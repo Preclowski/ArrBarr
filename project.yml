@@ -1,0 +1,53 @@
+name: ArrBarr
+options:
+  bundleIdPrefix: com.preclowski
+  deploymentTarget:
+    macOS: "14.0"
+  createIntermediateGroups: true
+  generateEmptyDirectories: true
+
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    DEVELOPMENT_TEAM: ""
+    CODE_SIGN_STYLE: Automatic
+    CODE_SIGN_IDENTITY: "-"
+    ENABLE_HARDENED_RUNTIME: YES
+    DEAD_CODE_STRIPPING: YES
+
+targets:
+  ArrBarr:
+    type: application
+    platform: macOS
+    deploymentTarget: "14.0"
+    sources:
+      - path: ArrBarr
+        excludes:
+          - "**/.DS_Store"
+    resources:
+      - path: ArrBarr/Assets.xcassets
+    info:
+      path: ArrBarr/Info.plist
+      properties:
+        CFBundleName: ArrBarr
+        CFBundleDisplayName: ArrBarr
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        LSMinimumSystemVersion: "$(MACOSX_DEPLOYMENT_TARGET)"
+        LSUIElement: true        # bez ikony w Docku — tylko status bar
+        NSHumanReadableCopyright: "© 2026 Konrad"
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: true   # lokalna sieć / self-hosted, często http
+    entitlements:
+      path: ArrBarr/ArrBarr.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        com.apple.security.network.client: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.preclowski.ArrBarr
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        COMBINE_HIDPI_IMAGES: YES
+        ENABLE_PREVIEWS: YES
