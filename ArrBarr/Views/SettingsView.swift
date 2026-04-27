@@ -13,25 +13,6 @@ struct SettingsView: View {
     @State private var draftForegroundInterval: TimeInterval = 5
     @State private var draftBackgroundInterval: TimeInterval = 30
     @State private var showUnsavedAlert = false
-    @State private var selectedTab: SettingsTab = .mediaServers
-
-    enum SettingsTab: String, CaseIterable, Identifiable {
-        case mediaServers = "Media Servers"
-        case usenet = "Usenet"
-        case torrents = "Torrents"
-        case general = "General"
-
-        var id: String { rawValue }
-
-        var icon: String {
-            switch self {
-            case .mediaServers: return "server.rack"
-            case .usenet: return "doc.zipper"
-            case .torrents: return "arrow.triangle.2.circlepath"
-            case .general: return "gearshape"
-            }
-        }
-    }
 
     private var hasChanges: Bool {
         draftRadarr != configStore.radarr
@@ -47,25 +28,20 @@ struct SettingsView: View {
     }
 
     var body: some View {
-        NavigationSplitView {
-            List(SettingsTab.allCases, selection: $selectedTab) { tab in
-                Label(tab.rawValue, systemImage: tab.icon)
+        VStack(spacing: 0) {
+            TabView {
+                generalPane
+                    .tabItem { Label("General", systemImage: "gearshape") }
+                mediaManagersPane
+                    .tabItem { Label("Media Managers", systemImage: "server.rack") }
+                usenetPane
+                    .tabItem { Label("Usenet", systemImage: "doc.zipper") }
+                torrentsPane
+                    .tabItem { Label("Torrents", systemImage: "arrow.triangle.2.circlepath") }
             }
-            .listStyle(.sidebar)
-            .navigationSplitViewColumnWidth(min: 160, ideal: 180, max: 220)
-        } detail: {
-            Form {
-                switch selectedTab {
-                case .mediaServers: mediaServersPane
-                case .usenet: usenetPane
-                case .torrents: torrentsPane
-                case .general: generalPane
-                }
-            }
-            .formStyle(.grouped)
-            .navigationTitle(selectedTab.rawValue)
+
+            bottomBar
         }
-        .safeAreaInset(edge: .bottom) { bottomBar }
         .onAppear { loadDrafts() }
         .alert("Unsaved Changes", isPresented: $showUnsavedAlert) {
             Button("Save", role: nil) { saveAndClose() }
@@ -78,8 +54,8 @@ struct SettingsView: View {
 
     // MARK: - Panes
 
-    private var mediaServersPane: some View {
-        Group {
+    private var mediaManagersPane: some View {
+        Form {
             Section("Radarr") {
                 ServiceFields(config: $draftRadarr, kind: .radarr)
             }
@@ -87,10 +63,11 @@ struct SettingsView: View {
                 ServiceFields(config: $draftSonarr, kind: .sonarr)
             }
         }
+        .formStyle(.grouped)
     }
 
     private var usenetPane: some View {
-        Group {
+        Form {
             Section("SABnzbd") {
                 ServiceFields(config: $draftSabnzbd, kind: .sabnzbd)
             }
@@ -98,10 +75,11 @@ struct SettingsView: View {
                 ServiceFields(config: $draftNzbget, kind: .nzbget)
             }
         }
+        .formStyle(.grouped)
     }
 
     private var torrentsPane: some View {
-        Group {
+        Form {
             Section("qBittorrent") {
                 ServiceFields(config: $draftQbittorrent, kind: .qbittorrent)
             }
@@ -115,21 +93,25 @@ struct SettingsView: View {
                 ServiceFields(config: $draftDeluge, kind: .deluge)
             }
         }
+        .formStyle(.grouped)
     }
 
     private var generalPane: some View {
-        Section("Refresh Interval") {
-            Picker("Popover open", selection: $draftForegroundInterval) {
-                ForEach(ConfigStore.foregroundIntervalOptions, id: \.self) { interval in
-                    Text(Self.formatInterval(interval)).tag(interval)
+        Form {
+            Section("Refresh Interval") {
+                Picker("Popover open", selection: $draftForegroundInterval) {
+                    ForEach(ConfigStore.foregroundIntervalOptions, id: \.self) { interval in
+                        Text(Self.formatInterval(interval)).tag(interval)
+                    }
                 }
-            }
-            Picker("Background", selection: $draftBackgroundInterval) {
-                ForEach(ConfigStore.backgroundIntervalOptions, id: \.self) { interval in
-                    Text(Self.formatInterval(interval)).tag(interval)
+                Picker("Background", selection: $draftBackgroundInterval) {
+                    ForEach(ConfigStore.backgroundIntervalOptions, id: \.self) { interval in
+                        Text(Self.formatInterval(interval)).tag(interval)
+                    }
                 }
             }
         }
+        .formStyle(.grouped)
     }
 
     // MARK: - Bottom bar
@@ -142,6 +124,7 @@ struct SettingsView: View {
                 if hasChanges {
                     Button("Save") { saveAndClose() }
                         .keyboardShortcut("s", modifiers: .command)
+                        .modifier(GlassProminentButtonStyle())
                         .controlSize(.large)
                 }
                 Button("Close") {
@@ -152,6 +135,7 @@ struct SettingsView: View {
                     }
                 }
                 .keyboardShortcut("w", modifiers: .command)
+                .modifier(GlassButtonStyle())
                 .controlSize(.large)
             }
             .padding(.horizontal, 20)

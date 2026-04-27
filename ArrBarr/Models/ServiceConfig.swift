@@ -16,7 +16,7 @@ struct ServiceConfig: Codable, Equatable {
         return true
     }
 
-    static let empty = ServiceConfig(enabled: true, baseURL: "", apiKey: "", username: "", password: "")
+    static let empty = ServiceConfig(enabled: false, baseURL: "", apiKey: "", username: "", password: "")
 }
 
 enum ServiceKind: String, CaseIterable, Identifiable {

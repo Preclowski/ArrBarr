@@ -47,9 +47,9 @@ struct ServiceConfigTests {
         #expect(!ServiceConfig.empty.isConfigured)
     }
 
-    @Test("Empty config has enabled set to true")
+    @Test("Empty config has enabled set to false")
     func emptyDefaults() {
-        #expect(ServiceConfig.empty.enabled)
+        #expect(!ServiceConfig.empty.enabled)
         #expect(ServiceConfig.empty.baseURL.isEmpty)
         #expect(ServiceConfig.empty.apiKey.isEmpty)
     }
