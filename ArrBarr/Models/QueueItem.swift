@@ -1,7 +1,7 @@
 import Foundation
 
 struct QueueItem: Identifiable, Equatable {
-    enum Source: String { case radarr, sonarr }
+    enum Source: String { case radarr, sonarr, lidarr }
     enum DownloadProtocol: String { case usenet, torrent, unknown }
     enum Status: String {
         case downloading, paused, queued, completed, warning, failed, unknown

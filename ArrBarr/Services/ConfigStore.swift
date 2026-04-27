@@ -7,6 +7,7 @@ final class ConfigStore: ObservableObject {
 
     @Published var radarr: ServiceConfig
     @Published var sonarr: ServiceConfig
+    @Published var lidarr: ServiceConfig
     @Published var sabnzbd: ServiceConfig
     @Published var qbittorrent: ServiceConfig
     @Published var nzbget: ServiceConfig
@@ -17,6 +18,7 @@ final class ConfigStore: ObservableObject {
     @Published var backgroundInterval: TimeInterval
     @Published var notifyRadarr: Bool
     @Published var notifySonarr: Bool
+    @Published var notifyLidarr: Bool
 
     static let foregroundIntervalOptions: [TimeInterval] = [0, 2, 5, 10, 15, 30]
     static let backgroundIntervalOptions: [TimeInterval] = [0, 10, 30, 60, 120, 300]
@@ -28,11 +30,13 @@ final class ConfigStore: ObservableObject {
     private static let backgroundIntervalKey = "ArrBarr.backgroundInterval"
     private static let notifyRadarrKey = "ArrBarr.notifyRadarr"
     private static let notifySonarrKey = "ArrBarr.notifySonarr"
+    private static let notifyLidarrKey = "ArrBarr.notifyLidarr"
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         self.radarr = Self.load(.radarr, from: defaults)
         self.sonarr = Self.load(.sonarr, from: defaults)
+        self.lidarr = Self.load(.lidarr, from: defaults)
         self.sabnzbd = Self.load(.sabnzbd, from: defaults)
         self.qbittorrent = Self.load(.qbittorrent, from: defaults)
         self.nzbget = Self.load(.nzbget, from: defaults)
@@ -45,6 +49,7 @@ final class ConfigStore: ObservableObject {
         self.backgroundInterval = defaults.object(forKey: bgKey) != nil ? defaults.double(forKey: bgKey) : 30
         self.notifyRadarr = defaults.object(forKey: Self.notifyRadarrKey) != nil ? defaults.bool(forKey: Self.notifyRadarrKey) : false
         self.notifySonarr = defaults.object(forKey: Self.notifySonarrKey) != nil ? defaults.bool(forKey: Self.notifySonarrKey) : false
+        self.notifyLidarr = defaults.object(forKey: Self.notifyLidarrKey) != nil ? defaults.bool(forKey: Self.notifyLidarrKey) : false
 
         for kind in ServiceKind.allCases {
             publisher(for: kind).dropFirst().sink { [weak self] cfg in
@@ -63,12 +68,16 @@ final class ConfigStore: ObservableObject {
         $notifySonarr.dropFirst().sink { [weak self] val in
             self?.defaults.set(val, forKey: Self.notifySonarrKey)
         }.store(in: &cancellables)
+        $notifyLidarr.dropFirst().sink { [weak self] val in
+            self?.defaults.set(val, forKey: Self.notifyLidarrKey)
+        }.store(in: &cancellables)
     }
 
     private func publisher(for kind: ServiceKind) -> Published<ServiceConfig>.Publisher {
         switch kind {
         case .radarr: $radarr
         case .sonarr: $sonarr
+        case .lidarr: $lidarr
         case .sabnzbd: $sabnzbd
         case .qbittorrent: $qbittorrent
         case .nzbget: $nzbget
@@ -82,6 +91,7 @@ final class ConfigStore: ObservableObject {
         switch kind {
         case .radarr: return radarr
         case .sonarr: return sonarr
+        case .lidarr: return lidarr
         case .sabnzbd: return sabnzbd
         case .qbittorrent: return qbittorrent
         case .nzbget: return nzbget
@@ -95,6 +105,7 @@ final class ConfigStore: ObservableObject {
         switch kind {
         case .radarr: radarr = config
         case .sonarr: sonarr = config
+        case .lidarr: lidarr = config
         case .sabnzbd: sabnzbd = config
         case .qbittorrent: qbittorrent = config
         case .nzbget: nzbget = config

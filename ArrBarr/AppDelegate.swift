@@ -40,9 +40,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
 
-        badgeObserver = Publishers.CombineLatest(queueVM.$radarr, queueVM.$sonarr)
-            .sink { [weak self] radarr, sonarr in
-                let active = (radarr + sonarr).filter { $0.status != .completed }.count
+        badgeObserver = Publishers.CombineLatest3(queueVM.$radarr, queueVM.$sonarr, queueVM.$lidarr)
+            .sink { [weak self] radarr, sonarr, lidarr in
+                let active = (radarr + sonarr + lidarr).filter { $0.status != .completed }.count
                 self?.updateStatusBarTitle(active: active)
             }
     }

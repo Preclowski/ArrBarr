@@ -265,3 +265,89 @@ struct SharedTypesDecodingTests {
         #expect(a == b)
     }
 }
+
+// MARK: - Lidarr
+
+@Suite("Lidarr JSON Decoding")
+struct LidarrDecodingTests {
+    @Test("Decodes full queue page with artist and album")
+    func fullQueuePage() throws {
+        let json = """
+        {
+          "page": 1, "pageSize": 10, "totalRecords": 1,
+          "records": [{
+            "id": 42,
+            "artistId": 7,
+            "albumId": 15,
+            "title": "album-release-title",
+            "status": "downloading",
+            "trackedDownloadStatus": "ok",
+            "trackedDownloadState": "downloading",
+            "downloadId": "sab_lidarr_001",
+            "downloadClient": "SABnzbd",
+            "protocol": "usenet",
+            "size": 500000000,
+            "sizeleft": 250000000,
+            "timeleft": "00:12:00",
+            "quality": {"quality": {"name": "FLAC"}},
+            "artist": {"id": 7, "artistName": "Radiohead", "foreignArtistId": "abc123"},
+            "album": {"id": 15, "title": "OK Computer", "releaseDate": "1997-06-16", "foreignAlbumId": "def456", "artist": null}
+          }]
+        }
+        """
+        let page = try JSONDecoder().decode(ArrQueuePage<LidarrQueueRecord>.self, from: Data(json.utf8))
+        #expect(page.records.count == 1)
+        let r = page.records[0]
+        #expect(r.id == 42)
+        #expect(r.artist?.artistName == "Radiohead")
+        #expect(r.album?.title == "OK Computer")
+        #expect(r.quality?.name == "FLAC")
+        #expect(r.protocol == "usenet")
+    }
+
+    @Test("Decodes record with minimal fields")
+    func minimalRecord() throws {
+        let json = """
+        {
+          "page": 1, "pageSize": 10, "totalRecords": 1,
+          "records": [{
+            "id": 1,
+            "title": "unknown-release"
+          }]
+        }
+        """
+        let page = try JSONDecoder().decode(ArrQueuePage<LidarrQueueRecord>.self, from: Data(json.utf8))
+        #expect(page.records.count == 1)
+        #expect(page.records[0].artist == nil)
+        #expect(page.records[0].album == nil)
+    }
+
+    @Test("Decodes calendar record with artist info")
+    func calendarRecord() throws {
+        let json = """
+        {
+          "id": 99,
+          "title": "In Rainbows",
+          "releaseDate": "2007-10-10",
+          "foreignAlbumId": "album-xyz",
+          "overview": "Seventh studio album",
+          "artist": {"id": 7, "artistName": "Radiohead", "foreignArtistId": "abc123"}
+        }
+        """
+        let r = try JSONDecoder().decode(LidarrCalendarRecord.self, from: Data(json.utf8))
+        #expect(r.title == "In Rainbows")
+        #expect(r.artist?.artistName == "Radiohead")
+        #expect(r.releaseDate == "2007-10-10")
+    }
+
+    @Test("Decodes calendar record with minimal fields")
+    func minimalCalendar() throws {
+        let json = """
+        {"id": 1, "title": "Unknown Album"}
+        """
+        let r = try JSONDecoder().decode(LidarrCalendarRecord.self, from: Data(json.utf8))
+        #expect(r.id == 1)
+        #expect(r.artist == nil)
+        #expect(r.releaseDate == nil)
+    }
+}

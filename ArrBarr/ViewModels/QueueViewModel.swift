@@ -7,8 +7,10 @@ import UserNotifications
 final class QueueViewModel: ObservableObject {
     @Published private(set) var radarr: [QueueItem] = []
     @Published private(set) var sonarr: [QueueItem] = []
+    @Published private(set) var lidarr: [QueueItem] = []
     @Published private(set) var radarrError: String?
     @Published private(set) var sonarrError: String?
+    @Published private(set) var lidarrError: String?
     @Published private(set) var upcoming: [UpcomingItem] = []
     @Published private(set) var isLoading = false
     @Published private(set) var lastError: String?
@@ -32,7 +34,7 @@ final class QueueViewModel: ObservableObject {
     }
 
     var activeCount: Int {
-        (radarr + sonarr).filter { $0.status != .completed }.count
+        (radarr + sonarr + lidarr).filter { $0.status != .completed }.count
     }
 
     init(configStore: ConfigStore = .shared) {
@@ -107,11 +109,14 @@ final class QueueViewModel: ObservableObject {
         let (queue, upcoming) = await (queueResult, upcomingResult)
         let newRadarr = applyOverrides(to: queue.radarr)
         let newSonarr = applyOverrides(to: queue.sonarr)
-        notifyNewItems(radarr: newRadarr, sonarr: newSonarr)
+        let newLidarr = applyOverrides(to: queue.lidarr)
+        notifyNewItems(radarr: newRadarr, sonarr: newSonarr, lidarr: newLidarr)
         self.radarr = newRadarr
         self.sonarr = newSonarr
+        self.lidarr = newLidarr
         self.radarrError = queue.radarrError
         self.sonarrError = queue.sonarrError
+        self.lidarrError = queue.lidarrError
         self.upcoming = upcoming
         self.lastError = nil
     }
@@ -148,8 +153,8 @@ final class QueueViewModel: ObservableObject {
 
     // MARK: - Notifications
 
-    private func notifyNewItems(radarr: [QueueItem], sonarr: [QueueItem]) {
-        let allItems = radarr + sonarr
+    private func notifyNewItems(radarr: [QueueItem], sonarr: [QueueItem], lidarr: [QueueItem]) {
+        let allItems = radarr + sonarr + lidarr
         let currentIDs = Set(allItems.map(\.id))
 
         guard let known = knownItemIDs else {
@@ -164,6 +169,7 @@ final class QueueViewModel: ObservableObject {
             switch item.source {
             case .radarr where configStore.notifyRadarr: sendNotification(for: item)
             case .sonarr where configStore.notifySonarr: sendNotification(for: item)
+            case .lidarr where configStore.notifyLidarr: sendNotification(for: item)
             default: break
             }
         }
@@ -171,7 +177,11 @@ final class QueueViewModel: ObservableObject {
 
     private func sendNotification(for item: QueueItem) {
         let content = UNMutableNotificationContent()
-        content.title = item.source == .radarr ? "Radarr" : "Sonarr"
+        content.title = switch item.source {
+        case .radarr: "Radarr"
+        case .sonarr: "Sonarr"
+        case .lidarr: "Lidarr"
+        }
         content.subtitle = item.title
         var body = item.status.displayName
         if let quality = item.quality { body += " · \(quality)" }
@@ -244,6 +254,7 @@ final class QueueViewModel: ObservableObject {
         switch item.source {
         case .radarr: update(&radarr)
         case .sonarr: update(&sonarr)
+        case .lidarr: update(&lidarr)
         }
     }
 }

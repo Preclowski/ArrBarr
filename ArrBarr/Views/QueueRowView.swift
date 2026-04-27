@@ -107,8 +107,11 @@ struct QueueRowView: View {
 
     private var webURL: URL? {
         guard let slug = item.contentSlug else { return nil }
-        let cfg = item.source == .radarr ? configStore.radarr : configStore.sonarr
-        let path = item.source == .radarr ? "/movie/\(slug)" : "/series/\(slug)"
+        let (cfg, path): (ServiceConfig, String) = switch item.source {
+        case .radarr: (configStore.radarr, "/movie/\(slug)")
+        case .sonarr: (configStore.sonarr, "/series/\(slug)")
+        case .lidarr: (configStore.lidarr, "/album/\(slug)")
+        }
         return URL(string: cfg.baseURL)?.appendingPathComponent(path)
     }
 

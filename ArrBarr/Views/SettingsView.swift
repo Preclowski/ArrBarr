@@ -4,6 +4,7 @@ struct SettingsView: View {
     @EnvironmentObject var configStore: ConfigStore
     @State private var draftRadarr: ServiceConfig = .empty
     @State private var draftSonarr: ServiceConfig = .empty
+    @State private var draftLidarr: ServiceConfig = .empty
     @State private var draftSabnzbd: ServiceConfig = .empty
     @State private var draftQbittorrent: ServiceConfig = .empty
     @State private var draftNzbget: ServiceConfig = .empty
@@ -17,6 +18,7 @@ struct SettingsView: View {
     private var hasChanges: Bool {
         draftRadarr != configStore.radarr
         || draftSonarr != configStore.sonarr
+        || draftLidarr != configStore.lidarr
         || draftSabnzbd != configStore.sabnzbd
         || draftQbittorrent != configStore.qbittorrent
         || draftNzbget != configStore.nzbget
@@ -61,6 +63,9 @@ struct SettingsView: View {
             }
             Section("Sonarr") {
                 ServiceFields(config: $draftSonarr, kind: .sonarr)
+            }
+            Section("Lidarr") {
+                ServiceFields(config: $draftLidarr, kind: .lidarr)
             }
         }
         .formStyle(.grouped)
@@ -113,6 +118,7 @@ struct SettingsView: View {
             Section("Notifications") {
                 Toggle("Radarr — notify on new grabs", isOn: $configStore.notifyRadarr)
                 Toggle("Sonarr — notify on new grabs", isOn: $configStore.notifySonarr)
+                Toggle("Lidarr — notify on new grabs", isOn: $configStore.notifyLidarr)
             }
         }
         .formStyle(.grouped)
@@ -153,6 +159,7 @@ struct SettingsView: View {
     private func saveAndClose() {
         configStore.radarr = draftRadarr
         configStore.sonarr = draftSonarr
+        configStore.lidarr = draftLidarr
         configStore.sabnzbd = draftSabnzbd
         configStore.qbittorrent = draftQbittorrent
         configStore.nzbget = draftNzbget
@@ -167,6 +174,7 @@ struct SettingsView: View {
     private func loadDrafts() {
         draftRadarr = configStore.radarr
         draftSonarr = configStore.sonarr
+        draftLidarr = configStore.lidarr
         draftSabnzbd = configStore.sabnzbd
         draftQbittorrent = configStore.qbittorrent
         draftNzbget = configStore.nzbget

@@ -90,6 +90,53 @@ struct SonarrEpisode: Decodable {
     let hasFile: Bool?
 }
 
+// MARK: - Lidarr
+
+struct LidarrQueueRecord: Decodable {
+    let id: Int
+    let artistId: Int?
+    let albumId: Int?
+    let title: String?
+    let status: String?
+    let trackedDownloadStatus: String?
+    let trackedDownloadState: String?
+    let downloadId: String?
+    let downloadClient: String?
+    let `protocol`: String?
+    let size: Double?
+    let sizeleft: Double?
+    let timeleft: String?
+    let estimatedCompletionTime: String?
+    let customFormats: [ArrCustomFormat]?
+    let customFormatScore: Int?
+    let quality: ArrQuality?
+    let artist: LidarrArtist?
+    let album: LidarrAlbum?
+}
+
+struct LidarrArtist: Decodable {
+    let id: Int
+    let artistName: String
+    let foreignArtistId: String?
+}
+
+struct LidarrAlbum: Decodable {
+    let id: Int
+    let title: String
+    let releaseDate: String?
+    let foreignAlbumId: String?
+    let artist: LidarrArtist?
+}
+
+struct LidarrCalendarRecord: Decodable {
+    let id: Int
+    let title: String
+    let releaseDate: String?
+    let foreignAlbumId: String?
+    let overview: String?
+    let artist: LidarrArtist?
+}
+
 // MARK: - Calendar
 
 struct RadarrCalendarRecord: Decodable {

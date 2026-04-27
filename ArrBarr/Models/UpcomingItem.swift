@@ -1,7 +1,7 @@
 import Foundation
 
 struct UpcomingItem: Identifiable, Equatable {
-    enum Source: String { case radarr, sonarr }
+    enum Source: String { case radarr, sonarr, lidarr }
 
     let id: String
     let source: Source

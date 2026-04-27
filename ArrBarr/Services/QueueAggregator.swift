@@ -34,24 +34,28 @@ final class QueueAggregator {
     func fetch() async -> AggregateResult {
         let radarrCfg = configStore.radarr
         let sonarrCfg = configStore.sonarr
+        let lidarrCfg = configStore.lidarr
 
         async let radarr = Self.safeFetch { try await RadarrClient(config: radarrCfg).fetchQueue() }
         async let sonarr = Self.safeFetch { try await SonarrClient(config: sonarrCfg).fetchQueue() }
-        let (r, s) = await (radarr, sonarr)
+        async let lidarr = Self.safeFetch { try await LidarrClient(config: lidarrCfg).fetchQueue() }
+        let (r, s, l) = await (radarr, sonarr, lidarr)
         return AggregateResult(
-            radarr: r.items, sonarr: s.items,
-            radarrError: r.error, sonarrError: s.error
+            radarr: r.items, sonarr: s.items, lidarr: l.items,
+            radarrError: r.error, sonarrError: s.error, lidarrError: l.error
         )
     }
 
     func fetchUpcoming() async -> [UpcomingItem] {
         let radarrCfg = configStore.radarr
         let sonarrCfg = configStore.sonarr
+        let lidarrCfg = configStore.lidarr
 
         async let radarr = Self.safeFetchUpcoming { try await RadarrClient(config: radarrCfg).fetchCalendar() }
         async let sonarr = Self.safeFetchUpcoming { try await SonarrClient(config: sonarrCfg).fetchCalendar() }
-        let (r, s) = await (radarr, sonarr)
-        return (r + s).sorted { $0.airDate < $1.airDate }
+        async let lidarr = Self.safeFetchUpcoming { try await LidarrClient(config: lidarrCfg).fetchCalendar() }
+        let (r, s, l) = await (radarr, sonarr, lidarr)
+        return (r + s + l).sorted { $0.airDate < $1.airDate }
     }
 
     private static func safeFetch(_ block: () async throws -> [QueueItem]) async -> (items: [QueueItem], error: String?) {
@@ -191,11 +195,13 @@ final class QueueAggregator {
 struct AggregateResult: Equatable {
     let radarr: [QueueItem]
     let sonarr: [QueueItem]
+    let lidarr: [QueueItem]
     var radarrError: String?
     var sonarrError: String?
+    var lidarrError: String?
 
-    var totalCount: Int { radarr.count + sonarr.count }
+    var totalCount: Int { radarr.count + sonarr.count + lidarr.count }
     var activeCount: Int {
-        (radarr + sonarr).filter { $0.status != .completed }.count
+        (radarr + sonarr + lidarr).filter { $0.status != .completed }.count
     }
 }

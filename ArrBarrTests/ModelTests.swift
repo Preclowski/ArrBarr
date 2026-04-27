@@ -93,9 +93,9 @@ struct ServiceKindTests {
         #expect(!ServiceKind.sabnzbd.requiresLogin)
     }
 
-    @Test("CaseIterable covers all eight services")
+    @Test("CaseIterable covers all nine services")
     func allCases() {
-        #expect(ServiceKind.allCases.count == 8)
+        #expect(ServiceKind.allCases.count == 9)
     }
 }
 

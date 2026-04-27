@@ -20,13 +20,14 @@ struct ServiceConfig: Codable, Equatable {
 }
 
 enum ServiceKind: String, CaseIterable, Identifiable {
-    case radarr, sonarr, sabnzbd, qbittorrent, nzbget, transmission, rtorrent, deluge
+    case radarr, sonarr, lidarr, sabnzbd, qbittorrent, nzbget, transmission, rtorrent, deluge
     var id: String { rawValue }
 
     var displayName: String {
         switch self {
         case .radarr: return "Radarr"
         case .sonarr: return "Sonarr"
+        case .lidarr: return "Lidarr"
         case .sabnzbd: return "SABnzbd"
         case .qbittorrent: return "qBittorrent"
         case .nzbget: return "NZBGet"
@@ -38,7 +39,7 @@ enum ServiceKind: String, CaseIterable, Identifiable {
 
     var requiresApiKey: Bool {
         switch self {
-        case .radarr, .sonarr, .sabnzbd: return true
+        case .radarr, .sonarr, .lidarr, .sabnzbd: return true
         default: return false
         }
     }
@@ -54,6 +55,7 @@ enum ServiceKind: String, CaseIterable, Identifiable {
         switch self {
         case .radarr: return "http://192.168.1.10:7878"
         case .sonarr: return "http://192.168.1.10:8989"
+        case .lidarr: return "http://192.168.1.10:8686"
         case .sabnzbd: return "http://192.168.1.10:8080"
         case .qbittorrent: return "http://192.168.1.10:8080"
         case .nzbget: return "http://192.168.1.10:6789"

@@ -12,7 +12,8 @@ struct PopoverContentView: View {
 
     private var sonarrConfigured: Bool { configStore.sonarr.isConfigured }
     private var radarrConfigured: Bool { configStore.radarr.isConfigured }
-    private var anyArrConfigured: Bool { sonarrConfigured || radarrConfigured }
+    private var lidarrConfigured: Bool { configStore.lidarr.isConfigured }
+    private var anyArrConfigured: Bool { sonarrConfigured || radarrConfigured || lidarrConfigured }
 
     enum Tab: String, CaseIterable {
         case queue = "Queue"
@@ -75,7 +76,7 @@ struct PopoverContentView: View {
 
     private var queueContent: some View {
         ScrollView {
-            if viewModel.isLoading && viewModel.radarr.isEmpty && viewModel.sonarr.isEmpty {
+            if viewModel.isLoading && viewModel.radarr.isEmpty && viewModel.sonarr.isEmpty && viewModel.lidarr.isEmpty {
                 VStack(spacing: 10) {
                     ProgressView()
                         .controlSize(.small)
@@ -97,7 +98,7 @@ struct PopoverContentView: View {
                         )
                     }
 
-                    if sonarrConfigured && radarrConfigured {
+                    if sonarrConfigured && (radarrConfigured || lidarrConfigured) {
                         Divider().padding(.horizontal, 12)
                     }
 
@@ -107,6 +108,20 @@ struct PopoverContentView: View {
                             symbol: "film",
                             items: viewModel.radarr,
                             error: viewModel.radarrError,
+                            viewModel: viewModel
+                        )
+                    }
+
+                    if lidarrConfigured && (sonarrConfigured || radarrConfigured) {
+                        Divider().padding(.horizontal, 12)
+                    }
+
+                    if lidarrConfigured {
+                        QueueSectionView(
+                            title: "Lidarr",
+                            symbol: "music.note",
+                            items: viewModel.lidarr,
+                            error: viewModel.lidarrError,
                             viewModel: viewModel
                         )
                     }
