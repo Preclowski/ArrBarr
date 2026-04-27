@@ -58,9 +58,9 @@ All connections go through your local network. ArrBarr is sandboxed with network
 ```
 ┌──────────────────┐    info + custom formats     ┌─────────────┐
 │  Radarr/Sonarr   │ ───────────────────────────▶ │   ArrBarr   │
-└──────────────────┘                               │  (popover)  │
-                                                   └──────┬──────┘
-┌──────────────────┐    start / pause / delete            │
+└──────────────────┘                              │  (popover)  │
+                                                  └──────┬──────┘
+┌──────────────────┐    start / pause / delete           │
 │ SABnzbd/qBitt.   │ ◀───────────────────────────────────┘
 └──────────────────┘
 ```
