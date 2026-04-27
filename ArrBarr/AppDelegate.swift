@@ -7,6 +7,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
     private var popover: NSPopover!
     private var settingsWindow: NSWindow?
+    private var escMonitor: Any?
 
     private let configStore = ConfigStore.shared
     private let queueVM = QueueViewModel()
@@ -37,12 +38,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         popover.contentViewController = hosting
 
         badgeObserver = Publishers.CombineLatest(queueVM.$radarr, queueVM.$sonarr)
-            .receive(on: DispatchQueue.main)
             .sink { [weak self] radarr, sonarr in
-                MainActor.assumeIsolated {
-                    let active = (radarr + sonarr).filter { $0.status != .completed }.count
-                    self?.updateStatusBarTitle(active: active)
-                }
+                let active = (radarr + sonarr).filter { $0.status != .completed }.count
+                self?.updateStatusBarTitle(active: active)
             }
     }
 
@@ -98,6 +96,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
             popover.contentViewController?.view.window?.makeKey()
             queueVM.startForegroundPolling()
+            installEscMonitor()
+        }
+    }
+
+    private func installEscMonitor() {
+        escMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            if event.keyCode == 53, self?.popover.isShown == true {
+                self?.popover.performClose(nil)
+                return nil
+            }
+            return event
+        }
+    }
+
+    private func removeEscMonitor() {
+        if let monitor = escMonitor {
+            NSEvent.removeMonitor(monitor)
+            escMonitor = nil
         }
     }
 
@@ -153,5 +169,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 extension AppDelegate: NSPopoverDelegate {
     func popoverDidClose(_ notification: Notification) {
         queueVM.stopForegroundPolling()
+        removeEscMonitor()
     }
 }

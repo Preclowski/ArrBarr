@@ -3,7 +3,7 @@ import Combine
 
 @MainActor
 final class ConfigStore: ObservableObject {
-    static let shared = ConfigStore()
+    @MainActor static let shared = ConfigStore()
 
     @Published var radarr: ServiceConfig
     @Published var sonarr: ServiceConfig
@@ -40,36 +40,30 @@ final class ConfigStore: ObservableObject {
         let bgKey = Self.backgroundIntervalKey
         self.backgroundInterval = defaults.object(forKey: bgKey) != nil ? defaults.double(forKey: bgKey) : 30
 
-        $radarr.dropFirst().sink { [weak self] cfg in
-            MainActor.assumeIsolated { self?.save(.radarr, cfg) }
-        }.store(in: &cancellables)
-        $sonarr.dropFirst().sink { [weak self] cfg in
-            MainActor.assumeIsolated { self?.save(.sonarr, cfg) }
-        }.store(in: &cancellables)
-        $sabnzbd.dropFirst().sink { [weak self] cfg in
-            MainActor.assumeIsolated { self?.save(.sabnzbd, cfg) }
-        }.store(in: &cancellables)
-        $qbittorrent.dropFirst().sink { [weak self] cfg in
-            MainActor.assumeIsolated { self?.save(.qbittorrent, cfg) }
-        }.store(in: &cancellables)
-        $nzbget.dropFirst().sink { [weak self] cfg in
-            MainActor.assumeIsolated { self?.save(.nzbget, cfg) }
-        }.store(in: &cancellables)
-        $transmission.dropFirst().sink { [weak self] cfg in
-            MainActor.assumeIsolated { self?.save(.transmission, cfg) }
-        }.store(in: &cancellables)
-        $rtorrent.dropFirst().sink { [weak self] cfg in
-            MainActor.assumeIsolated { self?.save(.rtorrent, cfg) }
-        }.store(in: &cancellables)
-        $deluge.dropFirst().sink { [weak self] cfg in
-            MainActor.assumeIsolated { self?.save(.deluge, cfg) }
-        }.store(in: &cancellables)
+        for kind in ServiceKind.allCases {
+            publisher(for: kind).dropFirst().sink { [weak self] cfg in
+                self?.save(kind, cfg)
+            }.store(in: &cancellables)
+        }
         $foregroundInterval.dropFirst().sink { [weak self] val in
-            MainActor.assumeIsolated { self?.defaults.set(val, forKey: Self.foregroundIntervalKey) }
+            self?.defaults.set(val, forKey: Self.foregroundIntervalKey)
         }.store(in: &cancellables)
         $backgroundInterval.dropFirst().sink { [weak self] val in
-            MainActor.assumeIsolated { self?.defaults.set(val, forKey: Self.backgroundIntervalKey) }
+            self?.defaults.set(val, forKey: Self.backgroundIntervalKey)
         }.store(in: &cancellables)
+    }
+
+    private func publisher(for kind: ServiceKind) -> Published<ServiceConfig>.Publisher {
+        switch kind {
+        case .radarr: $radarr
+        case .sonarr: $sonarr
+        case .sabnzbd: $sabnzbd
+        case .qbittorrent: $qbittorrent
+        case .nzbget: $nzbget
+        case .transmission: $transmission
+        case .rtorrent: $rtorrent
+        case .deluge: $deluge
+        }
     }
 
     func config(for kind: ServiceKind) -> ServiceConfig {

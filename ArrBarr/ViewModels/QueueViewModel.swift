@@ -40,17 +40,15 @@ final class QueueViewModel: ObservableObject {
 
         configStore.$backgroundInterval
             .dropFirst()
-            .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
-                MainActor.assumeIsolated { self?.restartBackgroundPolling() }
+                self?.restartBackgroundPolling()
             }
             .store(in: &intervalObservers)
 
         configStore.$foregroundInterval
             .dropFirst()
-            .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
-                MainActor.assumeIsolated { self?.restartForegroundPolling() }
+                self?.restartForegroundPolling()
             }
             .store(in: &intervalObservers)
     }
@@ -110,6 +108,7 @@ final class QueueViewModel: ObservableObject {
         self.radarrError = queue.radarrError
         self.sonarrError = queue.sonarrError
         self.upcoming = upcoming
+        self.lastError = nil
     }
 
     private func applyOverrides(to items: [QueueItem]) -> [QueueItem] {
