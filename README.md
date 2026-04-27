@@ -34,6 +34,12 @@ brew install --cask arrbarr
 
 Download the latest `.dmg` from [Releases](../../releases) and drag ArrBarr to your Applications folder.
 
+> **Note:** ArrBarr is not notarized (no paid Apple Developer account). macOS Gatekeeper may block the first launch. To fix this, run:
+> ```bash
+> xattr -cr /Applications/ArrBarr.app
+> ```
+> Or right-click the app and choose "Open" — macOS will ask for confirmation once, then remember your choice.
+
 ### Build from source
 
 Requires Xcode 26+.
