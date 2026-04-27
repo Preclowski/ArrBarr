@@ -147,8 +147,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let hosting = NSHostingController(rootView: view)
         let win = NSWindow(contentViewController: hosting)
         win.title = "ArrBarr Settings"
-        win.styleMask = [.titled, .closable, .miniaturizable]
-        win.setContentSize(NSSize(width: 500, height: 620))
+        win.styleMask = [.titled, .closable, .miniaturizable, .resizable]
+        win.setContentSize(NSSize(width: 620, height: 460))
+        win.minSize = NSSize(width: 520, height: 360)
         win.isReleasedWhenClosed = false
         win.center()
 
