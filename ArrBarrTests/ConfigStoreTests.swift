@@ -15,14 +15,9 @@ struct ConfigStoreTests {
         defer { UserDefaults.standard.removePersistentDomain(forName: name) }
 
         let store = ConfigStore(defaults: defaults)
-        #expect(store.radarr == .empty)
-        #expect(store.sonarr == .empty)
-        #expect(store.sabnzbd == .empty)
-        #expect(store.qbittorrent == .empty)
-        #expect(store.nzbget == .empty)
-        #expect(store.transmission == .empty)
-        #expect(store.rtorrent == .empty)
-        #expect(store.deluge == .empty)
+        for kind in ServiceKind.allCases {
+            #expect(store.config(for: kind) == .empty)
+        }
     }
 
     @Test("Default polling intervals are 5s foreground, 30s background")
@@ -88,7 +83,7 @@ struct ConfigStoreTests {
         #expect(store.config(for: .radarr) != sonarrConfig)
     }
 
-    @Test("update(:with:) sets all four service kinds")
+    @Test("update(:with:) sets all nine service kinds")
     @MainActor func updateAllKinds() {
         let (defaults, name) = makeDefaults()
         defer { UserDefaults.standard.removePersistentDomain(forName: name) }
@@ -103,5 +98,24 @@ struct ConfigStoreTests {
             store.update(kind, with: config)
             #expect(store.config(for: kind) == config)
         }
+    }
+
+    @Test("Notification settings default to false and persist")
+    @MainActor func notificationSettings() {
+        let (defaults, name) = makeDefaults()
+        defer { UserDefaults.standard.removePersistentDomain(forName: name) }
+
+        let store = ConfigStore(defaults: defaults)
+        #expect(store.notifyRadarr == false)
+        #expect(store.notifySonarr == false)
+        #expect(store.notifyLidarr == false)
+
+        store.notifyRadarr = true
+        store.notifySonarr = true
+
+        let reloaded = ConfigStore(defaults: defaults)
+        #expect(reloaded.notifyRadarr == true)
+        #expect(reloaded.notifySonarr == true)
+        #expect(reloaded.notifyLidarr == false)
     }
 }

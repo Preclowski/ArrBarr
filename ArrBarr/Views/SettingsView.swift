@@ -13,6 +13,9 @@ struct SettingsView: View {
     @State private var draftDeluge: ServiceConfig = .empty
     @State private var draftForegroundInterval: TimeInterval = 5
     @State private var draftBackgroundInterval: TimeInterval = 30
+    @State private var draftNotifyRadarr = false
+    @State private var draftNotifySonarr = false
+    @State private var draftNotifyLidarr = false
     @State private var showUnsavedAlert = false
 
     private var hasChanges: Bool {
@@ -27,6 +30,9 @@ struct SettingsView: View {
         || draftDeluge != configStore.deluge
         || draftForegroundInterval != configStore.foregroundInterval
         || draftBackgroundInterval != configStore.backgroundInterval
+        || draftNotifyRadarr != configStore.notifyRadarr
+        || draftNotifySonarr != configStore.notifySonarr
+        || draftNotifyLidarr != configStore.notifyLidarr
     }
 
     var body: some View {
@@ -46,7 +52,7 @@ struct SettingsView: View {
         }
         .onAppear { loadDrafts() }
         .alert("Unsaved Changes", isPresented: $showUnsavedAlert) {
-            Button("Save", role: nil) { saveAndClose() }
+            Button("Save", role: nil) { save(); NSApp.keyWindow?.close() }
             Button("Don't Save", role: .destructive) { NSApp.keyWindow?.close() }
             Button("Cancel", role: .cancel) { }
         } message: {
@@ -116,9 +122,9 @@ struct SettingsView: View {
                 }
             }
             Section("Notifications") {
-                Toggle("Radarr — notify on new grabs", isOn: $configStore.notifyRadarr)
-                Toggle("Sonarr — notify on new grabs", isOn: $configStore.notifySonarr)
-                Toggle("Lidarr — notify on new grabs", isOn: $configStore.notifyLidarr)
+                Toggle("Radarr — notify on new grabs", isOn: $draftNotifyRadarr)
+                Toggle("Sonarr — notify on new grabs", isOn: $draftNotifySonarr)
+                Toggle("Lidarr — notify on new grabs", isOn: $draftNotifyLidarr)
             }
         }
         .formStyle(.grouped)
@@ -132,7 +138,7 @@ struct SettingsView: View {
             HStack {
                 Spacer()
                 if hasChanges {
-                    Button("Save") { saveAndClose() }
+                    Button("Save") { save() }
                         .keyboardShortcut("s", modifiers: .command)
                         .modifier(GlassProminentButtonStyle())
                         .controlSize(.large)
@@ -156,7 +162,7 @@ struct SettingsView: View {
 
     // MARK: - Helpers
 
-    private func saveAndClose() {
+    private func save() {
         configStore.radarr = draftRadarr
         configStore.sonarr = draftSonarr
         configStore.lidarr = draftLidarr
@@ -168,7 +174,9 @@ struct SettingsView: View {
         configStore.deluge = draftDeluge
         configStore.foregroundInterval = draftForegroundInterval
         configStore.backgroundInterval = draftBackgroundInterval
-        NSApp.keyWindow?.close()
+        configStore.notifyRadarr = draftNotifyRadarr
+        configStore.notifySonarr = draftNotifySonarr
+        configStore.notifyLidarr = draftNotifyLidarr
     }
 
     private func loadDrafts() {
@@ -183,6 +191,9 @@ struct SettingsView: View {
         draftDeluge = configStore.deluge
         draftForegroundInterval = configStore.foregroundInterval
         draftBackgroundInterval = configStore.backgroundInterval
+        draftNotifyRadarr = configStore.notifyRadarr
+        draftNotifySonarr = configStore.notifySonarr
+        draftNotifyLidarr = configStore.notifyLidarr
     }
 
     private static func formatInterval(_ seconds: TimeInterval) -> String {
