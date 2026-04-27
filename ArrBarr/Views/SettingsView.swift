@@ -12,6 +12,7 @@ struct SettingsView: View {
     @State private var draftDeluge: ServiceConfig = .empty
     @State private var draftForegroundInterval: TimeInterval = 5
     @State private var draftBackgroundInterval: TimeInterval = 30
+    @State private var showUnsavedAlert = false
 
     private var hasChanges: Bool {
         draftRadarr != configStore.radarr
@@ -29,29 +30,24 @@ struct SettingsView: View {
     var body: some View {
         VStack(spacing: 0) {
             Form {
-                Section("Radarr") {
-                    ServiceFields(config: $draftRadarr, requiresApiKey: true, requiresLogin: false)
+                Section("Radarr / Sonarr") {
+                    ServiceFields(config: $draftRadarr, kind: .radarr)
+                    Divider()
+                    ServiceFields(config: $draftSonarr, kind: .sonarr)
                 }
-                Section("Sonarr") {
-                    ServiceFields(config: $draftSonarr, requiresApiKey: true, requiresLogin: false)
+                Section("Usenet Clients") {
+                    ServiceFields(config: $draftSabnzbd, kind: .sabnzbd)
+                    Divider()
+                    ServiceFields(config: $draftNzbget, kind: .nzbget)
                 }
-                Section("SABnzbd") {
-                    ServiceFields(config: $draftSabnzbd, requiresApiKey: true, requiresLogin: false)
-                }
-                Section("qBittorrent") {
-                    ServiceFields(config: $draftQbittorrent, requiresApiKey: false, requiresLogin: true)
-                }
-                Section("NZBGet") {
-                    ServiceFields(config: $draftNzbget, requiresApiKey: false, requiresLogin: true)
-                }
-                Section("Transmission") {
-                    ServiceFields(config: $draftTransmission, requiresApiKey: false, requiresLogin: true)
-                }
-                Section("rTorrent") {
-                    ServiceFields(config: $draftRtorrent, requiresApiKey: false, requiresLogin: true)
-                }
-                Section("Deluge") {
-                    ServiceFields(config: $draftDeluge, requiresApiKey: false, requiresLogin: true)
+                Section("Torrent Clients") {
+                    ServiceFields(config: $draftQbittorrent, kind: .qbittorrent)
+                    Divider()
+                    ServiceFields(config: $draftTransmission, kind: .transmission)
+                    Divider()
+                    ServiceFields(config: $draftRtorrent, kind: .rtorrent)
+                    Divider()
+                    ServiceFields(config: $draftDeluge, kind: .deluge)
                 }
                 Section("Refresh Interval") {
                     Picker("Popover open", selection: $draftForegroundInterval) {
@@ -71,31 +67,49 @@ struct SettingsView: View {
             Divider()
             HStack {
                 Spacer()
-                Button(hasChanges ? "Save & Close" : "Close") {
-                    if hasChanges {
-                        configStore.radarr = draftRadarr
-                        configStore.sonarr = draftSonarr
-                        configStore.sabnzbd = draftSabnzbd
-                        configStore.qbittorrent = draftQbittorrent
-                        configStore.nzbget = draftNzbget
-                        configStore.transmission = draftTransmission
-                        configStore.rtorrent = draftRtorrent
-                        configStore.deluge = draftDeluge
-                        configStore.foregroundInterval = draftForegroundInterval
-                        configStore.backgroundInterval = draftBackgroundInterval
-                    }
-                    NSApp.keyWindow?.close()
+                if hasChanges {
+                    Button("Save") { saveAndClose() }
+                        .keyboardShortcut("s", modifiers: .command)
+                        .controlSize(.large)
                 }
-                .keyboardShortcut(hasChanges ? "s" : "w", modifiers: .command)
+                Button("Close") {
+                    if hasChanges {
+                        showUnsavedAlert = true
+                    } else {
+                        NSApp.keyWindow?.close()
+                    }
+                }
+                .keyboardShortcut("w", modifiers: .command)
                 .controlSize(.large)
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 12)
         }
         .onAppear { loadDrafts() }
+        .alert("Unsaved Changes", isPresented: $showUnsavedAlert) {
+            Button("Save", role: nil) { saveAndClose() }
+            Button("Don't Save", role: .destructive) { NSApp.keyWindow?.close() }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("Do you want to save your changes before closing?")
+        }
     }
 
     // MARK: - Helpers
+
+    private func saveAndClose() {
+        configStore.radarr = draftRadarr
+        configStore.sonarr = draftSonarr
+        configStore.sabnzbd = draftSabnzbd
+        configStore.qbittorrent = draftQbittorrent
+        configStore.nzbget = draftNzbget
+        configStore.transmission = draftTransmission
+        configStore.rtorrent = draftRtorrent
+        configStore.deluge = draftDeluge
+        configStore.foregroundInterval = draftForegroundInterval
+        configStore.backgroundInterval = draftBackgroundInterval
+        NSApp.keyWindow?.close()
+    }
 
     private func loadDrafts() {
         draftRadarr = configStore.radarr
@@ -123,21 +137,20 @@ struct SettingsView: View {
 
 private struct ServiceFields: View {
     @Binding var config: ServiceConfig
-    let requiresApiKey: Bool
-    let requiresLogin: Bool
+    let kind: ServiceKind
 
     var body: some View {
-        Toggle("Enabled", isOn: $config.enabled.animation())
+        Toggle(kind.displayName, isOn: $config.enabled.animation())
 
         if config.enabled {
             TextField("URL", text: $config.baseURL, prompt: Text("http://192.168.1.10:7878"))
                 .autocorrectionDisabled(true)
 
-            if requiresApiKey {
+            if kind.requiresApiKey {
                 SecureField("API Key", text: $config.apiKey)
             }
 
-            if requiresLogin {
+            if kind.requiresLogin {
                 TextField("Username", text: $config.username)
                     .autocorrectionDisabled(true)
                 SecureField("Password", text: $config.password)

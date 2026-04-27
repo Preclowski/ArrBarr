@@ -9,7 +9,10 @@ struct ServiceConfig: Codable, Equatable {
 
     var isConfigured: Bool {
         guard enabled else { return false }
-        guard let url = URL(string: baseURL), url.scheme != nil, url.host != nil else { return false }
+        guard let url = URL(string: baseURL),
+              let scheme = url.scheme?.lowercased(),
+              ["http", "https"].contains(scheme),
+              url.host != nil else { return false }
         return true
     }
 

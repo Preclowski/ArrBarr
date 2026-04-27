@@ -51,8 +51,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func updateStatusBarTitle(active: Int) {
         guard let button = statusItem.button else { return }
 
+        let a11yLabel = active > 0
+            ? "ArrBarr — \(active) active download\(active == 1 ? "" : "s")"
+            : "ArrBarr — no active downloads"
         let symbolName = active > 0 ? "arrow.down.circle.fill" : "arrow.down.circle"
-        let icon = NSImage(systemSymbolName: symbolName, accessibilityDescription: "ArrBarr")
+        let icon = NSImage(systemSymbolName: symbolName, accessibilityDescription: a11yLabel)
         icon?.isTemplate = true
 
         if active > 0 {

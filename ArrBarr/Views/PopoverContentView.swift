@@ -75,32 +75,44 @@ struct PopoverContentView: View {
 
     private var queueContent: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                if sonarrConfigured {
-                    QueueSectionView(
-                        title: "Sonarr",
-                        symbol: "tv",
-                        items: viewModel.sonarr,
-                        error: viewModel.sonarrError,
-                        viewModel: viewModel
-                    )
+            if viewModel.isLoading && viewModel.radarr.isEmpty && viewModel.sonarr.isEmpty {
+                VStack(spacing: 10) {
+                    ProgressView()
+                        .controlSize(.small)
+                    Text("Loading…")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
                 }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 32)
+            } else {
+                VStack(alignment: .leading, spacing: 16) {
+                    if sonarrConfigured {
+                        QueueSectionView(
+                            title: "Sonarr",
+                            symbol: "tv",
+                            items: viewModel.sonarr,
+                            error: viewModel.sonarrError,
+                            viewModel: viewModel
+                        )
+                    }
 
-                if sonarrConfigured && radarrConfigured {
-                    Divider().padding(.horizontal, 12)
-                }
+                    if sonarrConfigured && radarrConfigured {
+                        Divider().padding(.horizontal, 12)
+                    }
 
-                if radarrConfigured {
-                    QueueSectionView(
-                        title: "Radarr",
-                        symbol: "film",
-                        items: viewModel.radarr,
-                        error: viewModel.radarrError,
-                        viewModel: viewModel
-                    )
+                    if radarrConfigured {
+                        QueueSectionView(
+                            title: "Radarr",
+                            symbol: "film",
+                            items: viewModel.radarr,
+                            error: viewModel.radarrError,
+                            viewModel: viewModel
+                        )
+                    }
                 }
+                .padding(.vertical, 12)
             }
-            .padding(.vertical, 12)
         }
         .scrollBounceBehavior(.basedOnSize)
         .frame(maxHeight: maxScrollHeight)

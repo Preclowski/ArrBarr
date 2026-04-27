@@ -34,6 +34,14 @@ struct ServiceConfigTests {
         #expect(config.isConfigured)
     }
 
+    @Test("Non-HTTP schemes are rejected")
+    func rejectsNonHTTP() {
+        for scheme in ["file:///etc/passwd", "ftp://server", "javascript:alert(1)"] {
+            let config = ServiceConfig(enabled: true, baseURL: scheme, apiKey: "", username: "", password: "")
+            #expect(!config.isConfigured, "Should reject: \(scheme)")
+        }
+    }
+
     @Test("Static empty config is not configured")
     func emptyStatic() {
         #expect(!ServiceConfig.empty.isConfigured)
