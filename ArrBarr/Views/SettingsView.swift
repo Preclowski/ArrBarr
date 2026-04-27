@@ -141,6 +141,11 @@ struct SettingsView: View {
         VStack(spacing: 0) {
             Divider()
             HStack {
+                Text(Self.versionString)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .textSelection(.enabled)
+                    .help("ArrBarr \(Self.versionString)")
                 Spacer()
                 if hasChanges {
                     Button("Save") { save() }
@@ -163,6 +168,13 @@ struct SettingsView: View {
             .padding(.vertical, 12)
         }
         .background(.bar)
+    }
+
+    private static var versionString: String {
+        let info = Bundle.main.infoDictionary
+        let short = info?["CFBundleShortVersionString"] as? String ?? "?"
+        let build = info?["CFBundleVersion"] as? String ?? "?"
+        return short == build ? "v\(short)" : "v\(short) (\(build))"
     }
 
     // MARK: - Helpers
