@@ -77,6 +77,10 @@ ArrBarr/
 └── Views/           # PopoverContentView, QueueRowView, SettingsView
 ```
 
+## Vibe-coded
+
+This project was built entirely through [vibe coding](https://en.wikipedia.org/wiki/Vibe_coding) with [Claude Code](https://claude.ai/claude-code).
+
 ## License
 
 [MIT](LICENSE)
