@@ -22,6 +22,10 @@ final class QueueAggregator {
     private let configStore: ConfigStore
     private var cachedQbitClient: QbittorrentClient?
     private var cachedQbitConfig: ServiceConfig?
+    private var cachedTransmissionClient: TransmissionClient?
+    private var cachedTransmissionConfig: ServiceConfig?
+    private var cachedDelugeClient: DelugeClient?
+    private var cachedDelugeConfig: ServiceConfig?
 
     init(configStore: ConfigStore) {
         self.configStore = configStore
@@ -70,24 +74,62 @@ final class QueueAggregator {
 
         switch item.downloadProtocol {
         case .usenet:
-            let cfg = configStore.sabnzbd
-            guard cfg.isConfigured, !cfg.apiKey.isEmpty else {
-                throw AggregateError.downloadClientNotConfigured(.usenet)
-            }
-            let sab = SabnzbdClient(config: cfg)
-            try await sab.perform(sabAction(action), nzoId: downloadId)
-
+            try await performUsenet(action, downloadId: downloadId)
         case .torrent:
-            let cfg = configStore.qbittorrent
-            guard cfg.isConfigured else {
-                throw AggregateError.downloadClientNotConfigured(.torrent)
-            }
-            let qbit = qbitClient(for: cfg)
-            try await qbit.perform(qbitAction(action), hash: downloadId)
-
+            try await performTorrent(action, downloadId: downloadId)
         case .unknown:
             throw AggregateError.downloadProtocolUnknown
         }
+    }
+
+    private func performUsenet(_ action: Action, downloadId: String) async throws {
+        let sabCfg = configStore.sabnzbd
+        if sabCfg.isConfigured, !sabCfg.apiKey.isEmpty {
+            let sab = SabnzbdClient(config: sabCfg)
+            try await sab.perform(sabAction(action), nzoId: downloadId)
+            return
+        }
+
+        let nzbgetCfg = configStore.nzbget
+        if nzbgetCfg.isConfigured {
+            let nzbget = NzbgetClient(config: nzbgetCfg)
+            try await nzbget.perform(nzbgetAction(action), nzbId: downloadId)
+            return
+        }
+
+        throw AggregateError.downloadClientNotConfigured(.usenet)
+    }
+
+    private func performTorrent(_ action: Action, downloadId: String) async throws {
+        let qbitCfg = configStore.qbittorrent
+        if qbitCfg.isConfigured {
+            let qbit = qbitClient(for: qbitCfg)
+            try await qbit.perform(qbitAction(action), hash: downloadId)
+            return
+        }
+
+        let transCfg = configStore.transmission
+        if transCfg.isConfigured {
+            let client = transmissionClient(for: transCfg)
+            try await client.perform(transmissionAction(action), hash: downloadId)
+            return
+        }
+
+        let rtCfg = configStore.rtorrent
+        if rtCfg.isConfigured {
+            let client = RtorrentClient(config: rtCfg)
+            try await client.perform(rtorrentAction(action), hash: downloadId)
+            return
+        }
+
+        let delugeCfg = configStore.deluge
+        if delugeCfg.isConfigured {
+            let client = delugeClient(for: delugeCfg)
+            try await client.perform(delugeAction(action), hash: downloadId)
+            return
+        }
+
+        throw AggregateError.downloadClientNotConfigured(.torrent)
     }
 
     // Reuse qBittorrent client to avoid re-login on every action.
@@ -101,20 +143,48 @@ final class QueueAggregator {
         return client
     }
 
-    private func sabAction(_ a: Action) -> SabnzbdClient.Action {
-        switch a {
-        case .pause: return .pause
-        case .resume: return .resume
-        case .delete: return .delete
+    private func transmissionClient(for cfg: ServiceConfig) -> TransmissionClient {
+        if let cached = cachedTransmissionClient, cachedTransmissionConfig == cfg {
+            return cached
         }
+        let client = TransmissionClient(config: cfg)
+        cachedTransmissionClient = client
+        cachedTransmissionConfig = cfg
+        return client
+    }
+
+    private func delugeClient(for cfg: ServiceConfig) -> DelugeClient {
+        if let cached = cachedDelugeClient, cachedDelugeConfig == cfg {
+            return cached
+        }
+        let client = DelugeClient(config: cfg)
+        cachedDelugeClient = client
+        cachedDelugeConfig = cfg
+        return client
+    }
+
+    private func sabAction(_ a: Action) -> SabnzbdClient.Action {
+        switch a { case .pause: .pause; case .resume: .resume; case .delete: .delete }
     }
 
     private func qbitAction(_ a: Action) -> QbittorrentClient.Action {
-        switch a {
-        case .pause: return .pause
-        case .resume: return .resume
-        case .delete: return .delete
-        }
+        switch a { case .pause: .pause; case .resume: .resume; case .delete: .delete }
+    }
+
+    private func nzbgetAction(_ a: Action) -> NzbgetClient.Action {
+        switch a { case .pause: .pause; case .resume: .resume; case .delete: .delete }
+    }
+
+    private func transmissionAction(_ a: Action) -> TransmissionClient.Action {
+        switch a { case .pause: .pause; case .resume: .resume; case .delete: .delete }
+    }
+
+    private func rtorrentAction(_ a: Action) -> RtorrentClient.Action {
+        switch a { case .pause: .pause; case .resume: .resume; case .delete: .delete }
+    }
+
+    private func delugeAction(_ a: Action) -> DelugeClient.Action {
+        switch a { case .pause: .pause; case .resume: .resume; case .delete: .delete }
     }
 }
 

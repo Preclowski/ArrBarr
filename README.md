@@ -1,7 +1,8 @@
 # ArrBarr
 
-A lightweight macOS menu bar app for monitoring your Radarr and Sonarr download queues, upcoming media, and controlling SABnzbd/qBittorrent download clients.
+A lightweight macOS menu bar app for monitoring your Radarr and Sonarr download queues, upcoming media, and controlling download clients.
 
+[![Build & Test](https://github.com/Preclowski/ArrBarr/actions/workflows/release.yml/badge.svg)](https://github.com/Preclowski/ArrBarr/actions/workflows/release.yml)
 ![macOS 14+](https://img.shields.io/badge/macOS-14%2B-blue)
 ![Swift 6](https://img.shields.io/badge/Swift-6-orange)
 ![License: MIT](https://img.shields.io/badge/License-MIT-green)
@@ -13,7 +14,7 @@ A lightweight macOS menu bar app for monitoring your Radarr and Sonarr download 
 - **Queue monitoring** — View active downloads from Radarr and Sonarr in a unified popover
 - **Upcoming media** — Browse upcoming TV episodes and movie releases with calendar grouping
 - **Download controls** — Pause, resume, and remove downloads directly from the menu bar
-- **Client support** — SABnzbd (Usenet) and qBittorrent (Torrent) integration
+- **Client support** — SABnzbd, NZBGet (Usenet) and qBittorrent, Transmission, rTorrent, Deluge (Torrent)
 - **Status bar badge** — Shows active download count with a live-updating icon
 - **Right-click menu** — Quick access to refresh, settings, and quit
 - **Open in browser** — Jump to any item's Radarr/Sonarr web page
@@ -48,8 +49,12 @@ open ArrBarr.xcodeproj
 2. Open **Settings** (gear menu or right-click the icon)
 3. Enter your service URLs and API keys:
    - **Radarr** / **Sonarr** — Base URL + API key (found in Settings > General in each app)
-   - **SABnzbd** — Base URL + API key (for Usenet download control)
-   - **qBittorrent** — Base URL + username/password (for Torrent download control)
+   - **SABnzbd** — Base URL + API key (Usenet)
+   - **NZBGet** — Base URL + username/password (Usenet)
+   - **qBittorrent** — Base URL + username/password (Torrent)
+   - **Transmission** — Base URL + username/password (Torrent)
+   - **rTorrent** — XMLRPC endpoint URL + username/password (Torrent)
+   - **Deluge** — Base URL + password (Torrent)
 
 All connections go through your local network. ArrBarr is sandboxed with network-client-only permissions.
 
@@ -61,7 +66,9 @@ All connections go through your local network. ArrBarr is sandboxed with network
 └──────────────────┘                              │  (popover)  │
                                                   └──────┬──────┘
 ┌──────────────────┐    start / pause / delete           │
-│ SABnzbd/qBitt.   │ ◀───────────────────────────────────┘
+│ Download Clients │ ◀───────────────────────────────────┘
+│ SAB/NZBGet/qBit  │
+│ Trans/rTor/Deluge│
 └──────────────────┘
 ```
 
@@ -72,7 +79,7 @@ All connections go through your local network. ArrBarr is sandboxed with network
 ```
 ArrBarr/
 ├── Models/          # QueueItem, UpcomingItem, ServiceConfig, API types
-├── Services/        # HTTP client, Radarr/Sonarr/SABnzbd/qBittorrent clients
+├── Services/        # HTTP client, Radarr/Sonarr + 6 download client adapters
 ├── ViewModels/      # QueueViewModel with optimistic updates
 └── Views/           # PopoverContentView, QueueRowView, SettingsView
 ```

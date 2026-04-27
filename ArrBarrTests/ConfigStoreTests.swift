@@ -19,6 +19,10 @@ struct ConfigStoreTests {
         #expect(store.sonarr == .empty)
         #expect(store.sabnzbd == .empty)
         #expect(store.qbittorrent == .empty)
+        #expect(store.nzbget == .empty)
+        #expect(store.transmission == .empty)
+        #expect(store.rtorrent == .empty)
+        #expect(store.deluge == .empty)
     }
 
     @Test("Default polling intervals are 5s foreground, 30s background")

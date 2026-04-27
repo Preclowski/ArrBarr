@@ -17,6 +17,10 @@
 		4A924CFD2C8652A8C2130FD8 /* QueueItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8368F44E56EB243C645549E1 /* QueueItem.swift */; };
 		63C90D1DDD8256091D388831 /* QbittorrentClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = E14AF8E6BCD3E031F64403D2 /* QbittorrentClient.swift */; };
 		66AFCB32AF8D15691A0A0FE2 /* UpcomingRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6B3B33C463CCA1E9E75154D /* UpcomingRowView.swift */; };
+		71E25D5D2F9F9AC00054A864 /* NzbgetClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71E25D5C2F9F9AC00054A864 /* NzbgetClient.swift */; };
+		71E25D5F2F9F9AC10054A864 /* TransmissionClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71E25D5E2F9F9AC10054A864 /* TransmissionClient.swift */; };
+		71E25D612F9F9AC10054A864 /* RtorrentClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71E25D602F9F9AC10054A864 /* RtorrentClient.swift */; };
+		71E25D632F9F9AC20054A864 /* DelugeClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71E25D622F9F9AC20054A864 /* DelugeClient.swift */; };
 		82B2E396634098E0FDA3E441 /* ArrTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48060A6CCC3F1544EE872199 /* ArrTypes.swift */; };
 		953E24EE53AE7971D31F0FA0 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C345657BD587401B20496BE6 /* Assets.xcassets */; };
 		9AE62E9483DBD45A17C23D0E /* PopoverContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F0DA93170F7174D59CBB0A6 /* PopoverContentView.swift */; };
@@ -55,6 +59,10 @@
 		65F8FDEDB2C4659A3568297C /* RadarrClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarrClient.swift; sourceTree = "<group>"; };
 		6C9F852D3892059766CF0A72 /* SabnzbdClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SabnzbdClient.swift; sourceTree = "<group>"; };
 		71E25D492F9F8D1B0054A864 /* ArrBarrTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ArrBarrTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		71E25D5C2F9F9AC00054A864 /* NzbgetClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NzbgetClient.swift; sourceTree = "<group>"; };
+		71E25D5E2F9F9AC10054A864 /* TransmissionClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransmissionClient.swift; sourceTree = "<group>"; };
+		71E25D602F9F9AC10054A864 /* RtorrentClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RtorrentClient.swift; sourceTree = "<group>"; };
+		71E25D622F9F9AC20054A864 /* DelugeClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DelugeClient.swift; sourceTree = "<group>"; };
 		8368F44E56EB243C645549E1 /* QueueItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QueueItem.swift; sourceTree = "<group>"; };
 		95C6DDB30ACEB4FDD30629F0 /* ConfigStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigStore.swift; sourceTree = "<group>"; };
 		B6B3B33C463CCA1E9E75154D /* UpcomingRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpcomingRowView.swift; sourceTree = "<group>"; };
@@ -106,6 +114,10 @@
 				65F8FDEDB2C4659A3568297C /* RadarrClient.swift */,
 				6C9F852D3892059766CF0A72 /* SabnzbdClient.swift */,
 				0CFA6A783235C2E8FC843636 /* SonarrClient.swift */,
+				71E25D5C2F9F9AC00054A864 /* NzbgetClient.swift */,
+				71E25D5E2F9F9AC10054A864 /* TransmissionClient.swift */,
+				71E25D602F9F9AC10054A864 /* RtorrentClient.swift */,
+				71E25D622F9F9AC20054A864 /* DelugeClient.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -281,6 +293,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				71E25D5D2F9F9AC00054A864 /* NzbgetClient.swift in Sources */,
 				1F0B1A9D78DA2F2F554BA54D /* AppDelegate.swift in Sources */,
 				D2FECFB6447CD596A4FC0207 /* ArrBarrApp.swift in Sources */,
 				82B2E396634098E0FDA3E441 /* ArrTypes.swift in Sources */,
@@ -288,11 +301,14 @@
 				44F961F5688B690373C0E12D /* DownloadClientTypes.swift in Sources */,
 				B2A301ECC359D8739AADDAA7 /* HTTPClient.swift in Sources */,
 				9AE62E9483DBD45A17C23D0E /* PopoverContentView.swift in Sources */,
+				71E25D5F2F9F9AC10054A864 /* TransmissionClient.swift in Sources */,
 				63C90D1DDD8256091D388831 /* QbittorrentClient.swift in Sources */,
+				71E25D632F9F9AC20054A864 /* DelugeClient.swift in Sources */,
 				E2D9DD2AD39BDB781D2CE854 /* QueueAggregator.swift in Sources */,
 				4A924CFD2C8652A8C2130FD8 /* QueueItem.swift in Sources */,
 				0D0E434079D152B096897BEC /* QueueRowView.swift in Sources */,
 				3B50BBDF38088A184E6A6C5D /* QueueSectionView.swift in Sources */,
+				71E25D612F9F9AC10054A864 /* RtorrentClient.swift in Sources */,
 				E7043ECF55373185EA0FE382 /* QueueViewModel.swift in Sources */,
 				35577A6B8323906C82620D7A /* RadarrClient.swift in Sources */,
 				F2B422F32893009BC5A19AC1 /* SabnzbdClient.swift in Sources */,

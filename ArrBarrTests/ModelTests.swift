@@ -55,27 +55,39 @@ struct ServiceKindTests {
         #expect(ServiceKind.sonarr.displayName == "Sonarr")
         #expect(ServiceKind.sabnzbd.displayName == "SABnzbd")
         #expect(ServiceKind.qbittorrent.displayName == "qBittorrent")
+        #expect(ServiceKind.nzbget.displayName == "NZBGet")
+        #expect(ServiceKind.transmission.displayName == "Transmission")
+        #expect(ServiceKind.rtorrent.displayName == "rTorrent")
+        #expect(ServiceKind.deluge.displayName == "Deluge")
     }
 
-    @Test("API key required for Arr services and SABnzbd, not qBittorrent")
+    @Test("API key required for Arr services and SABnzbd only")
     func apiKeyRequirements() {
         #expect(ServiceKind.radarr.requiresApiKey)
         #expect(ServiceKind.sonarr.requiresApiKey)
         #expect(ServiceKind.sabnzbd.requiresApiKey)
         #expect(!ServiceKind.qbittorrent.requiresApiKey)
+        #expect(!ServiceKind.nzbget.requiresApiKey)
+        #expect(!ServiceKind.transmission.requiresApiKey)
+        #expect(!ServiceKind.rtorrent.requiresApiKey)
+        #expect(!ServiceKind.deluge.requiresApiKey)
     }
 
-    @Test("Only qBittorrent requires login credentials")
+    @Test("Download clients require login credentials")
     func loginRequirements() {
         #expect(ServiceKind.qbittorrent.requiresLogin)
+        #expect(ServiceKind.nzbget.requiresLogin)
+        #expect(ServiceKind.transmission.requiresLogin)
+        #expect(ServiceKind.rtorrent.requiresLogin)
+        #expect(ServiceKind.deluge.requiresLogin)
         #expect(!ServiceKind.radarr.requiresLogin)
         #expect(!ServiceKind.sonarr.requiresLogin)
         #expect(!ServiceKind.sabnzbd.requiresLogin)
     }
 
-    @Test("CaseIterable covers all four services")
+    @Test("CaseIterable covers all eight services")
     func allCases() {
-        #expect(ServiceKind.allCases.count == 4)
+        #expect(ServiceKind.allCases.count == 8)
     }
 }
 

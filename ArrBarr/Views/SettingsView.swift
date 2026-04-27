@@ -6,6 +6,10 @@ struct SettingsView: View {
     @State private var draftSonarr: ServiceConfig = .empty
     @State private var draftSabnzbd: ServiceConfig = .empty
     @State private var draftQbittorrent: ServiceConfig = .empty
+    @State private var draftNzbget: ServiceConfig = .empty
+    @State private var draftTransmission: ServiceConfig = .empty
+    @State private var draftRtorrent: ServiceConfig = .empty
+    @State private var draftDeluge: ServiceConfig = .empty
     @State private var draftForegroundInterval: TimeInterval = 5
     @State private var draftBackgroundInterval: TimeInterval = 30
 
@@ -14,6 +18,10 @@ struct SettingsView: View {
         || draftSonarr != configStore.sonarr
         || draftSabnzbd != configStore.sabnzbd
         || draftQbittorrent != configStore.qbittorrent
+        || draftNzbget != configStore.nzbget
+        || draftTransmission != configStore.transmission
+        || draftRtorrent != configStore.rtorrent
+        || draftDeluge != configStore.deluge
         || draftForegroundInterval != configStore.foregroundInterval
         || draftBackgroundInterval != configStore.backgroundInterval
     }
@@ -32,6 +40,18 @@ struct SettingsView: View {
                 }
                 Section("qBittorrent") {
                     ServiceFields(config: $draftQbittorrent, requiresApiKey: false, requiresLogin: true)
+                }
+                Section("NZBGet") {
+                    ServiceFields(config: $draftNzbget, requiresApiKey: false, requiresLogin: true)
+                }
+                Section("Transmission") {
+                    ServiceFields(config: $draftTransmission, requiresApiKey: false, requiresLogin: true)
+                }
+                Section("rTorrent") {
+                    ServiceFields(config: $draftRtorrent, requiresApiKey: false, requiresLogin: true)
+                }
+                Section("Deluge") {
+                    ServiceFields(config: $draftDeluge, requiresApiKey: false, requiresLogin: true)
                 }
                 Section("Refresh Interval") {
                     Picker("Popover open", selection: $draftForegroundInterval) {
@@ -57,6 +77,10 @@ struct SettingsView: View {
                         configStore.sonarr = draftSonarr
                         configStore.sabnzbd = draftSabnzbd
                         configStore.qbittorrent = draftQbittorrent
+                        configStore.nzbget = draftNzbget
+                        configStore.transmission = draftTransmission
+                        configStore.rtorrent = draftRtorrent
+                        configStore.deluge = draftDeluge
                         configStore.foregroundInterval = draftForegroundInterval
                         configStore.backgroundInterval = draftBackgroundInterval
                     }
@@ -78,6 +102,10 @@ struct SettingsView: View {
         draftSonarr = configStore.sonarr
         draftSabnzbd = configStore.sabnzbd
         draftQbittorrent = configStore.qbittorrent
+        draftNzbget = configStore.nzbget
+        draftTransmission = configStore.transmission
+        draftRtorrent = configStore.rtorrent
+        draftDeluge = configStore.deluge
         draftForegroundInterval = configStore.foregroundInterval
         draftBackgroundInterval = configStore.backgroundInterval
     }
