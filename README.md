@@ -6,6 +6,9 @@ A lightweight macOS menu bar app for monitoring your Radarr and Sonarr download 
 ![Swift 6](https://img.shields.io/badge/Swift-6-orange)
 ![License: MIT](https://img.shields.io/badge/License-MIT-green)
 
+<!-- TODO: Add screenshot -->
+![ArrBarr Screenshot](screenshot.png)
+
 ## Features
 
 - **Queue monitoring** — View active downloads from Radarr and Sonarr in a unified popover
@@ -19,6 +22,13 @@ A lightweight macOS menu bar app for monitoring your Radarr and Sonarr download 
 - **Configurable polling** — Adjustable refresh intervals, including "Never" for manual refresh
 
 ## Installation
+
+### Homebrew
+
+```bash
+brew tap Preclowski/arrbarr
+brew install --cask arrbarr
+```
 
 ### Download
 
@@ -47,12 +57,12 @@ All connections go through your local network. ArrBarr is sandboxed with network
 ## Architecture
 
 ```
-┌──────────────────┐     info + custom formats      ┌─────────────┐
-│  Radarr/Sonarr   │ ──────────────────────────────▶│   ArrBarr   │
-└──────────────────┘                                 │  (popover)  │
-                                                     └─────┬───────┘
-┌──────────────────┐     start / pause / delete           │
-│ SABnzbd/qBitt.   │ ◀────────────────────────────────────┘
+┌──────────────────┐    info + custom formats     ┌─────────────┐
+│  Radarr/Sonarr   │ ───────────────────────────▶ │   ArrBarr   │
+└──────────────────┘                               │  (popover)  │
+                                                   └──────┬──────┘
+┌──────────────────┐    start / pause / delete            │
+│ SABnzbd/qBitt.   │ ◀───────────────────────────────────┘
 └──────────────────┘
 ```
 
@@ -67,13 +77,6 @@ ArrBarr/
 ├── ViewModels/      # QueueViewModel with optimistic updates
 └── Views/           # PopoverContentView, QueueRowView, SettingsView
 ```
-
-## Design decisions
-
-- **Refresh**: 5s while popover is open, 30s in background (badge update only)
-- **Delete action**: removes from the download client queue only — Radarr/Sonarr entries stay untouched
-- **Custom formats**: displayed in hover tooltips, fetched alongside the queue endpoint (`includeMovie=true` / `includeSeries=true`) with no extra requests
-- **Sandbox**: network client only — no file access, no Apple Events
 
 ## License
 
