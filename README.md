@@ -1,6 +1,6 @@
 # ArrBarr
 
-A lightweight macOS menu bar app for monitoring your Radarr and Sonarr download queues, upcoming media, and controlling download clients.
+A lightweight macOS menu bar app for monitoring your Radarr, Sonarr, and Lidarr download queues, upcoming media, and controlling download clients.
 
 [![Build & Test](https://github.com/Preclowski/ArrBarr/actions/workflows/release.yml/badge.svg)](https://github.com/Preclowski/ArrBarr/actions/workflows/release.yml)
 ![macOS 14+](https://img.shields.io/badge/macOS-14%2B-blue)
@@ -11,13 +11,14 @@ A lightweight macOS menu bar app for monitoring your Radarr and Sonarr download 
 
 ## Features
 
-- **Queue monitoring** — View active downloads from Radarr and Sonarr in a unified popover
-- **Upcoming media** — Browse upcoming TV episodes and movie releases with calendar grouping
+- **Queue monitoring** — View active downloads from Radarr, Sonarr, and Lidarr in a unified popover
+- **Upcoming media** — Browse upcoming movies, TV episodes, and album releases with calendar grouping
 - **Download controls** — Pause, resume, and remove downloads directly from the menu bar
 - **Client support** — SABnzbd, NZBGet (Usenet) and qBittorrent, Transmission, rTorrent, Deluge (Torrent)
+- **Notifications** — System notifications for new grabs, configurable per service
 - **Status bar badge** — Shows active download count with a live-updating icon
 - **Right-click menu** — Quick access to refresh, settings, and quit
-- **Open in browser** — Jump to any item's Radarr/Sonarr web page
+- **Open in browser** — Jump to any item's Radarr/Sonarr/Lidarr web page
 - **Liquid Glass** — Native macOS 26 (Tahoe) glass effects with graceful fallback
 - **Configurable polling** — Adjustable refresh intervals, including "Never" for manual refresh
 
@@ -54,7 +55,7 @@ open ArrBarr.xcodeproj
 1. Click the arrow icon in the menu bar
 2. Open **Settings** (gear menu or right-click the icon)
 3. Enter your service URLs and API keys:
-   - **Radarr** / **Sonarr** — Base URL + API key (found in Settings > General in each app)
+   - **Radarr** / **Sonarr** / **Lidarr** — Base URL + API key (found in Settings > General in each app)
    - **SABnzbd** — Base URL + API key (Usenet)
    - **NZBGet** — Base URL + username/password (Usenet)
    - **qBittorrent** — Base URL + username/password (Torrent)
@@ -67,15 +68,15 @@ All connections go through your local network. ArrBarr is sandboxed with network
 ## Architecture
 
 ```
-┌──────────────────┐    info + custom formats     ┌─────────────┐
-│  Radarr/Sonarr   │ ───────────────────────────▶ │   ArrBarr   │
-└──────────────────┘                              │  (popover)  │
-                                                  └──────┬──────┘
-┌──────────────────┐    start / pause / delete           │
-│ Download Clients │ ◀───────────────────────────────────┘
-│ SAB/NZBGet/qBit  │
-│ Trans/rTor/Deluge│
-└──────────────────┘
+┌────────────────────────┐  info + custom formats  ┌─────────────┐
+│ Radarr/Sonarr/Lidarr  │ ──────────────────────▶ │   ArrBarr   │
+└────────────────────────┘                         │  (popover)  │
+                                                   └──────┬──────┘
+┌────────────────────────┐  start / pause / delete        │
+│   Download Clients     │ ◀──────────────────────────────┘
+│ SAB/NZBGet/qBit/Trans  │
+│ rTorrent/Deluge         │
+└────────────────────────┘
 ```
 
 - **Swift 6** with strict concurrency (`@MainActor`, `actor` isolation)
@@ -85,7 +86,7 @@ All connections go through your local network. ArrBarr is sandboxed with network
 ```
 ArrBarr/
 ├── Models/          # QueueItem, UpcomingItem, ServiceConfig, API types
-├── Services/        # HTTP client, Radarr/Sonarr + 6 download client adapters
+├── Services/        # HTTP client, Radarr/Sonarr/Lidarr + 6 download client adapters
 ├── ViewModels/      # QueueViewModel with optimistic updates
 └── Views/           # PopoverContentView, QueueRowView, SettingsView
 ```
