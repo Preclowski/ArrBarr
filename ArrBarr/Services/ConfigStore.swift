@@ -52,7 +52,6 @@ final class ConfigStore: ObservableObject {
     static let backgroundIntervalOptions: [TimeInterval] = [0, 10, 30, 60, 120, 300]
 
     private let defaults: UserDefaults
-    private let secrets: SecretStore
     private var cancellables: Set<AnyCancellable> = []
 
     private static let foregroundIntervalKey = "ArrBarr.foregroundInterval"
@@ -61,19 +60,29 @@ final class ConfigStore: ObservableObject {
     private static let notifySonarrKey = "ArrBarr.notifySonarr"
     private static let notifyLidarrKey = "ArrBarr.notifyLidarr"
     private static let launchAtLoginKey = "ArrBarr.launchAtLogin"
+    private static let keychainMigrationDoneKey = "ArrBarr.keychainMigrationDone"
 
-    init(defaults: UserDefaults = .standard, secrets: SecretStore = KeychainSecretStore()) {
+    init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
-        self.secrets = secrets
-        self.radarr = Self.load(.radarr, from: defaults, secrets: secrets)
-        self.sonarr = Self.load(.sonarr, from: defaults, secrets: secrets)
-        self.lidarr = Self.load(.lidarr, from: defaults, secrets: secrets)
-        self.sabnzbd = Self.load(.sabnzbd, from: defaults, secrets: secrets)
-        self.qbittorrent = Self.load(.qbittorrent, from: defaults, secrets: secrets)
-        self.nzbget = Self.load(.nzbget, from: defaults, secrets: secrets)
-        self.transmission = Self.load(.transmission, from: defaults, secrets: secrets)
-        self.rtorrent = Self.load(.rtorrent, from: defaults, secrets: secrets)
-        self.deluge = Self.load(.deluge, from: defaults, secrets: secrets)
+        // One-time migration: pull any leftover Keychain secrets from older
+        // versions back into UserDefaults so they're loaded normally below.
+        // Without an Apple Developer ID, ad-hoc signed builds change identity
+        // every release, which makes Keychain prompt for the user's password
+        // on every launch — terrible UX. Storing in the sandbox container's
+        // UserDefaults avoids the prompts entirely.
+        if !defaults.bool(forKey: Self.keychainMigrationDoneKey) {
+            Self.migrateLegacyKeychainSecrets(defaults: defaults)
+            defaults.set(true, forKey: Self.keychainMigrationDoneKey)
+        }
+        self.radarr = Self.load(.radarr, from: defaults)
+        self.sonarr = Self.load(.sonarr, from: defaults)
+        self.lidarr = Self.load(.lidarr, from: defaults)
+        self.sabnzbd = Self.load(.sabnzbd, from: defaults)
+        self.qbittorrent = Self.load(.qbittorrent, from: defaults)
+        self.nzbget = Self.load(.nzbget, from: defaults)
+        self.transmission = Self.load(.transmission, from: defaults)
+        self.rtorrent = Self.load(.rtorrent, from: defaults)
+        self.deluge = Self.load(.deluge, from: defaults)
         let fgKey = Self.foregroundIntervalKey
         self.foregroundInterval = defaults.object(forKey: fgKey) != nil ? defaults.double(forKey: fgKey) : 5
         let bgKey = Self.backgroundIntervalKey
@@ -154,49 +163,44 @@ final class ConfigStore: ObservableObject {
     // MARK: - Persistence
 
     private static func key(_ kind: ServiceKind) -> String { "ArrBarr.config.\(kind.rawValue)" }
-    private static func apiKeyAccount(_ kind: ServiceKind) -> String { "\(kind.rawValue).apiKey" }
-    private static func passwordAccount(_ kind: ServiceKind) -> String { "\(kind.rawValue).password" }
 
-    private static func load(_ kind: ServiceKind, from defaults: UserDefaults, secrets: SecretStore) -> ServiceConfig {
+    private static func load(_ kind: ServiceKind, from defaults: UserDefaults) -> ServiceConfig {
         guard let data = defaults.data(forKey: key(kind)),
-              var cfg = try? JSONDecoder().decode(ServiceConfig.self, from: data)
+              let cfg = try? JSONDecoder().decode(ServiceConfig.self, from: data)
         else { return .empty }
-
-        // Migration: if legacy JSON still carries secrets, move them to keychain
-        // and rewrite the stripped blob back to defaults.
-        var didMigrate = false
-        if !cfg.apiKey.isEmpty {
-            secrets.write(cfg.apiKey, account: apiKeyAccount(kind))
-            didMigrate = true
-        }
-        if !cfg.password.isEmpty {
-            secrets.write(cfg.password, account: passwordAccount(kind))
-            didMigrate = true
-        }
-
-        cfg.apiKey = secrets.read(account: apiKeyAccount(kind)) ?? cfg.apiKey
-        cfg.password = secrets.read(account: passwordAccount(kind)) ?? cfg.password
-
-        if didMigrate {
-            var stripped = cfg
-            stripped.apiKey = ""
-            stripped.password = ""
-            if let stripped = try? JSONEncoder().encode(stripped) {
-                defaults.set(stripped, forKey: key(kind))
-            }
-        }
         return cfg
     }
 
     private func save(_ kind: ServiceKind, _ config: ServiceConfig) {
-        secrets.write(config.apiKey, account: Self.apiKeyAccount(kind))
-        secrets.write(config.password, account: Self.passwordAccount(kind))
-
-        var stripped = config
-        stripped.apiKey = ""
-        stripped.password = ""
-        if let data = try? JSONEncoder().encode(stripped) {
+        if let data = try? JSONEncoder().encode(config) {
             defaults.set(data, forKey: Self.key(kind))
+        }
+    }
+
+    // MARK: - One-time migration from Keychain (0.6.0/0.6.1) back to UserDefaults
+
+    private static func migrateLegacyKeychainSecrets(defaults: UserDefaults) {
+        for kind in ServiceKind.allCases {
+            guard let data = defaults.data(forKey: key(kind)),
+                  var cfg = try? JSONDecoder().decode(ServiceConfig.self, from: data)
+            else { continue }
+
+            var changed = false
+            if cfg.apiKey.isEmpty,
+               let migrated = LegacyKeychain.read(account: "\(kind.rawValue).apiKey") {
+                cfg.apiKey = migrated
+                changed = true
+            }
+            if cfg.password.isEmpty,
+               let migrated = LegacyKeychain.read(account: "\(kind.rawValue).password") {
+                cfg.password = migrated
+                changed = true
+            }
+            if changed, let updated = try? JSONEncoder().encode(cfg) {
+                defaults.set(updated, forKey: key(kind))
+                LegacyKeychain.delete(account: "\(kind.rawValue).apiKey")
+                LegacyKeychain.delete(account: "\(kind.rawValue).password")
+            }
         }
     }
 }

@@ -21,7 +21,6 @@ A lightweight macOS menu bar app for monitoring your Radarr, Sonarr, and Lidarr 
 - **Health badges** — Surface Radarr/Sonarr/Lidarr `/health` warnings inline as section badges
 - **Search / filter** — Filter the queue and upcoming lists by title or subtitle
 - **Launch at login** — Toggle in Settings (uses `SMAppService`)
-- **Keychain storage** — API keys and passwords stored in the macOS Keychain, not UserDefaults
 - **Notifications** — System notifications for new grabs, configurable per service
 - **Status bar badge** — Shows active download count with a live-updating icon
 - **Right-click menu** — Quick access to refresh, settings, and quit

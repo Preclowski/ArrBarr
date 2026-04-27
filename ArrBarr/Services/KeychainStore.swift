@@ -1,19 +1,18 @@
 import Foundation
 import Security
 
-protocol SecretStore: Sendable {
-    func read(account: String) -> String?
-    func write(_ value: String, account: String)
-    func delete(account: String)
-}
-
-struct KeychainSecretStore: SecretStore {
+/// Legacy Keychain helpers used only to migrate secrets written by ArrBarr
+/// 0.6.0 / 0.6.1 back into UserDefaults. Without an Apple Developer ID, the
+/// app's ad-hoc signature changes every release, which makes Keychain prompt
+/// the user for their login password on every launch — unusable. From 0.6.2
+/// onward secrets live in the sandboxed UserDefaults plist.
+enum LegacyKeychain {
     static let service = "com.preclowski.ArrBarr"
 
-    func read(account: String) -> String? {
+    static func read(account: String) -> String? {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: Self.service,
+            kSecAttrService as String: service,
             kSecAttrAccount as String: account,
             kSecReturnData as String: true,
             kSecMatchLimit as String: kSecMatchLimitOne,
@@ -28,59 +27,12 @@ struct KeychainSecretStore: SecretStore {
         return value
     }
 
-    func write(_ value: String, account: String) {
-        if value.isEmpty {
-            delete(account: account)
-            return
-        }
-        let data = Data(value.utf8)
+    static func delete(account: String) {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: Self.service,
-            kSecAttrAccount as String: account,
-        ]
-        let attributes: [String: Any] = [
-            kSecValueData as String: data,
-            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock,
-        ]
-        let updateStatus = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
-        if updateStatus == errSecItemNotFound {
-            var addQuery = query
-            addQuery.merge(attributes) { _, new in new }
-            SecItemAdd(addQuery as CFDictionary, nil)
-        }
-    }
-
-    func delete(account: String) {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: Self.service,
+            kSecAttrService as String: service,
             kSecAttrAccount as String: account,
         ]
         SecItemDelete(query as CFDictionary)
-    }
-}
-
-final class InMemorySecretStore: SecretStore, @unchecked Sendable {
-    private var storage: [String: String] = [:]
-    private let lock = NSLock()
-
-    func read(account: String) -> String? {
-        lock.lock(); defer { lock.unlock() }
-        return storage[account]
-    }
-
-    func write(_ value: String, account: String) {
-        lock.lock(); defer { lock.unlock() }
-        if value.isEmpty {
-            storage.removeValue(forKey: account)
-        } else {
-            storage[account] = value
-        }
-    }
-
-    func delete(account: String) {
-        lock.lock(); defer { lock.unlock() }
-        storage.removeValue(forKey: account)
     }
 }
