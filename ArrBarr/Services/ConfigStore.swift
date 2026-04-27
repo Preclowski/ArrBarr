@@ -15,6 +15,8 @@ final class ConfigStore: ObservableObject {
     @Published var deluge: ServiceConfig
     @Published var foregroundInterval: TimeInterval
     @Published var backgroundInterval: TimeInterval
+    @Published var notifyRadarr: Bool
+    @Published var notifySonarr: Bool
 
     static let foregroundIntervalOptions: [TimeInterval] = [0, 2, 5, 10, 15, 30]
     static let backgroundIntervalOptions: [TimeInterval] = [0, 10, 30, 60, 120, 300]
@@ -24,6 +26,8 @@ final class ConfigStore: ObservableObject {
 
     private static let foregroundIntervalKey = "ArrBarr.foregroundInterval"
     private static let backgroundIntervalKey = "ArrBarr.backgroundInterval"
+    private static let notifyRadarrKey = "ArrBarr.notifyRadarr"
+    private static let notifySonarrKey = "ArrBarr.notifySonarr"
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
@@ -39,6 +43,8 @@ final class ConfigStore: ObservableObject {
         self.foregroundInterval = defaults.object(forKey: fgKey) != nil ? defaults.double(forKey: fgKey) : 5
         let bgKey = Self.backgroundIntervalKey
         self.backgroundInterval = defaults.object(forKey: bgKey) != nil ? defaults.double(forKey: bgKey) : 30
+        self.notifyRadarr = defaults.object(forKey: Self.notifyRadarrKey) != nil ? defaults.bool(forKey: Self.notifyRadarrKey) : false
+        self.notifySonarr = defaults.object(forKey: Self.notifySonarrKey) != nil ? defaults.bool(forKey: Self.notifySonarrKey) : false
 
         for kind in ServiceKind.allCases {
             publisher(for: kind).dropFirst().sink { [weak self] cfg in
@@ -50,6 +56,12 @@ final class ConfigStore: ObservableObject {
         }.store(in: &cancellables)
         $backgroundInterval.dropFirst().sink { [weak self] val in
             self?.defaults.set(val, forKey: Self.backgroundIntervalKey)
+        }.store(in: &cancellables)
+        $notifyRadarr.dropFirst().sink { [weak self] val in
+            self?.defaults.set(val, forKey: Self.notifyRadarrKey)
+        }.store(in: &cancellables)
+        $notifySonarr.dropFirst().sink { [weak self] val in
+            self?.defaults.set(val, forKey: Self.notifySonarrKey)
         }.store(in: &cancellables)
     }
 

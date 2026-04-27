@@ -110,6 +110,10 @@ struct SettingsView: View {
                     }
                 }
             }
+            Section("Notifications") {
+                Toggle("Radarr — notify on new grabs", isOn: $configStore.notifyRadarr)
+                Toggle("Sonarr — notify on new grabs", isOn: $configStore.notifySonarr)
+            }
         }
         .formStyle(.grouped)
     }

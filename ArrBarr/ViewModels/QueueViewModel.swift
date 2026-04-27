@@ -1,6 +1,7 @@
 import Foundation
 import Combine
 import SwiftUI
+import UserNotifications
 
 @MainActor
 final class QueueViewModel: ObservableObject {
@@ -19,6 +20,7 @@ final class QueueViewModel: ObservableObject {
     private var intervalObservers: Set<AnyCancellable> = []
     private var optimisticOverrides: [String: OptimisticOverride] = [:]
     private var isRefreshing = false
+    private var knownItemIDs: Set<String>?
 
     private struct OptimisticOverride {
         let kind: Kind
@@ -103,8 +105,11 @@ final class QueueViewModel: ObservableObject {
         async let queueResult = aggregator.fetch()
         async let upcomingResult = aggregator.fetchUpcoming()
         let (queue, upcoming) = await (queueResult, upcomingResult)
-        self.radarr = applyOverrides(to: queue.radarr)
-        self.sonarr = applyOverrides(to: queue.sonarr)
+        let newRadarr = applyOverrides(to: queue.radarr)
+        let newSonarr = applyOverrides(to: queue.sonarr)
+        notifyNewItems(radarr: newRadarr, sonarr: newSonarr)
+        self.radarr = newRadarr
+        self.sonarr = newSonarr
         self.radarrError = queue.radarrError
         self.sonarrError = queue.sonarrError
         self.upcoming = upcoming
@@ -139,6 +144,47 @@ final class QueueViewModel: ObservableObject {
                 return nil
             }
         }
+    }
+
+    // MARK: - Notifications
+
+    private func notifyNewItems(radarr: [QueueItem], sonarr: [QueueItem]) {
+        let allItems = radarr + sonarr
+        let currentIDs = Set(allItems.map(\.id))
+
+        guard let known = knownItemIDs else {
+            knownItemIDs = currentIDs
+            return
+        }
+
+        let newItems = allItems.filter { !known.contains($0.id) }
+        knownItemIDs = currentIDs
+
+        for item in newItems {
+            switch item.source {
+            case .radarr where configStore.notifyRadarr: sendNotification(for: item)
+            case .sonarr where configStore.notifySonarr: sendNotification(for: item)
+            default: break
+            }
+        }
+    }
+
+    private func sendNotification(for item: QueueItem) {
+        let content = UNMutableNotificationContent()
+        content.title = item.source == .radarr ? "Radarr" : "Sonarr"
+        content.subtitle = item.title
+        var body = item.status.displayName
+        if let quality = item.quality { body += " · \(quality)" }
+        if item.isUpgrade { body += " · Upgrade" }
+        content.body = body
+        content.sound = .default
+
+        let request = UNNotificationRequest(
+            identifier: "arrbarr.\(item.id)",
+            content: content,
+            trigger: nil
+        )
+        UNUserNotificationCenter.current().add(request)
     }
 
     // MARK: - Actions

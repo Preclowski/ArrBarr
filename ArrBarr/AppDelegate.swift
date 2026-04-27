@@ -1,6 +1,7 @@
 import AppKit
 import SwiftUI
 import Combine
+import UserNotifications
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -36,6 +37,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let hosting = NSHostingController(rootView: root)
         hosting.sizingOptions = [.preferredContentSize]
         popover.contentViewController = hosting
+
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
 
         badgeObserver = Publishers.CombineLatest(queueVM.$radarr, queueVM.$sonarr)
             .sink { [weak self] radarr, sonarr in
