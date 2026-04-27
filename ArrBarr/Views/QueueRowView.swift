@@ -9,9 +9,16 @@ struct QueueRowView: View {
 
     private var canControl: Bool {
         switch item.downloadProtocol {
-        case .usenet: return configStore.sabnzbd.isConfigured && !configStore.sabnzbd.apiKey.isEmpty
-        case .torrent: return configStore.qbittorrent.isConfigured
-        case .unknown: return false
+        case .usenet:
+            return (configStore.sabnzbd.isConfigured && !configStore.sabnzbd.apiKey.isEmpty)
+                || configStore.nzbget.isConfigured
+        case .torrent:
+            return configStore.qbittorrent.isConfigured
+                || configStore.transmission.isConfigured
+                || configStore.rtorrent.isConfigured
+                || configStore.deluge.isConfigured
+        case .unknown:
+            return false
         }
     }
 
@@ -20,66 +27,76 @@ struct QueueRowView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(alignment: .top, spacing: 8) {
-                VStack(alignment: .leading, spacing: 1) {
-                    HStack(spacing: 4) {
-                        Text(item.title)
-                            .font(.system(size: 12, weight: .medium))
-                            .lineLimit(1)
-                            .truncationMode(.tail)
+        HStack(alignment: .top, spacing: 10) {
+            RemotePoster(
+                url: item.posterURL,
+                apiKey: item.posterRequiresAuth ? apiKeyForSource : nil,
+                size: posterSize,
+                cornerRadius: 4,
+                fallbackSymbol: fallbackSymbol
+            )
 
-                        Text(item.isUpgrade ? "Upgrade" : "New")
-                            .font(.system(size: 8, weight: .semibold))
-                            .foregroundStyle(item.isUpgrade ? .orange : .green)
-                            .padding(.horizontal, 4)
-                            .padding(.vertical, 1)
-                            .background(
-                                (item.isUpgrade ? Color.orange : Color.green).opacity(0.15),
-                                in: Capsule()
-                            )
-                    }
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(alignment: .top, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 1) {
+                        HStack(spacing: 4) {
+                            Text(item.title)
+                                .font(.system(size: 12, weight: .medium))
+                                .lineLimit(1)
+                                .truncationMode(.tail)
 
-                    if let sub = item.subtitle {
-                        Text(sub)
-                            .font(.system(size: 11))
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                    }
-
-                    HStack(spacing: 3) {
-                        Image(systemName: statusSymbol)
-                            .foregroundStyle(progressTint)
-                            .font(.system(size: 8))
-                        Text(item.status.displayName)
-                            .foregroundStyle(progressTint)
-                        if !metaLine.isEmpty {
-                            Text("·")
-                                .foregroundStyle(.tertiary)
-                            Text(metaLine)
-                                .foregroundStyle(.tertiary)
+                            Text(item.isUpgrade ? "Upgrade" : "New")
+                                .font(.system(size: 8, weight: .semibold))
+                                .foregroundStyle(item.isUpgrade ? .orange : .green)
+                                .padding(.horizontal, 4)
+                                .padding(.vertical, 1)
+                                .background(
+                                    (item.isUpgrade ? Color.orange : Color.green).opacity(0.15),
+                                    in: Capsule()
+                                )
                         }
+
+                        if let sub = item.subtitle {
+                            Text(sub)
+                                .font(.system(size: 11))
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
+
+                        HStack(spacing: 3) {
+                            Image(systemName: statusSymbol)
+                                .foregroundStyle(progressTint)
+                                .font(.system(size: 8))
+                            Text(item.status.displayName)
+                                .foregroundStyle(progressTint)
+                            if !metaLine.isEmpty {
+                                Text("·")
+                                    .foregroundStyle(.tertiary)
+                                Text(metaLine)
+                                    .foregroundStyle(.tertiary)
+                            }
+                        }
+                        .font(.system(size: 10))
+                        .lineLimit(1)
                     }
-                    .font(.system(size: 10))
-                    .lineLimit(1)
+                    Spacer(minLength: 4)
+                    if isHovering {
+                        actionButtons
+                            .transition(.opacity)
+                    }
                 }
-                Spacer(minLength: 4)
-                if isHovering {
-                    actionButtons
-                        .transition(.opacity)
+
+                if !item.customFormats.isEmpty {
+                    customFormatTags
+                        .padding(.top, 2)
                 }
-            }
 
-            if !item.customFormats.isEmpty {
-                customFormatTags
-                    .padding(.top, 2)
+                ProgressView(value: item.progress)
+                    .progressViewStyle(.linear)
+                    .tint(progressTint)
+                    .frame(height: 3)
+                    .padding(.top, item.customFormats.isEmpty ? 0 : 2)
             }
-
-            ProgressView(value: item.progress)
-                .progressViewStyle(.linear)
-                .tint(progressTint)
-                .frame(height: 3)
-                .padding(.top, item.customFormats.isEmpty ? 0 : 2)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
@@ -100,6 +117,31 @@ struct QueueRowView: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("This will remove \"\(item.title)\" from the download client.")
+        }
+    }
+
+    // MARK: - Poster helpers
+
+    private var posterSize: CGSize {
+        switch item.source {
+        case .radarr, .sonarr: return CGSize(width: 40, height: 60)
+        case .lidarr: return CGSize(width: 40, height: 40)
+        }
+    }
+
+    private var fallbackSymbol: String {
+        switch item.source {
+        case .radarr: return "film"
+        case .sonarr: return "tv"
+        case .lidarr: return "music.note"
+        }
+    }
+
+    private var apiKeyForSource: String? {
+        switch item.source {
+        case .radarr: return configStore.radarr.apiKey
+        case .sonarr: return configStore.sonarr.apiKey
+        case .lidarr: return configStore.lidarr.apiKey
         }
     }
 

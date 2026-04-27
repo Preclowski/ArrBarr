@@ -2,13 +2,17 @@ import SwiftUI
 
 struct UpcomingRowView: View {
     let item: UpcomingItem
+    @EnvironmentObject var configStore: ConfigStore
 
     var body: some View {
         HStack(spacing: 8) {
-            Image(systemName: item.source == .sonarr ? "tv" : "film")
-                .font(.system(size: 11))
-                .foregroundStyle(.secondary)
-                .frame(width: 16)
+            RemotePoster(
+                url: item.posterURL,
+                apiKey: item.posterRequiresAuth ? apiKeyForSource : nil,
+                size: posterSize,
+                cornerRadius: 3,
+                fallbackSymbol: fallbackSymbol
+            )
 
             VStack(alignment: .leading, spacing: 1) {
                 Text(item.title)
@@ -47,6 +51,29 @@ struct UpcomingRowView: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 5)
         .help(tooltipText)
+    }
+
+    private var posterSize: CGSize {
+        switch item.source {
+        case .radarr, .sonarr: return CGSize(width: 24, height: 36)
+        case .lidarr: return CGSize(width: 24, height: 24)
+        }
+    }
+
+    private var fallbackSymbol: String {
+        switch item.source {
+        case .radarr: return "film"
+        case .sonarr: return "tv"
+        case .lidarr: return "music.note"
+        }
+    }
+
+    private var apiKeyForSource: String? {
+        switch item.source {
+        case .radarr: return configStore.radarr.apiKey
+        case .sonarr: return configStore.sonarr.apiKey
+        case .lidarr: return configStore.lidarr.apiKey
+        }
     }
 
     private var tooltipText: String {

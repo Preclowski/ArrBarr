@@ -8,6 +8,16 @@ actor SonarrClient {
         self.config = config
     }
 
+    func testConnection() async throws -> String {
+        guard config.isConfigured else { throw HTTPError.notConfigured }
+        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
+        let url = try http.url(base: config.baseURL, path: "/api/v3/system/status")
+        let data = try await http.get(url, headers: ["X-Api-Key": config.apiKey])
+        struct Status: Decodable { let version: String? }
+        let status = try? JSONDecoder().decode(Status.self, from: data)
+        return status?.version.map { "Sonarr \($0)" } ?? "OK"
+    }
+
     func fetchQueue() async throws -> [QueueItem] {
         guard config.isConfigured else { throw HTTPError.notConfigured }
         guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
@@ -31,7 +41,8 @@ actor SonarrClient {
             throw HTTPError.decoding(error)
         }
 
-        return page.records.map { Self.unify($0) }
+        let baseURL = config.baseURL
+        return page.records.map { Self.unify($0, baseURL: baseURL) }
     }
 
     func fetchCalendar() async throws -> [UpcomingItem] {
@@ -62,10 +73,19 @@ actor SonarrClient {
             throw HTTPError.decoding(error)
         }
 
-        return records.compactMap { Self.unifyCalendar($0) }
+        let baseURL = config.baseURL
+        return records.compactMap { Self.unifyCalendar($0, baseURL: baseURL) }
     }
 
-    private static func unifyCalendar(_ r: SonarrCalendarRecord) -> UpcomingItem? {
+    func fetchHealth() async throws -> [ArrHealthRecord] {
+        guard config.isConfigured else { throw HTTPError.notConfigured }
+        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
+        let url = try http.url(base: config.baseURL, path: "/api/v3/health")
+        let data = try await http.get(url, headers: ["X-Api-Key": config.apiKey])
+        return (try? JSONDecoder().decode([ArrHealthRecord].self, from: data)) ?? []
+    }
+
+    private static func unifyCalendar(_ r: SonarrCalendarRecord, baseURL: String) -> UpcomingItem? {
         guard let dateStr = r.airDateUtc, let date = parseArrDate(dateStr) else { return nil }
 
         let seriesTitle = r.series?.title ?? "Unknown"
@@ -78,6 +98,7 @@ actor SonarrClient {
                 subtitle = code
             }
         }
+        let (poster, auth) = pickPosterURL(from: r.series?.images, coverTypes: ["poster"], baseURL: baseURL)
 
         return UpcomingItem(
             id: "sonarr-cal-\(r.id)",
@@ -87,11 +108,13 @@ actor SonarrClient {
             airDate: date,
             releaseType: "Airing",
             hasFile: r.hasFile ?? false,
-            overview: r.overview
+            overview: r.overview,
+            posterURL: poster,
+            posterRequiresAuth: auth
         )
     }
 
-    private static func unify(_ r: SonarrQueueRecord) -> QueueItem {
+    private static func unify(_ r: SonarrQueueRecord, baseURL: String) -> QueueItem {
         let total = Int64(r.size ?? 0)
         let left = Int64(r.sizeleft ?? 0)
         let progress: Double
@@ -119,6 +142,7 @@ actor SonarrClient {
             title = r.title ?? "Unknown"
             subtitle = nil
         }
+        let (poster, posterAuth) = pickPosterURL(from: r.series?.images, coverTypes: ["poster"], baseURL: baseURL)
 
         return QueueItem(
             id: "sonarr-\(r.id)",
@@ -138,7 +162,9 @@ actor SonarrClient {
             customFormatScore: r.customFormatScore ?? 0,
             quality: r.quality?.name,
             isUpgrade: r.episode?.hasFile ?? false,
-            contentSlug: r.series?.titleSlug
+            contentSlug: r.series?.titleSlug,
+            posterURL: poster,
+            posterRequiresAuth: posterAuth
         )
     }
 }

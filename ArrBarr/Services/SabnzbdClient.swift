@@ -50,6 +50,24 @@ actor SabnzbdClient {
         return slots.contains { $0.nzo_id == nzoId }
     }
 
+    func testConnection() async throws -> String {
+        guard config.isConfigured else { throw HTTPError.notConfigured }
+        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
+        let url = try http.url(
+            base: config.baseURL,
+            path: "/api",
+            query: [
+                URLQueryItem(name: "mode", value: "version"),
+                URLQueryItem(name: "output", value: "json"),
+                URLQueryItem(name: "apikey", value: config.apiKey),
+            ]
+        )
+        let data = try await http.get(url)
+        struct Version: Decodable { let version: String? }
+        let v = try? JSONDecoder().decode(Version.self, from: data)
+        return v?.version.map { "SABnzbd \($0)" } ?? "OK"
+    }
+
     private func fetchSlots() async throws -> [SabSlot] {
         guard config.isConfigured, !config.apiKey.isEmpty else { throw HTTPError.notConfigured }
 

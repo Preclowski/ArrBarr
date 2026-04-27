@@ -5,6 +5,7 @@ struct QueueSectionView: View {
     let symbol: String
     let items: [QueueItem]
     var error: String?
+    var health: [ArrHealthRecord] = []
     @ObservedObject var viewModel: QueueViewModel
 
     var body: some View {
@@ -19,6 +20,9 @@ struct QueueSectionView: View {
                     Text("\(items.count)")
                         .font(.system(size: 11))
                         .foregroundStyle(.tertiary)
+                }
+                if !health.isEmpty {
+                    healthBadge
                 }
                 Spacer()
             }
@@ -44,5 +48,12 @@ struct QueueSectionView: View {
                 }
             }
         }
+    }
+
+    private var healthBadge: some View {
+        Image(systemName: "exclamationmark.triangle.fill")
+            .font(.system(size: 10))
+            .foregroundStyle(.orange)
+            .help(health.compactMap(\.message).joined(separator: "\n"))
     }
 }

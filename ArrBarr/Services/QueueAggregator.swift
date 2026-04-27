@@ -46,6 +46,22 @@ final class QueueAggregator {
         )
     }
 
+    func fetchHealth() async -> HealthResult {
+        let radarrCfg = configStore.radarr
+        let sonarrCfg = configStore.sonarr
+        let lidarrCfg = configStore.lidarr
+
+        async let radarr = Self.safeFetchHealth { try await RadarrClient(config: radarrCfg).fetchHealth() }
+        async let sonarr = Self.safeFetchHealth { try await SonarrClient(config: sonarrCfg).fetchHealth() }
+        async let lidarr = Self.safeFetchHealth { try await LidarrClient(config: lidarrCfg).fetchHealth() }
+        let (r, s, l) = await (radarr, sonarr, lidarr)
+        return HealthResult(radarr: r, sonarr: s, lidarr: l)
+    }
+
+    private static func safeFetchHealth(_ block: () async throws -> [ArrHealthRecord]) async -> [ArrHealthRecord] {
+        do { return try await block() } catch { return [] }
+    }
+
     func fetchUpcoming() async -> [UpcomingItem] {
         let radarrCfg = configStore.radarr
         let sonarrCfg = configStore.sonarr
@@ -190,6 +206,14 @@ final class QueueAggregator {
     private func delugeAction(_ a: Action) -> DelugeClient.Action {
         switch a { case .pause: .pause; case .resume: .resume; case .delete: .delete }
     }
+}
+
+struct HealthResult: Equatable {
+    let radarr: [ArrHealthRecord]
+    let sonarr: [ArrHealthRecord]
+    let lidarr: [ArrHealthRecord]
+
+    static let empty = HealthResult(radarr: [], sonarr: [], lidarr: [])
 }
 
 struct AggregateResult: Equatable {

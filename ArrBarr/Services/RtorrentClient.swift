@@ -39,6 +39,30 @@ actor RtorrentClient {
         }
     }
 
+    func testConnection() async throws -> String {
+        guard config.isConfigured else { throw HTTPError.notConfigured }
+        let xml = """
+        <?xml version="1.0" encoding="UTF-8"?>\
+        <methodCall>\
+        <methodName>system.client_version</methodName>\
+        <params></params>\
+        </methodCall>
+        """
+        let url = try http.url(base: config.baseURL, path: "")
+        let data = try await http.post(url, headers: authHeaders(), body: Data(xml.utf8))
+        let body = String(data: data, encoding: .utf8) ?? ""
+        if body.contains("<fault>") {
+            throw RtorrentError.actionFailed("XMLRPC fault during version check")
+        }
+        // Crude extraction of <string>X</string>
+        if let r = body.range(of: "<string>"),
+           let end = body.range(of: "</string>", range: r.upperBound..<body.endIndex) {
+            let v = String(body[r.upperBound..<end.lowerBound])
+            return "rTorrent \(v)"
+        }
+        return "OK"
+    }
+
     private func xmlrpcCall(method: String, stringParam: String) -> String {
         let escaped = stringParam
             .replacingOccurrences(of: "&", with: "&amp;")

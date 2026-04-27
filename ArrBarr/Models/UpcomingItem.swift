@@ -11,6 +11,19 @@ struct UpcomingItem: Identifiable, Equatable {
     let releaseType: String?
     let hasFile: Bool
     let overview: String?
+    let posterURL: URL?
+    let posterRequiresAuth: Bool
+
+    init(
+        id: String, source: Source, title: String, subtitle: String?,
+        airDate: Date, releaseType: String?, hasFile: Bool, overview: String?,
+        posterURL: URL? = nil, posterRequiresAuth: Bool = false
+    ) {
+        self.id = id; self.source = source; self.title = title; self.subtitle = subtitle
+        self.airDate = airDate; self.releaseType = releaseType
+        self.hasFile = hasFile; self.overview = overview
+        self.posterURL = posterURL; self.posterRequiresAuth = posterRequiresAuth
+    }
 
     private static let mediumDateFormatter: DateFormatter = {
         let f = DateFormatter()

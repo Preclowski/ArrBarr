@@ -38,6 +38,25 @@ actor TransmissionClient {
         }
     }
 
+    func testConnection() async throws -> String {
+        guard config.isConfigured else { throw HTTPError.notConfigured }
+        let url = try http.url(base: config.baseURL, path: "/transmission/rpc")
+        let bodyDict: [String: Any] = ["method": "session-get", "arguments": ["fields": ["version"]]]
+        let body = try JSONSerialization.data(withJSONObject: bodyDict)
+        let data = try await rpcRequest(url: url, body: body)
+        if let resp = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let result = resp["result"] as? String {
+            if result == "success",
+               let args = resp["arguments"] as? [String: Any],
+               let version = args["version"] as? String {
+                return "Transmission \(version)"
+            } else if result != "success" {
+                throw TransmissionError.actionFailed(result)
+            }
+        }
+        return "OK"
+    }
+
     private func rpcRequest(url: URL, body: Data, retried: Bool = false) async throws -> Data {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"

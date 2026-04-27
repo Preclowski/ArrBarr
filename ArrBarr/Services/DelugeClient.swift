@@ -61,6 +61,15 @@ actor DelugeClient {
         }
     }
 
+    func testConnection() async throws -> String {
+        try await ensureLoggedIn()
+        let resp = try await rpc(method: "daemon.info", params: [])
+        if let version = resp["result"] as? String {
+            return "Deluge \(version)"
+        }
+        return "OK"
+    }
+
     private func ensureLoggedIn() async throws {
         guard config.isConfigured else { throw HTTPError.notConfigured }
         if loggedIn { return }

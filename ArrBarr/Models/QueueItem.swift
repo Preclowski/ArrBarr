@@ -40,6 +40,29 @@ struct QueueItem: Identifiable, Equatable {
     let isUpgrade: Bool
     let contentSlug: String?
 
+    let posterURL: URL?
+    let posterRequiresAuth: Bool
+
+    init(
+        id: String, source: Source, arrQueueId: Int,
+        downloadId: String?, downloadProtocol: DownloadProtocol,
+        downloadClient: String?, title: String, subtitle: String?,
+        status: Status, progress: Double, sizeTotal: Int64,
+        sizeLeft: Int64, timeLeft: String?,
+        customFormats: [String], customFormatScore: Int,
+        quality: String?, isUpgrade: Bool, contentSlug: String?,
+        posterURL: URL? = nil, posterRequiresAuth: Bool = false
+    ) {
+        self.id = id; self.source = source; self.arrQueueId = arrQueueId
+        self.downloadId = downloadId; self.downloadProtocol = downloadProtocol
+        self.downloadClient = downloadClient; self.title = title; self.subtitle = subtitle
+        self.status = status; self.progress = progress; self.sizeTotal = sizeTotal
+        self.sizeLeft = sizeLeft; self.timeLeft = timeLeft
+        self.customFormats = customFormats; self.customFormatScore = customFormatScore
+        self.quality = quality; self.isUpgrade = isUpgrade; self.contentSlug = contentSlug
+        self.posterURL = posterURL; self.posterRequiresAuth = posterRequiresAuth
+    }
+
     var isPaused: Bool { status == .paused }
     var isCompleted: Bool { status == .completed }
 }

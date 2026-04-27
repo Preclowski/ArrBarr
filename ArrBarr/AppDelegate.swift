@@ -40,6 +40,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
 
+        Task.detached { await ImageCache.shared.purgeOlderThan(30) }
+
         badgeObserver = Publishers.CombineLatest3(queueVM.$radarr, queueVM.$sonarr, queueVM.$lidarr)
             .sink { [weak self] radarr, sonarr, lidarr in
                 let active = (radarr + sonarr + lidarr).filter { $0.status != .completed }.count

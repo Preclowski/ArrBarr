@@ -19,6 +19,12 @@ struct ArrQuality: Decodable {
     var name: String? { quality?.name }
 }
 
+struct ArrImage: Decodable, Equatable {
+    let coverType: String?
+    let url: String?
+    let remoteUrl: String?
+}
+
 // MARK: - Radarr
 
 struct RadarrQueueRecord: Decodable {
@@ -48,6 +54,7 @@ struct RadarrMovie: Decodable {
     let originalTitle: String?
     let hasFile: Bool?
     let titleSlug: String?
+    let images: [ArrImage]?
 }
 
 // MARK: - Sonarr
@@ -80,6 +87,7 @@ struct SonarrSeries: Decodable {
     let title: String
     let year: Int?
     let titleSlug: String?
+    let images: [ArrImage]?
 }
 
 struct SonarrEpisode: Decodable {
@@ -118,6 +126,7 @@ struct LidarrArtist: Decodable {
     let id: Int
     let artistName: String
     let foreignArtistId: String?
+    let images: [ArrImage]?
 }
 
 struct LidarrAlbum: Decodable {
@@ -126,6 +135,7 @@ struct LidarrAlbum: Decodable {
     let releaseDate: String?
     let foreignAlbumId: String?
     let artist: LidarrArtist?
+    let images: [ArrImage]?
 }
 
 struct LidarrCalendarRecord: Decodable {
@@ -135,6 +145,16 @@ struct LidarrCalendarRecord: Decodable {
     let foreignAlbumId: String?
     let overview: String?
     let artist: LidarrArtist?
+    let images: [ArrImage]?
+}
+
+// MARK: - Health
+
+struct ArrHealthRecord: Decodable, Equatable {
+    let source: String?
+    let type: String?
+    let message: String?
+    let wikiUrl: String?
 }
 
 // MARK: - Calendar
@@ -148,6 +168,8 @@ struct RadarrCalendarRecord: Decodable {
     let inCinemas: String?
     let hasFile: Bool?
     let overview: String?
+    let images: [ArrImage]?
+    let titleSlug: String?
 }
 
 struct SonarrCalendarRecord: Decodable {

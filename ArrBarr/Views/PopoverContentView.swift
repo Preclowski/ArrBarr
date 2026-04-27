@@ -7,12 +7,22 @@ struct PopoverContentView: View {
     let onQuit: () -> Void
 
     @State private var selectedTab: Tab = .queue
+    @State private var searchText = ""
 
     private let maxScrollHeight: CGFloat = 520
 
-    private var sonarrConfigured: Bool { configStore.sonarr.isConfigured }
-    private var radarrConfigured: Bool { configStore.radarr.isConfigured }
-    private var lidarrConfigured: Bool { configStore.lidarr.isConfigured }
+    private func filter(_ items: [QueueItem]) -> [QueueItem] {
+        let q = searchText.trimmingCharacters(in: .whitespaces).lowercased()
+        guard !q.isEmpty else { return items }
+        return items.filter {
+            $0.title.lowercased().contains(q)
+                || ($0.subtitle?.lowercased().contains(q) ?? false)
+        }
+    }
+
+    private var sonarrConfigured: Bool { DemoMode.isActive || configStore.sonarr.isConfigured }
+    private var radarrConfigured: Bool { DemoMode.isActive || configStore.radarr.isConfigured }
+    private var lidarrConfigured: Bool { DemoMode.isActive || configStore.lidarr.isConfigured }
     private var anyArrConfigured: Bool { sonarrConfigured || radarrConfigured || lidarrConfigured }
 
     enum Tab: String, CaseIterable {
@@ -35,6 +45,9 @@ struct PopoverContentView: View {
             if anyArrConfigured {
                 tabBar
                 Divider()
+                if hasAnyItems {
+                    searchBar
+                }
                 Group {
                     switch selectedTab {
                     case .queue: queueContent
@@ -47,6 +60,37 @@ struct PopoverContentView: View {
             footer
         }
         .frame(width: 400)
+    }
+
+    private var hasAnyItems: Bool {
+        switch selectedTab {
+        case .queue: return !(viewModel.radarr.isEmpty && viewModel.sonarr.isEmpty && viewModel.lidarr.isEmpty)
+        case .upcoming: return !viewModel.upcoming.isEmpty
+        }
+    }
+
+    private var searchBar: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+            TextField("Filter…", text: $searchText)
+                .textFieldStyle(.plain)
+                .font(.system(size: 12))
+            if !searchText.isEmpty {
+                Button {
+                    searchText = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(Color.primary.opacity(0.04))
     }
 
     // MARK: - Tab bar
@@ -92,8 +136,9 @@ struct PopoverContentView: View {
                         QueueSectionView(
                             title: "Sonarr",
                             symbol: "tv",
-                            items: viewModel.sonarr,
+                            items: filter(viewModel.sonarr),
                             error: viewModel.sonarrError,
+                            health: viewModel.health.sonarr,
                             viewModel: viewModel
                         )
                     }
@@ -106,8 +151,9 @@ struct PopoverContentView: View {
                         QueueSectionView(
                             title: "Radarr",
                             symbol: "film",
-                            items: viewModel.radarr,
+                            items: filter(viewModel.radarr),
                             error: viewModel.radarrError,
+                            health: viewModel.health.radarr,
                             viewModel: viewModel
                         )
                     }
@@ -120,8 +166,9 @@ struct PopoverContentView: View {
                         QueueSectionView(
                             title: "Lidarr",
                             symbol: "music.note",
-                            items: viewModel.lidarr,
+                            items: filter(viewModel.lidarr),
                             error: viewModel.lidarrError,
+                            health: viewModel.health.lidarr,
                             viewModel: viewModel
                         )
                     }
@@ -138,7 +185,7 @@ struct PopoverContentView: View {
 
     private var upcomingContent: some View {
         ScrollView {
-            if viewModel.upcoming.isEmpty {
+            if filteredUpcoming.isEmpty {
                 VStack(spacing: 8) {
                     Image(systemName: "calendar")
                         .font(.system(size: 24, weight: .light))
@@ -172,12 +219,21 @@ struct PopoverContentView: View {
         .fixedSize(horizontal: false, vertical: true)
     }
 
+    private var filteredUpcoming: [UpcomingItem] {
+        let q = searchText.trimmingCharacters(in: .whitespaces).lowercased()
+        guard !q.isEmpty else { return viewModel.upcoming }
+        return viewModel.upcoming.filter {
+            $0.title.lowercased().contains(q)
+                || ($0.subtitle?.lowercased().contains(q) ?? false)
+        }
+    }
+
     private var groupedUpcoming: [UpcomingGroup] {
         let calendar = Calendar.current
         var groups: [UpcomingGroup] = []
         var current: (date: DateComponents, items: [UpcomingItem])?
 
-        for item in viewModel.upcoming {
+        for item in filteredUpcoming {
             let dc = calendar.dateComponents([.year, .month, .day], from: item.airDate)
             if let c = current, c.date == dc {
                 current?.items.append(item)

@@ -22,6 +22,10 @@
 		71E25D612F9F9AC10054A864 /* RtorrentClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71E25D602F9F9AC10054A864 /* RtorrentClient.swift */; };
 		71E25D632F9F9AC20054A864 /* DelugeClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71E25D622F9F9AC20054A864 /* DelugeClient.swift */; };
 		71E25D652F9FB4290054A864 /* LidarrClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71E25D642F9FB4290054A864 /* LidarrClient.swift */; };
+		7A1D7C0E2F00000100000001 /* KeychainStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A1D7C0D2F00000100000001 /* KeychainStore.swift */; };
+		7A1D7C102F00000100000002 /* ImageCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A1D7C0F2F00000100000002 /* ImageCache.swift */; };
+		7A1D7C122F00000100000003 /* RemotePoster.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A1D7C112F00000100000003 /* RemotePoster.swift */; };
+		7A1D7C142F00000100000004 /* DemoMocks.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A1D7C132F00000100000004 /* DemoMocks.swift */; };
 		82B2E396634098E0FDA3E441 /* ArrTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48060A6CCC3F1544EE872199 /* ArrTypes.swift */; };
 		953E24EE53AE7971D31F0FA0 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C345657BD587401B20496BE6 /* Assets.xcassets */; };
 		9AE62E9483DBD45A17C23D0E /* PopoverContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F0DA93170F7174D59CBB0A6 /* PopoverContentView.swift */; };
@@ -65,6 +69,10 @@
 		71E25D602F9F9AC10054A864 /* RtorrentClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RtorrentClient.swift; sourceTree = "<group>"; };
 		71E25D622F9F9AC20054A864 /* DelugeClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DelugeClient.swift; sourceTree = "<group>"; };
 		71E25D642F9FB4290054A864 /* LidarrClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LidarrClient.swift; sourceTree = "<group>"; };
+		7A1D7C0D2F00000100000001 /* KeychainStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainStore.swift; sourceTree = "<group>"; };
+		7A1D7C0F2F00000100000002 /* ImageCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageCache.swift; sourceTree = "<group>"; };
+		7A1D7C112F00000100000003 /* RemotePoster.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemotePoster.swift; sourceTree = "<group>"; };
+		7A1D7C132F00000100000004 /* DemoMocks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoMocks.swift; sourceTree = "<group>"; };
 		8368F44E56EB243C645549E1 /* QueueItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QueueItem.swift; sourceTree = "<group>"; };
 		95C6DDB30ACEB4FDD30629F0 /* ConfigStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigStore.swift; sourceTree = "<group>"; };
 		B6B3B33C463CCA1E9E75154D /* UpcomingRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpcomingRowView.swift; sourceTree = "<group>"; };
@@ -110,7 +118,10 @@
 			isa = PBXGroup;
 			children = (
 				95C6DDB30ACEB4FDD30629F0 /* ConfigStore.swift */,
+				7A1D7C132F00000100000004 /* DemoMocks.swift */,
 				F863F233B791C2E808B72760 /* HTTPClient.swift */,
+				7A1D7C0F2F00000100000002 /* ImageCache.swift */,
+				7A1D7C0D2F00000100000001 /* KeychainStore.swift */,
 				E14AF8E6BCD3E031F64403D2 /* QbittorrentClient.swift */,
 				B85A3F5E5F9F46F61156DA3D /* QueueAggregator.swift */,
 				65F8FDEDB2C4659A3568297C /* RadarrClient.swift */,
@@ -164,6 +175,7 @@
 				4F0DA93170F7174D59CBB0A6 /* PopoverContentView.swift */,
 				0F0FF31BB5B3550A51F6B5B5 /* QueueRowView.swift */,
 				BA286A35655E257C9FEF3288 /* QueueSectionView.swift */,
+				7A1D7C112F00000100000003 /* RemotePoster.swift */,
 				2C97656F4DBD8BBE0158EDA9 /* SettingsView.swift */,
 				B6B3B33C463CCA1E9E75154D /* UpcomingRowView.swift */,
 			);
@@ -304,6 +316,10 @@
 				D5FACDA503655F545E1E28EE /* ConfigStore.swift in Sources */,
 				44F961F5688B690373C0E12D /* DownloadClientTypes.swift in Sources */,
 				B2A301ECC359D8739AADDAA7 /* HTTPClient.swift in Sources */,
+				7A1D7C0E2F00000100000001 /* KeychainStore.swift in Sources */,
+				7A1D7C102F00000100000002 /* ImageCache.swift in Sources */,
+				7A1D7C122F00000100000003 /* RemotePoster.swift in Sources */,
+				7A1D7C142F00000100000004 /* DemoMocks.swift in Sources */,
 				9AE62E9483DBD45A17C23D0E /* PopoverContentView.swift in Sources */,
 				71E25D5F2F9F9AC10054A864 /* TransmissionClient.swift in Sources */,
 				63C90D1DDD8256091D388831 /* QbittorrentClient.swift in Sources */,
@@ -393,7 +409,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.5.0;
+				MARKETING_VERSION = 0.6.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -457,7 +473,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.5.0;
+				MARKETING_VERSION = 0.6.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";

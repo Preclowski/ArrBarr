@@ -8,6 +8,16 @@ actor RadarrClient {
         self.config = config
     }
 
+    func testConnection() async throws -> String {
+        guard config.isConfigured else { throw HTTPError.notConfigured }
+        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
+        let url = try http.url(base: config.baseURL, path: "/api/v3/system/status")
+        let data = try await http.get(url, headers: ["X-Api-Key": config.apiKey])
+        struct Status: Decodable { let version: String? }
+        let status = try? JSONDecoder().decode(Status.self, from: data)
+        return status?.version.map { "Radarr \($0)" } ?? "OK"
+    }
+
     func fetchQueue() async throws -> [QueueItem] {
         guard config.isConfigured else { throw HTTPError.notConfigured }
         guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
@@ -26,7 +36,8 @@ actor RadarrClient {
         let page: ArrQueuePage<RadarrQueueRecord>
         do { page = try JSONDecoder().decode(ArrQueuePage<RadarrQueueRecord>.self, from: data) }
         catch { throw HTTPError.decoding(error) }
-        return page.records.map { Self.unify($0) }
+        let baseURL = config.baseURL
+        return page.records.map { Self.unify($0, baseURL: baseURL) }
     }
 
     func fetchCalendar() async throws -> [UpcomingItem] {
@@ -56,10 +67,19 @@ actor RadarrClient {
             throw HTTPError.decoding(error)
         }
 
-        return records.compactMap { Self.unifyCalendar($0) }
+        let baseURL = config.baseURL
+        return records.compactMap { Self.unifyCalendar($0, baseURL: baseURL) }
     }
 
-    private static func unifyCalendar(_ r: RadarrCalendarRecord) -> UpcomingItem? {
+    func fetchHealth() async throws -> [ArrHealthRecord] {
+        guard config.isConfigured else { throw HTTPError.notConfigured }
+        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
+        let url = try http.url(base: config.baseURL, path: "/api/v3/health")
+        let data = try await http.get(url, headers: ["X-Api-Key": config.apiKey])
+        return (try? JSONDecoder().decode([ArrHealthRecord].self, from: data)) ?? []
+    }
+
+    private static func unifyCalendar(_ r: RadarrCalendarRecord, baseURL: String) -> UpcomingItem? {
         let (dateStr, releaseType): (String?, String) =
             if r.digitalRelease != nil { (r.digitalRelease, "Digital") }
             else if r.physicalRelease != nil { (r.physicalRelease, "Physical") }
@@ -68,6 +88,7 @@ actor RadarrClient {
         guard let dateStr, let date = parseArrDate(dateStr) else { return nil }
 
         let title = r.year.map { "\(r.title) (\($0))" } ?? r.title
+        let (poster, auth) = pickPosterURL(from: r.images, coverTypes: ["poster"], baseURL: baseURL)
 
         return UpcomingItem(
             id: "radarr-cal-\(r.id)",
@@ -77,11 +98,13 @@ actor RadarrClient {
             airDate: date,
             releaseType: releaseType,
             hasFile: r.hasFile ?? false,
-            overview: r.overview
+            overview: r.overview,
+            posterURL: poster,
+            posterRequiresAuth: auth
         )
     }
 
-    private static func unify(_ r: RadarrQueueRecord) -> QueueItem {
+    private static func unify(_ r: RadarrQueueRecord, baseURL: String) -> QueueItem {
         let total = Int64(r.size ?? 0)
         let left = Int64(r.sizeleft ?? 0)
         let progress = total > 0 ? max(0, min(1, 1.0 - Double(left) / Double(total))) : 0.0
@@ -92,6 +115,7 @@ actor RadarrClient {
         } else {
             movieTitle = r.title ?? "Unknown"
         }
+        let (poster, posterAuth) = pickPosterURL(from: r.movie?.images, coverTypes: ["poster"], baseURL: baseURL)
 
         return QueueItem(
             id: "radarr-\(r.id)",
@@ -111,9 +135,42 @@ actor RadarrClient {
             customFormatScore: r.customFormatScore ?? 0,
             quality: r.quality?.name,
             isUpgrade: r.movie?.hasFile ?? false,
-            contentSlug: r.movie?.titleSlug
+            contentSlug: r.movie?.titleSlug,
+            posterURL: poster,
+            posterRequiresAuth: posterAuth
         )
     }
+}
+
+/// Resolves a poster URL from an Arr `images[]` array.
+/// Prefers `remoteUrl` (typically TMDB / MusicBrainz, no auth) over the local server URL.
+/// Returns the URL plus whether it requires the X-Api-Key header.
+func pickPosterURL(
+    from images: [ArrImage]?,
+    coverTypes: [String],
+    baseURL: String
+) -> (URL?, Bool) {
+    guard let images else { return (nil, false) }
+    let normalized = coverTypes.map { $0.lowercased() }
+    let match = images.first { img in
+        guard let type = img.coverType?.lowercased() else { return false }
+        return normalized.contains(type)
+    }
+    guard let match else { return (nil, false) }
+
+    if let remote = match.remoteUrl, let url = URL(string: remote) {
+        return (url, false)
+    }
+    if let path = match.url, let base = URL(string: baseURL) {
+        // Some Arrs return absolute, some relative. Strip query (cache-busting hash) for stable cache keys.
+        if let abs = URL(string: path), abs.scheme != nil {
+            return (abs, true)
+        }
+        let trimmed = path.split(separator: "?", maxSplits: 1).first.map(String.init) ?? path
+        let composed = URL(string: trimmed, relativeTo: base)?.absoluteURL
+        return (composed, true)
+    }
+    return (nil, false)
 }
 
 func parseArrDate(_ string: String) -> Date? {

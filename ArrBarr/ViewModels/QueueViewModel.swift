@@ -12,6 +12,7 @@ final class QueueViewModel: ObservableObject {
     @Published private(set) var sonarrError: String?
     @Published private(set) var lidarrError: String?
     @Published private(set) var upcoming: [UpcomingItem] = []
+    @Published private(set) var health: HealthResult = .empty
     @Published private(set) var isLoading = false
     @Published private(set) var lastError: String?
 
@@ -104,9 +105,22 @@ final class QueueViewModel: ObservableObject {
             isLoading = false
             isRefreshing = false
         }
+        if DemoMode.isActive {
+            self.radarr = DemoMocks.radarrQueue
+            self.sonarr = DemoMocks.sonarrQueue
+            self.lidarr = DemoMocks.lidarrQueue
+            self.upcoming = DemoMocks.upcoming
+            self.health = DemoMocks.health
+            self.radarrError = nil
+            self.sonarrError = nil
+            self.lidarrError = nil
+            self.lastError = nil
+            return
+        }
         async let queueResult = aggregator.fetch()
         async let upcomingResult = aggregator.fetchUpcoming()
-        let (queue, upcoming) = await (queueResult, upcomingResult)
+        async let healthResult = aggregator.fetchHealth()
+        let (queue, upcoming, health) = await (queueResult, upcomingResult, healthResult)
         let newRadarr = applyOverrides(to: queue.radarr)
         let newSonarr = applyOverrides(to: queue.sonarr)
         let newLidarr = applyOverrides(to: queue.lidarr)
@@ -118,6 +132,7 @@ final class QueueViewModel: ObservableObject {
         self.sonarrError = queue.sonarrError
         self.lidarrError = queue.lidarrError
         self.upcoming = upcoming
+        self.health = health
         self.lastError = nil
     }
 

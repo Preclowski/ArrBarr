@@ -16,6 +16,7 @@ struct SettingsView: View {
     @State private var draftNotifyRadarr = false
     @State private var draftNotifySonarr = false
     @State private var draftNotifyLidarr = false
+    @State private var draftLaunchAtLogin = false
     @State private var showUnsavedAlert = false
 
     private var hasChanges: Bool {
@@ -33,6 +34,7 @@ struct SettingsView: View {
         || draftNotifyRadarr != configStore.notifyRadarr
         || draftNotifySonarr != configStore.notifySonarr
         || draftNotifyLidarr != configStore.notifyLidarr
+        || draftLaunchAtLogin != configStore.launchAtLogin
     }
 
     var body: some View {
@@ -109,6 +111,9 @@ struct SettingsView: View {
 
     private var generalPane: some View {
         Form {
+            Section("Startup") {
+                Toggle("Launch at login", isOn: $draftLaunchAtLogin)
+            }
             Section("Refresh Interval") {
                 Picker("Popover open", selection: $draftForegroundInterval) {
                     ForEach(ConfigStore.foregroundIntervalOptions, id: \.self) { interval in
@@ -177,6 +182,7 @@ struct SettingsView: View {
         configStore.notifyRadarr = draftNotifyRadarr
         configStore.notifySonarr = draftNotifySonarr
         configStore.notifyLidarr = draftNotifyLidarr
+        configStore.launchAtLogin = draftLaunchAtLogin
     }
 
     private func loadDrafts() {
@@ -194,6 +200,7 @@ struct SettingsView: View {
         draftNotifyRadarr = configStore.notifyRadarr
         draftNotifySonarr = configStore.notifySonarr
         draftNotifyLidarr = configStore.notifyLidarr
+        draftLaunchAtLogin = configStore.launchAtLogin
     }
 
     private static func formatInterval(_ seconds: TimeInterval) -> String {
@@ -211,6 +218,15 @@ private struct ServiceFields: View {
     @Binding var config: ServiceConfig
     let kind: ServiceKind
 
+    @State private var testState: TestState = .idle
+
+    private enum TestState: Equatable {
+        case idle
+        case testing
+        case success(String)
+        case failure(String)
+    }
+
     var body: some View {
         Toggle("Enabled", isOn: $config.enabled.animation())
 
@@ -227,6 +243,65 @@ private struct ServiceFields: View {
                     .autocorrectionDisabled(true)
                 SecureField("Password", text: $config.password, prompt: Text("Password"))
             }
+
+            HStack(spacing: 8) {
+                Button("Test Connection") { runTest() }
+                    .modifier(GlassButtonStyle())
+                    .controlSize(.small)
+                    .disabled(testState == .testing || !config.isConfigured)
+
+                switch testState {
+                case .idle:
+                    EmptyView()
+                case .testing:
+                    ProgressView().controlSize(.small)
+                case .success(let msg):
+                    Label(msg, systemImage: "checkmark.circle.fill")
+                        .font(.caption)
+                        .foregroundStyle(.green)
+                        .lineLimit(1)
+                case .failure(let msg):
+                    Label(msg, systemImage: "xmark.circle.fill")
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                        .lineLimit(2)
+                        .help(msg)
+                }
+            }
+            .onChange(of: config) { _, _ in
+                if testState != .idle && testState != .testing { testState = .idle }
+            }
+        }
+    }
+
+    private func runTest() {
+        testState = .testing
+        let snapshot = config
+        let kind = self.kind
+        Task {
+            do {
+                let result = try await ConnectionTester.test(kind: kind, config: snapshot)
+                await MainActor.run { testState = .success(result) }
+            } catch {
+                let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+                await MainActor.run { testState = .failure(message) }
+            }
+        }
+    }
+}
+
+private enum ConnectionTester {
+    static func test(kind: ServiceKind, config: ServiceConfig) async throws -> String {
+        switch kind {
+        case .radarr:       return try await RadarrClient(config: config).testConnection()
+        case .sonarr:       return try await SonarrClient(config: config).testConnection()
+        case .lidarr:       return try await LidarrClient(config: config).testConnection()
+        case .sabnzbd:      return try await SabnzbdClient(config: config).testConnection()
+        case .nzbget:       return try await NzbgetClient(config: config).testConnection()
+        case .qbittorrent:  return try await QbittorrentClient(config: config).testConnection()
+        case .transmission: return try await TransmissionClient(config: config).testConnection()
+        case .rtorrent:     return try await RtorrentClient(config: config).testConnection()
+        case .deluge:       return try await DelugeClient(config: config).testConnection()
         }
     }
 }

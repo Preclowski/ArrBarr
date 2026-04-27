@@ -12,9 +12,15 @@ A lightweight macOS menu bar app for monitoring your Radarr, Sonarr, and Lidarr 
 ## Features
 
 - **Queue monitoring** — View active downloads from Radarr, Sonarr, and Lidarr in a unified popover
+- **Posters** — Movie/series/album artwork in queue and upcoming rows, with on-disk cache
 - **Upcoming media** — Browse upcoming movies, TV episodes, and album releases with calendar grouping
 - **Download controls** — Pause, resume, and remove downloads directly from the menu bar
 - **Client support** — SABnzbd, NZBGet (Usenet) and qBittorrent, Transmission, rTorrent, Deluge (Torrent)
+- **Test Connection** — Verify URL + credentials per service from Settings before saving
+- **Health badges** — Surface Radarr/Sonarr/Lidarr `/health` warnings inline as section badges
+- **Search / filter** — Filter the queue and upcoming lists by title or subtitle
+- **Launch at login** — Toggle in Settings (uses `SMAppService`)
+- **Keychain storage** — API keys and passwords stored in the macOS Keychain, not UserDefaults
 - **Notifications** — System notifications for new grabs, configurable per service
 - **Status bar badge** — Shows active download count with a live-updating icon
 - **Right-click menu** — Quick access to refresh, settings, and quit
@@ -65,30 +71,41 @@ open ArrBarr.xcodeproj
 
 All connections go through your local network. ArrBarr is sandboxed with network-client-only permissions.
 
+## Demo mode
+
+Want to preview the UI without configuring real services? Launch with:
+
+```bash
+open /Applications/ArrBarr.app --args --demo
+```
+
+Or set `ARRBARR_DEMO=1` in the environment, or `defaults write com.preclowski.ArrBarr ArrBarrDemo -bool true`. The popover populates with public-domain content (Big Buck Bunny, Sintel, Pioneer One, etc.) and CC-licensed albums; posters load from `picsum.photos`.
+
 ## Architecture
 
 ```
 ┌────────────────────────┐  info + custom formats  ┌─────────────┐
-│ Radarr/Sonarr/Lidarr  │ ──────────────────────▶ │   ArrBarr   │
+│ Radarr/Sonarr/Lidarr   │ ──────────────────────▶ │   ArrBarr   │
 └────────────────────────┘                         │  (popover)  │
                                                    └──────┬──────┘
 ┌────────────────────────┐  start / pause / delete        │
 │   Download Clients     │ ◀──────────────────────────────┘
 │ SAB/NZBGet/qBit/Trans  │
-│ rTorrent/Deluge         │
+│ rTorrent/Deluge        │
 └────────────────────────┘
 ```
 
 - **Swift 6** with strict concurrency (`@MainActor`, `actor` isolation)
 - **SwiftUI** popover and settings, **AppKit** status bar and window management
-- **No dependencies** — pure Foundation networking, no third-party libraries
+- **No third-party dependencies** — Foundation, SwiftUI, AppKit, Security, ServiceManagement, UserNotifications
+- **Keychain** for secrets, on-disk cache for posters
 
 ```
 ArrBarr/
-├── Models/          # QueueItem, UpcomingItem, ServiceConfig, API types
-├── Services/        # HTTP client, Radarr/Sonarr/Lidarr + 6 download client adapters
+├── Models/          # QueueItem, UpcomingItem, ServiceConfig, ArrImage, API types
+├── Services/        # HTTP, Keychain, ImageCache, Radarr/Sonarr/Lidarr + 6 download client adapters, DemoMocks
 ├── ViewModels/      # QueueViewModel with optimistic updates
-└── Views/           # PopoverContentView, QueueRowView, SettingsView
+└── Views/           # PopoverContentView, QueueRowView, RemotePoster, SettingsView, …
 ```
 
 ## Vibe-coded

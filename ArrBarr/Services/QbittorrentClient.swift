@@ -38,6 +38,14 @@ actor QbittorrentClient {
         _ = try await http.post(url, headers: refererHeaders(), formBody: form)
     }
 
+    func testConnection() async throws -> String {
+        try await ensureLoggedIn()
+        let url = try http.url(base: config.baseURL, path: "/api/v2/app/version")
+        let data = try await http.get(url, headers: refererHeaders())
+        let version = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return version.isEmpty ? "OK" : "qBittorrent \(version)"
+    }
+
     func contains(hash: String) async throws -> Bool {
         let torrents = try await fetchTorrents()
         return torrents.contains { $0.hash.lowercased() == hash.lowercased() }

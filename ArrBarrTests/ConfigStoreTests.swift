@@ -14,7 +14,7 @@ struct ConfigStoreTests {
         let (defaults, name) = makeDefaults()
         defer { UserDefaults.standard.removePersistentDomain(forName: name) }
 
-        let store = ConfigStore(defaults: defaults)
+        let store = ConfigStore(defaults: defaults, secrets: InMemorySecretStore())
         for kind in ServiceKind.allCases {
             #expect(store.config(for: kind) == .empty)
         }
@@ -25,7 +25,7 @@ struct ConfigStoreTests {
         let (defaults, name) = makeDefaults()
         defer { UserDefaults.standard.removePersistentDomain(forName: name) }
 
-        let store = ConfigStore(defaults: defaults)
+        let store = ConfigStore(defaults: defaults, secrets: InMemorySecretStore())
         #expect(store.foregroundInterval == 5)
         #expect(store.backgroundInterval == 30)
     }
@@ -40,10 +40,11 @@ struct ConfigStoreTests {
             apiKey: "test-api-key", username: "", password: ""
         )
 
-        let store = ConfigStore(defaults: defaults)
+        let secrets = InMemorySecretStore()
+        let store = ConfigStore(defaults: defaults, secrets: secrets)
         store.update(.radarr, with: config)
 
-        let reloaded = ConfigStore(defaults: defaults)
+        let reloaded = ConfigStore(defaults: defaults, secrets: secrets)
         #expect(reloaded.radarr == config)
     }
 
@@ -52,11 +53,12 @@ struct ConfigStoreTests {
         let (defaults, name) = makeDefaults()
         defer { UserDefaults.standard.removePersistentDomain(forName: name) }
 
-        let store = ConfigStore(defaults: defaults)
+        let secrets = InMemorySecretStore()
+        let store = ConfigStore(defaults: defaults, secrets: secrets)
         store.foregroundInterval = 15
         store.backgroundInterval = 120
 
-        let reloaded = ConfigStore(defaults: defaults)
+        let reloaded = ConfigStore(defaults: defaults, secrets: secrets)
         #expect(reloaded.foregroundInterval == 15)
         #expect(reloaded.backgroundInterval == 120)
     }
@@ -66,7 +68,7 @@ struct ConfigStoreTests {
         let (defaults, name) = makeDefaults()
         defer { UserDefaults.standard.removePersistentDomain(forName: name) }
 
-        let store = ConfigStore(defaults: defaults)
+        let store = ConfigStore(defaults: defaults, secrets: InMemorySecretStore())
         let radarrConfig = ServiceConfig(
             enabled: true, baseURL: "http://localhost:7878",
             apiKey: "radarr-key", username: "", password: ""
@@ -88,7 +90,7 @@ struct ConfigStoreTests {
         let (defaults, name) = makeDefaults()
         defer { UserDefaults.standard.removePersistentDomain(forName: name) }
 
-        let store = ConfigStore(defaults: defaults)
+        let store = ConfigStore(defaults: defaults, secrets: InMemorySecretStore())
         let config = ServiceConfig(
             enabled: true, baseURL: "http://test",
             apiKey: "key", username: "user", password: "pass"
@@ -100,12 +102,69 @@ struct ConfigStoreTests {
         }
     }
 
+    @Test("Secrets persist in SecretStore, not UserDefaults")
+    @MainActor func secretsInKeychain() throws {
+        let (defaults, name) = makeDefaults()
+        defer { UserDefaults.standard.removePersistentDomain(forName: name) }
+
+        let secrets = InMemorySecretStore()
+        let config = ServiceConfig(
+            enabled: true, baseURL: "http://localhost:7878",
+            apiKey: "secret-key", username: "u", password: "secret-pw"
+        )
+        let store = ConfigStore(defaults: defaults, secrets: secrets)
+        store.update(.qbittorrent, with: config)
+
+        // Defaults blob should not contain the secrets
+        let blob = defaults.data(forKey: "ArrBarr.config.qbittorrent") ?? Data()
+        let stripped = try JSONDecoder().decode(ServiceConfig.self, from: blob)
+        #expect(stripped.apiKey == "")
+        #expect(stripped.password == "")
+        #expect(stripped.baseURL == "http://localhost:7878")
+
+        // SecretStore holds them
+        #expect(secrets.read(account: "qbittorrent.apiKey") == "secret-key")
+        #expect(secrets.read(account: "qbittorrent.password") == "secret-pw")
+
+        // Reload merges them back
+        let reloaded = ConfigStore(defaults: defaults, secrets: secrets)
+        #expect(reloaded.qbittorrent == config)
+    }
+
+    @Test("Legacy plaintext secrets migrate to SecretStore on load")
+    @MainActor func legacyMigration() throws {
+        let (defaults, name) = makeDefaults()
+        defer { UserDefaults.standard.removePersistentDomain(forName: name) }
+
+        let legacy = ServiceConfig(
+            enabled: true, baseURL: "http://localhost:7878",
+            apiKey: "legacy-key", username: "", password: "legacy-pw"
+        )
+        let blob = try JSONEncoder().encode(legacy)
+        defaults.set(blob, forKey: "ArrBarr.config.radarr")
+
+        let secrets = InMemorySecretStore()
+        let store = ConfigStore(defaults: defaults, secrets: secrets)
+
+        // Effective config still complete
+        #expect(store.radarr == legacy)
+        // Secrets migrated to keychain
+        #expect(secrets.read(account: "radarr.apiKey") == "legacy-key")
+        #expect(secrets.read(account: "radarr.password") == "legacy-pw")
+        // Defaults blob is now stripped
+        let after = defaults.data(forKey: "ArrBarr.config.radarr") ?? Data()
+        let stripped = try JSONDecoder().decode(ServiceConfig.self, from: after)
+        #expect(stripped.apiKey == "")
+        #expect(stripped.password == "")
+    }
+
     @Test("Notification settings default to false and persist")
     @MainActor func notificationSettings() {
         let (defaults, name) = makeDefaults()
         defer { UserDefaults.standard.removePersistentDomain(forName: name) }
 
-        let store = ConfigStore(defaults: defaults)
+        let secrets = InMemorySecretStore()
+        let store = ConfigStore(defaults: defaults, secrets: secrets)
         #expect(store.notifyRadarr == false)
         #expect(store.notifySonarr == false)
         #expect(store.notifyLidarr == false)
@@ -113,7 +172,7 @@ struct ConfigStoreTests {
         store.notifyRadarr = true
         store.notifySonarr = true
 
-        let reloaded = ConfigStore(defaults: defaults)
+        let reloaded = ConfigStore(defaults: defaults, secrets: secrets)
         #expect(reloaded.notifyRadarr == true)
         #expect(reloaded.notifySonarr == true)
         #expect(reloaded.notifyLidarr == false)

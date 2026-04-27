@@ -48,6 +48,19 @@ actor NzbgetClient {
         }
     }
 
+    func testConnection() async throws -> String {
+        guard config.isConfigured else { throw HTTPError.notConfigured }
+        let body: [String: Any] = ["method": "version", "params": []]
+        let jsonData = try JSONSerialization.data(withJSONObject: body)
+        let url = try http.url(base: config.baseURL, path: "/jsonrpc")
+        let data = try await http.post(url, headers: authHeaders(contentType: "application/json"), body: jsonData)
+        if let resp = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let version = resp["result"] as? String {
+            return "NZBGet \(version)"
+        }
+        return "OK"
+    }
+
     private func authHeaders(contentType: String) -> [String: String] {
         var headers = ["Content-Type": contentType]
         if !config.username.isEmpty {
