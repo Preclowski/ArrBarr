@@ -5,6 +5,7 @@ A lightweight macOS menu bar app for monitoring your Radarr, Sonarr, and Lidarr 
 [![Build & Test](https://github.com/Preclowski/ArrBarr/actions/workflows/release.yml/badge.svg)](https://github.com/Preclowski/ArrBarr/actions/workflows/release.yml)
 ![macOS 14+](https://img.shields.io/badge/macOS-14%2B-blue)
 ![Swift 6](https://img.shields.io/badge/Swift-6-orange)
+![Size: ~1.5 MB](https://img.shields.io/badge/Size-~1.5%20MB-brightgreen)
 ![License: MIT](https://img.shields.io/badge/License-MIT-green)
 
 ![ArrBarr Screenshot](screenshot.png)
@@ -27,6 +28,7 @@ A lightweight macOS menu bar app for monitoring your Radarr, Sonarr, and Lidarr 
 - **Open in browser** — Jump to any item's Radarr/Sonarr/Lidarr web page
 - **Liquid Glass** — Native macOS 26 (Tahoe) glass effects with graceful fallback
 - **Configurable polling** — Adjustable refresh intervals, including "Never" for manual refresh
+- **Tiny footprint** — ~1.5 MB DMG, ~2.5 MB installed; pure Apple frameworks, zero third-party dependencies
 
 ## Installation
 
