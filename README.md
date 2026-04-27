@@ -6,7 +6,6 @@ A lightweight macOS menu bar app for monitoring your Radarr and Sonarr download 
 ![Swift 6](https://img.shields.io/badge/Swift-6-orange)
 ![License: MIT](https://img.shields.io/badge/License-MIT-green)
 
-<!-- TODO: Add screenshot -->
 ![ArrBarr Screenshot](screenshot.png)
 
 ## Features
