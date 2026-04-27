@@ -143,17 +143,17 @@ private struct ServiceFields: View {
         Toggle(kind.displayName, isOn: $config.enabled.animation())
 
         if config.enabled {
-            TextField("URL", text: $config.baseURL, prompt: Text("http://192.168.1.10:7878"))
+            TextField("URL", text: $config.baseURL, prompt: Text(kind.urlPlaceholder))
                 .autocorrectionDisabled(true)
 
             if kind.requiresApiKey {
-                SecureField("API Key", text: $config.apiKey)
+                SecureField("API Key", text: $config.apiKey, prompt: Text("Paste your API key"))
             }
 
             if kind.requiresLogin {
-                TextField("Username", text: $config.username)
+                TextField("Username", text: $config.username, prompt: Text("admin"))
                     .autocorrectionDisabled(true)
-                SecureField("Password", text: $config.password)
+                SecureField("Password", text: $config.password, prompt: Text("Password"))
             }
         }
     }

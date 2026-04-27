@@ -49,4 +49,17 @@ enum ServiceKind: String, CaseIterable, Identifiable {
         default: return false
         }
     }
+
+    var urlPlaceholder: String {
+        switch self {
+        case .radarr: return "http://192.168.1.10:7878"
+        case .sonarr: return "http://192.168.1.10:8989"
+        case .sabnzbd: return "http://192.168.1.10:8080"
+        case .qbittorrent: return "http://192.168.1.10:8080"
+        case .nzbget: return "http://192.168.1.10:6789"
+        case .transmission: return "http://192.168.1.10:9091"
+        case .rtorrent: return "http://192.168.1.10/RPC2"
+        case .deluge: return "http://192.168.1.10:8112"
+        }
+    }
 }
