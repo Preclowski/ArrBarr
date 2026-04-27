@@ -1,6 +1,19 @@
 import Foundation
 
-/// Klient do SABnzbd. Endpoint /api z parametrami query (mode/name/value/apikey).
+enum SabnzbdError: LocalizedError {
+    case actionFailed(String)
+    var errorDescription: String? {
+        switch self {
+        case .actionFailed(let msg): return "SABnzbd: \(msg)"
+        }
+    }
+}
+
+private struct SabActionResponse: Decodable {
+    let status: Bool?
+    let error: String?
+}
+
 actor SabnzbdClient {
     enum Action: String { case pause, resume, delete }
 
@@ -25,10 +38,13 @@ actor SabnzbdClient {
                 URLQueryItem(name: "apikey", value: config.apiKey),
             ]
         )
-        _ = try await http.get(url)
+        let data = try await http.get(url)
+        let resp = try? JSONDecoder().decode(SabActionResponse.self, from: data)
+        if resp?.status == false {
+            throw SabnzbdError.actionFailed(resp?.error ?? "Unknown SABnzbd error")
+        }
     }
 
-    /// Sprawdzenie czy nzo_id istnieje w kolejce SAB-a (do diagnostyki).
     func contains(nzoId: String) async throws -> Bool {
         let slots = try await fetchSlots()
         return slots.contains { $0.nzo_id == nzoId }

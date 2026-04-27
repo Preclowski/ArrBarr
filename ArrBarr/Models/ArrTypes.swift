@@ -1,8 +1,6 @@
 import Foundation
 
-// MARK: - Wspólne typy Radarr/Sonarr v3
-
-/// Strona zwrócona przez /api/v3/queue.
+// MARK: - Shared Radarr/Sonarr v3 types
 struct ArrQueuePage<Record: Decodable>: Decodable {
     let page: Int
     let pageSize: Int
@@ -26,16 +24,16 @@ struct ArrQuality: Decodable {
 struct RadarrQueueRecord: Decodable {
     let id: Int
     let movieId: Int?
-    let title: String?              // np. tytuł release'u
+    let title: String?
     let status: String?
     let trackedDownloadStatus: String?
     let trackedDownloadState: String?
     let downloadId: String?
     let downloadClient: String?
     let `protocol`: String?
-    let size: Double?               // Radarr zwraca double (bytes)
+    let size: Double?
     let sizeleft: Double?
-    let timeleft: String?           // ISO 8601 duration np. "00:23:45"
+    let timeleft: String?
     let estimatedCompletionTime: String?
     let customFormats: [ArrCustomFormat]?
     let customFormatScore: Int?
@@ -48,6 +46,8 @@ struct RadarrMovie: Decodable {
     let title: String
     let year: Int?
     let originalTitle: String?
+    let hasFile: Bool?
+    let titleSlug: String?
 }
 
 // MARK: - Sonarr
@@ -79,6 +79,7 @@ struct SonarrSeries: Decodable {
     let id: Int
     let title: String
     let year: Int?
+    let titleSlug: String?
 }
 
 struct SonarrEpisode: Decodable {
@@ -86,4 +87,30 @@ struct SonarrEpisode: Decodable {
     let seasonNumber: Int?
     let episodeNumber: Int?
     let title: String?
+    let hasFile: Bool?
+}
+
+// MARK: - Calendar
+
+struct RadarrCalendarRecord: Decodable {
+    let id: Int
+    let title: String
+    let year: Int?
+    let digitalRelease: String?
+    let physicalRelease: String?
+    let inCinemas: String?
+    let hasFile: Bool?
+    let overview: String?
+}
+
+struct SonarrCalendarRecord: Decodable {
+    let id: Int
+    let seriesId: Int?
+    let seasonNumber: Int?
+    let episodeNumber: Int?
+    let title: String?
+    let airDateUtc: String?
+    let hasFile: Bool?
+    let overview: String?
+    let series: SonarrSeries?
 }

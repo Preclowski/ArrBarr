@@ -1,9 +1,7 @@
 import Foundation
 import Combine
 
-/// Trzyma konfigurację wszystkich usług w UserDefaults.
-/// Świadomie nie używa Keychain — to jest lokalna aplikacja użytkownika do self-hostowanych
-/// usług w prywatnej sieci. Jak zajdzie potrzeba, łatwo to wymienić.
+@MainActor
 final class ConfigStore: ObservableObject {
     static let shared = ConfigStore()
 
@@ -11,9 +9,17 @@ final class ConfigStore: ObservableObject {
     @Published var sonarr: ServiceConfig
     @Published var sabnzbd: ServiceConfig
     @Published var qbittorrent: ServiceConfig
+    @Published var foregroundInterval: TimeInterval
+    @Published var backgroundInterval: TimeInterval
+
+    static let foregroundIntervalOptions: [TimeInterval] = [0, 2, 5, 10, 15, 30]
+    static let backgroundIntervalOptions: [TimeInterval] = [0, 10, 30, 60, 120, 300]
 
     private let defaults: UserDefaults
     private var cancellables: Set<AnyCancellable> = []
+
+    private static let foregroundIntervalKey = "ArrBarr.foregroundInterval"
+    private static let backgroundIntervalKey = "ArrBarr.backgroundInterval"
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
@@ -21,12 +27,29 @@ final class ConfigStore: ObservableObject {
         self.sonarr = Self.load(.sonarr, from: defaults)
         self.sabnzbd = Self.load(.sabnzbd, from: defaults)
         self.qbittorrent = Self.load(.qbittorrent, from: defaults)
+        let fgKey = Self.foregroundIntervalKey
+        self.foregroundInterval = defaults.object(forKey: fgKey) != nil ? defaults.double(forKey: fgKey) : 5
+        let bgKey = Self.backgroundIntervalKey
+        self.backgroundInterval = defaults.object(forKey: bgKey) != nil ? defaults.double(forKey: bgKey) : 30
 
-        // Persist on every change.
-        $radarr.dropFirst().sink { [weak self] in self?.save(.radarr, $0) }.store(in: &cancellables)
-        $sonarr.dropFirst().sink { [weak self] in self?.save(.sonarr, $0) }.store(in: &cancellables)
-        $sabnzbd.dropFirst().sink { [weak self] in self?.save(.sabnzbd, $0) }.store(in: &cancellables)
-        $qbittorrent.dropFirst().sink { [weak self] in self?.save(.qbittorrent, $0) }.store(in: &cancellables)
+        $radarr.dropFirst().sink { [weak self] cfg in
+            MainActor.assumeIsolated { self?.save(.radarr, cfg) }
+        }.store(in: &cancellables)
+        $sonarr.dropFirst().sink { [weak self] cfg in
+            MainActor.assumeIsolated { self?.save(.sonarr, cfg) }
+        }.store(in: &cancellables)
+        $sabnzbd.dropFirst().sink { [weak self] cfg in
+            MainActor.assumeIsolated { self?.save(.sabnzbd, cfg) }
+        }.store(in: &cancellables)
+        $qbittorrent.dropFirst().sink { [weak self] cfg in
+            MainActor.assumeIsolated { self?.save(.qbittorrent, cfg) }
+        }.store(in: &cancellables)
+        $foregroundInterval.dropFirst().sink { [weak self] val in
+            MainActor.assumeIsolated { self?.defaults.set(val, forKey: Self.foregroundIntervalKey) }
+        }.store(in: &cancellables)
+        $backgroundInterval.dropFirst().sink { [weak self] val in
+            MainActor.assumeIsolated { self?.defaults.set(val, forKey: Self.backgroundIntervalKey) }
+        }.store(in: &cancellables)
     }
 
     func config(for kind: ServiceKind) -> ServiceConfig {

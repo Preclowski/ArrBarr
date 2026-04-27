@@ -6,6 +6,7 @@ enum HTTPError: LocalizedError {
     case status(Int, body: String?)
     case decoding(Error)
     case notConfigured
+    case missingApiKey
 
     var errorDescription: String? {
         switch self {
@@ -14,11 +15,11 @@ enum HTTPError: LocalizedError {
         case .status(let code, _): return "HTTP \(code)"
         case .decoding(let e): return "Decoding error: \(e.localizedDescription)"
         case .notConfigured: return "Service not configured"
+        case .missingApiKey: return "API key is missing"
         }
     }
 }
 
-/// Cienki wrapper na URLSession ułatwiający budowanie requestów do API *arr/SAB/qBit.
 struct HTTPClient {
     let session: URLSession
 
@@ -26,10 +27,8 @@ struct HTTPClient {
         self.session = session
     }
 
-    /// Zbuduj URL z `base` + `path` + query items.
     func url(base: String, path: String, query: [URLQueryItem] = []) throws -> URL {
         guard var components = URLComponents(string: base) else { throw HTTPError.badURL }
-        // Append path bezpiecznie nawet jeśli base ma trailing slash.
         let normalizedBasePath = components.path.hasSuffix("/")
             ? String(components.path.dropLast())
             : components.path

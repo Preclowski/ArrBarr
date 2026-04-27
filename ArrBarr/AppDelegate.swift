@@ -13,18 +13,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var badgeObserver: AnyCancellable?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // 1. Status item
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let button = statusItem.button {
-            button.action = #selector(togglePopover(_:))
+            button.action = #selector(statusItemClicked(_:))
             button.target = self
+            button.sendAction(on: [.leftMouseUp, .rightMouseUp])
         }
         updateStatusBarTitle(active: queueVM.activeCount)
 
-        // 2. Popover z SwiftUI
         popover = NSPopover()
-        popover.behavior = .transient        // zamknij gdy klik poza
-        popover.contentSize = NSSize(width: 400, height: 480)
+        popover.behavior = .transient
         popover.delegate = self
 
         let root = PopoverContentView(
@@ -34,18 +32,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
         .environmentObject(configStore)
 
-        popover.contentViewController = NSHostingController(rootView: root)
+        let hosting = NSHostingController(rootView: root)
+        hosting.sizingOptions = [.preferredContentSize]
+        popover.contentViewController = hosting
 
-        // 3. Reaktywny update badge'a
         badgeObserver = Publishers.CombineLatest(queueVM.$radarr, queueVM.$sonarr)
             .receive(on: DispatchQueue.main)
             .sink { [weak self] radarr, sonarr in
-                let active = (radarr + sonarr).filter { $0.status != .completed }.count
-                self?.updateStatusBarTitle(active: active)
+                MainActor.assumeIsolated {
+                    let active = (radarr + sonarr).filter { $0.status != .completed }.count
+                    self?.updateStatusBarTitle(active: active)
+                }
             }
     }
 
-    // MARK: - Status item rendering
+    // MARK: - Status item
 
     private func updateStatusBarTitle(active: Int) {
         guard let button = statusItem.button else { return }
@@ -55,18 +56,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         icon?.isTemplate = true
 
         if active > 0 {
-            // Ikona + liczba
             let attachment = NSTextAttachment()
             attachment.image = icon
             attachment.bounds = CGRect(x: 0, y: -3, width: 16, height: 16)
-            let imageString = NSAttributedString(attachment: attachment)
 
             let mutable = NSMutableAttributedString()
-            mutable.append(imageString)
+            mutable.append(NSAttributedString(attachment: attachment))
             mutable.append(NSAttributedString(
                 string: " \(active)",
                 attributes: [
-                    .font: NSFont.systemFont(ofSize: NSFont.systemFontSize, weight: .medium)
+                    .font: NSFont.monospacedDigitSystemFont(ofSize: NSFont.systemFontSize, weight: .medium)
                 ]
             ))
             button.attributedTitle = mutable
@@ -79,7 +78,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - Popover
 
-    @objc private func togglePopover(_ sender: AnyObject?) {
+    @objc private func statusItemClicked(_ sender: AnyObject?) {
+        guard let event = NSApp.currentEvent else { return }
+        if event.type == .rightMouseUp || event.modifierFlags.contains(.option) {
+            showStatusMenu()
+        } else {
+            togglePopover(sender)
+        }
+    }
+
+    private func togglePopover(_ sender: AnyObject?) {
         guard let button = statusItem.button else { return }
         if popover.isShown {
             popover.performClose(sender)
@@ -90,9 +98,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    // MARK: - Settings window
+    private func showStatusMenu() {
+        let menu = NSMenu()
+        menu.addItem(withTitle: "Refresh", action: #selector(menuRefresh), keyEquivalent: "r").target = self
+        menu.addItem(.separator())
+        menu.addItem(withTitle: "Settings…", action: #selector(menuSettings), keyEquivalent: ",").target = self
+        menu.addItem(withTitle: "Quit ArrBarr", action: #selector(menuQuit), keyEquivalent: "q").target = self
+        statusItem.menu = menu
+        statusItem.button?.performClick(nil)
+        statusItem.menu = nil
+    }
+
+    @objc private func menuRefresh() { Task { await queueVM.refresh() } }
+    @objc private func menuSettings() { openSettings() }
+    @objc private func menuQuit() { NSApp.terminate(nil) }
+
+    // MARK: - Settings
 
     private func openSettings() {
+        if popover.isShown { popover.performClose(nil) }
+
         if let win = settingsWindow {
             win.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
@@ -104,9 +129,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let win = NSWindow(contentViewController: hosting)
         win.title = "ArrBarr Settings"
         win.styleMask = [.titled, .closable, .miniaturizable]
-        win.setContentSize(NSSize(width: 480, height: 540))
+        win.setContentSize(NSSize(width: 500, height: 620))
         win.isReleasedWhenClosed = false
         win.center()
+
+        NotificationCenter.default.addObserver(
+            forName: NSWindow.willCloseNotification,
+            object: win,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in self?.settingsWindow = nil }
+        }
 
         settingsWindow = win
         win.makeKeyAndOrderFront(nil)

@@ -1,13 +1,9 @@
 import Foundation
 
-/// qBittorrent ma session-based auth: najpierw POST /api/v2/auth/login, potem cookies.
-/// Trzymamy własną HTTPCookieStorage żeby nie deptać po globalnym storage.
 actor QbittorrentClient {
     enum Action {
         case pause, resume, delete
 
-        /// W qBittorrent 5.0+ pause/resume zostały zastąpione przez stop/start.
-        /// stop/start istnieją od dawna jako aliasy, więc używamy nowych nazw — bezpieczniejsze.
         var path: String {
             switch self {
             case .pause: return "/api/v2/torrents/stop"
@@ -24,7 +20,6 @@ actor QbittorrentClient {
 
     init(config: ServiceConfig) {
         self.config = config
-        // Własny URLSession z izolowanym cookie storage, żeby SID qBittorrenta nie mieszał się z niczym.
         let configuration = URLSessionConfiguration.default
         configuration.httpCookieStorage = HTTPCookieStorage()
         configuration.httpCookieAcceptPolicy = .always
@@ -38,7 +33,7 @@ actor QbittorrentClient {
         let url = try http.url(base: config.baseURL, path: action.path)
         var form: [String: String] = ["hashes": hash]
         if action == .delete {
-            form["deleteFiles"] = "false"      // tylko z kolejki, nie kasuj plików
+            form["deleteFiles"] = "false"
         }
         _ = try await http.post(url, headers: refererHeaders(), formBody: form)
     }
@@ -69,7 +64,6 @@ actor QbittorrentClient {
             headers: refererHeaders(),
             formBody: ["username": config.username, "password": config.password]
         )
-        // qBittorrent zwraca "Ok." gdy login OK, "Fails." gdy nie.
         let body = String(data: data, encoding: .utf8) ?? ""
         guard body.contains("Ok") else {
             throw HTTPError.status(401, body: body)
@@ -77,7 +71,6 @@ actor QbittorrentClient {
         loggedIn = true
     }
 
-    /// qBittorrent wymaga nagłówka Referer matching base URL od wersji 4.x.
     private func refererHeaders() -> [String: String] {
         ["Referer": config.baseURL]
     }

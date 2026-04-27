@@ -4,6 +4,7 @@ struct QueueSectionView: View {
     let title: String
     let symbol: String
     let items: [QueueItem]
+    var error: String?
     @ObservedObject var viewModel: QueueViewModel
 
     var body: some View {
@@ -14,14 +15,22 @@ struct QueueSectionView: View {
                 Text(title)
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(.secondary)
-                Text("\(items.count)")
-                    .font(.system(size: 11))
-                    .foregroundStyle(.tertiary)
+                if error == nil {
+                    Text("\(items.count)")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.tertiary)
+                }
                 Spacer()
             }
             .padding(.horizontal, 12)
 
-            if items.isEmpty {
+            if let error {
+                Label(error, systemImage: "exclamationmark.triangle.fill")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.orange)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+            } else if items.isEmpty {
                 Text("Queue empty")
                     .font(.system(size: 12))
                     .foregroundStyle(.tertiary)

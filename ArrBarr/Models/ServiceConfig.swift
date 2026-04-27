@@ -1,18 +1,19 @@
 import Foundation
 
-/// Konfiguracja jednej z czterech usług. URL i credentials trzymane w UserDefaults.
 struct ServiceConfig: Codable, Equatable {
-    var baseURL: String      // np. "http://192.168.1.10:7878"
-    var apiKey: String       // używane przez Radarr/Sonarr/SABnzbd
-    var username: String     // qBittorrent
-    var password: String     // qBittorrent
+    var enabled: Bool
+    var baseURL: String
+    var apiKey: String
+    var username: String
+    var password: String
 
     var isConfigured: Bool {
+        guard enabled else { return false }
         guard let url = URL(string: baseURL), url.scheme != nil, url.host != nil else { return false }
         return true
     }
 
-    static let empty = ServiceConfig(baseURL: "", apiKey: "", username: "", password: "")
+    static let empty = ServiceConfig(enabled: true, baseURL: "", apiKey: "", username: "", password: "")
 }
 
 enum ServiceKind: String, CaseIterable, Identifiable {
