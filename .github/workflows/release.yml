@@ -53,7 +53,7 @@ jobs:
       - name: Update Homebrew Cask
         if: github.event_name == 'release'
         env:
-          TAP_TOKEN: ${{ secrets.TAP_TOKEN }}
+          TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
         run: |
           SHA=$(shasum -a 256 ArrBarr.dmg | awk '{print $1}')
           VERSION="${{ github.event.release.tag_name }}"
