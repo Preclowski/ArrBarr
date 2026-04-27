@@ -25,6 +25,14 @@ jobs:
             -derivedDataPath build \
             build
 
+      - name: Test
+        run: |
+          xcodebuild -project ArrBarr.xcodeproj \
+            -scheme ArrBarr \
+            -configuration Debug \
+            -derivedDataPath build \
+            test
+
       - name: Create DMG
         if: github.event_name == 'release'
         run: |

@@ -30,6 +30,16 @@
 		F2B422F32893009BC5A19AC1 /* SabnzbdClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C9F852D3892059766CF0A72 /* SabnzbdClient.swift */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		71E25D4D2F9F8D1B0054A864 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A653F04DC480B6C6FA6963CC /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 981F7B6F6B019D53A2A452F0;
+			remoteInfo = ArrBarr;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
 		0CFA6A783235C2E8FC843636 /* SonarrClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SonarrClient.swift; sourceTree = "<group>"; };
 		0F0FF31BB5B3550A51F6B5B5 /* QueueRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QueueRowView.swift; sourceTree = "<group>"; };
@@ -44,6 +54,7 @@
 		64DC7B599FC995056A674DBF /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		65F8FDEDB2C4659A3568297C /* RadarrClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarrClient.swift; sourceTree = "<group>"; };
 		6C9F852D3892059766CF0A72 /* SabnzbdClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SabnzbdClient.swift; sourceTree = "<group>"; };
+		71E25D492F9F8D1B0054A864 /* ArrBarrTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ArrBarrTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		8368F44E56EB243C645549E1 /* QueueItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QueueItem.swift; sourceTree = "<group>"; };
 		95C6DDB30ACEB4FDD30629F0 /* ConfigStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigStore.swift; sourceTree = "<group>"; };
 		B6B3B33C463CCA1E9E75154D /* UpcomingRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpcomingRowView.swift; sourceTree = "<group>"; };
@@ -57,11 +68,30 @@
 		F863F233B791C2E808B72760 /* HTTPClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTTPClient.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		71E25D4A2F9F8D1B0054A864 /* ArrBarrTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = ArrBarrTests;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		71E25D462F9F8D1B0054A864 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
 /* Begin PBXGroup section */
 		2AB51CB1B325CDC1D0C6215E /* Products */ = {
 			isa = PBXGroup;
 			children = (
 				24CA88887E39123AE476CB8E /* ArrBarr.app */,
+				71E25D492F9F8D1B0054A864 /* ArrBarrTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -100,6 +130,7 @@
 			isa = PBXGroup;
 			children = (
 				7C333C05887345F76F5DBD52 /* ArrBarr */,
+				71E25D4A2F9F8D1B0054A864 /* ArrBarrTests */,
 				2AB51CB1B325CDC1D0C6215E /* Products */,
 			);
 			sourceTree = "<group>";
@@ -139,6 +170,29 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		71E25D482F9F8D1B0054A864 /* ArrBarrTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 71E25D512F9F8D1B0054A864 /* Build configuration list for PBXNativeTarget "ArrBarrTests" */;
+			buildPhases = (
+				71E25D452F9F8D1B0054A864 /* Sources */,
+				71E25D462F9F8D1B0054A864 /* Frameworks */,
+				71E25D472F9F8D1B0054A864 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				71E25D4E2F9F8D1B0054A864 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				71E25D4A2F9F8D1B0054A864 /* ArrBarrTests */,
+			);
+			name = ArrBarrTests;
+			packageProductDependencies = (
+			);
+			productName = ArrBarrTests;
+			productReference = 71E25D492F9F8D1B0054A864 /* ArrBarrTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		981F7B6F6B019D53A2A452F0 /* ArrBarr */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 07E06E939352CD4439DA30B7 /* Build configuration list for PBXNativeTarget "ArrBarr" */;
@@ -164,8 +218,13 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
+				LastSwiftUpdateCheck = 2640;
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
+					71E25D482F9F8D1B0054A864 = {
+						CreatedOnToolsVersion = 26.4.1;
+						TestTargetID = 981F7B6F6B019D53A2A452F0;
+					};
 					981F7B6F6B019D53A2A452F0 = {
 						DevelopmentTeam = "";
 						ProvisioningStyle = Automatic;
@@ -187,11 +246,19 @@
 			projectRoot = "";
 			targets = (
 				981F7B6F6B019D53A2A452F0 /* ArrBarr */,
+				71E25D482F9F8D1B0054A864 /* ArrBarrTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		71E25D472F9F8D1B0054A864 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		C9D0B4133AB4C846041BD9C6 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -203,6 +270,13 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		71E25D452F9F8D1B0054A864 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		89ED09B21909E642FB98AD73 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -231,6 +305,14 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		71E25D4E2F9F8D1B0054A864 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 981F7B6F6B019D53A2A452F0 /* ArrBarr */;
+			targetProxy = 71E25D4D2F9F8D1B0054A864 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		352BD470A5BE9D48B8298DCE /* Debug */ = {
@@ -366,6 +448,61 @@
 			};
 			name = Release;
 		};
+		71E25D4F2F9F8D1B0054A864 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GENERATE_INFOPLIST_FILE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.3;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.preclowski.ArrBarrTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/ArrBarr.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/ArrBarr";
+			};
+			name = Debug;
+		};
+		71E25D502F9F8D1B0054A864 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GENERATE_INFOPLIST_FILE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.3;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.preclowski.ArrBarrTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/ArrBarr.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/ArrBarr";
+			};
+			name = Release;
+		};
 		A42B5AC8E0FD1391D7969489 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -419,6 +556,15 @@
 			buildConfigurations = (
 				352BD470A5BE9D48B8298DCE /* Debug */,
 				4007DC1307241916DB3176F6 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		71E25D512F9F8D1B0054A864 /* Build configuration list for PBXNativeTarget "ArrBarrTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				71E25D4F2F9F8D1B0054A864 /* Debug */,
+				71E25D502F9F8D1B0054A864 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
