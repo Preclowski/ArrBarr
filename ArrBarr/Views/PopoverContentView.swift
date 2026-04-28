@@ -45,9 +45,7 @@ struct PopoverContentView: View {
             if anyArrConfigured {
                 tabBar
                 Divider()
-                if hasAnyItems {
-                    searchBar
-                }
+                searchBar
                 Group {
                     switch selectedTab {
                     case .queue: queueContent
@@ -96,21 +94,31 @@ struct PopoverContentView: View {
     // MARK: - Tab bar
 
     private var tabBar: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 0) {
             ForEach(Tab.allCases, id: \.self) { tab in
                 Button {
-                    withAnimation(.easeInOut(duration: 0.15)) { selectedTab = tab }
+                    withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) { selectedTab = tab }
                 } label: {
                     Text(tab.rawValue)
                         .font(.system(size: 12, weight: selectedTab == tab ? .semibold : .regular))
                         .foregroundStyle(selectedTab == tab ? .primary : .secondary)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 6)
-                        .modifier(TabGlassHighlight(isSelected: selectedTab == tab))
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
             }
         }
+        .background(
+            GeometryReader { geo in
+                let count = CGFloat(Tab.allCases.count)
+                let segment = geo.size.width / count
+                let index = CGFloat(Tab.allCases.firstIndex(of: selectedTab) ?? 0)
+                TabPillBackground()
+                    .frame(width: segment - 4, height: geo.size.height - 4)
+                    .offset(x: segment * index + 2, y: 2)
+            }
+        )
         .padding(.horizontal, 12)
         .padding(.top, 8)
         .padding(.bottom, 4)
@@ -177,8 +185,7 @@ struct PopoverContentView: View {
             }
         }
         .scrollBounceBehavior(.basedOnSize)
-        .frame(maxHeight: maxScrollHeight)
-        .fixedSize(horizontal: false, vertical: true)
+        .frame(height: maxScrollHeight)
     }
 
     // MARK: - Upcoming content
@@ -215,8 +222,7 @@ struct PopoverContentView: View {
             }
         }
         .scrollBounceBehavior(.basedOnSize)
-        .frame(maxHeight: maxScrollHeight)
-        .fixedSize(horizontal: false, vertical: true)
+        .frame(height: maxScrollHeight)
     }
 
     private var filteredUpcoming: [UpcomingItem] {
@@ -347,29 +353,12 @@ private struct UpcomingGroup {
     let isFirst: Bool
 }
 
-// MARK: - Tab glass highlight
+// MARK: - Tab pill background
 
-private struct TabGlassHighlight: ViewModifier {
-    let isSelected: Bool
-
-    func body(content: Content) -> some View {
-        if #available(macOS 26.0, *) {
-            if isSelected {
-                content
-                    .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 6))
-            } else {
-                content
-                    .contentShape(RoundedRectangle(cornerRadius: 6))
-            }
-        } else {
-            content
-                .background(
-                    isSelected
-                        ? RoundedRectangle(cornerRadius: 6).fill(.quaternary)
-                        : nil
-                )
-                .contentShape(RoundedRectangle(cornerRadius: 6))
-        }
+private struct TabPillBackground: View {
+    var body: some View {
+        RoundedRectangle(cornerRadius: 6)
+            .fill(Color.primary.opacity(0.10))
     }
 }
 

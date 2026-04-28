@@ -71,7 +71,10 @@ final class QueueAggregator {
         async let sonarr = Self.safeFetchUpcoming { try await SonarrClient(config: sonarrCfg).fetchCalendar() }
         async let lidarr = Self.safeFetchUpcoming { try await LidarrClient(config: lidarrCfg).fetchCalendar() }
         let (r, s, l) = await (radarr, sonarr, lidarr)
-        return (r + s + l).sorted { $0.airDate < $1.airDate }
+        let startOfToday = Calendar.current.startOfDay(for: Date())
+        return (r + s + l)
+            .filter { $0.airDate >= startOfToday }
+            .sorted { $0.airDate < $1.airDate }
     }
 
     private static func safeFetch(_ block: () async throws -> [QueueItem]) async -> (items: [QueueItem], error: String?) {
