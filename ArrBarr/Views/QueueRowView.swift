@@ -67,7 +67,7 @@ struct QueueRowView: View {
                             Image(systemName: statusSymbol)
                                 .foregroundStyle(progressTint)
                                 .font(.system(size: 8))
-                            Text(item.status.displayName)
+                            Text(LocalizedStringKey(item.status.displayName))
                                 .foregroundStyle(progressTint)
                             if !metaLine.isEmpty {
                                 Text("·")
@@ -86,16 +86,15 @@ struct QueueRowView: View {
                     }
                 }
 
-                if !item.customFormats.isEmpty {
-                    customFormatTags
-                        .padding(.top, 2)
-                }
-
                 ProgressView(value: item.progress)
                     .progressViewStyle(.linear)
                     .tint(progressTint)
                     .frame(height: 3)
-                    .padding(.top, item.customFormats.isEmpty ? 0 : 2)
+
+                if !item.customFormats.isEmpty {
+                    customFormatTags
+                        .padding(.top, 2)
+                }
             }
         }
         .padding(.horizontal, 12)
@@ -211,10 +210,20 @@ struct QueueRowView: View {
     private var metaLine: String {
         var parts: [String] = []
         if let q = item.quality, !q.isEmpty { parts.append(q) }
-        if let t = item.timeLeft, !t.isEmpty, t != "00:00:00" { parts.append(t) }
+        if let t = formattedTimeLeft, !t.isEmpty, t != "00:00:00" { parts.append(t) }
         let sizeStr = ByteCountFormatter.string(fromByteCount: item.sizeTotal, countStyle: .file)
         parts.append(sizeStr)
         return parts.joined(separator: " · ")
+    }
+
+    private func formatTags(_ tags: [String]) -> String {
+        tags.map { "[\($0)]" }.joined()
+    }
+
+    private var formattedTimeLeft: String? {
+        guard let raw = item.timeLeft, !raw.isEmpty else { return nil }
+        // Arr APIs sometimes return "HH:mm:ss.fffffff" — trim sub-second precision.
+        return String(raw.prefix { $0 != "." })
     }
 
     private var statusSymbol: String {
@@ -222,6 +231,7 @@ struct QueueRowView: View {
         case .downloading: return "arrow.down.circle.fill"
         case .paused: return "pause.circle.fill"
         case .queued: return "clock.fill"
+        case .importing: return "tray.and.arrow.down.fill"
         case .completed: return "checkmark.circle.fill"
         case .warning: return "exclamationmark.triangle.fill"
         case .failed: return "xmark.circle.fill"
@@ -234,16 +244,30 @@ struct QueueRowView: View {
         if let sub = item.subtitle { lines.append(sub) }
         lines.append("")
 
-        if let q = item.quality, !q.isEmpty { lines.append("Quality: \(q)") }
-        if let client = item.downloadClient { lines.append("Client: \(client) (\(item.downloadProtocol.rawValue))") }
+        if let q = item.quality, !q.isEmpty { lines.append("\(String(localized: "Quality:")) \(q)") }
+        if let client = item.downloadClient { lines.append("\(String(localized: "Client:")) \(client) (\(item.downloadProtocol.rawValue))") }
+        if let file = item.downloadFileName, !file.isEmpty { lines.append("\(String(localized: "File:")) \(file)") }
         if item.customFormatScore != 0 {
             let sign = item.customFormatScore > 0 ? "+" : ""
-            lines.append("Score: \(sign)\(item.customFormatScore)")
+            lines.append("\(String(localized: "Score:")) \(sign)\(item.customFormatScore)")
         }
         if !item.customFormats.isEmpty {
+            lines.append("\(String(localized: "Custom formats:")) \(formatTags(item.customFormats))")
+        }
+        if item.isUpgrade,
+           item.existingCustomFormatScore != nil || item.existingQuality != nil || !item.existingCustomFormats.isEmpty {
             lines.append("")
-            lines.append("Custom formats:")
-            for cf in item.customFormats { lines.append("  • \(cf)") }
+            lines.append(String(localized: "Existing file:"))
+            if let q = item.existingQuality, !q.isEmpty {
+                lines.append("  \(String(localized: "Quality:")) \(q)")
+            }
+            if let s = item.existingCustomFormatScore {
+                let sign = s > 0 ? "+" : ""
+                lines.append("  \(String(localized: "Score:")) \(sign)\(s)")
+            }
+            if !item.existingCustomFormats.isEmpty {
+                lines.append("  \(String(localized: "Custom formats:")) \(formatTags(item.existingCustomFormats))")
+            }
         }
         return lines.joined(separator: "\n")
     }
@@ -253,6 +277,7 @@ struct QueueRowView: View {
         case .paused: return .orange
         case .failed, .warning: return .red
         case .completed: return .green
+        case .importing: return .purple
         default: return .blue
         }
     }

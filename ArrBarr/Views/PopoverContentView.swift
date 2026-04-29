@@ -8,8 +8,12 @@ struct PopoverContentView: View {
 
     @State private var selectedTab: Tab = .queue
     @State private var searchText = ""
+    @State private var measuredContentHeight: CGFloat = 0
+    @State private var historySource: QueueItem.Source?
+    @State private var historyRefreshNonce = 0
 
     private let maxScrollHeight: CGFloat = 520
+    private let minScrollHeight: CGFloat = 80
 
     private func filter(_ items: [QueueItem]) -> [QueueItem] {
         let q = searchText.trimmingCharacters(in: .whitespaces).lowercased()
@@ -31,18 +35,28 @@ struct PopoverContentView: View {
     }
 
     var body: some View {
-        if #available(macOS 26.0, *) {
-            GlassEffectContainer {
+        Group {
+            if #available(macOS 26.0, *) {
+                GlassEffectContainer {
+                    mainContent
+                }
+            } else {
                 mainContent
             }
-        } else {
-            mainContent
         }
+        .environment(\.locale, configStore.currentLocale)
     }
 
     private var mainContent: some View {
         VStack(spacing: 0) {
-            if anyArrConfigured {
+            if let historySource {
+                HistoryView(
+                    source: historySource,
+                    viewModel: viewModel,
+                    refreshNonce: historyRefreshNonce,
+                    onClose: { self.historySource = nil }
+                )
+            } else if anyArrConfigured {
                 tabBar
                 Divider()
                 searchBar
@@ -52,12 +66,18 @@ struct PopoverContentView: View {
                     case .upcoming: upcomingContent
                     }
                 }
+                .animation(.smooth(duration: 0.28), value: scrollHeight)
             } else {
                 emptyState
             }
             footer
         }
         .frame(width: 400)
+    }
+
+    private var scrollHeight: CGFloat {
+        guard measuredContentHeight > 0 else { return minScrollHeight }
+        return min(max(measuredContentHeight, minScrollHeight), maxScrollHeight)
     }
 
     private var hasAnyItems: Bool {
@@ -99,7 +119,7 @@ struct PopoverContentView: View {
                 Button {
                     withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) { selectedTab = tab }
                 } label: {
-                    Text(tab.rawValue)
+                    Text(LocalizedStringKey(tab.rawValue))
                         .font(.system(size: 12, weight: selectedTab == tab ? .semibold : .regular))
                         .foregroundStyle(selectedTab == tab ? .primary : .secondary)
                         .frame(maxWidth: .infinity)
@@ -128,18 +148,34 @@ struct PopoverContentView: View {
 
     private var queueContent: some View {
         ScrollView {
-            if viewModel.isLoading && viewModel.radarr.isEmpty && viewModel.sonarr.isEmpty && viewModel.lidarr.isEmpty {
-                VStack(spacing: 10) {
-                    ProgressView()
-                        .controlSize(.small)
-                    Text("Loading…")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+            Group {
+                if viewModel.isLoading && viewModel.radarr.isEmpty && viewModel.sonarr.isEmpty && viewModel.lidarr.isEmpty {
+                    VStack(spacing: 10) {
+                        ProgressView()
+                            .controlSize(.small)
+                        Text("Loading…")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 32)
+                } else {
+                    queueSections
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 32)
-            } else {
-                VStack(alignment: .leading, spacing: 16) {
+            }
+            .background(
+                GeometryReader { geo in
+                    Color.clear.preference(key: ContentHeightKey.self, value: geo.size.height)
+                }
+            )
+        }
+        .scrollBounceBehavior(.basedOnSize)
+        .frame(height: scrollHeight)
+        .onPreferenceChange(ContentHeightKey.self) { if $0 > 0 { measuredContentHeight = $0 } }
+    }
+
+    private var queueSections: some View {
+        VStack(alignment: .leading, spacing: 16) {
                     if sonarrConfigured {
                         QueueSectionView(
                             title: "Sonarr",
@@ -147,7 +183,8 @@ struct PopoverContentView: View {
                             items: filter(viewModel.sonarr),
                             error: viewModel.sonarrError,
                             health: viewModel.health.sonarr,
-                            viewModel: viewModel
+                            viewModel: viewModel,
+                            onShowHistory: { historySource = .sonarr }
                         )
                     }
 
@@ -162,7 +199,8 @@ struct PopoverContentView: View {
                             items: filter(viewModel.radarr),
                             error: viewModel.radarrError,
                             health: viewModel.health.radarr,
-                            viewModel: viewModel
+                            viewModel: viewModel,
+                            onShowHistory: { historySource = .radarr }
                         )
                     }
 
@@ -177,52 +215,57 @@ struct PopoverContentView: View {
                             items: filter(viewModel.lidarr),
                             error: viewModel.lidarrError,
                             health: viewModel.health.lidarr,
-                            viewModel: viewModel
+                            viewModel: viewModel,
+                            onShowHistory: { historySource = .lidarr }
                         )
                     }
-                }
-                .padding(.vertical, 12)
-            }
         }
-        .scrollBounceBehavior(.basedOnSize)
-        .frame(height: maxScrollHeight)
+        .padding(.vertical, 12)
     }
 
     // MARK: - Upcoming content
 
     private var upcomingContent: some View {
         ScrollView {
-            if filteredUpcoming.isEmpty {
-                VStack(spacing: 8) {
-                    Image(systemName: "calendar")
-                        .font(.system(size: 24, weight: .light))
-                        .foregroundStyle(.tertiary)
-                    Text("Nothing upcoming")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 32)
-            } else {
-                LazyVStack(alignment: .leading, spacing: 0) {
-                    ForEach(groupedUpcoming, id: \.date) { group in
-                        Text(group.label)
-                            .font(.system(size: 11, weight: .semibold))
+            Group {
+                if filteredUpcoming.isEmpty {
+                    VStack(spacing: 8) {
+                        Image(systemName: "calendar")
+                            .font(.system(size: 24, weight: .light))
+                            .foregroundStyle(.tertiary)
+                        Text("Nothing upcoming")
+                            .font(.subheadline)
                             .foregroundStyle(.secondary)
-                            .padding(.horizontal, 12)
-                            .padding(.top, group.isFirst ? 8 : 14)
-                            .padding(.bottom, 4)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 32)
+                } else {
+                    LazyVStack(alignment: .leading, spacing: 0) {
+                        ForEach(groupedUpcoming, id: \.date) { group in
+                            Text(group.label)
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(.secondary)
+                                .padding(.horizontal, 12)
+                                .padding(.top, group.isFirst ? 8 : 14)
+                                .padding(.bottom, 4)
 
-                        ForEach(group.items) { item in
-                            UpcomingRowView(item: item)
+                            ForEach(group.items) { item in
+                                UpcomingRowView(item: item)
+                            }
                         }
                     }
+                    .padding(.bottom, 8)
                 }
-                .padding(.bottom, 8)
             }
+            .background(
+                GeometryReader { geo in
+                    Color.clear.preference(key: ContentHeightKey.self, value: geo.size.height)
+                }
+            )
         }
         .scrollBounceBehavior(.basedOnSize)
-        .frame(height: maxScrollHeight)
+        .frame(height: scrollHeight)
+        .onPreferenceChange(ContentHeightKey.self) { if $0 > 0 { measuredContentHeight = $0 } }
     }
 
     private var filteredUpcoming: [UpcomingItem] {
@@ -309,7 +352,13 @@ struct PopoverContentView: View {
             }
             Divider()
             HStack(spacing: 6) {
-                Button(action: { Task { await viewModel.refresh() } }) {
+                Button(action: {
+                    if historySource != nil {
+                        historyRefreshNonce &+= 1
+                    } else {
+                        Task { await viewModel.refresh() }
+                    }
+                }) {
                     Image(systemName: "arrow.clockwise")
                         .rotationEffect(.degrees(viewModel.isLoading ? 360 : 0))
                         .animation(
@@ -322,7 +371,7 @@ struct PopoverContentView: View {
                 .modifier(GlassButtonStyle())
                 .controlSize(.small)
                 .help("Refresh")
-                .disabled(viewModel.isLoading)
+                .disabled(viewModel.isLoading && historySource == nil)
 
                 Spacer()
 
@@ -343,6 +392,13 @@ struct PopoverContentView: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
         }
+    }
+}
+
+private struct ContentHeightKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
     }
 }
 

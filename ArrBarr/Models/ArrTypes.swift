@@ -55,6 +55,21 @@ struct RadarrMovie: Decodable {
     let hasFile: Bool?
     let titleSlug: String?
     let images: [ArrImage]?
+    let movieFile: ArrFile?
+}
+
+struct ArrFile: Decodable {
+    let customFormats: [ArrCustomFormat]?
+    let customFormatScore: Int?
+    let quality: ArrQuality?
+}
+
+struct RadarrMovieFile: Decodable {
+    let id: Int
+    let movieId: Int?
+    let customFormats: [ArrCustomFormat]?
+    let customFormatScore: Int?
+    let quality: ArrQuality?
 }
 
 // MARK: - Sonarr
@@ -96,6 +111,15 @@ struct SonarrEpisode: Decodable {
     let episodeNumber: Int?
     let title: String?
     let hasFile: Bool?
+    let episodeFileId: Int?
+}
+
+struct SonarrEpisodeFile: Decodable {
+    let id: Int
+    let seriesId: Int?
+    let customFormats: [ArrCustomFormat]?
+    let customFormatScore: Int?
+    let quality: ArrQuality?
 }
 
 // MARK: - Lidarr
@@ -146,6 +170,48 @@ struct LidarrCalendarRecord: Decodable {
     let overview: String?
     let artist: LidarrArtist?
     let images: [ArrImage]?
+}
+
+// MARK: - History
+
+struct RadarrHistoryRecord: Decodable {
+    let id: Int
+    let movieId: Int?
+    let sourceTitle: String?
+    let date: String?
+    let eventType: String?
+    let quality: ArrQuality?
+    let customFormats: [ArrCustomFormat]?
+    let customFormatScore: Int?
+    let movie: RadarrMovie?
+}
+
+struct SonarrHistoryRecord: Decodable {
+    let id: Int
+    let episodeId: Int?
+    let seriesId: Int?
+    let sourceTitle: String?
+    let date: String?
+    let eventType: String?
+    let quality: ArrQuality?
+    let customFormats: [ArrCustomFormat]?
+    let customFormatScore: Int?
+    let series: SonarrSeries?
+    let episode: SonarrEpisode?
+}
+
+struct LidarrHistoryRecord: Decodable {
+    let id: Int
+    let albumId: Int?
+    let artistId: Int?
+    let sourceTitle: String?
+    let date: String?
+    let eventType: String?
+    let quality: ArrQuality?
+    let customFormats: [ArrCustomFormat]?
+    let customFormatScore: Int?
+    let artist: LidarrArtist?
+    let album: LidarrAlbum?
 }
 
 // MARK: - Health

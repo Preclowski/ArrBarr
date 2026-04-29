@@ -9,6 +9,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var popover: NSPopover!
     private var settingsWindow: NSWindow?
     private var escMonitor: Any?
+    private var outsideClickMonitor: Any?
 
     private let configStore = ConfigStore.shared
     private let queueVM = QueueViewModel()
@@ -113,6 +114,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
             return event
         }
+        outsideClickMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
+            guard let self, self.popover.isShown else { return }
+            self.popover.performClose(nil)
+        }
     }
 
     private func removeEscMonitor() {
@@ -120,14 +125,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             NSEvent.removeMonitor(monitor)
             escMonitor = nil
         }
+        if let monitor = outsideClickMonitor {
+            NSEvent.removeMonitor(monitor)
+            outsideClickMonitor = nil
+        }
     }
 
     private func showStatusMenu() {
         let menu = NSMenu()
-        menu.addItem(withTitle: "Refresh", action: #selector(menuRefresh), keyEquivalent: "r").target = self
+        menu.addItem(withTitle: String(localized: "Refresh"), action: #selector(menuRefresh), keyEquivalent: "r").target = self
         menu.addItem(.separator())
-        menu.addItem(withTitle: "Settings…", action: #selector(menuSettings), keyEquivalent: ",").target = self
-        menu.addItem(withTitle: "Quit ArrBarr", action: #selector(menuQuit), keyEquivalent: "q").target = self
+        menu.addItem(withTitle: String(localized: "Settings…"), action: #selector(menuSettings), keyEquivalent: ",").target = self
+        menu.addItem(withTitle: String(localized: "Quit ArrBarr"), action: #selector(menuQuit), keyEquivalent: "q").target = self
         statusItem.menu = menu
         statusItem.button?.performClick(nil)
         statusItem.menu = nil
@@ -151,7 +160,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let view = SettingsView().environmentObject(configStore)
         let hosting = NSHostingController(rootView: view)
         let win = NSWindow(contentViewController: hosting)
-        win.title = "ArrBarr Settings"
+        win.title = String(localized: "ArrBarr Settings")
         win.styleMask = [.titled, .closable, .miniaturizable]
         win.setContentSize(NSSize(width: 520, height: 460))
         win.isReleasedWhenClosed = false

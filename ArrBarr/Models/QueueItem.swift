@@ -4,13 +4,14 @@ struct QueueItem: Identifiable, Equatable {
     enum Source: String { case radarr, sonarr, lidarr }
     enum DownloadProtocol: String { case usenet, torrent, unknown }
     enum Status: String {
-        case downloading, paused, queued, completed, warning, failed, unknown
+        case downloading, paused, queued, importing, completed, warning, failed, unknown
 
         var displayName: String {
             switch self {
             case .downloading: return "Downloading"
             case .paused: return "Paused"
             case .queued: return "Queued"
+            case .importing: return "Importing"
             case .completed: return "Completed"
             case .warning: return "Warning"
             case .failed: return "Failed"
@@ -38,10 +39,15 @@ struct QueueItem: Identifiable, Equatable {
     let customFormatScore: Int
     let quality: String?
     let isUpgrade: Bool
+    let existingCustomFormats: [String]
+    let existingCustomFormatScore: Int?
+    let existingQuality: String?
     let contentSlug: String?
 
     let posterURL: URL?
     let posterRequiresAuth: Bool
+
+    var downloadFileName: String?
 
     init(
         id: String, source: Source, arrQueueId: Int,
@@ -50,7 +56,9 @@ struct QueueItem: Identifiable, Equatable {
         status: Status, progress: Double, sizeTotal: Int64,
         sizeLeft: Int64, timeLeft: String?,
         customFormats: [String], customFormatScore: Int,
-        quality: String?, isUpgrade: Bool, contentSlug: String?,
+        quality: String?, isUpgrade: Bool,
+        existingCustomFormats: [String] = [], existingCustomFormatScore: Int? = nil, existingQuality: String? = nil,
+        contentSlug: String?,
         posterURL: URL? = nil, posterRequiresAuth: Bool = false
     ) {
         self.id = id; self.source = source; self.arrQueueId = arrQueueId
@@ -60,6 +68,9 @@ struct QueueItem: Identifiable, Equatable {
         self.sizeLeft = sizeLeft; self.timeLeft = timeLeft
         self.customFormats = customFormats; self.customFormatScore = customFormatScore
         self.quality = quality; self.isUpgrade = isUpgrade; self.contentSlug = contentSlug
+        self.existingCustomFormats = existingCustomFormats
+        self.existingCustomFormatScore = existingCustomFormatScore
+        self.existingQuality = existingQuality
         self.posterURL = posterURL; self.posterRequiresAuth = posterRequiresAuth
     }
 

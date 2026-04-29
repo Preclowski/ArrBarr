@@ -47,6 +47,18 @@ final class ConfigStore: ObservableObject {
     @Published var notifySonarr: Bool
     @Published var notifyLidarr: Bool
     @Published var launchAtLogin: Bool
+    @Published var appLanguage: String
+
+    static let appLanguageOptions: [(code: String, label: String)] = [
+        ("system", "System"),
+        ("en", "English"),
+        ("pl", "Polski"),
+    ]
+
+    var currentLocale: Locale {
+        if appLanguage == "system" { return .autoupdatingCurrent }
+        return Locale(identifier: appLanguage)
+    }
 
     static let foregroundIntervalOptions: [TimeInterval] = [0, 2, 5, 10, 15, 30]
     static let backgroundIntervalOptions: [TimeInterval] = [0, 10, 30, 60, 120, 300]
@@ -60,6 +72,7 @@ final class ConfigStore: ObservableObject {
     private static let notifySonarrKey = "ArrBarr.notifySonarr"
     private static let notifyLidarrKey = "ArrBarr.notifyLidarr"
     private static let launchAtLoginKey = "ArrBarr.launchAtLogin"
+    private static let appLanguageKey = "ArrBarr.appLanguage"
     private static let keychainMigrationDoneKey = "ArrBarr.keychainMigrationDone"
 
     init(defaults: UserDefaults = .standard) {
@@ -91,6 +104,7 @@ final class ConfigStore: ObservableObject {
         self.notifySonarr = defaults.object(forKey: Self.notifySonarrKey) != nil ? defaults.bool(forKey: Self.notifySonarrKey) : false
         self.notifyLidarr = defaults.object(forKey: Self.notifyLidarrKey) != nil ? defaults.bool(forKey: Self.notifyLidarrKey) : false
         self.launchAtLogin = defaults.object(forKey: Self.launchAtLoginKey) != nil ? defaults.bool(forKey: Self.launchAtLoginKey) : false
+        self.appLanguage = defaults.string(forKey: Self.appLanguageKey) ?? "system"
 
         for kind in ServiceKind.allCases {
             publisher(for: kind).dropFirst().sink { [weak self] cfg in
@@ -115,6 +129,15 @@ final class ConfigStore: ObservableObject {
         $launchAtLogin.dropFirst().sink { [weak self] val in
             self?.defaults.set(val, forKey: Self.launchAtLoginKey)
             LaunchAtLogin.set(enabled: val)
+        }.store(in: &cancellables)
+        $appLanguage.dropFirst().sink { [weak self] val in
+            guard let self else { return }
+            self.defaults.set(val, forKey: Self.appLanguageKey)
+            if val == "system" {
+                self.defaults.removeObject(forKey: "AppleLanguages")
+            } else {
+                self.defaults.set([val], forKey: "AppleLanguages")
+            }
         }.store(in: &cancellables)
     }
 

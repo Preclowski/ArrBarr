@@ -51,6 +51,13 @@ actor QbittorrentClient {
         return torrents.contains { $0.hash.lowercased() == hash.lowercased() }
     }
 
+    func fetchNames() async throws -> [String: String] {
+        let torrents = try await fetchTorrents()
+        var map: [String: String] = [:]
+        for t in torrents { map[t.hash.lowercased()] = t.name }
+        return map
+    }
+
     private func fetchTorrents() async throws -> [QbitTorrent] {
         try await ensureLoggedIn()
         let url = try http.url(base: config.baseURL, path: "/api/v2/torrents/info")

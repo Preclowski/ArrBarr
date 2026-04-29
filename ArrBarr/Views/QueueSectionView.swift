@@ -7,6 +7,8 @@ struct QueueSectionView: View {
     var error: String?
     var health: [ArrHealthRecord] = []
     @ObservedObject var viewModel: QueueViewModel
+    var onShowHistory: (() -> Void)? = nil
+    @State private var hoveringHistory = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -25,6 +27,20 @@ struct QueueSectionView: View {
                     healthBadge
                 }
                 Spacer()
+                if let onShowHistory {
+                    Button(action: onShowHistory) {
+                        HStack(spacing: 2) {
+                            Text("Show history")
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 8, weight: .semibold))
+                        }
+                        .font(.system(size: 10))
+                        .foregroundStyle(hoveringHistory ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.tertiary))
+                    }
+                    .buttonStyle(.plain)
+                    .onHover { hoveringHistory = $0 }
+                    .help("Show history")
+                }
             }
             .padding(.horizontal, 12)
 

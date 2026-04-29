@@ -9,10 +9,10 @@ final class QueueAggregator {
 
         var errorDescription: String? {
             switch self {
-            case .noDownloadId: return "No download ID — item hasn't reached the client yet"
-            case .downloadProtocolUnknown: return "Unknown download protocol"
+            case .noDownloadId: return String(localized: "No download ID — item hasn't reached the client yet")
+            case .downloadProtocolUnknown: return String(localized: "Unknown download protocol")
             case .downloadClientNotConfigured(let p):
-                return "Client (\(p.rawValue)) is not configured"
+                return String(localized: "Client (\(p.rawValue)) is not configured")
             }
         }
     }
@@ -35,15 +35,40 @@ final class QueueAggregator {
         let radarrCfg = configStore.radarr
         let sonarrCfg = configStore.sonarr
         let lidarrCfg = configStore.lidarr
+        let qbitCfg = configStore.qbittorrent
+        let sabCfg = configStore.sabnzbd
 
         async let radarr = Self.safeFetch { try await RadarrClient(config: radarrCfg).fetchQueue() }
         async let sonarr = Self.safeFetch { try await SonarrClient(config: sonarrCfg).fetchQueue() }
         async let lidarr = Self.safeFetch { try await LidarrClient(config: lidarrCfg).fetchQueue() }
-        let (r, s, l) = await (radarr, sonarr, lidarr)
+        async let qbitNames = Self.safeNames { qbitCfg.isConfigured ? try await self.qbitClient(for: qbitCfg).fetchNames() : [:] }
+        async let sabNames = Self.safeNames {
+            (sabCfg.isConfigured && !sabCfg.apiKey.isEmpty) ? try await SabnzbdClient(config: sabCfg).fetchNames() : [:]
+        }
+        let (r, s, l, qNames, sNames) = await (radarr, sonarr, lidarr, qbitNames, sabNames)
         return AggregateResult(
-            radarr: r.items, sonarr: s.items, lidarr: l.items,
+            radarr: Self.attachNames(r.items, torrents: qNames, usenet: sNames),
+            sonarr: Self.attachNames(s.items, torrents: qNames, usenet: sNames),
+            lidarr: Self.attachNames(l.items, torrents: qNames, usenet: sNames),
             radarrError: r.error, sonarrError: s.error, lidarrError: l.error
         )
+    }
+
+    private static func safeNames(_ block: () async throws -> [String: String]) async -> [String: String] {
+        do { return try await block() } catch { return [:] }
+    }
+
+    private static func attachNames(_ items: [QueueItem], torrents: [String: String], usenet: [String: String]) -> [QueueItem] {
+        items.map { item in
+            guard let id = item.downloadId, !id.isEmpty else { return item }
+            var copy = item
+            switch item.downloadProtocol {
+            case .torrent: copy.downloadFileName = torrents[id.lowercased()]
+            case .usenet:  copy.downloadFileName = usenet[id]
+            case .unknown: break
+            }
+            return copy
+        }
     }
 
     func fetchHealth() async -> HealthResult {

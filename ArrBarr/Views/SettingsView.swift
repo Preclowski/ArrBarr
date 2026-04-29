@@ -17,6 +17,7 @@ struct SettingsView: View {
     @State private var draftNotifySonarr = false
     @State private var draftNotifyLidarr = false
     @State private var draftLaunchAtLogin = false
+    @State private var draftAppLanguage: String = "system"
     @State private var showUnsavedAlert = false
 
     private var hasChanges: Bool {
@@ -35,6 +36,7 @@ struct SettingsView: View {
         || draftNotifySonarr != configStore.notifySonarr
         || draftNotifyLidarr != configStore.notifyLidarr
         || draftLaunchAtLogin != configStore.launchAtLogin
+        || draftAppLanguage != configStore.appLanguage
     }
 
     var body: some View {
@@ -52,6 +54,7 @@ struct SettingsView: View {
 
             bottomBar
         }
+        .environment(\.locale, configStore.currentLocale)
         .onAppear { loadDrafts() }
         .alert("Unsaved Changes", isPresented: $showUnsavedAlert) {
             Button("Save", role: nil) { save(); NSApp.keyWindow?.close() }
@@ -113,6 +116,13 @@ struct SettingsView: View {
         Form {
             Section("Startup") {
                 Toggle("Launch at login", isOn: $draftLaunchAtLogin)
+            }
+            Section("Language") {
+                Picker("Language", selection: $draftAppLanguage) {
+                    ForEach(ConfigStore.appLanguageOptions, id: \.code) { opt in
+                        Text(LocalizedStringKey(opt.label)).tag(opt.code)
+                    }
+                }
             }
             Section("Refresh Interval") {
                 Picker("Popover open", selection: $draftForegroundInterval) {
@@ -195,6 +205,7 @@ struct SettingsView: View {
         configStore.notifySonarr = draftNotifySonarr
         configStore.notifyLidarr = draftNotifyLidarr
         configStore.launchAtLogin = draftLaunchAtLogin
+        configStore.appLanguage = draftAppLanguage
     }
 
     private func loadDrafts() {
@@ -213,11 +224,12 @@ struct SettingsView: View {
         draftNotifySonarr = configStore.notifySonarr
         draftNotifyLidarr = configStore.notifyLidarr
         draftLaunchAtLogin = configStore.launchAtLogin
+        draftAppLanguage = configStore.appLanguage
     }
 
     private static func formatInterval(_ seconds: TimeInterval) -> String {
         if seconds == 0 {
-            return "Never"
+            return String(localized: "Never")
         } else if seconds < 60 {
             return "\(Int(seconds))s"
         } else {

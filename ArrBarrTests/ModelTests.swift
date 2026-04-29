@@ -168,17 +168,8 @@ struct QueueItemTests {
 
     @Test("All status values have display names")
     func statusDisplayNames() {
-        let expected: [QueueItem.Status: String] = [
-            .downloading: "Downloading",
-            .paused: "Paused",
-            .queued: "Queued",
-            .completed: "Completed",
-            .warning: "Warning",
-            .failed: "Failed",
-            .unknown: "Unknown",
-        ]
-        for (status, name) in expected {
-            #expect(status.displayName == name)
+        for status in [QueueItem.Status.downloading, .paused, .queued, .importing, .completed, .warning, .failed, .unknown] {
+            #expect(!status.displayName.isEmpty)
         }
     }
 

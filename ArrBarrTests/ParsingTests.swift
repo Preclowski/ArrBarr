@@ -80,11 +80,20 @@ struct StatusParsingTests {
         #expect(parseStatus(arrStatus: nil, trackedState: "failedPending") == .failed)
     }
 
-    @Test("Tracked state: completed variants")
+    @Test("Tracked state: importing variants")
+    func trackedImporting() {
+        #expect(parseStatus(arrStatus: nil, trackedState: "importing") == .importing)
+        #expect(parseStatus(arrStatus: nil, trackedState: "importPending") == .importing)
+    }
+
+    @Test("Tracked state: imported is completed")
     func trackedCompleted() {
         #expect(parseStatus(arrStatus: nil, trackedState: "imported") == .completed)
-        #expect(parseStatus(arrStatus: nil, trackedState: "importing") == .completed)
-        #expect(parseStatus(arrStatus: nil, trackedState: "importPending") == .completed)
+    }
+
+    @Test("Tracked state: importBlocked is warning")
+    func trackedImportBlocked() {
+        #expect(parseStatus(arrStatus: nil, trackedState: "importBlocked") == .warning)
     }
 
     @Test("Arr status fallbacks when tracked state is nil")

@@ -72,6 +72,42 @@ actor LidarrClient {
         return records.compactMap { Self.unifyCalendar($0, baseURL: baseURL) }
     }
 
+    func fetchHistory() async throws -> [HistoryItem] {
+        guard config.isConfigured else { throw HTTPError.notConfigured }
+        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
+        let url = try http.url(
+            base: config.baseURL,
+            path: "/api/v1/history",
+            query: [
+                URLQueryItem(name: "page", value: "1"),
+                URLQueryItem(name: "pageSize", value: "50"),
+                URLQueryItem(name: "sortKey", value: "date"),
+                URLQueryItem(name: "sortDirection", value: "descending"),
+                URLQueryItem(name: "includeArtist", value: "true"),
+                URLQueryItem(name: "includeAlbum", value: "true"),
+            ]
+        )
+        let data = try await http.get(url, headers: ["X-Api-Key": config.apiKey])
+        let page: ArrQueuePage<LidarrHistoryRecord>
+        do { page = try JSONDecoder().decode(ArrQueuePage<LidarrHistoryRecord>.self, from: data) }
+        catch { throw HTTPError.decoding(error) }
+        return page.records.compactMap { r in
+            guard let dateStr = r.date, let date = parseArrDate(dateStr) else { return nil }
+            return HistoryItem(
+                id: "lidarr-h-\(r.id)",
+                source: .lidarr,
+                date: date,
+                eventType: HistoryItem.EventType.parse(r.eventType),
+                title: r.artist?.artistName ?? r.sourceTitle ?? "Unknown",
+                subtitle: r.album?.title,
+                sourceTitle: r.sourceTitle,
+                quality: r.quality?.name,
+                customFormats: (r.customFormats ?? []).map(\.name),
+                customFormatScore: r.customFormatScore ?? 0
+            )
+        }
+    }
+
     func fetchHealth() async throws -> [ArrHealthRecord] {
         guard config.isConfigured else { throw HTTPError.notConfigured }
         guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }

@@ -37,7 +37,22 @@ actor RadarrClient {
         do { page = try JSONDecoder().decode(ArrQueuePage<RadarrQueueRecord>.self, from: data) }
         catch { throw HTTPError.decoding(error) }
         let baseURL = config.baseURL
-        return page.records.map { Self.unify($0, baseURL: baseURL) }
+
+        let movieIds = Set(page.records.compactMap { $0.movieId ?? $0.movie?.id }
+            .filter { $0 > 0 })
+        let fileMap = (try? await fetchMovieFiles(movieIds: movieIds)) ?? [:]
+        return page.records.map { Self.unify($0, baseURL: baseURL, fileMap: fileMap) }
+    }
+
+    private func fetchMovieFiles(movieIds: Set<Int>) async throws -> [Int: RadarrMovieFile] {
+        guard !movieIds.isEmpty else { return [:] }
+        let items = movieIds.map { URLQueryItem(name: "movieId", value: String($0)) }
+        let url = try http.url(base: config.baseURL, path: "/api/v3/moviefile", query: items)
+        let data = try await http.get(url, headers: ["X-Api-Key": config.apiKey])
+        let files = (try? JSONDecoder().decode([RadarrMovieFile].self, from: data)) ?? []
+        var map: [Int: RadarrMovieFile] = [:]
+        for f in files { if let mid = f.movieId { map[mid] = f } }
+        return map
     }
 
     func fetchCalendar() async throws -> [UpcomingItem] {
@@ -69,6 +84,43 @@ actor RadarrClient {
 
         let baseURL = config.baseURL
         return records.compactMap { Self.unifyCalendar($0, baseURL: baseURL) }
+    }
+
+    func fetchHistory() async throws -> [HistoryItem] {
+        guard config.isConfigured else { throw HTTPError.notConfigured }
+        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
+        let url = try http.url(
+            base: config.baseURL,
+            path: "/api/v3/history",
+            query: [
+                URLQueryItem(name: "page", value: "1"),
+                URLQueryItem(name: "pageSize", value: "50"),
+                URLQueryItem(name: "sortKey", value: "date"),
+                URLQueryItem(name: "sortDirection", value: "descending"),
+                URLQueryItem(name: "includeMovie", value: "true"),
+            ]
+        )
+        let data = try await http.get(url, headers: ["X-Api-Key": config.apiKey])
+        let page: ArrQueuePage<RadarrHistoryRecord>
+        do { page = try JSONDecoder().decode(ArrQueuePage<RadarrHistoryRecord>.self, from: data) }
+        catch { throw HTTPError.decoding(error) }
+        return page.records.compactMap(Self.unifyHistory)
+    }
+
+    private static func unifyHistory(_ r: RadarrHistoryRecord) -> HistoryItem? {
+        guard let dateStr = r.date, let date = parseArrDate(dateStr) else { return nil }
+        return HistoryItem(
+            id: "radarr-h-\(r.id)",
+            source: .radarr,
+            date: date,
+            eventType: HistoryItem.EventType.parse(r.eventType),
+            title: r.movie?.title ?? r.sourceTitle ?? "Unknown",
+            subtitle: nil,
+            sourceTitle: r.sourceTitle,
+            quality: r.quality?.name,
+            customFormats: (r.customFormats ?? []).map(\.name),
+            customFormatScore: r.customFormatScore ?? 0
+        )
     }
 
     func fetchHealth() async throws -> [ArrHealthRecord] {
@@ -104,7 +156,7 @@ actor RadarrClient {
         )
     }
 
-    private static func unify(_ r: RadarrQueueRecord, baseURL: String) -> QueueItem {
+    private static func unify(_ r: RadarrQueueRecord, baseURL: String, fileMap: [Int: RadarrMovieFile]) -> QueueItem {
         let total = Int64(r.size ?? 0)
         let left = Int64(r.sizeleft ?? 0)
         let progress = total > 0 ? max(0, min(1, 1.0 - Double(left) / Double(total))) : 0.0
@@ -116,6 +168,8 @@ actor RadarrClient {
             movieTitle = r.title ?? "Unknown"
         }
         let (poster, posterAuth) = pickPosterURL(from: r.movie?.images, coverTypes: ["poster"], baseURL: baseURL)
+
+        let existingFile = (r.movieId ?? r.movie?.id).flatMap { fileMap[$0] }
 
         return QueueItem(
             id: "radarr-\(r.id)",
@@ -134,7 +188,10 @@ actor RadarrClient {
             customFormats: (r.customFormats ?? []).map(\.name),
             customFormatScore: r.customFormatScore ?? 0,
             quality: r.quality?.name,
-            isUpgrade: r.movie?.hasFile ?? false,
+            isUpgrade: existingFile != nil || r.movie?.movieFile != nil || (r.movie?.hasFile ?? false),
+            existingCustomFormats: (existingFile?.customFormats ?? r.movie?.movieFile?.customFormats ?? []).map(\.name),
+            existingCustomFormatScore: existingFile?.customFormatScore ?? r.movie?.movieFile?.customFormatScore,
+            existingQuality: existingFile?.quality?.name ?? r.movie?.movieFile?.quality?.name,
             contentSlug: r.movie?.titleSlug,
             posterURL: poster,
             posterRequiresAuth: posterAuth
@@ -199,7 +256,9 @@ func parseStatus(arrStatus: String?, trackedState: String?) -> QueueItem.Status 
         switch tracked {
         case "downloading": return .downloading
         case "downloadfailed", "failedpending": return .failed
-        case "imported", "importing", "importpending": return .completed
+        case "importing", "importpending": return .importing
+        case "imported": return .completed
+        case "importblocked": return .warning
         default: break
         }
     }

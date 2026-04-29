@@ -1,0 +1,426 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "Add your Radarr or Sonarr connection to get started." : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Dodaj połączenie z Radarrem lub Sonarrem, aby rozpocząć." } }
+      }
+    },
+    "API Key" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Klucz API" } }
+      }
+    },
+    "ArrBarr is not configured" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "ArrBarr nie jest skonfigurowany" } }
+      }
+    },
+    "ArrBarr Settings" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Ustawienia ArrBarr" } }
+      }
+    },
+    "Background" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "W tle" } }
+      }
+    },
+    "Cancel" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Anuluj" } }
+      }
+    },
+    "Client (%@) is not configured" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Klient (%@) nie jest skonfigurowany" } }
+      }
+    },
+    "Client:" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Klient:" } }
+      }
+    },
+    "Close" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Zamknij" } }
+      }
+    },
+    "Completed" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Ukończone" } }
+      }
+    },
+    "Custom formats:" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Formaty niestandardowe:" } }
+      }
+    },
+    "Do you want to save your changes before closing?" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Czy chcesz zapisać zmiany przed zamknięciem?" } }
+      }
+    },
+    "Don't Save" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Nie zapisuj" } }
+      }
+    },
+    "Downloading" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Pobieranie" } }
+      }
+    },
+    "Enabled" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Włączone" } }
+      }
+    },
+    "English" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Angielski" } }
+      }
+    },
+    "Existing file:" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Istniejący plik:" } }
+      }
+    },
+    "Show history" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Pokaż historię" } }
+      }
+    },
+    "History" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Historia" } }
+      }
+    },
+    "Back" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Wstecz" } }
+      }
+    },
+    "No history" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Brak historii" } }
+      }
+    },
+    "Grabbed" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Pobrane" } }
+      }
+    },
+    "Imported" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Zaimportowane" } }
+      }
+    },
+    "Deleted" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Usunięte" } }
+      }
+    },
+    "Event" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Zdarzenie" } }
+      }
+    },
+    "Failed" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Błąd" } }
+      }
+    },
+    "File:" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Plik:" } }
+      }
+    },
+    "Filter…" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Filtruj…" } }
+      }
+    },
+    "General" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Ogólne" } }
+      }
+    },
+    "Importing" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Importowanie" } }
+      }
+    },
+    "Language" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Język" } }
+      }
+    },
+    "Launch at login" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Uruchamiaj przy logowaniu" } }
+      }
+    },
+    "Lidarr — notify on new grabs" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Lidarr — powiadamiaj o nowych pobraniach" } }
+      }
+    },
+    "Loading…" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Ładowanie…" } }
+      }
+    },
+    "Media Managers" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Menedżery mediów" } }
+      }
+    },
+    "More options" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Więcej opcji" } }
+      }
+    },
+    "Never" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Nigdy" } }
+      }
+    },
+    "New" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Nowe" } }
+      }
+    },
+    "No download ID — item hasn't reached the client yet" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Brak ID pobierania — element jeszcze nie dotarł do klienta" } }
+      }
+    },
+    "Notifications" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Powiadomienia" } }
+      }
+    },
+    "Nothing upcoming" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Brak nadchodzących" } }
+      }
+    },
+    "Open in browser" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Otwórz w przeglądarce" } }
+      }
+    },
+    "Open %@ in browser" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Otwórz %@ w przeglądarce" } }
+      }
+    },
+    "Open Settings…" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Otwórz ustawienia…" } }
+      }
+    },
+    "Pause" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Wstrzymaj" } }
+      }
+    },
+    "Pause %@" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Wstrzymaj %@" } }
+      }
+    },
+    "Paused" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Wstrzymane" } }
+      }
+    },
+    "Polski" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Polski" } }
+      }
+    },
+    "Popover open" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Okno otwarte" } }
+      }
+    },
+    "Quality:" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Jakość:" } }
+      }
+    },
+    "Queue" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Kolejka" } }
+      }
+    },
+    "Queue empty" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Kolejka pusta" } }
+      }
+    },
+    "Queued" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "W kolejce" } }
+      }
+    },
+    "Quit ArrBarr" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Zakończ ArrBarr" } }
+      }
+    },
+    "Radarr — notify on new grabs" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Radarr — powiadamiaj o nowych pobraniach" } }
+      }
+    },
+    "Refresh" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Odśwież" } }
+      }
+    },
+    "Refresh Interval" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Częstotliwość odświeżania" } }
+      }
+    },
+    "Remove" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Usuń" } }
+      }
+    },
+    "Remove %@" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Usuń %@" } }
+      }
+    },
+    "Remove download?" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Usunąć pobieranie?" } }
+      }
+    },
+    "Remove from client" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Usuń z klienta" } }
+      }
+    },
+    "Restart ArrBarr to apply language change." : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Uruchom ArrBarr ponownie, aby zastosować zmianę języka." } }
+      }
+    },
+    "Resume" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Wznów" } }
+      }
+    },
+    "Resume %@" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Wznów %@" } }
+      }
+    },
+    "Save" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Zapisz" } }
+      }
+    },
+    "Score:" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Wynik:" } }
+      }
+    },
+    "Settings…" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Ustawienia…" } }
+      }
+    },
+    "Sonarr — notify on new grabs" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Sonarr — powiadamiaj o nowych pobraniach" } }
+      }
+    },
+    "Startup" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Uruchamianie" } }
+      }
+    },
+    "System" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Systemowy" } }
+      }
+    },
+    "Test Connection" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Testuj połączenie" } }
+      }
+    },
+    "This will remove \"%@\" from the download client." : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Spowoduje to usunięcie „%@\" z klienta pobierania." } }
+      }
+    },
+    "Torrents" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Torrenty" } }
+      }
+    },
+    "Unknown" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Nieznane" } }
+      }
+    },
+    "Unknown download protocol" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Nieznany protokół pobierania" } }
+      }
+    },
+    "Unsaved Changes" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Niezapisane zmiany" } }
+      }
+    },
+    "Upcoming" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Nadchodzące" } }
+      }
+    },
+    "Upgrade" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Ulepszenie" } }
+      }
+    },
+    "URL" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "URL" } }
+      }
+    },
+    "Usenet" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Usenet" } }
+      }
+    },
+    "Username" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Nazwa użytkownika" } }
+      }
+    },
+    "Password" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Hasło" } }
+      }
+    },
+    "Paste your API key" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Wklej swój klucz API" } }
+      }
+    },
+    "Warning" : {
+      "localizations" : {
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Ostrzeżenie" } }
+      }
+    }
+  },
+  "version" : "1.0"
+}

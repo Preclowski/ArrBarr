@@ -58,6 +58,20 @@ final class QueueViewModel: ObservableObject {
             .store(in: &intervalObservers)
     }
 
+    func fetchHistory(for source: QueueItem.Source) async -> (items: [HistoryItem], error: String?) {
+        do {
+            let items: [HistoryItem]
+            switch source {
+            case .radarr: items = try await RadarrClient(config: configStore.radarr).fetchHistory()
+            case .sonarr: items = try await SonarrClient(config: configStore.sonarr).fetchHistory()
+            case .lidarr: items = try await LidarrClient(config: configStore.lidarr).fetchHistory()
+            }
+            return (items, nil)
+        } catch {
+            return ([], (error as? LocalizedError)?.errorDescription ?? error.localizedDescription)
+        }
+    }
+
     func startForegroundPolling() {
         Task { await self.refresh() }
         foregroundTimer?.invalidate()
@@ -158,6 +172,9 @@ final class QueueViewModel: ObservableObject {
                     sizeLeft: item.sizeLeft, timeLeft: item.timeLeft,
                     customFormats: item.customFormats, customFormatScore: item.customFormatScore,
                     quality: item.quality, isUpgrade: item.isUpgrade,
+                    existingCustomFormats: item.existingCustomFormats,
+                    existingCustomFormatScore: item.existingCustomFormatScore,
+                    existingQuality: item.existingQuality,
                     contentSlug: item.contentSlug
                 )
             case .deleted:
@@ -259,6 +276,9 @@ final class QueueViewModel: ObservableObject {
                     sizeLeft: old.sizeLeft, timeLeft: old.timeLeft,
                     customFormats: old.customFormats, customFormatScore: old.customFormatScore,
                     quality: old.quality, isUpgrade: old.isUpgrade,
+                    existingCustomFormats: old.existingCustomFormats,
+                    existingCustomFormatScore: old.existingCustomFormatScore,
+                    existingQuality: old.existingQuality,
                     contentSlug: old.contentSlug
                 )
             case .deleted:
