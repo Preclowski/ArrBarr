@@ -137,6 +137,9 @@ final class QueueViewModel: ObservableObject {
             isRefreshing = false
         }
         if DemoMode.isActive {
+            // Simulate a real network round-trip so the spinner is visible and
+            // popover-blink regressions are easier to spot in demo mode.
+            try? await Task.sleep(nanoseconds: 1_000_000_000)
             self.radarr = DemoMocks.radarrQueue
             self.sonarr = DemoMocks.sonarrQueue
             self.lidarr = []

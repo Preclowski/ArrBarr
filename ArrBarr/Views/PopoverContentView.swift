@@ -30,22 +30,14 @@ struct PopoverContentView: View {
     }
 
     var body: some View {
-        Group {
-            if #available(macOS 26.0, *) {
-                GlassEffectContainer {
-                    mainContent
-                }
-            } else {
-                mainContent
+        mainContent
+            .environment(\.locale, configStore.currentLocale)
+            .background {
+                Button("", action: onOpenSettings)
+                    .keyboardShortcut(",", modifiers: .command)
+                    .opacity(0)
+                    .frame(width: 0, height: 0)
             }
-        }
-        .environment(\.locale, configStore.currentLocale)
-        .background {
-            Button("", action: onOpenSettings)
-                .keyboardShortcut(",", modifiers: .command)
-                .opacity(0)
-                .frame(width: 0, height: 0)
-        }
     }
 
     private var mainContent: some View {
