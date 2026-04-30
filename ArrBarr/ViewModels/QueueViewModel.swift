@@ -30,7 +30,7 @@ final class QueueViewModel: ObservableObject {
     private var backgroundTimer: Timer?
     private var intervalObservers: Set<AnyCancellable> = []
     private var optimisticOverrides: [String: OptimisticOverride] = [:]
-    private var isRefreshing = false
+    @Published private(set) var isRefreshing = false
     private var knownItemIDs: Set<String>?
 
     /// Per-arr counter of consecutive refresh cycles where the queue fetch failed.
@@ -130,9 +130,10 @@ final class QueueViewModel: ObservableObject {
     func refresh() async {
         guard !isRefreshing else { return }
         isRefreshing = true
-        isLoading = true
+        let hasExistingData = !radarr.isEmpty || !sonarr.isEmpty || !lidarr.isEmpty
+        if !hasExistingData { isLoading = true }
         defer {
-            isLoading = false
+            if isLoading { isLoading = false }
             isRefreshing = false
         }
         if DemoMode.isActive {

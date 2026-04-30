@@ -34,8 +34,32 @@ enum DemoMode {
 /// Public-domain / CC-licensed titles used as preview content.
 /// Posters come from picsum.photos with deterministic seeds, no auth.
 enum DemoMocks {
-    private static func poster(_ seed: String, w: Int = 200, h: Int = 300) -> URL? {
-        URL(string: "https://picsum.photos/seed/\(seed)/\(w)/\(h)")
+    /// Real, stable Wikipedia-hosted poster art for the open-source / CC titles
+    /// used in demo mode. Wikipedia's `Special:FilePath` endpoint resolves to the
+    /// current canonical CDN location, so these URLs survive bucket rehashing.
+    private static let realPosters: [String: String] = [
+        "bigbuckbunny":      "Big_buck_bunny_poster_big.jpg",
+        "sintel":            "Sintel_poster.jpg",
+        "tearsofsteel":      "Tos-poster.png",
+        "spring":            "Spring2019AlphaPosterBlender.jpg",
+        "cosmoslaundromat":  "CosmosLaundromatPoster.jpg",
+        "caminandes":        "Blender_Foundation_-_Caminandes_-_Episode_3_-_Llamigos_-_Cover_thumbnail.png",
+        "pioneerone":        "Artwork_for_the_2010_Pioneer_One_series.jpg",
+        "ninghosts":         "Nine_Inch_Nails_-_Ghosts_I-IV.png",
+    ]
+
+    private static func poster(label: String, seed: String, w: Int = 200, h: Int = 300) -> URL? {
+        if let filename = realPosters[seed] {
+            let encoded = filename.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? filename
+            return URL(string: "https://en.wikipedia.org/wiki/Special:FilePath/\(encoded)?width=\(w * 2)")
+        }
+        let palette = ["3b1d52", "1c3859", "4a2c1d", "1d4a3a", "5c1f1f", "3a3a1f", "1f4a52", "4a1f4a"]
+        let bg = palette[abs(seed.hashValue) % palette.count]
+        let encoded = label
+            .addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)?
+            .replacingOccurrences(of: "&", with: "%26")
+            ?? label
+        return URL(string: "https://placehold.co/\(w)x\(h)/\(bg)/ffffff/png?text=\(encoded)&font=lato")
     }
 
     // MARK: - Queue
@@ -47,7 +71,7 @@ enum DemoMocks {
                 title: "Big Buck Bunny (2008)",
                 releaseName: "Big.Buck.Bunny.2008.2160p.BluRay.x265.HDR-DEMO",
                 status: .downloading, progress: 0.42,
-                quality: "Bluray-2160p", formats: ["x265", "HDR", "Atmos"], score: 120,
+                quality: "Bluray-2160p", formats: ["HDR10+", "DV", "Atmos", "TrueHD", "Remux Tier 01", "HQ Source Group"], score: 1850,
                 client: "SABnzbd", indexer: "DemoUsenet",
                 upgrade: false, posterSeed: "bigbuckbunny", aspect: .portrait
             ),
@@ -56,11 +80,11 @@ enum DemoMocks {
                 title: "Sintel (2010)",
                 releaseName: "Sintel.2010.1080p.WEB-DL.AV1-DEMO",
                 status: .importing, progress: 1.0,
-                quality: "WEB-DL 1080p", formats: ["AV1"], score: 80,
+                quality: "WEB-DL 1080p", formats: ["AMZN", "Atmos", "DDP 5.1", "x264", "HQ Source Group"], score: 720,
                 client: "qBittorrent", indexer: "DemoTracker",
                 upgrade: true,
                 existing: ExistingFile(
-                    quality: "HDTV-720p", formats: ["x264"], score: 10,
+                    quality: "HDTV-720p", formats: ["x264", "AAC 2.0"], score: 60,
                     size: 850_000_000,
                     fileName: "Sintel.2010.720p.HDTV.x264-OLD.mkv"
                 ),
@@ -71,7 +95,7 @@ enum DemoMocks {
                 title: "Tears of Steel (2012)",
                 releaseName: "Tears.of.Steel.2012.720p.WEB-DL.x264-DEMO",
                 status: .paused, progress: 0.18,
-                quality: "WEB-DL 720p", formats: [], score: -20,
+                quality: "WEB-DL 720p", formats: ["LQ Release Group", "x264", "AAC 2.0"], score: -160,
                 client: "Transmission", indexer: "DemoTracker",
                 upgrade: false, posterSeed: "tearsofsteel", aspect: .portrait
             ),
@@ -82,15 +106,15 @@ enum DemoMocks {
         [
             queueItem(
                 source: .sonarr, id: "demo-sonarr-1",
-                title: "Pioneer One",
+                title: "Pioneer One (2010)",
                 subtitle: "S01E03 · Endurance",
                 releaseName: "Pioneer.One.S01E03.720p.HDTV.x264-DEMO",
                 status: .downloading, progress: 0.67,
-                quality: "HDTV-720p", formats: ["x264"], score: 50,
+                quality: "HDTV-720p", formats: ["x264", "AAC 2.0", "Internal", "HQ Source Group"], score: 380,
                 client: "qBittorrent", indexer: "DemoTracker",
                 upgrade: true,
                 existing: ExistingFile(
-                    quality: "WEBRip-480p", formats: [], score: 0,
+                    quality: "WEBRip-480p", formats: ["x264", "Repack"], score: 30,
                     size: 350_000_000,
                     fileName: "Pioneer.One.S01E03.480p.WEBRip-OLD.mkv"
                 ),
@@ -98,7 +122,7 @@ enum DemoMocks {
             ),
             queueItem(
                 source: .sonarr, id: "demo-sonarr-2",
-                title: "Cosmos Laundromat",
+                title: "Cosmos Laundromat (2015)",
                 subtitle: "S01E01 · The Beginning",
                 releaseName: "Cosmos.Laundromat.S01E01.1080p.WEB-DL-DEMO",
                 status: .queued, progress: 0,
@@ -108,13 +132,13 @@ enum DemoMocks {
             ),
             queueItem(
                 source: .sonarr, id: "demo-sonarr-3",
-                title: "Caminandes",
-                subtitle: "S01E02 · Gran Dillama",
-                releaseName: "Caminandes.S01E02.1080p.WEBRip-DEMO",
-                status: .warning, progress: 1.0,
-                quality: "WEBRip-1080p", formats: ["x264"], score: 25,
+                title: "Northern Cascade (2023)",
+                subtitle: "S02E04 · Cold Start",
+                releaseName: "Northern.Cascade.S02E04.2160p.WEB-DL.DV.HDR10-DEMO",
+                status: .warning, progress: 0.92,
+                quality: "WEB-DL 2160p", formats: ["AMZN", "DV", "HDR10", "Atmos", "x265", "10bit"], score: 1240,
                 client: "Deluge", indexer: "DemoTracker",
-                upgrade: false, posterSeed: "caminandes", aspect: .portrait
+                upgrade: false, posterSeed: "northerncascade", aspect: .portrait
             ),
         ]
     }
@@ -126,11 +150,11 @@ enum DemoMocks {
                 title: "Nine Inch Nails — Ghosts I-IV",
                 releaseName: "Nine.Inch.Nails-Ghosts.I-IV-FLAC-2008-DEMO",
                 status: .downloading, progress: 0.81,
-                quality: "FLAC", formats: ["Lossless"], score: 30,
+                quality: "FLAC", formats: ["Lossless", "24bit", "Original Source"], score: 320,
                 client: "qBittorrent", indexer: "DemoTracker",
                 upgrade: true,
                 existing: ExistingFile(
-                    quality: "MP3-320", formats: [], score: 0,
+                    quality: "MP3-320", formats: ["Lossy"], score: -50,
                     size: 220_000_000,
                     fileName: "Nine Inch Nails - Ghosts I-IV (320kbps).zip"
                 ),
@@ -154,7 +178,7 @@ enum DemoMocks {
         [
             upcomingItem(
                 source: .sonarr, id: "demo-cal-tonight-1",
-                title: "Pioneer One",
+                title: "Pioneer One (2010)",
                 subtitle: "S01E06 · Tomorrow Belongs to Us",
                 hoursAhead: 3, releaseType: "Airing", hasFile: false,
                 posterSeed: "pioneerone", aspect: .portrait
@@ -167,7 +191,7 @@ enum DemoMocks {
             ),
             upcomingItem(
                 source: .sonarr, id: "demo-cal-2",
-                title: "Pioneer One",
+                title: "Pioneer One (2010)",
                 subtitle: "S02E01 · Reentry",
                 daysAhead: 1, releaseType: "Airing", hasFile: false,
                 posterSeed: "pioneerone", aspect: .portrait
@@ -186,7 +210,7 @@ enum DemoMocks {
             ),
             upcomingItem(
                 source: .sonarr, id: "demo-cal-5",
-                title: "Pioneer One",
+                title: "Pioneer One (2010)",
                 subtitle: "S02E02 · Witness",
                 daysAhead: 8, releaseType: "Airing", hasFile: false,
                 posterSeed: "pioneerone", aspect: .portrait
@@ -224,11 +248,11 @@ enum DemoMocks {
             historyItem(.radarr, id: "rh1", minutesAgo: 12, event: .grabbed,
                         title: "Big Buck Bunny (2008)",
                         sourceTitle: "Big.Buck.Bunny.2008.2160p.BluRay.x265.HDR-DEMO",
-                        quality: "Bluray-2160p", formats: ["x265", "HDR"], score: 120),
+                        quality: "Bluray-2160p", formats: ["HDR10+", "DV", "Atmos", "Remux Tier 01"], score: 1850),
             historyItem(.radarr, id: "rh2", minutesAgo: 95, event: .imported,
                         title: "Sintel (2010)",
                         sourceTitle: "Sintel.2010.1080p.WEB-DL.AV1-DEMO",
-                        quality: "WEB-DL 1080p", formats: ["AV1"], score: 80),
+                        quality: "WEB-DL 1080p", formats: ["AMZN", "Atmos", "DDP 5.1", "x264"], score: 720),
             historyItem(.radarr, id: "rh3", minutesAgo: 240, event: .grabbed,
                         title: "Tears of Steel (2012)",
                         sourceTitle: "Tears.of.Steel.2012.720p.WEB-DL.x264-DEMO",
@@ -247,7 +271,7 @@ enum DemoMocks {
     private static var sonarrHistory: [HistoryItem] {
         [
             historyItem(.sonarr, id: "sh1", minutesAgo: 5, event: .grabbed,
-                        title: "Pioneer One",
+                        title: "Pioneer One (2010)",
                         subtitle: "S01E03 · Endurance",
                         sourceTitle: "Pioneer.One.S01E03.720p.HDTV.x264-DEMO",
                         quality: "HDTV-720p", formats: ["x264"], score: 50),
@@ -257,12 +281,12 @@ enum DemoMocks {
                         sourceTitle: "Pioneer.One.S01E02.720p.HDTV.x264-DEMO",
                         quality: "HDTV-720p", formats: ["x264"], score: 50),
             historyItem(.sonarr, id: "sh3", minutesAgo: 320, event: .imported,
-                        title: "Caminandes",
-                        subtitle: "S01E01 · Llama Drama",
-                        sourceTitle: "Caminandes.S01E01.1080p.WEBRip-DEMO",
-                        quality: "WEBRip-1080p", formats: ["x264"], score: 25),
+                        title: "Northern Cascade (2023)",
+                        subtitle: "S02E03 · Whiteout",
+                        sourceTitle: "Northern.Cascade.S02E03.2160p.WEB-DL.DV.HDR10-DEMO",
+                        quality: "WEB-DL 2160p", formats: ["AMZN", "DV", "HDR10", "Atmos"], score: 1240),
             historyItem(.sonarr, id: "sh4", minutesAgo: 2880, event: .failed,
-                        title: "Cosmos Laundromat",
+                        title: "Cosmos Laundromat (2015)",
                         subtitle: "S01E01 · The Beginning",
                         sourceTitle: "Cosmos.Laundromat.S01E01.bad.release",
                         quality: nil, formats: [], score: 0),
@@ -335,9 +359,16 @@ enum DemoMocks {
             existingSize: existing?.size,
             existingFileName: existing?.fileName,
             contentSlug: posterSeed,
-            posterURL: poster(posterSeed, w: w, h: h),
+            posterURL: poster(label: posterLabel(title: title, subtitle: subtitle), seed: posterSeed, w: w, h: h),
             posterRequiresAuth: false
         )
+    }
+
+    private static func posterLabel(title: String, subtitle: String?) -> String {
+        if let sub = subtitle, let ep = sub.split(separator: "·").first?.trimmingCharacters(in: .whitespaces) {
+            return "\(title)\n\(ep)"
+        }
+        return title
     }
 
     private static func upcomingItem(
@@ -355,7 +386,7 @@ enum DemoMocks {
             id: id, source: source, title: title, subtitle: subtitle,
             airDate: date, releaseType: releaseType, hasFile: hasFile,
             overview: "Demo overview text. \(title) is part of the open-source / CC-licensed sample content used for ArrBarr previews.",
-            posterURL: poster(posterSeed, w: w, h: h),
+            posterURL: poster(label: posterLabel(title: title, subtitle: subtitle), seed: posterSeed, w: w, h: h),
             posterRequiresAuth: false
         )
     }

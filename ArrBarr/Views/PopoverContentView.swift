@@ -390,11 +390,23 @@ struct PopoverContentView: View {
             VStack(spacing: 4) {
                 Text("ArrBarr is not configured")
                     .font(.headline)
-                Text("Add your Radarr or Sonarr connection to get started.")
+                Text("Connect Radarr, Sonarr or Lidarr to get started.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
             }
+
+            VStack(alignment: .leading, spacing: 6) {
+                emptyStep(number: 1, text: "Open your arr's web UI → Settings → General")
+                emptyStep(number: 2, text: "Copy the API Key")
+                emptyStep(number: 3, text: "Paste it here, along with the URL")
+            }
+            .font(.system(size: 11))
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 8))
 
             Button("Open Settings…", action: onOpenSettings)
                 .modifier(GlassProminentButtonStyle())
@@ -402,6 +414,15 @@ struct PopoverContentView: View {
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 22)
+    }
+
+    private func emptyStep(number: Int, text: LocalizedStringKey) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Text(verbatim: "\(number).")
+                .font(.system(size: 11, weight: .semibold).monospacedDigit())
+                .foregroundStyle(.tertiary)
+            Text(text)
+        }
     }
 
     // MARK: - Footer
@@ -426,19 +447,21 @@ struct PopoverContentView: View {
                         Task { await viewModel.refresh() }
                     }
                 }) {
-                    Image(systemName: "arrow.clockwise")
-                        .rotationEffect(.degrees(viewModel.isLoading ? 360 : 0))
-                        .animation(
-                            viewModel.isLoading
-                                ? .linear(duration: 0.8).repeatForever(autoreverses: false)
-                                : .default,
-                            value: viewModel.isLoading
-                        )
+                    ZStack {
+                        Image(systemName: "arrow.clockwise")
+                            .opacity(viewModel.isRefreshing ? 0 : 1)
+                        if viewModel.isRefreshing {
+                            ProgressView()
+                                .controlSize(.mini)
+                                .scaleEffect(0.7)
+                        }
+                    }
+                    .frame(width: 14, height: 14)
                 }
                 .modifier(GlassButtonStyle())
                 .controlSize(.small)
                 .localizedHelp("Refresh", locale: configStore.currentLocale)
-                .disabled(viewModel.isLoading && historySource == nil)
+                .disabled(viewModel.isRefreshing && historySource == nil)
 
                 Spacer()
 

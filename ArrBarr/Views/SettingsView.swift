@@ -217,6 +217,16 @@ struct SettingsView: View {
                 Text(verbatim: "🥨 Precel")
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
+                Link(destination: URL(string: "https://github.com/Preclowski/ArrBarr")!) {
+                    Image(systemName: "link")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .onHover { hovering in
+                    if hovering { NSCursor.pointingHand.push() } else { NSCursor.pop() }
+                }
+                .help("github.com/Preclowski/ArrBarr")
                 Spacer()
                 Button("Close") { NSApp.keyWindow?.close() }
                     .keyboardShortcut("w", modifiers: .command)

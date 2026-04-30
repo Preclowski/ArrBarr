@@ -599,7 +599,8 @@ private struct IconButton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: symbol)
-                .font(.system(size: 10, weight: .medium))
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(.primary)
                 .frame(width: 22, height: 22)
         }
         .modifier(GlassButtonStyle())
