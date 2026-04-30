@@ -23,6 +23,15 @@ struct LocaleBundleTests {
         "Resume",
         "Pause",
         "Remove from client",
+        // Queue item tooltip — must localize at runtime when language is switched
+        // in settings, not just at process launch.
+        "Quality",
+        "Size",
+        "Indexer",
+        "File",
+        "Custom formats",
+        "Existing file",
+        "Upgrade",
     ]
 
     private let translatedLocales = ["de", "es", "fr", "pl"]

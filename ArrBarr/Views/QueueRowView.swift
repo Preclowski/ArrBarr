@@ -156,7 +156,11 @@ struct QueueRowView: View {
             }
         }
         .popover(isPresented: $showTooltip, arrowEdge: .trailing) {
-            QueueItemTooltip(item: item)
+            QueueItemTooltip(
+                item: item,
+                apiKey: item.posterRequiresAuth ? apiKeyForSource : nil,
+                locale: configStore.currentLocale
+            )
         }
         .alert("Remove download?", isPresented: $showDeleteConfirmation) {
             Button("Remove", role: .destructive) {
@@ -356,8 +360,43 @@ private struct FlowLayout: Layout {
 
 struct QueueItemTooltip: View {
     let item: QueueItem
+    var apiKey: String? = nil
+    var locale: Locale = Locale(identifier: "en")
+
+    private func loc(_ key: String) -> String { LocaleBundle.string(key, locale: locale) }
 
     var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            RemotePoster(
+                url: item.posterURL,
+                apiKey: apiKey,
+                size: posterSize,
+                cornerRadius: 6,
+                fallbackSymbol: fallbackSymbol
+            )
+            tooltipContent
+        }
+        .padding(12)
+        .frame(width: 480)
+        .background(.regularMaterial)
+    }
+
+    private var posterSize: CGSize {
+        switch item.source {
+        case .radarr, .sonarr: return CGSize(width: 110, height: 165)
+        case .lidarr: return CGSize(width: 110, height: 110)
+        }
+    }
+
+    private var fallbackSymbol: String {
+        switch item.source {
+        case .radarr: return "film"
+        case .sonarr: return "tv"
+        case .lidarr: return "music.note"
+        }
+    }
+
+    private var tooltipContent: some View {
         VStack(alignment: .leading, spacing: 6) {
             header
             Divider().opacity(0.5)
@@ -376,7 +415,7 @@ struct QueueItemTooltip: View {
                 || item.existingQuality != nil
                 || !item.existingCustomFormats.isEmpty {
                 upgradeDivider
-                Text("Existing file")
+                Text(verbatim: loc("Existing file"))
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(.secondary)
                     .textCase(.uppercase)
@@ -384,9 +423,6 @@ struct QueueItemTooltip: View {
                 existingInfo
             }
         }
-        .padding(12)
-        .frame(width: 380)
-        .background(.regularMaterial)
     }
 
     private var header: some View {
@@ -441,7 +477,7 @@ struct QueueItemTooltip: View {
             Rectangle()
                 .fill(.quaternary)
                 .frame(height: 1)
-            Text("Upgrade")
+            Text(verbatim: loc("Upgrade"))
                 .font(.system(size: 9, weight: .semibold))
                 .foregroundStyle(.indigo)
                 .padding(.horizontal, 5)
@@ -484,7 +520,7 @@ struct QueueItemTooltip: View {
     }
 
     @ViewBuilder
-    private func tagsSection(label: LocalizedStringKey, score: Int?, tags: [String]) -> some View {
+    private func tagsSection(label: String, score: Int?, tags: [String]) -> some View {
         if !tags.isEmpty || score != nil {
             TooltipFlowLayout(spacing: 3) {
                 ForEach(tags, id: \.self) { TagChip(text: $0) }
@@ -502,9 +538,9 @@ private var sizeString: String {
     }
 
     @ViewBuilder
-    private func row(_ label: LocalizedStringKey, value: String, valueColor: Color? = nil, mono: Bool = false, wraps: Bool = false) -> some View {
+    private func row(_ label: String, value: String, valueColor: Color? = nil, mono: Bool = false, wraps: Bool = false) -> some View {
         GridRow(alignment: .firstTextBaseline) {
-            Text(label)
+            Text(verbatim: loc(label))
                 .font(.system(size: 11))
                 .foregroundStyle(.secondary)
                 .gridColumnAlignment(.leading)
