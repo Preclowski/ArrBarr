@@ -18,7 +18,10 @@ struct SettingsView: View {
     @State private var draftNotifyLidarr = false
     @State private var draftLaunchAtLogin = false
     @State private var draftAppLanguage: String = "system"
+    @State private var draftArrOrder: [String] = ConfigStore.defaultArrOrder
     @State private var showUnsavedAlert = false
+    @State private var draggingKey: String?
+    @State private var dragOffset: CGFloat = 0
 
     private var hasChanges: Bool {
         draftRadarr != configStore.radarr
@@ -37,6 +40,7 @@ struct SettingsView: View {
         || draftNotifyLidarr != configStore.notifyLidarr
         || draftLaunchAtLogin != configStore.launchAtLogin
         || draftAppLanguage != configStore.appLanguage
+        || draftArrOrder != configStore.arrOrder
     }
 
     var body: some View {
@@ -57,8 +61,8 @@ struct SettingsView: View {
         .environment(\.locale, configStore.currentLocale)
         .onAppear { loadDrafts() }
         .alert("Unsaved Changes", isPresented: $showUnsavedAlert) {
-            Button("Save", role: nil) { save(); NSApp.keyWindow?.close() }
-            Button("Don't Save", role: .destructive) { NSApp.keyWindow?.close() }
+            Button("Save", role: nil) { save(); closeSettingsWindow() }
+            Button("Don't Save", role: .destructive) { closeSettingsWindow() }
             Button("Cancel", role: .cancel) { }
         } message: {
             Text("Do you want to save your changes before closing?")
@@ -136,13 +140,73 @@ struct SettingsView: View {
                     }
                 }
             }
+            Section("Section order") {
+                ForEach(draftArrOrder, id: \.self) { key in
+                    arrOrderRow(key: key)
+                }
+            }
             Section("Notifications") {
-                Toggle("Radarr — notify on new grabs", isOn: $draftNotifyRadarr)
-                Toggle("Sonarr — notify on new grabs", isOn: $draftNotifySonarr)
-                Toggle("Lidarr — notify on new grabs", isOn: $draftNotifyLidarr)
+                Toggle("Radarr", isOn: $draftNotifyRadarr)
+                Toggle("Sonarr", isOn: $draftNotifySonarr)
+                Toggle("Lidarr", isOn: $draftNotifyLidarr)
             }
         }
         .formStyle(.grouped)
+    }
+
+    private static let arrRowHeight: CGFloat = 24
+
+    @ViewBuilder
+    private func arrOrderRow(key: String) -> some View {
+        if let source = QueueItem.Source(rawValue: key) {
+            let isDragging = draggingKey == key
+            HStack(spacing: 8) {
+                Image(systemName: "line.3.horizontal")
+                    .foregroundStyle(.tertiary)
+                    .font(.system(size: 11))
+                Image(systemName: source.symbol)
+                    .foregroundStyle(.secondary)
+                    .frame(width: 16)
+                Text(source.displayName)
+                Spacer()
+            }
+            .frame(height: Self.arrRowHeight)
+            .contentShape(Rectangle())
+            .background(
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(isDragging ? Color.primary.opacity(0.08) : .clear)
+                    .padding(.horizontal, -6)
+            )
+            .offset(y: isDragging ? dragOffset : 0)
+            .zIndex(isDragging ? 1 : 0)
+            .animation(.interactiveSpring(response: 0.25, dampingFraction: 0.85), value: draftArrOrder)
+            .gesture(arrDragGesture(key: key))
+        }
+    }
+
+    private func arrDragGesture(key: String) -> some Gesture {
+        DragGesture(minimumDistance: 2)
+            .onChanged { value in
+                if draggingKey != key { draggingKey = key }
+                dragOffset = value.translation.height
+
+                guard let from = draftArrOrder.firstIndex(of: key) else { return }
+                let steps = Int((dragOffset / Self.arrRowHeight).rounded())
+                let target = max(0, min(draftArrOrder.count - 1, from + steps))
+                if target != from {
+                    var newOrder = draftArrOrder
+                    let item = newOrder.remove(at: from)
+                    newOrder.insert(item, at: target)
+                    draftArrOrder = newOrder
+                    dragOffset -= CGFloat(target - from) * Self.arrRowHeight
+                }
+            }
+            .onEnded { _ in
+                withAnimation(.spring(response: 0.28, dampingFraction: 0.85)) {
+                    draggingKey = nil
+                    dragOffset = 0
+                }
+            }
     }
 
     // MARK: - Bottom bar
@@ -157,12 +221,14 @@ struct SettingsView: View {
                     .textSelection(.enabled)
                     .help("ArrBarr \(Self.versionString)")
                 Spacer()
-                if hasChanges {
-                    Button("Save") { save() }
-                        .keyboardShortcut("s", modifiers: .command)
-                        .modifier(GlassProminentButtonStyle())
-                        .controlSize(.large)
-                }
+                let showSave = hasChanges || draggingKey != nil
+                Button("Save") { save() }
+                    .keyboardShortcut("s", modifiers: .command)
+                    .modifier(GlassProminentButtonStyle())
+                    .controlSize(.large)
+                    .disabled(!showSave)
+                    .opacity(showSave ? 1 : 0)
+                    .allowsHitTesting(showSave)
                 Button("Close") {
                     if hasChanges {
                         showUnsavedAlert = true
@@ -206,6 +272,18 @@ struct SettingsView: View {
         configStore.notifyLidarr = draftNotifyLidarr
         configStore.launchAtLogin = draftLaunchAtLogin
         configStore.appLanguage = draftAppLanguage
+        configStore.arrOrder = draftArrOrder
+    }
+
+    private func closeSettingsWindow() {
+        let title = String(localized: "ArrBarr Settings")
+        DispatchQueue.main.async {
+            if let win = NSApp.windows.first(where: { $0.title == title }) {
+                win.close()
+            } else {
+                NSApp.keyWindow?.close()
+            }
+        }
     }
 
     private func loadDrafts() {
@@ -225,6 +303,7 @@ struct SettingsView: View {
         draftNotifyLidarr = configStore.notifyLidarr
         draftLaunchAtLogin = configStore.launchAtLogin
         draftAppLanguage = configStore.appLanguage
+        draftArrOrder = configStore.arrOrder
     }
 
     private static func formatInterval(_ seconds: TimeInterval) -> String {

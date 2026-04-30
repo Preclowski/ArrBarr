@@ -1,11 +1,38 @@
 import SwiftUI
 
+extension QueueItem.Status {
+    var symbol: String {
+        switch self {
+        case .downloading: return "arrow.down.circle.fill"
+        case .paused: return "pause.circle.fill"
+        case .queued: return "clock.fill"
+        case .importing: return "tray.and.arrow.down.fill"
+        case .completed: return "checkmark.circle.fill"
+        case .warning: return "exclamationmark.triangle.fill"
+        case .failed: return "xmark.circle.fill"
+        case .unknown: return "questionmark.circle"
+        }
+    }
+
+    var tint: Color {
+        switch self {
+        case .paused: return .orange
+        case .failed, .warning: return .red
+        case .completed: return .green
+        case .importing: return .purple
+        default: return .blue
+        }
+    }
+}
+
 struct QueueRowView: View {
     let item: QueueItem
     @ObservedObject var viewModel: QueueViewModel
     @EnvironmentObject var configStore: ConfigStore
     @State private var isHovering = false
     @State private var showDeleteConfirmation = false
+    @State private var showTooltip = false
+    @State private var hoverTask: Task<Void, Never>?
 
     private var canControl: Bool {
         switch item.downloadProtocol {
@@ -47,13 +74,24 @@ struct QueueRowView: View {
 
                             Text(item.isUpgrade ? "Upgrade" : "New")
                                 .font(.system(size: 8, weight: .semibold))
-                                .foregroundStyle(item.isUpgrade ? .orange : .green)
+                                .foregroundStyle(item.isUpgrade ? AnyShapeStyle(Color.indigo) : AnyShapeStyle(Color.accentColor))
                                 .padding(.horizontal, 4)
                                 .padding(.vertical, 1)
                                 .background(
-                                    (item.isUpgrade ? Color.orange : Color.green).opacity(0.15),
+                                    item.isUpgrade ? AnyShapeStyle(Color.indigo.opacity(0.15)) : AnyShapeStyle(Color.accentColor.opacity(0.15)),
                                     in: Capsule()
                                 )
+
+                            if let client = item.downloadClient {
+                                let color = downloadClientColor(client)
+                                Text(client)
+                                    .font(.system(size: 8, weight: .semibold))
+                                    .foregroundStyle(color)
+                                    .padding(.horizontal, 4)
+                                    .padding(.vertical, 1)
+                                    .background(color.opacity(0.15), in: Capsule())
+                                    .lineLimit(1)
+                            }
                         }
 
                         if let sub = item.subtitle {
@@ -64,11 +102,11 @@ struct QueueRowView: View {
                         }
 
                         HStack(spacing: 3) {
-                            Image(systemName: statusSymbol)
-                                .foregroundStyle(progressTint)
+                            Image(systemName: item.status.symbol)
+                                .foregroundStyle(item.status.tint)
                                 .font(.system(size: 8))
                             Text(LocalizedStringKey(item.status.displayName))
-                                .foregroundStyle(progressTint)
+                                .foregroundStyle(item.status.tint)
                             if !metaLine.isEmpty {
                                 Text("·")
                                     .foregroundStyle(.tertiary)
@@ -88,7 +126,7 @@ struct QueueRowView: View {
 
                 ProgressView(value: item.progress)
                     .progressViewStyle(.linear)
-                    .tint(progressTint)
+                    .tint(item.status.tint)
                     .frame(height: 3)
 
                 if !item.customFormats.isEmpty {
@@ -107,8 +145,19 @@ struct QueueRowView: View {
         .contentShape(Rectangle())
         .onHover { hovering in
             withAnimation(.easeInOut(duration: 0.15)) { isHovering = hovering }
+            hoverTask?.cancel()
+            if hovering {
+                hoverTask = Task { @MainActor [self] in
+                    try? await Task.sleep(nanoseconds: 600_000_000)
+                    if !Task.isCancelled && self.isHovering { showTooltip = true }
+                }
+            } else {
+                showTooltip = false
+            }
         }
-        .help(tooltipText)
+        .popover(isPresented: $showTooltip, arrowEdge: .trailing) {
+            QueueItemTooltip(item: item)
+        }
         .alert("Remove download?", isPresented: $showDeleteConfirmation) {
             Button("Remove", role: .destructive) {
                 Task { await viewModel.delete(item) }
@@ -216,71 +265,12 @@ struct QueueRowView: View {
         return parts.joined(separator: " · ")
     }
 
-    private func formatTags(_ tags: [String]) -> String {
-        tags.map { "[\($0)]" }.joined()
-    }
-
     private var formattedTimeLeft: String? {
         guard let raw = item.timeLeft, !raw.isEmpty else { return nil }
         // Arr APIs sometimes return "HH:mm:ss.fffffff" — trim sub-second precision.
         return String(raw.prefix { $0 != "." })
     }
 
-    private var statusSymbol: String {
-        switch item.status {
-        case .downloading: return "arrow.down.circle.fill"
-        case .paused: return "pause.circle.fill"
-        case .queued: return "clock.fill"
-        case .importing: return "tray.and.arrow.down.fill"
-        case .completed: return "checkmark.circle.fill"
-        case .warning: return "exclamationmark.triangle.fill"
-        case .failed: return "xmark.circle.fill"
-        case .unknown: return "questionmark.circle"
-        }
-    }
-
-    private var tooltipText: String {
-        var lines: [String] = [item.title]
-        if let sub = item.subtitle { lines.append(sub) }
-        lines.append("")
-
-        if let q = item.quality, !q.isEmpty { lines.append("\(String(localized: "Quality:")) \(q)") }
-        if let client = item.downloadClient { lines.append("\(String(localized: "Client:")) \(client) (\(item.downloadProtocol.rawValue))") }
-        if let file = item.downloadFileName, !file.isEmpty { lines.append("\(String(localized: "File:")) \(file)") }
-        if item.customFormatScore != 0 {
-            let sign = item.customFormatScore > 0 ? "+" : ""
-            lines.append("\(String(localized: "Score:")) \(sign)\(item.customFormatScore)")
-        }
-        if !item.customFormats.isEmpty {
-            lines.append("\(String(localized: "Custom formats:")) \(formatTags(item.customFormats))")
-        }
-        if item.isUpgrade,
-           item.existingCustomFormatScore != nil || item.existingQuality != nil || !item.existingCustomFormats.isEmpty {
-            lines.append("")
-            lines.append(String(localized: "Existing file:"))
-            if let q = item.existingQuality, !q.isEmpty {
-                lines.append("  \(String(localized: "Quality:")) \(q)")
-            }
-            if let s = item.existingCustomFormatScore {
-                let sign = s > 0 ? "+" : ""
-                lines.append("  \(String(localized: "Score:")) \(sign)\(s)")
-            }
-            if !item.existingCustomFormats.isEmpty {
-                lines.append("  \(String(localized: "Custom formats:")) \(formatTags(item.existingCustomFormats))")
-            }
-        }
-        return lines.joined(separator: "\n")
-    }
-
-    private var progressTint: Color {
-        switch item.status {
-        case .paused: return .orange
-        case .failed, .warning: return .red
-        case .completed: return .green
-        case .importing: return .purple
-        default: return .blue
-        }
-    }
 }
 
 private struct FlowLayout: Layout {
@@ -331,6 +321,252 @@ private struct FlowLayout: Layout {
     private struct Row {
         var indices: [Int] = []
         var height: CGFloat = 0
+    }
+}
+
+// MARK: - Rich tooltip
+
+struct QueueItemTooltip: View {
+    let item: QueueItem
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            header
+            Divider().opacity(0.5)
+            infoGrid
+
+            if !item.customFormats.isEmpty || item.customFormatScore != 0 {
+                tagsSection(
+                    label: "Custom formats",
+                    score: item.customFormatScore != 0 ? item.customFormatScore : nil,
+                    tags: item.customFormats
+                )
+            }
+
+            if item.isUpgrade,
+               item.existingCustomFormatScore != nil
+                || item.existingQuality != nil
+                || !item.existingCustomFormats.isEmpty {
+                upgradeDivider
+                Text("Existing file")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .textCase(.uppercase)
+                    .tracking(0.5)
+                existingInfo
+            }
+        }
+        .padding(12)
+        .frame(width: 380)
+        .background(.regularMaterial)
+    }
+
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 1) {
+            HStack(alignment: .top, spacing: 6) {
+                Text(item.title)
+                    .font(.system(size: 13, weight: .semibold))
+                    .lineLimit(2)
+                Spacer(minLength: 4)
+                HStack(spacing: 4) {
+                    Text(item.isUpgrade ? "Upgrade" : "New")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(item.isUpgrade ? AnyShapeStyle(Color.indigo) : AnyShapeStyle(Color.accentColor))
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 2)
+                        .background(
+                            item.isUpgrade ? AnyShapeStyle(Color.indigo.opacity(0.15)) : AnyShapeStyle(Color.accentColor.opacity(0.15)),
+                            in: Capsule()
+                        )
+                    if let client = item.downloadClient {
+                        let color = downloadClientColor(client)
+                        Text(client)
+                            .font(.system(size: 9, weight: .semibold))
+                            .foregroundStyle(color)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(color.opacity(0.15), in: Capsule())
+                            .lineLimit(1)
+                            .fixedSize()
+                    }
+                }
+            }
+            if let sub = item.subtitle {
+                Text(sub)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var infoGrid: some View {
+        Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 10, verticalSpacing: 3) {
+            if let q = item.quality, !q.isEmpty {
+                row("Quality", value: "\(q) · \(sizeString)")
+            } else {
+                row("Size", value: sizeString)
+            }
+            if let indexer = item.indexer, !indexer.isEmpty {
+                row("Indexer", value: indexer)
+            }
+            if let file = item.releaseName, !file.isEmpty {
+                row("File", value: file, mono: true, wraps: true)
+            }
+        }
+    }
+
+    private var upgradeDivider: some View {
+        HStack(spacing: 6) {
+            Rectangle()
+                .fill(.quaternary)
+                .frame(height: 1)
+            Image(systemName: "arrow.down")
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundStyle(.indigo)
+                .padding(.horizontal, 5)
+                .padding(.vertical, 1)
+                .background(Color.indigo.opacity(0.15), in: Capsule())
+            Rectangle()
+                .fill(.quaternary)
+                .frame(height: 1)
+        }
+        .padding(.top, 4)
+    }
+
+@ViewBuilder
+    private var existingInfo: some View {
+        Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 10, verticalSpacing: 3) {
+            if let q = item.existingQuality, !q.isEmpty {
+                if let size = item.existingSize, size > 0 {
+                    let sizeStr = ByteCountFormatter.string(fromByteCount: size, countStyle: .file)
+                    row("Quality", value: "\(q) · \(sizeStr)")
+                } else {
+                    row("Quality", value: q)
+                }
+            } else if let size = item.existingSize, size > 0 {
+                row("Size", value: ByteCountFormatter.string(fromByteCount: size, countStyle: .file))
+            }
+            if let file = item.existingFileName, !file.isEmpty {
+                row("File", value: file, mono: true, wraps: true)
+            }
+        }
+        if !item.existingCustomFormats.isEmpty || (item.existingCustomFormatScore ?? 0) != 0 {
+            TooltipFlowLayout(spacing: 3) {
+                ForEach(item.existingCustomFormats, id: \.self) { TagChip(text: $0) }
+                if let s = item.existingCustomFormatScore, s != 0 {
+                    let sign = s > 0 ? "+" : ""
+                    TagChip(text: "\(sign)\(s)", color: s > 0 ? .green : .red)
+                }
+            }
+            .padding(.top, 2)
+        }
+    }
+
+    @ViewBuilder
+    private func tagsSection(label: LocalizedStringKey, score: Int?, tags: [String]) -> some View {
+        if !tags.isEmpty || score != nil {
+            TooltipFlowLayout(spacing: 3) {
+                ForEach(tags, id: \.self) { TagChip(text: $0) }
+                if let score, score != 0 {
+                    let sign = score > 0 ? "+" : ""
+                    TagChip(text: "\(sign)\(score)", color: score > 0 ? .green : .red)
+                }
+            }
+            .padding(.top, 2)
+        }
+    }
+
+private var sizeString: String {
+        ByteCountFormatter.string(fromByteCount: item.sizeTotal, countStyle: .file)
+    }
+
+    @ViewBuilder
+    private func row(_ label: LocalizedStringKey, value: String, valueColor: Color? = nil, mono: Bool = false, wraps: Bool = false) -> some View {
+        GridRow(alignment: .firstTextBaseline) {
+            Text(label)
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+                .gridColumnAlignment(.leading)
+            Text(value)
+                .font(mono ? .system(size: 11, design: .monospaced) : .system(size: 11))
+                .foregroundStyle(valueColor.map { AnyShapeStyle($0) } ?? AnyShapeStyle(.primary))
+                .lineLimit(wraps ? nil : 2)
+                .truncationMode(.middle)
+                .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+}
+
+func downloadClientColor(_ name: String) -> Color {
+    let n = name.lowercased()
+    if n.contains("sab") { return .orange }
+    if n.contains("nzbget") { return .green }
+    if n.contains("qbit") { return .blue }
+    if n.contains("transmission") { return .red }
+    if n.contains("rtorrent") || n.contains("rutorrent") { return .teal }
+    if n.contains("deluge") { return .purple }
+    return .gray
+}
+
+struct TagChip: View {
+    let text: String
+    var color: Color = .primary
+
+    var body: some View {
+        Text(text)
+            .font(.system(size: 9, weight: .medium))
+            .foregroundStyle(color == .primary ? AnyShapeStyle(.primary) : AnyShapeStyle(color))
+            .padding(.horizontal, 5)
+            .padding(.vertical, 1)
+            .background(.quaternary, in: Capsule())
+    }
+}
+
+struct TooltipFlowLayout: Layout {
+    var spacing: CGFloat = 4
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let rows = computeRows(maxWidth: proposal.width ?? .infinity, subviews: subviews)
+        guard !rows.isEmpty else { return .zero }
+        let height = rows.reduce(CGFloat(0)) { $0 + $1.height } + CGFloat(rows.count - 1) * spacing
+        return CGSize(width: proposal.width ?? 0, height: height)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let rows = computeRows(maxWidth: bounds.width, subviews: subviews)
+        var y = bounds.minY
+        for row in rows {
+            var x = bounds.minX
+            for index in row.indices {
+                let size = subviews[index].sizeThatFits(.unspecified)
+                subviews[index].place(at: CGPoint(x: x, y: y), proposal: ProposedViewSize(size))
+                x += size.width + spacing
+            }
+            y += row.height + spacing
+        }
+    }
+
+    private func computeRows(maxWidth: CGFloat, subviews: Subviews) -> [(indices: [Int], height: CGFloat)] {
+        var rows: [(indices: [Int], height: CGFloat)] = []
+        var current: (indices: [Int], height: CGFloat) = ([], 0)
+        var x: CGFloat = 0
+        for (i, subview) in subviews.enumerated() {
+            let size = subview.sizeThatFits(.unspecified)
+            if !current.indices.isEmpty && x + size.width > maxWidth {
+                rows.append(current)
+                current = ([], 0)
+                x = 0
+            }
+            current.indices.append(i)
+            current.height = max(current.height, size.height)
+            x += size.width + spacing
+        }
+        if !current.indices.isEmpty { rows.append(current) }
+        return rows
     }
 }
 

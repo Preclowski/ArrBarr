@@ -36,6 +36,7 @@ struct RadarrQueueRecord: Decodable {
     let trackedDownloadState: String?
     let downloadId: String?
     let downloadClient: String?
+    let indexer: String?
     let `protocol`: String?
     let size: Double?
     let sizeleft: Double?
@@ -62,6 +63,8 @@ struct ArrFile: Decodable {
     let customFormats: [ArrCustomFormat]?
     let customFormatScore: Int?
     let quality: ArrQuality?
+    let size: Int64?
+    let relativePath: String?
 }
 
 struct RadarrMovieFile: Decodable {
@@ -70,6 +73,8 @@ struct RadarrMovieFile: Decodable {
     let customFormats: [ArrCustomFormat]?
     let customFormatScore: Int?
     let quality: ArrQuality?
+    let size: Int64?
+    let relativePath: String?
 }
 
 // MARK: - Sonarr
@@ -85,6 +90,7 @@ struct SonarrQueueRecord: Decodable {
     let trackedDownloadState: String?
     let downloadId: String?
     let downloadClient: String?
+    let indexer: String?
     let `protocol`: String?
     let size: Double?
     let sizeleft: Double?
@@ -120,6 +126,8 @@ struct SonarrEpisodeFile: Decodable {
     let customFormats: [ArrCustomFormat]?
     let customFormatScore: Int?
     let quality: ArrQuality?
+    let size: Int64?
+    let relativePath: String?
 }
 
 // MARK: - Lidarr
@@ -134,6 +142,7 @@ struct LidarrQueueRecord: Decodable {
     let trackedDownloadState: String?
     let downloadId: String?
     let downloadClient: String?
+    let indexer: String?
     let `protocol`: String?
     let size: Double?
     let sizeleft: Double?

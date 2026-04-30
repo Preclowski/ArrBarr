@@ -108,6 +108,20 @@ actor LidarrClient {
         }
     }
 
+    func deleteQueueItem(id: Int, removeFromClient: Bool = true, blocklist: Bool = false) async throws {
+        guard config.isConfigured else { throw HTTPError.notConfigured }
+        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
+        let url = try http.url(
+            base: config.baseURL,
+            path: "/api/v1/queue/\(id)",
+            query: [
+                URLQueryItem(name: "removeFromClient", value: removeFromClient ? "true" : "false"),
+                URLQueryItem(name: "blocklist", value: blocklist ? "true" : "false"),
+            ]
+        )
+        _ = try await http.delete(url, headers: ["X-Api-Key": config.apiKey])
+    }
+
     func fetchHealth() async throws -> [ArrHealthRecord] {
         guard config.isConfigured else { throw HTTPError.notConfigured }
         guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
@@ -161,8 +175,10 @@ actor LidarrClient {
             downloadId: r.downloadId,
             downloadProtocol: parseProtocol(r.protocol),
             downloadClient: r.downloadClient,
+            indexer: r.indexer,
             title: displayTitle,
             subtitle: nil,
+            releaseName: r.title,
             status: parseStatus(arrStatus: r.status, trackedState: r.trackedDownloadState),
             progress: progress,
             sizeTotal: total,

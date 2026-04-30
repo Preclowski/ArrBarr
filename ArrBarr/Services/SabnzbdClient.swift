@@ -50,14 +50,7 @@ actor SabnzbdClient {
         return slots.contains { $0.nzo_id == nzoId }
     }
 
-    func fetchNames() async throws -> [String: String] {
-        let slots = try await fetchSlots()
-        var map: [String: String] = [:]
-        for s in slots { map[s.nzo_id] = s.filename }
-        return map
-    }
-
-    func testConnection() async throws -> String {
+func testConnection() async throws -> String {
         guard config.isConfigured else { throw HTTPError.notConfigured }
         guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
         let url = try http.url(

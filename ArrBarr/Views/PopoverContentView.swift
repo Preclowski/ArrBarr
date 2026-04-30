@@ -45,6 +45,12 @@ struct PopoverContentView: View {
             }
         }
         .environment(\.locale, configStore.currentLocale)
+        .background {
+            Button("", action: onOpenSettings)
+                .keyboardShortcut(",", modifiers: .command)
+                .opacity(0)
+                .frame(width: 0, height: 0)
+        }
     }
 
     private var mainContent: some View {
@@ -175,52 +181,58 @@ struct PopoverContentView: View {
     }
 
     private var queueSections: some View {
-        VStack(alignment: .leading, spacing: 16) {
-                    if sonarrConfigured {
-                        QueueSectionView(
-                            title: "Sonarr",
-                            symbol: "tv",
-                            items: filter(viewModel.sonarr),
-                            error: viewModel.sonarrError,
-                            health: viewModel.health.sonarr,
-                            viewModel: viewModel,
-                            onShowHistory: { historySource = .sonarr }
-                        )
-                    }
-
-                    if sonarrConfigured && (radarrConfigured || lidarrConfigured) {
-                        Divider().padding(.horizontal, 12)
-                    }
-
-                    if radarrConfigured {
-                        QueueSectionView(
-                            title: "Radarr",
-                            symbol: "film",
-                            items: filter(viewModel.radarr),
-                            error: viewModel.radarrError,
-                            health: viewModel.health.radarr,
-                            viewModel: viewModel,
-                            onShowHistory: { historySource = .radarr }
-                        )
-                    }
-
-                    if lidarrConfigured && (sonarrConfigured || radarrConfigured) {
-                        Divider().padding(.horizontal, 12)
-                    }
-
-                    if lidarrConfigured {
-                        QueueSectionView(
-                            title: "Lidarr",
-                            symbol: "music.note",
-                            items: filter(viewModel.lidarr),
-                            error: viewModel.lidarrError,
-                            health: viewModel.health.lidarr,
-                            viewModel: viewModel,
-                            onShowHistory: { historySource = .lidarr }
-                        )
-                    }
+        let visible = configStore.arrOrder
+            .compactMap(QueueItem.Source.init(rawValue:))
+            .filter { isConfigured($0) }
+        return VStack(alignment: .leading, spacing: 16) {
+            ForEach(Array(visible.enumerated()), id: \.element) { index, source in
+                if index > 0 {
+                    Divider().padding(.horizontal, 12)
+                }
+                QueueSectionView(
+                    title: source.displayName,
+                    symbol: source.symbol,
+                    items: filter(items(for: source)),
+                    error: error(for: source),
+                    health: health(for: source),
+                    viewModel: viewModel,
+                    onShowHistory: { historySource = source }
+                )
+            }
         }
         .padding(.vertical, 12)
+    }
+
+    private func isConfigured(_ source: QueueItem.Source) -> Bool {
+        switch source {
+        case .sonarr: return sonarrConfigured
+        case .radarr: return radarrConfigured
+        case .lidarr: return lidarrConfigured
+        }
+    }
+
+    private func items(for source: QueueItem.Source) -> [QueueItem] {
+        switch source {
+        case .sonarr: return viewModel.sonarr
+        case .radarr: return viewModel.radarr
+        case .lidarr: return viewModel.lidarr
+        }
+    }
+
+    private func error(for source: QueueItem.Source) -> String? {
+        switch source {
+        case .sonarr: return viewModel.sonarrError
+        case .radarr: return viewModel.radarrError
+        case .lidarr: return viewModel.lidarrError
+        }
+    }
+
+    private func health(for source: QueueItem.Source) -> [ArrHealthRecord] {
+        switch source {
+        case .sonarr: return viewModel.health.sonarr
+        case .radarr: return viewModel.health.radarr
+        case .lidarr: return viewModel.health.lidarr
+        }
     }
 
     // MARK: - Upcoming content

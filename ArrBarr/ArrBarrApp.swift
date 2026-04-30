@@ -8,5 +8,8 @@ struct ArrBarrApp: App {
     // NSStatusItem + NSPopover in AppDelegate (LSUIElement app, no dock icon).
     var body: some Scene {
         Settings { EmptyView() }
+            .commands {
+                CommandGroup(replacing: .appSettings) { }
+            }
     }
 }

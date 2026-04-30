@@ -48,10 +48,16 @@ final class ConfigStore: ObservableObject {
     @Published var notifyLidarr: Bool
     @Published var launchAtLogin: Bool
     @Published var appLanguage: String
+    @Published var arrOrder: [String]
+
+    static let defaultArrOrder = ["sonarr", "radarr", "lidarr"]
 
     static let appLanguageOptions: [(code: String, label: String)] = [
         ("system", "System"),
         ("en", "English"),
+        ("de", "Deutsch"),
+        ("es", "Español"),
+        ("fr", "Français"),
         ("pl", "Polski"),
     ]
 
@@ -73,6 +79,7 @@ final class ConfigStore: ObservableObject {
     private static let notifyLidarrKey = "ArrBarr.notifyLidarr"
     private static let launchAtLoginKey = "ArrBarr.launchAtLogin"
     private static let appLanguageKey = "ArrBarr.appLanguage"
+    private static let arrOrderKey = "ArrBarr.arrOrder"
     private static let keychainMigrationDoneKey = "ArrBarr.keychainMigrationDone"
 
     init(defaults: UserDefaults = .standard) {
@@ -105,6 +112,7 @@ final class ConfigStore: ObservableObject {
         self.notifyLidarr = defaults.object(forKey: Self.notifyLidarrKey) != nil ? defaults.bool(forKey: Self.notifyLidarrKey) : false
         self.launchAtLogin = defaults.object(forKey: Self.launchAtLoginKey) != nil ? defaults.bool(forKey: Self.launchAtLoginKey) : false
         self.appLanguage = defaults.string(forKey: Self.appLanguageKey) ?? "system"
+        self.arrOrder = Self.normalizeArrOrder(defaults.stringArray(forKey: Self.arrOrderKey))
 
         for kind in ServiceKind.allCases {
             publisher(for: kind).dropFirst().sink { [weak self] cfg in
@@ -129,6 +137,9 @@ final class ConfigStore: ObservableObject {
         $launchAtLogin.dropFirst().sink { [weak self] val in
             self?.defaults.set(val, forKey: Self.launchAtLoginKey)
             LaunchAtLogin.set(enabled: val)
+        }.store(in: &cancellables)
+        $arrOrder.dropFirst().sink { [weak self] val in
+            self?.defaults.set(val, forKey: Self.arrOrderKey)
         }.store(in: &cancellables)
         $appLanguage.dropFirst().sink { [weak self] val in
             guard let self else { return }
@@ -181,6 +192,14 @@ final class ConfigStore: ObservableObject {
         case .rtorrent: rtorrent = config
         case .deluge: deluge = config
         }
+    }
+
+    private static func normalizeArrOrder(_ stored: [String]?) -> [String] {
+        let known = Set(defaultArrOrder)
+        var seen = Set<String>()
+        var result = (stored ?? []).filter { known.contains($0) && seen.insert($0).inserted }
+        for k in defaultArrOrder where !seen.contains(k) { result.append(k) }
+        return result
     }
 
     // MARK: - Persistence

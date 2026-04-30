@@ -4,6 +4,10 @@ actor SonarrClient {
     private let config: ServiceConfig
     private let http = HTTPClient()
 
+    private struct CachedEpisodeFiles { let files: [SonarrEpisodeFile]; let expiry: Date }
+    private var episodeFileCache: [Int: CachedEpisodeFiles] = [:]
+    private let episodeFileCacheTTL: TimeInterval = 60
+
     init(config: ServiceConfig) {
         self.config = config
     }
@@ -56,13 +60,21 @@ actor SonarrClient {
     }
 
     private func fetchEpisodeFiles(seriesId: Int) async throws -> [SonarrEpisodeFile] {
+        if let cached = episodeFileCache[seriesId], cached.expiry > Date() {
+            return cached.files
+        }
         let url = try http.url(
             base: config.baseURL,
             path: "/api/v3/episodefile",
             query: [URLQueryItem(name: "seriesId", value: String(seriesId))]
         )
         let data = try await http.get(url, headers: ["X-Api-Key": config.apiKey])
-        return (try? JSONDecoder().decode([SonarrEpisodeFile].self, from: data)) ?? []
+        let files = (try? JSONDecoder().decode([SonarrEpisodeFile].self, from: data)) ?? []
+        episodeFileCache[seriesId] = CachedEpisodeFiles(
+            files: files,
+            expiry: Date().addingTimeInterval(episodeFileCacheTTL)
+        )
+        return files
     }
 
     func fetchCalendar() async throws -> [UpcomingItem] {
@@ -138,6 +150,20 @@ actor SonarrClient {
             customFormats: (r.customFormats ?? []).map(\.name),
             customFormatScore: r.customFormatScore ?? 0
         )
+    }
+
+    func deleteQueueItem(id: Int, removeFromClient: Bool = true, blocklist: Bool = false) async throws {
+        guard config.isConfigured else { throw HTTPError.notConfigured }
+        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
+        let url = try http.url(
+            base: config.baseURL,
+            path: "/api/v3/queue/\(id)",
+            query: [
+                URLQueryItem(name: "removeFromClient", value: removeFromClient ? "true" : "false"),
+                URLQueryItem(name: "blocklist", value: blocklist ? "true" : "false"),
+            ]
+        )
+        _ = try await http.delete(url, headers: ["X-Api-Key": config.apiKey])
     }
 
     func fetchHealth() async throws -> [ArrHealthRecord] {
@@ -217,8 +243,10 @@ actor SonarrClient {
             downloadId: r.downloadId,
             downloadProtocol: parseProtocol(r.protocol),
             downloadClient: r.downloadClient,
+            indexer: r.indexer,
             title: title,
             subtitle: subtitle,
+            releaseName: r.title,
             status: parseStatus(arrStatus: r.status, trackedState: r.trackedDownloadState),
             progress: progress,
             sizeTotal: total,
@@ -231,6 +259,8 @@ actor SonarrClient {
             existingCustomFormats: (existingFile?.customFormats ?? []).map(\.name),
             existingCustomFormatScore: existingFile?.customFormatScore,
             existingQuality: existingFile?.quality?.name,
+            existingSize: existingFile?.size,
+            existingFileName: existingFile?.relativePath.map { URL(fileURLWithPath: $0).lastPathComponent },
             contentSlug: r.series?.titleSlug,
             posterURL: poster,
             posterRequiresAuth: posterAuth

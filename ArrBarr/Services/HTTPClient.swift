@@ -66,6 +66,13 @@ struct HTTPClient {
         return try await perform(req)
     }
 
+    func delete(_ url: URL, headers: [String: String] = [:]) async throws -> Data {
+        var req = URLRequest(url: url)
+        req.httpMethod = "DELETE"
+        for (k, v) in headers { req.setValue(v, forHTTPHeaderField: k) }
+        return try await perform(req)
+    }
+
     private func perform(_ req: URLRequest) async throws -> Data {
         let (data, response): (Data, URLResponse)
         do {

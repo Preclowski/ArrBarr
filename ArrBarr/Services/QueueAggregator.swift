@@ -20,6 +20,12 @@ final class QueueAggregator {
     enum Action { case pause, resume, delete }
 
     private let configStore: ConfigStore
+    private var cachedRadarrClient: RadarrClient?
+    private var cachedRadarrConfig: ServiceConfig?
+    private var cachedSonarrClient: SonarrClient?
+    private var cachedSonarrConfig: ServiceConfig?
+    private var cachedLidarrClient: LidarrClient?
+    private var cachedLidarrConfig: ServiceConfig?
     private var cachedQbitClient: QbittorrentClient?
     private var cachedQbitConfig: ServiceConfig?
     private var cachedTransmissionClient: TransmissionClient?
@@ -32,43 +38,18 @@ final class QueueAggregator {
     }
 
     func fetch() async -> AggregateResult {
-        let radarrCfg = configStore.radarr
-        let sonarrCfg = configStore.sonarr
-        let lidarrCfg = configStore.lidarr
-        let qbitCfg = configStore.qbittorrent
-        let sabCfg = configStore.sabnzbd
+        let radarrClient = self.radarrClient(for: configStore.radarr)
+        let sonarrClient = self.sonarrClient(for: configStore.sonarr)
+        let lidarrClient = self.lidarrClient(for: configStore.lidarr)
 
-        async let radarr = Self.safeFetch { try await RadarrClient(config: radarrCfg).fetchQueue() }
-        async let sonarr = Self.safeFetch { try await SonarrClient(config: sonarrCfg).fetchQueue() }
-        async let lidarr = Self.safeFetch { try await LidarrClient(config: lidarrCfg).fetchQueue() }
-        async let qbitNames = Self.safeNames { qbitCfg.isConfigured ? try await self.qbitClient(for: qbitCfg).fetchNames() : [:] }
-        async let sabNames = Self.safeNames {
-            (sabCfg.isConfigured && !sabCfg.apiKey.isEmpty) ? try await SabnzbdClient(config: sabCfg).fetchNames() : [:]
-        }
-        let (r, s, l, qNames, sNames) = await (radarr, sonarr, lidarr, qbitNames, sabNames)
+        async let radarr = Self.safeFetch { try await radarrClient.fetchQueue() }
+        async let sonarr = Self.safeFetch { try await sonarrClient.fetchQueue() }
+        async let lidarr = Self.safeFetch { try await lidarrClient.fetchQueue() }
+        let (r, s, l) = await (radarr, sonarr, lidarr)
         return AggregateResult(
-            radarr: Self.attachNames(r.items, torrents: qNames, usenet: sNames),
-            sonarr: Self.attachNames(s.items, torrents: qNames, usenet: sNames),
-            lidarr: Self.attachNames(l.items, torrents: qNames, usenet: sNames),
+            radarr: r.items, sonarr: s.items, lidarr: l.items,
             radarrError: r.error, sonarrError: s.error, lidarrError: l.error
         )
-    }
-
-    private static func safeNames(_ block: () async throws -> [String: String]) async -> [String: String] {
-        do { return try await block() } catch { return [:] }
-    }
-
-    private static func attachNames(_ items: [QueueItem], torrents: [String: String], usenet: [String: String]) -> [QueueItem] {
-        items.map { item in
-            guard let id = item.downloadId, !id.isEmpty else { return item }
-            var copy = item
-            switch item.downloadProtocol {
-            case .torrent: copy.downloadFileName = torrents[id.lowercased()]
-            case .usenet:  copy.downloadFileName = usenet[id]
-            case .unknown: break
-            }
-            return copy
-        }
     }
 
     func fetchHealth() async -> HealthResult {
@@ -76,9 +57,12 @@ final class QueueAggregator {
         let sonarrCfg = configStore.sonarr
         let lidarrCfg = configStore.lidarr
 
-        async let radarr = Self.safeFetchHealth { try await RadarrClient(config: radarrCfg).fetchHealth() }
-        async let sonarr = Self.safeFetchHealth { try await SonarrClient(config: sonarrCfg).fetchHealth() }
-        async let lidarr = Self.safeFetchHealth { try await LidarrClient(config: lidarrCfg).fetchHealth() }
+        let radarrClient = self.radarrClient(for: radarrCfg)
+        let sonarrClient = self.sonarrClient(for: sonarrCfg)
+        let lidarrClient = self.lidarrClient(for: lidarrCfg)
+        async let radarr = Self.safeFetchHealth { try await radarrClient.fetchHealth() }
+        async let sonarr = Self.safeFetchHealth { try await sonarrClient.fetchHealth() }
+        async let lidarr = Self.safeFetchHealth { try await lidarrClient.fetchHealth() }
         let (r, s, l) = await (radarr, sonarr, lidarr)
         return HealthResult(radarr: r, sonarr: s, lidarr: l)
     }
@@ -87,14 +71,56 @@ final class QueueAggregator {
         do { return try await block() } catch { return [] }
     }
 
+    func fetchHistory(for source: QueueItem.Source) async -> HistoryResult {
+        do {
+            let items: [HistoryItem]
+            switch source {
+            case .radarr: items = try await radarrClient(for: configStore.radarr).fetchHistory()
+            case .sonarr: items = try await sonarrClient(for: configStore.sonarr).fetchHistory()
+            case .lidarr: items = try await lidarrClient(for: configStore.lidarr).fetchHistory()
+            }
+            return HistoryResult(items: items, error: nil)
+        } catch {
+            let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+            return HistoryResult(items: [], error: message)
+        }
+    }
+
+    private func radarrClient(for cfg: ServiceConfig) -> RadarrClient {
+        if let cached = cachedRadarrClient, cachedRadarrConfig == cfg { return cached }
+        let client = RadarrClient(config: cfg)
+        cachedRadarrClient = client
+        cachedRadarrConfig = cfg
+        return client
+    }
+
+    private func sonarrClient(for cfg: ServiceConfig) -> SonarrClient {
+        if let cached = cachedSonarrClient, cachedSonarrConfig == cfg { return cached }
+        let client = SonarrClient(config: cfg)
+        cachedSonarrClient = client
+        cachedSonarrConfig = cfg
+        return client
+    }
+
+    private func lidarrClient(for cfg: ServiceConfig) -> LidarrClient {
+        if let cached = cachedLidarrClient, cachedLidarrConfig == cfg { return cached }
+        let client = LidarrClient(config: cfg)
+        cachedLidarrClient = client
+        cachedLidarrConfig = cfg
+        return client
+    }
+
     func fetchUpcoming() async -> [UpcomingItem] {
         let radarrCfg = configStore.radarr
         let sonarrCfg = configStore.sonarr
         let lidarrCfg = configStore.lidarr
 
-        async let radarr = Self.safeFetchUpcoming { try await RadarrClient(config: radarrCfg).fetchCalendar() }
-        async let sonarr = Self.safeFetchUpcoming { try await SonarrClient(config: sonarrCfg).fetchCalendar() }
-        async let lidarr = Self.safeFetchUpcoming { try await LidarrClient(config: lidarrCfg).fetchCalendar() }
+        let radarrClient = self.radarrClient(for: radarrCfg)
+        let sonarrClient = self.sonarrClient(for: sonarrCfg)
+        let lidarrClient = self.lidarrClient(for: lidarrCfg)
+        async let radarr = Self.safeFetchUpcoming { try await radarrClient.fetchCalendar() }
+        async let sonarr = Self.safeFetchUpcoming { try await sonarrClient.fetchCalendar() }
+        async let lidarr = Self.safeFetchUpcoming { try await lidarrClient.fetchCalendar() }
         let (r, s, l) = await (radarr, sonarr, lidarr)
         let startOfToday = Calendar.current.startOfDay(for: Date())
         return (r + s + l)
@@ -116,6 +142,12 @@ final class QueueAggregator {
     }
 
     func perform(_ action: Action, on item: QueueItem) async throws {
+        // Delete is routed through the arr API — works for any download client.
+        if action == .delete {
+            try await deleteViaArr(item)
+            return
+        }
+
         guard let downloadId = item.downloadId, !downloadId.isEmpty else {
             throw AggregateError.noDownloadId
         }
@@ -127,6 +159,14 @@ final class QueueAggregator {
             try await performTorrent(action, downloadId: downloadId)
         case .unknown:
             throw AggregateError.downloadProtocolUnknown
+        }
+    }
+
+    private func deleteViaArr(_ item: QueueItem) async throws {
+        switch item.source {
+        case .radarr: try await radarrClient(for: configStore.radarr).deleteQueueItem(id: item.arrQueueId)
+        case .sonarr: try await sonarrClient(for: configStore.sonarr).deleteQueueItem(id: item.arrQueueId)
+        case .lidarr: try await lidarrClient(for: configStore.lidarr).deleteQueueItem(id: item.arrQueueId)
         }
     }
 
@@ -234,6 +274,11 @@ final class QueueAggregator {
     private func delugeAction(_ a: Action) -> DelugeClient.Action {
         switch a { case .pause: .pause; case .resume: .resume; case .delete: .delete }
     }
+}
+
+struct HistoryResult: Equatable {
+    let items: [HistoryItem]
+    let error: String?
 }
 
 struct HealthResult: Equatable {

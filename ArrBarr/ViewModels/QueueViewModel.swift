@@ -58,18 +58,11 @@ final class QueueViewModel: ObservableObject {
             .store(in: &intervalObservers)
     }
 
-    func fetchHistory(for source: QueueItem.Source) async -> (items: [HistoryItem], error: String?) {
-        do {
-            let items: [HistoryItem]
-            switch source {
-            case .radarr: items = try await RadarrClient(config: configStore.radarr).fetchHistory()
-            case .sonarr: items = try await SonarrClient(config: configStore.sonarr).fetchHistory()
-            case .lidarr: items = try await LidarrClient(config: configStore.lidarr).fetchHistory()
-            }
-            return (items, nil)
-        } catch {
-            return ([], (error as? LocalizedError)?.errorDescription ?? error.localizedDescription)
+    func fetchHistory(for source: QueueItem.Source) async -> HistoryResult {
+        if DemoMode.isActive {
+            return HistoryResult(items: DemoMocks.history(for: source), error: nil)
         }
+        return await aggregator.fetchHistory(for: source)
     }
 
     func startForegroundPolling() {
@@ -164,19 +157,9 @@ final class QueueViewModel: ObservableObject {
                     optimisticOverrides.removeValue(forKey: item.id)
                     return item
                 }
-                return QueueItem(
-                    id: item.id, source: item.source, arrQueueId: item.arrQueueId,
-                    downloadId: item.downloadId, downloadProtocol: item.downloadProtocol,
-                    downloadClient: item.downloadClient, title: item.title, subtitle: item.subtitle,
-                    status: status, progress: item.progress, sizeTotal: item.sizeTotal,
-                    sizeLeft: item.sizeLeft, timeLeft: item.timeLeft,
-                    customFormats: item.customFormats, customFormatScore: item.customFormatScore,
-                    quality: item.quality, isUpgrade: item.isUpgrade,
-                    existingCustomFormats: item.existingCustomFormats,
-                    existingCustomFormatScore: item.existingCustomFormatScore,
-                    existingQuality: item.existingQuality,
-                    contentSlug: item.contentSlug
-                )
+                var copy = item
+                copy.status = status
+                return copy
             case .deleted:
                 return nil
             }
@@ -267,20 +250,7 @@ final class QueueViewModel: ObservableObject {
             guard let idx = items.firstIndex(where: { $0.id == item.id }) else { return }
             switch overrideKind {
             case .status(let newStatus):
-                let old = items[idx]
-                items[idx] = QueueItem(
-                    id: old.id, source: old.source, arrQueueId: old.arrQueueId,
-                    downloadId: old.downloadId, downloadProtocol: old.downloadProtocol,
-                    downloadClient: old.downloadClient, title: old.title, subtitle: old.subtitle,
-                    status: newStatus, progress: old.progress, sizeTotal: old.sizeTotal,
-                    sizeLeft: old.sizeLeft, timeLeft: old.timeLeft,
-                    customFormats: old.customFormats, customFormatScore: old.customFormatScore,
-                    quality: old.quality, isUpgrade: old.isUpgrade,
-                    existingCustomFormats: old.existingCustomFormats,
-                    existingCustomFormatScore: old.existingCustomFormatScore,
-                    existingQuality: old.existingQuality,
-                    contentSlug: old.contentSlug
-                )
+                items[idx].status = newStatus
             case .deleted:
                 items.remove(at: idx)
             }

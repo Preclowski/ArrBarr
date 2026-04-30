@@ -4,6 +4,10 @@ actor RadarrClient {
     private let config: ServiceConfig
     private let http = HTTPClient()
 
+    private struct CachedMovieFile { let file: RadarrMovieFile; let expiry: Date }
+    private var movieFileCache: [Int: CachedMovieFile] = [:]
+    private let movieFileCacheTTL: TimeInterval = 60
+
     init(config: ServiceConfig) {
         self.config = config
     }
@@ -46,13 +50,36 @@ actor RadarrClient {
 
     private func fetchMovieFiles(movieIds: Set<Int>) async throws -> [Int: RadarrMovieFile] {
         guard !movieIds.isEmpty else { return [:] }
-        let items = movieIds.map { URLQueryItem(name: "movieId", value: String($0)) }
+        let now = Date()
+        var result: [Int: RadarrMovieFile] = [:]
+        var misses: Set<Int> = []
+        for id in movieIds {
+            if let cached = movieFileCache[id], cached.expiry > now {
+                result[id] = cached.file
+            } else {
+                misses.insert(id)
+            }
+        }
+        guard !misses.isEmpty else { return result }
+
+        let items = misses.map { URLQueryItem(name: "movieId", value: String($0)) }
         let url = try http.url(base: config.baseURL, path: "/api/v3/moviefile", query: items)
         let data = try await http.get(url, headers: ["X-Api-Key": config.apiKey])
         let files = (try? JSONDecoder().decode([RadarrMovieFile].self, from: data)) ?? []
-        var map: [Int: RadarrMovieFile] = [:]
-        for f in files { if let mid = f.movieId { map[mid] = f } }
-        return map
+
+        let expiry = now.addingTimeInterval(movieFileCacheTTL)
+        let returnedIds = Set(files.compactMap { $0.movieId })
+        for f in files {
+            if let mid = f.movieId {
+                result[mid] = f
+                movieFileCache[mid] = CachedMovieFile(file: f, expiry: expiry)
+            }
+        }
+        // Movies with no file return nothing — invalidate any stale cache for them.
+        for id in misses where !returnedIds.contains(id) {
+            movieFileCache.removeValue(forKey: id)
+        }
+        return result
     }
 
     func fetchCalendar() async throws -> [UpcomingItem] {
@@ -123,6 +150,20 @@ actor RadarrClient {
         )
     }
 
+    func deleteQueueItem(id: Int, removeFromClient: Bool = true, blocklist: Bool = false) async throws {
+        guard config.isConfigured else { throw HTTPError.notConfigured }
+        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
+        let url = try http.url(
+            base: config.baseURL,
+            path: "/api/v3/queue/\(id)",
+            query: [
+                URLQueryItem(name: "removeFromClient", value: removeFromClient ? "true" : "false"),
+                URLQueryItem(name: "blocklist", value: blocklist ? "true" : "false"),
+            ]
+        )
+        _ = try await http.delete(url, headers: ["X-Api-Key": config.apiKey])
+    }
+
     func fetchHealth() async throws -> [ArrHealthRecord] {
         guard config.isConfigured else { throw HTTPError.notConfigured }
         guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
@@ -178,8 +219,10 @@ actor RadarrClient {
             downloadId: r.downloadId,
             downloadProtocol: parseProtocol(r.protocol),
             downloadClient: r.downloadClient,
+            indexer: r.indexer,
             title: movieTitle,
             subtitle: nil,
+            releaseName: r.title,
             status: parseStatus(arrStatus: r.status, trackedState: r.trackedDownloadState),
             progress: progress,
             sizeTotal: total,
@@ -192,6 +235,8 @@ actor RadarrClient {
             existingCustomFormats: (existingFile?.customFormats ?? r.movie?.movieFile?.customFormats ?? []).map(\.name),
             existingCustomFormatScore: existingFile?.customFormatScore ?? r.movie?.movieFile?.customFormatScore,
             existingQuality: existingFile?.quality?.name ?? r.movie?.movieFile?.quality?.name,
+            existingSize: existingFile?.size ?? r.movie?.movieFile?.size,
+            existingFileName: (existingFile?.relativePath ?? r.movie?.movieFile?.relativePath).map { URL(fileURLWithPath: $0).lastPathComponent },
             contentSlug: r.movie?.titleSlug,
             posterURL: poster,
             posterRequiresAuth: posterAuth
