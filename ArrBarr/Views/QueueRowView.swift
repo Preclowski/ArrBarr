@@ -397,15 +397,6 @@ struct QueueItemTooltip: View {
                     .lineLimit(2)
                 Spacer(minLength: 4)
                 HStack(spacing: 4) {
-                    Text(item.isUpgrade ? "Upgrade" : "New")
-                        .font(.system(size: 9, weight: .semibold))
-                        .foregroundStyle(item.isUpgrade ? AnyShapeStyle(Color.indigo) : AnyShapeStyle(Color.accentColor))
-                        .padding(.horizontal, 5)
-                        .padding(.vertical, 2)
-                        .background(
-                            item.isUpgrade ? AnyShapeStyle(Color.indigo.opacity(0.15)) : AnyShapeStyle(Color.accentColor.opacity(0.15)),
-                            in: Capsule()
-                        )
                     if let client = item.downloadClient {
                         let color = downloadClientColor(client)
                         Text(client)
@@ -450,7 +441,7 @@ struct QueueItemTooltip: View {
             Rectangle()
                 .fill(.quaternary)
                 .frame(height: 1)
-            Image(systemName: "arrow.up")
+            Text("Upgrade")
                 .font(.system(size: 9, weight: .semibold))
                 .foregroundStyle(.indigo)
                 .padding(.horizontal, 5)

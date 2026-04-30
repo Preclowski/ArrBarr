@@ -91,8 +91,6 @@ struct SettingsView: View {
                 }
             }
             Section("Popover") {
-                Toggle("Show Needs you", isOn: $configStore.showNeedsYou)
-                Toggle("Show Tonight banner", isOn: $configStore.showTonight)
                 Toggle("Show indexer issues warning", isOn: $configStore.showIndexerIssues)
                 Picker("Tonight window", selection: $configStore.tonightHours) {
                     ForEach(ConfigStore.tonightHoursOptions, id: \.self) { hours in
@@ -132,6 +130,12 @@ struct SettingsView: View {
                     .frame(width: 16)
                 Text(spec.title)
                 Spacer()
+                if let toggle = visibilityToggle(for: key) {
+                    Toggle("", isOn: toggle)
+                        .labelsHidden()
+                        .controlSize(.small)
+                        .toggleStyle(.switch)
+                }
             }
             .frame(height: Self.arrRowHeight)
             .contentShape(Rectangle())
@@ -150,6 +154,12 @@ struct SettingsView: View {
     private struct OrderRowSpec {
         let title: LocalizedStringKey
         let symbol: String
+    }
+
+    private func visibilityToggle(for key: String) -> Binding<Bool>? {
+        if key == ConfigStore.tonightOrderKey { return $configStore.showTonight }
+        if key == ConfigStore.needsYouOrderKey { return $configStore.showNeedsYou }
+        return nil
     }
 
     private func orderRowSpec(for key: String) -> OrderRowSpec? {
@@ -201,6 +211,12 @@ struct SettingsView: View {
                     .foregroundStyle(.secondary)
                     .textSelection(.enabled)
                     .help("ArrBarr \(Self.versionString)")
+                Text("·")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.tertiary)
+                Text(verbatim: "🥨 Precel")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
                 Spacer()
                 Button("Close") { NSApp.keyWindow?.close() }
                     .keyboardShortcut("w", modifiers: .command)
