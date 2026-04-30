@@ -208,23 +208,23 @@ struct QueueRowView: View {
     private var actionButtons: some View {
         HStack(spacing: 4) {
             if let url = webURL {
-                IconButton(symbol: "safari", help: "Open in browser", accessibilityLabel: "Open \(item.title) in browser") {
+                IconButton(symbol: "safari", helpKey: "Open in browser", accessibilityLabel: "Open \(item.title) in browser") {
                     NSWorkspace.shared.open(url)
                 }
             }
             if canControl && canPauseResume {
                 if item.isPaused {
-                    IconButton(symbol: "play.fill", help: "Resume", accessibilityLabel: "Resume \(item.title)") {
+                    IconButton(symbol: "play.fill", helpKey: "Resume", accessibilityLabel: "Resume \(item.title)") {
                         Task { await viewModel.resume(item) }
                     }
                 } else {
-                    IconButton(symbol: "pause.fill", help: "Pause", accessibilityLabel: "Pause \(item.title)") {
+                    IconButton(symbol: "pause.fill", helpKey: "Pause", accessibilityLabel: "Pause \(item.title)") {
                         Task { await viewModel.pause(item) }
                     }
                 }
             }
             if canControl {
-                IconButton(symbol: "trash", help: "Remove from client", accessibilityLabel: "Remove \(item.title)") {
+                IconButton(symbol: "trash", helpKey: "Remove from client", accessibilityLabel: "Remove \(item.title)") {
                     showDeleteConfirmation = true
                 }
             }
@@ -571,8 +571,9 @@ struct TooltipFlowLayout: Layout {
 }
 
 private struct IconButton: View {
+    @EnvironmentObject var configStore: ConfigStore
     let symbol: String
-    let help: LocalizedStringKey
+    let helpKey: String
     var accessibilityLabel: String = ""
     let action: () -> Void
 
@@ -584,7 +585,11 @@ private struct IconButton: View {
         }
         .modifier(GlassButtonStyle())
         .controlSize(.mini)
-        .help(help)
-        .accessibilityLabel(accessibilityLabel.isEmpty ? Text(help) : Text(verbatim: accessibilityLabel))
+        .localizedHelp(helpKey, locale: configStore.currentLocale)
+        .accessibilityLabel(
+            accessibilityLabel.isEmpty
+                ? Text(verbatim: LocaleBundle.string(helpKey, locale: configStore.currentLocale))
+                : Text(verbatim: accessibilityLabel)
+        )
     }
 }

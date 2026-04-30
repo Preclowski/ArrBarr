@@ -3,6 +3,7 @@ import SwiftUI
 struct HistoryView: View {
     let source: QueueItem.Source
     @ObservedObject var viewModel: QueueViewModel
+    @EnvironmentObject var configStore: ConfigStore
     let refreshNonce: Int
     let onClose: () -> Void
 
@@ -41,7 +42,7 @@ struct HistoryView: View {
             .onHover { hovering in
                 if hovering { NSCursor.pointingHand.push() } else { NSCursor.pop() }
             }
-            .help("Close")
+            .localizedHelp("Close", locale: configStore.currentLocale)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)

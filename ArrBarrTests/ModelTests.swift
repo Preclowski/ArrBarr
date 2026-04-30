@@ -101,17 +101,19 @@ struct ServiceKindTests {
 
 @Suite("UpcomingItem")
 struct UpcomingItemTests {
-    @Test("Today's date formats as 'Today'")
+    private let englishLocale = Locale(identifier: "en")
+
+    @Test("Today's date formats as 'Today' in English")
     func today() {
         let item = UpcomingItem(
             id: "test-1", source: .radarr, title: "Test",
             subtitle: nil, airDate: Date(), releaseType: "Digital",
             hasFile: false, overview: nil
         )
-        #expect(item.airDateFormatted == "Today")
+        #expect(item.airDateFormatted(locale: englishLocale) == "Today")
     }
 
-    @Test("Tomorrow's date formats as 'Tomorrow'")
+    @Test("Tomorrow's date formats as 'Tomorrow' in English")
     func tomorrow() {
         let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: Date())!
         let item = UpcomingItem(
@@ -119,10 +121,10 @@ struct UpcomingItemTests {
             subtitle: "S01E01", airDate: tomorrow, releaseType: "Airing",
             hasFile: false, overview: nil
         )
-        #expect(item.airDateFormatted == "Tomorrow")
+        #expect(item.airDateFormatted(locale: englishLocale) == "Tomorrow")
     }
 
-    @Test("Future date uses medium date format")
+    @Test("Future date is non-empty and not a relative label")
     func futureDate() {
         let nextWeek = Calendar.current.date(byAdding: .day, value: 7, to: Date())!
         let item = UpcomingItem(
@@ -130,7 +132,7 @@ struct UpcomingItemTests {
             subtitle: nil, airDate: nextWeek, releaseType: "In Cinemas",
             hasFile: false, overview: nil
         )
-        let formatted = item.airDateFormatted
+        let formatted = item.airDateFormatted(locale: englishLocale)
         #expect(formatted != "Today")
         #expect(formatted != "Tomorrow")
         #expect(!formatted.isEmpty)

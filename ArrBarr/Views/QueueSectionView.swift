@@ -9,6 +9,7 @@ struct QueueSectionView: View {
     var isCollapsed: Bool = false
     var onToggleCollapse: (() -> Void)? = nil
     @ObservedObject var viewModel: QueueViewModel
+    @EnvironmentObject var configStore: ConfigStore
     var onShowHistory: (() -> Void)? = nil
     @State private var hoveringHistory = false
 
@@ -55,7 +56,7 @@ struct QueueSectionView: View {
                     }
                     .buttonStyle(.plain)
                     .onHover { hoveringHistory = $0 }
-                    .help("Show history")
+                    .localizedHelp("Show history", locale: configStore.currentLocale)
                 }
             }
             .padding(.horizontal, 12)
