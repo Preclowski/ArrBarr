@@ -75,12 +75,21 @@ struct SettingsView: View {
         Form {
             Section("Radarr") {
                 ServiceFields(config: $draftRadarr, kind: .radarr)
+                if draftRadarr.enabled {
+                    Toggle("Notify on new grabs", isOn: $draftNotifyRadarr)
+                }
             }
             Section("Sonarr") {
                 ServiceFields(config: $draftSonarr, kind: .sonarr)
+                if draftSonarr.enabled {
+                    Toggle("Notify on new grabs", isOn: $draftNotifySonarr)
+                }
             }
             Section("Lidarr") {
                 ServiceFields(config: $draftLidarr, kind: .lidarr)
+                if draftLidarr.enabled {
+                    Toggle("Notify on new grabs", isOn: $draftNotifyLidarr)
+                }
             }
         }
         .formStyle(.grouped)
@@ -144,11 +153,6 @@ struct SettingsView: View {
                 ForEach(draftArrOrder, id: \.self) { key in
                     arrOrderRow(key: key)
                 }
-            }
-            Section("Notifications") {
-                Toggle("Radarr", isOn: $draftNotifyRadarr)
-                Toggle("Sonarr", isOn: $draftNotifySonarr)
-                Toggle("Lidarr", isOn: $draftNotifyLidarr)
             }
         }
         .formStyle(.grouped)

@@ -50,7 +50,7 @@ final class ConfigStore: ObservableObject {
     @Published var appLanguage: String
     @Published var arrOrder: [String]
 
-    static let defaultArrOrder = ["sonarr", "radarr", "lidarr"]
+    static let defaultArrOrder = ["radarr", "sonarr", "lidarr"]
 
     static let appLanguageOptions: [(code: String, label: String)] = [
         ("system", "System"),
