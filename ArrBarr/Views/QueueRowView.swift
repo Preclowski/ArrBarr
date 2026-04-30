@@ -234,24 +234,52 @@ struct QueueRowView: View {
     // MARK: - Custom format tags
 
     private var customFormatTags: some View {
-        FlowLayout(spacing: 4) {
-            ForEach(item.customFormats, id: \.self) { cf in
-                Text(cf)
-                    .font(.system(size: 9, weight: .medium))
-                    .padding(.horizontal, 5)
-                    .padding(.vertical, 1)
-                    .background(.quaternary, in: Capsule())
+        Color.clear
+            .frame(height: 14)
+            .frame(maxWidth: .infinity)
+            .overlay(alignment: .leading) {
+                HStack(spacing: 4) {
+                    ForEach(item.customFormats, id: \.self) { cf in
+                        Text(cf)
+                            .font(.system(size: 9, weight: .medium))
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 1)
+                            .background(.quaternary, in: Capsule())
+                    }
+                    if item.customFormatScore != 0 {
+                        let sign = item.customFormatScore > 0 ? "+" : ""
+                        Text("\(sign)\(item.customFormatScore)")
+                            .font(.system(size: 9, weight: .semibold))
+                            .foregroundStyle(item.customFormatScore > 0 ? .green : .red)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 1)
+                            .background(.quaternary, in: Capsule())
+                    }
+                }
+                .fixedSize()
             }
-            if item.customFormatScore != 0 {
-                let sign = item.customFormatScore > 0 ? "+" : ""
-                Text("\(sign)\(item.customFormatScore)")
-                    .font(.system(size: 9, weight: .semibold))
-                    .foregroundStyle(item.customFormatScore > 0 ? .green : .red)
-                    .padding(.horizontal, 5)
-                    .padding(.vertical, 1)
-                    .background(.quaternary, in: Capsule())
-            }
+            .clipped()
+            .mask(
+                LinearGradient(
+                    stops: [
+                        .init(color: .black, location: 0),
+                        .init(color: .black, location: 0.85),
+                        .init(color: .clear, location: 1.0),
+                    ],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
+            .help(Text(verbatim: customFormatsTooltip))
+    }
+
+    private var customFormatsTooltip: String {
+        var parts = item.customFormats.map { "[\($0)]" }
+        if item.customFormatScore != 0 {
+            let sign = item.customFormatScore > 0 ? "+" : ""
+            parts.append("\(sign)\(item.customFormatScore)")
         }
+        return parts.joined(separator: " ")
     }
 
     // MARK: - Display helpers
