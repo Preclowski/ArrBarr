@@ -35,17 +35,39 @@ struct UpcomingItem: Identifiable, Equatable {
         self.posterURL = posterURL; self.posterRequiresAuth = posterRequiresAuth
     }
 
-    private static let mediumDateFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.dateStyle = .medium
-        f.timeStyle = .none
-        return f
-    }()
-
-    var airDateFormatted: String {
+    func airDateFormatted(locale: Locale) -> String {
         let cal = Calendar.current
-        if cal.isDateInToday(airDate) { return "Today" }
-        if cal.isDateInTomorrow(airDate) { return "Tomorrow" }
-        return Self.mediumDateFormatter.string(from: airDate)
+        if cal.isDateInToday(airDate) {
+            return LocaleBundle.string("Today", locale: locale)
+        }
+        if cal.isDateInTomorrow(airDate) {
+            return LocaleBundle.string("Tomorrow", locale: locale)
+        }
+        // Date.FormatStyle.locale(_:) honours the explicit locale even when
+        // AppleLanguages was set differently at process launch.
+        return airDate.formatted(
+            .dateTime
+                .day()
+                .month(.abbreviated)
+                .year()
+                .locale(locale)
+        )
+    }
+}
+
+/// `String(localized:locale:)` ignores the locale argument for string lookup —
+/// it always reads from `Bundle.main.preferredLocalizations`, which is fixed
+/// at process launch from `AppleLanguages`. This helper loads the requested
+/// locale's compiled `.lproj/Localizable.strings` directly so in-app language
+/// changes take effect without restarting.
+enum LocaleBundle {
+    static func string(_ key: String, locale: Locale) -> String {
+        let langCode = locale.language.languageCode?.identifier ?? locale.identifier
+        if let path = Bundle.main.path(forResource: langCode, ofType: "lproj"),
+           let bundle = Bundle(path: path) {
+            let value = bundle.localizedString(forKey: key, value: key, table: nil)
+            if value != key { return value }
+        }
+        return Bundle.main.localizedString(forKey: key, value: key, table: nil)
     }
 }

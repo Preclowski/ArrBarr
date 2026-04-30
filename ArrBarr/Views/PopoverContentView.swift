@@ -240,6 +240,14 @@ struct PopoverContentView: View {
                     withAnimation(.smooth(duration: 0.22)) {
                         configStore.toggleCollapsed(ConfigStore.needsYouOrderKey)
                     }
+                },
+                onItemTap: { needs in
+                    let cfg = configStore.config(for: needs.source.serviceKind)
+                    guard let url = ArrActivityURLBuilder.queueURL(forBase: cfg.baseURL),
+                          let scheme = url.scheme?.lowercased(),
+                          scheme == "http" || scheme == "https"
+                    else { return }
+                    NSWorkspace.shared.open(url)
                 }
             )
             .padding(.vertical, 12)
@@ -350,7 +358,7 @@ struct PopoverContentView: View {
                     let y = c.date.year ?? 0, m = c.date.month ?? 0, d = c.date.day ?? 0
                     groups.append(UpcomingGroup(
                         date: "\(y)-\(m)-\(d)",
-                        label: first.airDateFormatted,
+                        label: first.airDateFormatted(locale: configStore.currentLocale),
                         items: c.items,
                         isFirst: groups.isEmpty
                     ))
@@ -362,7 +370,7 @@ struct PopoverContentView: View {
             let y = c.date.year ?? 0, m = c.date.month ?? 0, d = c.date.day ?? 0
             groups.append(UpcomingGroup(
                 date: "\(y)-\(m)-\(d)",
-                label: first.airDateFormatted,
+                label: first.airDateFormatted(locale: configStore.currentLocale),
                 items: c.items,
                 isFirst: groups.isEmpty
             ))

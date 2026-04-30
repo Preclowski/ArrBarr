@@ -793,6 +793,22 @@
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Afficher « Nécessite votre attention »" } },
         "pl" : { "stringUnit" : { "state" : "translated", "value" : "Pokaż „Potrzebuje twojej uwagi“" } }
       }
+    },
+    "Today" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Heute" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Hoy" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Aujourd’hui" } },
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Dziś" } }
+      }
+    },
+    "Tomorrow" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Morgen" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Mañana" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Demain" } },
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Jutro" } }
+      }
     }
   }
 }

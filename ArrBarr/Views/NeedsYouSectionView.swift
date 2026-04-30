@@ -4,6 +4,8 @@ struct NeedsYouSectionView: View {
     let items: [NeedsYouItem]
     let isCollapsed: Bool
     let onToggleCollapse: () -> Void
+    var onItemTap: ((NeedsYouItem) -> Void)? = nil
+    @State private var hoveredID: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -46,6 +48,20 @@ struct NeedsYouSectionView: View {
                         .padding(.leading, 28)
                         .padding(.trailing, 12)
                         .padding(.vertical, 4)
+                        .background(
+                            hoveredID == needs.id
+                                ? Color.primary.opacity(0.06)
+                                : Color.clear
+                        )
+                        .contentShape(Rectangle())
+                        .onTapGesture { onItemTap?(needs) }
+                        .onHover { hovering in
+                            hoveredID = hovering ? needs.id : nil
+                            if onItemTap != nil {
+                                if hovering { NSCursor.pointingHand.push() } else { NSCursor.pop() }
+                            }
+                        }
+                        .help("Open in browser")
                     }
                 }
             }

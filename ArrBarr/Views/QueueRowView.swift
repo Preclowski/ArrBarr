@@ -572,7 +572,7 @@ struct TooltipFlowLayout: Layout {
 
 private struct IconButton: View {
     let symbol: String
-    let help: String
+    let help: LocalizedStringKey
     var accessibilityLabel: String = ""
     let action: () -> Void
 
@@ -585,6 +585,6 @@ private struct IconButton: View {
         .modifier(GlassButtonStyle())
         .controlSize(.mini)
         .help(help)
-        .accessibilityLabel(accessibilityLabel.isEmpty ? help : accessibilityLabel)
+        .accessibilityLabel(accessibilityLabel.isEmpty ? Text(help) : Text(verbatim: accessibilityLabel))
     }
 }

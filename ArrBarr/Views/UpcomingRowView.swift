@@ -30,7 +30,7 @@ struct UpcomingRowView: View {
             Spacer(minLength: 4)
 
             VStack(alignment: .trailing, spacing: 1) {
-                Text(item.airDateFormatted)
+                Text(item.airDateFormatted(locale: configStore.currentLocale))
                     .font(.system(size: 10, weight: .medium))
                     .foregroundStyle(.secondary)
 
@@ -79,7 +79,7 @@ struct UpcomingRowView: View {
     private var tooltipText: String {
         var lines = [item.title]
         if let sub = item.subtitle { lines.append(sub) }
-        lines.append(item.airDateFormatted)
+        lines.append(item.airDateFormatted(locale: configStore.currentLocale))
         if let overview = item.overview, !overview.isEmpty {
             lines.append("")
             lines.append(overview)
