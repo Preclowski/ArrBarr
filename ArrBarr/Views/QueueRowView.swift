@@ -450,7 +450,7 @@ struct QueueItemTooltip: View {
             Rectangle()
                 .fill(.quaternary)
                 .frame(height: 1)
-            Image(systemName: "arrow.down")
+            Image(systemName: "arrow.up")
                 .font(.system(size: 9, weight: .semibold))
                 .foregroundStyle(.indigo)
                 .padding(.horizontal, 5)
