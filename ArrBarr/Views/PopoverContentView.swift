@@ -7,27 +7,22 @@ struct PopoverContentView: View {
     let onQuit: () -> Void
 
     @State private var selectedTab: Tab = .queue
-    @State private var searchText = ""
-    @State private var measuredContentHeight: CGFloat = 0
     @State private var historySource: QueueItem.Source?
     @State private var historyRefreshNonce = 0
 
     private let maxScrollHeight: CGFloat = 520
-    private let minScrollHeight: CGFloat = 80
 
-    private func filter(_ items: [QueueItem]) -> [QueueItem] {
-        let q = searchText.trimmingCharacters(in: .whitespaces).lowercased()
-        guard !q.isEmpty else { return items }
-        return items.filter {
-            $0.title.lowercased().contains(q)
-                || ($0.subtitle?.lowercased().contains(q) ?? false)
-        }
-    }
-
-    private var sonarrConfigured: Bool { DemoMode.isActive || configStore.sonarr.isConfigured }
-    private var radarrConfigured: Bool { DemoMode.isActive || configStore.radarr.isConfigured }
-    private var lidarrConfigured: Bool { DemoMode.isActive || configStore.lidarr.isConfigured }
+    private var sonarrConfigured: Bool { isVisible(configStore.sonarr) }
+    private var radarrConfigured: Bool { isVisible(configStore.radarr) }
+    private var lidarrConfigured: Bool { isVisible(configStore.lidarr) }
     private var anyArrConfigured: Bool { sonarrConfigured || radarrConfigured || lidarrConfigured }
+
+    /// In demo mode, show an arr whenever it's enabled (the configs are seeded to
+    /// `enabled = true` on first demo launch — see `DemoMode.seedConfigsIfNeeded`).
+    /// Outside of demo mode, require a real configured connection.
+    private func isVisible(_ config: ServiceConfig) -> Bool {
+        DemoMode.isActive ? config.enabled : config.isConfigured
+    }
 
     enum Tab: String, CaseIterable {
         case queue = "Queue"
@@ -65,14 +60,12 @@ struct PopoverContentView: View {
             } else if anyArrConfigured {
                 tabBar
                 Divider()
-                searchBar
                 Group {
                     switch selectedTab {
                     case .queue: queueContent
                     case .upcoming: upcomingContent
                     }
                 }
-                .animation(.smooth(duration: 0.28), value: scrollHeight)
             } else {
                 emptyState
             }
@@ -81,41 +74,66 @@ struct PopoverContentView: View {
         .frame(width: 400)
     }
 
-    private var scrollHeight: CGFloat {
-        guard measuredContentHeight > 0 else { return minScrollHeight }
-        return min(max(measuredContentHeight, minScrollHeight), maxScrollHeight)
-    }
+    // MARK: - Tonight banner
 
-    private var hasAnyItems: Bool {
-        switch selectedTab {
-        case .queue: return !(viewModel.radarr.isEmpty && viewModel.sonarr.isEmpty && viewModel.lidarr.isEmpty)
-        case .upcoming: return !viewModel.upcoming.isEmpty
-        }
-    }
-
-    private var searchBar: some View {
-        HStack(spacing: 6) {
-            Image(systemName: "magnifyingglass")
-                .font(.system(size: 11))
-                .foregroundStyle(.secondary)
-            TextField("Filter…", text: $searchText)
-                .textFieldStyle(.plain)
-                .font(.system(size: 12))
-            if !searchText.isEmpty {
-                Button {
-                    searchText = ""
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 11))
-                        .foregroundStyle(.secondary)
+    private var tonightBanner: some View {
+        let items = viewModel.tonight
+        let visible = viewModel.tonightExpanded ? items : Array(items.prefix(3))
+        let overflow = items.count - visible.count
+        return HStack(alignment: .top, spacing: 8) {
+            Image(systemName: "moon.stars.fill")
+                .font(.system(size: 13))
+                .foregroundStyle(.purple)
+                .padding(.top, 1)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Tonight")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                ForEach(visible) { item in
+                    HStack(spacing: 4) {
+                        Text(Self.tonightTimeFormatter.string(from: item.airDate))
+                            .font(.system(size: 11, weight: .medium).monospacedDigit())
+                            .foregroundStyle(.secondary)
+                        Image(systemName: item.source.symbol)
+                            .font(.system(size: 10))
+                            .foregroundStyle(.secondary)
+                        Text(item.title)
+                            .font(.system(size: 12, weight: .medium))
+                            .lineLimit(1)
+                        if let subtitle = item.subtitle, !subtitle.isEmpty {
+                            Text(subtitle)
+                                .font(.system(size: 11))
+                                .foregroundStyle(.tertiary)
+                                .lineLimit(1)
+                        }
+                    }
                 }
-                .buttonStyle(.plain)
+                if overflow > 0 {
+                    Button {
+                        withAnimation(.smooth(duration: 0.22)) {
+                            viewModel.setTonightExpanded(true)
+                        }
+                    } label: {
+                        Text("+\(overflow) more")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.tertiary)
+                    }
+                    .buttonStyle(.plain)
+                }
             }
+            Spacer()
         }
         .padding(.horizontal, 12)
-        .padding(.vertical, 6)
-        .background(Color.primary.opacity(0.04))
+        .padding(.vertical, 8)
+        .background(Color.purple.opacity(0.06))
     }
+
+    private static let tonightTimeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateStyle = .none
+        f.timeStyle = .short
+        return f
+    }()
 
     // MARK: - Tab bar
 
@@ -169,38 +187,81 @@ struct PopoverContentView: View {
                     queueSections
                 }
             }
-            .background(
-                GeometryReader { geo in
-                    Color.clear.preference(key: ContentHeightKey.self, value: geo.size.height)
-                }
-            )
         }
         .scrollBounceBehavior(.basedOnSize)
-        .frame(height: scrollHeight)
-        .onPreferenceChange(ContentHeightKey.self) { if $0 > 0 { measuredContentHeight = $0 } }
+        .frame(maxHeight: maxScrollHeight)
+    }
+
+    private enum SectionEntry: Hashable {
+        case tonight
+        case needsYou
+        case arr(QueueItem.Source)
+    }
+
+    private var visibleSections: [SectionEntry] {
+        configStore.arrOrder.compactMap { key in
+            if key == ConfigStore.tonightOrderKey {
+                guard configStore.showTonight && !viewModel.tonight.isEmpty else { return nil }
+                return .tonight
+            }
+            if key == ConfigStore.needsYouOrderKey {
+                guard configStore.showNeedsYou && !viewModel.needsYou.isEmpty else { return nil }
+                return .needsYou
+            }
+            if let source = QueueItem.Source(rawValue: key), isConfigured(source) {
+                return .arr(source)
+            }
+            return nil
+        }
     }
 
     private var queueSections: some View {
-        let visible = configStore.arrOrder
-            .compactMap(QueueItem.Source.init(rawValue:))
-            .filter { isConfigured($0) }
-        return VStack(alignment: .leading, spacing: 16) {
-            ForEach(Array(visible.enumerated()), id: \.element) { index, source in
+        let entries = visibleSections
+        return VStack(alignment: .leading, spacing: 0) {
+            ForEach(Array(entries.enumerated()), id: \.element) { index, entry in
                 if index > 0 {
                     Divider().padding(.horizontal, 12)
                 }
-                QueueSectionView(
-                    title: source.displayName,
-                    symbol: source.symbol,
-                    items: filter(items(for: source)),
-                    error: error(for: source),
-                    health: health(for: source),
-                    viewModel: viewModel,
-                    onShowHistory: { historySource = source }
-                )
+                sectionView(for: entry)
             }
         }
-        .padding(.vertical, 12)
+    }
+
+    @ViewBuilder
+    private func sectionView(for entry: SectionEntry) -> some View {
+        switch entry {
+        case .tonight:
+            tonightBanner
+        case .needsYou:
+            NeedsYouSectionView(
+                items: viewModel.needsYou,
+                isCollapsed: configStore.isCollapsed(ConfigStore.needsYouOrderKey),
+                onToggleCollapse: {
+                    withAnimation(.smooth(duration: 0.22)) {
+                        configStore.toggleCollapsed(ConfigStore.needsYouOrderKey)
+                    }
+                }
+            )
+            .padding(.vertical, 12)
+        case .arr(let source):
+            let arrError = error(for: source)
+            QueueSectionView(
+                title: source.displayName,
+                symbol: source.symbol,
+                items: items(for: source),
+                error: arrError,
+                health: health(for: source),
+                isCollapsed: arrError == nil ? configStore.isCollapsed(source) : false,
+                onToggleCollapse: arrError == nil ? {
+                    withAnimation(.smooth(duration: 0.22)) {
+                        configStore.toggleCollapsed(source)
+                    }
+                } : nil,
+                viewModel: viewModel,
+                onShowHistory: arrError == nil ? { historySource = source } : nil
+            )
+            .padding(.vertical, 12)
+        }
     }
 
     private func isConfigured(_ source: QueueItem.Source) -> Bool {
@@ -228,6 +289,7 @@ struct PopoverContentView: View {
     }
 
     private func health(for source: QueueItem.Source) -> [ArrHealthRecord] {
+        guard configStore.showIndexerIssues else { return [] }
         switch source {
         case .sonarr: return viewModel.health.sonarr
         case .radarr: return viewModel.health.radarr
@@ -240,7 +302,7 @@ struct PopoverContentView: View {
     private var upcomingContent: some View {
         ScrollView {
             Group {
-                if filteredUpcoming.isEmpty {
+                if viewModel.upcoming.isEmpty {
                     VStack(spacing: 8) {
                         Image(systemName: "calendar")
                             .font(.system(size: 24, weight: .light))
@@ -269,24 +331,9 @@ struct PopoverContentView: View {
                     .padding(.bottom, 8)
                 }
             }
-            .background(
-                GeometryReader { geo in
-                    Color.clear.preference(key: ContentHeightKey.self, value: geo.size.height)
-                }
-            )
         }
         .scrollBounceBehavior(.basedOnSize)
-        .frame(height: scrollHeight)
-        .onPreferenceChange(ContentHeightKey.self) { if $0 > 0 { measuredContentHeight = $0 } }
-    }
-
-    private var filteredUpcoming: [UpcomingItem] {
-        let q = searchText.trimmingCharacters(in: .whitespaces).lowercased()
-        guard !q.isEmpty else { return viewModel.upcoming }
-        return viewModel.upcoming.filter {
-            $0.title.lowercased().contains(q)
-                || ($0.subtitle?.lowercased().contains(q) ?? false)
-        }
+        .frame(maxHeight: maxScrollHeight)
     }
 
     private var groupedUpcoming: [UpcomingGroup] {
@@ -294,7 +341,7 @@ struct PopoverContentView: View {
         var groups: [UpcomingGroup] = []
         var current: (date: DateComponents, items: [UpcomingItem])?
 
-        for item in filteredUpcoming {
+        for item in viewModel.upcoming {
             let dc = calendar.dateComponents([.year, .month, .day], from: item.airDate)
             if let c = current, c.date == dc {
                 current?.items.append(item)
@@ -404,13 +451,6 @@ struct PopoverContentView: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
         }
-    }
-}
-
-private struct ContentHeightKey: PreferenceKey {
-    static let defaultValue: CGFloat = 0
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        value = max(value, nextValue())
     }
 }
 

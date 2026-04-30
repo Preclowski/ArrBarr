@@ -729,6 +729,70 @@
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Avertissement" } },
         "pl" : { "stringUnit" : { "state" : "translated", "value" : "Ostrzeżenie" } }
       }
+    },
+    "Needs you" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Benötigt deine Aufmerksamkeit" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Requiere tu atención" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Nécessite votre attention" } },
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Potrzebuje twojej uwagi" } }
+      }
+    },
+    "Tonight" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Heute Abend" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Esta noche" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Ce soir" } },
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Dziś wieczorem" } }
+      }
+    },
+    "Show indexer issues warning" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Indexer-Warnungen anzeigen" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Mostrar advertencias del indexador" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Afficher les alertes d'indexeur" } },
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Pokaż ostrzeżenie o problemach z indekserami" } }
+      }
+    },
+    "%lld hours" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "%lld Stunden" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "%lld horas" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "%lld heures" } },
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "%lld godzin" } }
+      }
+    },
+    "24 hours" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "24 Stunden" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "24 horas" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "24 heures" } },
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "24 godziny" } }
+      }
+    },
+    "%lld days" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "%lld Tage" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "%lld días" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "%lld jours" } },
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "%lld dni" } }
+      }
+    },
+    "Show Tonight banner" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Banner „Heute Abend“ anzeigen" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Mostrar el banner de Esta noche" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Afficher le bandeau Ce soir" } },
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Pokaż baner „Dziś wieczorem“" } }
+      }
+    },
+    "Show Needs you" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "„Benötigt deine Aufmerksamkeit“ anzeigen" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Mostrar „Requiere tu atención“" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Afficher « Nécessite votre attention »" } },
+        "pl" : { "stringUnit" : { "state" : "translated", "value" : "Pokaż „Potrzebuje twojej uwagi“" } }
+      }
     }
   }
 }

@@ -23,9 +23,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])
         }
         updateStatusBarTitle(active: queueVM.activeCount)
+        registerNotificationCategories()
+        UNUserNotificationCenter.current().delegate = self
 
         popover = NSPopover()
         popover.behavior = .transient
+        popover.animates = false
         popover.delegate = self
 
         let root = PopoverContentView(
@@ -38,6 +41,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let hosting = NSHostingController(rootView: root)
         hosting.sizingOptions = [.preferredContentSize]
         popover.contentViewController = hosting
+
+        DemoMode.seedConfigsIfNeeded(configStore)
 
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
 
@@ -66,7 +71,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             let attachment = NSTextAttachment()
             attachment.image = icon
             attachment.bounds = CGRect(x: 0, y: -3, width: 16, height: 16)
-
             let mutable = NSMutableAttributedString()
             mutable.append(NSAttributedString(attachment: attachment))
             mutable.append(NSAttributedString(
@@ -81,6 +85,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             button.image = icon
             button.attributedTitle = NSAttributedString(string: "")
         }
+    }
+
+    // MARK: - Notification categories
+
+    private func registerNotificationCategories() {
+        let openAction = UNNotificationAction(
+            identifier: NotificationCoalescer.openActionIdentifier,
+            title: String(localized: "Open in browser"),
+            options: [.foreground]
+        )
+        let category = UNNotificationCategory(
+            identifier: NotificationCoalescer.categoryIdentifier,
+            actions: [openAction],
+            intentIdentifiers: [],
+            options: []
+        )
+        UNUserNotificationCenter.current().setNotificationCategories([category])
     }
 
     // MARK: - Popover
@@ -161,7 +182,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let hosting = NSHostingController(rootView: view)
         let win = NSWindow(contentViewController: hosting)
         win.title = String(localized: "ArrBarr Settings")
-        win.styleMask = [.titled, .closable, .miniaturizable]
+        win.styleMask = [.titled]
         win.setContentSize(NSSize(width: 520, height: 460))
         win.isReleasedWhenClosed = false
         win.center()
@@ -183,6 +204,38 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 extension AppDelegate: NSPopoverDelegate {
     func popoverDidClose(_ notification: Notification) {
         queueVM.stopForegroundPolling()
+        queueVM.setTonightExpanded(false)
         removeEscMonitor()
+    }
+}
+
+extension AppDelegate: @preconcurrency UNUserNotificationCenterDelegate {
+    /// Show the banner even when the app is frontmost.
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification,
+        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+    ) {
+        completionHandler([.banner, .sound])
+    }
+
+    /// Tapping the banner OR pressing the "Open in browser" action both open
+    /// the arr's `/activity/queue` page using the base URL we stored in userInfo.
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse,
+        withCompletionHandler completionHandler: @escaping () -> Void
+    ) {
+        defer { completionHandler() }
+        let action = response.actionIdentifier
+        guard action == UNNotificationDefaultActionIdentifier
+              || action == NotificationCoalescer.openActionIdentifier
+        else { return }
+        guard let base = response.notification.request.content.userInfo[NotificationCoalescer.userInfoBaseURLKey] as? String,
+              let url = ArrActivityURLBuilder.queueURL(forBase: base),
+              let scheme = url.scheme?.lowercased(),
+              scheme == "http" || scheme == "https"
+        else { return }
+        Task { @MainActor in NSWorkspace.shared.open(url) }
     }
 }

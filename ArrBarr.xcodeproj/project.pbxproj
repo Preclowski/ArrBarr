@@ -30,6 +30,8 @@
 		7A1D7C182F00000100000006 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 7A1D7C172F00000100000006 /* Localizable.xcstrings */; };
 		7A1D7C1A2F00000100000007 /* HistoryItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A1D7C192F00000100000007 /* HistoryItem.swift */; };
 		7A1D7C1C2F00000100000008 /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A1D7C1B2F00000100000008 /* HistoryView.swift */; };
+		7A1D7C1E2F00000100000009 /* NotificationCoalescer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A1D7C1D2F00000100000009 /* NotificationCoalescer.swift */; };
+		7A1D7C202F0000010000000A /* NeedsYouSectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A1D7C1F2F0000010000000A /* NeedsYouSectionView.swift */; };
 		82B2E396634098E0FDA3E441 /* ArrTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48060A6CCC3F1544EE872199 /* ArrTypes.swift */; };
 		953E24EE53AE7971D31F0FA0 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C345657BD587401B20496BE6 /* Assets.xcassets */; };
 		9AE62E9483DBD45A17C23D0E /* PopoverContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F0DA93170F7174D59CBB0A6 /* PopoverContentView.swift */; };
@@ -81,6 +83,8 @@
 		7A1D7C172F00000100000006 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		7A1D7C192F00000100000007 /* HistoryItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryItem.swift; sourceTree = "<group>"; };
 		7A1D7C1B2F00000100000008 /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryView.swift; sourceTree = "<group>"; };
+		7A1D7C1D2F00000100000009 /* NotificationCoalescer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationCoalescer.swift; sourceTree = "<group>"; };
+		7A1D7C1F2F0000010000000A /* NeedsYouSectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NeedsYouSectionView.swift; sourceTree = "<group>"; };
 		8368F44E56EB243C645549E1 /* QueueItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QueueItem.swift; sourceTree = "<group>"; };
 		95C6DDB30ACEB4FDD30629F0 /* ConfigStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigStore.swift; sourceTree = "<group>"; };
 		B6B3B33C463CCA1E9E75154D /* UpcomingRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpcomingRowView.swift; sourceTree = "<group>"; };
@@ -130,6 +134,7 @@
 				F863F233B791C2E808B72760 /* HTTPClient.swift */,
 				7A1D7C0F2F00000100000002 /* ImageCache.swift */,
 				7A1D7C0D2F00000100000001 /* KeychainStore.swift */,
+				7A1D7C1D2F00000100000009 /* NotificationCoalescer.swift */,
 				E14AF8E6BCD3E031F64403D2 /* QbittorrentClient.swift */,
 				B85A3F5E5F9F46F61156DA3D /* QueueAggregator.swift */,
 				65F8FDEDB2C4659A3568297C /* RadarrClient.swift */,
@@ -184,6 +189,7 @@
 			children = (
 				4F0DA93170F7174D59CBB0A6 /* PopoverContentView.swift */,
 				7A1D7C1B2F00000100000008 /* HistoryView.swift */,
+				7A1D7C1F2F0000010000000A /* NeedsYouSectionView.swift */,
 				0F0FF31BB5B3550A51F6B5B5 /* QueueRowView.swift */,
 				BA286A35655E257C9FEF3288 /* QueueSectionView.swift */,
 				7A1D7C112F00000100000003 /* RemotePoster.swift */,
@@ -346,6 +352,8 @@
 				4A924CFD2C8652A8C2130FD8 /* QueueItem.swift in Sources */,
 				7A1D7C1A2F00000100000007 /* HistoryItem.swift in Sources */,
 				7A1D7C1C2F00000100000008 /* HistoryView.swift in Sources */,
+				7A1D7C1E2F00000100000009 /* NotificationCoalescer.swift in Sources */,
+				7A1D7C202F0000010000000A /* NeedsYouSectionView.swift in Sources */,
 				0D0E434079D152B096897BEC /* QueueRowView.swift in Sources */,
 				3B50BBDF38088A184E6A6C5D /* QueueSectionView.swift in Sources */,
 				71E25D612F9F9AC10054A864 /* RtorrentClient.swift in Sources */,
@@ -429,7 +437,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.7.0;
+				MARKETING_VERSION = 0.8.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -493,7 +501,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.7.0;
+				MARKETING_VERSION = 0.8.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";

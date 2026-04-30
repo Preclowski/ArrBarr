@@ -49,8 +49,16 @@ final class ConfigStore: ObservableObject {
     @Published var launchAtLogin: Bool
     @Published var appLanguage: String
     @Published var arrOrder: [String]
+    @Published var showTonight: Bool
+    @Published var showNeedsYou: Bool
+    @Published var showIndexerIssues: Bool
+    @Published var collapsedArrs: Set<String>
+    @Published var tonightHours: Int
 
-    static let defaultArrOrder = ["radarr", "sonarr", "lidarr"]
+    static let needsYouOrderKey = "needsyou"
+    static let tonightOrderKey = "tonight"
+    static let defaultArrOrder = ["tonight", "needsyou", "radarr", "sonarr", "lidarr"]
+    static let tonightHoursOptions = [12, 24, 72]
 
     static let appLanguageOptions: [(code: String, label: String)] = [
         ("system", "System"),
@@ -80,6 +88,11 @@ final class ConfigStore: ObservableObject {
     private static let launchAtLoginKey = "ArrBarr.launchAtLogin"
     private static let appLanguageKey = "ArrBarr.appLanguage"
     private static let arrOrderKey = "ArrBarr.arrOrder"
+    private static let showTonightKey = "ArrBarr.showTonight"
+    private static let showNeedsYouKey = "ArrBarr.showNeedsYou"
+    private static let collapsedArrsKey = "ArrBarr.collapsedArrs"
+    private static let tonightHoursKey = "ArrBarr.tonightHours"
+    private static let showIndexerIssuesKey = "ArrBarr.showIndexerIssues"
     private static let keychainMigrationDoneKey = "ArrBarr.keychainMigrationDone"
 
     init(defaults: UserDefaults = .standard) {
@@ -113,6 +126,12 @@ final class ConfigStore: ObservableObject {
         self.launchAtLogin = defaults.object(forKey: Self.launchAtLoginKey) != nil ? defaults.bool(forKey: Self.launchAtLoginKey) : false
         self.appLanguage = defaults.string(forKey: Self.appLanguageKey) ?? "system"
         self.arrOrder = Self.normalizeArrOrder(defaults.stringArray(forKey: Self.arrOrderKey))
+        self.showTonight = defaults.object(forKey: Self.showTonightKey) != nil ? defaults.bool(forKey: Self.showTonightKey) : true
+        self.showNeedsYou = defaults.object(forKey: Self.showNeedsYouKey) != nil ? defaults.bool(forKey: Self.showNeedsYouKey) : true
+        self.showIndexerIssues = defaults.object(forKey: Self.showIndexerIssuesKey) != nil ? defaults.bool(forKey: Self.showIndexerIssuesKey) : true
+        self.collapsedArrs = Set(defaults.stringArray(forKey: Self.collapsedArrsKey) ?? [])
+        let storedTonight = defaults.object(forKey: Self.tonightHoursKey) as? Int ?? 12
+        self.tonightHours = Self.tonightHoursOptions.contains(storedTonight) ? storedTonight : 12
 
         for kind in ServiceKind.allCases {
             publisher(for: kind).dropFirst().sink { [weak self] cfg in
@@ -140,6 +159,21 @@ final class ConfigStore: ObservableObject {
         }.store(in: &cancellables)
         $arrOrder.dropFirst().sink { [weak self] val in
             self?.defaults.set(val, forKey: Self.arrOrderKey)
+        }.store(in: &cancellables)
+        $showTonight.dropFirst().sink { [weak self] val in
+            self?.defaults.set(val, forKey: Self.showTonightKey)
+        }.store(in: &cancellables)
+        $showNeedsYou.dropFirst().sink { [weak self] val in
+            self?.defaults.set(val, forKey: Self.showNeedsYouKey)
+        }.store(in: &cancellables)
+        $showIndexerIssues.dropFirst().sink { [weak self] val in
+            self?.defaults.set(val, forKey: Self.showIndexerIssuesKey)
+        }.store(in: &cancellables)
+        $collapsedArrs.dropFirst().sink { [weak self] val in
+            self?.defaults.set(Array(val), forKey: Self.collapsedArrsKey)
+        }.store(in: &cancellables)
+        $tonightHours.dropFirst().sink { [weak self] val in
+            self?.defaults.set(val, forKey: Self.tonightHoursKey)
         }.store(in: &cancellables)
         $appLanguage.dropFirst().sink { [weak self] val in
             guard let self else { return }
@@ -180,6 +214,21 @@ final class ConfigStore: ObservableObject {
         }
     }
 
+    func toggleCollapsed(_ key: String) {
+        if collapsedArrs.contains(key) {
+            collapsedArrs.remove(key)
+        } else {
+            collapsedArrs.insert(key)
+        }
+    }
+
+    func isCollapsed(_ key: String) -> Bool {
+        collapsedArrs.contains(key)
+    }
+
+    func toggleCollapsed(_ arr: QueueItem.Source) { toggleCollapsed(arr.rawValue) }
+    func isCollapsed(_ arr: QueueItem.Source) -> Bool { isCollapsed(arr.rawValue) }
+
     func update(_ kind: ServiceKind, with config: ServiceConfig) {
         switch kind {
         case .radarr: radarr = config
@@ -194,10 +243,22 @@ final class ConfigStore: ObservableObject {
         }
     }
 
-    private static func normalizeArrOrder(_ stored: [String]?) -> [String] {
+    static func normalizeArrOrder(_ stored: [String]?) -> [String] {
         let known = Set(defaultArrOrder)
         var seen = Set<String>()
         var result = (stored ?? []).filter { known.contains($0) && seen.insert($0).inserted }
+        // Migration for users from <0.7.x: prepend "tonight" then "needsyou"
+        // so they sit at the top by default (matching the previous layout
+        // where the Tonight banner was above and Needs you sat first in the
+        // queue tab). Other missing keys get appended in canonical order.
+        if !seen.contains(needsYouOrderKey) {
+            result.insert(needsYouOrderKey, at: 0)
+            seen.insert(needsYouOrderKey)
+        }
+        if !seen.contains(tonightOrderKey) {
+            result.insert(tonightOrderKey, at: 0)
+            seen.insert(tonightOrderKey)
+        }
         for k in defaultArrOrder where !seen.contains(k) { result.append(k) }
         return result
     }

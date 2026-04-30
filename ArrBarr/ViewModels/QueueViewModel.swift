@@ -12,18 +12,32 @@ final class QueueViewModel: ObservableObject {
     @Published private(set) var sonarrError: String?
     @Published private(set) var lidarrError: String?
     @Published private(set) var upcoming: [UpcomingItem] = []
+    @Published private(set) var tonight: [UpcomingItem] = []
+    @Published private(set) var needsYou: [NeedsYouItem] = []
+    @Published private(set) var unreachableArrs: Set<QueueItem.Source> = []
+    /// User clicked "+N more" on the Tonight banner. Reset every time the popover closes.
+    @Published private(set) var tonightExpanded: Bool = false
+
+    func setTonightExpanded(_ expanded: Bool) { tonightExpanded = expanded }
     @Published private(set) var health: HealthResult = .empty
     @Published private(set) var isLoading = false
     @Published private(set) var lastError: String?
 
     private let aggregator: QueueAggregator
     private let configStore: ConfigStore
+    private let coalescer: NotificationCoalescer
     private var foregroundTimer: Timer?
     private var backgroundTimer: Timer?
     private var intervalObservers: Set<AnyCancellable> = []
     private var optimisticOverrides: [String: OptimisticOverride] = [:]
     private var isRefreshing = false
     private var knownItemIDs: Set<String>?
+
+    /// Per-arr counter of consecutive refresh cycles where the queue fetch failed.
+    /// We mark an arr as "unreachable" only after 3 in a row to ride out single-cycle
+    /// blips (network hiccup, brief restart) without flapping the menu bar.
+    private var consecutiveFailures: [QueueItem.Source: Int] = [:]
+    private static let unreachableThreshold = 3
 
     private struct OptimisticOverride {
         let kind: Kind
@@ -41,6 +55,7 @@ final class QueueViewModel: ObservableObject {
     init(configStore: ConfigStore = .shared) {
         self.configStore = configStore
         self.aggregator = QueueAggregator(configStore: configStore)
+        self.coalescer = NotificationCoalescer(configStore: configStore)
         startBackgroundPolling()
 
         configStore.$backgroundInterval
@@ -54,6 +69,14 @@ final class QueueViewModel: ObservableObject {
             .dropFirst()
             .sink { [weak self] _ in
                 self?.restartForegroundPolling()
+            }
+            .store(in: &intervalObservers)
+
+        configStore.$tonightHours
+            .dropFirst()
+            .sink { [weak self] hours in
+                guard let self else { return }
+                self.tonight = Self.tonightSlice(from: self.upcoming, hours: hours)
             }
             .store(in: &intervalObservers)
     }
@@ -115,12 +138,20 @@ final class QueueViewModel: ObservableObject {
         if DemoMode.isActive {
             self.radarr = DemoMocks.radarrQueue
             self.sonarr = DemoMocks.sonarrQueue
-            self.lidarr = DemoMocks.lidarrQueue
+            self.lidarr = []
             self.upcoming = DemoMocks.upcoming
+            self.tonight = Self.tonightSlice(from: DemoMocks.upcoming, hours: configStore.tonightHours)
             self.health = DemoMocks.health
             self.radarrError = nil
             self.sonarrError = nil
-            self.lidarrError = nil
+            self.lidarrError = String(localized: "Network error: Could not connect to the server.")
+            self.unreachableArrs = [.lidarr]
+            self.needsYou = Self.computeNeedsYou(
+                radarr: DemoMocks.radarrQueue,
+                sonarr: DemoMocks.sonarrQueue,
+                lidarr: [],
+                health: DemoMocks.health
+            )
             self.lastError = nil
             return
         }
@@ -139,8 +170,62 @@ final class QueueViewModel: ObservableObject {
         self.sonarrError = queue.sonarrError
         self.lidarrError = queue.lidarrError
         self.upcoming = upcoming
+        self.tonight = Self.tonightSlice(from: upcoming, hours: configStore.tonightHours)
         self.health = health
+        self.unreachableArrs = updateUnreachable(
+            radarrError: queue.radarrError,
+            sonarrError: queue.sonarrError,
+            lidarrError: queue.lidarrError
+        )
+        self.needsYou = Self.computeNeedsYou(
+            radarr: newRadarr, sonarr: newSonarr, lidarr: newLidarr, health: health
+        )
         self.lastError = nil
+    }
+
+    // MARK: - Derived state
+
+    static func tonightSlice(from upcoming: [UpcomingItem], hours: Int) -> [UpcomingItem] {
+        let now = Date()
+        let cutoff = now.addingTimeInterval(TimeInterval(hours) * 3600)
+        return upcoming.filter { $0.airDate >= now && $0.airDate <= cutoff }
+    }
+
+    static func computeNeedsYou(
+        radarr: [QueueItem], sonarr: [QueueItem], lidarr: [QueueItem],
+        health: HealthResult
+    ) -> [NeedsYouItem] {
+        (radarr + sonarr + lidarr)
+            .filter { $0.status == .failed || $0.status == .warning }
+            .map(NeedsYouItem.init)
+    }
+
+    /// Returns the set of arrs that have failed at least `unreachableThreshold` consecutive
+    /// refresh cycles. A nil error string for an arr resets that arr's counter.
+    private func updateUnreachable(
+        radarrError: String?, sonarrError: String?, lidarrError: String?
+    ) -> Set<QueueItem.Source> {
+        let errors: [(QueueItem.Source, String?, Bool)] = [
+            (.radarr, radarrError, configStore.radarr.isConfigured),
+            (.sonarr, sonarrError, configStore.sonarr.isConfigured),
+            (.lidarr, lidarrError, configStore.lidarr.isConfigured),
+        ]
+        var unreachable: Set<QueueItem.Source> = []
+        for (source, error, configured) in errors {
+            guard configured else {
+                consecutiveFailures[source] = 0
+                continue
+            }
+            if error != nil {
+                consecutiveFailures[source, default: 0] += 1
+                if (consecutiveFailures[source] ?? 0) >= Self.unreachableThreshold {
+                    unreachable.insert(source)
+                }
+            } else {
+                consecutiveFailures[source] = 0
+            }
+        }
+        return unreachable
     }
 
     private func applyOverrides(to items: [QueueItem]) -> [QueueItem] {
@@ -181,35 +266,13 @@ final class QueueViewModel: ObservableObject {
         knownItemIDs = currentIDs
 
         for item in newItems {
-            switch item.source {
-            case .radarr where configStore.notifyRadarr: sendNotification(for: item)
-            case .sonarr where configStore.notifySonarr: sendNotification(for: item)
-            case .lidarr where configStore.notifyLidarr: sendNotification(for: item)
-            default: break
+            let allowed: Bool = switch item.source {
+            case .radarr: configStore.notifyRadarr
+            case .sonarr: configStore.notifySonarr
+            case .lidarr: configStore.notifyLidarr
             }
+            if allowed { coalescer.enqueue(item) }
         }
-    }
-
-    private func sendNotification(for item: QueueItem) {
-        let content = UNMutableNotificationContent()
-        content.title = switch item.source {
-        case .radarr: "Radarr"
-        case .sonarr: "Sonarr"
-        case .lidarr: "Lidarr"
-        }
-        content.subtitle = item.title
-        var body = item.status.displayName
-        if let quality = item.quality { body += " · \(quality)" }
-        if item.isUpgrade { body += " · Upgrade" }
-        content.body = body
-        content.sound = .default
-
-        let request = UNNotificationRequest(
-            identifier: "arrbarr.\(item.id)",
-            content: content,
-            trigger: nil
-        )
-        UNUserNotificationCenter.current().add(request)
     }
 
     // MARK: - Actions
@@ -261,5 +324,20 @@ final class QueueViewModel: ObservableObject {
         case .sonarr: update(&sonarr)
         case .lidarr: update(&lidarr)
         }
+    }
+}
+
+struct NeedsYouItem: Identifiable, Equatable {
+    let item: QueueItem
+
+    init(_ item: QueueItem) { self.item = item }
+
+    var id: String { "needsyou.\(item.id)" }
+    var source: QueueItem.Source { item.source }
+    var title: String { item.title }
+    var subtitle: String {
+        item.status == .warning
+            ? String(localized: "Manual import required")
+            : item.status.displayName
     }
 }

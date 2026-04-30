@@ -14,6 +14,21 @@ enum DemoMode {
         if ProcessInfo.processInfo.environment["ARRBARR_DEMO"] == "1" { return true }
         return UserDefaults.standard.bool(forKey: "ArrBarrDemo")
     }()
+
+    private static let seedDoneKey = "ArrBarr.demoSeedDone"
+
+    /// First-time demo users get all three arrs flipped to `enabled` so the popover
+    /// has something to show out of the box. After the seed runs once, we respect
+    /// the user's toggles — disabling Lidarr in settings actually hides it.
+    @MainActor
+    static func seedConfigsIfNeeded(_ store: ConfigStore) {
+        guard isActive else { return }
+        guard !UserDefaults.standard.bool(forKey: seedDoneKey) else { return }
+        if store.radarr == .empty { store.radarr.enabled = true }
+        if store.sonarr == .empty { store.sonarr.enabled = true }
+        if store.lidarr == .empty { store.lidarr.enabled = true }
+        UserDefaults.standard.set(true, forKey: seedDoneKey)
+    }
 }
 
 /// Public-domain / CC-licensed titles used as preview content.
@@ -138,9 +153,16 @@ enum DemoMocks {
     static var upcoming: [UpcomingItem] {
         [
             upcomingItem(
-                source: .radarr, id: "demo-cal-1",
+                source: .sonarr, id: "demo-cal-tonight-1",
+                title: "Pioneer One",
+                subtitle: "S01E06 · Tomorrow Belongs to Us",
+                hoursAhead: 3, releaseType: "Airing", hasFile: false,
+                posterSeed: "pioneerone", aspect: .portrait
+            ),
+            upcomingItem(
+                source: .radarr, id: "demo-cal-tonight-2",
                 title: "Spring (2019)",
-                daysAhead: 0, releaseType: "Digital", hasFile: false,
+                hoursAhead: 8, releaseType: "Digital", hasFile: false,
                 posterSeed: "spring", aspect: .portrait
             ),
             upcomingItem(
@@ -321,10 +343,13 @@ enum DemoMocks {
     private static func upcomingItem(
         source: UpcomingItem.Source, id: String,
         title: String, subtitle: String? = nil,
-        daysAhead: Int, releaseType: String, hasFile: Bool,
+        daysAhead: Int = 0, hoursAhead: Int = 0,
+        releaseType: String, hasFile: Bool,
         posterSeed: String, aspect: Aspect
     ) -> UpcomingItem {
-        let date = Calendar.current.date(byAdding: .day, value: daysAhead, to: Date()) ?? Date()
+        let cal = Calendar.current
+        let withDays = cal.date(byAdding: .day, value: daysAhead, to: Date()) ?? Date()
+        let date = cal.date(byAdding: .hour, value: hoursAhead, to: withDays) ?? withDays
         let (w, h) = (aspect == .square) ? (200, 200) : (200, 300)
         return UpcomingItem(
             id: id, source: source, title: title, subtitle: subtitle,

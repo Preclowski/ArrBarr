@@ -1,7 +1,17 @@
 import Foundation
 
 struct UpcomingItem: Identifiable, Equatable {
-    enum Source: String { case radarr, sonarr, lidarr }
+    enum Source: String {
+        case radarr, sonarr, lidarr
+
+        var symbol: String {
+            switch self {
+            case .radarr: return "film"
+            case .sonarr: return "tv"
+            case .lidarr: return "music.note"
+            }
+        }
+    }
 
     let id: String
     let source: Source
