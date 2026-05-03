@@ -297,6 +297,20 @@ final class QueueViewModel: ObservableObject {
         await runAction(.delete, on: item)
     }
 
+    /// Bulk delete used for season packs — removes every member queue entry
+    /// in one go so we don't leave the popover with N−1 sibling rows
+    /// orphaned for ~30s while Sonarr's queue GC catches up.
+    func deleteAll(_ items: [QueueItem]) async {
+        guard !items.isEmpty else { return }
+        do {
+            try await aggregator.deleteAll(items)
+            lastError = nil
+            for item in items { applyOptimisticUpdate(.delete, on: item) }
+        } catch {
+            lastError = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+        }
+    }
+
     private func runAction(_ action: QueueAggregator.Action, on item: QueueItem) async {
         do {
             try await aggregator.perform(action, on: item)

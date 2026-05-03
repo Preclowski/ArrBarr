@@ -103,15 +103,18 @@ struct QueueSectionView: View {
                 onDelete: { [weak viewModel] in Task { await viewModel?.delete(item) } }
             )
         case .group(let group):
-            // All members share a downloadId so calling the action on the
-            // representative is enough — the arr's queue API affects the
-            // whole physical download.
+            // Pause/resume act on the representative — all members share a
+            // downloadId so a single arr API call affects the whole download
+            // (the client only knows about the one shared file). Delete is
+            // a special case: each member has its own arr queue entry, so we
+            // call delete N times via `deleteAll(_:)` — `removeFromClient`
+            // only on the first one, the rest just clean up the queue rows.
             let rep = group.representative
             QueueGroupRowView(
                 group: group,
                 onPause:  { [weak viewModel] in Task { await viewModel?.pause(rep) } },
                 onResume: { [weak viewModel] in Task { await viewModel?.resume(rep) } },
-                onDelete: { [weak viewModel] in Task { await viewModel?.delete(rep) } }
+                onDelete: { [weak viewModel] in Task { await viewModel?.deleteAll(group.items) } }
             )
         }
     }

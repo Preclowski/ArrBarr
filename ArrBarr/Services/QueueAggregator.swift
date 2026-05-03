@@ -163,10 +163,28 @@ final class QueueAggregator {
     }
 
     private func deleteViaArr(_ item: QueueItem) async throws {
+        try await deleteViaArr(item, removeFromClient: true)
+    }
+
+    private func deleteViaArr(_ item: QueueItem, removeFromClient: Bool) async throws {
         switch item.source {
-        case .radarr: try await radarrClient(for: configStore.radarr).deleteQueueItem(id: item.arrQueueId, removeFromClient: true)
-        case .sonarr: try await sonarrClient(for: configStore.sonarr).deleteQueueItem(id: item.arrQueueId, removeFromClient: true)
-        case .lidarr: try await lidarrClient(for: configStore.lidarr).deleteQueueItem(id: item.arrQueueId, removeFromClient: true)
+        case .radarr: try await radarrClient(for: configStore.radarr).deleteQueueItem(id: item.arrQueueId, removeFromClient: removeFromClient)
+        case .sonarr: try await sonarrClient(for: configStore.sonarr).deleteQueueItem(id: item.arrQueueId, removeFromClient: removeFromClient)
+        case .lidarr: try await lidarrClient(for: configStore.lidarr).deleteQueueItem(id: item.arrQueueId, removeFromClient: removeFromClient)
+        }
+    }
+
+    /// Removes every member of a season pack from the arr queue. Only the
+    /// first call sets `removeFromClient: true` because all members share a
+    /// downloadId — that single call already removes the underlying download
+    /// from the client. The remaining calls just clean up the per-episode
+    /// arr queue entries (without `removeFromClient` they'd otherwise linger
+    /// for ~30s until Sonarr's queue GC reconciled them).
+    func deleteAll(_ items: [QueueItem]) async throws {
+        var first = true
+        for item in items {
+            try await deleteViaArr(item, removeFromClient: first)
+            first = false
         }
     }
 
