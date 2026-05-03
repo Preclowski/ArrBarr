@@ -866,6 +866,36 @@
     },
     "Your menu-bar companion for Radarr, Sonarr, and Lidarr." : {
       "extractionState" : "manual"
+    },
+    "Make it yours" : {
+      "extractionState" : "manual"
+    },
+    "Reorder sections, hide what you don't need, tweak refresh intervals, and pick your language in Settings. Show only what matters to you." : {
+      "extractionState" : "manual"
+    },
+    "Download clients (optional)" : {
+      "extractionState" : "manual"
+    },
+    "Add SABnzbd, qBittorrent, NZBGet, Transmission, rTorrent, or Deluge to pause and resume directly from the queue. Most features work fine without it — your arr already handles the heavy lifting." : {
+      "extractionState" : "manual"
+    },
+    "Enjoying ArrBarr?" : {
+      "extractionState" : "manual"
+    },
+    "It's free and open-source. A star on GitHub helps other people find it — and means a lot. Thanks for trying it out!" : {
+      "extractionState" : "manual"
+    },
+    "Star on GitHub" : {
+      "extractionState" : "manual"
+    },
+    "Get started" : {
+      "extractionState" : "manual"
+    },
+    "Done" : {
+      "extractionState" : "manual"
+    },
+    "Open Settings" : {
+      "extractionState" : "manual"
     }
   }
 }

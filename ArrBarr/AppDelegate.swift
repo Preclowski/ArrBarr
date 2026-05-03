@@ -128,24 +128,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func togglePopover(_ sender: AnyObject?) {
-        guard let button = statusItem.button else { return }
         if popover.isShown {
             popover.performClose(sender)
         } else {
-            popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
-            popover.contentViewController?.view.window?.makeKey()
-            queueVM.startForegroundPolling()
-            installEscMonitor()
-            // Re-measure once on open so the popover hugs the SwiftUI content
-            // for the current state (history vs queue vs empty). After this,
-            // the size stays put until the popover closes — refresh-driven
-            // body invalidations no longer cause a window resize/repaint.
-            DispatchQueue.main.async { [weak self] in
-                guard let self, let hosting = self.popover.contentViewController else { return }
-                let fitting = hosting.view.fittingSize
-                if fitting.width > 0 && fitting.height > 0 {
-                    self.popover.contentSize = fitting
-                }
+            openPopover()
+        }
+    }
+
+    private func openPopover() {
+        guard let button = statusItem.button else { return }
+        popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+        popover.contentViewController?.view.window?.makeKey()
+        queueVM.startForegroundPolling()
+        installEscMonitor()
+        // Re-measure once on open so the popover hugs the SwiftUI content
+        // for the current state (history vs queue vs empty). After this,
+        // the size stays put until the popover closes — refresh-driven
+        // body invalidations no longer cause a window resize/repaint.
+        DispatchQueue.main.async { [weak self] in
+            guard let self, let hosting = self.popover.contentViewController else { return }
+            let fitting = hosting.view.fittingSize
+            if fitting.width > 0 && fitting.height > 0 {
+                self.popover.contentSize = fitting
             }
         }
     }
@@ -252,11 +256,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func openWelcome(force: Bool = false) {
         let variant: WelcomeContent.Variant = {
-            if force {
-                return configStore.welcomeSeenVersion == nil
-                    ? .firstRun
-                    : .whatsNew(version: WelcomeContent.currentVersion)
-            }
+            if force { return .firstRun }
             return WelcomeContent.variant(seen: configStore.welcomeSeenVersion) ?? .firstRun
         }()
         openWelcome(variant: variant)
@@ -273,17 +273,41 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             variant: variant,
             onDismiss: { [weak self] in self?.welcomeWindow?.performClose(nil) },
             onAddService: { [weak self] in
-                self?.welcomeWindow?.performClose(nil)
+                // Open Settings on top of the welcome window — don't close
+                // welcome. The user can configure and come back to finish
+                // the tour.
                 self?.openSettings()
             },
-            onTryDemo: { [weak self] in self?.enableDemoModeAndRelaunch() }
+            onTryDemo: { [weak self] in self?.enableDemoModeAndRelaunch() },
+            onFinish: { [weak self] in
+                // Done at the end of the tour: close welcome, then pop the
+                // status-bar popover so the user lands on the thing they
+                // just learned about.
+                self?.welcomeWindow?.performClose(nil)
+                self?.openPopover()
+            }
         ).environmentObject(configStore)
 
         let hosting = NSHostingController(rootView: view)
         let win = NSWindow(contentViewController: hosting)
         win.title = String(localized: "Welcome to ArrBarr")
-        win.styleMask = [.titled, .closable]
-        win.setContentSize(NSSize(width: 600, height: 680))
+        // Apple "What's New" style: no titlebar text, content extends under
+        // the title bar (we draw our own close button in the top-right), and
+        // the user can drag the window from anywhere on the background.
+        win.styleMask = [.titled, .closable, .fullSizeContentView]
+        win.titlebarAppearsTransparent = true
+        win.titleVisibility = .hidden
+        win.isMovableByWindowBackground = true
+        win.standardWindowButton(.miniaturizeButton)?.isHidden = true
+        win.standardWindowButton(.zoomButton)?.isHidden = true
+        // We draw our own X close button in the content's top-right corner —
+        // hide the standard traffic-light close so the window has just one
+        // unambiguous dismiss control.
+        win.standardWindowButton(.closeButton)?.isHidden = true
+        // MUST match WelcomeView's `.frame(width:height:)` — a mismatch leaves
+        // a strip of NSWindow background showing through where the SwiftUI
+        // content stops, which reads as "window inside the window".
+        win.setContentSize(NSSize(width: 400, height: 440))
         win.isReleasedWhenClosed = false
         win.center()
 

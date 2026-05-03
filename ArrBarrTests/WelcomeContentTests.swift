@@ -4,7 +4,7 @@ import Foundation
 
 @Suite("WelcomeContent decision logic")
 struct WelcomeContentDecisionTests {
-    private let item = WelcomeContent.FeatureItem(
+    private let item = WelcomeContent.WelcomePage(
         id: "x", symbol: "star", titleKey: "T", bodyKey: "B"
     )
 
@@ -74,15 +74,15 @@ struct WelcomeContentDecisionTests {
         #expect(v == .firstRun)
     }
 
-    @Test("Force-show shows whatsNew for returning users even with no entries")
-    func forceShowWhatsNew() {
+    @Test("Force-show always returns firstRun (the broader tour content)")
+    func forceShowAlwaysFirstRun() {
         let v = WelcomeContent.decide(
             seen: "0.9.0",
             current: "0.9.0",
             entries: [:],
             forceShow: true
         )
-        #expect(v == .whatsNew(version: "0.9.0"))
+        #expect(v == .firstRun)
     }
 }
 
@@ -142,15 +142,15 @@ struct WelcomeContentShippedDataTests {
         #expect((entries ?? []).isEmpty == false)
     }
 
-    @Test("First-run features list is non-empty")
-    func firstRunFeaturesNonEmpty() {
-        #expect(WelcomeContent.firstRunFeatures.isEmpty == false)
+    @Test("First-run pages list is non-empty")
+    func firstRunPagesNonEmpty() {
+        #expect(WelcomeContent.firstRunPages.isEmpty == false)
     }
 
-    @Test("features(for:) returns the right list per variant")
-    func featuresForVariant() {
-        #expect(WelcomeContent.features(for: .firstRun) == WelcomeContent.firstRunFeatures)
-        let whatsNew = WelcomeContent.features(for: .whatsNew(version: WelcomeContent.currentVersion))
+    @Test("pages(for:) returns the right list per variant")
+    func pagesForVariant() {
+        #expect(WelcomeContent.pages(for: .firstRun) == WelcomeContent.firstRunPages)
+        let whatsNew = WelcomeContent.pages(for: .whatsNew(version: WelcomeContent.currentVersion))
         #expect(whatsNew == WelcomeContent.whatsNewEntries[WelcomeContent.currentVersion])
     }
 }

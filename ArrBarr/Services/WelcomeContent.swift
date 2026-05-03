@@ -24,33 +24,97 @@ enum WelcomeContent {
         case whatsNew(version: String)
     }
 
-    struct FeatureItem: Identifiable, Equatable {
+    struct WelcomePage: Identifiable, Equatable {
         let id: String
         let symbol: String
         let titleKey: String
         let bodyKey: String
+        /// Optional secondary action button that appears under the body.
+        let cta: CTA?
+        /// Whether the hero illustration sits above or below the text.
+        /// Detailed/wide illustrations (mock menu bar, settings rows) read
+        /// better as a "preview" under the explanation; symbol-style heroes
+        /// look better above.
+        let illustrationPosition: IllustrationPosition
 
-        static func == (lhs: FeatureItem, rhs: FeatureItem) -> Bool { lhs.id == rhs.id }
+        enum IllustrationPosition: Equatable {
+            case above
+            case below
+        }
+
+        struct CTA: Equatable {
+            let titleKey: String
+            let symbol: String
+            let kind: Kind
+
+            enum Kind: Equatable {
+                case openURL(URL)
+                case openSettings
+            }
+        }
+
+        init(
+            id: String,
+            symbol: String,
+            titleKey: String,
+            bodyKey: String,
+            cta: CTA? = nil,
+            illustrationPosition: IllustrationPosition = .above
+        ) {
+            self.id = id
+            self.symbol = symbol
+            self.titleKey = titleKey
+            self.bodyKey = bodyKey
+            self.cta = cta
+            self.illustrationPosition = illustrationPosition
+        }
+
+        static func == (lhs: WelcomePage, rhs: WelcomePage) -> Bool { lhs.id == rhs.id }
     }
 
-    static let firstRunFeatures: [FeatureItem] = [
-        FeatureItem(
+    static let firstRunPages: [WelcomePage] = [
+        WelcomePage(
             id: "menubar",
             symbol: "menubar.dock.rectangle",
             titleKey: "Lives in your menu bar",
-            bodyKey: "ArrBarr stays out of your Dock and shows active downloads at a glance. Click the icon for the popover; right-click for quick options."
+            bodyKey: "ArrBarr stays out of your Dock and shows active downloads at a glance. Click the icon for the popover; right-click for quick options.",
+            illustrationPosition: .below
         ),
-        FeatureItem(
+        WelcomePage(
             id: "connect",
             symbol: "server.rack",
             titleKey: "Connect Radarr, Sonarr & Lidarr",
-            bodyKey: "Add your existing arr services in Settings — ArrBarr polls live queue, history, and health from each one."
+            bodyKey: "Add your existing arr services in Settings — ArrBarr polls live queue, history, and health from each one.",
+            cta: WelcomePage.CTA(
+                titleKey: "Open Settings",
+                symbol: "gearshape.fill",
+                kind: .openSettings
+            )
         ),
-        FeatureItem(
+        WelcomePage(
             id: "tonight",
             symbol: "moon.stars.fill",
             titleKey: "Tonight, Needs you, and notifications",
-            bodyKey: "See what's airing tonight, get notified about new grabs, and surface indexer issues before they become a problem."
+            bodyKey: "See what's airing tonight, get notified about new grabs, and surface indexer issues before they become a problem.",
+            illustrationPosition: .below
+        ),
+        WelcomePage(
+            id: "customize",
+            symbol: "slider.horizontal.3",
+            titleKey: "Make it yours",
+            bodyKey: "Reorder sections, hide what you don't need, tweak refresh intervals, and pick your language in Settings. Show only what matters to you.",
+            illustrationPosition: .below
+        ),
+        WelcomePage(
+            id: "star",
+            symbol: "star.fill",
+            titleKey: "Enjoying ArrBarr?",
+            bodyKey: "It's free and open-source. A star on GitHub helps other people find it — and means a lot. Thanks for trying it out!",
+            cta: WelcomePage.CTA(
+                titleKey: "Star on GitHub",
+                symbol: "star",
+                kind: .openURL(URL(string: "https://github.com/Preclowski/ArrBarr")!)
+            )
         ),
     ]
 
@@ -58,9 +122,9 @@ enum WelcomeContent {
     /// `currentVersion`. If the entry list for `currentVersion` is empty (or
     /// missing), the welcome window is skipped on update — only first-run users
     /// will see the welcome screen.
-    static let whatsNewEntries: [String: [FeatureItem]] = [
+    static let whatsNewEntries: [String: [WelcomePage]] = [
         "0.9.0": [
-            FeatureItem(
+            WelcomePage(
                 id: "welcome",
                 symbol: "sparkles",
                 titleKey: "Welcome screen",
@@ -76,11 +140,16 @@ enum WelcomeContent {
     static func decide(
         seen: String?,
         current: String,
-        entries: [String: [FeatureItem]],
+        entries: [String: [WelcomePage]],
         forceShow: Bool
     ) -> Variant? {
+        // Force-show always returns firstRun — that's the broader "tour"
+        // content, and it's what users actually want to re-view from Settings
+        // or from `--show-welcome` while testing. Returning users seeing
+        // version-specific changes is handled by the normal upgrade path
+        // below (no force flag).
         if forceShow {
-            return seen == nil ? .firstRun : .whatsNew(version: current)
+            return .firstRun
         }
         if seen == nil {
             return .firstRun
@@ -105,9 +174,9 @@ enum WelcomeContent {
         return result
     }
 
-    static func features(for variant: Variant) -> [FeatureItem] {
+    static func pages(for variant: Variant) -> [WelcomePage] {
         switch variant {
-        case .firstRun: return firstRunFeatures
+        case .firstRun: return firstRunPages
         case .whatsNew(let v): return whatsNewEntries[v] ?? []
         }
     }
