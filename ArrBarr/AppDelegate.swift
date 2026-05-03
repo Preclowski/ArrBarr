@@ -242,7 +242,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let view = SettingsView(
             onShowWelcome: { [weak self] in self?.openWelcome(force: true) },
-            onTestNotification: { [weak self] in self?.queueVM.fireTestNotification() }
+            onTestNotification: { [weak self] in self?.queueVM.fireTestNotification() },
+            onSetDemoMode: { [weak self] enabled in self?.setDemoModeAndRelaunch(enabled) ?? false }
         ).environmentObject(configStore)
         let hosting = NSHostingController(rootView: view)
         let win = NSWindow(contentViewController: hosting)
@@ -314,7 +315,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 // the tour.
                 self?.openSettings()
             },
-            onTryDemo: { [weak self] in self?.enableDemoModeAndRelaunch() },
+            onTryDemo: { [weak self] in self?.enableDeveloperModeAndRelaunch() },
             onFinish: { [weak self] in
                 // Done at the end of the tour: close welcome, then pop the
                 // status-bar popover so the user lands on the thing they
@@ -364,20 +365,46 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.activate(ignoringOtherApps: true)
     }
 
-    private func enableDemoModeAndRelaunch() {
-        // DemoMode.isActive is evaluated once at process start, so flipping the
-        // UserDefaults flag mid-run has no effect until next launch. Set the
-        // flag, tell the user, then relaunch ourselves.
-        UserDefaults.standard.set(true, forKey: "ArrBarrDemo")
+    private func enableDeveloperModeAndRelaunch() {
+        // Welcome-screen handoff: only flip the developer-mode flag, matching
+        // `--demo` launch-arg semantics. Fixtures stay off until the user
+        // explicitly toggles "Demo mode" inside the now-visible Developer
+        // options section. The two flags are evaluated once at process start,
+        // so we relaunch to take effect.
+        UserDefaults.standard.set(true, forKey: DeveloperMode.key)
 
         let alert = NSAlert()
-        alert.messageText = String(localized: "Demo mode enabled")
-        alert.informativeText = String(localized: "ArrBarr will relaunch now to load demo content.")
+        alert.messageText = String(localized: "Developer options enabled")
+        alert.informativeText = String(localized: "ArrBarr will relaunch. Open Settings → General to enable Demo mode and load preview content.")
         alert.addButton(withTitle: String(localized: "Relaunch"))
         alert.addButton(withTitle: String(localized: "Cancel"))
         let response = alert.runModal()
         guard response == .alertFirstButtonReturn else { return }
 
+        relaunchSelf()
+    }
+
+    private func setDemoModeAndRelaunch(_ enabled: Bool) -> Bool {
+        let alert = NSAlert()
+        alert.messageText = enabled
+            ? String(localized: "Demo mode enabled")
+            : String(localized: "Demo mode disabled")
+        alert.informativeText = String(localized: "ArrBarr will relaunch now to apply the change.")
+        alert.addButton(withTitle: String(localized: "Relaunch"))
+        alert.addButton(withTitle: String(localized: "Cancel"))
+        let response = alert.runModal()
+        guard response == .alertFirstButtonReturn else { return false }
+
+        UserDefaults.standard.set(enabled, forKey: DemoMode.key)
+        if !enabled {
+            // Re-arm the seed so re-enabling later flips configs back on.
+            UserDefaults.standard.removeObject(forKey: "ArrBarr.demoSeedDone")
+        }
+        relaunchSelf()
+        return true
+    }
+
+    private func relaunchSelf() {
         let url = Bundle.main.bundleURL
         let task = Process()
         task.launchPath = "/usr/bin/open"

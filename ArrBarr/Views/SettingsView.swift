@@ -3,10 +3,12 @@ import SwiftUI
 struct SettingsView: View {
     var onShowWelcome: (() -> Void)? = nil
     var onTestNotification: (() -> Void)? = nil
+    var onSetDemoMode: ((Bool) -> Bool)? = nil
 
     @EnvironmentObject var configStore: ConfigStore
     @State private var draggingKey: String?
     @State private var dragOffset: CGFloat = 0
+    @State private var demoModeOn: Bool = DemoMode.isActive
 
     var body: some View {
         VStack(spacing: 0) {
@@ -114,13 +116,26 @@ struct SettingsView: View {
                     }
                 }
             }
-            if onShowWelcome != nil || onTestNotification != nil {
-                Section {
-                    if let onTestNotification {
-                        Button("Send test notification") { onTestNotification() }
-                    }
-                    if let onShowWelcome {
-                        Button("Show welcome screen") { onShowWelcome() }
+            if DeveloperMode.isActive {
+                Section("Developer options") {
+                    Toggle("Demo mode", isOn: Binding(
+                        get: { demoModeOn },
+                        set: { newValue in
+                            guard newValue != demoModeOn else { return }
+                            // Confirm via the callback BEFORE flipping local
+                            // state — if the user cancels the relaunch, the
+                            // toggle stays in sync with reality.
+                            let committed = onSetDemoMode?(newValue) ?? false
+                            if committed { demoModeOn = newValue }
+                        }
+                    ))
+                    if demoModeOn {
+                        if let onTestNotification {
+                            Button("Send test notification") { onTestNotification() }
+                        }
+                        if let onShowWelcome {
+                            Button("Show welcome screen") { onShowWelcome() }
+                        }
                     }
                 }
             }
@@ -217,7 +232,6 @@ struct SettingsView: View {
 
     private var bottomBar: some View {
         VStack(spacing: 0) {
-            Divider()
             HStack {
                 Text(Self.versionString)
                     .font(.system(size: 11))
@@ -227,13 +241,20 @@ struct SettingsView: View {
                 Text("·")
                     .font(.system(size: 11))
                     .foregroundStyle(.tertiary)
-                Text(verbatim: "🥨 Precel")
+                Text(verbatim: "Made with 🥨")
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
+                Text("·")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.tertiary)
                 Link(destination: URL(string: "https://github.com/Preclowski/ArrBarr")!) {
-                    Image(systemName: "link")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(.secondary)
+                    HStack(spacing: 3) {
+                        Image(systemName: "link")
+                            .font(.system(size: 10, weight: .semibold))
+                        Text(verbatim: "GitHub")
+                            .font(.system(size: 11))
+                    }
+                    .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
                 .onHover { hovering in

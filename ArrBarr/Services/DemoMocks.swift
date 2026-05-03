@@ -1,19 +1,39 @@
 import Foundation
 
-/// Demo mode: ship a runnable preview without needing real Radarr/Sonarr/Lidarr instances.
+/// Developer mode: reveals the "Developer options" section in Settings, which
+/// is where the Demo mode toggle, test notifications, and replay-welcome
+/// buttons live. Decoupled from `DemoMode` so that you can poke at the dev
+/// options without forcing fixtures on yourself.
 ///
 /// Activate by any of:
-///   - Launch arg:        --demo
-///   - Env var:           ARRBARR_DEMO=1
-///   - UserDefaults:      defaults write com.preclowski.ArrBarr ArrBarrDemo -bool true
-///   - Or via NSArgs:     open ArrBarr.app --args -ArrBarrDemo YES
-enum DemoMode {
+///   - Launch arg:        --demo  (persisted to UserDefaults on first sight)
+///   - Env var:           ARRBARR_DEMO=1  (persisted to UserDefaults)
+///   - UserDefaults:      defaults write com.preclowski.ArrBarr ArrBarrDeveloperMode -bool true
+enum DeveloperMode {
+    static let key = "ArrBarrDeveloperMode"
+
     static let isActive: Bool = {
+        let defaults = UserDefaults.standard
         let args = ProcessInfo.processInfo.arguments
-        if args.contains("--demo") { return true }
-        if ProcessInfo.processInfo.environment["ARRBARR_DEMO"] == "1" { return true }
-        return UserDefaults.standard.bool(forKey: "ArrBarrDemo")
+        let envOn = ProcessInfo.processInfo.environment["ARRBARR_DEMO"] == "1"
+        if args.contains("--demo") || envOn {
+            // Persist so subsequent launches without the flag still keep
+            // dev options visible — matches how the welcome-screen handoff
+            // sets the same UserDefault.
+            defaults.set(true, forKey: key)
+            return true
+        }
+        return defaults.bool(forKey: key)
     }()
+}
+
+/// Demo mode: ship a runnable preview without needing real Radarr/Sonarr/Lidarr instances.
+/// Toggled from the "Demo mode" checkbox inside Developer options. The flag is
+/// read once at process start, so flipping it requires a relaunch.
+enum DemoMode {
+    static let key = "ArrBarrDemo"
+
+    static let isActive: Bool = UserDefaults.standard.bool(forKey: key)
 
     private static let seedDoneKey = "ArrBarr.demoSeedDone"
 
