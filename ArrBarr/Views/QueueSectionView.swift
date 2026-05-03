@@ -3,7 +3,7 @@ import SwiftUI
 struct QueueSectionView: View {
     let title: String
     let symbol: String
-    let items: [QueueItem]
+    let entries: [QueueRowEntry]
     var error: String?
     var health: [ArrHealthRecord] = []
     var isCollapsed: Bool = false
@@ -12,6 +12,17 @@ struct QueueSectionView: View {
     @EnvironmentObject var configStore: ConfigStore
     var onShowHistory: (() -> Void)? = nil
     @State private var hoveringHistory = false
+
+    /// Total individual queue items represented by this section's entries.
+    /// Singletons count as 1; groups contribute their member count.
+    private var itemCount: Int {
+        entries.reduce(0) { sum, entry in
+            switch entry {
+            case .single: return sum + 1
+            case .group(let g): return sum + g.memberCount
+            }
+        }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -31,7 +42,7 @@ struct QueueSectionView: View {
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(.secondary)
                 if error == nil {
-                    Text("\(items.count)")
+                    Text("\(itemCount)")
                         .font(.system(size: 11))
                         .foregroundStyle(.tertiary)
                     if !health.isEmpty { healthBadge }
@@ -64,7 +75,7 @@ struct QueueSectionView: View {
             .onTapGesture { onToggleCollapse?() }
 
             if !isCollapsed && error == nil {
-                if items.isEmpty {
+                if entries.isEmpty {
                     Text("Queue empty")
                         .font(.system(size: 12))
                         .foregroundStyle(.tertiary)
@@ -72,23 +83,36 @@ struct QueueSectionView: View {
                         .padding(.vertical, 8)
                 } else {
                     VStack(spacing: 2) {
-                        ForEach(items) { item in
-                            QueueRowView(
-                                item: item,
-                                onPause: { [weak viewModel] in
-                                    Task { await viewModel?.pause(item) }
-                                },
-                                onResume: { [weak viewModel] in
-                                    Task { await viewModel?.resume(item) }
-                                },
-                                onDelete: { [weak viewModel] in
-                                    Task { await viewModel?.delete(item) }
-                                }
-                            )
+                        ForEach(entries) { entry in
+                            row(for: entry)
                         }
                     }
                 }
             }
+        }
+    }
+
+    @ViewBuilder
+    private func row(for entry: QueueRowEntry) -> some View {
+        switch entry {
+        case .single(let item):
+            QueueRowView(
+                item: item,
+                onPause: { [weak viewModel] in Task { await viewModel?.pause(item) } },
+                onResume: { [weak viewModel] in Task { await viewModel?.resume(item) } },
+                onDelete: { [weak viewModel] in Task { await viewModel?.delete(item) } }
+            )
+        case .group(let group):
+            // All members share a downloadId so calling the action on the
+            // representative is enough — the arr's queue API affects the
+            // whole physical download.
+            let rep = group.representative
+            QueueGroupRowView(
+                group: group,
+                onPause:  { [weak viewModel] in Task { await viewModel?.pause(rep) } },
+                onResume: { [weak viewModel] in Task { await viewModel?.resume(rep) } },
+                onDelete: { [weak viewModel] in Task { await viewModel?.delete(rep) } }
+            )
         }
     }
 

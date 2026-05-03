@@ -908,6 +908,27 @@
     },
     "Needs attention" : {
       "extractionState" : "manual"
+    },
+    "Season %02lld" : {
+      "extractionState" : "manual"
+    },
+    "Multiple seasons" : {
+      "extractionState" : "manual"
+    },
+    "%lld episodes" : {
+      "extractionState" : "manual"
+    },
+    "Season pack" : {
+      "extractionState" : "manual"
+    },
+    "Episodes" : {
+      "extractionState" : "manual"
+    },
+    "Existing files" : {
+      "extractionState" : "manual"
+    },
+    "Replacing existing files" : {
+      "extractionState" : "manual"
     }
   }
 }

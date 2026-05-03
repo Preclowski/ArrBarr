@@ -248,7 +248,7 @@ struct PopoverContentView: View {
             QueueSectionView(
                 title: source.displayName,
                 symbol: source.symbol,
-                items: items(for: source),
+                entries: entries(for: source),
                 error: arrError,
                 health: health(for: source),
                 isCollapsed: arrError == nil ? configStore.isCollapsed(source) : false,
@@ -277,6 +277,17 @@ struct PopoverContentView: View {
         case .sonarr: return viewModel.sonarr
         case .radarr: return viewModel.radarr
         case .lidarr: return viewModel.lidarr
+        }
+    }
+
+    /// Sonarr items get bucketed by downloadId so a season pack collapses
+    /// into one row matching the underlying download. Radarr / Lidarr stay
+    /// one-row-per-item; grouping is sonarr-only for now.
+    private func entries(for source: QueueItem.Source) -> [QueueRowEntry] {
+        let raw = items(for: source)
+        switch source {
+        case .sonarr: return QueueGrouping.group(raw)
+        default:      return raw.map { .single($0) }
         }
     }
 

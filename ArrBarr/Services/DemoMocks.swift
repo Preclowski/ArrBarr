@@ -103,7 +103,11 @@ enum DemoMocks {
     }
 
     static var sonarrQueue: [QueueItem] {
-        [
+        // Order: a single grabbed episode, then the Caminandes season pack
+        // (so it sits in the middle and isn't last in the section), then the
+        // three independent Pioneer One episodes (different downloadIds —
+        // they should NOT group), then the remaining standalones.
+        var items: [QueueItem] = [
             queueItem(
                 source: .sonarr, id: "demo-sonarr-1",
                 title: "Pioneer One (2010)",
@@ -120,13 +124,18 @@ enum DemoMocks {
                 ),
                 posterSeed: "pioneerone", aspect: .portrait
             ),
+        ]
+        items.append(contentsOf: caminandesSeasonPack)
+        items.append(contentsOf: tearsOfSteelSeasonPack)
+        items.append(contentsOf: pioneerOneIndependentEpisodes)
+        items.append(contentsOf: [
             queueItem(
                 source: .sonarr, id: "demo-sonarr-2",
                 title: "Cosmos Laundromat (2015)",
                 subtitle: "S01E01 · The Beginning",
                 releaseName: "Cosmos.Laundromat.S01E01.1080p.WEB-DL-DEMO",
                 status: .queued, progress: 0,
-                quality: nil, formats: [], score: 0,
+                quality: "WEB-DL 1080p", formats: ["AMZN", "x264"], score: 180,
                 client: "NZBGet", indexer: "DemoUsenet",
                 upgrade: false, posterSeed: "cosmoslaundromat", aspect: .portrait
             ),
@@ -140,7 +149,127 @@ enum DemoMocks {
                 client: "Deluge", indexer: "DemoTracker",
                 upgrade: false, posterSeed: "northerncascade", aspect: .portrait
             ),
+        ])
+        return items
+    }
+
+    /// A 5-episode Caminandes season pack — all members share the same
+    /// `downloadId` so QueueGrouping renders them as a single Sonarr row
+    /// labelled "Caminandes · S01". Each episode's *existing* file comes
+    /// from a different original release (mixed-source upgrade), which is
+    /// the realistic case: one was a crisp HDTV grab, two were lower-tier,
+    /// one missing entirely. The tooltip's per-episode grid shows it all.
+    private static var caminandesSeasonPack: [QueueItem] {
+        let sharedDownloadId = "demo-pack-caminandes-s01"
+        let baseRelease = "Caminandes.S01.1080p.WEB-DL.x264-DEMO"
+        let episodes: [(num: Int, title: String, existing: ExistingFile?)] = [
+            (1, "Llama Drama", ExistingFile(
+                quality: "HDTV-720p", formats: ["x264", "Repack"], score: 60,
+                size: 320_000_000,
+                fileName: "Caminandes.S01E01.720p.HDTV.x264-CRISPY.mkv"
+            )),
+            (2, "Gran Dillama", ExistingFile(
+                quality: "WEBRip-480p", formats: ["x264"], score: 20,
+                size: 180_000_000,
+                fileName: "Caminandes.S01E02.480p.WEBRip.x264-OTHER.mkv"
+            )),
+            (3, "Llamigos", nil), // missing — no existing file, just a fresh add
+            (4, "Mountain Pass", ExistingFile(
+                quality: "HDTV-720p", formats: ["x264"], score: 50,
+                size: 290_000_000,
+                fileName: "Caminandes.S01E04.720p.HDTV.x264-CRISPY.mkv"
+            )),
+            (5, "Frozen Lake", ExistingFile(
+                quality: "DVDRip", formats: ["XviD", "MP3"], score: -40,
+                size: 410_000_000,
+                fileName: "Caminandes.S01E05.DVDRip.XviD-ANCIENT.avi"
+            )),
         ]
+        return episodes.map { ep in
+            queueItem(
+                source: .sonarr,
+                id: "demo-sonarr-pack-\(ep.num)",
+                title: "Caminandes (2013)",
+                subtitle: String(format: "S01E%02d · %@", ep.num, ep.title),
+                releaseName: baseRelease,
+                status: .downloading,
+                progress: 0.55,
+                quality: "WEB-DL 1080p",
+                formats: ["AMZN", "x264", "AAC 2.0", "HQ Source Group"],
+                score: 720,
+                client: "qBittorrent",
+                indexer: "DemoTracker",
+                upgrade: true,
+                existing: ep.existing,
+                posterSeed: "caminandes",
+                aspect: .portrait,
+                downloadId: sharedDownloadId
+            )
+        }
+    }
+
+    /// A second season pack — fresh grab (not an upgrade) — so the demo
+    /// has both a NEW pack and an UPGRADE pack visible side by side.
+    private static var tearsOfSteelSeasonPack: [QueueItem] {
+        let sharedDownloadId = "demo-pack-tearsofsteel-s01"
+        let baseRelease = "Tears.of.Steel.S01.2160p.WEB-DL.HDR-DEMO"
+        let episodes: [(num: Int, title: String)] = [
+            (1, "First Light"),
+            (2, "Mecha"),
+            (3, "Reunion"),
+        ]
+        return episodes.map { ep in
+            queueItem(
+                source: .sonarr,
+                id: "demo-sonarr-tos-pack-\(ep.num)",
+                title: "Tears of Steel (2012)",
+                subtitle: String(format: "S01E%02d · %@", ep.num, ep.title),
+                releaseName: baseRelease,
+                status: .downloading,
+                progress: 0.18,
+                quality: "WEB-DL 2160p",
+                formats: ["AMZN", "DV", "HDR10", "Atmos", "x265"],
+                score: 1450,
+                client: "SABnzbd",
+                indexer: "DemoUsenet",
+                upgrade: false,
+                posterSeed: "tearsofsteel",
+                aspect: .portrait,
+                downloadId: sharedDownloadId
+            )
+        }
+    }
+
+    /// Three Pioneer One episodes downloaded as separate releases — each
+    /// has its own `downloadId`, so QueueGrouping must render them as three
+    /// independent rows even though they share a series. Verifies the
+    /// "only group true season packs" rule.
+    private static var pioneerOneIndependentEpisodes: [QueueItem] {
+        let releases: [(num: Int, title: String, status: QueueItem.Status, progress: Double, score: Int, formats: [String])] = [
+            (4, "Brave New Earth",      .downloading, 0.34, 420, ["x264", "AAC 2.0"]),
+            (5, "Foothold",             .queued,      0.0,  60,  []),
+            (6, "Tomorrow Belongs to Us", .downloading, 0.78, 380, ["x264", "AAC 2.0", "HQ Source Group"]),
+        ]
+        return releases.map { rel in
+            queueItem(
+                source: .sonarr,
+                id: "demo-sonarr-pone-\(rel.num)",
+                title: "Pioneer One (2010)",
+                subtitle: String(format: "S01E%02d · %@", rel.num, rel.title),
+                releaseName: String(format: "Pioneer.One.S01E%02d.720p.HDTV.x264-DEMO", rel.num),
+                status: rel.status,
+                progress: rel.progress,
+                quality: "HDTV-720p",
+                formats: rel.formats,
+                score: rel.score,
+                client: "qBittorrent",
+                indexer: "DemoTracker",
+                upgrade: false,
+                posterSeed: "pioneerone",
+                aspect: .portrait
+                // No downloadId override — defaults to id, so each is unique.
+            )
+        }
     }
 
     static var lidarrQueue: [QueueItem] {
@@ -328,7 +457,8 @@ enum DemoMocks {
         quality: String?, formats: [String], score: Int,
         client: String = "qBittorrent", indexer: String? = nil,
         upgrade: Bool, existing: ExistingFile? = nil,
-        posterSeed: String, aspect: Aspect
+        posterSeed: String, aspect: Aspect,
+        downloadId: String? = nil
     ) -> QueueItem {
         let total: Int64 = 4_500_000_000
         let left = Int64(Double(total) * (1 - progress))
@@ -346,7 +476,7 @@ enum DemoMocks {
         let (w, h) = (aspect == .square) ? (200, 200) : (200, 300)
         return QueueItem(
             id: id, source: source, arrQueueId: abs(id.hashValue % 99999),
-            downloadId: id, downloadProtocol: proto, downloadClient: client,
+            downloadId: downloadId ?? id, downloadProtocol: proto, downloadClient: client,
             indexer: indexer,
             title: title, subtitle: subtitle, releaseName: releaseName,
             status: status, progress: progress,

@@ -70,65 +70,59 @@ struct QueueRowView: View {
             )
 
             VStack(alignment: .leading, spacing: 4) {
-                HStack(alignment: .top, spacing: 8) {
-                    VStack(alignment: .leading, spacing: 1) {
-                        HStack(spacing: 4) {
-                            Text(item.title)
-                                .font(.system(size: 12, weight: .medium))
-                                .lineLimit(1)
-                                .truncationMode(.tail)
+                VStack(alignment: .leading, spacing: 1) {
+                    HStack(spacing: 4) {
+                        Text(item.title)
+                            .font(.system(size: 12, weight: .medium))
+                            .lineLimit(1)
+                            .truncationMode(.tail)
 
-                            Text(item.isUpgrade ? "Upgrade" : "New")
+                        Text(item.isUpgrade ? "Upgrade" : "New")
+                            .font(.system(size: 8, weight: .semibold))
+                            .foregroundStyle(item.isUpgrade ? AnyShapeStyle(Color.indigo) : AnyShapeStyle(Color.accentColor))
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 1)
+                            .background(
+                                item.isUpgrade ? AnyShapeStyle(Color.indigo.opacity(0.15)) : AnyShapeStyle(Color.accentColor.opacity(0.15)),
+                                in: Capsule()
+                            )
+
+                        if let client = item.downloadClient {
+                            let color = downloadClientColor(client)
+                            Text(client)
                                 .font(.system(size: 8, weight: .semibold))
-                                .foregroundStyle(item.isUpgrade ? AnyShapeStyle(Color.indigo) : AnyShapeStyle(Color.accentColor))
+                                .foregroundStyle(color)
                                 .padding(.horizontal, 4)
                                 .padding(.vertical, 1)
-                                .background(
-                                    item.isUpgrade ? AnyShapeStyle(Color.indigo.opacity(0.15)) : AnyShapeStyle(Color.accentColor.opacity(0.15)),
-                                    in: Capsule()
-                                )
-
-                            if let client = item.downloadClient {
-                                let color = downloadClientColor(client)
-                                Text(client)
-                                    .font(.system(size: 8, weight: .semibold))
-                                    .foregroundStyle(color)
-                                    .padding(.horizontal, 4)
-                                    .padding(.vertical, 1)
-                                    .background(color.opacity(0.15), in: Capsule())
-                                    .lineLimit(1)
-                            }
-                        }
-
-                        if let sub = item.subtitle {
-                            Text(sub)
-                                .font(.system(size: 11))
-                                .foregroundStyle(.secondary)
+                                .background(color.opacity(0.15), in: Capsule())
                                 .lineLimit(1)
                         }
+                    }
 
-                        HStack(spacing: 3) {
-                            Image(systemName: item.status.symbol)
-                                .foregroundStyle(item.status.tint)
-                                .font(.system(size: 8))
-                            Text(LocalizedStringKey(item.status.displayName))
-                                .foregroundStyle(item.status.tint)
-                            if !metaLine.isEmpty {
-                                Text("·")
-                                    .foregroundStyle(.tertiary)
-                                Text(metaLine)
-                                    .foregroundStyle(.tertiary)
-                            }
+                    if let sub = item.subtitle {
+                        Text(sub)
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+
+                    HStack(spacing: 3) {
+                        Image(systemName: item.status.symbol)
+                            .foregroundStyle(item.status.tint)
+                            .font(.system(size: 8))
+                        Text(LocalizedStringKey(item.status.displayName))
+                            .foregroundStyle(item.status.tint)
+                        if !metaLine.isEmpty {
+                            Text("·")
+                                .foregroundStyle(.tertiary)
+                            Text(metaLine)
+                                .foregroundStyle(.tertiary)
                         }
-                        .font(.system(size: 10))
-                        .lineLimit(1)
                     }
-                    Spacer(minLength: 4)
-                    if isHovering {
-                        actionButtons
-                            .transition(.opacity)
-                    }
+                    .font(.system(size: 10))
+                    .lineLimit(1)
                 }
+                .hoverActions(visible: isHovering) { actionButtons }
 
                 ProgressView(value: item.progress)
                     .progressViewStyle(.linear)
@@ -216,7 +210,7 @@ struct QueueRowView: View {
     }
 
     private var actionButtons: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 6) {
             if let url = webURL {
                 IconButton(symbol: "safari", helpKey: "Open in browser", accessibilityLabel: "Open \(item.title) in browser") {
                     NSWorkspace.shared.open(url)
@@ -254,7 +248,7 @@ struct QueueRowView: View {
                             .font(.system(size: 9, weight: .medium))
                             .padding(.horizontal, 5)
                             .padding(.vertical, 1)
-                            .background(.quaternary, in: Capsule())
+                            .background(Color.primary.opacity(0.08), in: Capsule())
                     }
                     if item.customFormatScore != 0 {
                         let sign = item.customFormatScore > 0 ? "+" : ""
@@ -263,7 +257,7 @@ struct QueueRowView: View {
                             .foregroundStyle(item.customFormatScore > 0 ? .green : .red)
                             .padding(.horizontal, 5)
                             .padding(.vertical, 1)
-                            .background(.quaternary, in: Capsule())
+                            .background(Color.primary.opacity(0.08), in: Capsule())
                     }
                 }
                 .fixedSize()
@@ -583,7 +577,12 @@ struct TagChip: View {
             .foregroundStyle(color == .primary ? AnyShapeStyle(.primary) : AnyShapeStyle(color))
             .padding(.horizontal, 5)
             .padding(.vertical, 1)
-            .background(.quaternary, in: Capsule())
+            // `.quaternary` is a hierarchical material — inside a popover
+            // (which is itself a `.regularMaterial` container) it resolves
+            // to a much darker tone, so chips look like solid black pills.
+            // Explicit colour-with-opacity renders the same in both
+            // contexts.
+            .background(Color.primary.opacity(0.08), in: Capsule())
     }
 }
 
@@ -631,7 +630,49 @@ struct TooltipFlowLayout: Layout {
     }
 }
 
-private struct IconButton: View {
+/// Overlays hover-only `actions` on the top-trailing edge of a content
+/// block, with a short gradient fade behind the buttons so any tags / chips
+/// they overlap fade out cleanly. The content keeps its full width
+/// regardless of hover state — actions don't push the layout sideways
+/// (which is what was wrapping title-row badges to a second line).
+struct HoverActionOverlay<Actions: View>: ViewModifier {
+    let visible: Bool
+    @ViewBuilder let actions: () -> Actions
+
+    func body(content: Content) -> some View {
+        ZStack(alignment: .topTrailing) {
+            content
+                .frame(maxWidth: .infinity, alignment: .leading)
+            if visible {
+                actions()
+                    .padding(.leading, 6)
+                    .background(
+                        LinearGradient(
+                            colors: [
+                                Color(nsColor: .windowBackgroundColor).opacity(0),
+                                Color(nsColor: .windowBackgroundColor).opacity(0.95),
+                                Color(nsColor: .windowBackgroundColor).opacity(0.95),
+                            ],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .transition(.opacity)
+            }
+        }
+    }
+}
+
+extension View {
+    func hoverActions<Actions: View>(
+        visible: Bool,
+        @ViewBuilder actions: @escaping () -> Actions
+    ) -> some View {
+        modifier(HoverActionOverlay(visible: visible, actions: actions))
+    }
+}
+
+struct IconButton: View {
     @EnvironmentObject var configStore: ConfigStore
     let symbol: String
     let helpKey: String
