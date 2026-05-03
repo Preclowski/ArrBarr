@@ -38,8 +38,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
         .environmentObject(configStore)
 
+        // Don't enable any sizingOptions on the hosting controller. With
+        // .preferredContentSize / .intrinsicContentSize, NSHostingController
+        // pushes a fresh size to NSPopover on every SwiftUI body invalidation
+        // — and a refresh fires several @Published changes per cycle, which
+        // causes NSPopover to repaint its window each time. That repaint is
+        // the popover-wide blink the user keeps reporting. Instead, we
+        // measure the SwiftUI content's preferred size once when the popover
+        // opens (see togglePopover) and pin the popover to that size for the
+        // duration the popover is shown.
         let hosting = NSHostingController(rootView: root)
-        hosting.sizingOptions = [.preferredContentSize]
+        popover.contentSize = NSSize(width: 400, height: 600)
         popover.contentViewController = hosting
 
         DemoMode.seedConfigsIfNeeded(configStore)
@@ -124,6 +133,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             popover.contentViewController?.view.window?.makeKey()
             queueVM.startForegroundPolling()
             installEscMonitor()
+            // Re-measure once on open so the popover hugs the SwiftUI content
+            // for the current state (history vs queue vs empty). After this,
+            // the size stays put until the popover closes — refresh-driven
+            // body invalidations no longer cause a window resize/repaint.
+            DispatchQueue.main.async { [weak self] in
+                guard let self, let hosting = self.popover.contentViewController else { return }
+                let fitting = hosting.view.fittingSize
+                if fitting.width > 0 && fitting.height > 0 {
+                    self.popover.contentSize = fitting
+                }
+            }
         }
     }
 
