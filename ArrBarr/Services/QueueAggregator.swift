@@ -164,9 +164,9 @@ final class QueueAggregator {
 
     private func deleteViaArr(_ item: QueueItem) async throws {
         switch item.source {
-        case .radarr: try await radarrClient(for: configStore.radarr).deleteQueueItem(id: item.arrQueueId)
-        case .sonarr: try await sonarrClient(for: configStore.sonarr).deleteQueueItem(id: item.arrQueueId)
-        case .lidarr: try await lidarrClient(for: configStore.lidarr).deleteQueueItem(id: item.arrQueueId)
+        case .radarr: try await radarrClient(for: configStore.radarr).deleteQueueItem(id: item.arrQueueId, removeFromClient: true)
+        case .sonarr: try await sonarrClient(for: configStore.sonarr).deleteQueueItem(id: item.arrQueueId, removeFromClient: true)
+        case .lidarr: try await lidarrClient(for: configStore.lidarr).deleteQueueItem(id: item.arrQueueId, removeFromClient: true)
         }
     }
 
