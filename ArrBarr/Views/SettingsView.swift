@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct SettingsView: View {
+    var onShowWelcome: (() -> Void)? = nil
+
     @EnvironmentObject var configStore: ConfigStore
     @State private var draggingKey: String?
     @State private var dragOffset: CGFloat = 0
@@ -109,6 +111,11 @@ struct SettingsView: View {
                     ForEach(ConfigStore.backgroundIntervalOptions, id: \.self) { interval in
                         Text(Self.formatInterval(interval)).tag(interval)
                     }
+                }
+            }
+            if let onShowWelcome {
+                Section {
+                    Button("Show welcome screen") { onShowWelcome() }
                 }
             }
         }

@@ -8,6 +8,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
     private var popover: NSPopover!
     private var settingsWindow: NSWindow?
+    private var welcomeWindow: NSWindow?
     private var escMonitor: Any?
     private var outsideClickMonitor: Any?
 
@@ -52,6 +53,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         popover.contentViewController = hosting
 
         DemoMode.seedConfigsIfNeeded(configStore)
+
+        showWelcomeIfNeeded()
 
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
 
@@ -198,7 +201,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
-        let view = SettingsView().environmentObject(configStore)
+        let view = SettingsView(onShowWelcome: { [weak self] in
+            self?.openWelcome(force: true)
+        }).environmentObject(configStore)
         let hosting = NSHostingController(rootView: view)
         let win = NSWindow(contentViewController: hosting)
         win.title = String(localized: "ArrBarr Settings")
@@ -218,6 +223,107 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         settingsWindow = win
         win.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+    }
+
+    // MARK: - Welcome
+
+    private func showWelcomeIfNeeded() {
+        // Upgrade from a pre-welcome build: they already configured services
+        // before the welcome screen existed. Showing first-run would be
+        // confusing; silently mark them caught up so the next major-update
+        // welcome still fires.
+        let isUpgradeFromPreWelcome = configStore.welcomeSeenVersion == nil
+            && hasAnyConfiguredArr
+        if isUpgradeFromPreWelcome && !WelcomeContent.shouldForceShow() {
+            configStore.welcomeSeenVersion = WelcomeContent.currentVersion
+            return
+        }
+        guard let variant = WelcomeContent.variant(seen: configStore.welcomeSeenVersion) else { return }
+        openWelcome(variant: variant)
+    }
+
+    private var hasAnyConfiguredArr: Bool {
+        // A demo-seeded user has `enabled = true` but no `baseURL`; only count
+        // real configurations.
+        !configStore.radarr.baseURL.isEmpty
+            || !configStore.sonarr.baseURL.isEmpty
+            || !configStore.lidarr.baseURL.isEmpty
+    }
+
+    private func openWelcome(force: Bool = false) {
+        let variant: WelcomeContent.Variant = {
+            if force {
+                return configStore.welcomeSeenVersion == nil
+                    ? .firstRun
+                    : .whatsNew(version: WelcomeContent.currentVersion)
+            }
+            return WelcomeContent.variant(seen: configStore.welcomeSeenVersion) ?? .firstRun
+        }()
+        openWelcome(variant: variant)
+    }
+
+    private func openWelcome(variant: WelcomeContent.Variant) {
+        if let win = welcomeWindow {
+            win.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
+
+        let view = WelcomeView(
+            variant: variant,
+            onDismiss: { [weak self] in self?.welcomeWindow?.performClose(nil) },
+            onAddService: { [weak self] in
+                self?.welcomeWindow?.performClose(nil)
+                self?.openSettings()
+            },
+            onTryDemo: { [weak self] in self?.enableDemoModeAndRelaunch() }
+        ).environmentObject(configStore)
+
+        let hosting = NSHostingController(rootView: view)
+        let win = NSWindow(contentViewController: hosting)
+        win.title = String(localized: "Welcome to ArrBarr")
+        win.styleMask = [.titled, .closable]
+        win.setContentSize(NSSize(width: 600, height: 680))
+        win.isReleasedWhenClosed = false
+        win.center()
+
+        NotificationCenter.default.addObserver(
+            forName: NSWindow.willCloseNotification,
+            object: win,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                guard let self else { return }
+                self.configStore.welcomeSeenVersion = WelcomeContent.currentVersion
+                self.welcomeWindow = nil
+            }
+        }
+
+        welcomeWindow = win
+        win.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    private func enableDemoModeAndRelaunch() {
+        // DemoMode.isActive is evaluated once at process start, so flipping the
+        // UserDefaults flag mid-run has no effect until next launch. Set the
+        // flag, tell the user, then relaunch ourselves.
+        UserDefaults.standard.set(true, forKey: "ArrBarrDemo")
+
+        let alert = NSAlert()
+        alert.messageText = String(localized: "Demo mode enabled")
+        alert.informativeText = String(localized: "ArrBarr will relaunch now to load demo content.")
+        alert.addButton(withTitle: String(localized: "Relaunch"))
+        alert.addButton(withTitle: String(localized: "Cancel"))
+        let response = alert.runModal()
+        guard response == .alertFirstButtonReturn else { return }
+
+        let url = Bundle.main.bundleURL
+        let task = Process()
+        task.launchPath = "/usr/bin/open"
+        task.arguments = ["-n", url.path]
+        try? task.run()
+        NSApp.terminate(nil)
     }
 }
 

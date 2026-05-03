@@ -54,6 +54,10 @@ final class ConfigStore: ObservableObject {
     @Published var showIndexerIssues: Bool
     @Published var collapsedArrs: Set<String>
     @Published var tonightHours: Int
+    /// Last `WelcomeContent.currentVersion` the user dismissed. `nil` means
+    /// they've never seen the welcome screen — first launch shows the
+    /// firstRun variant.
+    @Published var welcomeSeenVersion: String?
 
     static let needsYouOrderKey = "needsyou"
     static let tonightOrderKey = "tonight"
@@ -93,6 +97,7 @@ final class ConfigStore: ObservableObject {
     private static let collapsedArrsKey = "ArrBarr.collapsedArrs"
     private static let tonightHoursKey = "ArrBarr.tonightHours"
     private static let showIndexerIssuesKey = "ArrBarr.showIndexerIssues"
+    private static let welcomeSeenVersionKey = "ArrBarr.welcomeSeenVersion"
     private static let keychainMigrationDoneKey = "ArrBarr.keychainMigrationDone"
 
     init(defaults: UserDefaults = .standard) {
@@ -132,6 +137,7 @@ final class ConfigStore: ObservableObject {
         self.collapsedArrs = Set(defaults.stringArray(forKey: Self.collapsedArrsKey) ?? [])
         let storedTonight = defaults.object(forKey: Self.tonightHoursKey) as? Int ?? 12
         self.tonightHours = Self.tonightHoursOptions.contains(storedTonight) ? storedTonight : 12
+        self.welcomeSeenVersion = defaults.string(forKey: Self.welcomeSeenVersionKey)
 
         for kind in ServiceKind.allCases {
             publisher(for: kind).dropFirst().sink { [weak self] cfg in
@@ -174,6 +180,13 @@ final class ConfigStore: ObservableObject {
         }.store(in: &cancellables)
         $tonightHours.dropFirst().sink { [weak self] val in
             self?.defaults.set(val, forKey: Self.tonightHoursKey)
+        }.store(in: &cancellables)
+        $welcomeSeenVersion.dropFirst().sink { [weak self] val in
+            if let val {
+                self?.defaults.set(val, forKey: Self.welcomeSeenVersionKey)
+            } else {
+                self?.defaults.removeObject(forKey: Self.welcomeSeenVersionKey)
+            }
         }.store(in: &cancellables)
         $appLanguage.dropFirst().sink { [weak self] val in
             guard let self else { return }

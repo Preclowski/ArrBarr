@@ -809,6 +809,63 @@
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Demain" } },
         "pl" : { "stringUnit" : { "state" : "translated", "value" : "Jutro" } }
       }
+    },
+    "Add a service" : {
+      "extractionState" : "manual"
+    },
+    "Add your existing arr services in Settings — ArrBarr polls live queue, history, and health from each one." : {
+      "extractionState" : "manual"
+    },
+    "ArrBarr now shows a brief intro on first launch and after major updates so you know what's new. Reopen it any time from Settings → General." : {
+      "extractionState" : "manual"
+    },
+    "ArrBarr stays out of your Dock and shows active downloads at a glance. Click the icon for the popover; right-click for quick options." : {
+      "extractionState" : "manual"
+    },
+    "ArrBarr will relaunch now to load demo content." : {
+      "extractionState" : "manual"
+    },
+    "Connect Radarr, Sonarr & Lidarr" : {
+      "extractionState" : "manual"
+    },
+    "Continue" : {
+      "extractionState" : "manual"
+    },
+    "Demo mode enabled" : {
+      "extractionState" : "manual"
+    },
+    "Lives in your menu bar" : {
+      "extractionState" : "manual"
+    },
+    "Relaunch" : {
+      "extractionState" : "manual"
+    },
+    "See what's airing tonight, get notified about new grabs, and surface indexer issues before they become a problem." : {
+      "extractionState" : "manual"
+    },
+    "Show welcome screen" : {
+      "extractionState" : "manual"
+    },
+    "Tonight, Needs you, and notifications" : {
+      "extractionState" : "manual"
+    },
+    "Try demo mode" : {
+      "extractionState" : "manual"
+    },
+    "Version %@" : {
+      "extractionState" : "manual"
+    },
+    "Welcome screen" : {
+      "extractionState" : "manual"
+    },
+    "Welcome to ArrBarr" : {
+      "extractionState" : "manual"
+    },
+    "What's New in ArrBarr" : {
+      "extractionState" : "manual"
+    },
+    "Your menu-bar companion for Radarr, Sonarr, and Lidarr." : {
+      "extractionState" : "manual"
     }
   }
 }
