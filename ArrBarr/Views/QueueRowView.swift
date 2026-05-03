@@ -27,7 +27,13 @@ extension QueueItem.Status {
 
 struct QueueRowView: View {
     let item: QueueItem
-    @ObservedObject var viewModel: QueueViewModel
+    /// Action callbacks instead of an `@ObservedObject viewModel` so the row
+    /// re-renders only when its own `item` value changes — not on every
+    /// QueueViewModel publish. Closures are wrapped in `Equatable` checks at
+    /// the SwiftUI diff level via the surrounding `ForEach(... id: \.id)`.
+    let onPause: () -> Void
+    let onResume: () -> Void
+    let onDelete: () -> Void
     @EnvironmentObject var configStore: ConfigStore
     @State private var isHovering = false
     @State private var showDeleteConfirmation = false
@@ -164,7 +170,7 @@ struct QueueRowView: View {
         }
         .alert("Remove download?", isPresented: $showDeleteConfirmation) {
             Button("Remove", role: .destructive) {
-                Task { await viewModel.delete(item) }
+                onDelete()
             }
             Button("Cancel", role: .cancel) {}
         } message: {
@@ -219,11 +225,11 @@ struct QueueRowView: View {
             if canControl && canPauseResume {
                 if item.isPaused {
                     IconButton(symbol: "play.fill", helpKey: "Resume", accessibilityLabel: "Resume \(item.title)") {
-                        Task { await viewModel.resume(item) }
+                        onResume()
                     }
                 } else {
                     IconButton(symbol: "pause.fill", helpKey: "Pause", accessibilityLabel: "Pause \(item.title)") {
-                        Task { await viewModel.pause(item) }
+                        onPause()
                     }
                 }
             }

@@ -73,7 +73,18 @@ struct QueueSectionView: View {
                 } else {
                     VStack(spacing: 2) {
                         ForEach(items) { item in
-                            QueueRowView(item: item, viewModel: viewModel)
+                            QueueRowView(
+                                item: item,
+                                onPause: { [weak viewModel] in
+                                    Task { await viewModel?.pause(item) }
+                                },
+                                onResume: { [weak viewModel] in
+                                    Task { await viewModel?.resume(item) }
+                                },
+                                onDelete: { [weak viewModel] in
+                                    Task { await viewModel?.delete(item) }
+                                }
+                            )
                         }
                     }
                 }
