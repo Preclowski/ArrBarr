@@ -107,13 +107,48 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             title: String(localized: "Open in browser"),
             options: [.foreground]
         )
-        let category = UNNotificationCategory(
+        let pauseAction = UNNotificationAction(
+            identifier: NotificationCoalescer.pauseActionIdentifier,
+            title: String(localized: "Pause"),
+            options: []
+        )
+        let resumeAction = UNNotificationAction(
+            identifier: NotificationCoalescer.resumeActionIdentifier,
+            title: String(localized: "Start downloading"),
+            options: []
+        )
+        let removeAction = UNNotificationAction(
+            identifier: NotificationCoalescer.removeActionIdentifier,
+            title: String(localized: "Remove"),
+            options: [.destructive]
+        )
+
+        // Multi-item batch — only "Open" is meaningful; pause/remove can't
+        // target a specific item from a batched banner.
+        let batchCategory = UNNotificationCategory(
             identifier: NotificationCoalescer.categoryIdentifier,
             actions: [openAction],
             intentIdentifiers: [],
             options: []
         )
-        UNUserNotificationCenter.current().setNotificationCategories([category])
+        // Single item that's currently downloading.
+        let downloadingCategory = UNNotificationCategory(
+            identifier: NotificationCoalescer.downloadingCategoryIdentifier,
+            actions: [openAction, pauseAction, removeAction],
+            intentIdentifiers: [],
+            options: []
+        )
+        // Single item that's currently paused (or queued waiting on the
+        // download client).
+        let pausedCategory = UNNotificationCategory(
+            identifier: NotificationCoalescer.pausedCategoryIdentifier,
+            actions: [openAction, resumeAction, removeAction],
+            intentIdentifiers: [],
+            options: []
+        )
+        UNUserNotificationCenter.current().setNotificationCategories([
+            batchCategory, downloadingCategory, pausedCategory,
+        ])
     }
 
     // MARK: - Popover
@@ -205,9 +240,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
-        let view = SettingsView(onShowWelcome: { [weak self] in
-            self?.openWelcome(force: true)
-        }).environmentObject(configStore)
+        let view = SettingsView(
+            onShowWelcome: { [weak self] in self?.openWelcome(force: true) },
+            onTestNotification: { [weak self] in self?.queueVM.fireTestNotification() }
+        ).environmentObject(configStore)
         let hosting = NSHostingController(rootView: view)
         let win = NSWindow(contentViewController: hosting)
         win.title = String(localized: "ArrBarr Settings")
@@ -369,8 +405,9 @@ extension AppDelegate: @preconcurrency UNUserNotificationCenterDelegate {
         completionHandler([.banner, .sound])
     }
 
-    /// Tapping the banner OR pressing the "Open in browser" action both open
-    /// the arr's `/activity/queue` page using the base URL we stored in userInfo.
+    /// Tap on banner / "Open in browser" → opens the arr's queue page.
+    /// Pause / Resume / Remove → looks up the QueueItem by source + arrQueueId
+    /// in the current QueueViewModel state and calls the matching action.
     func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse,
@@ -378,14 +415,69 @@ extension AppDelegate: @preconcurrency UNUserNotificationCenterDelegate {
     ) {
         defer { completionHandler() }
         let action = response.actionIdentifier
-        guard action == UNNotificationDefaultActionIdentifier
-              || action == NotificationCoalescer.openActionIdentifier
-        else { return }
-        guard let base = response.notification.request.content.userInfo[NotificationCoalescer.userInfoBaseURLKey] as? String,
+        let userInfo = response.notification.request.content.userInfo
+
+        switch action {
+        case UNNotificationDefaultActionIdentifier:
+            // Tapping the banner body opens the menu-bar popover —
+            // that's the app's primary surface and likely what the user
+            // expects after seeing a status update.
+            Task { @MainActor in self.openPopover() }
+        case NotificationCoalescer.openActionIdentifier:
+            openArrQueue(from: userInfo)
+        case NotificationCoalescer.pauseActionIdentifier:
+            performQueueAction(from: userInfo) { vm, item in
+                Task { await vm.pause(item) }
+            }
+        case NotificationCoalescer.resumeActionIdentifier:
+            performQueueAction(from: userInfo) { vm, item in
+                Task { await vm.resume(item) }
+            }
+        case NotificationCoalescer.removeActionIdentifier:
+            performQueueAction(from: userInfo) { vm, item in
+                Task { await vm.delete(item) }
+            }
+        default:
+            break
+        }
+    }
+
+    private func openArrQueue(from userInfo: [AnyHashable: Any]) {
+        guard let base = userInfo[NotificationCoalescer.userInfoBaseURLKey] as? String,
               let url = ArrActivityURLBuilder.queueURL(forBase: base),
               let scheme = url.scheme?.lowercased(),
               scheme == "http" || scheme == "https"
         else { return }
         Task { @MainActor in NSWorkspace.shared.open(url) }
+    }
+
+    private func performQueueAction(
+        from userInfo: [AnyHashable: Any],
+        run: @escaping @MainActor (QueueViewModel, QueueItem) -> Void
+    ) {
+        guard let sourceRaw = userInfo[NotificationCoalescer.userInfoSourceKey] as? String,
+              let source = QueueItem.Source(rawValue: sourceRaw),
+              let arrQueueId = userInfo[NotificationCoalescer.userInfoQueueIdKey] as? Int
+        else { return }
+        Task { @MainActor in
+            // Find the item in the current snapshot. If the user hasn't opened
+            // the popover since launch the VM may not have polled yet — kick
+            // a refresh first so the item is present.
+            if findItem(source: source, arrQueueId: arrQueueId) == nil {
+                await queueVM.refresh()
+            }
+            guard let item = findItem(source: source, arrQueueId: arrQueueId) else { return }
+            run(queueVM, item)
+        }
+    }
+
+    private func findItem(source: QueueItem.Source, arrQueueId: Int) -> QueueItem? {
+        let pool: [QueueItem]
+        switch source {
+        case .radarr: pool = queueVM.radarr
+        case .sonarr: pool = queueVM.sonarr
+        case .lidarr: pool = queueVM.lidarr
+        }
+        return pool.first { $0.arrQueueId == arrQueueId }
     }
 }

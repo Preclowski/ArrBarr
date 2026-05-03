@@ -896,6 +896,18 @@
     },
     "Open Settings" : {
       "extractionState" : "manual"
+    },
+    "Start downloading" : {
+      "extractionState" : "manual"
+    },
+    "Send test notification" : {
+      "extractionState" : "manual"
+    },
+    "New" : {
+      "extractionState" : "manual"
+    },
+    "Needs attention" : {
+      "extractionState" : "manual"
     }
   }
 }

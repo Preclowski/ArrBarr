@@ -52,6 +52,12 @@ final class QueueViewModel: ObservableObject {
         (radarr + sonarr + lidarr).filter { $0.status != .completed }.count
     }
 
+    /// Fires a sample banner so the user can preview the notification UI
+    /// (score, tags, poster, actions) without waiting for a real grab.
+    func fireTestNotification() {
+        coalescer.postTest()
+    }
+
     init(configStore: ConfigStore = .shared) {
         self.configStore = configStore
         self.aggregator = QueueAggregator(configStore: configStore)

@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SettingsView: View {
     var onShowWelcome: (() -> Void)? = nil
+    var onTestNotification: (() -> Void)? = nil
 
     @EnvironmentObject var configStore: ConfigStore
     @State private var draggingKey: String?
@@ -113,9 +114,14 @@ struct SettingsView: View {
                     }
                 }
             }
-            if let onShowWelcome {
+            if onShowWelcome != nil || onTestNotification != nil {
                 Section {
-                    Button("Show welcome screen") { onShowWelcome() }
+                    if let onTestNotification {
+                        Button("Send test notification") { onTestNotification() }
+                    }
+                    if let onShowWelcome {
+                        Button("Show welcome screen") { onShowWelcome() }
+                    }
                 }
             }
         }
