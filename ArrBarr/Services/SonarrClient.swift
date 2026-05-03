@@ -203,6 +203,29 @@ actor SonarrClient {
         )
     }
 
+    /// Extracts the scene-style release group suffix from a release name —
+    /// the trailing `-GROUP` token after the final dash, with any file
+    /// extension stripped first. Used to fingerprint per-episode releases
+    /// that came from the same uploader so virtual season grouping can
+    /// collapse them into one row.
+    private static func parseReleaseGroup(from name: String?) -> String? {
+        guard let name, !name.isEmpty else { return nil }
+        var stripped = name
+        if let dot = stripped.lastIndex(of: ".") {
+            let ext = stripped[stripped.index(after: dot)...]
+            // Only strip if it looks like a file extension (≤4 alphanum chars).
+            if ext.count <= 4, ext.allSatisfy({ $0.isLetter || $0.isNumber }) {
+                stripped = String(stripped[..<dot])
+            }
+        }
+        guard let dash = stripped.lastIndex(of: "-") else { return nil }
+        let token = stripped[stripped.index(after: dash)...]
+        guard !token.isEmpty,
+              token.allSatisfy({ $0.isLetter || $0.isNumber || $0 == "_" })
+        else { return nil }
+        return String(token)
+    }
+
     private static func unify(_ r: SonarrQueueRecord, baseURL: String, fileMap: [Int: SonarrEpisodeFile]) -> QueueItem {
         let total = Int64(r.size ?? 0)
         let left = Int64(r.sizeleft ?? 0)
@@ -255,6 +278,7 @@ actor SonarrClient {
             customFormats: (r.customFormats ?? []).map(\.name),
             customFormatScore: r.customFormatScore ?? 0,
             quality: r.quality?.name,
+            releaseGroup: parseReleaseGroup(from: r.title),
             isUpgrade: isUpgrade,
             existingCustomFormats: (existingFile?.customFormats ?? []).map(\.name),
             existingCustomFormatScore: existingFile?.customFormatScore,

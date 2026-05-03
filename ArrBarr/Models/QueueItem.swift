@@ -57,6 +57,7 @@ struct QueueItem: Identifiable, Equatable {
     let customFormats: [String]
     let customFormatScore: Int
     let quality: String?
+    let releaseGroup: String?
     let isUpgrade: Bool
     let existingCustomFormats: [String]
     let existingCustomFormatScore: Int?
@@ -76,7 +77,7 @@ struct QueueItem: Identifiable, Equatable {
         status: Status, progress: Double, sizeTotal: Int64,
         sizeLeft: Int64, timeLeft: String?,
         customFormats: [String], customFormatScore: Int,
-        quality: String?, isUpgrade: Bool,
+        quality: String?, releaseGroup: String? = nil, isUpgrade: Bool,
         existingCustomFormats: [String] = [], existingCustomFormatScore: Int? = nil, existingQuality: String? = nil,
         existingSize: Int64? = nil, existingFileName: String? = nil,
         contentSlug: String?,
@@ -89,7 +90,8 @@ struct QueueItem: Identifiable, Equatable {
         self.status = status; self.progress = progress; self.sizeTotal = sizeTotal
         self.sizeLeft = sizeLeft; self.timeLeft = timeLeft
         self.customFormats = customFormats; self.customFormatScore = customFormatScore
-        self.quality = quality; self.isUpgrade = isUpgrade; self.contentSlug = contentSlug
+        self.quality = quality; self.releaseGroup = releaseGroup
+        self.isUpgrade = isUpgrade; self.contentSlug = contentSlug
         self.existingCustomFormats = existingCustomFormats
         self.existingCustomFormatScore = existingCustomFormatScore
         self.existingQuality = existingQuality

@@ -122,7 +122,12 @@ struct QueueRowView: View {
                     .font(.system(size: 10))
                     .lineLimit(1)
                 }
-                .hoverActions(visible: isHovering) { actionButtons }
+                // Keep action buttons visible while the tooltip popover is
+                // open: the popover floats above the row and steals the
+                // mouse, dropping `isHovering` to false — without this the
+                // pause/remove icons would vanish the moment the tooltip
+                // appeared, even though the cursor is still on the row.
+                .hoverActions(visible: isHovering || showTooltip) { actionButtons }
 
                 ProgressView(value: item.progress)
                     .progressViewStyle(.linear)
@@ -502,9 +507,6 @@ struct QueueItemTooltip: View {
                 }
             } else if let size = item.existingSize, size > 0 {
                 row("Size", value: ByteCountFormatter.string(fromByteCount: size, countStyle: .file))
-            }
-            if let file = item.existingFileName, !file.isEmpty {
-                row("File", value: file, mono: true, wraps: true)
             }
         }
         if !item.existingCustomFormats.isEmpty || (item.existingCustomFormatScore ?? 0) != 0 {

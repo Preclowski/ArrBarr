@@ -103,18 +103,31 @@ struct QueueSectionView: View {
                 onDelete: { [weak viewModel] in Task { await viewModel?.delete(item) } }
             )
         case .group(let group):
-            // Pause/resume act on the representative — all members share a
-            // downloadId so a single arr API call affects the whole download
-            // (the client only knows about the one shared file). Delete is
-            // a special case: each member has its own arr queue entry, so we
-            // call delete N times via `deleteAll(_:)` — `removeFromClient`
-            // only on the first one, the rest just clean up the queue rows.
+            // Action wiring depends on whether the row is a real pack or a
+            // virtual bundle. Packs share one downloadId, so pause/resume
+            // on the representative already affects every sibling at the
+            // arr level. Virtual bundles wrap N independent downloads, so
+            // every action must fan out.
+            // Delete uniformly goes through `deleteAll(_:)`; the aggregator
+            // figures out per-call `removeFromClient` from the items.
+            let items = group.items
             let rep = group.representative
+            let isVirtual = group.kind == .virtual
             QueueGroupRowView(
                 group: group,
-                onPause:  { [weak viewModel] in Task { await viewModel?.pause(rep) } },
-                onResume: { [weak viewModel] in Task { await viewModel?.resume(rep) } },
-                onDelete: { [weak viewModel] in Task { await viewModel?.deleteAll(group.items) } }
+                onPause: { [weak viewModel] in
+                    Task {
+                        if isVirtual { await viewModel?.pauseAll(items) }
+                        else { await viewModel?.pause(rep) }
+                    }
+                },
+                onResume: { [weak viewModel] in
+                    Task {
+                        if isVirtual { await viewModel?.resumeAll(items) }
+                        else { await viewModel?.resume(rep) }
+                    }
+                },
+                onDelete: { [weak viewModel] in Task { await viewModel?.deleteAll(items) } }
             )
         }
     }

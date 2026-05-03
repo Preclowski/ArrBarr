@@ -174,16 +174,27 @@ final class QueueAggregator {
         }
     }
 
-    /// Removes every member of a season pack from the arr queue. Only the
-    /// first call sets `removeFromClient: true` because all members share a
-    /// downloadId — that single call already removes the underlying download
-    /// from the client. The remaining calls just clean up the per-episode
-    /// arr queue entries (without `removeFromClient` they'd otherwise linger
-    /// for ~30s until Sonarr's queue GC reconciled them).
+    /// Removes every member of a grouped row from the arr queue.
+    ///
+    /// Two cases share this entry point:
+    ///   - **Real season pack** — all members share one `downloadId`. The
+    ///     first call sets `removeFromClient: true` (that single call
+    ///     removes the physical download); the rest just clean up sibling
+    ///     queue rows so the popover doesn't leave them orphaned for ~30s
+    ///     while Sonarr's queue GC catches up.
+    ///   - **Virtual season bundle** — members have distinct `downloadId`s,
+    ///     each backing its own download. Every call must set
+    ///     `removeFromClient: true` so every torrent/nzb is removed.
+    ///
+    /// The two cases are distinguished by whether all members share the
+    /// same non-empty downloadId.
     func deleteAll(_ items: [QueueItem]) async throws {
+        let downloadIds = Set(items.compactMap { $0.downloadId?.isEmpty == false ? $0.downloadId : nil })
+        let sharedDownload = downloadIds.count <= 1
         var first = true
         for item in items {
-            try await deleteViaArr(item, removeFromClient: first)
+            let removeFromClient = sharedDownload ? first : true
+            try await deleteViaArr(item, removeFromClient: removeFromClient)
             first = false
         }
     }

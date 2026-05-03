@@ -148,6 +148,7 @@ enum DemoMocks {
         items.append(contentsOf: caminandesSeasonPack)
         items.append(contentsOf: tearsOfSteelSeasonPack)
         items.append(contentsOf: pioneerOneIndependentEpisodes)
+        items.append(contentsOf: springTalesVirtualBundle)
         items.append(contentsOf: [
             queueItem(
                 source: .sonarr, id: "demo-sonarr-2",
@@ -288,6 +289,43 @@ enum DemoMocks {
                 posterSeed: "pioneerone",
                 aspect: .portrait
                 // No downloadId override — defaults to id, so each is unique.
+            )
+        }
+    }
+
+    /// Four Spring Tales episodes downloaded as separate releases that all
+    /// share the same release group, quality, and custom formats — a manually
+    /// assembled "season" rather than a real season pack. Each episode keeps
+    /// its own `downloadId` (the client sees four torrents) so QueueGrouping
+    /// can only collapse them via the second-pass virtual fingerprint.
+    /// Exercises the `.virtual` row variant: "Season" badge, aggregate
+    /// progress bar, fan-out pause/resume.
+    private static var springTalesVirtualBundle: [QueueItem] {
+        let cfs = ["AMZN", "DDP 5.1", "x264"]
+        let episodes: [(num: Int, title: String, status: QueueItem.Status, progress: Double)] = [
+            (1, "Bloom",   .downloading, 0.82),
+            (2, "Petals",  .downloading, 0.54),
+            (3, "Pollen",  .downloading, 0.31),
+            (4, "Wilt",    .queued,      0.00),
+        ]
+        return episodes.map { ep in
+            queueItem(
+                source: .sonarr,
+                id: "demo-sonarr-virtual-\(ep.num)",
+                title: "Spring Tales (2019)",
+                subtitle: String(format: "S01E%02d · %@", ep.num, ep.title),
+                releaseName: String(format: "Spring.Tales.S01E%02d.1080p.WEB-DL.x264-DEMO", ep.num),
+                status: ep.status,
+                progress: ep.progress,
+                quality: "WEB-DL 1080p",
+                formats: cfs,
+                score: 420,
+                client: "qBittorrent",
+                indexer: "DemoTracker",
+                upgrade: false,
+                posterSeed: "spring",
+                aspect: .portrait,
+                releaseGroup: "DEMO"
             )
         }
     }
@@ -478,7 +516,8 @@ enum DemoMocks {
         client: String = "qBittorrent", indexer: String? = nil,
         upgrade: Bool, existing: ExistingFile? = nil,
         posterSeed: String, aspect: Aspect,
-        downloadId: String? = nil
+        downloadId: String? = nil,
+        releaseGroup: String? = nil
     ) -> QueueItem {
         let total: Int64 = 4_500_000_000
         let left = Int64(Double(total) * (1 - progress))
@@ -502,7 +541,7 @@ enum DemoMocks {
             status: status, progress: progress,
             sizeTotal: total, sizeLeft: left, timeLeft: timeLeft,
             customFormats: formats, customFormatScore: score,
-            quality: quality, isUpgrade: upgrade,
+            quality: quality, releaseGroup: releaseGroup, isUpgrade: upgrade,
             existingCustomFormats: existing?.formats ?? [],
             existingCustomFormatScore: existing?.score,
             existingQuality: existing?.quality,

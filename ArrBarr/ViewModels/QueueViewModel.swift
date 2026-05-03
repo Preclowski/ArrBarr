@@ -297,9 +297,13 @@ final class QueueViewModel: ObservableObject {
         await runAction(.delete, on: item)
     }
 
-    /// Bulk delete used for season packs — removes every member queue entry
-    /// in one go so we don't leave the popover with N−1 sibling rows
-    /// orphaned for ~30s while Sonarr's queue GC catches up.
+    /// Bulk delete used for season packs and virtual season bundles. For a
+    /// real pack (one shared `downloadId`) the underlying download is
+    /// removed by the first call only and the rest just clean up sibling
+    /// queue rows. For a virtual bundle (N independent `downloadId`s) every
+    /// call must remove from the client because each member is its own
+    /// physical download. `aggregator.deleteAll` infers which case applies
+    /// from the items' downloadIds.
     func deleteAll(_ items: [QueueItem]) async {
         guard !items.isEmpty else { return }
         do {
@@ -309,6 +313,17 @@ final class QueueViewModel: ObservableObject {
         } catch {
             lastError = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
         }
+    }
+
+    /// Fan-out pause/resume for virtual season bundles. Real season packs
+    /// don't go through this path (one shared downloadId means a single
+    /// `pause(rep)` already affects the whole pack), but virtual bundles
+    /// need one client call per member.
+    func pauseAll(_ items: [QueueItem]) async {
+        for item in items { await pause(item) }
+    }
+    func resumeAll(_ items: [QueueItem]) async {
+        for item in items { await resume(item) }
     }
 
     private func runAction(_ action: QueueAggregator.Action, on item: QueueItem) async {

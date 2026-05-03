@@ -63,7 +63,11 @@ struct QueueGroupRowView: View {
 
                         // Title-row badges: colour-tinted capsules, mirrors
                         // QueueRowView so the row reads as a sibling.
-                        Text("Season pack")
+                        // `.virtual` bundles say just "Season" — they're N
+                        // independent downloads, not one physical pack, and
+                        // the user shouldn't be misled into thinking the
+                        // release is a single torrent/nzb.
+                        Text(group.kind == .pack ? "Season pack" : "Season")
                             .font(.system(size: 8, weight: .semibold))
                             .foregroundStyle(Color.teal)
                             .padding(.horizontal, 4)
@@ -113,9 +117,12 @@ struct QueueGroupRowView: View {
                     .font(.system(size: 10))
                     .lineLimit(1)
                 }
-                .hoverActions(visible: isHovering) { actionButtons }
+                // See QueueRowView: tooltip popover steals the mouse, so we
+                // also treat `showTooltip` as "still hovering" to keep the
+                // pause/remove icons reachable while the tooltip is up.
+                .hoverActions(visible: isHovering || showTooltip) { actionButtons }
 
-                ProgressView(value: rep.progress)
+                ProgressView(value: aggregateProgress)
                     .progressViewStyle(.linear)
                     .tint(rep.status.tint)
                     .frame(height: 3)
@@ -188,6 +195,23 @@ struct QueueGroupRowView: View {
 
     private var episodeCountText: String {
         String(format: String(localized: "%lld episodes"), group.memberCount)
+    }
+
+    /// Aggregate completion across all members. For `.pack` groups this
+    /// reduces to the rep's progress (every member is the same physical
+    /// download with the same size/sizeleft). For `.virtual` bundles each
+    /// member is its own download, so weighted-by-size aggregation is the
+    /// only honest summary — a 60% bar means the bundle as a whole is 60%
+    /// transferred. Falls back to a count-based mean if no sizes are known.
+    private var aggregateProgress: Double {
+        let total = group.items.reduce(Int64(0)) { $0 + $1.sizeTotal }
+        let left  = group.items.reduce(Int64(0)) { $0 + $1.sizeLeft }
+        if total > 0 {
+            return max(0, min(1, 1.0 - Double(left) / Double(total)))
+        }
+        let count = Double(group.items.count)
+        guard count > 0 else { return 0 }
+        return group.items.reduce(0.0) { $0 + $1.progress } / count
     }
 
     private static func parseSeason(from subtitle: String?) -> Int? {
@@ -405,14 +429,6 @@ struct QueueGroupTooltip: View {
                 }
             }
 
-            if let name = member.existingFileName, !name.isEmpty {
-                Text(name)
-                    .font(.system(size: 11, design: .monospaced))
-                    .foregroundStyle(.tertiary)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
         }
     }
 
@@ -557,13 +573,27 @@ struct QueueGroupTooltip: View {
     }
 
     private var episodeList: some View {
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: 3) {
             ForEach(group.items) { item in
                 if let sub = item.subtitle, !sub.isEmpty {
-                    Text(sub)
-                        .font(.system(size: 11))
-                        .foregroundStyle(.primary)
-                        .lineLimit(1)
+                    HStack(alignment: .center, spacing: 8) {
+                        Text(sub)
+                            .font(.system(size: 11))
+                            .foregroundStyle(.primary)
+                            .lineLimit(1)
+                            .layoutPriority(1)
+                        // Slim per-episode progress bar. For real packs the
+                        // members all share progress (same downloadId) so
+                        // every bar shows the same value — that's fine, it
+                        // reads as "consistent" rather than special-cased.
+                        // For virtual bundles each download has its own
+                        // progress, which is the whole point of showing it.
+                        ProgressView(value: max(0, min(1, item.progress)))
+                            .progressViewStyle(.linear)
+                            .tint(item.status.tint)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 3)
+                    }
                 }
             }
         }
