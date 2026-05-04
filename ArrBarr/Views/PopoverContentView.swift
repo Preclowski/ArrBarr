@@ -53,6 +53,12 @@ struct PopoverContentView: View {
             .onChange(of: selectedTab) { _, newTab in
                 if newTab != .search { searchResult = nil }
             }
+            .onChange(of: searchConfigured) { _, configured in
+                if !configured && selectedTab == .search {
+                    selectedTab = .queue
+                    searchResult = nil
+                }
+            }
             .background {
                 Button("", action: onOpenSettings)
                     .keyboardShortcut(",", modifiers: .command)
