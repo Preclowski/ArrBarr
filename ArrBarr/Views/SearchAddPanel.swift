@@ -26,7 +26,7 @@ struct SearchAddPanel: View {
                         Text("Results")
                             .font(.system(size: 12))
                     }
-                    .foregroundStyle(.accent)
+                    .foregroundStyle(Color.accentColor)
                 }
                 .buttonStyle(.plain)
 
