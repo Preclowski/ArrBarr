@@ -20,17 +20,17 @@ actor SearchClient {
 
     func lookup(query: String) async throws -> [SearchResult] {
         guard config.isConfigured else { throw HTTPError.notConfigured }
-        let encoded = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? query
+        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
         switch source {
         case .radarr:
             let url = try http.url(base: config.baseURL, path: "\(apiBase)/movie/lookup",
-                                   query: [URLQueryItem(name: "term", value: encoded)])
+                                   query: [URLQueryItem(name: "term", value: query)])
             let data = try await http.get(url, headers: headers)
             let records = try JSONDecoder().decode([RadarrLookupRecord].self, from: data)
             return records.compactMap { Self.unifyRadarr($0, baseURL: config.baseURL) }
         case .sonarr:
             let url = try http.url(base: config.baseURL, path: "\(apiBase)/series/lookup",
-                                   query: [URLQueryItem(name: "term", value: encoded)])
+                                   query: [URLQueryItem(name: "term", value: query)])
             let data = try await http.get(url, headers: headers)
             let records = try JSONDecoder().decode([SonarrLookupRecord].self, from: data)
             return records.compactMap { Self.unifySonarr($0, baseURL: config.baseURL) }
@@ -80,6 +80,7 @@ actor SearchClient {
     func addMovie(_ result: SearchResult, qualityProfileId: Int, rootFolderPath: String,
                   monitor: RadarrMonitorMode) async throws {
         guard config.isConfigured else { throw HTTPError.notConfigured }
+        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
         let url = try http.url(base: config.baseURL, path: "\(apiBase)/movie")
         let body: [String: Any] = [
             "tmdbId": result.id,
@@ -98,6 +99,7 @@ actor SearchClient {
                    monitor: SonarrMonitorMode, seriesType: SonarrSeriesType,
                    seasonFolder: Bool) async throws {
         guard config.isConfigured else { throw HTTPError.notConfigured }
+        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
         let url = try http.url(base: config.baseURL, path: "\(apiBase)/series")
         let body: [String: Any] = [
             "tvdbId": result.id,
