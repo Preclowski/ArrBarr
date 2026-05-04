@@ -7,9 +7,7 @@ struct SearchResultRow: View {
     var body: some View {
         Button(action: onTap) {
             HStack(spacing: 8) {
-                RemotePoster(url: result.posterURL, requiresAuth: false)
-                    .frame(width: 26, height: 38)
-                    .clipShape(RoundedRectangle(cornerRadius: 3))
+                RemotePoster(url: result.posterURL, apiKey: nil, size: CGSize(width: 26, height: 38), cornerRadius: 3)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(result.title)

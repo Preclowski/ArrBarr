@@ -120,10 +120,11 @@ struct SearchView: View {
             .frame(maxWidth: .infinity)
             .padding(.vertical, 32)
         } else {
+            let lastID = viewModel.results.last?.id
             LazyVStack(spacing: 0) {
                 ForEach(viewModel.results) { result in
                     SearchResultRow(result: result) { onSelectResult(result) }
-                    if result.id != viewModel.results.last?.id {
+                    if result.id != lastID {
                         Divider().padding(.leading, 46)
                     }
                 }
