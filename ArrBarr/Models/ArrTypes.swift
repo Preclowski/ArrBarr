@@ -267,14 +267,14 @@ struct RadarrLookupRecord: Decodable {
     let year: Int?
     let overview: String?
     let runtime: Int?
-    let ratings: RadarrRatings?
+    let ratings: RadarrLookupRatings?
     let images: [ArrImage]?
 }
 
-struct RadarrRatings: Decodable {
-    let tmdb: RadarrRatingValue?
+struct RadarrLookupRatings: Decodable {
+    let tmdb: RadarrLookupRatingValue?
 }
-struct RadarrRatingValue: Decodable {
+struct RadarrLookupRatingValue: Decodable {
     let value: Double?
 }
 
@@ -283,12 +283,12 @@ struct SonarrLookupRecord: Decodable {
     let title: String
     let year: Int?
     let overview: String?
-    let ratings: SonarrRatings?
+    let ratings: SonarrLookupRatings?
     let images: [ArrImage]?
     let statistics: SonarrLookupStats?
 }
 
-struct SonarrRatings: Decodable {
+struct SonarrLookupRatings: Decodable {
     let value: Double?
 }
 

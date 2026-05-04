@@ -29,5 +29,7 @@ struct SearchDecodingTests {
         let records = try JSONDecoder().decode([SonarrLookupRecord].self, from: json)
         #expect(records[0].tvdbId == 81189)
         #expect(records[0].statistics?.seasonCount == 5)
+        #expect(records[0].title == "Breaking Bad")
+        #expect(records[0].ratings?.value == 9.5)
     }
 }

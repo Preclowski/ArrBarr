@@ -14,7 +14,7 @@ struct RootFolder: Decodable, Identifiable {
 
 // MARK: - Search result (unified)
 
-struct SearchResult: Identifiable {
+struct SearchResult: Identifiable, Equatable, Sendable {
     let id: Int                  // arr's internal id (tmdbId for Radarr, tvdbId for Sonarr)
     let foreignId: String        // tmdbId/tvdbId as string — used in POST body
     let title: String
