@@ -258,3 +258,44 @@ struct SonarrCalendarRecord: Decodable {
     let overview: String?
     let series: SonarrSeries?
 }
+
+// MARK: - Search Lookup
+
+struct RadarrLookupRecord: Decodable {
+    let tmdbId: Int?
+    let title: String
+    let year: Int?
+    let overview: String?
+    let runtime: Int?
+    let ratings: RadarrRatings?
+    let images: [ArrImage]?
+}
+
+struct RadarrRatings: Decodable {
+    let tmdb: RadarrRatingValue?
+}
+struct RadarrRatingValue: Decodable {
+    let value: Double?
+}
+
+struct SonarrLookupRecord: Decodable {
+    let tvdbId: Int?
+    let title: String
+    let year: Int?
+    let overview: String?
+    let ratings: SonarrRatings?
+    let images: [ArrImage]?
+    let statistics: SonarrLookupStats?
+}
+
+struct SonarrRatings: Decodable {
+    let value: Double?
+}
+
+struct SonarrLookupStats: Decodable {
+    let seasonCount: Int?
+}
+
+// Used to fetch existing library ids
+struct RadarrLibraryRecord: Decodable { let tmdbId: Int? }
+struct SonarrLibraryRecord: Decodable { let tvdbId: Int? }
