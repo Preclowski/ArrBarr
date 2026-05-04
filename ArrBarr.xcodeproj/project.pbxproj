@@ -7,6 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		AA000001AA000001AA000001 /* SearchTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000001BB000001BB000001 /* SearchTypes.swift */; };
+		AA000002AA000002AA000002 /* SearchClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000002BB000002BB000002 /* SearchClient.swift */; };
+		AA000003AA000003AA000003 /* SearchViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000003BB000003BB000003 /* SearchViewModel.swift */; };
+		AA000004AA000004AA000004 /* SearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000004BB000004BB000004 /* SearchView.swift */; };
+		AA000005AA000005AA000005 /* SearchAddPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000005BB000005BB000005 /* SearchAddPanel.swift */; };
+		AA000006AA000006AA000006 /* SearchResultRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000006BB000006BB000006 /* SearchResultRow.swift */; };
 		0D0E434079D152B096897BEC /* QueueRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F0FF31BB5B3550A51F6B5B5 /* QueueRowView.swift */; };
 		1B335D47ED0EF6F0A6A611D0 /* SonarrClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CFA6A783235C2E8FC843636 /* SonarrClient.swift */; };
 		1F0B1A9D78DA2F2F554BA54D /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64DC7B599FC995056A674DBF /* AppDelegate.swift */; };
@@ -104,6 +110,12 @@
 		E14AF8E6BCD3E031F64403D2 /* QbittorrentClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QbittorrentClient.swift; sourceTree = "<group>"; };
 		E476A3C86CE13DD5526DF9D8 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		F863F233B791C2E808B72760 /* HTTPClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTTPClient.swift; sourceTree = "<group>"; };
+		BB000001BB000001BB000001 /* SearchTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchTypes.swift; sourceTree = "<group>"; };
+		BB000002BB000002BB000002 /* SearchClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchClient.swift; sourceTree = "<group>"; };
+		BB000003BB000003BB000003 /* SearchViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchViewModel.swift; sourceTree = "<group>"; };
+		BB000004BB000004BB000004 /* SearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchView.swift; sourceTree = "<group>"; };
+		BB000005BB000005BB000005 /* SearchAddPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchAddPanel.swift; sourceTree = "<group>"; };
+		BB000006BB000006BB000006 /* SearchResultRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchResultRow.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -147,6 +159,7 @@
 				B85A3F5E5F9F46F61156DA3D /* QueueAggregator.swift */,
 				65F8FDEDB2C4659A3568297C /* RadarrClient.swift */,
 				6C9F852D3892059766CF0A72 /* SabnzbdClient.swift */,
+				BB000002BB000002BB000002 /* SearchClient.swift */,
 				0CFA6A783235C2E8FC843636 /* SonarrClient.swift */,
 				71E25D5C2F9F9AC00054A864 /* NzbgetClient.swift */,
 				71E25D5E2F9F9AC10054A864 /* TransmissionClient.swift */,
@@ -189,6 +202,7 @@
 			isa = PBXGroup;
 			children = (
 				CF6D4EBB94011D47E0A4B2A0 /* QueueViewModel.swift */,
+				BB000003BB000003BB000003 /* SearchViewModel.swift */,
 			);
 			path = ViewModels;
 			sourceTree = "<group>";
@@ -203,6 +217,9 @@
 				7A1D7C272F0000010000000E /* QueueGroupRowView.swift */,
 				BA286A35655E257C9FEF3288 /* QueueSectionView.swift */,
 				7A1D7C112F00000100000003 /* RemotePoster.swift */,
+				BB000004BB000004BB000004 /* SearchView.swift */,
+				BB000005BB000005BB000005 /* SearchAddPanel.swift */,
+				BB000006BB000006BB000006 /* SearchResultRow.swift */,
 				2C97656F4DBD8BBE0158EDA9 /* SettingsView.swift */,
 				B6B3B33C463CCA1E9E75154D /* UpcomingRowView.swift */,
 				7A1D7C232F0000010000000C /* WelcomeView.swift */,
@@ -218,6 +235,7 @@
 				7A1D7C192F00000100000007 /* HistoryItem.swift */,
 				7A1D7C252F0000010000000D /* QueueGroup.swift */,
 				8368F44E56EB243C645549E1 /* QueueItem.swift */,
+				BB000001BB000001BB000001 /* SearchTypes.swift */,
 				606C6BB84653A29854DC76F9 /* ServiceConfig.swift */,
 				590B1E74DF4B4704433BA229 /* UpcomingItem.swift */,
 			);
@@ -381,6 +399,12 @@
 				7A1D7C242F0000010000000C /* WelcomeView.swift in Sources */,
 				7A1D7C262F0000010000000D /* QueueGroup.swift in Sources */,
 				7A1D7C282F0000010000000E /* QueueGroupRowView.swift in Sources */,
+				AA000001AA000001AA000001 /* SearchTypes.swift in Sources */,
+				AA000002AA000002AA000002 /* SearchClient.swift in Sources */,
+				AA000003AA000003AA000003 /* SearchViewModel.swift in Sources */,
+				AA000004AA000004AA000004 /* SearchView.swift in Sources */,
+				AA000005AA000005AA000005 /* SearchAddPanel.swift in Sources */,
+				AA000006AA000006AA000006 /* SearchResultRow.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

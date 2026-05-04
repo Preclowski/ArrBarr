@@ -9,6 +9,8 @@ struct PopoverContentView: View {
     @State private var selectedTab: Tab = .queue
     @State private var historySource: QueueItem.Source?
     @State private var historyRefreshNonce = 0
+    @StateObject private var searchViewModel = SearchViewModel()
+    @State private var searchResult: SearchResult?
 
     private let maxScrollHeight: CGFloat = 520
 
@@ -16,6 +18,15 @@ struct PopoverContentView: View {
     private var radarrConfigured: Bool { isVisible(configStore.radarr) }
     private var lidarrConfigured: Bool { isVisible(configStore.lidarr) }
     private var anyArrConfigured: Bool { sonarrConfigured || radarrConfigured || lidarrConfigured }
+
+    private var searchSources: [QueueItem.Source] {
+        [
+            sonarrConfigured ? QueueItem.Source.sonarr : nil,
+            radarrConfigured ? QueueItem.Source.radarr : nil,
+        ].compactMap { $0 }
+    }
+
+    private var searchConfigured: Bool { !searchSources.isEmpty }
 
     /// In demo mode, show an arr whenever it's enabled (the configs are seeded to
     /// `enabled = true` on first demo launch — see `DemoMode.seedConfigsIfNeeded`).
@@ -27,11 +38,21 @@ struct PopoverContentView: View {
     enum Tab: String, CaseIterable {
         case queue = "Queue"
         case upcoming = "Upcoming"
+        case search = "Search"
     }
 
     var body: some View {
         mainContent
             .environment(\.locale, configStore.currentLocale)
+            .onAppear {
+                searchViewModel.setup(
+                    radarrConfig: configStore.radarr,
+                    sonarrConfig: configStore.sonarr
+                )
+            }
+            .onChange(of: selectedTab) { _, newTab in
+                if newTab != .search { searchResult = nil }
+            }
             .background {
                 Button("", action: onOpenSettings)
                     .keyboardShortcut(",", modifiers: .command)
@@ -56,6 +77,19 @@ struct PopoverContentView: View {
                     switch selectedTab {
                     case .queue: queueContent
                     case .upcoming: upcomingContent
+                    case .search:
+                        if let result = searchResult {
+                            SearchAddPanel(result: result, viewModel: searchViewModel) {
+                                searchResult = nil
+                            }
+                        } else {
+                            SearchView(
+                                viewModel: searchViewModel,
+                                configuredSources: searchSources
+                            ) { result in
+                                searchResult = result
+                            }
+                        }
                     }
                 }
             } else {
@@ -129,9 +163,16 @@ struct PopoverContentView: View {
 
     // MARK: - Tab bar
 
+    private var visibleTabs: [Tab] {
+        Tab.allCases.filter { tab in
+            if tab == .search { return searchConfigured }
+            return true
+        }
+    }
+
     private var tabBar: some View {
         HStack(spacing: 0) {
-            ForEach(Tab.allCases, id: \.self) { tab in
+            ForEach(visibleTabs, id: \.self) { tab in
                 Button {
                     withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) { selectedTab = tab }
                 } label: {
@@ -147,9 +188,9 @@ struct PopoverContentView: View {
         }
         .background(
             GeometryReader { geo in
-                let count = CGFloat(Tab.allCases.count)
+                let count = CGFloat(visibleTabs.count)
                 let segment = geo.size.width / count
-                let index = CGFloat(Tab.allCases.firstIndex(of: selectedTab) ?? 0)
+                let index = CGFloat(visibleTabs.firstIndex(of: selectedTab) ?? 0)
                 TabPillBackground()
                     .frame(width: segment - 4, height: geo.size.height - 4)
                     .offset(x: segment * index + 2, y: 2)
