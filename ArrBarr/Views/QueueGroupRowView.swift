@@ -395,7 +395,7 @@ struct QueueGroupTooltip: View {
                 .font(.system(size: 11))
                 .foregroundStyle(.secondary)
         } else {
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 2) {
                 ForEach(upgradedMembers) { member in
                     existingMemberBlock(member)
                 }
@@ -573,26 +573,27 @@ struct QueueGroupTooltip: View {
     }
 
     private var episodeList: some View {
-        VStack(alignment: .leading, spacing: 3) {
+        VStack(alignment: .leading, spacing: 2) {
             ForEach(group.items) { item in
                 if let sub = item.subtitle, !sub.isEmpty {
-                    HStack(alignment: .center, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 1) {
                         Text(sub)
                             .font(.system(size: 11))
                             .foregroundStyle(.primary)
                             .lineLimit(1)
-                            .layoutPriority(1)
-                        // Slim per-episode progress bar. For real packs the
-                        // members all share progress (same downloadId) so
-                        // every bar shows the same value — that's fine, it
-                        // reads as "consistent" rather than special-cased.
-                        // For virtual bundles each download has its own
-                        // progress, which is the whole point of showing it.
-                        ProgressView(value: max(0, min(1, item.progress)))
-                            .progressViewStyle(.linear)
-                            .tint(item.status.tint)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 3)
+                        GeometryReader { geo in
+                            ZStack(alignment: .leading) {
+                                RoundedRectangle(cornerRadius: 0.5)
+                                    .fill(Color.primary.opacity(0.12))
+                                RoundedRectangle(cornerRadius: 0.5)
+                                    .fill(item.status.tint)
+                                    .frame(width: geo.size.width * max(0, min(1, item.progress)))
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 1)
+                        .padding(.top, 1.5)
+                        .padding(.bottom, 3)
                     }
                 }
             }
