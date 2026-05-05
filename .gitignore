@@ -21,3 +21,4 @@ Package.resolved
 
 # Temporary icon layers (source is AppIcon.icon)
 IconLayers/
+.superpowers/
