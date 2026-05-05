@@ -412,9 +412,19 @@ public struct QueueGroupTooltip: View {
     /// inline "↑ replaces …" line with chips.
     private var episodeQueueList: some View {
         let showPerRow = uniformExistingFile == nil
+        // For real `.pack` groups every member shares one physical release,
+        // so quality + new-format chips repeat the pack header verbatim on
+        // every row — hide them. `.virtual` bundles are independent
+        // downloads that genuinely differ per row, so keep the per-row
+        // metadata visible there.
+        let showNewMeta = group.kind == .virtual
         return VStack(alignment: .leading, spacing: 4) {
             ForEach(group.items) { it in
-                TooltipQueueRow(item: it, showExistingFile: showPerRow)
+                TooltipQueueRow(
+                    item: it,
+                    showExistingFile: showPerRow,
+                    showNewFileMeta: showNewMeta
+                )
             }
         }
     }
@@ -538,10 +548,18 @@ public struct TooltipQueueRow: View {
     /// detail is necessary; suppressed when a top-level summary card
     /// already covers it (Variant A).
     var showExistingFile: Bool = false
+    /// When false, the row hides quality + new-custom-format chips —
+    /// they would otherwise repeat the pack header's identical info on
+    /// every episode. Set false for real `.pack` groups where every
+    /// member shares one physical release; left true for `.virtual`
+    /// bundles where members are independent downloads with potentially
+    /// different new-file metadata.
+    var showNewFileMeta: Bool = true
 
-    public init(item: QueueItem, showExistingFile: Bool = false) {
+    public init(item: QueueItem, showExistingFile: Bool = false, showNewFileMeta: Bool = true) {
         self.item = item
         self.showExistingFile = showExistingFile
+        self.showNewFileMeta = showNewFileMeta
     }
 
     public var body: some View {
@@ -580,7 +598,7 @@ public struct TooltipQueueRow: View {
                 }
             }
             .frame(height: 3)
-            if !item.customFormats.isEmpty || item.customFormatScore != 0 {
+            if showNewFileMeta, !item.customFormats.isEmpty || item.customFormatScore != 0 {
                 TooltipFlowLayout(spacing: 3) {
                     ForEach(item.customFormats, id: \.self) { TagChip(text: $0) }
                     if item.customFormatScore != 0 {
@@ -650,7 +668,10 @@ public struct TooltipQueueRow: View {
                 .trimmingCharacters(in: CharacterSet(charactersIn: " ·–—-"))
             if !stripped.isEmpty { bits.append(stripped) }
         }
-        if let q = item.quality, !q.isEmpty { bits.append(q) }
+        // Quality stays suppressed when the row sits inside a pack — the
+        // pack header already shows the single shared quality, so
+        // repeating it on every episode just adds noise.
+        if showNewFileMeta, let q = item.quality, !q.isEmpty { bits.append(q) }
         return bits.joined(separator: " · ")
     }
 
