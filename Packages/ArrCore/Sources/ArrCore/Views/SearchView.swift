@@ -69,6 +69,40 @@ public struct SearchView: View {
         selectedSource == .radarr ? "Search movies…" : "Search shows…"
     }
 
+    /// Empty-state copy that fills the body before the user types. Without
+    /// it the popover looks broken — search bar, then nothing.
+    private var emptyPrompt: some View {
+        VStack(spacing: 10) {
+            Image(systemName: selectedSource == .radarr ? "film.stack" : "tv.inset.filled")
+                .font(.system(size: 26, weight: .light))
+                .foregroundStyle(.tertiary)
+            VStack(spacing: 4) {
+                Text(emptyHeadline)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(.secondary)
+                Text(emptyHint)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.tertiary)
+                    .multilineTextAlignment(.center)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 24)
+        .padding(.vertical, 36)
+    }
+
+    private var emptyHeadline: LocalizedStringKey {
+        selectedSource == .radarr
+            ? "Find a movie to add"
+            : "Find a show to add"
+    }
+
+    private var emptyHint: LocalizedStringKey {
+        selectedSource == .radarr
+            ? "Type a title above to search TMDB through Radarr's lookup, then add it to your library."
+            : "Type a title above to search TVDB through Sonarr's lookup, then add it to your library."
+    }
+
     private var subTabs: some View {
         HStack(spacing: 0) {
             ForEach(configuredSources, id: \.self) { source in
@@ -107,7 +141,7 @@ public struct SearchView: View {
                 .foregroundStyle(.red)
                 .padding(12)
         } else if viewModel.query.isEmpty {
-            EmptyView()
+            emptyPrompt
         } else if viewModel.results.isEmpty {
             VStack(spacing: 8) {
                 Image(systemName: "magnifyingglass")
