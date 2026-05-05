@@ -151,7 +151,12 @@ private struct QueueTab: View {
     }
 
     private func isConfigured(_ source: QueueItem.Source) -> Bool {
-        configStore.config(for: source.serviceKind).isConfigured
+        let cfg = configStore.config(for: source.serviceKind)
+        // Demo mode seeds `enabled = true` without ever filling in a base
+        // URL, so the strict `isConfigured` check (which requires a valid
+        // http/https URL) hides every section. Mirror PopoverContentView's
+        // `isVisible` helper: in demo mode, "enabled" is enough.
+        return DemoMode.isActive ? cfg.enabled : cfg.isConfigured
     }
 
     private func items(for source: QueueItem.Source) -> [QueueItem] {
@@ -294,8 +299,10 @@ private struct SearchTab: View {
 
     private var searchSources: [QueueItem.Source] {
         var s: [QueueItem.Source] = []
-        if configStore.sonarr.isConfigured { s.append(.sonarr) }
-        if configStore.radarr.isConfigured { s.append(.radarr) }
+        let sonarrVisible = DemoMode.isActive ? configStore.sonarr.enabled : configStore.sonarr.isConfigured
+        let radarrVisible = DemoMode.isActive ? configStore.radarr.enabled : configStore.radarr.isConfigured
+        if sonarrVisible { s.append(.sonarr) }
+        if radarrVisible { s.append(.radarr) }
         return s
     }
 }
