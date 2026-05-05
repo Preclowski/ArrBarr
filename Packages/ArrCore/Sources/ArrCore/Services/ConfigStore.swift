@@ -1,16 +1,24 @@
 import Foundation
 import Combine
-import ServiceManagement
 import os
+
+#if os(macOS)
+import ServiceManagement
+#endif
 
 public enum LaunchAtLogin {
     private static let logger = Logger(subsystem: "com.preclowski.ArrBarr", category: "LaunchAtLogin")
 
     static var isEnabled: Bool {
-        SMAppService.mainApp.status == .enabled
+        #if os(macOS)
+        return SMAppService.mainApp.status == .enabled
+        #else
+        return false
+        #endif
     }
 
     static func set(enabled: Bool) {
+        #if os(macOS)
         let service = SMAppService.mainApp
         do {
             if enabled {
@@ -25,6 +33,10 @@ public enum LaunchAtLogin {
         } catch {
             logger.error("LaunchAtLogin toggle failed: \(error.localizedDescription, privacy: .public)")
         }
+        #else
+        // No equivalent on iOS — apps don't have a "launch at login" model.
+        _ = enabled
+        #endif
     }
 }
 

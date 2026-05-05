@@ -1,5 +1,4 @@
 import SwiftUI
-import AppKit
 
 /// A single Sonarr row that represents a *season pack* — one physical
 /// download whose Sonarr-side queue surfaces as N expected-episode entries

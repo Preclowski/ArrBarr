@@ -601,9 +601,9 @@ public struct HoverActionOverlay<Actions: View>: ViewModifier {
                     .background(
                         LinearGradient(
                             colors: [
-                                Color(nsColor: .windowBackgroundColor).opacity(0),
-                                Color(nsColor: .windowBackgroundColor).opacity(0.95),
-                                Color(nsColor: .windowBackgroundColor).opacity(0.95),
+                                Color.platformWindowBackground.opacity(0),
+                                Color.platformWindowBackground.opacity(0.95),
+                                Color.platformWindowBackground.opacity(0.95),
                             ],
                             startPoint: .leading,
                             endPoint: .trailing

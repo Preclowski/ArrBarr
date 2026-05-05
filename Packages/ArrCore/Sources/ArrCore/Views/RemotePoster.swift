@@ -7,13 +7,13 @@ public struct RemotePoster: View {
     var cornerRadius: CGFloat = 4
     var fallbackSymbol: String = "photo"
 
-    @State private var image: NSImage?
+    @State private var image: PlatformImage?
     @State private var failed = false
 
     public var body: some View {
         Group {
             if let image {
-                Image(nsImage: image)
+                Image(platformImage: image)
                     .resizable()
                     .interpolation(.medium)
                     .scaledToFill()

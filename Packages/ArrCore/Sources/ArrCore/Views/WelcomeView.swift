@@ -1,5 +1,4 @@
 import SwiftUI
-import AppKit
 
 public struct WelcomeView: View {
     let variant: WelcomeContent.Variant
@@ -62,7 +61,7 @@ public struct WelcomeView: View {
         // 400×440 box would show NSWindow's own background colour, which
         // reads as a lighter band under the action buttons.
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(nsColor: .windowBackgroundColor))
+        .background(Color.platformWindowBackground)
         .overlay(alignment: .topTrailing) {
             closeButton
                 .padding(.top, 8)
@@ -211,7 +210,11 @@ public struct WelcomeView: View {
         HStack(spacing: 12) {
             if case .firstRun = variant, !isLastPage {
                 Button(String(localized: "Try demo mode")) { onTryDemo() }
+                    #if os(macOS)
                     .buttonStyle(.link)
+                    #else
+                    .buttonStyle(.borderless)
+                    #endif
             }
             Spacer()
             Button(primaryButtonTitle) { onPrimary() }
@@ -239,7 +242,7 @@ public struct WelcomeView: View {
     private func handleCTA(_ cta: WelcomeContent.WelcomePage.CTA) {
         switch cta.kind {
         case .openURL(let url):
-            NSWorkspace.shared.open(url)
+            PlatformURLOpener.open(url)
         case .openSettings:
             onAddService()
         }
@@ -321,7 +324,7 @@ private struct MenuBarIllustration: View {
                 .fill(
                     LinearGradient(
                         colors: [
-                            Color(nsColor: .windowBackgroundColor).opacity(0.95),
+                            Color.platformWindowBackground.opacity(0.95),
                             Color.accentColor.opacity(0.12),
                         ],
                         startPoint: .top,
@@ -388,7 +391,7 @@ private struct MenuBarIllustration: View {
         VStack(spacing: 0) {
             // Tail / arrow pointing up to the status item
             Triangle()
-                .fill(Color(nsColor: .windowBackgroundColor))
+                .fill(Color.platformWindowBackground)
                 .overlay(Triangle().stroke(Color.secondary.opacity(0.30), lineWidth: 0.5))
                 .frame(width: 10, height: 5)
                 .offset(y: 0.5)
@@ -418,7 +421,7 @@ private struct MenuBarIllustration: View {
             .frame(maxWidth: .infinity)
             .background(
                 RoundedRectangle(cornerRadius: 6)
-                    .fill(Color(nsColor: .windowBackgroundColor))
+                    .fill(Color.platformWindowBackground)
                     .overlay(
                         RoundedRectangle(cornerRadius: 6)
                             .strokeBorder(Color.secondary.opacity(0.30), lineWidth: 0.5)

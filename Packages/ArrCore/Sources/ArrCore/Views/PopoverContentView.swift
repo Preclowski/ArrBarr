@@ -305,7 +305,7 @@ public struct PopoverContentView: View {
                           let scheme = url.scheme?.lowercased(),
                           scheme == "http" || scheme == "https"
                     else { return }
-                    NSWorkspace.shared.open(url)
+                    PlatformURLOpener.open(url)
                 }
             )
             .padding(.vertical, 12)
@@ -577,7 +577,7 @@ private struct TabPillBackground: View {
 
 public struct GlassButtonStyle: ViewModifier {
     public func body(content: Content) -> some View {
-        if #available(macOS 26.0, *) {
+        if #available(macOS 26.0, iOS 26.0, *) {
             content.buttonStyle(.glass)
         } else {
             content.buttonStyle(.bordered)
@@ -587,7 +587,7 @@ public struct GlassButtonStyle: ViewModifier {
 
 public struct GlassProminentButtonStyle: ViewModifier {
     public func body(content: Content) -> some View {
-        if #available(macOS 26.0, *) {
+        if #available(macOS 26.0, iOS 26.0, *) {
             content.buttonStyle(.glassProminent)
         } else {
             content.buttonStyle(.borderedProminent)

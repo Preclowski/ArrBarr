@@ -267,15 +267,19 @@ public struct SettingsView: View {
                     .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
+                #if os(macOS)
                 .onHover { hovering in
                     if hovering { NSCursor.pointingHand.push() } else { NSCursor.pop() }
                 }
+                #endif
                 .help("github.com/Preclowski/ArrBarr")
                 Spacer()
+                #if os(macOS)
                 Button("Close") { NSApp.keyWindow?.close() }
                     .keyboardShortcut("w", modifiers: .command)
                     .modifier(GlassButtonStyle())
                     .controlSize(.large)
+                #endif
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 12)

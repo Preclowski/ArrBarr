@@ -1,5 +1,4 @@
 import SwiftUI
-import AppKit
 
 /// Detail view for a queue item — replaces the popover content while shown.
 /// Fetches data from Radarr/Sonarr/Lidarr based on `item.entityId` and
@@ -75,7 +74,7 @@ public struct DetailView: View {
 
             if let url = webURL {
                 Button {
-                    NSWorkspace.shared.open(url)
+                    PlatformURLOpener.open(url)
                 } label: {
                     Image(systemName: "safari")
                         .font(.system(size: 12))

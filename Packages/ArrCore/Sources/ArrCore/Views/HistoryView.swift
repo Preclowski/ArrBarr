@@ -39,9 +39,11 @@ public struct HistoryView: View {
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            #if os(macOS)
             .onHover { hovering in
                 if hovering { NSCursor.pointingHand.push() } else { NSCursor.pop() }
             }
+            #endif
             .localizedHelp("Close", locale: configStore.currentLocale)
         }
         .padding(.horizontal, 12)

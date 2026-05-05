@@ -1,17 +1,16 @@
 import Foundation
-import AppKit
 import CryptoKit
 import os
 
 public actor ImageCache {
     public static let shared = ImageCache()
 
-    private let memory = NSCache<NSString, NSImage>()
+    private let memory = NSCache<NSString, PlatformImage>()
     private let cacheDir: URL
     private let session: URLSession
     private let logger = Logger(subsystem: "com.preclowski.ArrBarr", category: "ImageCache")
 
-    private var inflight: [String: Task<NSImage?, Never>] = [:]
+    private var inflight: [String: Task<PlatformImage?, Never>] = [:]
     private var negativeCache: [String: Date] = [:]
     private static let negativeTTL: TimeInterval = 60 * 60 // 1 hour
     private static let memoryCostCap = 50 * 1024 * 1024     // 50 MB
@@ -32,7 +31,7 @@ public actor ImageCache {
         memory.totalCostLimit = Self.memoryCostCap
     }
 
-    func image(for url: URL, apiKey: String? = nil) async -> NSImage? {
+    func image(for url: URL, apiKey: String? = nil) async -> PlatformImage? {
         let key = Self.cacheKey(for: url)
 
         if let hit = memory.object(forKey: key as NSString) { return hit }
@@ -42,7 +41,7 @@ public actor ImageCache {
             return await task.value
         }
 
-        let task = Task<NSImage?, Never> { [weak self] in
+        let task = Task<PlatformImage?, Never> { [weak self] in
             guard let self else { return nil }
             return await self.loadOrFetch(url: url, key: key, apiKey: apiKey)
         }
@@ -52,9 +51,9 @@ public actor ImageCache {
         return result
     }
 
-    private func loadOrFetch(url: URL, key: String, apiKey: String?) async -> NSImage? {
+    private func loadOrFetch(url: URL, key: String, apiKey: String?) async -> PlatformImage? {
         let fileURL = cacheDir.appendingPathComponent(key)
-        if let data = try? Data(contentsOf: fileURL), let image = NSImage(data: data) {
+        if let data = try? Data(contentsOf: fileURL), let image = PlatformImage(data: data) {
             store(image: image, data: data, key: key)
             touch(fileURL)
             return image
@@ -72,7 +71,7 @@ public actor ImageCache {
                 logger.debug("poster \(http.statusCode, privacy: .public) for \(url.absoluteString, privacy: .public)")
                 return nil
             }
-            guard let image = NSImage(data: data) else {
+            guard let image = PlatformImage(data: data) else {
                 negativeCache[key] = Date().addingTimeInterval(Self.negativeTTL)
                 return nil
             }
@@ -86,7 +85,7 @@ public actor ImageCache {
         }
     }
 
-    private func store(image: NSImage, data: Data, key: String) {
+    private func store(image: PlatformImage, data: Data, key: String) {
         memory.setObject(image, forKey: key as NSString, cost: data.count)
     }
 

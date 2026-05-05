@@ -57,9 +57,11 @@ public struct NeedsYouSectionView: View {
                         .onTapGesture { onItemTap?(needs) }
                         .onHover { hovering in
                             hoveredID = hovering ? needs.id : nil
+                            #if os(macOS)
                             if onItemTap != nil {
                                 if hovering { NSCursor.pointingHand.push() } else { NSCursor.pop() }
                             }
+                            #endif
                         }
                         .help("Open in browser")
                     }
