@@ -578,11 +578,11 @@ public struct TooltipQueueRow: View {
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
                     .truncationMode(.tail)
-                if item.isUpgrade {
-                    Image(systemName: "arrow.up.circle.fill")
-                        .font(.system(size: 9))
-                        .foregroundStyle(.indigo)
-                }
+                // No per-episode upgrade arrow inside the season-pack
+                // tooltip — the pack header already says "Upgrade", and
+                // either the summary card (Variant A) or the per-row
+                // "↑ replaces …" line (Variant B) carries the indigo
+                // accent for episodes that need it.
                 Spacer(minLength: 4)
                 Text(trailing)
                     .font(.system(size: 10).monospacedDigit())
