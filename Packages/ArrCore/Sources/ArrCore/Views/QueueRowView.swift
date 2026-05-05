@@ -36,6 +36,10 @@ public struct QueueRowView: View {
     let onDelete: () -> Void
     var onShowDetail: (() -> Void)? = nil
     @EnvironmentObject var configStore: ConfigStore
+    /// Surfaces that have a permanent detail pane (the desktop window) set
+    /// this to `true` so we skip the redundant long-hover tooltip. The
+    /// menu-bar popover leaves it false.
+    @Environment(\.suppressRowTooltip) private var suppressRowTooltip
     @State private var isHovering = false
     @State private var showDeleteConfirmation = false
     @State private var showTooltip = false
@@ -167,8 +171,10 @@ public struct QueueRowView: View {
         #if os(macOS)
         .onHover { hovering in
             withAnimation(.easeInOut(duration: 0.15)) { isHovering = hovering }
+            // Only schedule the long-hover tooltip when the host surface
+            // doesn't already have a permanent detail pane.
             hoverTask?.cancel()
-            if hovering {
+            if hovering && !suppressRowTooltip {
                 hoverTask = Task { @MainActor [self] in
                     try? await Task.sleep(nanoseconds: 600_000_000)
                     if !Task.isCancelled && self.isHovering { showTooltip = true }

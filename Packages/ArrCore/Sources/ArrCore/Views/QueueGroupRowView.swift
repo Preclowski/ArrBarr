@@ -17,6 +17,9 @@ public struct QueueGroupRowView: View {
     var onShowDetail: (() -> Void)? = nil
 
     @EnvironmentObject var configStore: ConfigStore
+    /// True when the host already has a permanent detail pane (desktop
+    /// window). Suppresses the long-hover tooltip popover.
+    @Environment(\.suppressRowTooltip) private var suppressRowTooltip
     @State private var isHovering = false
     @State private var showDeleteConfirmation = false
     @State private var showTooltip = false
@@ -148,8 +151,9 @@ public struct QueueGroupRowView: View {
         #if os(macOS)
         .onHover { hovering in
             withAnimation(.easeInOut(duration: 0.15)) { isHovering = hovering }
+            // Skip the long-hover tooltip when the host has a detail pane.
             hoverTask?.cancel()
-            if hovering {
+            if hovering && !suppressRowTooltip {
                 hoverTask = Task { @MainActor [self] in
                     try? await Task.sleep(nanoseconds: 600_000_000)
                     if !Task.isCancelled && self.isHovering { showTooltip = true }

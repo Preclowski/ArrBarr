@@ -86,6 +86,11 @@ public struct MainWindowView: View {
             detailPane
         }
         .environment(\.locale, configStore.currentLocale)
+        // Suppresses the long-hover tooltip on every queue row in the window
+        // — the detail pane on the right already shows the same info, so the
+        // tooltip would be redundant chrome. The popover keeps tooltips since
+        // it has no detail pane.
+        .environment(\.suppressRowTooltip, true)
         .onAppear {
             searchViewModel.setup(
                 radarrConfig: configStore.radarr,

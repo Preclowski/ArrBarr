@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sonarr Add Panel — Options</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
+    background: #1a1a1f;
+    color: #e8e8ed;
+    padding: 32px 24px 48px;
+    min-height: 100vh;
+  }
+  h1 { font-size: 20px; font-weight: 600; margin-bottom: 6px; }
+  .subtitle { font-size: 13px; color: #888; margin-bottom: 12px; }
+  .context { font-size: 12px; color: #666; margin-bottom: 32px; background: rgba(255,255,255,0.04); border-radius: 8px; padding: 10px 14px; border-left: 3px solid rgba(74,132,255,0.4); }
+
+  .cols { display: flex; gap: 28px; justify-content: center; flex-wrap: wrap; }
+  .col { flex: 0 0 auto; }
+  .col-label {
+    font-size: 11px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.06em; color: #666; margin-bottom: 8px; text-align: center;
+  }
+  .pill {
+    display: inline-block; margin-left: 6px;
+    background: rgba(74,132,255,0.18); border: 1px solid rgba(74,132,255,0.35);
+    color: #4a84ff; font-size: 10px; font-weight: 600;
+    padding: 1px 7px; border-radius: 20px; vertical-align: middle;
+  }
+
+  .popover {
+    background: rgba(36,36,42,0.98);
+    border-radius: 13px;
+    border: 1px solid rgba(255,255,255,0.09);
+    overflow: hidden;
+    width: 220px;
+    box-shadow: 0 16px 48px rgba(0,0,0,0.6);
+    cursor: pointer;
+    transition: transform 0.12s;
+  }
+  .popover:hover { transform: translateY(-1px); }
+  .popover.selected { outline: 2.5px solid #4a84ff; outline-offset: 2px; }
+
+  .tab-bar { display: flex; padding: 8px 8px 4px; }
+  .tab { flex:1; text-align:center; font-size:9.5px; font-weight:500; color:#888; padding:3px 0; border-radius:5px; }
+  .tab.active { background:rgba(255,255,255,0.10); color:#e8e8ed; font-weight:600; }
+  .divider { height:1px; background:rgba(255,255,255,0.07); }
+
+  .panel-header {
+    display:flex; align-items:center;
+    padding:8px 10px;
+    gap:6px;
+  }
+  .back-btn { font-size:10px; color:#4a84ff; }
+  .panel-title { font-size:11px; font-weight:600; color:#aaa; flex:1; text-align:center; }
+
+  .panel-hero {
+    display:flex; gap:10px; padding:8px 10px 10px;
+  }
+  .hero-poster {
+    width:40px; height:58px;
+    border-radius:5px;
+    flex-shrink:0;
+    background:linear-gradient(160deg,#3a5a4a,#253528);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  }
+  .hero-info { flex:1; min-width:0; padding-top:2px; }
+  .hero-title { font-size:11.5px; font-weight:700; color:#e8e8ed; line-height:1.2; }
+  .hero-meta { font-size:9px; color:#888; margin-top:2px; }
+  .hero-overview { font-size:8.5px; color:#666; margin-top:3px; line-height:1.4; }
+
+  .form-section { padding: 0 10px 4px; }
+  .form-row {
+    display:flex; align-items:center;
+    background:rgba(255,255,255,0.05);
+    border-radius:6px; padding:5px 8px;
+    margin-bottom:4px;
+    justify-content:space-between;
+  }
+  .form-label { font-size:9.5px; color:#888; }
+  .form-value { font-size:9.5px; color:#ccc; font-weight:500; display:flex; align-items:center; gap:3px; }
+  .form-chevron { font-size:8px; color:#555; }
+
+  .section-header {
+    font-size:8.5px; font-weight:600; text-transform:uppercase;
+    letter-spacing:0.06em; color:#555;
+    padding: 6px 10px 3px;
+  }
+
+  .toggle-row {
+    display:flex; align-items:center;
+    padding: 4px 10px;
+    margin-bottom:3px;
+    justify-content:space-between;
+  }
+  .toggle-label { font-size:9.5px; color:#aaa; }
+  .toggle {
+    width:26px; height:15px;
+    border-radius:8px;
+    background:#34c759;
+    position:relative;
+  }
+  .toggle-off { background:rgba(255,255,255,0.12); }
+  .toggle::after {
+    content:'';
+    position:absolute;
+    right:2px; top:2px;
+    width:11px; height:11px;
+    border-radius:50%;
+    background:#fff;
+    box-shadow:0 1px 3px rgba(0,0,0,0.3);
+  }
+  .toggle-off::after { right:auto; left:2px; }
+
+  .add-btn {
+    margin:8px 10px 10px;
+    background:rgba(74,132,255,0.85);
+    border-radius:7px;
+    padding:6px;
+    text-align:center;
+    font-size:11px; font-weight:600; color:#fff;
+  }
+
+  .star { color:#f1c40f; font-size:9px; }
+
+  .select-hint { margin-top: 32px; text-align: center; font-size: 12px; color: #555; }
+
+  /* Chip group for monitoring */
+  .chip-group { display:flex; gap:3px; flex-wrap:wrap; padding:4px 10px 6px; }
+  .chip {
+    font-size:8.5px; font-weight:500;
+    padding:2px 7px; border-radius:4px;
+    background:rgba(255,255,255,0.07); color:#888;
+    border:1px solid rgba(255,255,255,0.08);
+  }
+  .chip.active {
+    background:rgba(74,132,255,0.2); color:#4a84ff;
+    border-color:rgba(74,132,255,0.35);
+  }
+</style>
+</head>
+<body>
+
+<h1>Sonarr Add Panel — Options</h1>
+<p class="subtitle">Sonarr needs a few more settings than Radarr. Two approaches to the extra fields.</p>
+<div class="context">Radarr (movies) only needs: Quality Profile · Root Folder · Monitor.<br>Sonarr (shows) also needs: <strong>Season Folder</strong>, <strong>Series Type</strong>, and a <strong>Season Monitoring</strong> choice (all, future, first, none…).</div>
+
+<div class="cols">
+
+  <!-- ── OPTION A: Keep it minimal — smart defaults, only override what matters ── -->
+  <div class="col">
+    <div class="col-label">Option A — Minimal<span class="pill">Recommended</span></div>
+    <div class="popover" id="optA" onclick="pick('a',this)">
+      <div class="tab-bar">
+        <div class="tab">Queue</div><div class="tab">Upcoming</div><div class="tab active">Search</div>
+      </div>
+      <div class="divider"></div>
+      <div class="panel-header">
+        <div class="back-btn">‹ Results</div>
+        <div class="panel-title">Add to Sonarr</div>
+      </div>
+      <div class="divider"></div>
+
+      <div class="panel-hero">
+        <div class="hero-poster"></div>
+        <div class="hero-info">
+          <div class="hero-title">Breaking Bad</div>
+          <div class="hero-meta">2008–2013 · <span class="star">★</span> 9.5 · 5 seasons</div>
+          <div class="hero-overview">A chemistry teacher diagnosed with cancer turns to manufacturing meth with a former student.</div>
+        </div>
+      </div>
+
+      <div class="divider" style="margin-bottom:6px;"></div>
+
+      <div class="form-section">
+        <div class="form-row">
+          <div class="form-label">Quality Profile</div>
+          <div class="form-value">HD-1080p <div class="form-chevron">›</div></div>
+        </div>
+        <div class="form-row">
+          <div class="form-label">Root Folder</div>
+          <div class="form-value">/tv <div class="form-chevron">›</div></div>
+        </div>
+        <div class="form-row">
+          <div class="form-label">Monitor</div>
+          <div class="form-value">All Seasons <div class="form-chevron">›</div></div>
+        </div>
+      </div>
+
+      <!-- Toggles for booleans -->
+      <div class="toggle-row">
+        <div class="toggle-label">Season Folders</div>
+        <div class="toggle"></div>
+      </div>
+      <div class="toggle-row">
+        <div class="toggle-label">Search on Add</div>
+        <div class="toggle"></div>
+      </div>
+
+      <div class="add-btn">Add to Sonarr</div>
+    </div>
+  </div>
+
+  <!-- ── OPTION B: Full options with sections ── -->
+  <div class="col">
+    <div class="col-label">Option B — Full options</div>
+    <div class="popover" id="optB" onclick="pick('b',this)">
+      <div class="tab-bar">
+        <div class="tab">Queue</div><div class="tab">Upcoming</div><div class="tab active">Search</div>
+      </div>
+      <div class="divider"></div>
+      <div class="panel-header">
+        <div class="back-btn">‹ Results</div>
+        <div class="panel-title">Add to Sonarr</div>
+      </div>
+      <div class="divider"></div>
+
+      <div class="panel-hero">
+        <div class="hero-poster"></div>
+        <div class="hero-info">
+          <div class="hero-title">Breaking Bad</div>
+          <div class="hero-meta">2008–2013 · <span class="star">★</span> 9.5 · 5 seasons</div>
+          <div class="hero-overview">A chemistry teacher diagnosed with cancer turns to manufacturing meth.</div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="section-header">Library</div>
+      <div class="form-section">
+        <div class="form-row">
+          <div class="form-label">Quality Profile</div>
+          <div class="form-value">HD-1080p <div class="form-chevron">›</div></div>
+        </div>
+        <div class="form-row">
+          <div class="form-label">Root Folder</div>
+          <div class="form-value">/tv <div class="form-chevron">›</div></div>
+        </div>
+        <div class="form-row">
+          <div class="form-label">Series Type</div>
+          <div class="form-value">Standard <div class="form-chevron">›</div></div>
+        </div>
+      </div>
+
+      <div class="section-header">Monitor</div>
+      <div class="chip-group">
+        <div class="chip active">All</div>
+        <div class="chip">Future</div>
+        <div class="chip">Missing</div>
+        <div class="chip">1st Season</div>
+        <div class="chip">None</div>
+      </div>
+
+      <div class="toggle-row" style="margin-top:2px;">
+        <div class="toggle-label">Season Folders</div>
+        <div class="toggle"></div>
+      </div>
+
+      <div class="add-btn" style="margin-top:6px;">Add to Sonarr</div>
+    </div>
+  </div>
+
+</div>
+
+<p class="select-hint">Click the one you want · or just tell me in the terminal</p>
+
+<script>
+  function pick(choice, el) {
+    document.querySelectorAll('.popover').forEach(p => p.classList.remove('selected'));
+    el.classList.add('selected');
+    try {
+      fetch('/event', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({type:'click', choice, text: choice === 'a' ? 'Minimal' : 'Full options', timestamp: Date.now()})
+      });
+    } catch(e){}
+  }
+</script>
+</body>
+</html>
