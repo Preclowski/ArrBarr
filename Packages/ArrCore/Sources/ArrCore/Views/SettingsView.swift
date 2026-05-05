@@ -137,17 +137,26 @@ public struct SettingsView: View {
                 }
             }
             Section("About") {
-                LabeledContent("Version", value: Self.versionString)
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        // Classic iOS Settings.app trick: tap version 7
-                        // times to reveal developer options.
-                        versionTapCount += 1
-                        if versionTapCount >= 7 && !devModeRevealed {
-                            DeveloperMode.setEnabled(true)
-                            withAnimation(.smooth(duration: 0.22)) { devModeRevealed = true }
-                        }
+                // Classic iOS Settings.app trick: tap Version 7 times to
+                // reveal Developer options. LabeledContent swallows
+                // gestures inside Form, so use a plain Button styled like
+                // a row instead — its action fires reliably.
+                Button {
+                    versionTapCount += 1
+                    if versionTapCount >= 7 && !devModeRevealed {
+                        DeveloperMode.setEnabled(true)
+                        withAnimation(.smooth(duration: 0.22)) { devModeRevealed = true }
                     }
+                } label: {
+                    HStack {
+                        Text("Version")
+                            .foregroundStyle(.primary)
+                        Spacer()
+                        Text(Self.versionString)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .buttonStyle(.plain)
                 Link(destination: URL(string: "https://github.com/Preclowski/ArrBarr")!) {
                     Label("GitHub", systemImage: "link")
                 }
