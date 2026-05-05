@@ -980,7 +980,9 @@ private struct DiffTag: View {
 
 /// One row inside the multi-item list: status dot, episode/quality text,
 /// and a thin progress bar. When `hoverDetail` is true and the item is an
-/// upgrade, hovering reveals an existing-file popover.
+/// upgrade, the row reveals existing-file detail on demand:
+///   - macOS: hovering for ~350 ms opens a popover anchored to the row.
+///   - iOS:   tapping the row toggles the same content inline below it.
 private struct MultiRow: View {
     let item: QueueItem
     let isFocused: Bool
@@ -991,6 +993,8 @@ private struct MultiRow: View {
     @State private var isHovering = false
     @State private var showHoverPopover = false
     @State private var hoverTask: Task<Void, Never>?
+    /// iOS-only: tap-to-expand state for the inline existing-file block.
+    @State private var showInlineExistingFile = false
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 3) {
@@ -1028,6 +1032,14 @@ private struct MultiRow: View {
                     .font(.system(size: 10))
                     .foregroundStyle(.indigo)
             }
+            #if !os(macOS)
+            // iOS: tap-to-expand existing-file block sits inline below
+            // the row so we don't need a popover anchor.
+            if hoverDetail, item.isUpgrade, showInlineExistingFile {
+                ExistingFilePopover(item: item)
+                    .padding(.top, 4)
+            }
+            #endif
         }
         .padding(.vertical, 3)
         .padding(.leading, 6)
@@ -1044,6 +1056,7 @@ private struct MultiRow: View {
             }
         }
         .contentShape(Rectangle())
+        #if os(macOS)
         .onHover { hovering in
             guard hoverDetail, item.isUpgrade else { return }
             isHovering = hovering
@@ -1060,6 +1073,12 @@ private struct MultiRow: View {
         .popover(isPresented: $showHoverPopover, arrowEdge: .trailing) {
             ExistingFilePopover(item: item)
         }
+        #else
+        .onTapGesture {
+            guard hoverDetail, item.isUpgrade else { return }
+            withAnimation(.smooth(duration: 0.18)) { showInlineExistingFile.toggle() }
+        }
+        #endif
     }
 
     private var rowBackground: Color {

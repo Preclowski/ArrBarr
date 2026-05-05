@@ -120,7 +120,12 @@ public struct QueueGroupRowView: View {
                 // See QueueRowView: tooltip popover steals the mouse, so we
                 // also treat `showTooltip` as "still hovering" to keep the
                 // pause/remove icons reachable while the tooltip is up.
+                // iOS has no hover so the icons stay always-visible.
+                #if os(macOS)
                 .hoverActions(visible: isHovering || showTooltip) { actionButtons }
+                #else
+                .hoverActions(visible: true) { actionButtons }
+                #endif
 
                 ThinProgressBar(progress: aggregateProgress, tint: rep.status.tint)
 
@@ -144,6 +149,10 @@ public struct QueueGroupRowView: View {
         .onTapGesture {
             onShowDetail?()
         }
+        // macOS-only hover affordances: row tint + 600 ms delayed tooltip.
+        // iOS users tap the row to drill into the detail view, which
+        // surfaces the same content as the macOS tooltip.
+        #if os(macOS)
         .onHover { hovering in
             withAnimation(.easeInOut(duration: 0.15)) { isHovering = hovering }
             hoverTask?.cancel()
@@ -163,6 +172,7 @@ public struct QueueGroupRowView: View {
                 locale: configStore.currentLocale
             )
         }
+        #endif
         .alert("Remove download?", isPresented: $showDeleteConfirmation) {
             Button("Remove", role: .destructive) { onDelete() }
             Button("Cancel", role: .cancel) {}

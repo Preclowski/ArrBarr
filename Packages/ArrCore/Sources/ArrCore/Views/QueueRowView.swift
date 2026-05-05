@@ -128,7 +128,13 @@ public struct QueueRowView: View {
                 // mouse, dropping `isHovering` to false — without this the
                 // pause/remove icons would vanish the moment the tooltip
                 // appeared, even though the cursor is still on the row.
+                // iOS has no hover, so on touch devices the action buttons
+                // sit always-visible — there's no hover to gate them on.
+                #if os(macOS)
                 .hoverActions(visible: isHovering || showTooltip) { actionButtons }
+                #else
+                .hoverActions(visible: true) { actionButtons }
+                #endif
 
                 ThinProgressBar(progress: item.progress, tint: item.status.tint)
 
@@ -153,6 +159,12 @@ public struct QueueRowView: View {
         .onTapGesture {
             onShowDetail?()
         }
+        // Hover-only affordances live on macOS. On iOS the same information
+        // is available by tapping into the detail view, and the floating
+        // tooltip popover would render as a sheet — wrong UX for a brief
+        // glance. So both the hover-state row tint and the long-hover
+        // tooltip are macOS-only.
+        #if os(macOS)
         .onHover { hovering in
             withAnimation(.easeInOut(duration: 0.15)) { isHovering = hovering }
             hoverTask?.cancel()
@@ -172,6 +184,7 @@ public struct QueueRowView: View {
                 locale: configStore.currentLocale
             )
         }
+        #endif
         .alert("Remove download?", isPresented: $showDeleteConfirmation) {
             Button("Remove", role: .destructive) {
                 onDelete()
