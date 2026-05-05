@@ -10,6 +10,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var popover: NSPopover!
     private var settingsWindow: NSWindow?
     private var welcomeWindow: NSWindow?
+    /// Optional desktop window. Hidden by default — opened on demand via the
+    /// status-item right-click menu, the popover footer "Open Window…" item,
+    /// or ⌘N. While the window is alive the app flips its activation policy
+    /// to `.regular` so Dock + ⌘⇥ work; when it closes we revert to
+    /// `.accessory` so we're back to a pure menu-bar utility.
+    private var mainWindow: NSWindow?
     private var escMonitor: Any?
     private var outsideClickMonitor: Any?
 
@@ -36,7 +42,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let root = PopoverContentView(
             viewModel: queueVM,
             onOpenSettings: { [weak self] in self?.openSettings() },
-            onQuit: { NSApp.terminate(nil) }
+            onQuit: { NSApp.terminate(nil) },
+            onOpenWindow: { [weak self] in self?.openMainWindow() }
         )
         .environmentObject(configStore)
 
@@ -212,7 +219,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let menu = NSMenu()
         menu.addItem(withTitle: String(localized: "Refresh"), action: #selector(menuRefresh), keyEquivalent: "r").target = self
         menu.addItem(.separator())
+        menu.addItem(withTitle: String(localized: "Open Window…"), action: #selector(menuOpenWindow), keyEquivalent: "n").target = self
         menu.addItem(withTitle: String(localized: "Settings…"), action: #selector(menuSettings), keyEquivalent: ",").target = self
+        menu.addItem(.separator())
         menu.addItem(withTitle: String(localized: "Quit ArrBarr"), action: #selector(menuQuit), keyEquivalent: "q").target = self
         statusItem.menu = menu
         statusItem.button?.performClick(nil)
@@ -220,6 +229,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func menuRefresh() { Task { await queueVM.refresh() } }
+    @objc private func menuOpenWindow() { openMainWindow() }
     @objc private func menuSettings() { openSettings() }
     @objc private func menuQuit() { NSApp.terminate(nil) }
 
@@ -258,6 +268,80 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         settingsWindow = win
         win.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+    }
+
+    // MARK: - Main Window
+    //
+    // Opens the desktop-window mode of the app. The window is a transient
+    // power-user surface — clicking the status item still pops the popover
+    // (the primary, lightweight interaction). Only when the user explicitly
+    // chooses "Open Window…" (right-click menu, popover footer, or ⌘N) do we
+    // promote the process to a regular Dock app for the duration of the
+    // window's lifetime.
+    //
+    // Lifecycle:
+    //   open  → setActivationPolicy(.regular) + makeKeyAndOrderFront
+    //   close → setActivationPolicy(.accessory), nil out reference
+    //
+    // The window's content is currently the existing PopoverContentView,
+    // simply allowed to grow to a desktop size. This is the scaffold; the
+    // next phase will swap the body for a proper NavigationSplitView
+    // (LibraryRoot) shared with iPad landscape.
+
+    private func openMainWindow() {
+        if popover.isShown { popover.performClose(nil) }
+
+        if let win = mainWindow {
+            NSApp.setActivationPolicy(.regular)
+            NSApp.activate(ignoringOtherApps: true)
+            win.makeKeyAndOrderFront(nil)
+            return
+        }
+
+        let view = PopoverContentView(
+            viewModel: queueVM,
+            onOpenSettings: { [weak self] in self?.openSettings() },
+            onQuit: { NSApp.terminate(nil) }
+            // Deliberately omit onOpenWindow here — once the window is open
+            // the menu shouldn't offer to open it again.
+        ).environmentObject(configStore)
+
+        let hosting = NSHostingController(rootView: view)
+        let win = NSWindow(contentViewController: hosting)
+        win.title = "ArrBarr"
+        win.styleMask = [.titled, .closable, .miniaturizable, .resizable]
+        // Generous default — popover is 400x600; window gets 2x the room so
+        // it's clearly a "different surface", not a stretched popover.
+        win.setContentSize(NSSize(width: 880, height: 720))
+        win.minSize = NSSize(width: 560, height: 480)
+        win.isReleasedWhenClosed = false
+        win.center()
+
+        NotificationCenter.default.addObserver(
+            forName: NSWindow.willCloseNotification,
+            object: win,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                guard let self else { return }
+                self.mainWindow = nil
+                // Pop back to accessory: Dock icon vanishes, the app is
+                // a pure menu-bar utility again. The status item stays put.
+                NSApp.setActivationPolicy(.accessory)
+                // Polling can stop unless the popover is currently showing.
+                if !self.popover.isShown {
+                    self.queueVM.stopForegroundPolling()
+                }
+            }
+        }
+
+        mainWindow = win
+        // Promote to regular so Dock + ⌘⇥ work while the window is up.
+        NSApp.setActivationPolicy(.regular)
+        NSApp.activate(ignoringOtherApps: true)
+        win.makeKeyAndOrderFront(nil)
+        // Foreground polling — the window is the primary surface while open.
+        queueVM.startForegroundPolling()
     }
 
     // MARK: - Welcome
@@ -410,7 +494,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
 extension AppDelegate: NSPopoverDelegate {
     func popoverDidClose(_ notification: Notification) {
-        queueVM.stopForegroundPolling()
+        // Keep polling alive if the desktop window is still showing — it's
+        // the primary surface in that case.
+        if mainWindow == nil {
+            queueVM.stopForegroundPolling()
+        }
         queueVM.setTonightExpanded(false)
         removeEscMonitor()
     }

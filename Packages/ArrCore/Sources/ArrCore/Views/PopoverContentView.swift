@@ -5,15 +5,21 @@ public struct PopoverContentView: View {
     @EnvironmentObject var configStore: ConfigStore
     let onOpenSettings: () -> Void
     let onQuit: () -> Void
+    /// Optional. When provided, the footer "More" menu shows an "Open Window…"
+    /// item that hands off to a richer NSWindow-hosted view. Nil for the iOS
+    /// build (no separate window concept) and the early macOS scaffold.
+    let onOpenWindow: (() -> Void)?
 
     public init(
         viewModel: QueueViewModel,
         onOpenSettings: @escaping () -> Void,
-        onQuit: @escaping () -> Void
+        onQuit: @escaping () -> Void,
+        onOpenWindow: (() -> Void)? = nil
     ) {
         self.viewModel = viewModel
         self.onOpenSettings = onOpenSettings
         self.onQuit = onQuit
+        self.onOpenWindow = onOpenWindow
     }
 
     @State private var selectedTab: Tab = .queue
@@ -538,6 +544,11 @@ public struct PopoverContentView: View {
                 Spacer()
 
                 Menu {
+                    if let onOpenWindow {
+                        Button("Open Window…", action: onOpenWindow)
+                            .keyboardShortcut("n", modifiers: .command)
+                        Divider()
+                    }
                     Button("Settings…", action: onOpenSettings)
                         .keyboardShortcut(",", modifiers: .command)
                     Divider()
