@@ -102,7 +102,8 @@ public enum DemoMocks {
                 status: .downloading, progress: 0.42,
                 quality: "Bluray-2160p", formats: ["HDR10+", "DV", "Atmos", "TrueHD", "Remux Tier 01", "HQ Source Group"], score: 1850,
                 client: "SABnzbd", indexer: "DemoUsenet",
-                upgrade: false, posterSeed: "bigbuckbunny", aspect: .portrait
+                upgrade: false, posterSeed: "bigbuckbunny", aspect: .portrait,
+                entityId: 201
             ),
             queueItem(
                 source: .radarr, id: "demo-radarr-2",
@@ -117,7 +118,8 @@ public enum DemoMocks {
                     size: 850_000_000,
                     fileName: "Sintel.2010.720p.HDTV.x264-OLD.mkv"
                 ),
-                posterSeed: "sintel", aspect: .portrait
+                posterSeed: "sintel", aspect: .portrait,
+                entityId: 202
             ),
             queueItem(
                 source: .radarr, id: "demo-radarr-3",
@@ -126,7 +128,8 @@ public enum DemoMocks {
                 status: .paused, progress: 0.18,
                 quality: "WEB-DL 720p", formats: ["LQ Release Group", "x264", "AAC 2.0"], score: -160,
                 client: "Transmission", indexer: "DemoTracker",
-                upgrade: false, posterSeed: "tearsofsteel", aspect: .portrait
+                upgrade: false, posterSeed: "tearsofsteel", aspect: .portrait,
+                entityId: 203
             ),
         ]
     }
@@ -151,7 +154,8 @@ public enum DemoMocks {
                     size: 350_000_000,
                     fileName: "Pioneer.One.S01E03.480p.WEBRip-OLD.mkv"
                 ),
-                posterSeed: "pioneerone", aspect: .portrait
+                posterSeed: "pioneerone", aspect: .portrait,
+                entityId: 101
             ),
         ]
         items.append(contentsOf: caminandesSeasonPack)
@@ -167,7 +171,8 @@ public enum DemoMocks {
                 status: .queued, progress: 0,
                 quality: "WEB-DL 1080p", formats: ["AMZN", "x264"], score: 180,
                 client: "NZBGet", indexer: "DemoUsenet",
-                upgrade: false, posterSeed: "cosmoslaundromat", aspect: .portrait
+                upgrade: false, posterSeed: "cosmoslaundromat", aspect: .portrait,
+                entityId: 104
             ),
             queueItem(
                 source: .sonarr, id: "demo-sonarr-3",
@@ -177,7 +182,8 @@ public enum DemoMocks {
                 status: .warning, progress: 0.92,
                 quality: "WEB-DL 2160p", formats: ["AMZN", "DV", "HDR10", "Atmos", "x265", "10bit"], score: 1240,
                 client: "Deluge", indexer: "DemoTracker",
-                upgrade: false, posterSeed: "northerncascade", aspect: .portrait
+                upgrade: false, posterSeed: "northerncascade", aspect: .portrait,
+                entityId: 105
             ),
         ])
         return items
@@ -233,7 +239,8 @@ public enum DemoMocks {
                 existing: ep.existing,
                 posterSeed: "caminandes",
                 aspect: .portrait,
-                downloadId: sharedDownloadId
+                downloadId: sharedDownloadId,
+                entityId: 102
             )
         }
     }
@@ -265,7 +272,8 @@ public enum DemoMocks {
                 upgrade: false,
                 posterSeed: "tearsofsteel",
                 aspect: .portrait,
-                downloadId: sharedDownloadId
+                downloadId: sharedDownloadId,
+                entityId: 103
             )
         }
     }
@@ -296,7 +304,8 @@ public enum DemoMocks {
                 indexer: "DemoTracker",
                 upgrade: false,
                 posterSeed: "pioneerone",
-                aspect: .portrait
+                aspect: .portrait,
+                entityId: 101
                 // No downloadId override — defaults to id, so each is unique.
             )
         }
@@ -334,7 +343,8 @@ public enum DemoMocks {
                 upgrade: false,
                 posterSeed: "spring",
                 aspect: .portrait,
-                releaseGroup: "DEMO"
+                releaseGroup: "DEMO",
+                entityId: 106
             )
         }
     }
@@ -354,7 +364,8 @@ public enum DemoMocks {
                     size: 220_000_000,
                     fileName: "Nine Inch Nails - Ghosts I-IV (320kbps).zip"
                 ),
-                posterSeed: "ninghosts", aspect: .square
+                posterSeed: "ninghosts", aspect: .square,
+                entityId: 301
             ),
             queueItem(
                 source: .lidarr, id: "demo-lidarr-2",
@@ -363,7 +374,8 @@ public enum DemoMocks {
                 status: .completed, progress: 1.0,
                 quality: "MP3-320", formats: [], score: 0,
                 client: "rTorrent", indexer: "DemoTracker",
-                upgrade: false, posterSeed: "bradsucks", aspect: .square
+                upgrade: false, posterSeed: "bradsucks", aspect: .square,
+                entityId: 302
             ),
         ]
     }
@@ -526,7 +538,8 @@ public enum DemoMocks {
         upgrade: Bool, existing: ExistingFile? = nil,
         posterSeed: String, aspect: Aspect,
         downloadId: String? = nil,
-        releaseGroup: String? = nil
+        releaseGroup: String? = nil,
+        entityId: Int? = nil
     ) -> QueueItem {
         let total: Int64 = 4_500_000_000
         let left = Int64(Double(total) * (1 - progress))
@@ -557,6 +570,7 @@ public enum DemoMocks {
             existingSize: existing?.size,
             existingFileName: existing?.fileName,
             contentSlug: posterSeed,
+            entityId: entityId,
             posterURL: poster(label: posterLabel(title: title, subtitle: subtitle), seed: posterSeed, w: w, h: h),
             posterRequiresAuth: false
         )
@@ -608,5 +622,597 @@ public enum DemoMocks {
             customFormats: formats,
             customFormatScore: score
         )
+    }
+
+    // MARK: - Detail-view fixtures
+    //
+    // The detail panels (RadarrMovieDetail, SonarrSeriesDetail,
+    // LidarrAlbumDetail) feed `MediaHeaderCard`, the season list, the
+    // existing-file banner, etc. Each entry below corresponds to a
+    // queue item's `entityId` so DetailView can look up rich metadata
+    // when the user taps a row.
+
+    /// Lookup helper used by RadarrClient.fetchMovieDetails when
+    /// DemoMode is active.
+    public static func radarrMovieDetail(id: Int) -> RadarrMovieDetail? {
+        radarrDetails[id]
+    }
+
+    public static func sonarrSeriesDetail(id: Int) -> SonarrSeriesDetail? {
+        sonarrDetails[id]
+    }
+
+    public static func sonarrEpisodes(seriesId: Int) -> [SonarrEpisodeDetail] {
+        sonarrEpisodeData[seriesId] ?? []
+    }
+
+    public static func lidarrAlbumDetail(id: Int) -> LidarrAlbumDetail? {
+        lidarrDetails[id]
+    }
+
+    public static func lidarrTracks(albumId: Int) -> [LidarrTrackDetail] {
+        lidarrTrackData[albumId] ?? []
+    }
+
+    private static func image(seed: String, kind: String = "poster") -> ArrImage {
+        let url = poster(label: "", seed: seed, w: 220, h: 330)?.absoluteString
+        return ArrImage(coverType: kind, url: url, remoteUrl: url)
+    }
+
+    private static var radarrDetails: [Int: RadarrMovieDetail] {
+        [
+            201: RadarrMovieDetail(
+                id: 201,
+                title: "Big Buck Bunny",
+                year: 2008,
+                overview: "A large rabbit deals with three bullying rodents who terrorise the forest. Big Buck Bunny shows off the open-source Blender movie pipeline at peak whimsy — a benchmark short for compositing, fluid sims, and fur shading that tens of millions of streams later still works as a charming standalone.",
+                runtime: 10,
+                genres: ["Animation", "Comedy", "Family", "Short"],
+                ratings: RadarrDetailRatings(
+                    imdb: RadarrRatingValue(value: 6.5, votes: 24_000),
+                    tmdb: RadarrRatingValue(value: 7.2, votes: 1_100),
+                    metacritic: RadarrRatingValue(value: 78, votes: nil),
+                    rottenTomatoes: RadarrRatingValue(value: 92, votes: nil)
+                ),
+                images: [image(seed: "bigbuckbunny")],
+                studio: "Blender Foundation",
+                certification: "G",
+                titleSlug: "bigbuckbunny",
+                movieFile: nil,
+                inCinemas: nil,
+                status: "released"
+            ),
+            202: RadarrMovieDetail(
+                id: 202,
+                title: "Sintel",
+                year: 2010,
+                overview: "A girl scours a hostile world for her lost dragon companion. Blender's third open-movie short, fronted by a lush hand-drawn opening cut to live-action plates and a haunting Jan Morgenstern score; widely cited as the moment Blender's renderer crossed the line into 'good enough for theatrical' for short-form work.",
+                runtime: 14,
+                genres: ["Animation", "Adventure", "Drama", "Fantasy"],
+                ratings: RadarrDetailRatings(
+                    imdb: RadarrRatingValue(value: 8.0, votes: 7_300),
+                    tmdb: RadarrRatingValue(value: 7.9, votes: 480),
+                    metacritic: nil,
+                    rottenTomatoes: RadarrRatingValue(value: 88, votes: nil)
+                ),
+                images: [image(seed: "sintel")],
+                studio: "Blender Foundation",
+                certification: "PG",
+                titleSlug: "sintel",
+                movieFile: nil,
+                inCinemas: nil,
+                status: "released"
+            ),
+            203: RadarrMovieDetail(
+                id: 203,
+                title: "Tears of Steel",
+                year: 2012,
+                overview: "A small group of warriors and scientists gather at the foot of an Amsterdam landmark to make a desperate stand against a robot uprising. Blender's first big live-action / VFX hybrid — the project that pushed compositing, motion-capture cleanup, and node-based shading into Blender's main branch.",
+                runtime: 12,
+                genres: ["Action", "Sci-Fi", "Short"],
+                ratings: RadarrDetailRatings(
+                    imdb: RadarrRatingValue(value: 6.7, votes: 4_200),
+                    tmdb: RadarrRatingValue(value: 6.9, votes: 320),
+                    metacritic: nil,
+                    rottenTomatoes: nil
+                ),
+                images: [image(seed: "tearsofsteel")],
+                studio: "Blender Foundation",
+                certification: "PG",
+                titleSlug: "tearsofsteel",
+                movieFile: nil,
+                inCinemas: nil,
+                status: "released"
+            ),
+        ]
+    }
+
+    private static var sonarrDetails: [Int: SonarrSeriesDetail] {
+        [
+            101: SonarrSeriesDetail(
+                id: 101,
+                title: "Pioneer One",
+                year: 2010,
+                overview: "A mysterious capsule re-enters the atmosphere over Montana. As the US government investigates, a deeper Cold War-era conspiracy starts to unravel. The first show ever crowdfunded on BitTorrent — released CC-BY-SA, episode by episode, while the world figured out how to pay creators directly.",
+                genres: ["Drama", "Mystery", "Sci-Fi"],
+                runtime: 35,
+                ratings: SonarrDetailRatings(value: 7.4, votes: 1_840),
+                network: "VODO",
+                status: "ended",
+                images: [image(seed: "pioneerone")],
+                titleSlug: "pioneerone",
+                seasons: [
+                    SonarrSeasonInfo(seasonNumber: 1, monitored: true, statistics: SonarrSeasonStats(
+                        episodeFileCount: 4, episodeCount: 6, totalEpisodeCount: 6,
+                        sizeOnDisk: 2_400_000_000, percentOfEpisodes: 66.6
+                    )),
+                    SonarrSeasonInfo(seasonNumber: 2, monitored: true, statistics: SonarrSeasonStats(
+                        episodeFileCount: 0, episodeCount: 4, totalEpisodeCount: 4,
+                        sizeOnDisk: 0, percentOfEpisodes: 0
+                    )),
+                ],
+                firstAired: "2010-06-16"
+            ),
+            102: SonarrSeriesDetail(
+                id: 102,
+                title: "Caminandes",
+                year: 2013,
+                overview: "Koro, a wide-eyed Patagonian llama, just wants to live his life — but the trail keeps giving him reasons not to. Three short episodes of Blender Foundation slapstick that became a tutorial pipeline for character rigging, eye shading, and snow simulation.",
+                genres: ["Animation", "Comedy", "Family"],
+                runtime: 5,
+                ratings: SonarrDetailRatings(value: 7.6, votes: 2_300),
+                network: "Blender Foundation",
+                status: "continuing",
+                images: [image(seed: "caminandes")],
+                titleSlug: "caminandes",
+                seasons: [
+                    SonarrSeasonInfo(seasonNumber: 1, monitored: true, statistics: SonarrSeasonStats(
+                        episodeFileCount: 3, episodeCount: 5, totalEpisodeCount: 5,
+                        sizeOnDisk: 1_400_000_000, percentOfEpisodes: 60
+                    )),
+                ],
+                firstAired: "2013-04-13"
+            ),
+            103: SonarrSeriesDetail(
+                id: 103,
+                title: "Tears of Steel",
+                year: 2012,
+                overview: "A serialised continuation of the Blender short — the same Amsterdam crew, episode-by-episode, exploring the years between the robot uprising and the human resistance. Demo placeholder for a sci-fi season pack.",
+                genres: ["Sci-Fi", "Action", "Drama"],
+                runtime: 28,
+                ratings: SonarrDetailRatings(value: 7.1, votes: 980),
+                network: "Blender Foundation",
+                status: "continuing",
+                images: [image(seed: "tearsofsteel")],
+                titleSlug: "tearsofsteel-series",
+                seasons: [
+                    SonarrSeasonInfo(seasonNumber: 1, monitored: true, statistics: SonarrSeasonStats(
+                        episodeFileCount: 0, episodeCount: 3, totalEpisodeCount: 3,
+                        sizeOnDisk: 0, percentOfEpisodes: 0
+                    )),
+                ],
+                firstAired: "2012-09-26"
+            ),
+            104: SonarrSeriesDetail(
+                id: 104,
+                title: "Cosmos Laundromat",
+                year: 2015,
+                overview: "Franck the suicidal sheep meets a multiversal salesman who promises any life he can imagine — for a price. The Blender Foundation's experimental open-movie pilot; demo content for a half-hour adult-animation drama.",
+                genres: ["Animation", "Drama", "Fantasy"],
+                runtime: 12,
+                ratings: SonarrDetailRatings(value: 7.5, votes: 1_400),
+                network: "Blender Foundation",
+                status: "ended",
+                images: [image(seed: "cosmoslaundromat")],
+                titleSlug: "cosmoslaundromat-series",
+                seasons: [
+                    SonarrSeasonInfo(seasonNumber: 1, monitored: true, statistics: SonarrSeasonStats(
+                        episodeFileCount: 0, episodeCount: 1, totalEpisodeCount: 1,
+                        sizeOnDisk: 0, percentOfEpisodes: 0
+                    )),
+                ],
+                firstAired: "2015-08-10"
+            ),
+            105: SonarrSeriesDetail(
+                id: 105,
+                title: "Northern Cascade",
+                year: 2023,
+                overview: "A team of glaciologists, climbers, and a reluctant journalist disappear in the Cascade range. Each season unwinds the timeline differently — what they took with them, what they left behind, and what was already there before they arrived. (Demo placeholder.)",
+                genres: ["Drama", "Mystery", "Thriller"],
+                runtime: 52,
+                ratings: SonarrDetailRatings(value: 8.4, votes: 12_500),
+                network: "Demo Streaming",
+                status: "continuing",
+                images: [image(seed: "northerncascade")],
+                titleSlug: "northerncascade",
+                seasons: [
+                    SonarrSeasonInfo(seasonNumber: 1, monitored: true, statistics: SonarrSeasonStats(
+                        episodeFileCount: 8, episodeCount: 8, totalEpisodeCount: 8,
+                        sizeOnDisk: 36_000_000_000, percentOfEpisodes: 100
+                    )),
+                    SonarrSeasonInfo(seasonNumber: 2, monitored: true, statistics: SonarrSeasonStats(
+                        episodeFileCount: 3, episodeCount: 8, totalEpisodeCount: 8,
+                        sizeOnDisk: 14_500_000_000, percentOfEpisodes: 37.5
+                    )),
+                ],
+                firstAired: "2023-02-09"
+            ),
+            106: SonarrSeriesDetail(
+                id: 106,
+                title: "Spring Tales",
+                year: 2019,
+                overview: "An animated anthology of folklore retold from the perspective of small things — a bee on a stalk, a frog in a puddle, a salamander under a stone. A spiritual descendant of Blender's `Spring` short, expanded into a season of slow-paced visual storytelling. (Demo placeholder.)",
+                genres: ["Animation", "Family", "Drama"],
+                runtime: 22,
+                ratings: SonarrDetailRatings(value: 8.0, votes: 3_200),
+                network: "Blender Foundation",
+                status: "continuing",
+                images: [image(seed: "spring")],
+                titleSlug: "springtales",
+                seasons: [
+                    SonarrSeasonInfo(seasonNumber: 1, monitored: true, statistics: SonarrSeasonStats(
+                        episodeFileCount: 0, episodeCount: 4, totalEpisodeCount: 4,
+                        sizeOnDisk: 0, percentOfEpisodes: 0
+                    )),
+                ],
+                firstAired: "2019-04-04"
+            ),
+        ]
+    }
+
+    private static var sonarrEpisodeData: [Int: [SonarrEpisodeDetail]] {
+        [
+            101: [ // Pioneer One
+                episode(101, 1, 1, "Earthfall", "A capsule re-enters over rural Montana.", daysAgo: 700, hasFile: true),
+                episode(102, 1, 2, "Tomorrow Belongs to Us", "DHS gets involved.", daysAgo: 690, hasFile: true),
+                episode(103, 1, 3, "Endurance", "A doctor risks her career.", daysAgo: 680, hasFile: false),
+                episode(104, 1, 4, "Brave New Earth", "The signal travels.", daysAgo: 670, hasFile: false),
+                episode(105, 1, 5, "Foothold", "An offer no one can refuse.", daysAgo: 660, hasFile: false),
+                episode(106, 1, 6, "What Remains", "Things break, others mend.", daysAgo: 650, hasFile: true),
+                episode(201, 2, 1, "Reentry", "Aftermath.", daysAhead: 1, hasFile: false),
+                episode(202, 2, 2, "Witness", "An unexpected ally.", daysAhead: 8, hasFile: false),
+                episode(203, 2, 3, "Cold War Echo", "An old enemy.", daysAhead: 15, hasFile: false),
+                episode(204, 2, 4, "Diaspora", "The cosmonaut speaks.", daysAhead: 22, hasFile: false),
+            ],
+            102: [ // Caminandes
+                episode(301, 1, 1, "Llama Drama", "Koro meets a fence.", daysAgo: 1100, hasFile: true),
+                episode(302, 1, 2, "Gran Dillama", "Koro meets a llama-vending machine.", daysAgo: 950, hasFile: true),
+                episode(303, 1, 3, "Llamigos", "Koro meets a penguin.", daysAgo: 800, hasFile: false),
+                episode(304, 1, 4, "Mountain Pass", "Koro climbs.", daysAgo: 600, hasFile: true),
+                episode(305, 1, 5, "Frozen Lake", "Koro slips.", daysAgo: 400, hasFile: false),
+            ],
+            105: [ // Northern Cascade
+                episode(701, 2, 1, "First Tracks", "A return to the range.", daysAgo: 70, hasFile: true),
+                episode(702, 2, 2, "Approach", "The team splits.", daysAgo: 63, hasFile: true),
+                episode(703, 2, 3, "Whiteout", "Visibility drops to zero.", daysAgo: 56, hasFile: true),
+                episode(704, 2, 4, "Cold Start", "Equipment fails.", daysAgo: 49, hasFile: false),
+                episode(705, 2, 5, "Bivouac", "A long night.", daysAgo: 42, hasFile: false),
+                episode(706, 2, 6, "Crevasse", "Someone goes down.", daysAhead: 0, hasFile: false),
+                episode(707, 2, 7, "Recovery", "Helicopter on standby.", daysAhead: 7, hasFile: false),
+                episode(708, 2, 8, "Aftermath", "Press conference.", daysAhead: 14, hasFile: false),
+            ],
+            106: sprintTalesEpisodes,
+            103: tosSeriesEpisodes,
+            104: [
+                episode(901, 1, 1, "The Beginning", "Franck negotiates.", daysAhead: 0, hasFile: false),
+            ],
+        ]
+    }
+
+    private static var sprintTalesEpisodes: [SonarrEpisodeDetail] {
+        [
+            episode(801, 1, 1, "Bloom", "A flower opens.", daysAgo: 0, hasFile: false),
+            episode(802, 1, 2, "Petals", "A breeze picks up.", daysAhead: 7, hasFile: false),
+            episode(803, 1, 3, "Pollen", "A bee visits.", daysAhead: 14, hasFile: false),
+            episode(804, 1, 4, "Wilt", "Autumn arrives.", daysAhead: 21, hasFile: false),
+        ]
+    }
+
+    private static var tosSeriesEpisodes: [SonarrEpisodeDetail] {
+        [
+            episode(401, 1, 1, "First Light", "The team gathers.", daysAgo: 30, hasFile: false),
+            episode(402, 1, 2, "Mecha", "An old enemy returns.", daysAgo: 23, hasFile: false),
+            episode(403, 1, 3, "Reunion", "Decisions made.", daysAgo: 16, hasFile: false),
+        ]
+    }
+
+    private static func episode(
+        _ id: Int, _ season: Int, _ number: Int,
+        _ title: String, _ overview: String,
+        daysAgo: Int = -1, daysAhead: Int = -1,
+        hasFile: Bool
+    ) -> SonarrEpisodeDetail {
+        let date: Date
+        if daysAgo >= 0 {
+            date = Calendar.current.date(byAdding: .day, value: -daysAgo, to: Date()) ?? Date()
+        } else if daysAhead >= 0 {
+            date = Calendar.current.date(byAdding: .day, value: daysAhead, to: Date()) ?? Date()
+        } else {
+            date = Date()
+        }
+        let fmt = ISO8601DateFormatter()
+        return SonarrEpisodeDetail(
+            id: id, seasonNumber: season, episodeNumber: number,
+            title: title, overview: overview,
+            airDateUtc: fmt.string(from: date),
+            hasFile: hasFile, monitored: true, runtime: 45
+        )
+    }
+
+    private static var lidarrDetails: [Int: LidarrAlbumDetail] {
+        [
+            301: LidarrAlbumDetail(
+                id: 301,
+                title: "Ghosts I-IV",
+                overview: "Trent Reznor and Atticus Ross's 36-track instrumental sprawl, released directly to fans on a tiered model that essentially invented the modern artist-direct download. Available freely under CC-BY-NC-SA — perfect demo content for a music tracker.",
+                releaseDate: "2008-03-02",
+                genres: ["Electronic", "Industrial", "Ambient", "Instrumental"],
+                ratings: LidarrDetailRatings(value: 8.2, votes: 4_500),
+                images: [image(seed: "ninghosts", kind: "cover")],
+                artist: LidarrArtist(
+                    id: 301, artistName: "Nine Inch Nails",
+                    foreignArtistId: "b7ffd2af-418f-4be2-bdd1-22f8b48613da",
+                    images: [image(seed: "ninghosts", kind: "poster")]
+                ),
+                foreignAlbumId: "ghosts-i-iv-2008",
+                albumType: "Album",
+                duration: 1_960_000, // ~33 min
+                statistics: LidarrAlbumStats(
+                    trackCount: 36, trackFileCount: 12, totalTrackCount: 36,
+                    sizeOnDisk: 280_000_000
+                )
+            ),
+            302: LidarrAlbumDetail(
+                id: 302,
+                title: "Out of It",
+                overview: "Brad Sucks's third self-released album of cynical, hooky DIY rock. Made in his basement, released for free, distributed via direct downloads and CC licensing — a poster child for the open-music movement Lidarr was built to track.",
+                releaseDate: "2017-04-04",
+                genres: ["Indie Rock", "Alternative", "DIY"],
+                ratings: LidarrDetailRatings(value: 7.6, votes: 320),
+                images: [image(seed: "bradsucks", kind: "cover")],
+                artist: LidarrArtist(
+                    id: 302, artistName: "Brad Sucks",
+                    foreignArtistId: "1ce18a52-ca5f-4f34-9bc6-5f2af0d33f5e",
+                    images: [image(seed: "bradsucks", kind: "poster")]
+                ),
+                foreignAlbumId: "out-of-it-2017",
+                albumType: "Album",
+                duration: 2_280_000, // ~38 min
+                statistics: LidarrAlbumStats(
+                    trackCount: 11, trackFileCount: 11, totalTrackCount: 11,
+                    sizeOnDisk: 95_000_000
+                )
+            ),
+        ]
+    }
+
+    private static var lidarrTrackData: [Int: [LidarrTrackDetail]] {
+        [
+            301: [
+                track(3001, "1", 1, "1 Ghosts I", duration_ms: 152_000, hasFile: true),
+                track(3002, "2", 2, "2 Ghosts I", duration_ms: 218_000, hasFile: true),
+                track(3003, "3", 3, "3 Ghosts I", duration_ms: 218_000, hasFile: true),
+                track(3004, "4", 4, "4 Ghosts I", duration_ms: 137_000, hasFile: true),
+                track(3005, "5", 5, "5 Ghosts I", duration_ms: 169_000, hasFile: true),
+                track(3006, "6", 6, "6 Ghosts I", duration_ms: 240_000, hasFile: true),
+                track(3007, "7", 7, "7 Ghosts I", duration_ms: 153_000, hasFile: true),
+                track(3008, "8", 8, "8 Ghosts I", duration_ms: 178_000, hasFile: true),
+                track(3009, "9", 9, "9 Ghosts I", duration_ms: 165_000, hasFile: true),
+                track(3010, "10", 10, "10 Ghosts II", duration_ms: 180_000, hasFile: true),
+                track(3011, "11", 11, "11 Ghosts II", duration_ms: 245_000, hasFile: true),
+                track(3012, "12", 12, "12 Ghosts II", duration_ms: 225_000, hasFile: true),
+                track(3013, "13", 13, "13 Ghosts II", duration_ms: 277_000, hasFile: false),
+                track(3014, "14", 14, "14 Ghosts II", duration_ms: 113_000, hasFile: false),
+                track(3015, "15", 15, "15 Ghosts II", duration_ms: 224_000, hasFile: false),
+                track(3016, "16", 16, "16 Ghosts II", duration_ms: 196_000, hasFile: false),
+                track(3017, "17", 17, "17 Ghosts II", duration_ms: 209_000, hasFile: false),
+                track(3018, "18", 18, "18 Ghosts II", duration_ms: 162_000, hasFile: false),
+            ],
+            302: [
+                track(4001, "1", 1, "Sleeping",         duration_ms: 198_000, hasFile: true),
+                track(4002, "2", 2, "Wonder",           duration_ms: 207_000, hasFile: true),
+                track(4003, "3", 3, "Out of It",        duration_ms: 184_000, hasFile: true),
+                track(4004, "4", 4, "Maps",             duration_ms: 215_000, hasFile: true),
+                track(4005, "5", 5, "Holding Pattern",  duration_ms: 226_000, hasFile: true),
+                track(4006, "6", 6, "Try",              duration_ms: 233_000, hasFile: true),
+                track(4007, "7", 7, "What You Wanted",  duration_ms: 198_000, hasFile: true),
+                track(4008, "8", 8, "Out of Reach",     duration_ms: 203_000, hasFile: true),
+                track(4009, "9", 9, "Underwater",       duration_ms: 234_000, hasFile: true),
+                track(4010, "10", 10, "Dive Light",     duration_ms: 191_000, hasFile: true),
+                track(4011, "11", 11, "Surfacing",      duration_ms: 195_000, hasFile: true),
+            ],
+        ]
+    }
+
+    private static func track(
+        _ id: Int, _ trackNumber: String, _ absolute: Int,
+        _ title: String, duration_ms: Int, hasFile: Bool
+    ) -> LidarrTrackDetail {
+        LidarrTrackDetail(
+            id: id, trackNumber: trackNumber, absoluteTrackNumber: absolute,
+            title: title, duration: duration_ms, mediumNumber: 1, hasFile: hasFile
+        )
+    }
+
+    // MARK: - Search results
+
+    public static func searchResults(for query: String, source: QueueItem.Source) -> [SearchResult] {
+        let pool: [SearchResult]
+        switch source {
+        case .radarr: pool = radarrSearchPool
+        case .sonarr: pool = sonarrSearchPool
+        case .lidarr: pool = []
+        }
+        guard !query.isEmpty else { return Array(pool.prefix(6)) }
+        let q = query.lowercased()
+        return pool.filter { result in
+            result.title.lowercased().contains(q)
+                || (result.overview?.lowercased().contains(q) ?? false)
+                || result.genres.contains(where: { $0.lowercased().contains(q) })
+        }
+    }
+
+    private static var radarrSearchPool: [SearchResult] {
+        [
+            SearchResult(
+                id: 10003, foreignId: "10003",
+                title: "Elephants Dream", subtitle: nil,
+                year: 2006,
+                rating: 7.0,
+                imdb: 6.8, rottenTomatoes: 79, metacritic: 71,
+                overview: "Two characters argue about the nature of the strange world they inhabit. Blender's first ever open movie — short, surreal, and a watershed moment for free / open-source CGI in 2006.",
+                runtime: 11,
+                genres: ["Animation", "Short", "Sci-Fi"],
+                network: "Blender Foundation",
+                certification: "PG",
+                posterURL: poster(label: "Elephants Dream", seed: "elephantsdream", w: 200, h: 300),
+                source: .radarr
+            ),
+            SearchResult(
+                id: 10004, foreignId: "10004",
+                title: "Spring", subtitle: nil,
+                year: 2019,
+                rating: 7.8,
+                imdb: 7.5, rottenTomatoes: 91, metacritic: 82,
+                overview: "A young shepherd girl and her dog encounter ancient creatures during the spring melt. Blender's most painterly open-movie short — every frame deliberately staged like a watercolour.",
+                runtime: 8,
+                genres: ["Animation", "Family", "Adventure"],
+                network: "Blender Foundation",
+                certification: "G",
+                posterURL: poster(label: "Spring", seed: "spring", w: 200, h: 300),
+                source: .radarr
+            ),
+            SearchResult(
+                id: 10005, foreignId: "10005",
+                title: "Charge", subtitle: nil,
+                year: 2018,
+                rating: 7.0,
+                imdb: 6.9, rottenTomatoes: nil, metacritic: nil,
+                overview: "A short film about a robot who has to choose between his owner and his charging cable. Maker-built, shot on consumer-grade rigs, and released openly. Demo entry for a small indie sci-fi short.",
+                runtime: 9,
+                genres: ["Sci-Fi", "Short", "Drama"],
+                network: nil,
+                certification: "PG",
+                posterURL: poster(label: "Charge", seed: "charge", w: 200, h: 300),
+                source: .radarr
+            ),
+            SearchResult(
+                id: 10006, foreignId: "10006",
+                title: "Agent 327: Operation Barbershop", subtitle: nil,
+                year: 2017,
+                rating: 7.4,
+                imdb: 7.2, rottenTomatoes: 88, metacritic: nil,
+                overview: "A Dutch comic-book spy walks into a barbershop and out into a slapstick brawl. Blender Animation Studio's pilot for an Agent 327 feature — three minutes of bouncy character animation that doubles as a tech demo for the EEVEE realtime renderer.",
+                runtime: 4,
+                genres: ["Animation", "Action", "Comedy"],
+                network: "Blender Animation Studio",
+                certification: "PG",
+                posterURL: poster(label: "Agent 327", seed: "agent327", w: 200, h: 300),
+                source: .radarr
+            ),
+            SearchResult(
+                id: 10007, foreignId: "10007",
+                title: "Hero", subtitle: nil,
+                year: 2018,
+                rating: 7.2,
+                imdb: 7.0, rottenTomatoes: nil, metacritic: nil,
+                overview: "Grease-pencil 2D animation about a small dog with a big imagination. Blender's first major showcase of fully integrated 2D-in-3D pipeline work — a love letter to hand-drawn cartoons rendered inside a 3D scene.",
+                runtime: 4,
+                genres: ["Animation", "Family"],
+                network: "Blender Animation Studio",
+                certification: "G",
+                posterURL: poster(label: "Hero", seed: "hero2018", w: 200, h: 300),
+                source: .radarr
+            ),
+            SearchResult(
+                id: 10008, foreignId: "10008",
+                title: "Coffee Run", subtitle: nil,
+                year: 2020,
+                rating: 7.1,
+                imdb: 6.9, rottenTomatoes: nil, metacritic: nil,
+                overview: "A frantic cup of coffee dashes through a city of frantic adults. Pure stylised motion design, mostly built in grease pencil and used as a stress test for Blender's grease-pencil performance.",
+                runtime: 4,
+                genres: ["Animation", "Short", "Comedy"],
+                network: "Blender Animation Studio",
+                certification: "G",
+                posterURL: poster(label: "Coffee Run", seed: "coffeerun", w: 200, h: 300),
+                source: .radarr
+            ),
+        ]
+    }
+
+    private static var sonarrSearchPool: [SearchResult] {
+        [
+            SearchResult(
+                id: 20001, foreignId: "20001",
+                title: "Pioneer One", subtitle: "1 season",
+                year: 2010,
+                rating: 7.4,
+                imdb: nil, rottenTomatoes: nil, metacritic: nil,
+                overview: "BitTorrent-funded sci-fi thriller about a Soviet capsule that re-enters the atmosphere over Montana. Each episode was paid for by viewer donations after the previous one shipped.",
+                runtime: 35,
+                genres: ["Drama", "Mystery", "Sci-Fi"],
+                network: "VODO",
+                certification: nil,
+                posterURL: poster(label: "Pioneer One", seed: "pioneerone", w: 200, h: 300),
+                source: .sonarr
+            ),
+            SearchResult(
+                id: 20002, foreignId: "20002",
+                title: "Caminandes", subtitle: "1 season",
+                year: 2013,
+                rating: 7.6,
+                imdb: nil, rottenTomatoes: nil, metacritic: nil,
+                overview: "A llama, a fence, and a steady supply of bad ideas. Blender Foundation's silent slapstick anthology.",
+                runtime: 5,
+                genres: ["Animation", "Comedy", "Family"],
+                network: "Blender Foundation",
+                certification: nil,
+                posterURL: poster(label: "Caminandes", seed: "caminandes", w: 200, h: 300),
+                source: .sonarr
+            ),
+            SearchResult(
+                id: 20003, foreignId: "20003",
+                title: "Northern Cascade", subtitle: "2 seasons",
+                year: 2023,
+                rating: 8.4,
+                imdb: nil, rottenTomatoes: nil, metacritic: nil,
+                overview: "A team of glaciologists, climbers, and a reluctant journalist disappear in the Cascade range. Each season unwinds the timeline differently — what they took with them, what they left behind, and what was already there before they arrived.",
+                runtime: 52,
+                genres: ["Drama", "Mystery", "Thriller"],
+                network: "Demo Streaming",
+                certification: nil,
+                posterURL: poster(label: "Northern Cascade", seed: "northerncascade", w: 200, h: 300),
+                source: .sonarr
+            ),
+            SearchResult(
+                id: 20004, foreignId: "20004",
+                title: "Spring Tales", subtitle: "1 season",
+                year: 2019,
+                rating: 8.0,
+                imdb: nil, rottenTomatoes: nil, metacritic: nil,
+                overview: "Animated anthology of folklore from the perspective of small things. Pollen-cam.",
+                runtime: 22,
+                genres: ["Animation", "Family", "Drama"],
+                network: "Blender Foundation",
+                certification: nil,
+                posterURL: poster(label: "Spring Tales", seed: "spring", w: 200, h: 300),
+                source: .sonarr
+            ),
+            SearchResult(
+                id: 20005, foreignId: "20005",
+                title: "Cosmos Laundromat", subtitle: "Pilot",
+                year: 2015,
+                rating: 7.5,
+                imdb: nil, rottenTomatoes: nil, metacritic: nil,
+                overview: "A multiversal salesman makes a pitch to a suicidal sheep. Open-movie pilot.",
+                runtime: 12,
+                genres: ["Animation", "Drama", "Fantasy"],
+                network: "Blender Foundation",
+                certification: nil,
+                posterURL: poster(label: "Cosmos Laundromat", seed: "cosmoslaundromat", w: 200, h: 300),
+                source: .sonarr
+            ),
+        ]
     }
 }

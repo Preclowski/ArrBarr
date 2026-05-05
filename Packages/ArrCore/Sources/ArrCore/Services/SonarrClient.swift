@@ -167,6 +167,11 @@ public actor SonarrClient {
     }
 
     func fetchSeriesDetails(id: Int) async throws -> SonarrSeriesDetail {
+        if DemoMode.isActive {
+            try? await Task.sleep(nanoseconds: 250_000_000)
+            if let demo = DemoMocks.sonarrSeriesDetail(id: id) { return demo }
+            throw HTTPError.decoding(NSError(domain: "demo", code: 404))
+        }
         guard config.isConfigured else { throw HTTPError.notConfigured }
         guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
         let url = try http.url(base: config.baseURL, path: "/api/v3/series/\(id)")
@@ -176,6 +181,10 @@ public actor SonarrClient {
     }
 
     func fetchEpisodes(seriesId: Int) async throws -> [SonarrEpisodeDetail] {
+        if DemoMode.isActive {
+            try? await Task.sleep(nanoseconds: 200_000_000)
+            return DemoMocks.sonarrEpisodes(seriesId: seriesId)
+        }
         guard config.isConfigured else { throw HTTPError.notConfigured }
         guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
         let url = try http.url(

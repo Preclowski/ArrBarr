@@ -123,6 +123,11 @@ public actor LidarrClient {
     }
 
     func fetchAlbumDetails(id: Int) async throws -> LidarrAlbumDetail {
+        if DemoMode.isActive {
+            try? await Task.sleep(nanoseconds: 250_000_000)
+            if let demo = DemoMocks.lidarrAlbumDetail(id: id) { return demo }
+            throw HTTPError.decoding(NSError(domain: "demo", code: 404))
+        }
         guard config.isConfigured else { throw HTTPError.notConfigured }
         guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
         let url = try http.url(base: config.baseURL, path: "/api/v1/album/\(id)")
@@ -132,6 +137,10 @@ public actor LidarrClient {
     }
 
     func fetchTracks(albumId: Int) async throws -> [LidarrTrackDetail] {
+        if DemoMode.isActive {
+            try? await Task.sleep(nanoseconds: 200_000_000)
+            return DemoMocks.lidarrTracks(albumId: albumId)
+        }
         guard config.isConfigured else { throw HTTPError.notConfigured }
         guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
         let url = try http.url(

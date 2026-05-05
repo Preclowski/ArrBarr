@@ -165,6 +165,11 @@ public actor RadarrClient {
     }
 
     func fetchMovieDetails(id: Int) async throws -> RadarrMovieDetail {
+        if DemoMode.isActive {
+            try? await Task.sleep(nanoseconds: 250_000_000)
+            if let demo = DemoMocks.radarrMovieDetail(id: id) { return demo }
+            throw HTTPError.decoding(NSError(domain: "demo", code: 404))
+        }
         guard config.isConfigured else { throw HTTPError.notConfigured }
         guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
         let url = try http.url(base: config.baseURL, path: "/api/v3/movie/\(id)")

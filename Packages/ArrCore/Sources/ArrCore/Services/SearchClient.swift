@@ -19,6 +19,13 @@ public actor SearchClient {
     // MARK: - Lookup
 
     func lookup(query: String) async throws -> [SearchResult] {
+        if DemoMode.isActive {
+            // Simulate a brief network round-trip so the loading state is
+            // visible. Real arr API responses to a typed query are
+            // typically ~200-400 ms, so 350 ms feels right.
+            try? await Task.sleep(nanoseconds: 350_000_000)
+            return DemoMocks.searchResults(for: query, source: source)
+        }
         guard config.isConfigured else { throw HTTPError.notConfigured }
         guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
         switch source {
@@ -42,6 +49,7 @@ public actor SearchClient {
     // MARK: - Library filter
 
     func fetchLibraryIds() async throws -> Set<Int> {
+        if DemoMode.isActive { return [] }
         guard config.isConfigured else { return [] }
         switch source {
         case .radarr:
@@ -62,6 +70,13 @@ public actor SearchClient {
     // MARK: - Profiles & folders
 
     func fetchQualityProfiles() async throws -> [QualityProfile] {
+        if DemoMode.isActive {
+            return [
+                QualityProfile(id: 1, name: "Any"),
+                QualityProfile(id: 2, name: "HD-1080p"),
+                QualityProfile(id: 3, name: "Ultra-HD"),
+            ]
+        }
         guard config.isConfigured else { return [] }
         let url = try http.url(base: config.baseURL, path: "\(apiBase)/qualityprofile")
         let data = try await http.get(url, headers: headers)
@@ -69,6 +84,12 @@ public actor SearchClient {
     }
 
     func fetchRootFolders() async throws -> [RootFolder] {
+        if DemoMode.isActive {
+            return [
+                RootFolder(id: 1, path: "/demo/Movies"),
+                RootFolder(id: 2, path: "/demo/TV"),
+            ]
+        }
         guard config.isConfigured else { return [] }
         let url = try http.url(base: config.baseURL, path: "\(apiBase)/rootfolder")
         let data = try await http.get(url, headers: headers)
@@ -79,6 +100,10 @@ public actor SearchClient {
 
     func addMovie(_ result: SearchResult, qualityProfileId: Int, rootFolderPath: String,
                   monitor: RadarrMonitorMode) async throws {
+        if DemoMode.isActive {
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            return
+        }
         guard config.isConfigured else { throw HTTPError.notConfigured }
         guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
         let url = try http.url(base: config.baseURL, path: "\(apiBase)/movie")
@@ -98,6 +123,10 @@ public actor SearchClient {
     func addSeries(_ result: SearchResult, qualityProfileId: Int, rootFolderPath: String,
                    monitor: SonarrMonitorMode, seriesType: SonarrSeriesType,
                    seasonFolder: Bool) async throws {
+        if DemoMode.isActive {
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            return
+        }
         guard config.isConfigured else { throw HTTPError.notConfigured }
         guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
         let url = try http.url(base: config.baseURL, path: "\(apiBase)/series")

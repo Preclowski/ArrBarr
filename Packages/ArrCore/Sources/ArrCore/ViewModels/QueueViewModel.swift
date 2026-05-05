@@ -148,18 +148,18 @@ public final class QueueViewModel: ObservableObject {
             try? await Task.sleep(nanoseconds: 1_000_000_000)
             self.radarr = DemoMocks.radarrQueue
             self.sonarr = DemoMocks.sonarrQueue
-            self.lidarr = []
+            self.lidarr = DemoMocks.lidarrQueue
             self.upcoming = DemoMocks.upcoming
             self.tonight = Self.tonightSlice(from: DemoMocks.upcoming, hours: configStore.tonightHours)
             self.health = DemoMocks.health
             self.radarrError = nil
             self.sonarrError = nil
-            self.lidarrError = String(localized: "Network error: Could not connect to the server.")
-            self.unreachableArrs = [.lidarr]
+            self.lidarrError = nil
+            self.unreachableArrs = []
             self.needsYou = Self.computeNeedsYou(
                 radarr: DemoMocks.radarrQueue,
                 sonarr: DemoMocks.sonarrQueue,
-                lidarr: [],
+                lidarr: DemoMocks.lidarrQueue,
                 health: DemoMocks.health
             )
             self.lastError = nil
