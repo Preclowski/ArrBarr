@@ -63,14 +63,33 @@ public struct UpcomingItem: Identifiable, Equatable {
 /// loads the requested locale's compiled `.lproj/Localizable.strings` directly
 /// so in-app language changes take effect without restarting.
 public enum LocaleBundle {
+    /// Bundles to search for compiled `.lproj/Localizable.strings`. We
+    /// prefer the package's own resource bundle (`Bundle.module`) so
+    /// strings ship with the package itself — that way the macOS app,
+    /// the iOS app, and the test runner all read the same compiled
+    /// strings. Bundle.main stays as a fallback for legacy callers.
+    private static let candidateBundles: [Bundle] = [.module, .main]
+
     public static func string(_ key: String, locale: Locale) -> String {
         let langCode = locale.language.languageCode?.identifier ?? locale.identifier
-        if let path = Bundle.main.path(forResource: langCode, ofType: "lproj"),
-           let bundle = Bundle(path: path) {
-            let value = bundle.localizedString(forKey: key, value: key, table: nil)
-            if value != key { return value }
+        // Look for the explicit per-language `.lproj` first. This bypasses
+        // the bundle's preferred-localizations resolution, which would
+        // otherwise return whatever language the host process happens to
+        // be running in — wrong both for unit tests and for the in-app
+        // language picker that lets the user pick a locale at runtime.
+        for bundle in candidateBundles {
+            if let path = bundle.path(forResource: langCode, ofType: "lproj"),
+               let lproj = Bundle(path: path) {
+                let value = lproj.localizedString(forKey: key, value: key, table: nil)
+                if value != key { return value }
+            }
         }
-        return Bundle.main.localizedString(forKey: key, value: key, table: nil)
+        // No explicit hit. Don't fall back to `bundle.localizedString` —
+        // it uses preferred-localizations and would leak the host's
+        // language into our explicit-locale callers. Just hand the key
+        // back, which is what English (the source language) effectively
+        // does anyway.
+        return key
     }
 }
 

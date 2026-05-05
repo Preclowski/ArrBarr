@@ -1,6 +1,6 @@
 import Testing
 import Foundation
-@testable import ArrBarr
+@testable import ArrCore
 
 @Suite("LocaleBundle")
 struct LocaleBundleTests {
@@ -47,7 +47,10 @@ struct LocaleBundleTests {
     func everyKeyHasEntry(_ locale: String) {
         let bundleLocale = Locale(identifier: locale)
         let langCode = bundleLocale.language.languageCode?.identifier ?? bundleLocale.identifier
-        guard let path = Bundle.main.path(forResource: langCode, ofType: "lproj"),
+        // The strings catalog now ships inside `Bundle.module` (the
+        // ArrCore package's resource bundle) rather than the host app
+        // bundle, so we look there instead of `Bundle.main`.
+        guard let path = Bundle.module.path(forResource: langCode, ofType: "lproj"),
               let bundle = Bundle(path: path) else {
             Issue.record("No \(locale).lproj bundle in test host")
             return

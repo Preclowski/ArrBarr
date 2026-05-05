@@ -1,6 +1,6 @@
 import Testing
 import Foundation
-@testable import ArrBarr
+@testable import ArrCore
 
 // MARK: - Mock URL Protocol
 

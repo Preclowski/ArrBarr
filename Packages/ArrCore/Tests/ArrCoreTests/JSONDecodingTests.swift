@@ -1,6 +1,6 @@
 import Testing
 import Foundation
-@testable import ArrBarr
+@testable import ArrCore
 
 @Suite("Radarr JSON Decoding")
 struct RadarrDecodingTests {
