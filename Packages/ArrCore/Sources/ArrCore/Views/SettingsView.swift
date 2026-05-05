@@ -19,24 +19,144 @@ public struct SettingsView: View {
     @State private var draggingKey: String?
     @State private var dragOffset: CGFloat = 0
     @State private var demoModeOn: Bool = DemoMode.isActive
+    /// iOS: 7-tap on the Version row enables Developer mode, since iOS
+    /// users can't pass `--demo` on launch.
+    @State private var versionTapCount: Int = 0
+    @State private var devModeRevealed: Bool = DeveloperMode.isActive
 
     public var body: some View {
-        VStack(spacing: 0) {
-            TabView {
-                generalPane
-                    .tabItem { Label("General", systemImage: "gearshape") }
-                mediaManagersPane
-                    .tabItem { Label("Media Managers", systemImage: "server.rack") }
-                usenetPane
-                    .tabItem { Label("Usenet", systemImage: "doc.zipper") }
-                torrentsPane
-                    .tabItem { Label("Torrents", systemImage: "arrow.triangle.2.circlepath") }
+        Group {
+            #if os(macOS)
+            VStack(spacing: 0) {
+                TabView {
+                    generalPane
+                        .tabItem { Label("General", systemImage: "gearshape") }
+                    mediaManagersPane
+                        .tabItem { Label("Media Managers", systemImage: "server.rack") }
+                    usenetPane
+                        .tabItem { Label("Usenet", systemImage: "doc.zipper") }
+                    torrentsPane
+                        .tabItem { Label("Torrents", systemImage: "arrow.triangle.2.circlepath") }
+                }
+                bottomBar
             }
-
-            bottomBar
+            #else
+            // iOS: a single Form with every section inline. The macOS
+            // TabView paradigm fights with the bottom tab bar, and a
+            // grouped scrolling list is the iOS-native way to present
+            // settings anyway. The "About" section at the very end is
+            // where macOS's bottom-bar version+link footer lives.
+            iOSCombinedForm
+            #endif
         }
         .environment(\.locale, configStore.currentLocale)
     }
+
+    #if os(iOS)
+    private var iOSCombinedForm: some View {
+        Form {
+            Section("Radarr") {
+                ServiceFields(config: $configStore.radarr, kind: .radarr,
+                              notifyBinding: $configStore.notifyRadarr)
+            }
+            Section("Sonarr") {
+                ServiceFields(config: $configStore.sonarr, kind: .sonarr,
+                              notifyBinding: $configStore.notifySonarr)
+            }
+            Section("Lidarr") {
+                ServiceFields(config: $configStore.lidarr, kind: .lidarr,
+                              notifyBinding: $configStore.notifyLidarr)
+            }
+            Section("SABnzbd") {
+                ServiceFields(config: $configStore.sabnzbd, kind: .sabnzbd)
+            }
+            Section("NZBGet") {
+                ServiceFields(config: $configStore.nzbget, kind: .nzbget)
+            }
+            Section("qBittorrent") {
+                ServiceFields(config: $configStore.qbittorrent, kind: .qbittorrent)
+            }
+            Section("Transmission") {
+                ServiceFields(config: $configStore.transmission, kind: .transmission)
+            }
+            Section("rTorrent") {
+                ServiceFields(config: $configStore.rtorrent, kind: .rtorrent)
+            }
+            Section("Deluge") {
+                ServiceFields(config: $configStore.deluge, kind: .deluge)
+            }
+            Section("Language") {
+                Picker("Language", selection: $configStore.appLanguage) {
+                    ForEach(ConfigStore.appLanguageOptions, id: \.code) { opt in
+                        Text(LocalizedStringKey(opt.label)).tag(opt.code)
+                    }
+                }
+            }
+            Section("Section order") {
+                ForEach(configStore.arrOrder, id: \.self) { key in
+                    arrOrderRow(key: key)
+                }
+            }
+            Section("Display") {
+                Toggle("Show indexer issues warning", isOn: $configStore.showIndexerIssues)
+                Picker("Tonight window", selection: $configStore.tonightHours) {
+                    ForEach(ConfigStore.tonightHoursOptions, id: \.self) { hours in
+                        Text(Self.formatTonight(hours: hours)).tag(hours)
+                    }
+                }
+                .disabled(!configStore.showTonight)
+            }
+            Section("Refresh") {
+                // iOS only: foreground (= "while app is open") interval.
+                // Background polling is gone here — iOS suspends apps shortly
+                // after backgrounding so a periodic timer can't survive.
+                Picker("While open", selection: $configStore.foregroundInterval) {
+                    ForEach(ConfigStore.foregroundIntervalOptions, id: \.self) { interval in
+                        Text(Self.formatInterval(interval)).tag(interval)
+                    }
+                }
+            }
+            if devModeRevealed {
+                Section("Developer options") {
+                    Toggle("Demo mode", isOn: Binding(
+                        get: { demoModeOn },
+                        set: { newValue in
+                            guard newValue != demoModeOn else { return }
+                            let committed = onSetDemoMode?(newValue) ?? false
+                            if committed { demoModeOn = newValue }
+                        }
+                    ))
+                    if demoModeOn {
+                        if let onTestNotification {
+                            Button("Send test notification") { onTestNotification() }
+                        }
+                        if let onShowWelcome {
+                            Button("Show welcome screen") { onShowWelcome() }
+                        }
+                    }
+                }
+            }
+            Section("About") {
+                LabeledContent("Version", value: Self.versionString)
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        // Classic iOS Settings.app trick: tap version 7
+                        // times to reveal developer options.
+                        versionTapCount += 1
+                        if versionTapCount >= 7 && !devModeRevealed {
+                            DeveloperMode.setEnabled(true)
+                            withAnimation(.smooth(duration: 0.22)) { devModeRevealed = true }
+                        }
+                    }
+                Link(destination: URL(string: "https://github.com/Preclowski/ArrBarr")!) {
+                    Label("GitHub", systemImage: "link")
+                }
+                Text(verbatim: "Made with 🥨")
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+    #endif
 
     // MARK: - Panes
 

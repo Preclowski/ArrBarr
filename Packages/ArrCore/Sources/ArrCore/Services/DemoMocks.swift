@@ -12,7 +12,7 @@ import Foundation
 public enum DeveloperMode {
     public static let key = "ArrBarrDeveloperMode"
 
-    public static let isActive: Bool = {
+    public static var isActive: Bool {
         let defaults = UserDefaults.standard
         let args = ProcessInfo.processInfo.arguments
         let envOn = ProcessInfo.processInfo.environment["ARRBARR_DEMO"] == "1"
@@ -24,16 +24,25 @@ public enum DeveloperMode {
             return true
         }
         return defaults.bool(forKey: key)
-    }()
+    }
+
+    /// Manually flip Developer mode on/off — used by the iOS About-section
+    /// 7-tap easter egg since iOS users can't pass launch args.
+    public static func setEnabled(_ enabled: Bool) {
+        UserDefaults.standard.set(enabled, forKey: key)
+    }
 }
 
 /// Demo mode: ship a runnable preview without needing real Radarr/Sonarr/Lidarr instances.
 /// Toggled from the "Demo mode" checkbox inside Developer options. The flag is
-/// read once at process start, so flipping it requires a relaunch.
+/// read live from UserDefaults so flipping it can take effect within the same
+/// session — every consumer that reads `isActive` (the queue refresh path,
+/// the popover's `isVisible(_:)` filter, etc.) sees the new value on its
+/// next call.
 public enum DemoMode {
     public static let key = "ArrBarrDemo"
 
-    public static let isActive: Bool = UserDefaults.standard.bool(forKey: key)
+    public static var isActive: Bool { UserDefaults.standard.bool(forKey: key) }
 
     private static let seedDoneKey = "ArrBarr.demoSeedDone"
 

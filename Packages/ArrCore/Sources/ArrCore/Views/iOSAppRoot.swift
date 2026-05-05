@@ -35,7 +35,7 @@ public struct iOSAppRoot: View {
             NavigationStack { SearchTab(viewModel: viewModel) }
                 .tabItem { Label("Search", systemImage: "magnifyingglass") }
 
-            NavigationStack { SettingsTab() }
+            NavigationStack { SettingsTab(viewModel: viewModel) }
                 .tabItem { Label("Settings", systemImage: "gearshape") }
         }
         .environmentObject(configStore)
@@ -303,9 +303,24 @@ private struct SearchTab: View {
 // MARK: - Settings tab
 
 private struct SettingsTab: View {
+    @ObservedObject var viewModel: QueueViewModel
+    @EnvironmentObject var configStore: ConfigStore
+
     var body: some View {
-        SettingsView()
-            .navigationTitle("Settings")
+        SettingsView(
+            onSetDemoMode: { enable in
+                // iOS can't relaunch itself the way the macOS AppDelegate
+                // can. Instead, just persist the flag — `DemoMode.isActive`
+                // is a live read of UserDefaults, so the queue's next
+                // refresh sees demo data immediately. Seed the configs on
+                // enable so the queue isn't empty on first toggle.
+                UserDefaults.standard.set(enable, forKey: DemoMode.key)
+                if enable { DemoMode.seedConfigsIfNeeded(configStore) }
+                Task { await viewModel.refresh() }
+                return true
+            }
+        )
+        .navigationTitle("Settings")
     }
 }
 #endif
