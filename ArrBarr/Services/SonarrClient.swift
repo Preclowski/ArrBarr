@@ -166,6 +166,27 @@ actor SonarrClient {
         _ = try await http.delete(url, headers: ["X-Api-Key": config.apiKey])
     }
 
+    func fetchSeriesDetails(id: Int) async throws -> SonarrSeriesDetail {
+        guard config.isConfigured else { throw HTTPError.notConfigured }
+        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
+        let url = try http.url(base: config.baseURL, path: "/api/v3/series/\(id)")
+        let data = try await http.get(url, headers: ["X-Api-Key": config.apiKey])
+        do { return try JSONDecoder().decode(SonarrSeriesDetail.self, from: data) }
+        catch { throw HTTPError.decoding(error) }
+    }
+
+    func fetchEpisodes(seriesId: Int) async throws -> [SonarrEpisodeDetail] {
+        guard config.isConfigured else { throw HTTPError.notConfigured }
+        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
+        let url = try http.url(
+            base: config.baseURL,
+            path: "/api/v3/episode",
+            query: [URLQueryItem(name: "seriesId", value: String(seriesId))]
+        )
+        let data = try await http.get(url, headers: ["X-Api-Key": config.apiKey])
+        return (try? JSONDecoder().decode([SonarrEpisodeDetail].self, from: data)) ?? []
+    }
+
     func fetchHealth() async throws -> [ArrHealthRecord] {
         guard config.isConfigured else { throw HTTPError.notConfigured }
         guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
@@ -286,6 +307,7 @@ actor SonarrClient {
             existingSize: existingFile?.size,
             existingFileName: existingFile?.relativePath.map { URL(fileURLWithPath: $0).lastPathComponent },
             contentSlug: r.series?.titleSlug,
+            entityId: r.series?.id ?? r.seriesId,
             posterURL: poster,
             posterRequiresAuth: posterAuth
         )

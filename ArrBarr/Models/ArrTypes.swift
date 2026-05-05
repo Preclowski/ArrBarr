@@ -269,10 +269,17 @@ struct RadarrLookupRecord: Decodable {
     let runtime: Int?
     let ratings: RadarrLookupRatings?
     let images: [ArrImage]?
+    let genres: [String]?
+    let certification: String?
+    let studio: String?
+    let status: String?
 }
 
 struct RadarrLookupRatings: Decodable {
     let tmdb: RadarrLookupRatingValue?
+    let imdb: RadarrLookupRatingValue?
+    let metacritic: RadarrLookupRatingValue?
+    let rottenTomatoes: RadarrLookupRatingValue?
 }
 struct RadarrLookupRatingValue: Decodable {
     let value: Double?
@@ -286,6 +293,10 @@ struct SonarrLookupRecord: Decodable {
     let ratings: SonarrLookupRatings?
     let images: [ArrImage]?
     let statistics: SonarrLookupStats?
+    let genres: [String]?
+    let network: String?
+    let runtime: Int?
+    let status: String?
 }
 
 struct SonarrLookupRatings: Decodable {

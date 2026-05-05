@@ -20,9 +20,15 @@ struct SearchResult: Identifiable, Equatable, Sendable {
     let title: String
     let subtitle: String?        // nil for movies; "X seasons" for shows
     let year: Int?
-    let rating: Double?
+    let rating: Double?          // primary score (TMDB for Radarr, value for Sonarr)
+    let imdb: Double?            // Radarr only
+    let rottenTomatoes: Double?  // Radarr only
+    let metacritic: Double?      // Radarr only
     let overview: String?
-    let runtime: Int?            // minutes; nil for Sonarr
+    let runtime: Int?            // minutes
+    let genres: [String]
+    let network: String?         // Sonarr network / Radarr studio
+    let certification: String?   // Radarr only
     let posterURL: URL?
     let source: QueueItem.Source
 }

@@ -11,6 +11,7 @@ struct PopoverContentView: View {
     @State private var historyRefreshNonce = 0
     @StateObject private var searchViewModel = SearchViewModel()
     @State private var searchResult: SearchResult?
+    @State private var detailItem: QueueItem?
 
     private let maxScrollHeight: CGFloat = 520
 
@@ -69,7 +70,15 @@ struct PopoverContentView: View {
 
     private var mainContent: some View {
         VStack(spacing: 0) {
-            if let historySource {
+            if let detailItem {
+                DetailView(
+                    item: detailItem,
+                    onBack: {
+                        withAnimation(.smooth(duration: 0.22)) { self.detailItem = nil }
+                    },
+                    viewModel: viewModel
+                )
+            } else if let historySource {
                 HistoryView(
                     source: historySource,
                     viewModel: viewModel,
@@ -103,7 +112,7 @@ struct PopoverContentView: View {
             }
             footer
         }
-        .frame(width: 400)
+        .frame(width: 400, height: 600)
     }
 
     // MARK: - Tonight banner
@@ -228,7 +237,7 @@ struct PopoverContentView: View {
             }
         }
         .scrollBounceBehavior(.basedOnSize)
-        .frame(maxHeight: maxScrollHeight)
+        .frame(maxHeight: .infinity)
     }
 
     private enum SectionEntry: Hashable {
@@ -305,7 +314,10 @@ struct PopoverContentView: View {
                     }
                 } : nil,
                 viewModel: viewModel,
-                onShowHistory: arrError == nil ? { historySource = source } : nil
+                onShowHistory: arrError == nil ? { historySource = source } : nil,
+                onShowDetail: { item in
+                    withAnimation(.smooth(duration: 0.22)) { detailItem = item }
+                }
             )
             .padding(.vertical, 12)
         }
@@ -391,7 +403,7 @@ struct PopoverContentView: View {
             }
         }
         .scrollBounceBehavior(.basedOnSize)
-        .frame(maxHeight: maxScrollHeight)
+        .frame(maxHeight: .infinity)
     }
 
     private var groupedUpcoming: [UpcomingGroup] {

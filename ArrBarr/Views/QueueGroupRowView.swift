@@ -15,6 +15,7 @@ struct QueueGroupRowView: View {
     let onPause: () -> Void
     let onResume: () -> Void
     let onDelete: () -> Void
+    var onShowDetail: (() -> Void)? = nil
 
     @EnvironmentObject var configStore: ConfigStore
     @State private var isHovering = false
@@ -122,14 +123,14 @@ struct QueueGroupRowView: View {
                 // pause/remove icons reachable while the tooltip is up.
                 .hoverActions(visible: isHovering || showTooltip) { actionButtons }
 
-                ProgressView(value: aggregateProgress)
-                    .progressViewStyle(.linear)
-                    .tint(rep.status.tint)
-                    .frame(height: 3)
+                ThinProgressBar(progress: aggregateProgress, tint: rep.status.tint)
 
-                if !rep.customFormats.isEmpty {
-                    customFormatTags
-                        .padding(.top, 2)
+                if !rep.customFormats.isEmpty || rep.customFormatScore != 0 {
+                    CustomFormatStrip(
+                        formats: rep.customFormats,
+                        score: rep.customFormatScore
+                    )
+                    .padding(.top, 2)
                 }
             }
         }
@@ -141,6 +142,9 @@ struct QueueGroupRowView: View {
                 .padding(.horizontal, 6)
         )
         .contentShape(Rectangle())
+        .onTapGesture {
+            onShowDetail?()
+        }
         .onHover { hovering in
             withAnimation(.easeInOut(duration: 0.15)) { isHovering = hovering }
             hoverTask?.cancel()
@@ -251,49 +255,6 @@ struct QueueGroupRowView: View {
         }
     }
 
-    // MARK: - Custom format tags
-    //
-    // All members of the group share the same physical release, so they
-    // share the same custom-format tags and score — render the rep's.
-
-    private var customFormatTags: some View {
-        Color.clear
-            .frame(height: 14)
-            .frame(maxWidth: .infinity)
-            .overlay(alignment: .leading) {
-                HStack(spacing: 4) {
-                    ForEach(rep.customFormats, id: \.self) { cf in
-                        Text(cf)
-                            .font(.system(size: 9, weight: .medium))
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 1)
-                            .background(Color.primary.opacity(0.08), in: Capsule())
-                    }
-                    if rep.customFormatScore != 0 {
-                        let sign = rep.customFormatScore > 0 ? "+" : ""
-                        Text("\(sign)\(rep.customFormatScore)")
-                            .font(.system(size: 9, weight: .semibold))
-                            .foregroundStyle(rep.customFormatScore > 0 ? .green : .red)
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 1)
-                            .background(Color.primary.opacity(0.08), in: Capsule())
-                    }
-                }
-                .fixedSize()
-            }
-            .clipped()
-            .mask(
-                LinearGradient(
-                    stops: [
-                        .init(color: .black, location: 0),
-                        .init(color: .black, location: 0.85),
-                        .init(color: .clear, location: 1.0),
-                    ],
-                    startPoint: .leading,
-                    endPoint: .trailing
-                )
-            )
-    }
 }
 
 // MARK: - Season pack tooltip
@@ -348,167 +309,25 @@ struct QueueGroupTooltip: View {
                     .textCase(.uppercase)
                     .tracking(0.5)
                     .padding(.top, 4)
-                episodeList
-            }
-
-            if rep.isUpgrade {
-                upgradeDivider
-                Text(verbatim: loc("Existing files"))
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(.secondary)
-                    .textCase(.uppercase)
-                    .tracking(0.5)
-                existingInfo
+                episodeQueueList
             }
         }
     }
 
-    /// Same Apple-y upgrade divider QueueItemTooltip uses, restated here so
-    /// the season tooltip has visual continuity with the per-episode one.
-    private var upgradeDivider: some View {
-        HStack(spacing: 6) {
-            Rectangle().fill(Color.primary.opacity(0.12)).frame(height: 1)
-            Text(verbatim: loc("Upgrade"))
-                .font(.system(size: 9, weight: .semibold))
-                .foregroundStyle(.indigo)
-                .padding(.horizontal, 5)
-                .padding(.vertical, 1)
-                .background(Color.indigo.opacity(0.15), in: Capsule())
-            Rectangle().fill(Color.primary.opacity(0.12)).frame(height: 1)
-        }
-        .padding(.top, 4)
-    }
-
-    /// Per-episode block of what each new file is *replacing*. Each episode
-    /// gets three lines:
-    ///   1. Episode label · old quality
-    ///   2. Old custom-format tags (gradient-fading on the right when they
-    ///      overflow) followed by the old score chip
-    ///   3. Old filename (monospaced, middle-truncated)
-    ///
-    /// Episodes with no existing-file metadata are omitted (those are fresh
-    /// additions inside an otherwise-upgrade pack — nothing to replace).
-    @ViewBuilder
-    private var existingInfo: some View {
-        if upgradedMembers.isEmpty {
-            Text(verbatim: loc("Replacing existing files"))
-                .font(.system(size: 11))
-                .foregroundStyle(.secondary)
-        } else {
-            VStack(alignment: .leading, spacing: 2) {
-                ForEach(upgradedMembers) { member in
-                    existingMemberBlock(member)
-                }
+    /// Replaces the legacy episode list + heavy "existing files" block with
+    /// the same compact queue-row presentation used in `DetailView`. Each
+    /// episode shows a status dot, episode code, headline, percent, thin
+    /// progress bar, and any custom-format chips. Upgrades surface an
+    /// indigo arrow icon — full existing-file detail still lives in the
+    /// detail view (this is just a hover preview).
+    private var episodeQueueList: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            ForEach(group.items) { it in
+                TooltipQueueRow(item: it)
             }
         }
     }
 
-    private func existingMemberBlock(_ member: QueueItem) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            // Single header line: episode label · old quality · tags
-            // (gradient-faded on overflow) · score chip on the far right.
-            HStack(alignment: .center, spacing: 6) {
-                Text(episodeTag(for: member))
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(.primary)
-                if let q = member.existingQuality, !q.isEmpty {
-                    Text("·").foregroundStyle(.tertiary)
-                    Text(q)
-                        .font(.system(size: 11))
-                        .foregroundStyle(.secondary)
-                }
-                existingTagsRow(for: member)
-                if let s = member.existingCustomFormatScore, s != 0 {
-                    let sign = s > 0 ? "+" : ""
-                    Text("\(sign)\(s)")
-                        .font(.system(size: 9, weight: .semibold))
-                        .foregroundStyle(s > 0 ? .green : .red)
-                        .padding(.horizontal, 5)
-                        .padding(.vertical, 1)
-                        .background(Color.primary.opacity(0.08), in: Capsule())
-                }
-            }
-
-        }
-    }
-
-    /// Existing-file tag chips, fading out at the right when the row would
-    /// otherwise overflow. Empty if the member has no existing tags.
-    /// Tag chips for a member's existing file, taking the remaining flex
-    /// width inside the header line. Fades out on the right via a gradient
-    /// mask when the chips overflow. When the member has no existing tags
-    /// the row collapses into a flexible Spacer so the score chip still
-    /// pins to the right.
-    @ViewBuilder
-    private func existingTagsRow(for member: QueueItem) -> some View {
-        if member.existingCustomFormats.isEmpty {
-            Spacer(minLength: 0)
-        } else {
-            Color.clear
-                .frame(height: 16)
-                .frame(maxWidth: .infinity)
-                .overlay(alignment: .leading) {
-                    HStack(spacing: 4) {
-                        ForEach(member.existingCustomFormats, id: \.self) { cf in
-                            Text(cf)
-                                .font(.system(size: 9, weight: .medium))
-                                .padding(.horizontal, 5)
-                                .padding(.vertical, 1)
-                                .background(Color.primary.opacity(0.08), in: Capsule())
-                        }
-                    }
-                    .fixedSize()
-                }
-                .clipped()
-                .mask(
-                    LinearGradient(
-                        stops: [
-                            .init(color: .black, location: 0),
-                            .init(color: .black, location: 0.85),
-                            .init(color: .clear, location: 1.0),
-                        ],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
-        }
-    }
-
-    private var upgradedMembers: [QueueItem] {
-        group.items.filter {
-            $0.existingFileName != nil
-                || $0.existingQuality != nil
-                || ($0.existingCustomFormatScore ?? 0) != 0
-                || !$0.existingCustomFormats.isEmpty
-        }
-    }
-
-    /// "S01E03" extracted from the member's subtitle, falling back to the
-    /// raw subtitle if the regex misses.
-    private func episodeTag(for item: QueueItem) -> String {
-        guard let s = item.subtitle else { return "—" }
-        let pattern = "S\\d+E\\d+"
-        if let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive),
-           let match = regex.firstMatch(in: s, range: NSRange(s.startIndex..., in: s)),
-           let range = Range(match.range, in: s) {
-            return String(s[range]).uppercased()
-        }
-        return s
-    }
-
-    @ViewBuilder
-    private func scoreText(for score: Int?) -> some View {
-        if let s = score, s != 0 {
-            let sign = s > 0 ? "+" : ""
-            Text("\(sign)\(s)")
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(s > 0 ? .green : .red)
-        } else {
-            Text("—")
-                .font(.system(size: 11))
-                .foregroundStyle(.tertiary)
-        }
-    }
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 1) {
@@ -572,34 +391,6 @@ struct QueueGroupTooltip: View {
         }
     }
 
-    private var episodeList: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            ForEach(group.items) { item in
-                if let sub = item.subtitle, !sub.isEmpty {
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(sub)
-                            .font(.system(size: 11))
-                            .foregroundStyle(.primary)
-                            .lineLimit(1)
-                        GeometryReader { geo in
-                            ZStack(alignment: .leading) {
-                                RoundedRectangle(cornerRadius: 0.5)
-                                    .fill(Color.primary.opacity(0.12))
-                                RoundedRectangle(cornerRadius: 0.5)
-                                    .fill(item.status.tint)
-                                    .frame(width: geo.size.width * max(0, min(1, item.progress)))
-                            }
-                        }
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 1)
-                        .padding(.top, 1.5)
-                        .padding(.bottom, 3)
-                    }
-                }
-            }
-        }
-    }
-
     private var seasonLabel: String? {
         let seasons = Set(group.items.compactMap { Self.parseSeason(from: $0.subtitle) })
         if seasons.count == 1, let s = seasons.first {
@@ -640,6 +431,92 @@ struct QueueGroupTooltip: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
+    }
+}
+
+/// Compact queue row used inside the season-pack tooltip. Mirrors the
+/// detail-view multi-row look: status icon, episode code, headline,
+/// percent, thin progress bar, custom-format chips, and an indigo arrow
+/// when the episode is replacing an existing file.
+struct TooltipQueueRow: View {
+    let item: QueueItem
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            HStack(spacing: 6) {
+                Image(systemName: item.status.symbol)
+                    .font(.system(size: 9))
+                    .foregroundStyle(item.status.tint)
+                if let code = episodeCode {
+                    Text(code)
+                        .font(.system(size: 11, weight: .semibold).monospacedDigit())
+                        .foregroundStyle(.primary)
+                }
+                Text(headline)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                if item.isUpgrade {
+                    Image(systemName: "arrow.up.circle.fill")
+                        .font(.system(size: 9))
+                        .foregroundStyle(.indigo)
+                }
+                Spacer(minLength: 4)
+                Text(trailing)
+                    .font(.system(size: 10).monospacedDigit())
+                    .foregroundStyle(.tertiary)
+            }
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 1)
+                        .fill(Color.primary.opacity(0.10))
+                    RoundedRectangle(cornerRadius: 1)
+                        .fill(item.status.tint)
+                        .frame(width: geo.size.width * max(0, min(1, item.progress)))
+                }
+            }
+            .frame(height: 3)
+            if !item.customFormats.isEmpty || item.customFormatScore != 0 {
+                TooltipFlowLayout(spacing: 3) {
+                    ForEach(item.customFormats, id: \.self) { TagChip(text: $0) }
+                    if item.customFormatScore != 0 {
+                        let sign = item.customFormatScore > 0 ? "+" : ""
+                        TagChip(
+                            text: "\(sign)\(item.customFormatScore)",
+                            color: item.customFormatScore > 0 ? .green : .red
+                        )
+                    }
+                }
+                .padding(.top, 1)
+            }
+        }
+    }
+
+    private var episodeCode: String? {
+        guard let s = item.subtitle else { return nil }
+        let pattern = "S\\d+E\\d+"
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive),
+              let match = regex.firstMatch(in: s, range: NSRange(s.startIndex..., in: s)),
+              let range = Range(match.range, in: s)
+        else { return nil }
+        return String(s[range]).uppercased()
+    }
+
+    private var headline: String {
+        var bits: [String] = []
+        if let s = item.subtitle, let code = episodeCode {
+            let stripped = s.replacingOccurrences(of: code, with: "", options: .caseInsensitive)
+                .trimmingCharacters(in: CharacterSet(charactersIn: " ·–—-"))
+            if !stripped.isEmpty { bits.append(stripped) }
+        }
+        if let q = item.quality, !q.isEmpty { bits.append(q) }
+        return bits.joined(separator: " · ")
+    }
+
+    private var trailing: String {
+        if item.status == .queued { return "Queued" }
+        return "\(Int((item.progress * 100).rounded()))%"
     }
 }
 

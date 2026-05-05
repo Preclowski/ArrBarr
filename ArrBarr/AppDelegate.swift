@@ -176,17 +176,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         popover.contentViewController?.view.window?.makeKey()
         queueVM.startForegroundPolling()
         installEscMonitor()
-        // Re-measure once on open so the popover hugs the SwiftUI content
-        // for the current state (history vs queue vs empty). After this,
-        // the size stays put until the popover closes — refresh-driven
-        // body invalidations no longer cause a window resize/repaint.
-        DispatchQueue.main.async { [weak self] in
-            guard let self, let hosting = self.popover.contentViewController else { return }
-            let fitting = hosting.view.fittingSize
-            if fitting.width > 0 && fitting.height > 0 {
-                self.popover.contentSize = fitting
-            }
-        }
+        // Popover stays pinned at 400x600 (set once at init). We deliberately
+        // don't re-measure or push intrinsic sizes from SwiftUI — that caused
+        // the popover to resize when swapping views (queue → detail → back),
+        // and it wouldn't always return to the previous height.
     }
 
     private func installEscMonitor() {

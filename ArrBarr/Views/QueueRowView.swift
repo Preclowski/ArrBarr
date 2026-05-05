@@ -34,6 +34,7 @@ struct QueueRowView: View {
     let onPause: () -> Void
     let onResume: () -> Void
     let onDelete: () -> Void
+    var onShowDetail: (() -> Void)? = nil
     @EnvironmentObject var configStore: ConfigStore
     @State private var isHovering = false
     @State private var showDeleteConfirmation = false
@@ -129,14 +130,15 @@ struct QueueRowView: View {
                 // appeared, even though the cursor is still on the row.
                 .hoverActions(visible: isHovering || showTooltip) { actionButtons }
 
-                ProgressView(value: item.progress)
-                    .progressViewStyle(.linear)
-                    .tint(item.status.tint)
-                    .frame(height: 3)
+                ThinProgressBar(progress: item.progress, tint: item.status.tint)
 
-                if !item.customFormats.isEmpty {
-                    customFormatTags
-                        .padding(.top, 2)
+                if !item.customFormats.isEmpty || item.customFormatScore != 0 {
+                    CustomFormatStrip(
+                        formats: item.customFormats,
+                        score: item.customFormatScore,
+                        help: customFormatsTooltip
+                    )
+                    .padding(.top, 2)
                 }
             }
         }
@@ -148,6 +150,9 @@ struct QueueRowView: View {
                 .padding(.horizontal, 6)
         )
         .contentShape(Rectangle())
+        .onTapGesture {
+            onShowDetail?()
+        }
         .onHover { hovering in
             withAnimation(.easeInOut(duration: 0.15)) { isHovering = hovering }
             hoverTask?.cancel()
@@ -204,23 +209,8 @@ struct QueueRowView: View {
 
     // MARK: - Actions
 
-    private var webURL: URL? {
-        guard let slug = item.contentSlug else { return nil }
-        let (cfg, path): (ServiceConfig, String) = switch item.source {
-        case .radarr: (configStore.radarr, "/movie/\(slug)")
-        case .sonarr: (configStore.sonarr, "/series/\(slug)")
-        case .lidarr: (configStore.lidarr, "/album/\(slug)")
-        }
-        return URL(string: cfg.baseURL)?.appendingPathComponent(path)
-    }
-
     private var actionButtons: some View {
         HStack(spacing: 6) {
-            if let url = webURL {
-                IconButton(symbol: "safari", helpKey: "Open in browser", accessibilityLabel: "Open \(item.title) in browser") {
-                    NSWorkspace.shared.open(url)
-                }
-            }
             if canControl && canPauseResume {
                 if item.isPaused {
                     IconButton(symbol: "play.fill", helpKey: "Resume", accessibilityLabel: "Resume \(item.title)") {
@@ -241,46 +231,6 @@ struct QueueRowView: View {
     }
 
     // MARK: - Custom format tags
-
-    private var customFormatTags: some View {
-        Color.clear
-            .frame(height: 14)
-            .frame(maxWidth: .infinity)
-            .overlay(alignment: .leading) {
-                HStack(spacing: 4) {
-                    ForEach(item.customFormats, id: \.self) { cf in
-                        Text(cf)
-                            .font(.system(size: 9, weight: .medium))
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 1)
-                            .background(Color.primary.opacity(0.08), in: Capsule())
-                    }
-                    if item.customFormatScore != 0 {
-                        let sign = item.customFormatScore > 0 ? "+" : ""
-                        Text("\(sign)\(item.customFormatScore)")
-                            .font(.system(size: 9, weight: .semibold))
-                            .foregroundStyle(item.customFormatScore > 0 ? .green : .red)
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 1)
-                            .background(Color.primary.opacity(0.08), in: Capsule())
-                    }
-                }
-                .fixedSize()
-            }
-            .clipped()
-            .mask(
-                LinearGradient(
-                    stops: [
-                        .init(color: .black, location: 0),
-                        .init(color: .black, location: 0.85),
-                        .init(color: .clear, location: 1.0),
-                    ],
-                    startPoint: .leading,
-                    endPoint: .trailing
-                )
-            )
-            .help(Text(verbatim: customFormatsTooltip))
-    }
 
     private var customFormatsTooltip: String {
         var parts = item.customFormats.map { "[\($0)]" }
@@ -696,5 +646,86 @@ struct IconButton: View {
                 ? Text(verbatim: LocaleBundle.string(helpKey, locale: configStore.currentLocale))
                 : Text(verbatim: accessibilityLabel)
         )
+    }
+}
+
+// MARK: - Shared row chrome
+//
+// SwiftUI's linear `ProgressView` silently ignores `.frame(height: 3)`,
+// which is what made the Sonarr group rows render visibly thicker than
+// Radarr/Lidarr rows even though both wrote the same modifier. Every
+// progress bar in the app — listing rows, group rows, season tooltips,
+// detail panels — now goes through `ThinProgressBar` so thickness stays
+// pixel-identical regardless of context.
+struct ThinProgressBar: View {
+    let progress: Double
+    let tint: Color
+    var height: CGFloat = 3
+    var body: some View {
+        GeometryReader { geo in
+            ZStack(alignment: .leading) {
+                RoundedRectangle(cornerRadius: height / 2)
+                    .fill(Color.primary.opacity(0.10))
+                RoundedRectangle(cornerRadius: height / 2)
+                    .fill(tint)
+                    .frame(width: geo.size.width * max(0, min(1, progress)))
+            }
+        }
+        .frame(height: height)
+    }
+}
+
+/// The single-line custom-format chip strip with a fade-out gradient when
+/// the chips overflow the available width. Used by listing rows so the
+/// row never wraps; detail views use the wrapping `CustomFormatChips`
+/// variant instead.
+struct CustomFormatStrip: View {
+    let formats: [String]
+    let score: Int
+    var help: String? = nil
+
+    var body: some View {
+        let view = Color.clear
+            .frame(height: 14)
+            .frame(maxWidth: .infinity)
+            .overlay(alignment: .leading) {
+                HStack(spacing: 4) {
+                    ForEach(formats, id: \.self) { cf in
+                        Text(cf)
+                            .font(.system(size: 9, weight: .medium))
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 1)
+                            .background(Color.primary.opacity(0.08), in: Capsule())
+                    }
+                    if score != 0 {
+                        let sign = score > 0 ? "+" : ""
+                        Text("\(sign)\(score)")
+                            .font(.system(size: 9, weight: .semibold))
+                            .foregroundStyle(score > 0 ? Color.green : Color.red)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 1)
+                            .background(Color.primary.opacity(0.08), in: Capsule())
+                    }
+                }
+                .fixedSize()
+            }
+            .clipped()
+            .mask(
+                LinearGradient(
+                    stops: [
+                        .init(color: .black, location: 0),
+                        .init(color: .black, location: 0.85),
+                        .init(color: .clear, location: 1.0),
+                    ],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
+
+        if let help {
+            view.help(Text(verbatim: help))
+        } else {
+            view
+        }
     }
 }

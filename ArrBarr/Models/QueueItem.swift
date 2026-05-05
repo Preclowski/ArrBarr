@@ -65,6 +65,9 @@ struct QueueItem: Identifiable, Equatable {
     let existingSize: Int64?
     let existingFileName: String?
     let contentSlug: String?
+    /// Underlying arr entity id — Radarr `movie.id`, Sonarr `series.id`,
+    /// Lidarr `album.id`. Used to fetch detail views.
+    let entityId: Int?
 
     let posterURL: URL?
     let posterRequiresAuth: Bool
@@ -81,6 +84,7 @@ struct QueueItem: Identifiable, Equatable {
         existingCustomFormats: [String] = [], existingCustomFormatScore: Int? = nil, existingQuality: String? = nil,
         existingSize: Int64? = nil, existingFileName: String? = nil,
         contentSlug: String?,
+        entityId: Int? = nil,
         posterURL: URL? = nil, posterRequiresAuth: Bool = false
     ) {
         self.id = id; self.source = source; self.arrQueueId = arrQueueId
@@ -91,7 +95,7 @@ struct QueueItem: Identifiable, Equatable {
         self.sizeLeft = sizeLeft; self.timeLeft = timeLeft
         self.customFormats = customFormats; self.customFormatScore = customFormatScore
         self.quality = quality; self.releaseGroup = releaseGroup
-        self.isUpgrade = isUpgrade; self.contentSlug = contentSlug
+        self.isUpgrade = isUpgrade; self.contentSlug = contentSlug; self.entityId = entityId
         self.existingCustomFormats = existingCustomFormats
         self.existingCustomFormatScore = existingCustomFormatScore
         self.existingQuality = existingQuality

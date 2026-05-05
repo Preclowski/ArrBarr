@@ -164,6 +164,15 @@ actor RadarrClient {
         _ = try await http.delete(url, headers: ["X-Api-Key": config.apiKey])
     }
 
+    func fetchMovieDetails(id: Int) async throws -> RadarrMovieDetail {
+        guard config.isConfigured else { throw HTTPError.notConfigured }
+        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
+        let url = try http.url(base: config.baseURL, path: "/api/v3/movie/\(id)")
+        let data = try await http.get(url, headers: ["X-Api-Key": config.apiKey])
+        do { return try JSONDecoder().decode(RadarrMovieDetail.self, from: data) }
+        catch { throw HTTPError.decoding(error) }
+    }
+
     func fetchHealth() async throws -> [ArrHealthRecord] {
         guard config.isConfigured else { throw HTTPError.notConfigured }
         guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
@@ -238,6 +247,7 @@ actor RadarrClient {
             existingSize: existingFile?.size ?? r.movie?.movieFile?.size,
             existingFileName: (existingFile?.relativePath ?? r.movie?.movieFile?.relativePath).map { URL(fileURLWithPath: $0).lastPathComponent },
             contentSlug: r.movie?.titleSlug,
+            entityId: r.movieId ?? r.movie?.id,
             posterURL: poster,
             posterRequiresAuth: posterAuth
         )

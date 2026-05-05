@@ -122,6 +122,27 @@ actor LidarrClient {
         _ = try await http.delete(url, headers: ["X-Api-Key": config.apiKey])
     }
 
+    func fetchAlbumDetails(id: Int) async throws -> LidarrAlbumDetail {
+        guard config.isConfigured else { throw HTTPError.notConfigured }
+        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
+        let url = try http.url(base: config.baseURL, path: "/api/v1/album/\(id)")
+        let data = try await http.get(url, headers: ["X-Api-Key": config.apiKey])
+        do { return try JSONDecoder().decode(LidarrAlbumDetail.self, from: data) }
+        catch { throw HTTPError.decoding(error) }
+    }
+
+    func fetchTracks(albumId: Int) async throws -> [LidarrTrackDetail] {
+        guard config.isConfigured else { throw HTTPError.notConfigured }
+        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
+        let url = try http.url(
+            base: config.baseURL,
+            path: "/api/v1/track",
+            query: [URLQueryItem(name: "albumId", value: String(albumId))]
+        )
+        let data = try await http.get(url, headers: ["X-Api-Key": config.apiKey])
+        return (try? JSONDecoder().decode([LidarrTrackDetail].self, from: data)) ?? []
+    }
+
     func fetchHealth() async throws -> [ArrHealthRecord] {
         guard config.isConfigured else { throw HTTPError.notConfigured }
         guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
@@ -189,6 +210,7 @@ actor LidarrClient {
             quality: r.quality?.name,
             isUpgrade: false,
             contentSlug: r.album?.foreignAlbumId,
+            entityId: r.album?.id ?? r.albumId,
             posterURL: poster,
             posterRequiresAuth: posterAuth
         )

@@ -13,6 +13,8 @@
 		AA000004AA000004AA000004 /* SearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000004BB000004BB000004 /* SearchView.swift */; };
 		AA000005AA000005AA000005 /* SearchAddPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000005BB000005BB000005 /* SearchAddPanel.swift */; };
 		AA000006AA000006AA000006 /* SearchResultRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000006BB000006BB000006 /* SearchResultRow.swift */; };
+		AA000007AA000007AA000007 /* ArrDetailTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000007BB000007BB000007 /* ArrDetailTypes.swift */; };
+		AA000008AA000008AA000008 /* DetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000008BB000008BB000008 /* DetailView.swift */; };
 		0D0E434079D152B096897BEC /* QueueRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F0FF31BB5B3550A51F6B5B5 /* QueueRowView.swift */; };
 		1B335D47ED0EF6F0A6A611D0 /* SonarrClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CFA6A783235C2E8FC843636 /* SonarrClient.swift */; };
 		1F0B1A9D78DA2F2F554BA54D /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64DC7B599FC995056A674DBF /* AppDelegate.swift */; };
@@ -116,6 +118,8 @@
 		BB000004BB000004BB000004 /* SearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchView.swift; sourceTree = "<group>"; };
 		BB000005BB000005BB000005 /* SearchAddPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchAddPanel.swift; sourceTree = "<group>"; };
 		BB000006BB000006BB000006 /* SearchResultRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchResultRow.swift; sourceTree = "<group>"; };
+		BB000007BB000007BB000007 /* ArrDetailTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArrDetailTypes.swift; sourceTree = "<group>"; };
+		BB000008BB000008BB000008 /* DetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetailView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -211,6 +215,7 @@
 			isa = PBXGroup;
 			children = (
 				4F0DA93170F7174D59CBB0A6 /* PopoverContentView.swift */,
+				BB000008BB000008BB000008 /* DetailView.swift */,
 				7A1D7C1B2F00000100000008 /* HistoryView.swift */,
 				7A1D7C1F2F0000010000000A /* NeedsYouSectionView.swift */,
 				0F0FF31BB5B3550A51F6B5B5 /* QueueRowView.swift */,
@@ -231,6 +236,7 @@
 			isa = PBXGroup;
 			children = (
 				48060A6CCC3F1544EE872199 /* ArrTypes.swift */,
+				BB000007BB000007BB000007 /* ArrDetailTypes.swift */,
 				DF376B40311D14EDC175312A /* DownloadClientTypes.swift */,
 				7A1D7C192F00000100000007 /* HistoryItem.swift */,
 				7A1D7C252F0000010000000D /* QueueGroup.swift */,
@@ -367,6 +373,8 @@
 				1F0B1A9D78DA2F2F554BA54D /* AppDelegate.swift in Sources */,
 				D2FECFB6447CD596A4FC0207 /* ArrBarrApp.swift in Sources */,
 				82B2E396634098E0FDA3E441 /* ArrTypes.swift in Sources */,
+				AA000007AA000007AA000007 /* ArrDetailTypes.swift in Sources */,
+				AA000008AA000008AA000008 /* DetailView.swift in Sources */,
 				D5FACDA503655F545E1E28EE /* ConfigStore.swift in Sources */,
 				44F961F5688B690373C0E12D /* DownloadClientTypes.swift in Sources */,
 				B2A301ECC359D8739AADDAA7 /* HTTPClient.swift in Sources */,

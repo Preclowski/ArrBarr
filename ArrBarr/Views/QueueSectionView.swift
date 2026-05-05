@@ -11,6 +11,7 @@ struct QueueSectionView: View {
     @ObservedObject var viewModel: QueueViewModel
     @EnvironmentObject var configStore: ConfigStore
     var onShowHistory: (() -> Void)? = nil
+    var onShowDetail: ((QueueItem) -> Void)? = nil
     @State private var hoveringHistory = false
 
     /// Total individual queue items represented by this section's entries.
@@ -100,7 +101,8 @@ struct QueueSectionView: View {
                 item: item,
                 onPause: { [weak viewModel] in Task { await viewModel?.pause(item) } },
                 onResume: { [weak viewModel] in Task { await viewModel?.resume(item) } },
-                onDelete: { [weak viewModel] in Task { await viewModel?.delete(item) } }
+                onDelete: { [weak viewModel] in Task { await viewModel?.delete(item) } },
+                onShowDetail: onShowDetail.map { cb in { cb(item) } }
             )
         case .group(let group):
             // Action wiring depends on whether the row is a real pack or a
@@ -127,7 +129,8 @@ struct QueueSectionView: View {
                         else { await viewModel?.resume(rep) }
                     }
                 },
-                onDelete: { [weak viewModel] in Task { await viewModel?.deleteAll(items) } }
+                onDelete: { [weak viewModel] in Task { await viewModel?.deleteAll(items) } },
+                onShowDetail: onShowDetail.map { cb in { cb(rep) } }
             )
         }
     }

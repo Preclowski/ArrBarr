@@ -127,7 +127,13 @@ actor SearchClient {
             id: tmdbId, foreignId: String(tmdbId),
             title: r.title, subtitle: nil,
             year: r.year, rating: r.ratings?.tmdb?.value,
+            imdb: r.ratings?.imdb?.value,
+            rottenTomatoes: r.ratings?.rottenTomatoes?.value,
+            metacritic: r.ratings?.metacritic?.value,
             overview: r.overview, runtime: r.runtime,
+            genres: r.genres ?? [],
+            network: r.studio,
+            certification: r.certification,
             posterURL: poster, source: .radarr
         )
     }
@@ -141,7 +147,11 @@ actor SearchClient {
             id: tvdbId, foreignId: String(tvdbId),
             title: r.title, subtitle: subtitle,
             year: r.year, rating: r.ratings?.value,
-            overview: r.overview, runtime: nil,
+            imdb: nil, rottenTomatoes: nil, metacritic: nil,
+            overview: r.overview, runtime: r.runtime,
+            genres: r.genres ?? [],
+            network: r.network,
+            certification: nil,
             posterURL: poster, source: .sonarr
         )
     }

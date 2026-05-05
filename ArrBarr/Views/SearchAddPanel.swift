@@ -17,35 +17,15 @@ struct SearchAddPanel: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Header
-            HStack {
-                Button(action: onBack) {
-                    HStack(spacing: 2) {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 11, weight: .semibold))
-                        Text("Results")
-                            .font(.system(size: 12))
-                    }
-                    .foregroundStyle(Color.accentColor)
-                }
-                .buttonStyle(.plain)
-
-                Spacer()
-                Text(result.source == .radarr ? "Add to Radarr" : "Add to Sonarr")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(.secondary)
-                Spacer()
-                Color.clear.frame(width: 60, height: 1)
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-
+            header
             Divider()
 
             ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
+                VStack(alignment: .leading, spacing: 12) {
                     hero
-                    Divider().padding(.vertical, 8)
+                        .padding(.horizontal, 14)
+                        .padding(.top, 12)
+                    Divider().padding(.horizontal, 14)
                     if viewModel.isLoadingOptions {
                         ProgressView().controlSize(.small).frame(maxWidth: .infinity).padding(.vertical, 16)
                     } else {
@@ -59,15 +39,16 @@ struct SearchAddPanel: View {
                         Text(err)
                             .font(.caption)
                             .foregroundStyle(.red)
-                            .padding(.horizontal, 12)
-                            .padding(.bottom, 6)
+                            .padding(.horizontal, 14)
                     }
                     addButton
                 }
+                .padding(.bottom, 12)
             }
             .scrollBounceBehavior(.basedOnSize)
-            .frame(maxHeight: 480)
+            .frame(maxHeight: .infinity)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .task {
             await viewModel.loadOptions(source: result.source)
             selectedProfileId = viewModel.qualityProfiles.first?.id
@@ -75,47 +56,65 @@ struct SearchAddPanel: View {
         }
     }
 
+    // MARK: - Header chrome (matches DetailView)
+
+    private var header: some View {
+        HStack(spacing: 6) {
+            Button(action: onBack) {
+                HStack(spacing: 3) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 11, weight: .semibold))
+                    Text("Back")
+                        .font(.system(size: 12))
+                }
+                .foregroundStyle(.secondary)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            Spacer()
+
+            Image(systemName: result.source.symbol)
+                .font(.system(size: 11))
+                .foregroundStyle(.tertiary)
+            Text(result.source.displayName)
+                .font(.system(size: 11))
+                .foregroundStyle(.tertiary)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+    }
+
     // MARK: - Hero
 
     private var hero: some View {
-        HStack(alignment: .top, spacing: 10) {
-            RemotePoster(url: result.posterURL, apiKey: nil,
-                         size: CGSize(width: 44, height: 64), cornerRadius: 5)
-
-            VStack(alignment: .leading, spacing: 3) {
-                Text(result.title)
-                    .font(.system(size: 13, weight: .bold))
-                    .lineLimit(2)
-
-                HStack(spacing: 4) {
-                    if let y = result.year { Text(verbatim: "\(y)").foregroundStyle(.secondary) }
-                    if let r = result.rating {
-                        Text("·").foregroundStyle(.tertiary)
-                        Text(String(format: "★%.1f", r)).foregroundStyle(.secondary)
-                    }
-                    if let rt = result.runtime {
-                        Text("·").foregroundStyle(.tertiary)
-                        Text("\(rt)m").foregroundStyle(.secondary)
-                    }
-                    if let sub = result.subtitle {
-                        Text("·").foregroundStyle(.tertiary)
-                        Text(sub).foregroundStyle(.secondary)
-                    }
-                }
-                .font(.system(size: 10))
-
-                if let ov = result.overview {
-                    Text(ov)
-                        .font(.system(size: 10))
-                        .foregroundStyle(.tertiary)
-                        .lineLimit(3)
-                        .padding(.top, 2)
-                }
+        VStack(alignment: .leading, spacing: 10) {
+            MediaHeaderCard(
+                title: result.title,
+                subtitle: result.subtitle,
+                year: result.year,
+                runtime: result.runtime,
+                network: result.network,
+                certification: result.certification,
+                genres: result.genres,
+                ratings: ratingChips,
+                posterURL: result.posterURL,
+                fallbackSymbol: result.source == .sonarr ? "tv" : "film",
+                posterAspect: 2.0/3.0
+            )
+            if let ov = result.overview, !ov.isEmpty {
+                ExpandableOverview(text: ov)
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.top, 10)
-        .padding(.bottom, 2)
+    }
+
+    private var ratingChips: [RatingChip] {
+        var chips: [RatingChip] = []
+        if let v = result.imdb { chips.append(RatingChip(label: "IMDb", value: String(format: "%.1f", v), color: .yellow)) }
+        if let v = result.rating { chips.append(RatingChip(label: "TMDB", value: String(format: "%.1f", v), color: .teal)) }
+        if let v = result.rottenTomatoes { chips.append(RatingChip(label: "RT", value: "\(Int(v))%", color: .red)) }
+        if let v = result.metacritic { chips.append(RatingChip(label: "MC", value: "\(Int(v))", color: .green)) }
+        return chips
     }
 
     // MARK: - Radarr form
@@ -140,8 +139,8 @@ struct SearchAddPanel: View {
                        selection: $radarrMonitor,
                        options: RadarrMonitorMode.allCases.map { ($0, $0.displayName) })
         }
-        .padding(.horizontal, 12)
-        .padding(.bottom, 8)
+        .padding(.horizontal, 14)
+        .padding(.bottom, 4)
     }
 
     // MARK: - Sonarr form
@@ -179,9 +178,9 @@ struct SearchAddPanel: View {
             }
             .toggleStyle(.switch)
             .controlSize(.mini)
-            .padding(.horizontal, 12)
+            .padding(.horizontal, 14)
             .padding(.top, 6)
-            .padding(.bottom, 8)
+            .padding(.bottom, 4)
         }
     }
 
@@ -208,7 +207,7 @@ struct SearchAddPanel: View {
                     .buttonStyle(.plain)
                 }
             }
-            .padding(.horizontal, 12)
+            .padding(.horizontal, 14)
             .padding(.vertical, 6)
         }
     }
@@ -247,8 +246,7 @@ struct SearchAddPanel: View {
         }
         .modifier(GlassProminentButtonStyle())
         .disabled(viewModel.isAdding || viewModel.isLoadingOptions)
-        .padding(.horizontal, 12)
-        .padding(.bottom, 12)
+        .padding(.horizontal, 14)
         .padding(.top, 4)
     }
 
@@ -260,7 +258,7 @@ struct SearchAddPanel: View {
             .foregroundStyle(.tertiary)
             .textCase(.uppercase)
             .tracking(0.5)
-            .padding(.horizontal, 12)
+            .padding(.horizontal, 14)
             .padding(.top, 8)
             .padding(.bottom, 2)
     }
