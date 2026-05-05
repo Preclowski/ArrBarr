@@ -1,6 +1,6 @@
 import Foundation
 
-public struct QueueItem: Identifiable, Equatable {
+public struct QueueItem: Identifiable, Equatable, Hashable {
     public enum Source: String, CaseIterable, Sendable { case radarr, sonarr, lidarr
 
         public var displayName: String {
