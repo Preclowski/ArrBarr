@@ -298,22 +298,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
-        let view = PopoverContentView(
+        let view = MainWindowView(
             viewModel: queueVM,
-            onOpenSettings: { [weak self] in self?.openSettings() },
-            onQuit: { NSApp.terminate(nil) }
-            // Deliberately omit onOpenWindow here — once the window is open
-            // the menu shouldn't offer to open it again.
+            onOpenSettings: { [weak self] in self?.openSettings() }
         ).environmentObject(configStore)
 
         let hosting = NSHostingController(rootView: view)
         let win = NSWindow(contentViewController: hosting)
         win.title = "ArrBarr"
-        win.styleMask = [.titled, .closable, .miniaturizable, .resizable]
-        // Generous default — popover is 400x600; window gets 2x the room so
-        // it's clearly a "different surface", not a stretched popover.
-        win.setContentSize(NSSize(width: 880, height: 720))
-        win.minSize = NSSize(width: 560, height: 480)
+        win.styleMask = [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView]
+        // Generous default — three-pane split needs space.
+        win.setContentSize(NSSize(width: 1100, height: 720))
+        win.minSize = NSSize(width: 760, height: 520)
         win.isReleasedWhenClosed = false
         win.center()
 
