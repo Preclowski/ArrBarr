@@ -311,6 +311,14 @@ public struct QueueGroupTooltip: View {
                 )
             }
 
+            // Variant A — every upgrade episode is replacing the same kind
+            // of file. Render the summary card once between the header and
+            // the episode list; per-episode rows then collapse to just
+            // status/code/title/progress.
+            if let uniform = uniformExistingFile {
+                replacesSummary(uniform: uniform)
+            }
+
             if !group.items.isEmpty {
                 Text(verbatim: loc("Episodes"))
                     .font(.system(size: 10, weight: .semibold))
@@ -323,16 +331,90 @@ public struct QueueGroupTooltip: View {
         }
     }
 
+    /// Snapshot of an episode's existing-file metadata used to detect
+    /// "all five episodes are upgrading from the same release" so we can
+    /// hoist a single summary card instead of repeating identical chip
+    /// rows under each episode.
+    private struct ExistingFingerprint: Equatable {
+        let quality: String
+        let score: Int
+        let formats: [String]
+    }
+
+    private func existingFingerprint(_ item: QueueItem) -> ExistingFingerprint? {
+        // Only count rows that actually carry existing-file metadata —
+        // a fresh add inside an otherwise-upgrade pack should not
+        // collapse the summary, but it also shouldn't poison "all the
+        // upgrades match" detection.
+        guard item.isUpgrade,
+              let q = item.existingQuality, !q.isEmpty
+        else { return nil }
+        return ExistingFingerprint(
+            quality: q,
+            score: item.existingCustomFormatScore ?? 0,
+            formats: item.existingCustomFormats.sorted()
+        )
+    }
+
+    /// Returns the shared existing-file fingerprint when *every* upgrade
+    /// row in the pack carries identical existing metadata. Returns nil
+    /// the moment two rows differ — the per-episode "replaces …" path
+    /// then handles the heterogeneous case.
+    private var uniformExistingFile: ExistingFingerprint? {
+        let prints = group.items.compactMap(existingFingerprint)
+        guard !prints.isEmpty else { return nil }
+        // Need at least two upgrade rows to bother with a summary; one
+        // upgrade row inside an otherwise-fresh pack reads cleaner with
+        // its own per-row replaces line.
+        guard prints.count >= 2 else { return nil }
+        let first = prints[0]
+        guard prints.allSatisfy({ $0 == first }) else { return nil }
+        return first
+    }
+
+    @ViewBuilder
+    private func replacesSummary(uniform: ExistingFingerprint) -> some View {
+        let upgradeCount = group.items.filter(\.isUpgrade).count
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 4) {
+                Image(systemName: "arrow.up.doc.fill")
+                    .font(.system(size: 9))
+                    .foregroundStyle(.indigo)
+                Text(verbatim: String(format: loc("Replacing all %lld episodes"), upgradeCount))
+                    .font(.system(size: 9, weight: .semibold))
+                    .textCase(.uppercase)
+                    .tracking(0.5)
+                    .foregroundStyle(.indigo)
+            }
+            HStack(spacing: 4) {
+                Text(uniform.quality).foregroundStyle(.primary)
+                if uniform.score != 0 {
+                    Text("·").foregroundStyle(.tertiary)
+                    let sign = uniform.score > 0 ? "+" : ""
+                    Text("\(sign)\(uniform.score)")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(uniform.score > 0 ? Color.green : Color.red)
+                }
+                ForEach(uniform.formats, id: \.self) { TagChip(text: $0) }
+            }
+            .font(.system(size: 11))
+        }
+        .padding(8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.indigo.opacity(0.08), in: RoundedRectangle(cornerRadius: 6))
+    }
+
     /// Replaces the legacy episode list + heavy "existing files" block with
     /// the same compact queue-row presentation used in `DetailView`. Each
     /// episode shows a status dot, episode code, headline, percent, thin
-    /// progress bar, and any custom-format chips. Upgrades surface an
-    /// indigo arrow icon — full existing-file detail still lives in the
-    /// detail view (this is just a hover preview).
+    /// progress bar, and any custom-format chips. When the pack has mixed
+    /// existing files (variant B/C), each upgrade row also gets a single
+    /// inline "↑ replaces …" line with chips.
     private var episodeQueueList: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        let showPerRow = uniformExistingFile == nil
+        return VStack(alignment: .leading, spacing: 4) {
             ForEach(group.items) { it in
-                TooltipQueueRow(item: it)
+                TooltipQueueRow(item: it, showExistingFile: showPerRow)
             }
         }
     }
@@ -449,6 +531,18 @@ public struct QueueGroupTooltip: View {
 /// when the episode is replacing an existing file.
 public struct TooltipQueueRow: View {
     let item: QueueItem
+    /// When true, render an inline "↑ replaces …" line under the row
+    /// for upgrade items, with quality · size · score and existing
+    /// custom-format chips wrapping on the same line. Used for season
+    /// packs with mixed existing files (Variant B/C) where the per-row
+    /// detail is necessary; suppressed when a top-level summary card
+    /// already covers it (Variant A).
+    var showExistingFile: Bool = false
+
+    public init(item: QueueItem, showExistingFile: Bool = false) {
+        self.item = item
+        self.showExistingFile = showExistingFile
+    }
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 3) {
@@ -499,6 +593,43 @@ public struct TooltipQueueRow: View {
                 }
                 .padding(.top, 1)
             }
+
+            if showExistingFile, item.isUpgrade {
+                replacesLine
+                    .padding(.top, 1)
+                    .padding(.leading, 14)
+            }
+        }
+    }
+
+    /// Single wrapping line that combines text + chips for the existing
+    /// file: "↑ replaces  720p HDTV · 1.8 GB · +50  [chip] [chip] [chip]".
+    /// Lays out via `TooltipFlowLayout` so all of it sits on one row when
+    /// it fits and wraps as a unit when it doesn't.
+    @ViewBuilder
+    private var replacesLine: some View {
+        let prefixText = Text("↑ replaces").foregroundStyle(Color.indigo).font(.system(size: 10, weight: .medium))
+        let qualityText: Text? = (item.existingQuality?.isEmpty == false)
+            ? Text(item.existingQuality!).foregroundStyle(.secondary).font(.system(size: 10))
+            : nil
+        let sizeText: Text? = (item.existingSize ?? 0) > 0
+            ? Text(ByteCountFormatter.string(fromByteCount: item.existingSize!, countStyle: .file))
+                .foregroundStyle(.secondary).font(.system(size: 10))
+            : nil
+        let scoreValue = item.existingCustomFormatScore ?? 0
+        let scoreText: Text? = scoreValue != 0
+            ? Text("\(scoreValue > 0 ? "+" : "")\(scoreValue)")
+                .foregroundStyle(scoreValue > 0 ? Color.green : Color.red)
+                .font(.system(size: 10, weight: .semibold))
+            : nil
+        let dot = Text("·").foregroundStyle(.tertiary).font(.system(size: 10))
+
+        TooltipFlowLayout(spacing: 4) {
+            prefixText
+            if let qualityText { qualityText }
+            if let sizeText { dot; sizeText }
+            if let scoreText { dot; scoreText }
+            ForEach(item.existingCustomFormats, id: \.self) { TagChip(text: $0) }
         }
     }
 
