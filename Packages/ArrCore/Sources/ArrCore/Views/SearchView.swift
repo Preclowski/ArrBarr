@@ -16,8 +16,42 @@ public struct SearchView: View {
     }
 
     public var body: some View {
+        #if os(iOS)
+        // iOS: search field floats at the bottom as a Liquid Glass capsule.
+        // Content scrolls *behind* it (so the blur reads), with bottom inset
+        // applied so the last row clears the bar.
         VStack(spacing: 0) {
-            // Search field
+            if configuredSources.count > 1 {
+                subTabs
+                Divider().padding(.top, 4)
+            }
+            ScrollView {
+                resultContent
+                    .padding(.bottom, 88) // clear the floating bar
+            }
+            .scrollBounceBehavior(.basedOnSize)
+        }
+        .overlay(alignment: .bottom) {
+            FloatingGlassSearchBar(
+                placeholder: placeholder,
+                query: $viewModel.query
+            )
+            .padding(.horizontal, 16)
+            .padding(.bottom, 12)
+        }
+        .onChange(of: selectedSource) { _, _ in
+            viewModel.resetForSource()
+            if !viewModel.query.isEmpty {
+                viewModel.onQueryChange(source: selectedSource)
+            }
+        }
+        .onChange(of: viewModel.query) { _, _ in
+            viewModel.onQueryChange(source: selectedSource)
+        }
+        #else
+        // macOS popover: inline field at the top — floating glass would look
+        // wrong inside a 320pt popover.
+        VStack(spacing: 0) {
             HStack(spacing: 6) {
                 Image(systemName: "magnifyingglass")
                     .font(.system(size: 12))
@@ -43,14 +77,12 @@ public struct SearchView: View {
             .padding(.horizontal, 12)
             .padding(.top, 8)
 
-            // Sub-tabs (only if >1 source)
             if configuredSources.count > 1 {
                 subTabs
             }
 
             Divider().padding(.top, 4)
 
-            // Results area
             ScrollView {
                 resultContent
             }
@@ -63,6 +95,7 @@ public struct SearchView: View {
                 viewModel.onQueryChange(source: selectedSource)
             }
         }
+        #endif
     }
 
     private var placeholder: String {
@@ -167,3 +200,58 @@ public struct SearchView: View {
         }
     }
 }
+
+#if os(iOS)
+/// Floating Liquid Glass search bar for iOS. Sits at the bottom of the screen,
+/// capsule-shaped, content scrolls behind it.
+///
+/// On iOS 26 we use `.glassEffect()` for true Liquid Glass; earlier OSes
+/// fall back to `.ultraThinMaterial` which is the closest visual approximation.
+private struct FloatingGlassSearchBar: View {
+    let placeholder: String
+    @Binding var query: String
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 16, weight: .regular))
+                .foregroundStyle(.secondary)
+            TextField(placeholder, text: $query)
+                .font(.system(size: 16))
+                .textFieldStyle(.plain)
+                .submitLabel(.search)
+                .focused($focused)
+                .autocorrectionDisabled()
+                .textInputAutocapitalization(.never)
+            if !query.isEmpty {
+                Button {
+                    query = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 16))
+                        .foregroundStyle(.tertiary)
+                }
+                .buttonStyle(.plain)
+                .transition(.opacity.combined(with: .scale(scale: 0.85)))
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(glassBackground)
+        .overlay(
+            Capsule()
+                .strokeBorder(Color.white.opacity(0.10), lineWidth: 0.5)
+        )
+        .shadow(color: .black.opacity(0.25), radius: 18, x: 0, y: 6)
+        .animation(.easeInOut(duration: 0.18), value: query.isEmpty)
+    }
+
+    /// `ultraThinMaterial` reads as Liquid Glass on iOS 26 (the system swaps
+    /// material rendering in) and as a vibrant blur on iOS 17+. Same call site,
+    /// no `#available` gate needed.
+    private var glassBackground: some View {
+        Capsule().fill(.ultraThinMaterial)
+    }
+}
+#endif
