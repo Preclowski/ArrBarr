@@ -168,143 +168,46 @@ struct QueueGroupingTests {
         guard case .group(let g) = QueueGrouping.group(items)[0] else {
             Issue.record("expected group"); return
         }
-        #expect(g.kind == .pack)
     }
 
-    @Test("3+ matching episodes with distinct downloadIds form a virtual group")
-    func virtualBundleFormsAtThreshold() {
+    @Test("Independent same-series episodes with distinct downloadIds stay as singletons")
+    func independentEpisodesNeverGroup() {
+        // Used to be the "virtual bundle" case. Now we keep these as
+        // individual queue rows because pretending they were one row
+        // misled the user about pause/progress/indexer.
         let items = (1...3).map { episode(id: "v\($0)", episodeNumber: $0) }
         let entries = QueueGrouping.group(items)
-        #expect(entries.count == 1)
-        guard case .group(let g) = entries[0] else {
-            Issue.record("expected group"); return
-        }
-        #expect(g.kind == .virtual)
-        #expect(g.memberCount == 3)
-    }
-
-    @Test("Two matching episodes stay as singletons (below threshold)")
-    func virtualBelowThresholdStaysSingletons() {
-        let items = (1...2).map { episode(id: "v\($0)", episodeNumber: $0) }
-        let entries = QueueGrouping.group(items)
-        #expect(entries.count == 2)
-        for entry in entries {
-            if case .group = entry { Issue.record("should not group below threshold") }
-        }
-    }
-
-    @Test("Different release groups break the virtual bundle")
-    func virtualNeedsSameReleaseGroup() {
-        let items = [
-            episode(id: "v1", episodeNumber: 1, releaseGroup: "ALPHA"),
-            episode(id: "v2", episodeNumber: 2, releaseGroup: "BETA"),
-            episode(id: "v3", episodeNumber: 3, releaseGroup: "GAMMA"),
-        ]
-        let entries = QueueGrouping.group(items)
         #expect(entries.count == 3)
         for entry in entries {
-            if case .group = entry { Issue.record("different release groups must not collapse") }
+            if case .group = entry { Issue.record("must not collapse independent downloads") }
         }
     }
 
-    @Test("Different seasons break the virtual bundle")
-    func virtualNeedsSameSeason() {
-        let items = [
-            episode(id: "v1", season: 1, episodeNumber: 1),
-            episode(id: "v2", season: 2, episodeNumber: 1),
-            episode(id: "v3", season: 3, episodeNumber: 1),
-        ]
-        let entries = QueueGrouping.group(items)
-        #expect(entries.count == 3)
-        for entry in entries {
-            if case .group = entry { Issue.record("different seasons must not collapse") }
-        }
-    }
-
-    @Test("Different qualities break the virtual bundle")
-    func virtualNeedsSameQuality() {
-        let items = [
-            episode(id: "v1", episodeNumber: 1, quality: "WEB-DL 1080p"),
-            episode(id: "v2", episodeNumber: 2, quality: "WEB-DL 720p"),
-            episode(id: "v3", episodeNumber: 3, quality: "Bluray-1080p"),
-        ]
-        let entries = QueueGrouping.group(items)
-        #expect(entries.count == 3)
-    }
-
-    @Test("Different custom formats break the virtual bundle")
-    func virtualNeedsSameCustomFormats() {
-        let items = [
-            episode(id: "v1", episodeNumber: 1, customFormats: ["x264"]),
-            episode(id: "v2", episodeNumber: 2, customFormats: ["x265"]),
-            episode(id: "v3", episodeNumber: 3, customFormats: ["x264", "AAC"]),
-        ]
-        let entries = QueueGrouping.group(items)
-        #expect(entries.count == 3)
-    }
-
-    @Test("Custom format order doesn't matter — sorted comparison")
-    func virtualCustomFormatOrderInsensitive() {
-        let items = [
-            episode(id: "v1", episodeNumber: 1, customFormats: ["x264", "AAC"]),
-            episode(id: "v2", episodeNumber: 2, customFormats: ["AAC", "x264"]),
-            episode(id: "v3", episodeNumber: 3, customFormats: ["x264", "AAC"]),
-        ]
-        let entries = QueueGrouping.group(items)
-        #expect(entries.count == 1)
-        if case .group(let g) = entries[0] { #expect(g.kind == .virtual) }
-    }
-
-    @Test("Missing release group disables virtual grouping")
-    func virtualSkipsWhenReleaseGroupMissing() {
-        let items: [QueueItem] = (1...3).map {
-            item(
-                id: "v\($0)", downloadId: "v\($0)",
-                title: "Show", subtitle: String(format: "S01E%02d", $0),
-                quality: "WEB-DL 1080p", releaseGroup: nil,
-                customFormats: ["x264"]
-            )
-        }
-        let entries = QueueGrouping.group(items)
-        #expect(entries.count == 3)
-    }
-
-    @Test("Non-sonarr items never form virtual groups")
-    func virtualIsSonarrOnly() {
-        let items = (1...3).map {
-            item(
-                id: "r\($0)", downloadId: "r\($0)",
-                title: "Movie",
-                subtitle: String(format: "S01E%02d", $0),
-                source: .radarr,
-                quality: "WEB-DL 1080p",
-                releaseGroup: "GROUP",
-                customFormats: ["x264"]
-            )
-        }
-        let entries = QueueGrouping.group(items)
-        #expect(entries.count == 3)
-    }
-
-    @Test("Real pack and a virtual bundle coexist independently")
-    func packAndVirtualCoexist() {
-        // 2-episode real pack from one downloadId, plus 3 virtual-eligible
-        // siblings of a different series. Expect: one .pack + one .virtual.
+    @Test("Real pack alongside independent siblings")
+    func packAndIndependentEpisodesCoexist() {
+        // 2-episode real pack + 3 independent siblings of a different
+        // series. Expect: one .pack group and three singletons.
         var items: [QueueItem] = [
             episode(id: "p1", episodeNumber: 1, title: "Packed", downloadId: "shared"),
             episode(id: "p2", episodeNumber: 2, title: "Packed", downloadId: "shared"),
         ]
         items.append(contentsOf: (1...3).map {
-            episode(id: "v\($0)", episodeNumber: $0, title: "Virtual")
+            episode(id: "v\($0)", episodeNumber: $0, title: "Independent")
         })
         let entries = QueueGrouping.group(items)
-        #expect(entries.count == 2)
-        guard case .group(let pack) = entries[0],
-              case .group(let virtual) = entries[1]
-        else { Issue.record("expected two groups"); return }
-        #expect(pack.kind == .pack)
-        #expect(pack.memberCount == 2)
-        #expect(virtual.kind == .virtual)
-        #expect(virtual.memberCount == 3)
+        #expect(entries.count == 4)
+        var groupCount = 0
+        var singleCount = 0
+        for entry in entries {
+            switch entry {
+            case .group(let g):
+                groupCount += 1
+                #expect(g.memberCount == 2)
+            case .single:
+                singleCount += 1
+            }
+        }
+        #expect(groupCount == 1)
+        #expect(singleCount == 3)
     }
 }

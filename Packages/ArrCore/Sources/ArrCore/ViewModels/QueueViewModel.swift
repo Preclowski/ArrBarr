@@ -315,17 +315,6 @@ public final class QueueViewModel: ObservableObject {
         }
     }
 
-    /// Fan-out pause/resume for virtual season bundles. Real season packs
-    /// don't go through this path (one shared downloadId means a single
-    /// `pause(rep)` already affects the whole pack), but virtual bundles
-    /// need one client call per member.
-    public func pauseAll(_ items: [QueueItem]) async {
-        for item in items { await pause(item) }
-    }
-    public func resumeAll(_ items: [QueueItem]) async {
-        for item in items { await resume(item) }
-    }
-
     private func runAction(_ action: QueueAggregator.Action, on item: QueueItem) async {
         do {
             try await aggregator.perform(action, on: item)

@@ -143,7 +143,8 @@ public enum DemoMocks {
             queueItem(
                 source: .sonarr, id: "demo-sonarr-1",
                 title: "Pioneer One (2010)",
-                subtitle: "S01E03 · Endurance",
+                subtitle: "Season 01 · Episode 3 — Endurance",
+                seasonNumber: 1, episodeNumber: 3, episodeTitle: "Endurance",
                 releaseName: "Pioneer.One.S01E03.720p.HDTV.x264-DEMO",
                 status: .downloading, progress: 0.67,
                 quality: "HDTV-720p", formats: ["x264", "AAC 2.0", "Internal", "HQ Source Group"], score: 380,
@@ -161,12 +162,13 @@ public enum DemoMocks {
         items.append(contentsOf: caminandesSeasonPack)
         items.append(contentsOf: tearsOfSteelSeasonPack)
         items.append(contentsOf: pioneerOneIndependentEpisodes)
-        items.append(contentsOf: springTalesVirtualBundle)
+        items.append(contentsOf: springTalesIndependentEpisodes)
         items.append(contentsOf: [
             queueItem(
                 source: .sonarr, id: "demo-sonarr-2",
                 title: "Cosmos Laundromat (2015)",
-                subtitle: "S01E01 · The Beginning",
+                subtitle: "Season 01 · Episode 1 — The Beginning",
+                seasonNumber: 1, episodeNumber: 1, episodeTitle: "The Beginning",
                 releaseName: "Cosmos.Laundromat.S01E01.1080p.WEB-DL-DEMO",
                 status: .queued, progress: 0,
                 quality: "WEB-DL 1080p", formats: ["AMZN", "x264"], score: 180,
@@ -177,7 +179,8 @@ public enum DemoMocks {
             queueItem(
                 source: .sonarr, id: "demo-sonarr-3",
                 title: "Northern Cascade (2023)",
-                subtitle: "S02E04 · Cold Start",
+                subtitle: "Season 02 · Episode 4 — Cold Start",
+                seasonNumber: 2, episodeNumber: 4, episodeTitle: "Cold Start",
                 releaseName: "Northern.Cascade.S02E04.2160p.WEB-DL.DV.HDR10-DEMO",
                 status: .warning, progress: 0.92,
                 quality: "WEB-DL 2160p", formats: ["AMZN", "DV", "HDR10", "Atmos", "x265", "10bit"], score: 1240,
@@ -226,7 +229,8 @@ public enum DemoMocks {
                 source: .sonarr,
                 id: "demo-sonarr-pack-\(ep.num)",
                 title: "Caminandes (2013)",
-                subtitle: String(format: "S01E%02d · %@", ep.num, ep.title),
+                subtitle: String(format: String(localized: "Season 01 · Episode %lld — %@"), ep.num, ep.title),
+                seasonNumber: 1, episodeNumber: ep.num, episodeTitle: ep.title,
                 releaseName: baseRelease,
                 status: .downloading,
                 progress: 0.55,
@@ -260,7 +264,8 @@ public enum DemoMocks {
                 source: .sonarr,
                 id: "demo-sonarr-tos-pack-\(ep.num)",
                 title: "Tears of Steel (2012)",
-                subtitle: String(format: "S01E%02d · %@", ep.num, ep.title),
+                subtitle: String(format: String(localized: "Season 01 · Episode %lld — %@"), ep.num, ep.title),
+                seasonNumber: 1, episodeNumber: ep.num, episodeTitle: ep.title,
                 releaseName: baseRelease,
                 status: .downloading,
                 progress: 0.18,
@@ -293,7 +298,8 @@ public enum DemoMocks {
                 source: .sonarr,
                 id: "demo-sonarr-pone-\(rel.num)",
                 title: "Pioneer One (2010)",
-                subtitle: String(format: "S01E%02d · %@", rel.num, rel.title),
+                subtitle: String(format: String(localized: "Season 01 · Episode %lld — %@"), rel.num, rel.title),
+                seasonNumber: 1, episodeNumber: rel.num, episodeTitle: rel.title,
                 releaseName: String(format: "Pioneer.One.S01E%02d.720p.HDTV.x264-DEMO", rel.num),
                 status: rel.status,
                 progress: rel.progress,
@@ -311,14 +317,13 @@ public enum DemoMocks {
         }
     }
 
-    /// Four Spring Tales episodes downloaded as separate releases that all
-    /// share the same release group, quality, and custom formats — a manually
-    /// assembled "season" rather than a real season pack. Each episode keeps
-    /// its own `downloadId` (the client sees four torrents) so QueueGrouping
-    /// can only collapse them via the second-pass virtual fingerprint.
-    /// Exercises the `.virtual` row variant: "Season" badge, aggregate
-    /// progress bar, fan-out pause/resume.
-    private static var springTalesVirtualBundle: [QueueItem] {
+    /// Four Spring Tales episodes downloaded as separate releases. With
+    /// the virtual-bundle collapse removed, each one renders as its own
+    /// queue row — exactly like four independent Radarr movies would.
+    /// Pause/resume targets exactly what the user sees; no fan-out
+    /// trickery, no aggregate progress lying about which one is at what
+    /// percent.
+    private static var springTalesIndependentEpisodes: [QueueItem] {
         let cfs = ["AMZN", "DDP 5.1", "x264"]
         let episodes: [(num: Int, title: String, status: QueueItem.Status, progress: Double)] = [
             (1, "Bloom",   .downloading, 0.82),
@@ -329,9 +334,10 @@ public enum DemoMocks {
         return episodes.map { ep in
             queueItem(
                 source: .sonarr,
-                id: "demo-sonarr-virtual-\(ep.num)",
+                id: "demo-sonarr-springtales-\(ep.num)",
                 title: "Spring Tales (2019)",
-                subtitle: String(format: "S01E%02d · %@", ep.num, ep.title),
+                subtitle: String(format: String(localized: "Season 01 · Episode %lld — %@"), ep.num, ep.title),
+                seasonNumber: 1, episodeNumber: ep.num, episodeTitle: ep.title,
                 releaseName: String(format: "Spring.Tales.S01E%02d.1080p.WEB-DL.x264-DEMO", ep.num),
                 status: ep.status,
                 progress: ep.progress,
@@ -531,6 +537,7 @@ public enum DemoMocks {
     private static func queueItem(
         source: QueueItem.Source, id: String,
         title: String, subtitle: String? = nil,
+        seasonNumber: Int? = nil, episodeNumber: Int? = nil, episodeTitle: String? = nil,
         releaseName: String? = nil,
         status: QueueItem.Status, progress: Double,
         quality: String?, formats: [String], score: Int,
@@ -559,7 +566,9 @@ public enum DemoMocks {
             id: id, source: source, arrQueueId: abs(id.hashValue % 99999),
             downloadId: downloadId ?? id, downloadProtocol: proto, downloadClient: client,
             indexer: indexer,
-            title: title, subtitle: subtitle, releaseName: releaseName,
+            title: title, subtitle: subtitle,
+            seasonNumber: seasonNumber, episodeNumber: episodeNumber, episodeTitle: episodeTitle,
+            releaseName: releaseName,
             status: status, progress: progress,
             sizeTotal: total, sizeLeft: left, timeLeft: timeLeft,
             customFormats: formats, customFormatScore: score,

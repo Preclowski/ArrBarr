@@ -61,19 +61,12 @@ public struct QueueGroupRowView: View {
                             .lineLimit(1)
                             .truncationMode(.tail)
 
-                        // Title-row badges: colour-tinted capsules, mirrors
-                        // QueueRowView so the row reads as a sibling.
-                        // `.virtual` bundles say just "Season" — they're N
-                        // independent downloads, not one physical pack, and
-                        // the user shouldn't be misled into thinking the
-                        // release is a single torrent/nzb.
-                        Text(group.kind == .pack ? "Season pack" : "Season")
-                            .font(.system(size: 8, weight: .semibold))
-                            .foregroundStyle(Color.teal)
-                            .padding(.horizontal, 4)
-                            .padding(.vertical, 1)
-                            .background(Color.teal.opacity(0.15), in: Capsule())
-
+                        // Title-row badges: Upgrade/New + download client,
+                        // matching QueueRowView (and Radarr's movie row)
+                        // exactly. The pack-shape callout used to live
+                        // here as a third teal pill — it's been demoted
+                        // into the subtitle line below where it belongs
+                        // alongside other shape descriptors.
                         Text(rep.isUpgrade ? "Upgrade" : "New")
                             .font(.system(size: 8, weight: .semibold))
                             .foregroundStyle(rep.isUpgrade ? AnyShapeStyle(Color.indigo) : AnyShapeStyle(Color.accentColor))
@@ -183,20 +176,25 @@ public struct QueueGroupRowView: View {
 
     // MARK: - Header text
 
-    /// Second line under the series title.
-    /// - Single-season pack → "Season 01 · 5 episodes"
-    /// - Mixed-season pack  → "Multiple seasons · 12 episodes"
-    /// - No parsable season → nil (the second line is hidden)
+    /// Second line under the series title. Unified subtitle shape:
+    ///   - Single-season pack → "Season 01 · season pack · 5 episodes"
+    ///   - Mixed-season pack  → "Multiple seasons · season pack · 12 episodes"
+    ///   - No parsable season → "Season pack · 5 episodes" as a fallback.
+    ///
+    /// "Season pack" used to be a third coloured pill in the title row; it
+    /// describes the *shape* of the download, not its *state*, so it
+    /// belongs in the subtitle alongside other shape descriptors.
     private var seasonLabel: String? {
-        let seasons = Set(group.items.compactMap { Self.parseSeason(from: $0.subtitle) })
+        let seasons = Set(group.items.compactMap(\.seasonNumber))
+        let packLabel = String(localized: "season pack")
         if seasons.count == 1, let s = seasons.first {
             let seasonText = String(format: String(localized: "Season %02lld"), s)
-            return "\(seasonText) · \(episodeCountText)"
+            return "\(seasonText) · \(packLabel) · \(episodeCountText)"
         }
         if seasons.count > 1 {
-            return "\(String(localized: "Multiple seasons")) · \(episodeCountText)"
+            return "\(String(localized: "Multiple seasons")) · \(packLabel) · \(episodeCountText)"
         }
-        return nil
+        return "\(String(localized: "Season pack")) · \(episodeCountText)"
     }
 
     /// Used in the alert; same logic as `seasonLabel` but always returns
@@ -225,16 +223,6 @@ public struct QueueGroupRowView: View {
         let count = Double(group.items.count)
         guard count > 0 else { return 0 }
         return group.items.reduce(0.0) { $0 + $1.progress } / count
-    }
-
-    private static func parseSeason(from subtitle: String?) -> Int? {
-        guard let s = subtitle else { return nil }
-        let pattern = "S(\\d+)E\\d+"
-        guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive),
-              let match = regex.firstMatch(in: s, range: NSRange(s.startIndex..., in: s)),
-              let range = Range(match.range(at: 1), in: s)
-        else { return nil }
-        return Int(s[range])
     }
 
     // MARK: - Actions
@@ -412,18 +400,15 @@ public struct QueueGroupTooltip: View {
     /// inline "↑ replaces …" line with chips.
     private var episodeQueueList: some View {
         let showPerRow = uniformExistingFile == nil
-        // For real `.pack` groups every member shares one physical release,
-        // so quality + new-format chips repeat the pack header verbatim on
-        // every row — hide them. `.virtual` bundles are independent
-        // downloads that genuinely differ per row, so keep the per-row
-        // metadata visible there.
-        let showNewMeta = group.kind == .virtual
+        // Every member of the (now only) `.pack` group shares one physical
+        // release — quality + new-format chips would just repeat the pack
+        // header on every row, so hide them.
         return VStack(alignment: .leading, spacing: 4) {
             ForEach(group.items) { it in
                 TooltipQueueRow(
                     item: it,
                     showExistingFile: showPerRow,
-                    showNewFileMeta: showNewMeta
+                    showNewFileMeta: false
                 )
             }
         }
@@ -493,7 +478,7 @@ public struct QueueGroupTooltip: View {
     }
 
     private var seasonLabel: String? {
-        let seasons = Set(group.items.compactMap { Self.parseSeason(from: $0.subtitle) })
+        let seasons = Set(group.items.compactMap(\.seasonNumber))
         if seasons.count == 1, let s = seasons.first {
             return String(format: loc("Season %02lld"), s)
         }
@@ -501,16 +486,6 @@ public struct QueueGroupTooltip: View {
             return loc("Multiple seasons")
         }
         return nil
-    }
-
-    private static func parseSeason(from subtitle: String?) -> Int? {
-        guard let s = subtitle else { return nil }
-        let pattern = "S(\\d+)E\\d+"
-        guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive),
-              let match = regex.firstMatch(in: s, range: NSRange(s.startIndex..., in: s)),
-              let range = Range(match.range(at: 1), in: s)
-        else { return nil }
-        return Int(s[range])
     }
 
     private var sizeString: String {
@@ -652,22 +627,13 @@ public struct TooltipQueueRow: View {
     }
 
     private var episodeCode: String? {
-        guard let s = item.subtitle else { return nil }
-        let pattern = "S\\d+E\\d+"
-        guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive),
-              let match = regex.firstMatch(in: s, range: NSRange(s.startIndex..., in: s)),
-              let range = Range(match.range, in: s)
-        else { return nil }
-        return String(s[range]).uppercased()
+        guard let s = item.seasonNumber, let e = item.episodeNumber else { return nil }
+        return String(format: "S%02dE%02d", s, e)
     }
 
     private var headline: String {
         var bits: [String] = []
-        if let s = item.subtitle, let code = episodeCode {
-            let stripped = s.replacingOccurrences(of: code, with: "", options: .caseInsensitive)
-                .trimmingCharacters(in: CharacterSet(charactersIn: " ·–—-"))
-            if !stripped.isEmpty { bits.append(stripped) }
-        }
+        if let t = item.episodeTitle, !t.isEmpty { bits.append(t) }
         // Quality stays suppressed when the row sits inside a pack — the
         // pack header already shows the single shared quality, so
         // repeating it on every episode just adds noise.

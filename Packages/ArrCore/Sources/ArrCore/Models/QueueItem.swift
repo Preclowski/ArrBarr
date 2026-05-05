@@ -47,6 +47,12 @@ public struct QueueItem: Identifiable, Equatable, Hashable {
 
     public let title: String
     public let subtitle: String?
+    /// Sonarr-only: structured episode coordinates so consumers don't have
+    /// to regex-parse `subtitle` to know which episode the row represents.
+    /// nil for Radarr / Lidarr / unknown-episode Sonarr rows.
+    public let seasonNumber: Int?
+    public let episodeNumber: Int?
+    public let episodeTitle: String?
     public let releaseName: String?
     public var status: Status
     public let progress: Double
@@ -76,7 +82,9 @@ public struct QueueItem: Identifiable, Equatable, Hashable {
         id: String, source: Source, arrQueueId: Int,
         downloadId: String?, downloadProtocol: DownloadProtocol,
         downloadClient: String?, indexer: String? = nil,
-        title: String, subtitle: String?, releaseName: String? = nil,
+        title: String, subtitle: String?,
+        seasonNumber: Int? = nil, episodeNumber: Int? = nil, episodeTitle: String? = nil,
+        releaseName: String? = nil,
         status: Status, progress: Double, sizeTotal: Int64,
         sizeLeft: Int64, timeLeft: String?,
         customFormats: [String], customFormatScore: Int,
@@ -91,6 +99,7 @@ public struct QueueItem: Identifiable, Equatable, Hashable {
         self.downloadId = downloadId; self.downloadProtocol = downloadProtocol
         self.downloadClient = downloadClient; self.indexer = indexer
         self.title = title; self.subtitle = subtitle; self.releaseName = releaseName
+        self.seasonNumber = seasonNumber; self.episodeNumber = episodeNumber; self.episodeTitle = episodeTitle
         self.status = status; self.progress = progress; self.sizeTotal = sizeTotal
         self.sizeLeft = sizeLeft; self.timeLeft = timeLeft
         self.customFormats = customFormats; self.customFormatScore = customFormatScore

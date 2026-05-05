@@ -268,20 +268,37 @@ public actor SonarrClient {
 
         let title: String
         let subtitle: String?
+        let seasonNumber: Int?
+        let episodeNumber: Int?
+        let episodeTitle: String?
         if let s = r.series {
             title = s.title
             if let ep = r.episode, let season = ep.seasonNumber, let number = ep.episodeNumber {
-                let code = String(format: "S%02dE%02d", season, number)
-                if let epTitle = ep.title, !epTitle.isEmpty {
-                    subtitle = "\(code) · \(epTitle)"
+                seasonNumber = season
+                episodeNumber = number
+                episodeTitle = ep.title?.isEmpty == false ? ep.title : nil
+                // Unified Sonarr subtitle shape: "Season 02 · Episode 3 — Title".
+                // Single-episode rows now lead with the same "Season XX"
+                // anchor as the season-pack rows so the eye lands on the
+                // same column whichever row type it's reading.
+                let seasonText = String(format: String(localized: "Season %02lld"), season)
+                let episodeText = String(format: String(localized: "Episode %lld"), number)
+                if let t = episodeTitle {
+                    subtitle = "\(seasonText) · \(episodeText) — \(t)"
                 } else {
-                    subtitle = code
+                    subtitle = "\(seasonText) · \(episodeText)"
                 }
             } else {
+                seasonNumber = nil
+                episodeNumber = nil
+                episodeTitle = nil
                 subtitle = nil
             }
         } else {
             title = r.title ?? "Unknown"
+            seasonNumber = nil
+            episodeNumber = nil
+            episodeTitle = nil
             subtitle = nil
         }
         let (poster, posterAuth) = pickPosterURL(from: r.series?.images, coverTypes: ["poster"], baseURL: baseURL)
@@ -299,6 +316,9 @@ public actor SonarrClient {
             indexer: r.indexer,
             title: title,
             subtitle: subtitle,
+            seasonNumber: seasonNumber,
+            episodeNumber: episodeNumber,
+            episodeTitle: episodeTitle,
             releaseName: r.title,
             status: parseStatus(arrStatus: r.status, trackedState: r.trackedDownloadState),
             progress: progress,

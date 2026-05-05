@@ -1088,23 +1088,14 @@ private struct MultiRow: View {
     }
 
     private var episodeCode: String? {
-        guard let s = item.subtitle else { return nil }
-        let pattern = "S\\d+E\\d+"
-        guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive),
-              let match = regex.firstMatch(in: s, range: NSRange(s.startIndex..., in: s)),
-              let range = Range(match.range, in: s)
-        else { return nil }
-        return String(s[range]).uppercased()
+        guard let s = item.seasonNumber, let e = item.episodeNumber else { return nil }
+        return String(format: "S%02dE%02d", s, e)
     }
 
-    /// Subtitle minus the episode code, plus the quality, joined by a dot.
+    /// Episode title + quality, joined by a dot.
     private var headlineText: String {
         var bits: [String] = []
-        if let s = item.subtitle, let code = episodeCode {
-            let stripped = s.replacingOccurrences(of: code, with: "", options: .caseInsensitive)
-                .trimmingCharacters(in: CharacterSet(charactersIn: " ·–—-"))
-            if !stripped.isEmpty { bits.append(stripped) }
-        }
+        if let t = item.episodeTitle, !t.isEmpty { bits.append(t) }
         if let q = item.quality, !q.isEmpty { bits.append(q) }
         if bits.isEmpty, let release = item.releaseName, !release.isEmpty { bits.append(release) }
         return bits.joined(separator: " · ")

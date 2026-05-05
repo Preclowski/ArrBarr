@@ -105,30 +105,17 @@ public struct QueueSectionView: View {
                 onShowDetail: onShowDetail.map { cb in { cb(item) } }
             )
         case .group(let group):
-            // Action wiring depends on whether the row is a real pack or a
-            // virtual bundle. Packs share one downloadId, so pause/resume
-            // on the representative already affects every sibling at the
-            // arr level. Virtual bundles wrap N independent downloads, so
-            // every action must fan out.
-            // Delete uniformly goes through `deleteAll(_:)`; the aggregator
-            // figures out per-call `removeFromClient` from the items.
+            // A `.group` is now always a real season pack: every member
+            // shares one downloadId, so pausing the representative
+            // affects every sibling at the arr level. Delete still goes
+            // through `deleteAll(_:)` because the aggregator wants the
+            // member list to figure out per-call `removeFromClient`.
             let items = group.items
             let rep = group.representative
-            let isVirtual = group.kind == .virtual
             QueueGroupRowView(
                 group: group,
-                onPause: { [weak viewModel] in
-                    Task {
-                        if isVirtual { await viewModel?.pauseAll(items) }
-                        else { await viewModel?.pause(rep) }
-                    }
-                },
-                onResume: { [weak viewModel] in
-                    Task {
-                        if isVirtual { await viewModel?.resumeAll(items) }
-                        else { await viewModel?.resume(rep) }
-                    }
-                },
+                onPause: { [weak viewModel] in Task { await viewModel?.pause(rep) } },
+                onResume: { [weak viewModel] in Task { await viewModel?.resume(rep) } },
                 onDelete: { [weak viewModel] in Task { await viewModel?.deleteAll(items) } },
                 onShowDetail: onShowDetail.map { cb in { cb(rep) } }
             )
