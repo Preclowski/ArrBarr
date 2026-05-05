@@ -1,0 +1,315 @@
+import Foundation
+
+public actor SonarrClient {
+    private let config: ServiceConfig
+    private let http = HTTPClient()
+
+    private struct CachedEpisodeFiles { let files: [SonarrEpisodeFile]; let expiry: Date }
+    private var episodeFileCache: [Int: CachedEpisodeFiles] = [:]
+    private let episodeFileCacheTTL: TimeInterval = 60
+
+    init(config: ServiceConfig) {
+        self.config = config
+    }
+
+    func testConnection() async throws -> String {
+        guard config.isConfigured else { throw HTTPError.notConfigured }
+        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
+        let url = try http.url(base: config.baseURL, path: "/api/v3/system/status")
+        let data = try await http.get(url, headers: ["X-Api-Key": config.apiKey])
+        struct Status: Decodable { let version: String? }
+        let status = try? JSONDecoder().decode(Status.self, from: data)
+        return status?.version.map { "Sonarr \($0)" } ?? "OK"
+    }
+
+    func fetchQueue() async throws -> [QueueItem] {
+        guard config.isConfigured else { throw HTTPError.notConfigured }
+        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
+
+        let url = try http.url(
+            base: config.baseURL,
+            path: "/api/v3/queue",
+            query: [
+                URLQueryItem(name: "pageSize", value: "1000"),
+                URLQueryItem(name: "includeSeries", value: "true"),
+                URLQueryItem(name: "includeEpisode", value: "true"),
+                URLQueryItem(name: "includeUnknownSeriesItems", value: "true"),
+            ]
+        )
+        let data = try await http.get(url, headers: ["X-Api-Key": config.apiKey])
+
+        let page: ArrQueuePage<SonarrQueueRecord>
+        do {
+            page = try JSONDecoder().decode(ArrQueuePage<SonarrQueueRecord>.self, from: data)
+        } catch {
+            throw HTTPError.decoding(error)
+        }
+
+        let baseURL = config.baseURL
+        let seriesIds = Set(page.records.compactMap { $0.series?.id ?? $0.seriesId })
+        var fileMap: [Int: SonarrEpisodeFile] = [:]
+        await withTaskGroup(of: [SonarrEpisodeFile].self) { group in
+            for sid in seriesIds {
+                group.addTask { (try? await self.fetchEpisodeFiles(seriesId: sid)) ?? [] }
+            }
+            for await files in group {
+                for f in files { fileMap[f.id] = f }
+            }
+        }
+        return page.records.map { Self.unify($0, baseURL: baseURL, fileMap: fileMap) }
+    }
+
+    private func fetchEpisodeFiles(seriesId: Int) async throws -> [SonarrEpisodeFile] {
+        if let cached = episodeFileCache[seriesId], cached.expiry > Date() {
+            return cached.files
+        }
+        let url = try http.url(
+            base: config.baseURL,
+            path: "/api/v3/episodefile",
+            query: [URLQueryItem(name: "seriesId", value: String(seriesId))]
+        )
+        let data = try await http.get(url, headers: ["X-Api-Key": config.apiKey])
+        let files = (try? JSONDecoder().decode([SonarrEpisodeFile].self, from: data)) ?? []
+        episodeFileCache[seriesId] = CachedEpisodeFiles(
+            files: files,
+            expiry: Date().addingTimeInterval(episodeFileCacheTTL)
+        )
+        return files
+    }
+
+    func fetchCalendar() async throws -> [UpcomingItem] {
+        guard config.isConfigured else { throw HTTPError.notConfigured }
+        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
+
+        let now = Date()
+        let end = Calendar.current.date(byAdding: .day, value: 14, to: now)!
+        let fmt = ISO8601DateFormatter()
+        fmt.formatOptions = [.withFullDate]
+
+        let url = try http.url(
+            base: config.baseURL,
+            path: "/api/v3/calendar",
+            query: [
+                URLQueryItem(name: "start", value: fmt.string(from: now)),
+                URLQueryItem(name: "end", value: fmt.string(from: end)),
+                URLQueryItem(name: "includeSeries", value: "true"),
+                URLQueryItem(name: "unmonitored", value: "false"),
+            ]
+        )
+        let data = try await http.get(url, headers: ["X-Api-Key": config.apiKey])
+
+        let records: [SonarrCalendarRecord]
+        do {
+            records = try JSONDecoder().decode([SonarrCalendarRecord].self, from: data)
+        } catch {
+            throw HTTPError.decoding(error)
+        }
+
+        let baseURL = config.baseURL
+        return records.compactMap { Self.unifyCalendar($0, baseURL: baseURL) }
+    }
+
+    func fetchHistory() async throws -> [HistoryItem] {
+        guard config.isConfigured else { throw HTTPError.notConfigured }
+        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
+        let url = try http.url(
+            base: config.baseURL,
+            path: "/api/v3/history",
+            query: [
+                URLQueryItem(name: "page", value: "1"),
+                URLQueryItem(name: "pageSize", value: "50"),
+                URLQueryItem(name: "sortKey", value: "date"),
+                URLQueryItem(name: "sortDirection", value: "descending"),
+                URLQueryItem(name: "includeSeries", value: "true"),
+                URLQueryItem(name: "includeEpisode", value: "true"),
+            ]
+        )
+        let data = try await http.get(url, headers: ["X-Api-Key": config.apiKey])
+        let page: ArrQueuePage<SonarrHistoryRecord>
+        do { page = try JSONDecoder().decode(ArrQueuePage<SonarrHistoryRecord>.self, from: data) }
+        catch { throw HTTPError.decoding(error) }
+        return page.records.compactMap(Self.unifyHistory)
+    }
+
+    private static func unifyHistory(_ r: SonarrHistoryRecord) -> HistoryItem? {
+        guard let dateStr = r.date, let date = parseArrDate(dateStr) else { return nil }
+        var subtitle: String?
+        if let ep = r.episode, let s = ep.seasonNumber, let e = ep.episodeNumber {
+            let code = String(format: "S%02dE%02d", s, e)
+            subtitle = (ep.title?.isEmpty == false) ? "\(code) · \(ep.title!)" : code
+        }
+        return HistoryItem(
+            id: "sonarr-h-\(r.id)",
+            source: .sonarr,
+            date: date,
+            eventType: HistoryItem.EventType.parse(r.eventType),
+            title: r.series?.title ?? r.sourceTitle ?? "Unknown",
+            subtitle: subtitle,
+            sourceTitle: r.sourceTitle,
+            quality: r.quality?.name,
+            customFormats: (r.customFormats ?? []).map(\.name),
+            customFormatScore: r.customFormatScore ?? 0
+        )
+    }
+
+    func deleteQueueItem(id: Int, removeFromClient: Bool = true, blocklist: Bool = false) async throws {
+        guard config.isConfigured else { throw HTTPError.notConfigured }
+        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
+        let url = try http.url(
+            base: config.baseURL,
+            path: "/api/v3/queue/\(id)",
+            query: [
+                URLQueryItem(name: "removeFromClient", value: removeFromClient ? "true" : "false"),
+                URLQueryItem(name: "blocklist", value: blocklist ? "true" : "false"),
+            ]
+        )
+        _ = try await http.delete(url, headers: ["X-Api-Key": config.apiKey])
+    }
+
+    func fetchSeriesDetails(id: Int) async throws -> SonarrSeriesDetail {
+        guard config.isConfigured else { throw HTTPError.notConfigured }
+        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
+        let url = try http.url(base: config.baseURL, path: "/api/v3/series/\(id)")
+        let data = try await http.get(url, headers: ["X-Api-Key": config.apiKey])
+        do { return try JSONDecoder().decode(SonarrSeriesDetail.self, from: data) }
+        catch { throw HTTPError.decoding(error) }
+    }
+
+    func fetchEpisodes(seriesId: Int) async throws -> [SonarrEpisodeDetail] {
+        guard config.isConfigured else { throw HTTPError.notConfigured }
+        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
+        let url = try http.url(
+            base: config.baseURL,
+            path: "/api/v3/episode",
+            query: [URLQueryItem(name: "seriesId", value: String(seriesId))]
+        )
+        let data = try await http.get(url, headers: ["X-Api-Key": config.apiKey])
+        return (try? JSONDecoder().decode([SonarrEpisodeDetail].self, from: data)) ?? []
+    }
+
+    func fetchHealth() async throws -> [ArrHealthRecord] {
+        guard config.isConfigured else { throw HTTPError.notConfigured }
+        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
+        let url = try http.url(base: config.baseURL, path: "/api/v3/health")
+        let data = try await http.get(url, headers: ["X-Api-Key": config.apiKey])
+        return (try? JSONDecoder().decode([ArrHealthRecord].self, from: data)) ?? []
+    }
+
+    private static func unifyCalendar(_ r: SonarrCalendarRecord, baseURL: String) -> UpcomingItem? {
+        guard let dateStr = r.airDateUtc, let date = parseArrDate(dateStr) else { return nil }
+
+        let seriesTitle = r.series?.title ?? "Unknown"
+        var subtitle: String?
+        if let s = r.seasonNumber, let e = r.episodeNumber {
+            let code = String(format: "S%02dE%02d", s, e)
+            if let epTitle = r.title, !epTitle.isEmpty {
+                subtitle = "\(code) · \(epTitle)"
+            } else {
+                subtitle = code
+            }
+        }
+        let (poster, auth) = pickPosterURL(from: r.series?.images, coverTypes: ["poster"], baseURL: baseURL)
+
+        return UpcomingItem(
+            id: "sonarr-cal-\(r.id)",
+            source: .sonarr,
+            title: seriesTitle,
+            subtitle: subtitle,
+            airDate: date,
+            releaseType: "Airing",
+            hasFile: r.hasFile ?? false,
+            overview: r.overview,
+            posterURL: poster,
+            posterRequiresAuth: auth
+        )
+    }
+
+    /// Extracts the scene-style release group suffix from a release name —
+    /// the trailing `-GROUP` token after the final dash, with any file
+    /// extension stripped first. Used to fingerprint per-episode releases
+    /// that came from the same uploader so virtual season grouping can
+    /// collapse them into one row.
+    private static func parseReleaseGroup(from name: String?) -> String? {
+        guard let name, !name.isEmpty else { return nil }
+        var stripped = name
+        if let dot = stripped.lastIndex(of: ".") {
+            let ext = stripped[stripped.index(after: dot)...]
+            // Only strip if it looks like a file extension (≤4 alphanum chars).
+            if ext.count <= 4, ext.allSatisfy({ $0.isLetter || $0.isNumber }) {
+                stripped = String(stripped[..<dot])
+            }
+        }
+        guard let dash = stripped.lastIndex(of: "-") else { return nil }
+        let token = stripped[stripped.index(after: dash)...]
+        guard !token.isEmpty,
+              token.allSatisfy({ $0.isLetter || $0.isNumber || $0 == "_" })
+        else { return nil }
+        return String(token)
+    }
+
+    private static func unify(_ r: SonarrQueueRecord, baseURL: String, fileMap: [Int: SonarrEpisodeFile]) -> QueueItem {
+        let total = Int64(r.size ?? 0)
+        let left = Int64(r.sizeleft ?? 0)
+        let progress: Double
+        if total > 0 {
+            progress = max(0, min(1, 1.0 - Double(left) / Double(total)))
+        } else {
+            progress = 0
+        }
+
+        let title: String
+        let subtitle: String?
+        if let s = r.series {
+            title = s.title
+            if let ep = r.episode, let season = ep.seasonNumber, let number = ep.episodeNumber {
+                let code = String(format: "S%02dE%02d", season, number)
+                if let epTitle = ep.title, !epTitle.isEmpty {
+                    subtitle = "\(code) · \(epTitle)"
+                } else {
+                    subtitle = code
+                }
+            } else {
+                subtitle = nil
+            }
+        } else {
+            title = r.title ?? "Unknown"
+            subtitle = nil
+        }
+        let (poster, posterAuth) = pickPosterURL(from: r.series?.images, coverTypes: ["poster"], baseURL: baseURL)
+
+        let existingFile = (r.episode?.episodeFileId).flatMap { id in id > 0 ? fileMap[id] : nil }
+        let isUpgrade = existingFile != nil || (r.episode?.hasFile ?? false)
+
+        return QueueItem(
+            id: "sonarr-\(r.id)",
+            source: .sonarr,
+            arrQueueId: r.id,
+            downloadId: r.downloadId,
+            downloadProtocol: parseProtocol(r.protocol),
+            downloadClient: r.downloadClient,
+            indexer: r.indexer,
+            title: title,
+            subtitle: subtitle,
+            releaseName: r.title,
+            status: parseStatus(arrStatus: r.status, trackedState: r.trackedDownloadState),
+            progress: progress,
+            sizeTotal: total,
+            sizeLeft: left,
+            timeLeft: r.timeleft,
+            customFormats: (r.customFormats ?? []).map(\.name),
+            customFormatScore: r.customFormatScore ?? 0,
+            quality: r.quality?.name,
+            releaseGroup: parseReleaseGroup(from: r.title),
+            isUpgrade: isUpgrade,
+            existingCustomFormats: (existingFile?.customFormats ?? []).map(\.name),
+            existingCustomFormatScore: existingFile?.customFormatScore,
+            existingQuality: existingFile?.quality?.name,
+            existingSize: existingFile?.size,
+            existingFileName: existingFile?.relativePath.map { URL(fileURLWithPath: $0).lastPathComponent },
+            contentSlug: r.series?.titleSlug,
+            entityId: r.series?.id ?? r.seriesId,
+            posterURL: poster,
+            posterRequiresAuth: posterAuth
+        )
+    }
+}

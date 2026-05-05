@@ -2,6 +2,7 @@ import AppKit
 import SwiftUI
 import Combine
 import UserNotifications
+import ArrCore
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
