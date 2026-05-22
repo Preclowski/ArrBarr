@@ -30,13 +30,25 @@ public extension View {
 private struct PopoverBehaviorAdjuster: NSViewRepresentable {
     let behavior: NSPopover.Behavior
 
+    final class Coordinator { var didConfigure = false }
+
+    func makeCoordinator() -> Coordinator { Coordinator() }
+
     func makeNSView(context: Context) -> NSView { NSView() }
 
     func updateNSView(_ nsView: NSView, context: Context) {
-        // Defer until the view is in a window — at make-time the popover's
-        // window hasn't been wired up yet.
+        // `updateNSView` fires on every body re-evaluation of the popover's
+        // content — which means every queue refresh once a row is hovered.
+        // Setting `popover.behavior` is idempotent, but re-dispatching it
+        // ~10×/s caused visible flicker of the *outer* menubar popover when
+        // the lookup escaped to a parent window. Configure exactly once via
+        // a Coordinator latch.
+        guard !context.coordinator.didConfigure else { return }
+        let coord = context.coordinator
         DispatchQueue.main.async {
-            Self.popover(hosting: nsView)?.behavior = behavior
+            guard let popover = Self.popover(hosting: nsView) else { return }
+            popover.behavior = behavior
+            coord.didConfigure = true
         }
     }
 
@@ -44,16 +56,13 @@ private struct PopoverBehaviorAdjuster: NSViewRepresentable {
     /// `NSPopover` via the (private) `popover` KVC key. The key has been
     /// stable across macOS releases since the API was introduced; if it
     /// ever changes the lookup silently no-ops and we fall back to the
-    /// transient default — no crash.
+    /// transient default — no crash. We deliberately do NOT walk up to the
+    /// `parent` chain: that traversal can escape to the menubar popover's
+    /// own NSWindow and clobber its behavior, manifesting as a full-popover
+    /// flicker on every queue refresh.
     private static func popover(hosting view: NSView) -> NSPopover? {
-        var window: NSWindow? = view.window
-        while let w = window {
-            if let popover = w.value(forKey: "popover") as? NSPopover {
-                return popover
-            }
-            window = w.parent
-        }
-        return nil
+        guard let window = view.window else { return nil }
+        return window.value(forKey: "popover") as? NSPopover
     }
 }
 #endif
