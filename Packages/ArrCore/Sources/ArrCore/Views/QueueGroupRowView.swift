@@ -170,6 +170,9 @@ public struct QueueGroupRowView: View {
                 apiKey: rep.posterRequiresAuth ? configStore.sonarr.apiKey : nil,
                 locale: configStore.currentLocale
             )
+            // See PopoverBehavior.swift — keep clicks from being eaten by the
+            // default .transient dismissal.
+            .popoverBehavior(.applicationDefined)
         }
         #endif
         .alert("Remove download?", isPresented: $showDeleteConfirmation) {
@@ -256,17 +259,6 @@ public struct QueueGroupRowView: View {
                 }
             }
         }
-        // See QueueRowView.actionButtons — dismiss the transient popover
-        // eagerly when the cursor enters the buttons so the first click
-        // hits the button instead of being eaten by popover dismissal.
-        #if os(macOS)
-        .onHover { hovering in
-            if hovering {
-                hoverTask?.cancel()
-                showTooltip = false
-            }
-        }
-        #endif
     }
 
 }
