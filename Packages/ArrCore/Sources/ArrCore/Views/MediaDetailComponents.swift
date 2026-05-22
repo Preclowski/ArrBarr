@@ -740,29 +740,21 @@ struct MultiRow: View {
 public struct ListingBadgesView: View {
     let item: QueueItem
 
+    /// Only the Upgrade pill, and only when the row is actually an upgrade.
+    /// "New" is implicit (no existing-file banner = brand new download), and
+    /// the download client already shows up in `ProgressLine` below — both
+    /// previously duplicated here.
     public var body: some View {
-        HStack(spacing: 4) {
-            Text(item.isUpgrade ? "Upgrade" : "New")
-                .font(.system(size: 9, weight: .semibold))
-                .foregroundStyle(item.isUpgrade ? Color.indigo : Color.accentColor)
-                .padding(.horizontal, 5)
-                .padding(.vertical, 1)
-                .background(
-                    (item.isUpgrade ? Color.indigo : Color.accentColor).opacity(0.15),
-                    in: Capsule()
-                )
-
-            if let client = item.downloadClient {
-                let color = downloadClientColor(client)
-                Text(client)
+        if item.isUpgrade {
+            HStack(spacing: 4) {
+                Text("Upgrade")
                     .font(.system(size: 9, weight: .semibold))
-                    .foregroundStyle(color)
+                    .foregroundStyle(Color.indigo)
                     .padding(.horizontal, 5)
                     .padding(.vertical, 1)
-                    .background(color.opacity(0.15), in: Capsule())
-                    .lineLimit(1)
+                    .background(Color.indigo.opacity(0.15), in: Capsule())
+                Spacer()
             }
-            Spacer()
         }
     }
 }
