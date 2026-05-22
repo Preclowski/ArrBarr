@@ -133,7 +133,7 @@ public struct ConfirmAddCard: View {
             // — Profile picker on the left, Cancel/Confirm on the right.
             //   Folder picker only when there's actually a choice to make.
             HStack(spacing: 6) {
-                if !profiles.isEmpty {
+                if profiles.count > 1 {
                     Image(systemName: "slider.horizontal.3")
                         .font(.system(size: 11))
                         .foregroundStyle(.secondary)
