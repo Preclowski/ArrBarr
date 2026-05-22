@@ -49,7 +49,7 @@ public struct RichToolResultView: View {
                     }
                 case .calendar(let items):
                     ForEach(items) { item in
-                        CalendarRowView(item: item)
+                        CalendarRowView(item: item, sonarrApiKey: sonarr.apiKey, radarrApiKey: radarr.apiKey)
                     }
                 }
             }
@@ -148,23 +148,42 @@ private struct LibraryRecordCard: View {
 
 private struct CalendarRowView: View {
     let item: UpcomingItem
+    let sonarrApiKey: String
+    let radarrApiKey: String
+
+    private var apiKey: String {
+        switch item.source {
+        case .sonarr: return sonarrApiKey
+        case .radarr: return radarrApiKey
+        case .lidarr: return ""
+        }
+    }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(Self.dateLabel(item.airDate))
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(.secondary)
-            Text(item.title)
-                .font(.system(size: 12, weight: .semibold))
-                .lineLimit(2)
-            if let subtitle = item.subtitle, !subtitle.isEmpty {
-                Text(subtitle)
-                    .font(.system(size: 11))
-                    .foregroundStyle(.tertiary)
-                    .lineLimit(1)
+        HStack(alignment: .top, spacing: 8) {
+            RemotePoster(
+                url: item.posterURL,
+                apiKey: item.posterRequiresAuth ? apiKey : nil,
+                size: CGSize(width: 40, height: 60),
+                cornerRadius: 4
+            )
+            VStack(alignment: .leading, spacing: 2) {
+                Text(Self.dateLabel(item.airDate))
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                Text(item.title)
+                    .font(.system(size: 12, weight: .semibold))
+                    .lineLimit(2)
+                if let subtitle = item.subtitle, !subtitle.isEmpty {
+                    Text(subtitle)
+                        .font(.system(size: 11))
+                        .foregroundStyle(.tertiary)
+                        .lineLimit(1)
+                }
             }
+            Spacer(minLength: 0)
         }
-        .frame(width: 140, alignment: .leading)
+        .frame(width: 200, alignment: .leading)
         .padding(8)
         .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 6))
     }
