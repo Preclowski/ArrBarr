@@ -61,11 +61,13 @@ public final class ChatViewModel: ObservableObject {
         defer { isThinking = false }
         guard let confirmedArgs = await awaitConfirm(call) else {
             // Cancel — surface the dropped intent so the chat doesn't end on
-            // a dangling user message. The trailing dash is part of the
-            // displayed content; MessageBubble shows this verbatim.
+            // a dangling user message. The "(cancelled by user)" marker in
+            // toolResult is what MessageBubble keys off to swap the icon and
+            // strikethrough the title; content stays the same userIntent so
+            // success and cancel rows visually mirror each other.
             messages.append(ChatMessage(
                 role: .tool,
-                content: "\(userIntent) — cancelled",
+                content: userIntent,
                 toolCall: call,
                 toolResult: "(cancelled by user)"
             ))

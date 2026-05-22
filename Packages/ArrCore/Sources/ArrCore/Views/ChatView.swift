@@ -86,12 +86,12 @@ public struct ChatView: View {
     }
 
     private static let suggestions: [String] = [
+        "Movies with Adam Sandler",
+        "Suggest a horror for tonight",
+        "Sci-fi films from the 90s",
         "What's coming this week?",
         "Do I have The Bear?",
-        "Find Severance",
-        "Add Better Call Saul",
-        "What's in my Sonarr library?",
-        "Show upcoming albums",
+        "Best comedies of the last 5 years",
     ]
 
     private var emptyHint: some View {
@@ -183,95 +183,156 @@ private struct MessageBubble: View {
     @State private var expanded = false
     @EnvironmentObject var configStore: ConfigStore
 
-    /// `content` carries a friendly label (e.g. "Add Spring (2019)") when the
-    /// chat called `requestAdd` from a poster tap; the LLM path stuffs the
-    /// raw tool name there instead. Inequality is the cheapest way to tell
-    /// them apart — used to drop the "Tool call:" prefix + chevron for the
-    /// user-tap case so it reads like a status line, not a debug breadcrumb.
-    private var isUserInitiated: Bool {
-        message.role == .tool && message.content != (message.toolCall?.name ?? "")
-    }
-
     var body: some View {
+        // Uniform layout for every chat row: icon column + content + optional
+        // expandable details. The kind enum decides which icon, label format,
+        // and whether the chevron is available.
         HStack(alignment: .firstTextBaseline, spacing: 8) {
-            if !isUserInitiated || message.richContent != nil {
-                Image(systemName: symbol)
-                    .font(.system(size: 12))
-                    .foregroundStyle(tint)
-                    .frame(width: 18, alignment: .center)
-            } else {
-                // No icon for user-tap text-only outcomes — the row would be
-                // a tiny status line floating next to a wrench, looks noisy.
-                Spacer().frame(width: 18 + 8)
-            }
+            Image(systemName: kind.symbol)
+                .font(.system(size: 12))
+                .foregroundStyle(kind.tint)
+                .frame(width: 18, alignment: .center)
             VStack(alignment: .leading, spacing: 2) {
-                if message.role == .tool {
-                    if let rich = message.richContent {
-                        // Rich result: always-visible header chip + carousel
-                        Group {
-                            if isUserInitiated {
-                                Text(message.content)
-                            } else {
-                                Text("Tool call: \(message.content)", bundle: .module)
-                            }
-                        }
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(.secondary)
-                        RichToolResultView(
-                            content: rich,
-                            sonarr: configStore.sonarr,
-                            radarr: configStore.radarr,
-                            lidarr: configStore.lidarr,
-                            whisparr: configStore.whisparr,
-                            blurWhisparr: configStore.blurWhisparrPosters
-                        )
-                        .padding(.top, 4)
-                    } else if isUserInitiated {
-                        // User-tap outcome: inline status line, no chevron.
-                        // toolResult already encodes the state (e.g.
-                        // "(cancelled by user)") via the message.content
-                        // suffix; the raw tool text adds nothing.
-                        Text(message.content)
-                            .font(.system(size: 12))
-                            .foregroundStyle(.secondary)
-                    } else {
-                        // LLM-issued tool call: chevron-collapsible to keep
-                        // the raw tool name + result peekable without
-                        // dominating the chat.
-                        Button {
-                            withAnimation(.smooth(duration: 0.18)) { expanded.toggle() }
-                        } label: {
-                            HStack(spacing: 4) {
-                                Image(systemName: expanded ? "chevron.down" : "chevron.right")
-                                    .font(.system(size: 9, weight: .semibold))
-                                    .foregroundStyle(.secondary)
-                                Text("Tool call: \(message.content)", bundle: .module)
-                                    .font(.system(size: 11, weight: .semibold))
-                                    .foregroundStyle(.secondary)
-                            }
-                            .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                        if expanded, let result = message.toolResult, !result.isEmpty {
-                            Text(result)
-                                .font(.system(size: 11).monospaced())
-                                .foregroundStyle(.secondary)
-                                .textSelection(.enabled)
-                                .fixedSize(horizontal: false, vertical: true)
-                                .padding(.leading, 13)
-                                .padding(.top, 2)
-                        }
-                    }
-                } else {
-                    Text(Self.attributed(message.content))
-                        .font(.system(size: 13))
-                        .textSelection(.enabled)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
+                content
             }
             Spacer(minLength: 0)
         }
     }
+
+    @ViewBuilder
+    private var content: some View {
+        switch kind {
+        case .user, .assistant:
+            Text(Self.attributed(message.content))
+                .font(.system(size: 13))
+                .textSelection(.enabled)
+                .fixedSize(horizontal: false, vertical: true)
+
+        case .userAdd(let cancelled):
+            // Tap-to-add status line. Cancel state strikes through the title
+            // and dims to secondary — same icon family, just a different
+            // glyph, so success vs cancel reads at a glance.
+            Text(message.content)
+                .font(.system(size: 12))
+                .foregroundStyle(cancelled ? .secondary : .primary)
+                .strikethrough(cancelled, color: .secondary)
+
+        case .llmTool:
+            // LLM-issued tool result with rich payload: header label +
+            // carousel. With plain text: chevron-collapsible — useful to
+            // inspect raw tool output without dominating the chat.
+            if let rich = message.richContent {
+                Text("Tool call: \(message.content)", bundle: .module)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                RichToolResultView(
+                    content: rich,
+                    sonarr: configStore.sonarr,
+                    radarr: configStore.radarr,
+                    lidarr: configStore.lidarr,
+                    whisparr: configStore.whisparr,
+                    blurWhisparr: configStore.blurWhisparrPosters
+                )
+                .padding(.top, 4)
+            } else {
+                chevronExpandable(label: "Tool call: \(message.content)")
+            }
+
+        case .userAddWithResults:
+            // Tap-to-add that the backend turned into a result list (rare —
+            // e.g. add-by-title returned multiple candidates). Render same
+            // header as a user-tap status, then the carousel.
+            if let rich = message.richContent {
+                Text(message.content)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                RichToolResultView(
+                    content: rich,
+                    sonarr: configStore.sonarr,
+                    radarr: configStore.radarr,
+                    lidarr: configStore.lidarr,
+                    whisparr: configStore.whisparr,
+                    blurWhisparr: configStore.blurWhisparrPosters
+                )
+                .padding(.top, 4)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func chevronExpandable(label: String) -> some View {
+        Button {
+            withAnimation(.smooth(duration: 0.18)) { expanded.toggle() }
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: expanded ? "chevron.down" : "chevron.right")
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                Text(verbatim: label)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.secondary)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        if expanded, let result = message.toolResult, !result.isEmpty {
+            Text(result)
+                .font(.system(size: 11).monospaced())
+                .foregroundStyle(.secondary)
+                .textSelection(.enabled)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.leading, 13)
+                .padding(.top, 2)
+        }
+    }
+
+    /// Display category derived from `ChatMessage`. The role alone doesn't
+    /// capture the user-tap vs LLM distinction for tool messages — we use
+    /// the convention that `requestAdd` stores `userIntent` in `content`
+    /// while the LLM path stores the raw tool name, and the toolResult's
+    /// "(cancelled by user)" marker flags the cancel branch.
+    private enum Kind {
+        case user, assistant
+        case userAdd(cancelled: Bool)
+        case userAddWithResults
+        case llmTool
+
+        var symbol: String {
+            switch self {
+            case .user: return "person.circle"
+            case .assistant: return "sparkles"
+            case .userAdd(let cancelled): return cancelled ? "xmark.circle" : "plus.circle.fill"
+            case .userAddWithResults: return "plus.circle.fill"
+            case .llmTool: return "wrench.and.screwdriver"
+            }
+        }
+
+        var tint: Color {
+            switch self {
+            case .user: return .secondary
+            case .assistant: return .purple
+            case .userAdd(let cancelled): return cancelled ? .secondary : .green
+            case .userAddWithResults: return .green
+            case .llmTool: return .blue
+            }
+        }
+    }
+
+    private var kind: Kind {
+        switch message.role {
+        case .user:      return .user
+        case .assistant: return .assistant
+        case .tool:
+            // user-tap path stores friendly intent in content; LLM path
+            // stores the raw tool name there.
+            let isUserInitiated = message.content != (message.toolCall?.name ?? "")
+            if !isUserInitiated { return .llmTool }
+            if message.richContent != nil { return .userAddWithResults }
+            let cancelled = (message.toolResult ?? "").contains("cancelled")
+            return .userAdd(cancelled: cancelled)
+        }
+    }
+
     /// Parse inline markdown (bold, italic, code, links). Block-level markdown
     /// like headings or lists falls back to inline rendering — the model
     /// usually emits paragraph + inline emphasis which renders cleanly.
@@ -283,21 +344,6 @@ private struct MessageBubble: View {
             return attr
         }
         return AttributedString(raw)
-    }
-
-    private var symbol: String {
-        switch message.role {
-        case .user: return "person.circle"
-        case .assistant: return "sparkles"
-        case .tool: return "wrench.and.screwdriver"
-        }
-    }
-    private var tint: Color {
-        switch message.role {
-        case .user: return .secondary
-        case .assistant: return .purple
-        case .tool: return .blue
-        }
     }
 }
 
