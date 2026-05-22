@@ -538,7 +538,7 @@ public struct PopoverContentView: View {
                 }
                 .modifier(GlassButtonStyle())
                 .controlSize(.small)
-                .localizedHelp("Refresh", locale: configStore.currentLocale)
+                .help(Text("Refresh", bundle: .module))
                 .disabled(viewModel.isRefreshing && historySource == nil)
 
                 Spacer()
@@ -560,7 +560,7 @@ public struct PopoverContentView: View {
                 }
                 .menuStyle(.borderlessButton)
                 .fixedSize()
-                .localizedHelp("More options", locale: configStore.currentLocale)
+                .help(Text("More options", bundle: .module))
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)

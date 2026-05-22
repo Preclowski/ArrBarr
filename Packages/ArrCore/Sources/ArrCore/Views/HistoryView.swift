@@ -44,7 +44,7 @@ public struct HistoryView: View {
                 if hovering { NSCursor.pointingHand.push() } else { NSCursor.pop() }
             }
             #endif
-            .localizedHelp("Close", locale: configStore.currentLocale)
+            .help(Text("Close", bundle: .module))
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)

@@ -68,7 +68,7 @@ public struct QueueSectionView: View {
                     }
                     .buttonStyle(.plain)
                     .onHover { hoveringHistory = $0 }
-                    .localizedHelp("Show history", locale: configStore.currentLocale)
+                    .help(Text("Show history", bundle: .module))
                 }
             }
             .padding(.horizontal, 12)
