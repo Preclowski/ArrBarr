@@ -4160,7 +4160,26 @@
       "extractionState": "manual"
     },
     "Clear conversation": {
-      "extractionState": "manual"
+      "extractionState": "manual",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wyczyść rozmowę"
+          }
+        }
+      }
+    },
+    "Clear chat": {
+      "extractionState": "manual",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wyczyść chat"
+          }
+        }
+      }
     },
     "Clear": {
       "extractionState": "manual"

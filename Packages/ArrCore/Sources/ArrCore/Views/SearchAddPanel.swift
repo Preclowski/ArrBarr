@@ -1,9 +1,19 @@
 import SwiftUI
 
 public struct SearchAddPanel: View {
-    let result: SearchResult
+    /// Mutable so we can swap in an enriched copy when the source was a
+    /// chat result built from a TMDB summary (no IMDB / RT / runtime).
+    /// `+`-flow results already arrive enriched and the swap is a no-op.
+    @State private var result: SearchResult
     @ObservedObject var viewModel: SearchViewModel
     let onBack: () -> Void
+
+    public init(result: SearchResult, viewModel: SearchViewModel,
+                onBack: @escaping () -> Void) {
+        _result = State(initialValue: result)
+        self.viewModel = viewModel
+        self.onBack = onBack
+    }
 
     // Radarr state
     @State private var selectedProfileId: Int?
@@ -60,11 +70,28 @@ public struct SearchAddPanel: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .task {
-            await viewModel.loadOptions(source: result.source)
+            // Enrich first so the hero card upgrades from TMDB-lean to
+            // full-fat IMDB/RT/runtime as soon as possible. Runs in
+            // parallel with loadOptions — they hit different endpoints.
+            async let enrich: Void = {
+                if needsEnrichment, let enriched = await viewModel.enrich(result) {
+                    result = enriched
+                }
+            }()
+            async let options: Void = viewModel.loadOptions(source: result.source)
+            _ = await (enrich, options)
             selectedProfileId = viewModel.qualityProfiles.first?.id
             selectedRootFolder = viewModel.rootFolders.first?.path
             selectedMetadataProfileId = viewModel.metadataProfiles.first?.id
         }
+    }
+
+    /// TMDB-sourced chat results carry only voteAverage + title + year + genres.
+    /// Lookup-sourced `+` results carry IMDB / RT / Metacritic / runtime too.
+    /// Use those richer fields' absence as the "this came from chat" signal.
+    private var needsEnrichment: Bool {
+        result.runtime == nil && result.imdb == nil
+            && result.rottenTomatoes == nil && result.metacritic == nil
     }
 
     // MARK: - Header chrome (matches DetailView)
