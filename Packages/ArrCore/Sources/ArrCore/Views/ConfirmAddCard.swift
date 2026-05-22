@@ -130,10 +130,14 @@ public struct ConfirmAddCard: View {
                 Spacer(minLength: 0)
             }
 
-            // — Single-row controls: profile · folder · cancel · confirm
-            HStack(spacing: 8) {
-                if profiles.count > 1 {
-                    Picker("", selection: Binding(get: { selectedProfileId }, set: { selectedProfileId = $0 })) {
+            // — Profile picker on the left, Cancel/Confirm on the right.
+            //   Folder picker only when there's actually a choice to make.
+            HStack(spacing: 6) {
+                if !profiles.isEmpty {
+                    Image(systemName: "slider.horizontal.3")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                    Picker("Quality profile", selection: Binding(get: { selectedProfileId }, set: { selectedProfileId = $0 })) {
                         ForEach(profiles, id: \.id) { p in
                             Text(p.name).tag(p.id)
                         }
@@ -141,10 +145,14 @@ public struct ConfirmAddCard: View {
                     .labelsHidden()
                     .pickerStyle(.menu)
                     .controlSize(.small)
-                    .fixedSize()
+                    .frame(maxWidth: 160)
                 }
                 if folders.count > 1 {
-                    Picker("", selection: Binding(get: { selectedFolderPath }, set: { selectedFolderPath = $0 })) {
+                    Image(systemName: "folder")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                        .padding(.leading, 4)
+                    Picker("Root folder", selection: Binding(get: { selectedFolderPath }, set: { selectedFolderPath = $0 })) {
                         ForEach(folders, id: \.path) { f in
                             Text(Self.shortenPath(f.path)).tag(f.path)
                         }
@@ -152,7 +160,7 @@ public struct ConfirmAddCard: View {
                     .labelsHidden()
                     .pickerStyle(.menu)
                     .controlSize(.small)
-                    .fixedSize()
+                    .frame(maxWidth: 140)
                 }
                 Spacer(minLength: 0)
                 Button(Self.locStr("Cancel"), action: onCancel)
