@@ -26,6 +26,7 @@ public struct PopoverContentView: View {
     @State private var historySource: QueueItem.Source?
     @State private var historyRefreshNonce = 0
     @StateObject private var searchViewModel = SearchViewModel()
+    @StateObject private var chatViewModel = ChatViewModelFactory.makePlaceholder()
     @State private var searchResult: SearchResult?
     @State private var detailItem: QueueItem?
 
@@ -45,6 +46,13 @@ public struct PopoverContentView: View {
 
     private var searchConfigured: Bool { !searchSources.isEmpty }
 
+    private var chatAvailable: Bool {
+        guard configStore.chatEnabled else { return false }
+        guard configStore.mcp.isConfigured else { return false }
+        if #available(macOS 26.0, iOS 26.0, *) { return true }
+        return false
+    }
+
     /// In demo mode, show an arr whenever it's enabled (the configs are seeded to
     /// `enabled = true` on first demo launch — see `DemoMode.seedConfigsIfNeeded`).
     /// Outside of demo mode, require a real configured connection.
@@ -56,6 +64,7 @@ public struct PopoverContentView: View {
         case queue = "Queue"
         case upcoming = "Upcoming"
         case search = "Search"
+        case chat = "Chat"
     }
 
     public var body: some View {
@@ -108,6 +117,8 @@ public struct PopoverContentView: View {
                     switch selectedTab {
                     case .queue: queueContent
                     case .upcoming: upcomingContent
+                    case .chat:
+                        ChatView(viewModel: chatViewModel)
                     case .search:
                         if let result = searchResult {
                             SearchAddPanel(result: result, viewModel: searchViewModel) {
@@ -196,8 +207,11 @@ public struct PopoverContentView: View {
 
     private var visibleTabs: [Tab] {
         Tab.allCases.filter { tab in
-            if tab == .search { return searchConfigured }
-            return true
+            switch tab {
+            case .search: return searchConfigured
+            case .chat:   return chatAvailable
+            default:      return true
+            }
         }
     }
 
@@ -581,6 +595,18 @@ private struct TabPillBackground: View {
     public var body: some View {
         RoundedRectangle(cornerRadius: 6)
             .fill(Color.primary.opacity(0.10))
+    }
+}
+
+// MARK: - Chat view-model factory
+
+enum ChatViewModelFactory {
+    @MainActor static func makePlaceholder() -> ChatViewModel {
+        ChatViewModel(
+            provider: UnavailableLLMProvider(),
+            tools: [],
+            invokeTool: { _, _ in "" }
+        )
     }
 }
 
