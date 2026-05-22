@@ -30,6 +30,11 @@ public struct PopoverContentView: View {
     @State private var searchResult: SearchResult?
     @State private var detailItem: QueueItem?
     @State private var showSearch = false
+    /// `true` when the search overlay was opened via a chat tap-to-add
+    /// rather than the `+` button. Drives the Back behaviour in
+    /// `SearchAddPanel` — back returns straight to chat instead of dropping
+    /// into the search browser, which the user never asked to see.
+    @State private var searchAddFromChat = false
 
     private var sonarrConfigured: Bool { configStore.sonarr.isVisible }
     private var radarrConfigured: Bool { configStore.radarr.isVisible }
@@ -114,6 +119,18 @@ public struct PopoverContentView: View {
                 historySource = nil
                 withAnimation(.smooth(duration: 0.22)) { detailItem = item }
             }
+            .onReceive(NotificationCenter.default.publisher(for: .arrBarrOpenSearchAdd)) { note in
+                // User tapped a missing search result in chat. Open the full
+                // SearchAddPanel overlay with that result pre-loaded.
+                // `searchAddFromChat` lets the Back button skip the
+                // intermediate SearchView and return straight to chat.
+                guard let result = note.userInfo?["result"] as? SearchResult else { return }
+                historySource = nil
+                detailItem = nil
+                searchAddFromChat = true
+                searchResult = result
+                showSearch = true
+            }
     }
 
     private var mainContent: some View {
@@ -173,7 +190,16 @@ public struct PopoverContentView: View {
     private var searchOverlayContent: some View {
         if let result = searchResult {
             SearchAddPanel(result: result, viewModel: searchViewModel) {
-                searchResult = nil
+                // Chat-originated panels close the whole overlay so Back
+                // takes the user back to the chat carousel — the search
+                // browser was never part of their journey.
+                if searchAddFromChat {
+                    searchAddFromChat = false
+                    searchResult = nil
+                    showSearch = false
+                } else {
+                    searchResult = nil
+                }
             }
         } else {
             VStack(spacing: 0) {
