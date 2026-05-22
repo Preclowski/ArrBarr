@@ -101,7 +101,9 @@ public struct SettingsView: View {
     private var aiSection: some View {
         Section("AI") {
             Toggle("Enable AI", isOn: $configStore.aiEnabled)
-            if configStore.aiEnabled {
+        }
+        if configStore.aiEnabled {
+            Section("MCP") {
                 Picker("Tools", selection: $configStore.toolSource) {
                     ForEach(ToolSource.allCases) { s in
                         Text(s.displayName).tag(s)
@@ -112,6 +114,8 @@ public struct SettingsView: View {
                               prompt: Text(verbatim: "http://nas.local:3000/mcp"))
                     SecureField("MCP bearer token (optional)", text: $configStore.mcp.bearerToken)
                 }
+            }
+            Section("Model") {
                 Picker("AI provider", selection: $configStore.chatProvider) {
                     ForEach(ChatProvider.allCases) { p in
                         Text(p.displayName).tag(p)

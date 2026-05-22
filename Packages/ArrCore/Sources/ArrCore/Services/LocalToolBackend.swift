@@ -63,13 +63,25 @@ public actor LocalToolBackend: ToolBackend {
     }
 
     private func addSeries(_ args: JSONValue) async throws -> String {
+        let tvdbId = Self.intArg(args, key: "tvdbId")
         let title = Self.stringArg(args, key: "title")
-        guard !title.isEmpty else { return "Title is required to add a series." }
+        guard tvdbId != 0 || !title.isEmpty else {
+            return "Need a tvdbId (preferred) or title to add a series. Run sonarr_search first."
+        }
         guard sonarr.isConfigured else { return "Sonarr is not configured." }
         let client = SearchClient(config: sonarr, source: .sonarr)
-        let candidates = try await client.lookup(query: title)
-        guard let first = candidates.first else {
-            return "Couldn't find any series matching '\(title)'."
+        // Lookup once. We accept either tvdbId (exact) or title (search + pick).
+        let lookupQuery = tvdbId != 0 ? "tvdb:\(tvdbId)" : title
+        let candidates = try await client.lookup(query: lookupQuery)
+        // If the user / LLM supplied tvdbId, demand an exact match before we add.
+        let chosen: SearchResult?
+        if tvdbId != 0 {
+            chosen = candidates.first(where: { $0.id == tvdbId }) ?? candidates.first
+        } else {
+            chosen = candidates.first
+        }
+        guard let pick = chosen else {
+            return "Couldn't find any series matching '\(lookupQuery)'."
         }
         let profiles = try await client.fetchQualityProfiles()
         let folders = try await client.fetchRootFolders()
@@ -77,24 +89,35 @@ public actor LocalToolBackend: ToolBackend {
             return "Sonarr is missing a quality profile or root folder."
         }
         try await client.addSeries(
-            first,
+            pick,
             qualityProfileId: profile.id,
             rootFolderPath: folder.path,
             monitor: .all,
             seriesType: .standard,
             seasonFolder: true
         )
-        return "Added '\(first.title)' to Sonarr (profile: \(profile.name), folder: \(folder.path))."
+        let yearPart = pick.year.map { " (\($0))" } ?? ""
+        return "Added '\(pick.title)\(yearPart)' to Sonarr (profile: \(profile.name), folder: \(folder.path))."
     }
 
     private func addMovie(_ args: JSONValue) async throws -> String {
+        let tmdbId = Self.intArg(args, key: "tmdbId")
         let title = Self.stringArg(args, key: "title")
-        guard !title.isEmpty else { return "Title is required to add a movie." }
+        guard tmdbId != 0 || !title.isEmpty else {
+            return "Need a tmdbId (preferred) or title to add a movie. Run radarr_search first."
+        }
         guard radarr.isConfigured else { return "Radarr is not configured." }
         let client = SearchClient(config: radarr, source: .radarr)
-        let candidates = try await client.lookup(query: title)
-        guard let first = candidates.first else {
-            return "Couldn't find any movies matching '\(title)'."
+        let lookupQuery = tmdbId != 0 ? "tmdb:\(tmdbId)" : title
+        let candidates = try await client.lookup(query: lookupQuery)
+        let chosen: SearchResult?
+        if tmdbId != 0 {
+            chosen = candidates.first(where: { $0.id == tmdbId }) ?? candidates.first
+        } else {
+            chosen = candidates.first
+        }
+        guard let pick = chosen else {
+            return "Couldn't find any movies matching '\(lookupQuery)'."
         }
         let profiles = try await client.fetchQualityProfiles()
         let folders = try await client.fetchRootFolders()
@@ -102,12 +125,13 @@ public actor LocalToolBackend: ToolBackend {
             return "Radarr is missing a quality profile or root folder."
         }
         try await client.addMovie(
-            first,
+            pick,
             qualityProfileId: profile.id,
             rootFolderPath: folder.path,
             monitor: .movieOnly
         )
-        return "Added '\(first.title)' to Radarr (profile: \(profile.name), folder: \(folder.path))."
+        let yearPart = pick.year.map { " (\($0))" } ?? ""
+        return "Added '\(pick.title)\(yearPart)' to Radarr (profile: \(profile.name), folder: \(folder.path))."
     }
 
     // MARK: - Formatting helpers
@@ -119,15 +143,29 @@ public actor LocalToolBackend: ToolBackend {
         return ""
     }
 
+    /// Extract an integer arg. Tolerates JSON numbers OR strings (LLM might
+    /// serialize "12345" instead of 12345).
+    private static func intArg(_ value: JSONValue, key: String) -> Int {
+        guard case .object(let dict) = value, let v = dict[key] else { return 0 }
+        switch v {
+        case .number(let n): return Int(n)
+        case .string(let s): return Int(s) ?? 0
+        default: return 0
+        }
+    }
+
     private static func formatSearchResults(_ results: [SearchResult], kind: String) -> String {
         guard !results.isEmpty else { return "No results found." }
         let top = results.prefix(8)
+        // For series the id is tvdbId; for movies it's tmdbId. The label
+        // helps the LLM pick the right arg name when calling *_add_*.
+        let idLabel = kind == "series" ? "tvdbId" : "tmdbId"
         let lines = top.map { r -> String in
             let yearPart = r.year.map { " (\($0))" } ?? ""
             let ratingPart = r.rating.map { String(format: " · ★ %.1f", $0) } ?? ""
-            return "• \(r.title)\(yearPart)\(ratingPart)"
+            return "• \(idLabel)=\(r.id) — \(r.title)\(yearPart)\(ratingPart)"
         }
-        var out = "Top \(top.count) \(kind) result\(top.count == 1 ? "" : "s"):"
+        var out = "Top \(top.count) \(kind) result\(top.count == 1 ? "" : "s") (use \(idLabel) when calling add):"
         out += "\n" + lines.joined(separator: "\n")
         if results.count > top.count {
             out += "\n(\(results.count - top.count) more not shown)"
@@ -199,30 +237,36 @@ public actor LocalToolBackend: ToolBackend {
         ),
         MCPTool(
             name: "sonarr_add_series",
-            description: "Add a TV series to Sonarr by title (will pick the first matching result).",
+            description: "Add a TV series to Sonarr. ALWAYS run sonarr_search first to get the tvdbId; pass it here. Title is a fallback only.",
             inputSchema: .object([
                 "type": .string("object"),
                 "properties": .object([
+                    "tvdbId": .object([
+                        "type": .string("integer"),
+                        "description": .string("TVDB id of the series, from sonarr_search results"),
+                    ]),
                     "title": .object([
                         "type": .string("string"),
-                        "description": .string("Series title to add"),
+                        "description": .string("Series title (fallback when no tvdbId — picks the first match)"),
                     ]),
                 ]),
-                "required": .array([.string("title")]),
             ])
         ),
         MCPTool(
             name: "radarr_add_movie",
-            description: "Add a movie to Radarr by title (will pick the first matching result).",
+            description: "Add a movie to Radarr. ALWAYS run radarr_search first to get the tmdbId; pass it here. Title is a fallback only.",
             inputSchema: .object([
                 "type": .string("object"),
                 "properties": .object([
+                    "tmdbId": .object([
+                        "type": .string("integer"),
+                        "description": .string("TMDB id of the movie, from radarr_search results"),
+                    ]),
                     "title": .object([
                         "type": .string("string"),
-                        "description": .string("Movie title to add"),
+                        "description": .string("Movie title (fallback when no tmdbId — picks the first match)"),
                     ]),
                 ]),
-                "required": .array([.string("title")]),
             ])
         ),
     ]
