@@ -210,7 +210,7 @@ public struct PopoverContentView: View {
                 .foregroundStyle(.purple)
                 .padding(.top, 1)
             VStack(alignment: .leading, spacing: 2) {
-                Text("Tonight")
+                Text("Upcoming", bundle: .module)
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(.secondary)
                 ForEach(visible) { item in

@@ -207,7 +207,7 @@ public struct SettingsView: View {
             }
             Section("Display") {
                 Toggle("Show indexer issues warning", isOn: $configStore.showIndexerIssues)
-                Picker("Tonight window", selection: $configStore.tonightHours) {
+                Picker("Upcoming window", selection: $configStore.tonightHours) {
                     ForEach(ConfigStore.tonightHoursOptions, id: \.self) { hours in
                         Text(Self.formatTonight(hours: hours)).tag(hours)
                     }
@@ -359,7 +359,7 @@ public struct SettingsView: View {
             }
             Section("Popover") {
                 Toggle("Show indexer issues warning", isOn: $configStore.showIndexerIssues)
-                Picker("Tonight window", selection: $configStore.tonightHours) {
+                Picker("Upcoming window", selection: $configStore.tonightHours) {
                     ForEach(ConfigStore.tonightHoursOptions, id: \.self) { hours in
                         Text(Self.formatTonight(hours: hours)).tag(hours)
                     }
@@ -454,7 +454,7 @@ public struct SettingsView: View {
 
     private func orderRowSpec(for key: String) -> OrderRowSpec? {
         if key == ConfigStore.tonightOrderKey {
-            return .init(title: "Tonight", symbol: "moon.stars.fill")
+            return .init(title: "Upcoming", symbol: "moon.stars.fill")
         }
         if key == ConfigStore.needsYouOrderKey {
             return .init(title: "Needs you", symbol: "exclamationmark.bubble.fill")

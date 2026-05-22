@@ -52,18 +52,20 @@ public struct ChatView: View {
     private var messages: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                LazyVStack(alignment: .leading, spacing: 8) {
-                    if viewModel.messages.isEmpty {
-                        emptyHint
+                if viewModel.messages.isEmpty && !viewModel.isThinking {
+                    emptyHint
+                        .frame(maxWidth: .infinity, minHeight: 380)
+                } else {
+                    LazyVStack(alignment: .leading, spacing: 8) {
+                        ForEach(viewModel.messages.filter { !Self.shouldHide($0) }) { msg in
+                            MessageBubble(message: msg).id(msg.id)
+                        }
+                        if viewModel.isThinking {
+                            ThinkingRow()
+                        }
                     }
-                    ForEach(viewModel.messages.filter { !Self.shouldHide($0) }) { msg in
-                        MessageBubble(message: msg).id(msg.id)
-                    }
-                    if viewModel.isThinking {
-                        ThinkingRow()
-                    }
+                    .padding(12)
                 }
-                .padding(12)
             }
             .onChange(of: viewModel.messages.count) { _, _ in
                 if let last = viewModel.messages.last {
@@ -75,16 +77,46 @@ public struct ChatView: View {
         }
     }
 
+    private static let suggestions: [String] = [
+        "What's coming this week?",
+        "Do I have The Bear?",
+        "Find Severance",
+        "Add Better Call Saul",
+        "What's in my Sonarr library?",
+        "Show upcoming albums",
+    ]
+
     private var emptyHint: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("Ask anything about your Sonarr / Radarr.", bundle: .module)
-                .foregroundStyle(.secondary)
-                .font(.subheadline)
-            Text("Try: \"What's coming this week?\" · \"Add Severance\"", bundle: .module)
-                .foregroundStyle(.tertiary)
-                .font(.caption)
+        VStack(spacing: 14) {
+            Spacer(minLength: 0)
+            Image(systemName: "sparkles")
+                .font(.system(size: 36, weight: .light))
+                .foregroundStyle(.purple)
+            Text("Ask about Sonarr, Radarr or Lidarr", bundle: .module)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(.primary)
+                .multilineTextAlignment(.center)
+            VStack(spacing: 6) {
+                ForEach(Self.suggestions, id: \.self) { suggestion in
+                    Button {
+                        draft = ""
+                        Task { await viewModel.send(suggestion) }
+                    } label: {
+                        Text(suggestion)
+                            .font(.system(size: 12))
+                            .foregroundStyle(.primary)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(Color.primary.opacity(0.06), in: Capsule())
+                            .contentShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.top, 4)
+            Spacer(minLength: 0)
         }
-        .padding(.top, 24)
+        .padding(.horizontal, 24)
     }
 
     private var inputBar: some View {
