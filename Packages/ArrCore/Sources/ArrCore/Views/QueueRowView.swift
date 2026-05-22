@@ -583,41 +583,40 @@ public struct IconButton: View {
     let symbol: String
     let helpKey: String
     var accessibilityLabel: String = ""
-    /// Used for destructive intent — system styles paint .glass / .borderless
-    /// hover state with this colour, matching macOS row-action conventions.
+    /// Color used for the symbol on hover. nil → primary (neutral).
+    /// Destructive actions pass `.red` so the trash glows red when the user
+    /// is about to remove something.
     var tint: Color? = nil
     let action: () -> Void
+
+    @State private var isHovering = false
 
     public var body: some View {
         Button(action: action) {
             Image(systemName: symbol)
-                .font(.system(size: 10, weight: .semibold))
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(isHovering ? (tint ?? .primary) : .secondary)
                 .frame(width: 22, height: 22)
+                .background(
+                    Circle()
+                        .fill(isHovering
+                              ? (tint?.opacity(0.12) ?? Color.primary.opacity(0.08))
+                              : Color.clear)
+                )
+                .contentShape(Circle())
         }
-        .modifier(InlineIconButtonStyle())
-        .controlSize(.mini)
-        .tint(tint ?? Color.primary)
+        .buttonStyle(.plain)
+        #if os(macOS)
+        .onHover { hovering in
+            withAnimation(.easeInOut(duration: 0.12)) { isHovering = hovering }
+        }
+        #endif
         .help(Text(LocalizedStringKey(helpKey), bundle: .module))
         .accessibilityLabel(
             accessibilityLabel.isEmpty
                 ? Text(LocalizedStringKey(helpKey), bundle: .module)
                 : Text(verbatim: accessibilityLabel)
         )
-    }
-}
-
-/// Inline row-action style. macOS 26's `.glass` is the native Liquid Glass
-/// pill; older systems fall back to `.borderless`, which renders nothing at
-/// rest and only paints the hover/press backdrop — that's how Apple draws
-/// row actions in Mail / Finder. Cleaner than the previous `.bordered`
-/// chrome that the queue rows were using everywhere, including at idle.
-private struct InlineIconButtonStyle: ViewModifier {
-    func body(content: Content) -> some View {
-        if #available(macOS 26.0, iOS 26.0, *) {
-            content.buttonStyle(.glass)
-        } else {
-            content.buttonStyle(.borderless)
-        }
     }
 }
 
