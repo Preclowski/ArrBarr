@@ -8,11 +8,11 @@ import FoundationModels
 @available(macOS 26.0, iOS 26.0, *)
 public struct FoundationModelsProvider: LLMProvider {
 
-    private let invokeTool: @Sendable (String, JSONValue) async throws -> String
+    private let invokeTool: @Sendable (String, JSONValue) async throws -> ToolCallOutput
     private let confirmDestructive: @Sendable (ToolCall) async -> JSONValue?
 
     public init(
-        invokeTool: @escaping @Sendable (String, JSONValue) async throws -> String,
+        invokeTool: @escaping @Sendable (String, JSONValue) async throws -> ToolCallOutput,
         confirmDestructive: @escaping @Sendable (ToolCall) async -> JSONValue?
     ) {
         self.invokeTool = invokeTool
@@ -48,11 +48,12 @@ public struct FoundationModelsProvider: LLMProvider {
         }
 
         let result = try await session.respond(to: prompt)
-        let (calls, results) = await DynamicMCPToolBox.shared.drainResults()
+        let (calls, texts, richs) = await DynamicMCPToolBox.shared.drainResults()
         if calls.isEmpty {
             return LLMResponse(text: result.content)
         }
-        return LLMResponse(text: result.content, toolCalls: calls, toolResults: results)
+        let outputs = zip(texts, richs).map { ToolCallOutput(text: $0, rich: $1) }
+        return LLMResponse(text: result.content, toolCalls: calls, toolResults: outputs)
     }
 
     // MARK: - Private
@@ -116,18 +117,21 @@ actor DynamicMCPToolBox {
     static let shared = DynamicMCPToolBox()
     private var pendingCalls: [ToolCall] = []
     private var pendingResults: [String] = []
+    private var pendingRich: [ChatRichContent?] = []
 
-    func record(call: ToolCall, result: String) {
+    func record(call: ToolCall, result: String, rich: ChatRichContent?) {
         pendingCalls.append(call)
         pendingResults.append(result)
+        pendingRich.append(rich)
     }
 
-    func drainResults() -> ([ToolCall], [String]) {
+    func drainResults() -> ([ToolCall], [String], [ChatRichContent?]) {
         defer {
             pendingCalls = []
             pendingResults = []
+            pendingRich = []
         }
-        return (pendingCalls, pendingResults)
+        return (pendingCalls, pendingResults, pendingRich)
     }
 }
 
@@ -144,7 +148,7 @@ actor DynamicMCPToolBox {
 struct DynamicMCPTool: Tool {
 
     let spec: LLMTool
-    let invokeTool: @Sendable (String, JSONValue) async throws -> String
+    let invokeTool: @Sendable (String, JSONValue) async throws -> ToolCallOutput
     let confirmDestructive: @Sendable (ToolCall) async -> JSONValue?
 
     var name: String { spec.name }
@@ -171,23 +175,23 @@ struct DynamicMCPTool: Tool {
         if MCPToolWhitelist.isDestructive(spec.name) {
             guard let args = await confirmDestructive(toolCall) else {
                 let result = "(cancelled by user)"
-                await DynamicMCPToolBox.shared.record(call: toolCall, result: result)
+                await DynamicMCPToolBox.shared.record(call: toolCall, result: result, rich: nil)
                 return result
             }
             confirmedArgs = args
         }
 
         let confirmedCall = ToolCall(id: toolCall.id, name: spec.name, arguments: confirmedArgs)
-        let result: String
+        let output: ToolCallOutput
         do {
-            result = try await invokeTool(spec.name, confirmedArgs)
+            output = try await invokeTool(spec.name, confirmedArgs)
         } catch {
-            let errResult = "(tool error: \(error.localizedDescription))"
-            await DynamicMCPToolBox.shared.record(call: confirmedCall, result: errResult)
-            return errResult
+            let errOutput = ToolCallOutput(text: "(tool error: \(error.localizedDescription))")
+            await DynamicMCPToolBox.shared.record(call: confirmedCall, result: errOutput.text, rich: nil)
+            return errOutput.text
         }
-        await DynamicMCPToolBox.shared.record(call: confirmedCall, result: result)
-        return result
+        await DynamicMCPToolBox.shared.record(call: confirmedCall, result: output.text, rich: output.rich)
+        return output.text
     }
 }
 
@@ -199,7 +203,7 @@ struct DynamicMCPTool: Tool {
 /// FoundationModels (macOS < 26 SDK). Reports unavailable at runtime.
 public struct FoundationModelsProvider: LLMProvider {
     public init(
-        invokeTool: @escaping @Sendable (String, JSONValue) async throws -> String,
+        invokeTool: @escaping @Sendable (String, JSONValue) async throws -> ToolCallOutput,
         confirmDestructive: @escaping @Sendable (ToolCall) async -> JSONValue?
     ) {}
 

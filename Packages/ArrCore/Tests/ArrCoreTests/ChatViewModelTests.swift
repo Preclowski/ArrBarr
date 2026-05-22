@@ -30,9 +30,9 @@ struct ChatViewModelTests {
     final class FakeMCP {
         var callCount = 0
         var responses: [String: String] = [:]
-        func call(name: String, arguments: JSONValue) async throws -> String {
+        func call(name: String, arguments: JSONValue) async throws -> ToolCallOutput {
             callCount += 1
-            return responses[name] ?? "(no response)"
+            return ToolCallOutput(text: responses[name] ?? "(no response)")
         }
     }
 
@@ -66,7 +66,7 @@ struct ChatViewModelTests {
             LLMResponse(
                 text: "Found 1 series.",
                 toolCalls: [ToolCall(name: "sonarr_search", arguments: .object(["query": .string("X")]))],
-                toolResults: ["X (2025)"]
+                toolResults: [ToolCallOutput(text: "X (2025)")]
             )
         ]
         let mcp = FakeMCP()
@@ -83,6 +83,22 @@ struct ChatViewModelTests {
         #expect(mcp.callCount == 0, "MCP must not be called when provider pre-executed")
     }
 
+    @Test("provider pre-executed tool results propagate rich content")
+    func preExecutedRichContent() async throws {
+        let p = FakeProvider()
+        let richPayload = ChatRichContent.searchSeriesResults([])
+        p.scripted = [
+            LLMResponse(
+                text: "Found results.",
+                toolCalls: [ToolCall(name: "sonarr_search", arguments: .object(["query": .string("X")]))],
+                toolResults: [ToolCallOutput(text: "X (2025)", rich: richPayload)]
+            )
+        ]
+        let vm = makeVM(provider: p, mcp: FakeMCP())
+        await vm.send("find X")
+        #expect(vm.messages[2].richContent == richPayload)
+    }
+
     @Test("destructive tool gated via awaitConfirm path")
     func destructiveStalls() async throws {
         var vmCapture: ChatViewModel?
@@ -94,7 +110,7 @@ struct ChatViewModelTests {
                 return LLMResponse(
                     text: "Added.",
                     toolCalls: [ToolCall(name: "sonarr_add_series", arguments: .object(["title": .string("X")]))],
-                    toolResults: ["OK"]
+                    toolResults: [ToolCallOutput(text: "OK")]
                 )
             } else {
                 return LLMResponse(text: "Skipped.", toolCalls: [], toolResults: nil)
@@ -103,7 +119,7 @@ struct ChatViewModelTests {
         let vm = ChatViewModel(
             provider: provider,
             tools: [],
-            invokeTool: { _, _ in "" }
+            invokeTool: { _, _ in ToolCallOutput(text: "") }
         )
         vmCapture = vm
 
@@ -138,7 +154,7 @@ struct ChatViewModelTests {
         let vm = ChatViewModel(
             provider: provider,
             tools: [],
-            invokeTool: { _, _ in "" }
+            invokeTool: { _, _ in ToolCallOutput(text: "") }
         )
         vmCapture = vm
 

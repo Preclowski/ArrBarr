@@ -10,14 +10,14 @@ public final class ChatViewModel: ObservableObject {
 
     private let provider: LLMProvider
     private let tools: [LLMTool]
-    private let invokeTool: @Sendable (_ name: String, _ args: JSONValue) async throws -> String
+    private let invokeTool: @Sendable (_ name: String, _ args: JSONValue) async throws -> ToolCallOutput
     private(set) var pendingResume: CheckedContinuation<JSONValue?, Never>?
 
     public var providerIsAvailable: Bool { provider.isAvailable }
 
     public init(provider: LLMProvider,
                 tools: [LLMTool],
-                invokeTool: @escaping @Sendable (_ name: String, _ args: JSONValue) async throws -> String) {
+                invokeTool: @escaping @Sendable (_ name: String, _ args: JSONValue) async throws -> ToolCallOutput) {
         self.provider = provider
         self.tools = tools
         self.invokeTool = invokeTool
@@ -85,13 +85,19 @@ public final class ChatViewModel: ObservableObject {
                     let toolCall = response.toolCalls.first
                     let assistantMsg = ChatMessage(role: .assistant, content: response.text, toolCall: toolCall)
                     messages.append(assistantMsg)
-                    for (call, result) in zip(response.toolCalls, toolResults) {
-                        messages.append(ChatMessage(role: .tool, content: call.name, toolResult: result))
+                    for (call, output) in zip(response.toolCalls, toolResults) {
+                        messages.append(ChatMessage(
+                            role: .tool,
+                            content: call.name,
+                            toolCall: call,
+                            toolResult: output.text,
+                            richContent: output.rich
+                        ))
                     }
                     return
                 }
 
-                // --- View-model-executes path (e.g. future Anthropic API provider) ---
+                // --- View-model-executes path (e.g. OpenAI provider) ---
                 let toolCall = response.toolCalls.first
                 let assistantMsg = ChatMessage(role: .assistant, content: response.text, toolCall: toolCall)
                 messages.append(assistantMsg)
@@ -100,22 +106,33 @@ public final class ChatViewModel: ObservableObject {
                 var confirmedArgs = call.arguments
                 if MCPToolWhitelist.isDestructive(call.name) {
                     guard let args = await awaitConfirm(call) else {
-                        messages.append(ChatMessage(role: .tool, content: call.name, toolCall: call, toolResult: "(cancelled by user)"))
+                        messages.append(ChatMessage(
+                            role: .tool,
+                            content: call.name,
+                            toolCall: call,
+                            toolResult: "(cancelled by user)"
+                        ))
                         nextPrompt = "Tool \(call.name) was cancelled by the user."
                         continue
                     }
                     confirmedArgs = args
                 }
 
-                let result: String
+                let output: ToolCallOutput
                 do {
-                    result = try await invokeTool(call.name, confirmedArgs)
+                    output = try await invokeTool(call.name, confirmedArgs)
                 } catch {
-                    result = "(tool error: \(error.localizedDescription))"
+                    output = ToolCallOutput(text: "(tool error: \(error.localizedDescription))")
                 }
                 let confirmedCall = ToolCall(id: call.id, name: call.name, arguments: confirmedArgs)
-                messages.append(ChatMessage(role: .tool, content: call.name, toolCall: confirmedCall, toolResult: result))
-                nextPrompt = "Tool \(call.name) returned: \(result)"
+                messages.append(ChatMessage(
+                    role: .tool,
+                    content: call.name,
+                    toolCall: confirmedCall,
+                    toolResult: output.text,
+                    richContent: output.rich
+                ))
+                nextPrompt = "Tool \(call.name) returned: \(output.text)"
             }
             if roundsLeft == 0 {
                 lastError = "Reached the maximum number of tool-call rounds."

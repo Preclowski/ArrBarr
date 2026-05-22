@@ -6,7 +6,7 @@ public enum ChatViewModelFactory {
         ChatViewModel(
             provider: UnavailableLLMProvider(),
             tools: [],
-            invokeTool: { _, _ in "" }
+            invokeTool: { _, _ in ToolCallOutput(text: "") }
         )
     }
 
@@ -20,7 +20,7 @@ public enum ChatViewModelFactory {
 
         let llmTools = ChatToolCatalog.llmTools
 
-        let invoke: @Sendable (String, JSONValue) async throws -> String = { name, args in
+        let invoke: @Sendable (String, JSONValue) async throws -> ToolCallOutput = { name, args in
             try await backend.callTool(name: name, arguments: args)
         }
 

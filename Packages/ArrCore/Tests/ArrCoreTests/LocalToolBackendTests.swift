@@ -76,24 +76,27 @@ struct LocalToolBackendTests {
     @Test("callTool sonarr_search when sonarr not configured returns informative string")
     func sonarrSearchNotConfigured() async throws {
         let b = LocalToolBackend(sonarr: .empty, radarr: radarrConfig())
-        let result = try await b.callTool(name: "sonarr_search", arguments: .object(["query": .string("Severance")]))
-        #expect(result == "Sonarr is not configured.")
+        let output = try await b.callTool(name: "sonarr_search", arguments: .object(["query": .string("Severance")]))
+        #expect(output.text == "Sonarr is not configured.")
+        #expect(output.rich == nil)
     }
 
     @Test("callTool radarr_search when radarr not configured returns informative string")
     func radarrSearchNotConfigured() async throws {
         let b = LocalToolBackend(sonarr: sonarrConfig(), radarr: .empty)
-        let result = try await b.callTool(name: "radarr_search", arguments: .object(["query": .string("Dune")]))
-        #expect(result == "Radarr is not configured.")
+        let output = try await b.callTool(name: "radarr_search", arguments: .object(["query": .string("Dune")]))
+        #expect(output.text == "Radarr is not configured.")
+        #expect(output.rich == nil)
     }
 
     @Test("callTool sonarr_search empty query returns prompt string")
     func sonarrSearchEmptyQuery() async throws {
-        let result = try await backend().callTool(name: "sonarr_search", arguments: .object([:]))
-        #expect(result == "Please provide a search query.")
+        let output = try await backend().callTool(name: "sonarr_search", arguments: .object([:]))
+        #expect(output.text == "Please provide a search query.")
+        #expect(output.rich == nil)
     }
 
-    @Test("callTool sonarr_search stubs HTTP and returns formatted results")
+    @Test("callTool sonarr_search stubs HTTP and returns formatted results with rich payload")
     func sonarrSearchFormatted() async throws {
         URLProtocol.registerClass(LocalStubProtocol.self)
         defer {
@@ -107,15 +110,48 @@ struct LocalToolBackendTests {
         """.data(using: .utf8)!
         LocalStubProtocol.handlers["/api/v3/series/lookup"] = (200, json)
 
-        let result = try await backend().callTool(
+        let output = try await backend().callTool(
             name: "sonarr_search",
             arguments: .object(["query": .string("Severance")])
         )
-        #expect(result.contains("Severance"))
-        #expect(result.contains("2022"))
+        #expect(output.text.contains("Severance"))
+        #expect(output.text.contains("2022"))
+        // Rich payload must be populated with searchSeriesResults
+        if case .searchSeriesResults(let results) = output.rich {
+            #expect(results.count == 1)
+            #expect(results[0].title == "Severance")
+        } else {
+            Issue.record("Expected .searchSeriesResults rich payload")
+        }
     }
 
-    @Test("callTool sonarr_get_calendar stubs HTTP and returns formatted calendar")
+    @Test("callTool radarr_search returns searchMovieResults rich payload")
+    func radarrSearchRichPayload() async throws {
+        URLProtocol.registerClass(LocalStubProtocol.self)
+        defer {
+            URLProtocol.unregisterClass(LocalStubProtocol.self)
+            LocalStubProtocol.reset()
+        }
+
+        let json = """
+        [{"tmdbId":361743,"title":"Colony","year":2013,"images":[],"genres":[],"ratings":{"tmdb":{"value":7.2}}}]
+        """.data(using: .utf8)!
+        LocalStubProtocol.handlers["/api/v3/movie/lookup"] = (200, json)
+
+        let output = try await backend().callTool(
+            name: "radarr_search",
+            arguments: .object(["query": .string("Colony")])
+        )
+        #expect(output.text.contains("Colony"))
+        if case .searchMovieResults(let results) = output.rich {
+            #expect(results.count == 1)
+            #expect(results[0].title == "Colony")
+        } else {
+            Issue.record("Expected .searchMovieResults rich payload")
+        }
+    }
+
+    @Test("callTool sonarr_get_calendar stubs HTTP and returns formatted calendar with rich payload")
     func sonarrCalendarFormatted() async throws {
         URLProtocol.registerClass(LocalStubProtocol.self)
         defer {
@@ -130,9 +166,14 @@ struct LocalToolBackendTests {
         """.data(using: .utf8)!
         LocalStubProtocol.handlers["/api/v3/calendar"] = (200, json)
 
-        let result = try await backend().callTool(name: "sonarr_get_calendar", arguments: .object([:]))
-        #expect(result.contains("My Show"))
-        #expect(result.hasPrefix("Upcoming releases:"))
+        let output = try await backend().callTool(name: "sonarr_get_calendar", arguments: .object([:]))
+        #expect(output.text.contains("My Show"))
+        #expect(output.text.hasPrefix("Upcoming releases:"))
+        if case .calendar(let items) = output.rich {
+            #expect(items.count == 1)
+        } else {
+            Issue.record("Expected .calendar rich payload")
+        }
     }
 
     @Test("callTool sonarr_get_series stubs HTTP and returns library with filter")
@@ -151,13 +192,18 @@ struct LocalToolBackendTests {
         """.data(using: .utf8)!
         LocalStubProtocol.handlers["/api/v3/series"] = (200, json)
 
-        let result = try await backend().callTool(
+        let output = try await backend().callTool(
             name: "sonarr_get_series",
             arguments: .object(["query": .string("severance")])
         )
-        #expect(result.contains("Severance"))
-        #expect(result.contains("tvdbId=369232"))
-        #expect(!result.contains("Game of Thrones"))
+        #expect(output.text.contains("Severance"))
+        #expect(output.text.contains("tvdbId=369232"))
+        #expect(!output.text.contains("Game of Thrones"))
+        if case .librarySeries(let recs) = output.rich {
+            #expect(recs.count == 1)
+        } else {
+            Issue.record("Expected .librarySeries rich payload")
+        }
     }
 
     @Test("callTool radarr_get_movies stubs HTTP and returns library with filter")
@@ -176,20 +222,26 @@ struct LocalToolBackendTests {
         """.data(using: .utf8)!
         LocalStubProtocol.handlers["/api/v3/movie"] = (200, json)
 
-        let result = try await backend().callTool(
+        let output = try await backend().callTool(
             name: "radarr_get_movies",
             arguments: .object(["query": .string("colony")])
         )
-        #expect(result.contains("Colony"))
-        #expect(result.contains("tmdbId=361743"))
-        #expect(result.contains("downloaded"))
-        #expect(!result.contains("Dune"))
+        #expect(output.text.contains("Colony"))
+        #expect(output.text.contains("tmdbId=361743"))
+        #expect(output.text.contains("downloaded"))
+        #expect(!output.text.contains("Dune"))
+        if case .libraryMovies(let recs) = output.rich {
+            #expect(recs.count == 1)
+        } else {
+            Issue.record("Expected .libraryMovies rich payload")
+        }
     }
 
     @Test("callTool radarr_get_movies when radarr not configured returns informative string")
     func radarrGetMoviesNotConfigured() async throws {
         let b = LocalToolBackend(sonarr: sonarrConfig(), radarr: .empty)
-        let result = try await b.callTool(name: "radarr_get_movies", arguments: .object([:]))
-        #expect(result == "Radarr is not configured.")
+        let output = try await b.callTool(name: "radarr_get_movies", arguments: .object([:]))
+        #expect(output.text == "Radarr is not configured.")
+        #expect(output.rich == nil)
     }
 }

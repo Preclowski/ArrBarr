@@ -1,7 +1,7 @@
 import Foundation
 import SwiftUI
 
-public struct UpcomingItem: Identifiable, Equatable {
+public struct UpcomingItem: Identifiable, Equatable, Sendable {
     public enum Source: String {
         case radarr, sonarr, lidarr
 

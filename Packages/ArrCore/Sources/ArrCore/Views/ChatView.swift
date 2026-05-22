@@ -131,6 +131,8 @@ public struct ChatView: View {
 private struct MessageBubble: View {
     let message: ChatMessage
     @State private var expanded = false
+    @EnvironmentObject var configStore: ConfigStore
+
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
             Image(systemName: symbol)
@@ -139,28 +141,42 @@ private struct MessageBubble: View {
                 .frame(width: 18, alignment: .center)
             VStack(alignment: .leading, spacing: 2) {
                 if message.role == .tool {
-                    Button {
-                        withAnimation(.smooth(duration: 0.18)) { expanded.toggle() }
-                    } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: expanded ? "chevron.down" : "chevron.right")
-                                .font(.system(size: 9, weight: .semibold))
-                                .foregroundStyle(.secondary)
-                            Text("Tool call: \(message.content)", bundle: .module)
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundStyle(.secondary)
-                        }
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    if expanded, let result = message.toolResult, !result.isEmpty {
-                        Text(result)
-                            .font(.system(size: 11).monospaced())
+                    if let rich = message.richContent {
+                        // Rich result: always-visible header chip + carousel
+                        Text("Tool call: \(message.content)", bundle: .module)
+                            .font(.system(size: 11, weight: .semibold))
                             .foregroundStyle(.secondary)
-                            .textSelection(.enabled)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .padding(.leading, 13)
-                            .padding(.top, 2)
+                        RichToolResultView(
+                            content: rich,
+                            sonarr: configStore.sonarr,
+                            radarr: configStore.radarr
+                        )
+                        .padding(.top, 4)
+                    } else {
+                        // Plain result: chevron-collapsible (add confirmations, errors, etc.)
+                        Button {
+                            withAnimation(.smooth(duration: 0.18)) { expanded.toggle() }
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: expanded ? "chevron.down" : "chevron.right")
+                                    .font(.system(size: 9, weight: .semibold))
+                                    .foregroundStyle(.secondary)
+                                Text("Tool call: \(message.content)", bundle: .module)
+                                    .font(.system(size: 11, weight: .semibold))
+                                    .foregroundStyle(.secondary)
+                            }
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        if expanded, let result = message.toolResult, !result.isEmpty {
+                            Text(result)
+                                .font(.system(size: 11).monospaced())
+                                .foregroundStyle(.secondary)
+                                .textSelection(.enabled)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .padding(.leading, 13)
+                                .padding(.top, 2)
+                        }
                     }
                 } else {
                     Text(Self.attributed(message.content))
