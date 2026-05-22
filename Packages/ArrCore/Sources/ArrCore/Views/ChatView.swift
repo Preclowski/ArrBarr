@@ -13,27 +13,32 @@ public struct ChatView: View {
     public var body: some View {
         // iMessage-style: scrolling messages fill the surface, the input bar
         // floats over the bottom with a liquid-glass / material background.
-        // `safeAreaInset` reserves space at the bottom of the scroll so
-        // messages can't slide under the input cluster.
-        messages
-            .safeAreaInset(edge: .bottom, spacing: 0) {
-                VStack(spacing: 8) {
-                    if let confirm = viewModel.pendingConfirm {
-                        ConfirmAddCard(
-                            call: confirm,
-                            sonarr: configStore.sonarr,
-                            radarr: configStore.radarr,
-                            lidarr: configStore.lidarr,
-                            onConfirm: { args in Task { await viewModel.confirmPending(with: args) } },
-                            onCancel: { Task { await viewModel.cancelPending() } }
-                        )
-                    }
-                    inputBar
+        // ZStack — not `safeAreaInset` — because the inset modifier reacts
+        // to any identity change in its parent view tree (e.g. messages's
+        // empty-vs-populated branches re-render on every keystroke), which
+        // re-mounted the TextField and lost focus mid-typing in `SearchView`.
+        // The ZStack here keeps the bar as a stable sibling. The messages
+        // ScrollView already pads its content for the bar's height (see
+        // `messages` below) so nothing scrolls under it.
+        ZStack(alignment: .bottom) {
+            messages
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            VStack(spacing: 8) {
+                if let confirm = viewModel.pendingConfirm {
+                    ConfirmAddCard(
+                        call: confirm,
+                        sonarr: configStore.sonarr,
+                        radarr: configStore.radarr,
+                        lidarr: configStore.lidarr,
+                        onConfirm: { args in Task { await viewModel.confirmPending(with: args) } },
+                        onCancel: { Task { await viewModel.cancelPending() } }
+                    )
                 }
-                .padding(.horizontal, 10)
-                .padding(.bottom, 10)
-                .padding(.top, 4)
+                inputBar
             }
+            .padding(.horizontal, 10)
+            .padding(.bottom, 10)
+        }
     }
 
     @State private var clearHovered: Bool = false
@@ -52,6 +57,9 @@ public struct ChatView: View {
                         if viewModel.isThinking {
                             ThinkingRow()
                         }
+                        // Bottom reservation so the floating input bar /
+                        // confirm card don't cover the last message.
+                        Color.clear.frame(height: 56)
                     }
                     .padding(12)
                 }

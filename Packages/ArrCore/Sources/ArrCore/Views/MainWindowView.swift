@@ -279,7 +279,7 @@ public struct MainWindowView: View {
 
     private func queueScroll(sources: [QueueItem.Source]) -> some View {
         ScrollView {
-            if viewModel.isLoading && viewModel.allEmpty {
+            if viewModel.isLoading {
                 VStack(spacing: 10) {
                     ProgressView().controlSize(.small)
                     Text("Loading…").font(.subheadline).foregroundStyle(.secondary)

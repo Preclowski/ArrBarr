@@ -41,35 +41,18 @@ public struct SearchView: View {
 
     public var body: some View {
         // Search bar floats at the bottom (Apple's recent search/Spotlight
-        // direction) — `safeAreaInset` keeps the result list from sliding
-        // under it.
-        Group {
-            if viewModel.query.isEmpty && !viewModel.isSearching {
-                emptyHint
-            } else if viewModel.isSearching {
-                VStack {
-                    ProgressView()
-                        .controlSize(.small)
-                }
+        // direction). Implemented as a ZStack overlay — `safeAreaInset` lost
+        // the TextField's focus on every keystroke because `Group`'s
+        // `_ConditionalContent` branch switches between the three states
+        // (empty hint / loading / results) re-created the inset's underlying
+        // view identity, which in turn re-mounted the TextField inside. The
+        // ZStack keeps the bar as a stable sibling of the swapping content.
+        ZStack(alignment: .bottom) {
+            content
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 0) {
-                        ForEach(orderedSources, id: \.self) { src in
-                            sourceSection(src)
-                        }
-                    }
-                    .padding(.vertical, 4)
-                }
-                .scrollBounceBehavior(.basedOnSize)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            }
-        }
-        .safeAreaInset(edge: .bottom, spacing: 0) {
             searchBar
                 .padding(.horizontal, 10)
                 .padding(.bottom, 10)
-                .padding(.top, 4)
         }
         .onChange(of: viewModel.query) { _, oldValue in
             // Reset "show all" toggles whenever the query changes — new
@@ -203,6 +186,33 @@ public struct SearchView: View {
                     }
                 }
             }
+        }
+    }
+
+    /// The result area underneath the floating search bar. The conditional
+    /// branches all reserve ~58pt at the bottom so nothing sits under the
+    /// glass pill.
+    @ViewBuilder
+    private var content: some View {
+        if viewModel.query.isEmpty && !viewModel.isSearching {
+            emptyHint
+        } else if viewModel.isSearching {
+            VStack {
+                ProgressView().controlSize(.small)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(orderedSources, id: \.self) { src in
+                        sourceSection(src)
+                    }
+                    Color.clear.frame(height: 58)
+                }
+                .padding(.vertical, 4)
+            }
+            .scrollBounceBehavior(.basedOnSize)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 

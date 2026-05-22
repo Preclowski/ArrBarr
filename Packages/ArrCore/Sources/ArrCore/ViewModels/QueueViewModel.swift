@@ -52,6 +52,13 @@ public final class QueueViewModel: ObservableObject {
 
     @Published public private(set) var health: HealthResult = .empty
     @Published public private(set) var isLoading = false
+    /// Set once after the very first `refresh()` settles. The UI uses this to
+    /// suppress the loading spinner on every subsequent poll — the previous
+    /// rule (`!hasExistingData`) flashed the spinner whenever the queue
+    /// happened to be empty, which on a healthy idle library was every
+    /// background tick. Once true, we trust the existing rows to redraw with
+    /// fresh values rather than tearing the surface down.
+    @Published public private(set) var hasLoadedOnce = false
     @Published public private(set) var lastError: String?
 
     private let aggregator: QueueAggregator
@@ -167,10 +174,15 @@ public final class QueueViewModel: ObservableObject {
     public func refresh() async {
         guard !isRefreshing else { return }
         isRefreshing = true
-        let hasExistingData = !radarr.isEmpty || !sonarr.isEmpty || !lidarr.isEmpty
-        if !hasExistingData { isLoading = true }
+        // Show the spinner only on the very first load. Subsequent polls
+        // update the already-rendered rows in place — the previous logic
+        // flashed the spinner on every tick when the queue was empty
+        // (including the common idle case of "nothing in queue, just
+        // upcoming").
+        if !hasLoadedOnce { isLoading = true }
         defer {
-            if isLoading { isLoading = false }
+            isLoading = false
+            hasLoadedOnce = true
             isRefreshing = false
         }
         if DemoMode.isActive {
