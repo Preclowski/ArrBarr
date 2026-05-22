@@ -8,6 +8,9 @@ public struct RichToolResultView: View {
     let radarr: ServiceConfig
     let lidarr: ServiceConfig
 
+    @State private var visibleCount: Int = Self.pageSize
+    private static let pageSize = 10
+
     public init(content: ChatRichContent, sonarr: ServiceConfig, radarr: ServiceConfig, lidarr: ServiceConfig = .empty) {
         self.content = content
         self.sonarr = sonarr
@@ -20,19 +23,38 @@ public struct RichToolResultView: View {
             LazyHStack(alignment: .top, spacing: 10) {
                 switch content {
                 case .searchMovieResults(let results):
-                    ForEach(results) { r in
+                    let visible = Array(results.prefix(visibleCount))
+                    ForEach(visible) { r in
                         SearchResultCard(result: r, apiKey: radarr.apiKey)
                     }
+                    if visible.count < results.count {
+                        LoadMoreSentinel {
+                            visibleCount = min(visibleCount + Self.pageSize, results.count)
+                        }
+                    }
                 case .searchSeriesResults(let results):
-                    ForEach(results) { r in
+                    let visible = Array(results.prefix(visibleCount))
+                    ForEach(visible) { r in
                         SearchResultCard(result: r, apiKey: sonarr.apiKey)
                     }
+                    if visible.count < results.count {
+                        LoadMoreSentinel {
+                            visibleCount = min(visibleCount + Self.pageSize, results.count)
+                        }
+                    }
                 case .searchArtistResults(let results):
-                    ForEach(results) { r in
+                    let visible = Array(results.prefix(visibleCount))
+                    ForEach(visible) { r in
                         SearchResultCard(result: r, apiKey: lidarr.apiKey)
                     }
+                    if visible.count < results.count {
+                        LoadMoreSentinel {
+                            visibleCount = min(visibleCount + Self.pageSize, results.count)
+                        }
+                    }
                 case .libraryMovies(let recs):
-                    ForEach(Array(recs.enumerated()), id: \.offset) { _, rec in
+                    let visible = Array(recs.prefix(visibleCount))
+                    ForEach(Array(visible.enumerated()), id: \.offset) { _, rec in
                         LibraryRecordCard(
                             title: rec.title ?? "(untitled)",
                             year: rec.year,
@@ -42,8 +64,14 @@ public struct RichToolResultView: View {
                             apiKey: radarr.apiKey
                         )
                     }
+                    if visible.count < recs.count {
+                        LoadMoreSentinel {
+                            visibleCount = min(visibleCount + Self.pageSize, recs.count)
+                        }
+                    }
                 case .librarySeries(let recs):
-                    ForEach(Array(recs.enumerated()), id: \.offset) { _, rec in
+                    let visible = Array(recs.prefix(visibleCount))
+                    ForEach(Array(visible.enumerated()), id: \.offset) { _, rec in
                         LibraryRecordCard(
                             title: rec.title ?? "(untitled)",
                             year: rec.year,
@@ -53,8 +81,14 @@ public struct RichToolResultView: View {
                             apiKey: sonarr.apiKey
                         )
                     }
+                    if visible.count < recs.count {
+                        LoadMoreSentinel {
+                            visibleCount = min(visibleCount + Self.pageSize, recs.count)
+                        }
+                    }
                 case .libraryArtists(let recs):
-                    ForEach(Array(recs.enumerated()), id: \.offset) { _, rec in
+                    let visible = Array(recs.prefix(visibleCount))
+                    ForEach(Array(visible.enumerated()), id: \.offset) { _, rec in
                         LibraryRecordCard(
                             title: rec.artistName ?? "(untitled)",
                             year: nil,
@@ -64,9 +98,20 @@ public struct RichToolResultView: View {
                             apiKey: lidarr.apiKey
                         )
                     }
+                    if visible.count < recs.count {
+                        LoadMoreSentinel {
+                            visibleCount = min(visibleCount + Self.pageSize, recs.count)
+                        }
+                    }
                 case .calendar(let items):
-                    ForEach(items) { item in
+                    let visible = Array(items.prefix(visibleCount))
+                    ForEach(visible) { item in
                         CalendarRowView(item: item, sonarrApiKey: sonarr.apiKey, radarrApiKey: radarr.apiKey, lidarrApiKey: lidarr.apiKey)
+                    }
+                    if visible.count < items.count {
+                        LoadMoreSentinel {
+                            visibleCount = min(visibleCount + Self.pageSize, items.count)
+                        }
                     }
                 }
             }
@@ -74,9 +119,22 @@ public struct RichToolResultView: View {
             .padding(.horizontal, 2)
         }
         .fixedSize(horizontal: false, vertical: true)
+        .onChange(of: content) { _, _ in visibleCount = Self.pageSize }
         #if os(iOS)
         .scrollTargetBehavior(.viewAligned)
         #endif
+    }
+}
+
+// MARK: - Load-more sentinel
+
+private struct LoadMoreSentinel: View {
+    let onAppear: () -> Void
+    var body: some View {
+        ProgressView()
+            .controlSize(.small)
+            .frame(width: 100, height: 180, alignment: .center)
+            .task { onAppear() }
     }
 }
 

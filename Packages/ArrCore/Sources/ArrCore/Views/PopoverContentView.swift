@@ -31,8 +31,6 @@ public struct PopoverContentView: View {
     @State private var detailItem: QueueItem?
     @State private var showSearch = false
 
-    private let maxScrollHeight: CGFloat = 520
-
     private var sonarrConfigured: Bool { isVisible(configStore.sonarr) }
     private var radarrConfigured: Bool { isVisible(configStore.radarr) }
     private var lidarrConfigured: Bool { isVisible(configStore.lidarr) }
@@ -150,7 +148,6 @@ public struct PopoverContentView: View {
             } else {
                 emptyState
             }
-            footer
         }
         .frame(width: 400, height: 600)
     }
@@ -272,6 +269,17 @@ public struct PopoverContentView: View {
     }
 
     private var tabBar: some View {
+        HStack(spacing: 8) {
+            tabPills
+                .frame(maxWidth: .infinity)
+            accessoryButtons
+        }
+        .padding(.horizontal, 12)
+        .padding(.top, 8)
+        .padding(.bottom, 4)
+    }
+
+    private var tabPills: some View {
         HStack(spacing: 0) {
             ForEach(visibleTabs, id: \.self) { tab in
                 Button {
@@ -297,9 +305,51 @@ public struct PopoverContentView: View {
                     .offset(x: segment * index + 2, y: 2)
             }
         )
-        .padding(.horizontal, 12)
-        .padding(.top, 8)
-        .padding(.bottom, 4)
+    }
+
+    private var accessoryButtons: some View {
+        HStack(spacing: 4) {
+            if searchAvailable {
+                Button {
+                    searchViewModel.reset()
+                    showSearch = true
+                } label: {
+                    Image(systemName: "plus")
+                        .font(.system(size: 12, weight: .semibold))
+                        .frame(width: 22, height: 22)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+                .help(Text("Add new", bundle: .module))
+            }
+            moreMenu
+        }
+    }
+
+    private var moreMenu: some View {
+        Menu {
+            if let onOpenWindow {
+                Button("Open Window…", action: onOpenWindow)
+                    .keyboardShortcut("n", modifiers: [.command, .shift])
+                Divider()
+            }
+            Button("Settings…", action: onOpenSettings)
+                .keyboardShortcut(",", modifiers: .command)
+            Divider()
+            Button("Quit ArrBarr") { onQuit() }
+                .keyboardShortcut("q", modifiers: .command)
+        } label: {
+            Image(systemName: "ellipsis")
+                .font(.system(size: 12, weight: .semibold))
+                .frame(width: 22, height: 22)
+                .contentShape(Rectangle())
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .foregroundStyle(.secondary)
+        .help(Text("More options", bundle: .module))
     }
 
     // MARK: - Queue content
@@ -529,39 +579,45 @@ public struct PopoverContentView: View {
     // MARK: - Empty state
 
     private var emptyState: some View {
-        VStack(spacing: 14) {
-            Image(systemName: "gearshape.2")
-                .font(.system(size: 28, weight: .light))
-                .foregroundStyle(.secondary)
-                .symbolRenderingMode(.hierarchical)
-
-            VStack(spacing: 4) {
-                Text("ArrBarr is not configured")
-                    .font(.headline)
-                Text("Connect Radarr, Sonarr or Lidarr to get started.")
-                    .font(.subheadline)
+        ZStack(alignment: .topTrailing) {
+            VStack(spacing: 14) {
+                Image(systemName: "gearshape.2")
+                    .font(.system(size: 28, weight: .light))
                     .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-            }
+                    .symbolRenderingMode(.hierarchical)
 
-            VStack(alignment: .leading, spacing: 6) {
-                emptyStep(number: 1, text: "Open your arr's web UI → Settings → General")
-                emptyStep(number: 2, text: "Copy the API Key")
-                emptyStep(number: 3, text: "Paste it here, along with the URL")
-            }
-            .font(.system(size: 11))
-            .foregroundStyle(.secondary)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 8))
+                VStack(spacing: 4) {
+                    Text("ArrBarr is not configured")
+                        .font(.headline)
+                    Text("Connect Radarr, Sonarr or Lidarr to get started.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                }
 
-            Button("Open Settings…", action: onOpenSettings)
-                .modifier(GlassProminentButtonStyle())
-                .controlSize(.regular)
+                VStack(alignment: .leading, spacing: 6) {
+                    emptyStep(number: 1, text: "Open your arr's web UI → Settings → General")
+                    emptyStep(number: 2, text: "Copy the API Key")
+                    emptyStep(number: 3, text: "Paste it here, along with the URL")
+                }
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 8))
+
+                Button("Open Settings…", action: onOpenSettings)
+                    .modifier(GlassProminentButtonStyle())
+                    .controlSize(.regular)
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 22)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            moreMenu
+                .padding(8)
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 22)
     }
 
     private func emptyStep(number: Int, text: LocalizedStringKey) -> some View {
@@ -573,81 +629,6 @@ public struct PopoverContentView: View {
         }
     }
 
-    // MARK: - Footer
-
-    private var footer: some View {
-        VStack(spacing: 0) {
-            if let err = viewModel.lastError {
-                Text(err)
-                    .font(.caption)
-                    .foregroundStyle(.red)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color.red.opacity(0.08))
-            }
-            Divider()
-            HStack(spacing: 6) {
-                Button(action: {
-                    if historySource != nil {
-                        historyRefreshNonce &+= 1
-                    } else {
-                        Task { await viewModel.refresh() }
-                    }
-                }) {
-                    Image(systemName: "arrow.clockwise")
-                        .rotationEffect(.degrees(viewModel.isRefreshing ? 360 : 0))
-                        .animation(viewModel.isRefreshing
-                                   ? .linear(duration: 0.9).repeatForever(autoreverses: false)
-                                   : .default,
-                                   value: viewModel.isRefreshing)
-                        .frame(width: 14, height: 14)
-                }
-                .modifier(GlassButtonStyle())
-                .controlSize(.small)
-                .help(Text("Refresh", bundle: .module))
-                .disabled(viewModel.isRefreshing && historySource == nil)
-
-                if searchAvailable {
-                    Button(action: { searchViewModel.reset(); showSearch = true }) {
-                        Image(systemName: "plus")
-                            .frame(width: 14, height: 14)
-                    }
-                    .modifier(GlassButtonStyle())
-                    .controlSize(.small)
-                    .help(Text("Add new", bundle: .module))
-                }
-
-                Spacer()
-
-                Menu {
-                    if searchAvailable {
-                        Button("Add…") { searchViewModel.reset(); showSearch = true }
-                            .keyboardShortcut("n", modifiers: .command)
-                        Divider()
-                    }
-                    if let onOpenWindow {
-                        Button("Open Window…", action: onOpenWindow)
-                            .keyboardShortcut("n", modifiers: [.command, .shift])
-                        Divider()
-                    }
-                    Button("Settings…", action: onOpenSettings)
-                        .keyboardShortcut(",", modifiers: .command)
-                    Divider()
-                    Button("Quit ArrBarr") { onQuit() }
-                        .keyboardShortcut("q", modifiers: .command)
-                } label: {
-                    Image(systemName: "ellipsis.circle")
-                        .font(.system(size: 14))
-                }
-                .menuStyle(.borderlessButton)
-                .fixedSize()
-                .help(Text("More options", bundle: .module))
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-        }
-    }
 }
 
 private struct UpcomingGroup {
