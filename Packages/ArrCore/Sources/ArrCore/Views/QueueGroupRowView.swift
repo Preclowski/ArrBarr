@@ -254,7 +254,9 @@ public struct QueueGroupRowView: View {
                 }
             }
             if canControl {
-                IconButton(symbol: "trash", helpKey: "Remove from client", accessibilityLabel: "Remove \(headerLabel)") {
+                IconButton(symbol: "trash", helpKey: "Remove from client",
+                           accessibilityLabel: "Remove \(headerLabel)",
+                           tint: .red) {
                     showDeleteConfirmation = true
                 }
             }

@@ -236,7 +236,9 @@ public struct QueueRowView: View {
                 }
             }
             if canControl {
-                IconButton(symbol: "trash", helpKey: "Remove from client", accessibilityLabel: "Remove \(item.title)") {
+                IconButton(symbol: "trash", helpKey: "Remove from client",
+                           accessibilityLabel: "Remove \(item.title)",
+                           tint: .red) {
                     showDeleteConfirmation = true
                 }
             }
@@ -581,23 +583,41 @@ public struct IconButton: View {
     let symbol: String
     let helpKey: String
     var accessibilityLabel: String = ""
+    /// Used for destructive intent — system styles paint .glass / .borderless
+    /// hover state with this colour, matching macOS row-action conventions.
+    var tint: Color? = nil
     let action: () -> Void
 
     public var body: some View {
         Button(action: action) {
             Image(systemName: symbol)
                 .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(.primary)
                 .frame(width: 22, height: 22)
         }
-        .modifier(GlassButtonStyle())
+        .modifier(InlineIconButtonStyle())
         .controlSize(.mini)
+        .tint(tint ?? Color.primary)
         .help(Text(LocalizedStringKey(helpKey), bundle: .module))
         .accessibilityLabel(
             accessibilityLabel.isEmpty
                 ? Text(LocalizedStringKey(helpKey), bundle: .module)
                 : Text(verbatim: accessibilityLabel)
         )
+    }
+}
+
+/// Inline row-action style. macOS 26's `.glass` is the native Liquid Glass
+/// pill; older systems fall back to `.borderless`, which renders nothing at
+/// rest and only paints the hover/press backdrop — that's how Apple draws
+/// row actions in Mail / Finder. Cleaner than the previous `.bordered`
+/// chrome that the queue rows were using everywhere, including at idle.
+private struct InlineIconButtonStyle: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(macOS 26.0, iOS 26.0, *) {
+            content.buttonStyle(.glass)
+        } else {
+            content.buttonStyle(.borderless)
+        }
     }
 }
 
