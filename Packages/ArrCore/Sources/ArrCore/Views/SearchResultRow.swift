@@ -19,32 +19,11 @@ public struct SearchResultRow: View {
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(result.title)
+                    Text(titleWithYear)
                         .font(.system(size: 12, weight: .medium))
                         .lineLimit(1)
-                    HStack(spacing: 4) {
-                        if let year = result.year {
-                            Text(verbatim: "\(year)")
-                                .font(.system(size: 10))
-                                .foregroundStyle(.secondary)
-                        }
-                        if let sub = result.subtitle {
-                            Text("·")
-                                .font(.system(size: 10))
-                                .foregroundStyle(.tertiary)
-                            Text(sub)
-                                .font(.system(size: 10))
-                                .foregroundStyle(.secondary)
-                        }
-                        if let r = result.rating {
-                            Text("·")
-                                .font(.system(size: 10))
-                                .foregroundStyle(.tertiary)
-                            Text(String(format: "★%.1f", r))
-                                .font(.system(size: 10))
-                                .foregroundStyle(.secondary)
-                        }
-                    }
+                    metadataLine
+                        .font(.system(size: 10))
                 }
                 Spacer(minLength: 0)
                 Image(systemName: "plus")
@@ -68,5 +47,45 @@ public struct SearchResultRow: View {
             withAnimation(.easeInOut(duration: 0.15)) { isHovering = hovering }
         }
         #endif
+    }
+
+    /// "Title (1994)" — same idea as MediaHeaderCard. The year is just a
+    /// year, so it joins the title rather than burning a metadata segment.
+    private var titleWithYear: String {
+        if let year = result.year {
+            return "\(result.title) (\(year))"
+        }
+        return result.title
+    }
+
+    /// Second-line metadata. Arr's lookup endpoint hands us all of these in
+    /// the same response that fetched the row, so showing them costs zero
+    /// extra requests: subtitle (Sonarr "X seasons" / Lidarr disambiguation)
+    /// → IMDb → RT → Metacritic → TMDB → runtime → certification.
+    /// Filter to what's populated and join with dots.
+    @ViewBuilder
+    private var metadataLine: some View {
+        let segments: [String] = [
+            result.subtitle.flatMap { $0.isEmpty ? nil : $0 },
+            result.imdb.map { String(format: "IMDb %.1f", $0) },
+            result.rottenTomatoes.map { "RT \(Int($0))%" },
+            result.metacritic.map { "MC \(Int($0))" },
+            result.imdb == nil ? result.rating.map { String(format: "★%.1f", $0) } : nil,
+            result.runtime.flatMap { $0 > 0 ? "\($0) min" : nil },
+            result.certification.flatMap { $0.isEmpty ? nil : $0 },
+        ].compactMap { $0 }
+
+        if segments.isEmpty {
+            EmptyView()
+        } else {
+            HStack(spacing: 4) {
+                ForEach(Array(segments.enumerated()), id: \.offset) { idx, seg in
+                    if idx > 0 {
+                        Text("·").foregroundStyle(.tertiary)
+                    }
+                    Text(seg).foregroundStyle(.secondary)
+                }
+            }
+        }
     }
 }
