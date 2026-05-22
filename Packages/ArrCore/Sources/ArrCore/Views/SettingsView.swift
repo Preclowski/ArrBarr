@@ -137,6 +137,24 @@ public struct SettingsView: View {
                     Toggle("AI knows about Whisparr", isOn: $configStore.aiKnowsAboutWhisparr)
                 }
             }
+            Section {
+                SecureField("TMDB API key", text: $configStore.tmdbApiKey,
+                            prompt: Text(verbatim: "v3 read key"))
+                if let url = URL(string: "https://www.themoviedb.org/settings/api") {
+                    Link(destination: url) {
+                        Label("Get a free TMDB key", systemImage: "link")
+                            .font(.caption)
+                    }
+                }
+            } header: {
+                Text("Discovery")
+            } footer: {
+                Text(configStore.tmdbEnabled
+                     ? "Chat can search by actor, genre, and decade."
+                     : "Add a TMDB key to let chat search by actor, genre, and decade.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 
