@@ -3,6 +3,7 @@ import SwiftUI
 public struct UpcomingRowView: View {
     let item: UpcomingItem
     @EnvironmentObject var configStore: ConfigStore
+    @State private var isHovering = false
 
     private var shouldBlur: Bool {
         configStore.shouldBlurPoster(for: item.source)
@@ -26,6 +27,21 @@ public struct UpcomingRowView: View {
         .buttonStyle(.plain)
         .disabled(item.entityId == nil)
         .help(tooltipText)
+        // Hover tint mirrors QueueRowView — signals that the row is
+        // tappable now that it opens DetailView. Skipped when there's no
+        // entityId (button is disabled, no interaction to advertise).
+        #if os(macOS)
+        .background(
+            RoundedRectangle(cornerRadius: 6)
+                .fill(isHovering && item.entityId != nil
+                      ? Color.primary.opacity(0.06)
+                      : Color.clear)
+                .padding(.horizontal, 6)
+        )
+        .onHover { hovering in
+            withAnimation(.easeInOut(duration: 0.15)) { isHovering = hovering }
+        }
+        #endif
     }
 
     private var rowContent: some View {

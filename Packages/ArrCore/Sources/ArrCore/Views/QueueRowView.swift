@@ -191,6 +191,10 @@ public struct QueueRowView: View {
                 apiKey: item.posterRequiresAuth ? apiKeyForSource : nil,
                 locale: configStore.currentLocale
             )
+            // Default .transient eats the first click outside the popover.
+            // .applicationDefined makes the popover passive — we close it
+            // ourselves in onHover when the cursor leaves the row.
+            .popoverBehavior(.applicationDefined)
         }
         #endif
         .alert("Remove download?", isPresented: $showDeleteConfirmation) {
@@ -237,20 +241,6 @@ public struct QueueRowView: View {
                 }
             }
         }
-        // NSPopover (the row's hover-tooltip) is .transient by default —
-        // the first click anywhere outside it dismisses the popover AND
-        // gets eaten in the process, so users had to click twice on
-        // pause/play/trash. Killing the tooltip eagerly when the cursor
-        // enters the button cluster lets the next click hit the button
-        // directly.
-        #if os(macOS)
-        .onHover { hovering in
-            if hovering {
-                hoverTask?.cancel()
-                showTooltip = false
-            }
-        }
-        #endif
     }
 
     // MARK: - Custom format tags
