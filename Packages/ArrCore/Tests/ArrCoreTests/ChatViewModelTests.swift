@@ -87,10 +87,10 @@ struct ChatViewModelTests {
     func destructiveStalls() async throws {
         var vmCapture: ChatViewModel?
         let provider = ConfirmingFakeProvider {
-            let proceed = await vmCapture!.awaitConfirm(
+            let confirmedArgs = await vmCapture!.awaitConfirm(
                 ToolCall(name: "sonarr_add_series", arguments: .object(["title": .string("X")]))
             )
-            if proceed {
+            if confirmedArgs != nil {
                 return LLMResponse(
                     text: "Added.",
                     toolCalls: [ToolCall(name: "sonarr_add_series", arguments: .object(["title": .string("X")]))],
@@ -114,7 +114,7 @@ struct ChatViewModelTests {
             spins += 1
         }
         #expect(vm.pendingConfirm != nil)
-        await vm.confirmPending()
+        await vm.confirmPending(with: .object(["title": .string("X")]))
         await task.value
         let assistantMsg = vm.messages.last(where: { $0.role == .assistant })
         #expect(assistantMsg?.content == "Added.")
@@ -126,10 +126,10 @@ struct ChatViewModelTests {
     func destructiveCancel() async throws {
         var vmCapture: ChatViewModel?
         let provider = ConfirmingFakeProvider {
-            let proceed = await vmCapture!.awaitConfirm(
+            let confirmedArgs = await vmCapture!.awaitConfirm(
                 ToolCall(name: "sonarr_add_series", arguments: .object(["title": .string("X")]))
             )
-            if proceed {
+            if confirmedArgs != nil {
                 return LLMResponse(text: "Added.", toolCalls: [], toolResults: nil)
             } else {
                 return LLMResponse(text: "Skipped.", toolCalls: [], toolResults: nil)
@@ -179,7 +179,7 @@ struct ChatViewModelTests {
         await vm.send("ignored")
         #expect(vm.messages.count == messagesBefore, "send() must not append while gated")
 
-        await vm.confirmPending()
+        await vm.confirmPending(with: .object(["title": .string("X")]))
         await firstSend.value
     }
 

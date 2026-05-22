@@ -11,7 +11,7 @@ public final class ChatViewModel: ObservableObject {
     private let provider: LLMProvider
     private let tools: [LLMTool]
     private let invokeTool: @Sendable (_ name: String, _ args: JSONValue) async throws -> String
-    private(set) var pendingResume: CheckedContinuation<Bool, Never>?
+    private(set) var pendingResume: CheckedContinuation<JSONValue?, Never>?
 
     public var providerIsAvailable: Bool { provider.isAvailable }
 
@@ -31,15 +31,15 @@ public final class ChatViewModel: ObservableObject {
         await runLoop(prompt: trimmed)
     }
 
-    public func confirmPending() async {
+    public func confirmPending(with arguments: JSONValue) async {
         guard pendingConfirm != nil else { return }
-        pendingResume?.resume(returning: true)
+        pendingResume?.resume(returning: arguments)
         pendingResume = nil
     }
 
     public func cancelPending() async {
         guard pendingConfirm != nil else { return }
-        pendingResume?.resume(returning: false)
+        pendingResume?.resume(returning: nil)
         pendingResume = nil
     }
 
@@ -53,17 +53,18 @@ public final class ChatViewModel: ObservableObject {
 
     /// Surfaces the confirm gate to external callers (e.g. injected into
     /// `FoundationModelsProvider` so `DynamicMCPTool` can pause the FM session).
-    /// Re-entrant calls return false immediately.
-    public func awaitConfirm(_ call: ToolCall) async -> Bool {
-        guard pendingResume == nil else { return false }
+    /// Re-entrant calls return nil immediately. Returns nil for cancel, or the
+    /// (possibly user-modified) args JSONValue to proceed with.
+    public func awaitConfirm(_ call: ToolCall) async -> JSONValue? {
+        guard pendingResume == nil else { return nil }
         pendingConfirm = call
         isThinking = false
-        let proceed = await withCheckedContinuation { (cont: CheckedContinuation<Bool, Never>) in
+        let result = await withCheckedContinuation { (cont: CheckedContinuation<JSONValue?, Never>) in
             self.pendingResume = cont
         }
         pendingConfirm = nil
         isThinking = true
-        return proceed
+        return result
     }
 
     private func runLoop(prompt: String) async {
@@ -96,28 +97,24 @@ public final class ChatViewModel: ObservableObject {
                 messages.append(assistantMsg)
                 guard let call = toolCall else { return }
 
+                var confirmedArgs = call.arguments
                 if MCPToolWhitelist.isDestructive(call.name) {
-                    isThinking = false
-                    pendingConfirm = call
-                    let proceed = await withCheckedContinuation { (cont: CheckedContinuation<Bool, Never>) in
-                        self.pendingResume = cont
-                    }
-                    pendingConfirm = nil
-                    isThinking = true
-                    if !proceed {
+                    guard let args = await awaitConfirm(call) else {
                         messages.append(ChatMessage(role: .tool, content: call.name, toolCall: call, toolResult: "(cancelled by user)"))
                         nextPrompt = "Tool \(call.name) was cancelled by the user."
                         continue
                     }
+                    confirmedArgs = args
                 }
 
                 let result: String
                 do {
-                    result = try await invokeTool(call.name, call.arguments)
+                    result = try await invokeTool(call.name, confirmedArgs)
                 } catch {
                     result = "(tool error: \(error.localizedDescription))"
                 }
-                messages.append(ChatMessage(role: .tool, content: call.name, toolCall: call, toolResult: result))
+                let confirmedCall = ToolCall(id: call.id, name: call.name, arguments: confirmedArgs)
+                messages.append(ChatMessage(role: .tool, content: call.name, toolCall: confirmedCall, toolResult: result))
                 nextPrompt = "Tool \(call.name) returned: \(result)"
             }
             if roundsLeft == 0 {

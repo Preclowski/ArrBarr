@@ -136,6 +136,8 @@ public actor LocalToolBackend: ToolBackend {
     private func addSeries(_ args: JSONValue) async throws -> String {
         let tvdbId = Self.intArg(args, key: "tvdbId")
         let title = Self.stringArg(args, key: "title")
+        let chosenProfileId = Self.intArg(args, key: "qualityProfileId")
+        let chosenFolderPath = Self.stringArg(args, key: "rootFolderPath")
         guard tvdbId != 0 || !title.isEmpty else {
             return "Need a tvdbId (preferred) or title to add a series. Run sonarr_search first."
         }
@@ -156,7 +158,9 @@ public actor LocalToolBackend: ToolBackend {
         }
         let profiles = try await client.fetchQualityProfiles()
         let folders = try await client.fetchRootFolders()
-        guard let profile = profiles.first, let folder = folders.first else {
+        let profile = profiles.first(where: { $0.id == chosenProfileId }) ?? profiles.first
+        let folder = folders.first(where: { $0.path == chosenFolderPath }) ?? folders.first
+        guard let profile, let folder else {
             return "Sonarr is missing a quality profile or root folder."
         }
         try await client.addSeries(
@@ -174,6 +178,8 @@ public actor LocalToolBackend: ToolBackend {
     private func addMovie(_ args: JSONValue) async throws -> String {
         let tmdbId = Self.intArg(args, key: "tmdbId")
         let title = Self.stringArg(args, key: "title")
+        let chosenProfileId = Self.intArg(args, key: "qualityProfileId")
+        let chosenFolderPath = Self.stringArg(args, key: "rootFolderPath")
         guard tmdbId != 0 || !title.isEmpty else {
             return "Need a tmdbId (preferred) or title to add a movie. Run radarr_search first."
         }
@@ -192,7 +198,9 @@ public actor LocalToolBackend: ToolBackend {
         }
         let profiles = try await client.fetchQualityProfiles()
         let folders = try await client.fetchRootFolders()
-        guard let profile = profiles.first, let folder = folders.first else {
+        let profile = profiles.first(where: { $0.id == chosenProfileId }) ?? profiles.first
+        let folder = folders.first(where: { $0.path == chosenFolderPath }) ?? folders.first
+        guard let profile, let folder else {
             return "Radarr is missing a quality profile or root folder."
         }
         try await client.addMovie(

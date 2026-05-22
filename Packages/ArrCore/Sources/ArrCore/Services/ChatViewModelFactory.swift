@@ -34,8 +34,8 @@ public enum ChatViewModelFactory {
         }
 
         var vmRef: ChatViewModel? = nil
-        let confirm: @Sendable (ToolCall) async -> Bool = { [weak vmRef] call in
-            guard let vm = vmRef else { return false }
+        let confirm: @Sendable (ToolCall) async -> JSONValue? = { [weak vmRef] call in
+            guard let vm = vmRef else { return nil }
             return await vm.awaitConfirm(call)
         }
 

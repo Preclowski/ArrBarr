@@ -35,6 +35,15 @@
     "Confirm": {
       "extractionState": "manual"
     },
+    "Couldn't load metadata": {
+      "extractionState": "manual"
+    },
+    "Quality profile": {
+      "extractionState": "manual"
+    },
+    "Root folder": {
+      "extractionState": "manual"
+    },
     "Enable chat": {
       "extractionState": "manual"
     },

@@ -2,6 +2,7 @@ import SwiftUI
 
 public struct ChatView: View {
     @ObservedObject var viewModel: ChatViewModel
+    @EnvironmentObject var configStore: ConfigStore
     @State private var draft: String = ""
     @FocusState private var inputFocused: Bool
 
@@ -17,7 +18,13 @@ public struct ChatView: View {
             }
             messages
             if let confirm = viewModel.pendingConfirm {
-                confirmBanner(for: confirm)
+                ConfirmAddCard(
+                    call: confirm,
+                    sonarr: configStore.sonarr,
+                    radarr: configStore.radarr,
+                    onConfirm: { args in Task { await viewModel.confirmPending(with: args) } },
+                    onCancel: { Task { await viewModel.cancelPending() } }
+                )
             }
             Divider()
             inputBar
@@ -77,32 +84,6 @@ public struct ChatView: View {
                 .font(.caption)
         }
         .padding(.top, 24)
-    }
-
-    private func confirmBanner(for call: ToolCall) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .foregroundStyle(.orange)
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Confirm: \(call.name)")
-                    .font(.system(size: 12, weight: .semibold))
-                Text(Self.summarize(call.arguments))
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
-            }
-            Spacer()
-            Button("Cancel") { Task { await viewModel.cancelPending() } }
-                .controlSize(.small)
-            Button("Confirm") { Task { await viewModel.confirmPending() } }
-                .controlSize(.small)
-#if os(macOS)
-                .keyboardShortcut(.defaultAction)
-#endif
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(Color.orange.opacity(0.10))
     }
 
     private var inputBar: some View {

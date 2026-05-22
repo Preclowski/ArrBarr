@@ -9,11 +9,11 @@ import FoundationModels
 public struct FoundationModelsProvider: LLMProvider {
 
     private let invokeTool: @Sendable (String, JSONValue) async throws -> String
-    private let confirmDestructive: @Sendable (ToolCall) async -> Bool
+    private let confirmDestructive: @Sendable (ToolCall) async -> JSONValue?
 
     public init(
         invokeTool: @escaping @Sendable (String, JSONValue) async throws -> String,
-        confirmDestructive: @escaping @Sendable (ToolCall) async -> Bool
+        confirmDestructive: @escaping @Sendable (ToolCall) async -> JSONValue?
     ) {
         self.invokeTool = invokeTool
         self.confirmDestructive = confirmDestructive
@@ -145,7 +145,7 @@ struct DynamicMCPTool: Tool {
 
     let spec: LLMTool
     let invokeTool: @Sendable (String, JSONValue) async throws -> String
-    let confirmDestructive: @Sendable (ToolCall) async -> Bool
+    let confirmDestructive: @Sendable (ToolCall) async -> JSONValue?
 
     var name: String { spec.name }
     var description: String { spec.description }
@@ -167,24 +167,26 @@ struct DynamicMCPTool: Tool {
         }
         let toolCall = ToolCall(name: spec.name, arguments: argsValue)
 
+        var confirmedArgs = argsValue
         if MCPToolWhitelist.isDestructive(spec.name) {
-            let proceed = await confirmDestructive(toolCall)
-            if !proceed {
+            guard let args = await confirmDestructive(toolCall) else {
                 let result = "(cancelled by user)"
                 await DynamicMCPToolBox.shared.record(call: toolCall, result: result)
                 return result
             }
+            confirmedArgs = args
         }
 
+        let confirmedCall = ToolCall(id: toolCall.id, name: spec.name, arguments: confirmedArgs)
         let result: String
         do {
-            result = try await invokeTool(spec.name, argsValue)
+            result = try await invokeTool(spec.name, confirmedArgs)
         } catch {
             let errResult = "(tool error: \(error.localizedDescription))"
-            await DynamicMCPToolBox.shared.record(call: toolCall, result: errResult)
+            await DynamicMCPToolBox.shared.record(call: confirmedCall, result: errResult)
             return errResult
         }
-        await DynamicMCPToolBox.shared.record(call: toolCall, result: result)
+        await DynamicMCPToolBox.shared.record(call: confirmedCall, result: result)
         return result
     }
 }
@@ -198,7 +200,7 @@ struct DynamicMCPTool: Tool {
 public struct FoundationModelsProvider: LLMProvider {
     public init(
         invokeTool: @escaping @Sendable (String, JSONValue) async throws -> String,
-        confirmDestructive: @escaping @Sendable (ToolCall) async -> Bool
+        confirmDestructive: @escaping @Sendable (ToolCall) async -> JSONValue?
     ) {}
 
     public var isAvailable: Bool { false }
