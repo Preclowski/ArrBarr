@@ -713,8 +713,52 @@ struct MultiRow: View {
 
 /// Full-width existing-file banner for Radarr details. Sits between the
 /// header card and the overview so the chips have room to breathe.
+/// Banner describing the file an arr already has on disk for this item.
+/// Two callers:
+///   - upgrade-in-progress (queue item) — fields come from the queue
+///     row's `existing*` metadata
+///   - already-in-library (no active queue) — fields come from
+///     `RadarrMovieDetail.movieFile` / similar
+/// The view body is the same; only the source of the fields differs.
 struct ExistingFileBanner: View {
-    let item: QueueItem
+    let quality: String?
+    let size: Int64?
+    let customFormatScore: Int?
+    let customFormats: [String]
+    let fileName: String?
+
+    init(quality: String?, size: Int64?, customFormatScore: Int?,
+         customFormats: [String], fileName: String?) {
+        self.quality = quality; self.size = size
+        self.customFormatScore = customFormatScore
+        self.customFormats = customFormats
+        self.fileName = fileName
+    }
+
+    /// Build the banner from a queue row's `existing*` fields (upgrade-time
+    /// metadata Radarr/Sonarr send when a download will replace something).
+    init(item: QueueItem) {
+        self.init(
+            quality: item.existingQuality,
+            size: item.existingSize,
+            customFormatScore: item.existingCustomFormatScore,
+            customFormats: item.existingCustomFormats,
+            fileName: item.existingFileName
+        )
+    }
+
+    /// Build the banner from an arr's library `movieFile` — the file the
+    /// user already owns, no queue activity required.
+    init(movieFile: ArrFile) {
+        self.init(
+            quality: movieFile.quality?.name,
+            size: movieFile.size,
+            customFormatScore: movieFile.customFormatScore,
+            customFormats: (movieFile.customFormats ?? []).map(\.name),
+            fileName: movieFile.relativePath
+        )
+    }
+
     public var body: some View {
         VStack(alignment: .leading, spacing: 5) {
             HStack(spacing: 6) {
@@ -727,18 +771,18 @@ struct ExistingFileBanner: View {
                     .textCase(.uppercase)
                     .tracking(0.5)
                 Spacer()
-                if let q = item.existingQuality, !q.isEmpty {
+                if let q = quality, !q.isEmpty {
                     Text(q)
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(.primary)
                 }
-                if let size = item.existingSize, size > 0 {
+                if let size, size > 0 {
                     Text("·").foregroundStyle(.tertiary)
                     Text(ByteCountFormatter.string(fromByteCount: size, countStyle: .file))
                         .font(.system(size: 11))
                         .foregroundStyle(.secondary)
                 }
-                if let s = item.existingCustomFormatScore, s != 0 {
+                if let s = customFormatScore, s != 0 {
                     Text("·").foregroundStyle(.tertiary)
                     let sign = s > 0 ? "+" : ""
                     Text("\(sign)\(s)")
@@ -746,12 +790,12 @@ struct ExistingFileBanner: View {
                         .foregroundStyle(s > 0 ? Color.green : Color.red)
                 }
             }
-            if !item.existingCustomFormats.isEmpty {
+            if !customFormats.isEmpty {
                 TooltipFlowLayout(spacing: 4) {
-                    ForEach(item.existingCustomFormats, id: \.self) { TagChip(text: $0) }
+                    ForEach(customFormats, id: \.self) { TagChip(text: $0) }
                 }
             }
-            if let name = item.existingFileName, !name.isEmpty {
+            if let name = fileName, !name.isEmpty {
                 Text(name)
                     .font(.system(size: 10, design: .monospaced))
                     .foregroundStyle(.tertiary)
