@@ -332,3 +332,35 @@ public struct SonarrLibraryStatistics: Decodable, Sendable, Equatable {
     let episodeFileCount: Int?
     let seasonCount: Int?
 }
+
+// MARK: - ArrImage helpers
+
+public extension Array where Element == ArrImage {
+    /// Resolves a poster URL from an Arr images array.
+    /// Prefers `remoteUrl` (TMDB / MusicBrainz / etc., no auth) over the local server URL.
+    /// - Parameter baseURL: The arr server base URL (used when only a local path is available).
+    /// - Parameter coverTypes: Cover type names to match, in priority order (default: `["poster"]`).
+    /// - Returns: the URL plus whether it requires the X-Api-Key header.
+    func posterURL(baseURL: String, coverTypes: [String] = ["poster"]) -> (URL?, Bool) {
+        let normalized = coverTypes.map { $0.lowercased() }
+        let match = first { img in
+            guard let type = img.coverType?.lowercased() else { return false }
+            return normalized.contains(type)
+        }
+        guard let match else { return (nil, false) }
+
+        if let remote = match.remoteUrl, let url = URL(string: remote) {
+            return (url, false)
+        }
+        if let path = match.url, let base = URL(string: baseURL) {
+            // Some Arrs return absolute, some relative. Strip query (cache-busting hash) for stable cache keys.
+            if let abs = URL(string: path), abs.scheme != nil {
+                return (abs, true)
+            }
+            let trimmed = path.split(separator: "?", maxSplits: 1).first.map(String.init) ?? path
+            let composed = URL(string: trimmed, relativeTo: base)?.absoluteURL
+            return (composed, true)
+        }
+        return (nil, false)
+    }
+}

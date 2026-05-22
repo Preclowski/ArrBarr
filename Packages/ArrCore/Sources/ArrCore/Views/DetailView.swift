@@ -376,7 +376,7 @@ public struct DetailView: View {
         case .sonarr: configStore.sonarr.baseURL
         case .lidarr: configStore.lidarr.baseURL
         }
-        let (url, _) = pickPosterURL(from: images, coverTypes: ["poster", "cover"], baseURL: baseURL)
+        let (url, _) = (images?.posterURL(baseURL: baseURL, coverTypes: ["poster", "cover"]) ?? (nil, false))
         return url
     }
 

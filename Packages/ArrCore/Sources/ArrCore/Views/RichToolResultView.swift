@@ -118,7 +118,7 @@ private struct LibraryRecordCard: View {
         VStack(alignment: .leading, spacing: 4) {
             ZStack(alignment: .bottomTrailing) {
                 RemotePoster(
-                    url: pickPosterURL(from: images, coverTypes: ["poster"], baseURL: baseURL).0,
+                    url: images?.posterURL(baseURL: baseURL).0,
                     apiKey: apiKey,
                     size: CGSize(width: 90, height: 135),
                     cornerRadius: 6

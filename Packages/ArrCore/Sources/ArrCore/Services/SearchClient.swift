@@ -151,7 +151,7 @@ public actor SearchClient {
 
     private static func unifyRadarr(_ r: RadarrLookupRecord, baseURL: String) -> SearchResult? {
         guard let tmdbId = r.tmdbId else { return nil }
-        let (poster, _) = pickPosterURL(from: r.images, coverTypes: ["poster"], baseURL: baseURL)
+        let (poster, _) = (r.images?.posterURL(baseURL: baseURL) ?? (nil, false))
         return SearchResult(
             id: tmdbId, foreignId: String(tmdbId),
             title: r.title, subtitle: nil,
@@ -169,7 +169,7 @@ public actor SearchClient {
 
     private static func unifySonarr(_ r: SonarrLookupRecord, baseURL: String) -> SearchResult? {
         guard let tvdbId = r.tvdbId else { return nil }
-        let (poster, _) = pickPosterURL(from: r.images, coverTypes: ["poster"], baseURL: baseURL)
+        let (poster, _) = (r.images?.posterURL(baseURL: baseURL) ?? (nil, false))
         let seasons = r.statistics?.seasonCount
         let subtitle = seasons.map { "\($0) season\($0 == 1 ? "" : "s")" }
         return SearchResult(
