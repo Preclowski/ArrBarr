@@ -70,6 +70,8 @@ public final class ConfigStore: ObservableObject {
     /// they've never seen the welcome screen — first launch shows the
     /// firstRun variant.
     @Published public var welcomeSeenVersion: String?
+    @Published public var chatEnabled: Bool
+    @Published public var mcp: MCPConfig
 
     public static let needsYouOrderKey = "needsyou"
     public static let tonightOrderKey = "tonight"
@@ -110,6 +112,8 @@ public final class ConfigStore: ObservableObject {
     private static let tonightHoursKey = "ArrBarr.tonightHours"
     private static let showIndexerIssuesKey = "ArrBarr.showIndexerIssues"
     private static let welcomeSeenVersionKey = "ArrBarr.welcomeSeenVersion"
+    private static let chatEnabledKey = "ArrBarr.chatEnabled"
+    private static let mcpConfigKey = "ArrBarr.mcp"
     private static let keychainMigrationDoneKey = "ArrBarr.keychainMigrationDone"
 
     public init(defaults: UserDefaults = .standard) {
@@ -150,6 +154,14 @@ public final class ConfigStore: ObservableObject {
         let storedTonight = defaults.object(forKey: Self.tonightHoursKey) as? Int ?? 12
         self.tonightHours = Self.tonightHoursOptions.contains(storedTonight) ? storedTonight : 12
         self.welcomeSeenVersion = defaults.string(forKey: Self.welcomeSeenVersionKey)
+        self.chatEnabled = defaults.object(forKey: Self.chatEnabledKey) != nil
+            ? defaults.bool(forKey: Self.chatEnabledKey) : false
+        if let data = defaults.data(forKey: Self.mcpConfigKey),
+           let cfg = try? JSONDecoder().decode(MCPConfig.self, from: data) {
+            self.mcp = cfg
+        } else {
+            self.mcp = .empty
+        }
 
         for kind in ServiceKind.allCases {
             publisher(for: kind).dropFirst().sink { [weak self] cfg in
@@ -207,6 +219,14 @@ public final class ConfigStore: ObservableObject {
                 self.defaults.removeObject(forKey: "AppleLanguages")
             } else {
                 self.defaults.set([val], forKey: "AppleLanguages")
+            }
+        }.store(in: &cancellables)
+        $chatEnabled.dropFirst().sink { [weak self] val in
+            self?.defaults.set(val, forKey: Self.chatEnabledKey)
+        }.store(in: &cancellables)
+        $mcp.dropFirst().sink { [weak self] cfg in
+            if let data = try? JSONEncoder().encode(cfg) {
+                self?.defaults.set(data, forKey: Self.mcpConfigKey)
             }
         }.store(in: &cancellables)
     }
