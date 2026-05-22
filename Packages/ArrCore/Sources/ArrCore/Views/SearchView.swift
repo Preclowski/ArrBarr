@@ -7,6 +7,11 @@ public struct SearchView: View {
 
     @State private var radarrCollapsed = false
     @State private var sonarrCollapsed = false
+    @State private var radarrShowAll = false
+    @State private var sonarrShowAll = false
+    @FocusState private var queryFocused: Bool
+
+    private static let collapsedLimit = 5
 
     public init(viewModel: SearchViewModel, onSelectResult: @escaping (SearchResult) -> Void) {
         self.viewModel = viewModel
@@ -52,8 +57,18 @@ public struct SearchView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
-        .onChange(of: viewModel.query) { _, _ in
+        .onChange(of: viewModel.query) { _, oldValue in
+            // Reset "show all" toggles whenever the query changes — new
+            // results, fresh 5-item view.
+            if oldValue != viewModel.query {
+                radarrShowAll = false
+                sonarrShowAll = false
+            }
             viewModel.onQueryChange()
+        }
+        .task {
+            // Autofocus the search field when the overlay opens.
+            queryFocused = true
         }
     }
 
@@ -61,7 +76,12 @@ public struct SearchView: View {
     private func sourceSection(_ source: QueueItem.Source) -> some View {
         let results = source == .radarr ? viewModel.radarrResults : viewModel.sonarrResults
         let isCollapsed = source == .radarr ? radarrCollapsed : sonarrCollapsed
+        let showAll = source == .radarr ? radarrShowAll : sonarrShowAll
         let title: LocalizedStringKey = source == .radarr ? "Movies" : "Series"
+        let visibleResults: [SearchResult] = (showAll || results.count <= Self.collapsedLimit)
+            ? results
+            : Array(results.prefix(Self.collapsedLimit))
+        let hiddenCount = results.count - visibleResults.count
 
         VStack(alignment: .leading, spacing: 0) {
             // Section header
@@ -103,8 +123,32 @@ public struct SearchView: View {
                         .padding(.horizontal, 12)
                         .padding(.bottom, 8)
                 } else {
-                    ForEach(results) { r in
+                    ForEach(visibleResults) { r in
                         SearchResultRow(result: r) { onSelectResult(r) }
+                    }
+                    if hiddenCount > 0 {
+                        Button {
+                            withAnimation(.smooth(duration: 0.18)) {
+                                if source == .radarr {
+                                    radarrShowAll = true
+                                } else {
+                                    sonarrShowAll = true
+                                }
+                            }
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: "chevron.down")
+                                    .font(.system(size: 9, weight: .semibold))
+                                Text("Show \(hiddenCount) more", bundle: .module)
+                                    .font(.system(size: 11, weight: .medium))
+                            }
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
             }
@@ -122,6 +166,7 @@ public struct SearchView: View {
             )
             .font(.system(size: 12))
             .textFieldStyle(.plain)
+            .focused($queryFocused)
             if !viewModel.query.isEmpty {
                 Button { viewModel.query = "" } label: {
                     Image(systemName: "xmark.circle.fill")

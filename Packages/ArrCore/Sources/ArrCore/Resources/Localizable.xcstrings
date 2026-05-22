@@ -4206,6 +4206,9 @@
     },
     "No series match this query.": {
       "extractionState": "manual"
+    },
+    "Show %lld more": {
+      "extractionState": "manual"
     }
   }
 }
