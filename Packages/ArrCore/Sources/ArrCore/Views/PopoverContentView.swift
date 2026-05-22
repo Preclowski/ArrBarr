@@ -153,7 +153,6 @@ public struct PopoverContentView: View {
                     )
                 } else if anyArrConfigured {
                     tabBar
-                    Divider()
                     Group {
                         switch selectedTab {
                         case .queue: queueContent
@@ -339,14 +338,20 @@ public struct PopoverContentView: View {
     }
 
     private var tabBar: some View {
+        // Two floating glass capsules: the tab pills carry the section
+        // switcher, the accessory cluster carries +/⋯. Sitting on the
+        // popover material (not pushing content with a Divider) gives the
+        // "floating chrome over the content" feel the user asked for.
         HStack(spacing: 8) {
             tabPills
                 .frame(maxWidth: .infinity)
+                .glassyFloatingBar()
             accessoryButtons
+                .glassyFloatingBar()
         }
         .padding(.horizontal, 12)
-        .padding(.top, 8)
-        .padding(.bottom, 4)
+        .padding(.top, 10)
+        .padding(.bottom, 8)
     }
 
     private var tabPills: some View {
@@ -359,7 +364,7 @@ public struct PopoverContentView: View {
                         .font(.system(size: 12, weight: selectedTab == tab ? .semibold : .regular))
                         .foregroundStyle(selectedTab == tab ? .primary : .secondary)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 6)
+                        .padding(.vertical, 7)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -371,14 +376,14 @@ public struct PopoverContentView: View {
                 let segment = geo.size.width / count
                 let index = CGFloat(visibleTabs.firstIndex(of: selectedTab) ?? 0)
                 TabPillBackground()
-                    .frame(width: segment - 4, height: geo.size.height - 4)
-                    .offset(x: segment * index + 2, y: 2)
+                    .frame(width: segment - 6, height: geo.size.height - 6)
+                    .offset(x: segment * index + 3, y: 3)
             }
         )
     }
 
     private var accessoryButtons: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 2) {
             if searchAvailable {
                 Button {
                     searchViewModel.reset()
@@ -386,7 +391,7 @@ public struct PopoverContentView: View {
                 } label: {
                     Image(systemName: "plus")
                         .font(.system(size: 12, weight: .semibold))
-                        .frame(width: 22, height: 22)
+                        .frame(width: 28, height: 28)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -395,6 +400,7 @@ public struct PopoverContentView: View {
             }
             moreMenu
         }
+        .padding(.horizontal, 2)
     }
 
     private var moreMenu: some View {
@@ -412,7 +418,7 @@ public struct PopoverContentView: View {
         } label: {
             Image(systemName: "ellipsis")
                 .font(.system(size: 12, weight: .semibold))
-                .frame(width: 22, height: 22)
+                .frame(width: 28, height: 28)
                 .contentShape(Rectangle())
         }
         .menuStyle(.borderlessButton)
@@ -693,8 +699,12 @@ private struct UpcomingGroup {
 
 private struct TabPillBackground: View {
     public var body: some View {
-        RoundedRectangle(cornerRadius: 6)
-            .fill(Color.primary.opacity(0.10))
+        // Sits *inside* the outer glass capsule (the tabPills container),
+        // so we can't go glass-on-glass — it would vanish. A soft solid
+        // tint reads as the "selected slot" depression and lets the
+        // outer capsule keep its translucent feel.
+        Capsule()
+            .fill(Color.primary.opacity(0.14))
     }
 }
 
