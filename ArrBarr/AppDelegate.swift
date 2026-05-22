@@ -58,6 +58,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // duration the popover is shown.
         let hosting = NSHostingController(rootView: root)
         popover.contentSize = NSSize(width: 400, height: 600)
+        // On macOS 26 NSPopover natively paints Liquid Glass for its own
+        // frame (the rounded tile, arrow, and shadow). Earlier we wrapped
+        // the host in our own NSVisualEffectView, but that *fought* the
+        // system chrome instead of helping — the popover ended up looking
+        // like a flat HUD rectangle layered on top of the real glass.
+        //
+        // The correct path: hand NSPopover the host directly, then make
+        // the hosting view transparent so NSPopover's own glass shows
+        // through. NSHostingController paints windowBackgroundColor by
+        // default, which is exactly what was blocking the system glass.
+        hosting.view.wantsLayer = true
+        hosting.view.layer?.backgroundColor = .clear
         popover.contentViewController = hosting
 
         DemoMode.seedConfigsIfNeeded(configStore)
