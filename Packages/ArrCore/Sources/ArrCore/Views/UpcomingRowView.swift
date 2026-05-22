@@ -9,6 +9,26 @@ public struct UpcomingRowView: View {
     }
 
     public var body: some View {
+        Button {
+            guard let entityId = item.entityId else { return }
+            DetailRequest.post(
+                DetailRequest.syntheticItem(
+                    source: queueSource,
+                    entityId: entityId,
+                    title: item.title,
+                    posterURL: item.posterURL,
+                    posterRequiresAuth: item.posterRequiresAuth
+                )
+            )
+        } label: {
+            rowContent
+        }
+        .buttonStyle(.plain)
+        .disabled(item.entityId == nil)
+        .help(tooltipText)
+    }
+
+    private var rowContent: some View {
         HStack(spacing: 8) {
             PosterBlurContainer(blurred: shouldBlur, cornerRadius: 3) {
                 RemotePoster(
@@ -56,7 +76,16 @@ public struct UpcomingRowView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 5)
-        .help(tooltipText)
+        .contentShape(Rectangle())
+    }
+
+    private var queueSource: QueueItem.Source {
+        switch item.source {
+        case .radarr: return .radarr
+        case .sonarr: return .sonarr
+        case .lidarr: return .lidarr
+        case .whisparr: return .whisparr
+        }
     }
 
     private var posterSize: CGSize {

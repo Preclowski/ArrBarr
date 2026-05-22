@@ -191,7 +191,8 @@ public actor LidarrClient: ArrAPIClient {
             hasFile: false,
             overview: r.overview,
             posterURL: poster,
-            posterRequiresAuth: auth
+            posterRequiresAuth: auth,
+            entityId: r.id
         )
     }
 

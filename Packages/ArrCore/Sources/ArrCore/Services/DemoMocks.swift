@@ -439,7 +439,8 @@ public enum DemoMocks {
                 title: "Pioneer One (2010)",
                 subtitle: "S01E06 · Tomorrow Belongs to Us",
                 hoursAhead: 3, releaseType: "Airing", hasFile: false,
-                posterSeed: "pioneerone", aspect: .portrait
+                posterSeed: "pioneerone", aspect: .portrait,
+                entityId: 101
             ),
             upcomingItem(
                 source: .radarr, id: "demo-cal-tonight-2",
@@ -452,7 +453,8 @@ public enum DemoMocks {
                 title: "Pioneer One (2010)",
                 subtitle: "S02E01 · Reentry",
                 daysAhead: 1, releaseType: "Airing", hasFile: false,
-                posterSeed: "pioneerone", aspect: .portrait
+                posterSeed: "pioneerone", aspect: .portrait,
+                entityId: 101
             ),
             upcomingItem(
                 source: .radarr, id: "demo-cal-3",
@@ -471,7 +473,8 @@ public enum DemoMocks {
                 title: "Pioneer One (2010)",
                 subtitle: "S02E02 · Witness",
                 daysAhead: 8, releaseType: "Airing", hasFile: false,
-                posterSeed: "pioneerone", aspect: .portrait
+                posterSeed: "pioneerone", aspect: .portrait,
+                entityId: 101
             ),
             upcomingItem(
                 source: .whisparr, id: "demo-cal-whisparr-1",
@@ -677,7 +680,8 @@ public enum DemoMocks {
         title: String, subtitle: String? = nil,
         daysAhead: Int = 0, hoursAhead: Int = 0,
         releaseType: String, hasFile: Bool,
-        posterSeed: String, aspect: Aspect
+        posterSeed: String, aspect: Aspect,
+        entityId: Int? = nil
     ) -> UpcomingItem {
         let cal = Calendar.current
         let withDays = cal.date(byAdding: .day, value: daysAhead, to: Date()) ?? Date()
@@ -688,7 +692,8 @@ public enum DemoMocks {
             airDate: date, releaseType: releaseType, hasFile: hasFile,
             overview: "Demo overview text. \(title) is part of the open-source / CC-licensed sample content used for ArrBarr previews.",
             posterURL: poster(label: posterLabel(title: title, subtitle: subtitle), seed: posterSeed, w: w, h: h),
-            posterRequiresAuth: false
+            posterRequiresAuth: false,
+            entityId: entityId
         )
     }
 
