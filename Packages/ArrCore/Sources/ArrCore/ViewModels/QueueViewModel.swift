@@ -43,6 +43,13 @@ public final class QueueViewModel: ObservableObject {
         }
     }
 
+    /// True when no arr has any queued items. Used by both surfaces to show
+    /// the "Nothing in queue" empty state instead of dispatching to per-arr
+    /// sections that would each render their own empty placeholders.
+    public var allEmpty: Bool {
+        radarr.isEmpty && sonarr.isEmpty && lidarr.isEmpty && whisparr.isEmpty
+    }
+
     @Published public private(set) var health: HealthResult = .empty
     @Published public private(set) var isLoading = false
     @Published public private(set) var lastError: String?

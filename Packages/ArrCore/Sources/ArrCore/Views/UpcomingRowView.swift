@@ -36,7 +36,7 @@ public struct UpcomingRowView: View {
                     apiKey: item.posterRequiresAuth ? apiKeyForSource : nil,
                     size: posterSize,
                     cornerRadius: 3,
-                    fallbackSymbol: fallbackSymbol
+                    fallbackSymbol: item.source.symbol
                 )
             }
 
@@ -83,15 +83,6 @@ public struct UpcomingRowView: View {
         switch item.source {
         case .radarr, .sonarr, .whisparr: return CGSize(width: 24, height: 36)
         case .lidarr: return CGSize(width: 24, height: 24)
-        }
-    }
-
-    private var fallbackSymbol: String {
-        switch item.source {
-        case .radarr: return "film"
-        case .sonarr: return "tv"
-        case .lidarr: return "music.note"
-        case .whisparr: return "flame"
         }
     }
 

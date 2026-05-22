@@ -374,7 +374,7 @@ public struct PopoverContentView: View {
     private var queueContent: some View {
         ScrollView {
             Group {
-                if viewModel.isLoading && viewModel.radarr.isEmpty && viewModel.sonarr.isEmpty && viewModel.lidarr.isEmpty && viewModel.whisparr.isEmpty {
+                if viewModel.isLoading && viewModel.allEmpty {
                     VStack(spacing: 10) {
                         ProgressView()
                             .controlSize(.small)

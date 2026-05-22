@@ -300,9 +300,9 @@ public struct QueueGroupTooltip: View {
             infoGrid
 
             if !rep.customFormats.isEmpty || rep.customFormatScore != 0 {
-                tagsSection(
-                    score: rep.customFormatScore != 0 ? rep.customFormatScore : nil,
-                    tags: rep.customFormats
+                customFormatChipStrip(
+                    tags: rep.customFormats,
+                    score: rep.customFormatScore != 0 ? rep.customFormatScore : nil
                 )
             }
 
@@ -467,20 +467,6 @@ public struct QueueGroupTooltip: View {
             if let file = rep.releaseName, !file.isEmpty {
                 row("File", value: file, mono: true, wraps: true)
             }
-        }
-    }
-
-    @ViewBuilder
-    private func tagsSection(score: Int?, tags: [String]) -> some View {
-        if !tags.isEmpty || score != nil {
-            TooltipFlowLayout(spacing: 3) {
-                ForEach(tags, id: \.self) { TagChip(text: $0) }
-                if let score, score != 0 {
-                    let sign = score > 0 ? "+" : ""
-                    TagChip(text: "\(sign)\(score)", color: score > 0 ? .green : .red)
-                }
-            }
-            .padding(.top, 2)
         }
     }
 

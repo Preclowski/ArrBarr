@@ -72,7 +72,7 @@ public struct QueueRowView: View {
                     apiKey: item.posterRequiresAuth ? apiKeyForSource : nil,
                     size: posterSize,
                     cornerRadius: 4,
-                    fallbackSymbol: fallbackSymbol
+                    fallbackSymbol: item.source.symbol
                 )
             }
 
@@ -212,15 +212,6 @@ public struct QueueRowView: View {
         }
     }
 
-    private var fallbackSymbol: String {
-        switch item.source {
-        case .radarr: return "film"
-        case .sonarr: return "tv"
-        case .lidarr: return "music.note"
-        case .whisparr: return "flame"
-        }
-    }
-
     private var apiKeyForSource: String? {
         configStore.serviceConfig(for: item.source).apiKey
     }
@@ -278,56 +269,6 @@ public struct QueueRowView: View {
 
 }
 
-private struct FlowLayout: Layout {
-    var spacing: CGFloat = 4
-
-    public func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let rows = computeRows(proposal: proposal, subviews: subviews)
-        guard !rows.isEmpty else { return .zero }
-        let height = rows.reduce(CGFloat(0)) { $0 + $1.height } + CGFloat(rows.count - 1) * spacing
-        return CGSize(width: proposal.width ?? 0, height: height)
-    }
-
-    public func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        let rows = computeRows(proposal: proposal, subviews: subviews)
-        var y = bounds.minY
-        for row in rows {
-            var x = bounds.minX
-            for index in row.indices {
-                let size = subviews[index].sizeThatFits(.unspecified)
-                subviews[index].place(at: CGPoint(x: x, y: y), proposal: ProposedViewSize(size))
-                x += size.width + spacing
-            }
-            y += row.height + spacing
-        }
-    }
-
-    private func computeRows(proposal: ProposedViewSize, subviews: Subviews) -> [Row] {
-        let maxWidth = proposal.width ?? .infinity
-        var rows: [Row] = []
-        var current = Row()
-        var x: CGFloat = 0
-
-        for (i, subview) in subviews.enumerated() {
-            let size = subview.sizeThatFits(.unspecified)
-            if !current.indices.isEmpty && x + size.width > maxWidth {
-                rows.append(current)
-                current = Row()
-                x = 0
-            }
-            current.indices.append(i)
-            current.height = max(current.height, size.height)
-            x += size.width + spacing
-        }
-        if !current.indices.isEmpty { rows.append(current) }
-        return rows
-    }
-
-    private struct Row {
-        var indices: [Int] = []
-        var height: CGFloat = 0
-    }
-}
 
 // MARK: - Rich tooltip
 
@@ -345,7 +286,7 @@ public struct QueueItemTooltip: View {
                     apiKey: apiKey,
                     size: posterSize,
                     cornerRadius: 6,
-                    fallbackSymbol: fallbackSymbol
+                    fallbackSymbol: item.source.symbol
                 )
             }
             tooltipContent
@@ -362,15 +303,6 @@ public struct QueueItemTooltip: View {
         }
     }
 
-    private var fallbackSymbol: String {
-        switch item.source {
-        case .radarr: return "film"
-        case .sonarr: return "tv"
-        case .lidarr: return "music.note"
-        case .whisparr: return "flame"
-        }
-    }
-
     private var tooltipContent: some View {
         VStack(alignment: .leading, spacing: 6) {
             header
@@ -378,10 +310,9 @@ public struct QueueItemTooltip: View {
             infoGrid
 
             if !item.customFormats.isEmpty || item.customFormatScore != 0 {
-                tagsSection(
-                    label: "Custom formats",
-                    score: item.customFormatScore != 0 ? item.customFormatScore : nil,
-                    tags: item.customFormats
+                customFormatChipStrip(
+                    tags: item.customFormats,
+                    score: item.customFormatScore != 0 ? item.customFormatScore : nil
                 )
             }
 
@@ -479,33 +410,13 @@ public struct QueueItemTooltip: View {
                 row("Size", value: ByteCountFormatter.string(fromByteCount: size, countStyle: .file))
             }
         }
-        if !item.existingCustomFormats.isEmpty || (item.existingCustomFormatScore ?? 0) != 0 {
-            TooltipFlowLayout(spacing: 3) {
-                ForEach(item.existingCustomFormats, id: \.self) { TagChip(text: $0) }
-                if let s = item.existingCustomFormatScore, s != 0 {
-                    let sign = s > 0 ? "+" : ""
-                    TagChip(text: "\(sign)\(s)", color: s > 0 ? .green : .red)
-                }
-            }
-            .padding(.top, 2)
-        }
+        customFormatChipStrip(
+            tags: item.existingCustomFormats,
+            score: item.existingCustomFormatScore
+        )
     }
 
-    @ViewBuilder
-    private func tagsSection(label: String, score: Int?, tags: [String]) -> some View {
-        if !tags.isEmpty || score != nil {
-            TooltipFlowLayout(spacing: 3) {
-                ForEach(tags, id: \.self) { TagChip(text: $0) }
-                if let score, score != 0 {
-                    let sign = score > 0 ? "+" : ""
-                    TagChip(text: "\(sign)\(score)", color: score > 0 ? .green : .red)
-                }
-            }
-            .padding(.top, 2)
-        }
-    }
-
-private var sizeString: String {
+    private var sizeString: String {
         ByteCountFormatter.string(fromByteCount: item.sizeTotal, countStyle: .file)
     }
 
@@ -537,6 +448,23 @@ func downloadClientColor(_ name: String) -> Color {
     if n.contains("rtorrent") || n.contains("rutorrent") { return .teal }
     if n.contains("deluge") { return .purple }
     return .gray
+}
+
+/// Custom-format chips plus an optional score chip, wrapping with
+/// `TooltipFlowLayout`. Pulled out of `QueueRowView` / `QueueGroupRowView`
+/// since both tooltips rendered byte-identical strips inline.
+@ViewBuilder
+public func customFormatChipStrip(tags: [String], score: Int?) -> some View {
+    if !tags.isEmpty || (score ?? 0) != 0 {
+        TooltipFlowLayout(spacing: 3) {
+            ForEach(tags, id: \.self) { TagChip(text: $0) }
+            if let score, score != 0 {
+                let sign = score > 0 ? "+" : ""
+                TagChip(text: "\(sign)\(score)", color: score > 0 ? .green : .red)
+            }
+        }
+        .padding(.top, 2)
+    }
 }
 
 public struct TagChip: View {

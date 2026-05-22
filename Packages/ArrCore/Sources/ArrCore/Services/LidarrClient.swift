@@ -13,7 +13,7 @@ public actor LidarrClient: ArrAPIClient {
         guard config.isConfigured else { throw HTTPError.notConfigured }
         guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
         let url = try http.url(base: config.baseURL, path: "/api/v1/system/status")
-        let data = try await http.get(url, headers: ["X-Api-Key": config.apiKey])
+        let data = try await http.get(url, headers: apiHeaders)
         struct Status: Decodable { let version: String? }
         let status = try? JSONDecoder().decode(Status.self, from: data)
         return status?.version.map { "Lidarr \($0)" } ?? "OK"
@@ -33,7 +33,7 @@ public actor LidarrClient: ArrAPIClient {
                 URLQueryItem(name: "includeUnknownArtistItems", value: "true"),
             ]
         )
-        let data = try await http.get(url, headers: ["X-Api-Key": config.apiKey])
+        let data = try await http.get(url, headers: apiHeaders)
 
         let page: ArrQueuePage<LidarrQueueRecord>
         do { page = try JSONDecoder().decode(ArrQueuePage<LidarrQueueRecord>.self, from: data) }
@@ -60,7 +60,7 @@ public actor LidarrClient: ArrAPIClient {
                 URLQueryItem(name: "unmonitored", value: "false"),
             ]
         )
-        let data = try await http.get(url, headers: ["X-Api-Key": config.apiKey])
+        let data = try await http.get(url, headers: apiHeaders)
 
         let records: [LidarrCalendarRecord]
         do {
@@ -88,7 +88,7 @@ public actor LidarrClient: ArrAPIClient {
                 URLQueryItem(name: "includeAlbum", value: "true"),
             ]
         )
-        let data = try await http.get(url, headers: ["X-Api-Key": config.apiKey])
+        let data = try await http.get(url, headers: apiHeaders)
         let page: ArrQueuePage<LidarrHistoryRecord>
         do { page = try JSONDecoder().decode(ArrQueuePage<LidarrHistoryRecord>.self, from: data) }
         catch { throw HTTPError.decoding(error) }
@@ -120,7 +120,7 @@ public actor LidarrClient: ArrAPIClient {
                 URLQueryItem(name: "blocklist", value: blocklist ? "true" : "false"),
             ]
         )
-        _ = try await http.delete(url, headers: ["X-Api-Key": config.apiKey])
+        _ = try await http.delete(url, headers: apiHeaders)
     }
 
     func fetchAlbumDetails(id: Int) async throws -> LidarrAlbumDetail {
@@ -132,7 +132,7 @@ public actor LidarrClient: ArrAPIClient {
         guard config.isConfigured else { throw HTTPError.notConfigured }
         guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
         let url = try http.url(base: config.baseURL, path: "/api/v1/album/\(id)")
-        let data = try await http.get(url, headers: ["X-Api-Key": config.apiKey])
+        let data = try await http.get(url, headers: apiHeaders)
         do { return try JSONDecoder().decode(LidarrAlbumDetail.self, from: data) }
         catch { throw HTTPError.decoding(error) }
     }
@@ -149,7 +149,7 @@ public actor LidarrClient: ArrAPIClient {
             path: "/api/v1/track",
             query: [URLQueryItem(name: "albumId", value: String(albumId))]
         )
-        let data = try await http.get(url, headers: ["X-Api-Key": config.apiKey])
+        let data = try await http.get(url, headers: apiHeaders)
         return (try? JSONDecoder().decode([LidarrTrackDetail].self, from: data)) ?? []
     }
 
@@ -158,7 +158,7 @@ public actor LidarrClient: ArrAPIClient {
         guard config.isConfigured else { return [] }
         guard !config.apiKey.isEmpty else { return [] }
         let url = try http.url(base: config.baseURL, path: "/api/v1/artist")
-        let data = try await http.get(url, headers: ["X-Api-Key": config.apiKey])
+        let data = try await http.get(url, headers: apiHeaders)
         return (try? JSONDecoder().decode([LidarrLibraryRecord].self, from: data)) ?? []
     }
 
@@ -166,7 +166,7 @@ public actor LidarrClient: ArrAPIClient {
         guard config.isConfigured else { throw HTTPError.notConfigured }
         guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
         let url = try http.url(base: config.baseURL, path: "/api/v1/health")
-        let data = try await http.get(url, headers: ["X-Api-Key": config.apiKey])
+        let data = try await http.get(url, headers: apiHeaders)
         return (try? JSONDecoder().decode([ArrHealthRecord].self, from: data)) ?? []
     }
 
