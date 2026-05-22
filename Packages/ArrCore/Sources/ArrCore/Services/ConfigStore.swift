@@ -265,6 +265,18 @@ public final class ConfigStore: ObservableObject {
     /// discovery chat tools are advertised to the LLM.
     public var tmdbEnabled: Bool { !tmdbApiKey.isEmpty }
 
+    /// Lookup the matching `ServiceConfig` for an arr `Source`. Replaces the
+    /// four-way switch that several views and view-models duplicate when they
+    /// need to pull the poster auth key, base URL, etc.
+    public func serviceConfig(for source: QueueItem.Source) -> ServiceConfig {
+        switch source {
+        case .radarr:   return radarr
+        case .sonarr:   return sonarr
+        case .lidarr:   return lidarr
+        case .whisparr: return whisparr
+        }
+    }
+
     private func publisher(for kind: ServiceKind) -> Published<ServiceConfig>.Publisher {
         switch kind {
         case .radarr: $radarr

@@ -63,11 +63,10 @@ public struct ChatView: View {
                     }
                 }
             }
-            // Trash button used to live in a dedicated topBar with a Divider
-            // — it dominated an otherwise minimal chat surface. Tuck it as a
-            // hover-revealed overlay at top-trailing instead; only appears
-            // when there's something to clear and the mouse is in the chat.
-            .overlay(alignment: .topTrailing) {
+            // Trash lives top-leading so it doesn't fight the user's own
+            // trailing-aligned message bubble. Hover-revealed thinMaterial
+            // pill, only when there's something to clear.
+            .overlay(alignment: .topLeading) {
                 if !viewModel.messages.isEmpty {
                     Button(action: { viewModel.clear() }) {
                         Image(systemName: "trash")
@@ -81,7 +80,7 @@ public struct ChatView: View {
                     .disabled(viewModel.pendingConfirm != nil)
                     .opacity(clearHovered ? 1 : 0.0)
                     .padding(.top, 6)
-                    .padding(.trailing, 8)
+                    .padding(.leading, 8)
                     .animation(.easeOut(duration: 0.15), value: clearHovered)
                 }
             }
@@ -164,22 +163,6 @@ public struct ChatView: View {
         return msg.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
-    static func summarize(_ value: JSONValue) -> String {
-        if case .object(let dict) = value {
-            return dict.map { "\($0.key): \(stringify($0.value))" }.joined(separator: ", ")
-        }
-        return stringify(value)
-    }
-    static func stringify(_ value: JSONValue) -> String {
-        switch value {
-        case .null: return "null"
-        case .bool(let b): return String(b)
-        case .number(let n): return String(n)
-        case .string(let s): return s
-        case .array(let a): return "[\(a.map(stringify).joined(separator: ", "))]"
-        case .object(let o): return "{\(o.map { "\($0.key):\(stringify($0.value))" }.joined(separator: ","))}"
-        }
-    }
 }
 
 private struct MessageBubble: View {

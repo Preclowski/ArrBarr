@@ -370,32 +370,22 @@ public struct DetailView: View {
     // MARK: - Helpers
 
     private var apiKeyForSource: String? {
-        switch item.source {
-        case .radarr: return configStore.radarr.apiKey
-        case .sonarr: return configStore.sonarr.apiKey
-        case .lidarr: return configStore.lidarr.apiKey
-        case .whisparr: return configStore.whisparr.apiKey
-        }
+        configStore.serviceConfig(for: item.source).apiKey
     }
 
     private var webURL: URL? {
         guard let slug = item.contentSlug else { return nil }
-        let (cfg, path): (ServiceConfig, String) = switch item.source {
-        case .radarr: (configStore.radarr, "/movie/\(slug)")
-        case .sonarr: (configStore.sonarr, "/series/\(slug)")
-        case .lidarr: (configStore.lidarr, "/album/\(slug)")
-        case .whisparr: (configStore.whisparr, "/movie/\(slug)")
+        let cfg = configStore.serviceConfig(for: item.source)
+        let path: String = switch item.source {
+        case .radarr, .whisparr: "/movie/\(slug)"
+        case .sonarr: "/series/\(slug)"
+        case .lidarr: "/album/\(slug)"
         }
         return URL(string: cfg.baseURL)?.appendingPathComponent(path)
     }
 
     private func posterURL(images: [ArrImage]?) -> URL? {
-        let baseURL: String = switch item.source {
-        case .radarr: configStore.radarr.baseURL
-        case .sonarr: configStore.sonarr.baseURL
-        case .lidarr: configStore.lidarr.baseURL
-        case .whisparr: configStore.whisparr.baseURL
-        }
+        let baseURL = configStore.serviceConfig(for: item.source).baseURL
         let (url, _) = (images?.posterURL(baseURL: baseURL, coverTypes: ["poster", "cover"]) ?? (nil, false))
         return url
     }

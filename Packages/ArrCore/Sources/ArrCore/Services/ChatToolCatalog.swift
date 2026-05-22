@@ -31,12 +31,6 @@ public enum ChatToolCatalog {
         return arr
     }
 
-    /// Deprecated shim — returns the full pre-gating catalog. Use `tools(...)`.
-    public static var allTools: [MCPTool] {
-        tools(includeSonarr: true, includeRadarr: true, includeLidarr: true,
-              includeWhisparr: false, includeTMDBMovies: false, includeTMDBSeries: false)
-    }
-
     /// Convert the catalog into `LLMTool` values for provider advertisement.
     public static func llmTools(
         includeSonarr: Bool = true,

@@ -395,7 +395,7 @@ private struct CalendarRowView: View {
             guard let entityId = item.entityId else { return }
             DetailRequest.post(
                 DetailRequest.syntheticItem(
-                    source: queueSource,
+                    source: item.source,
                     entityId: entityId,
                     title: item.title,
                     posterURL: item.posterURL,
@@ -439,15 +439,6 @@ private struct CalendarRowView: View {
         .padding(8)
         .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 6))
         .contentShape(Rectangle())
-    }
-
-    private var queueSource: QueueItem.Source {
-        switch item.source {
-        case .radarr: return .radarr
-        case .sonarr: return .sonarr
-        case .lidarr: return .lidarr
-        case .whisparr: return .whisparr
-        }
     }
 
     private static func dateLabel(_ date: Date) -> String {

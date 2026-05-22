@@ -222,12 +222,7 @@ public struct QueueRowView: View {
     }
 
     private var apiKeyForSource: String? {
-        switch item.source {
-        case .radarr: return configStore.radarr.apiKey
-        case .sonarr: return configStore.sonarr.apiKey
-        case .lidarr: return configStore.lidarr.apiKey
-        case .whisparr: return configStore.whisparr.apiKey
-        }
+        configStore.serviceConfig(for: item.source).apiKey
     }
 
     // MARK: - Actions
