@@ -133,6 +133,9 @@ public struct SettingsView: View {
                     }
                     #endif
                 }
+                if configStore.whisparr.isConfigured {
+                    Toggle("AI knows about Whisparr", isOn: $configStore.aiKnowsAboutWhisparr)
+                }
             }
         }
     }
@@ -171,6 +174,12 @@ public struct SettingsView: View {
             Section("Lidarr") {
                 ServiceFields(config: $configStore.lidarr, kind: .lidarr,
                               notifyBinding: $configStore.notifyLidarr)
+            }
+            Section("Whisparr") {
+                ServiceFields(config: $configStore.whisparr, kind: .whisparr)
+                if configStore.whisparr.enabled {
+                    Toggle("Blur posters #nsfw", isOn: $configStore.blurWhisparrPosters)
+                }
             }
             Section("SABnzbd") {
                 ServiceFields(config: $configStore.sabnzbd, kind: .sabnzbd)
@@ -282,6 +291,12 @@ public struct SettingsView: View {
             Section("Lidarr") {
                 ServiceFields(config: $configStore.lidarr, kind: .lidarr,
                               notifyBinding: $configStore.notifyLidarr)
+            }
+            Section("Whisparr") {
+                ServiceFields(config: $configStore.whisparr, kind: .whisparr)
+                if configStore.whisparr.enabled {
+                    Toggle("Blur posters #nsfw", isOn: $configStore.blurWhisparrPosters)
+                }
             }
         }
         .formStyle(.grouped)
@@ -638,6 +653,7 @@ private enum ConnectionTester {
         case .radarr:       return try await RadarrClient(config: config).testConnection()
         case .sonarr:       return try await SonarrClient(config: config).testConnection()
         case .lidarr:       return try await LidarrClient(config: config).testConnection()
+        case .whisparr:     return try await WhisparrClient(config: config).testConnection()
         case .sabnzbd:      return try await SabnzbdClient(config: config).testConnection()
         case .nzbget:       return try await NzbgetClient(config: config).testConnection()
         case .qbittorrent:  return try await QbittorrentClient(config: config).testConnection()

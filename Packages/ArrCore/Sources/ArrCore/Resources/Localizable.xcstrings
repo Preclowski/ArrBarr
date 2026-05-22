@@ -4230,6 +4230,27 @@
     },
     "ArrBarr stays out of your Dock and shows active downloads at a glance. **Left-click** the icon to open the popover. **Right-click** for Add, Refresh, Settings — every action also has a keyboard shortcut.": {
       "extractionState": "manual"
+    },
+    "Whisparr": {
+      "extractionState": "manual"
+    },
+    "Scenes": {
+      "extractionState": "manual"
+    },
+    "Add to Whisparr": {
+      "extractionState": "manual"
+    },
+    "Blur posters #nsfw": {
+      "extractionState": "manual"
+    },
+    "AI knows about Whisparr": {
+      "extractionState": "manual"
+    },
+    "No scenes match this query.": {
+      "extractionState": "manual"
+    },
+    "Whisparr AI access is disabled in Settings.": {
+      "extractionState": "manual"
     }
   }
 }

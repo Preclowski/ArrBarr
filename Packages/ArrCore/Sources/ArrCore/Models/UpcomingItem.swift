@@ -3,13 +3,14 @@ import SwiftUI
 
 public struct UpcomingItem: Identifiable, Equatable, Sendable {
     public enum Source: String {
-        case radarr, sonarr, lidarr
+        case radarr, sonarr, lidarr, whisparr
 
         public var symbol: String {
             switch self {
             case .radarr: return "film"
             case .sonarr: return "tv"
             case .lidarr: return "music.note"
+            case .whisparr: return "flame"
             }
         }
     }

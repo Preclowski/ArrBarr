@@ -7,15 +7,21 @@ public struct RichToolResultView: View {
     let sonarr: ServiceConfig
     let radarr: ServiceConfig
     let lidarr: ServiceConfig
+    let whisparr: ServiceConfig
+    let blurWhisparr: Bool
 
     @State private var visibleCount: Int = Self.pageSize
     private static let pageSize = 10
 
-    public init(content: ChatRichContent, sonarr: ServiceConfig, radarr: ServiceConfig, lidarr: ServiceConfig = .empty) {
+    public init(content: ChatRichContent, sonarr: ServiceConfig, radarr: ServiceConfig,
+                lidarr: ServiceConfig = .empty, whisparr: ServiceConfig = .empty,
+                blurWhisparr: Bool = true) {
         self.content = content
         self.sonarr = sonarr
         self.radarr = radarr
         self.lidarr = lidarr
+        self.whisparr = whisparr
+        self.blurWhisparr = blurWhisparr
     }
 
     public var body: some View {
@@ -46,6 +52,16 @@ public struct RichToolResultView: View {
                     let visible = Array(results.prefix(visibleCount))
                     ForEach(visible) { r in
                         SearchResultCard(result: r, apiKey: lidarr.apiKey)
+                    }
+                    if visible.count < results.count {
+                        LoadMoreSentinel {
+                            visibleCount = min(visibleCount + Self.pageSize, results.count)
+                        }
+                    }
+                case .searchSceneResults(let results):
+                    let visible = Array(results.prefix(visibleCount))
+                    ForEach(visible) { r in
+                        SearchResultCard(result: r, apiKey: whisparr.apiKey, blurred: blurWhisparr)
                     }
                     if visible.count < results.count {
                         LoadMoreSentinel {
@@ -98,6 +114,19 @@ public struct RichToolResultView: View {
                             apiKey: lidarr.apiKey
                         )
                     }
+                case .libraryScenes(let recs):
+                    let visible = Array(recs.prefix(visibleCount))
+                    ForEach(Array(visible.enumerated()), id: \.offset) { _, rec in
+                        LibraryRecordCard(
+                            title: rec.title ?? "(untitled)",
+                            year: rec.year,
+                            hasFile: rec.hasFile ?? false,
+                            images: rec.images,
+                            baseURL: whisparr.baseURL,
+                            apiKey: whisparr.apiKey,
+                            blurred: blurWhisparr
+                        )
+                    }
                     if visible.count < recs.count {
                         LoadMoreSentinel {
                             visibleCount = min(visibleCount + Self.pageSize, recs.count)
@@ -106,7 +135,9 @@ public struct RichToolResultView: View {
                 case .calendar(let items):
                     let visible = Array(items.prefix(visibleCount))
                     ForEach(visible) { item in
-                        CalendarRowView(item: item, sonarrApiKey: sonarr.apiKey, radarrApiKey: radarr.apiKey, lidarrApiKey: lidarr.apiKey)
+                        CalendarRowView(item: item, sonarrApiKey: sonarr.apiKey, radarrApiKey: radarr.apiKey,
+                                        lidarrApiKey: lidarr.apiKey, whisparrApiKey: whisparr.apiKey,
+                                        blurWhisparr: blurWhisparr)
                     }
                     if visible.count < items.count {
                         LoadMoreSentinel {
@@ -143,6 +174,11 @@ private struct LoadMoreSentinel: View {
 private struct SearchResultCard: View {
     let result: SearchResult
     let apiKey: String
+    var blurred: Bool = false
+
+    @State private var manuallyRevealed = false
+
+    private var effectivelyBlurred: Bool { blurred && !manuallyRevealed }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -152,6 +188,8 @@ private struct SearchResultCard: View {
                 size: CGSize(width: 90, height: 135),
                 cornerRadius: 6
             )
+            .blur(radius: effectivelyBlurred ? 14 : 0)
+            .onTapGesture { if blurred { manuallyRevealed.toggle() } }
             Text(result.title)
                 .font(.system(size: 12, weight: .semibold))
                 .lineLimit(2, reservesSpace: true)
@@ -188,6 +226,11 @@ private struct LibraryRecordCard: View {
     let images: [ArrImage]?
     let baseURL: String
     let apiKey: String
+    var blurred: Bool = false
+
+    @State private var manuallyRevealed = false
+
+    private var effectivelyBlurred: Bool { blurred && !manuallyRevealed }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -198,6 +241,8 @@ private struct LibraryRecordCard: View {
                     size: CGSize(width: 90, height: 135),
                     cornerRadius: 6
                 )
+                .blur(radius: effectivelyBlurred ? 14 : 0)
+                .onTapGesture { if blurred { manuallyRevealed.toggle() } }
                 if let hasFile {
                     Image(systemName: hasFile ? "checkmark.circle.fill" : "questionmark.circle")
                         .foregroundStyle(hasFile ? .green : .orange)
@@ -226,12 +271,21 @@ private struct CalendarRowView: View {
     let sonarrApiKey: String
     let radarrApiKey: String
     let lidarrApiKey: String
+    var whisparrApiKey: String = ""
+    var blurWhisparr: Bool = false
+
+    @State private var manuallyRevealed = false
+
+    private var effectivelyBlurred: Bool {
+        item.source == .whisparr && blurWhisparr && !manuallyRevealed
+    }
 
     private var apiKey: String {
         switch item.source {
         case .sonarr: return sonarrApiKey
         case .radarr: return radarrApiKey
         case .lidarr: return lidarrApiKey
+        case .whisparr: return whisparrApiKey
         }
     }
 
@@ -243,6 +297,8 @@ private struct CalendarRowView: View {
                 size: CGSize(width: 40, height: 60),
                 cornerRadius: 4
             )
+            .blur(radius: effectivelyBlurred ? 14 : 0)
+            .onTapGesture { if item.source == .whisparr && blurWhisparr { manuallyRevealed.toggle() } }
             VStack(alignment: .leading, spacing: 2) {
                 Text(Self.dateLabel(item.airDate))
                     .font(.system(size: 10, weight: .semibold))

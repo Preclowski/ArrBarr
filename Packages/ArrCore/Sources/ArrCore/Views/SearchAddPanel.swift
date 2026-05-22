@@ -18,6 +18,9 @@ public struct SearchAddPanel: View {
     // Lidarr state
     @State private var selectedMetadataProfileId: Int?
 
+    // Whisparr state
+    @State private var whisparrMonitor: RadarrMonitorMode = .movieOnly
+
     public var body: some View {
         VStack(spacing: 0) {
             header
@@ -36,6 +39,8 @@ public struct SearchAddPanel: View {
                             radarrForm
                         } else if result.source == .sonarr {
                             sonarrForm
+                        } else if result.source == .whisparr {
+                            whisparrForm
                         } else {
                             lidarrForm
                         }
@@ -105,7 +110,7 @@ public struct SearchAddPanel: View {
                 genres: result.genres,
                 ratings: ratingChips,
                 posterURL: result.posterURL,
-                fallbackSymbol: result.source == .sonarr ? "tv" : (result.source == .lidarr ? "music.note" : "film"),
+                fallbackSymbol: result.source == .sonarr ? "tv" : (result.source == .lidarr ? "music.note" : (result.source == .whisparr ? "flame" : "film")),
                 posterAspect: 2.0/3.0
             )
             if let ov = result.overview, !ov.isEmpty {
@@ -152,6 +157,32 @@ public struct SearchAddPanel: View {
         if let v = result.rottenTomatoes { chips.append(RatingChip(label: "RT", value: "\(Int(v))%", color: .red)) }
         if let v = result.metacritic { chips.append(RatingChip(label: "MC", value: "\(Int(v))", color: .green)) }
         return chips
+    }
+
+    // MARK: - Whisparr form
+
+    private var whisparrForm: some View {
+        VStack(spacing: 4) {
+            formPicker("Quality Profile",
+                       selection: Binding(
+                           get: { selectedProfileId ?? viewModel.qualityProfiles.first?.id ?? 0 },
+                           set: { selectedProfileId = $0 }
+                       ),
+                       options: viewModel.qualityProfiles.map { ($0.id, $0.name) })
+
+            formPicker("Root Folder",
+                       selection: Binding(
+                           get: { selectedRootFolder ?? viewModel.rootFolders.first?.path ?? "" },
+                           set: { selectedRootFolder = $0 }
+                       ),
+                       options: viewModel.rootFolders.map { ($0.path, $0.path) })
+
+            formPicker("Monitor",
+                       selection: $whisparrMonitor,
+                       options: RadarrMonitorMode.allCases.map { ($0, $0.displayName) })
+        }
+        .padding(.horizontal, 14)
+        .padding(.bottom, 4)
     }
 
     // MARK: - Radarr form
@@ -265,6 +296,11 @@ public struct SearchAddPanel: View {
                     await viewModel.addSeries(result, qualityProfileId: pid,
                                              rootFolderPath: folder, monitor: sonarrMonitor,
                                              seriesType: seriesType, seasonFolder: seasonFolder)
+                } else if result.source == .whisparr {
+                    guard let pid = selectedProfileId ?? viewModel.qualityProfiles.first?.id,
+                          let folder = selectedRootFolder ?? viewModel.rootFolders.first?.path else { return }
+                    await viewModel.addScene(result, qualityProfileId: pid,
+                                            rootFolderPath: folder, monitor: whisparrMonitor)
                 } else {
                     guard let pid = selectedProfileId ?? viewModel.qualityProfiles.first?.id,
                           let folder = selectedRootFolder ?? viewModel.rootFolders.first?.path else { return }
@@ -284,6 +320,7 @@ public struct SearchAddPanel: View {
                         case .radarr: return "Add to Radarr"
                         case .sonarr: return "Add to Sonarr"
                         case .lidarr: return "Add to Lidarr"
+                        case .whisparr: return "Add to Whisparr"
                         }
                     }()
                     Text(addLabel)

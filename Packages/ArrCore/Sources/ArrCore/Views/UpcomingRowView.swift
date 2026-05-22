@@ -55,7 +55,7 @@ public struct UpcomingRowView: View {
 
     private var posterSize: CGSize {
         switch item.source {
-        case .radarr, .sonarr: return CGSize(width: 24, height: 36)
+        case .radarr, .sonarr, .whisparr: return CGSize(width: 24, height: 36)
         case .lidarr: return CGSize(width: 24, height: 24)
         }
     }
@@ -65,6 +65,7 @@ public struct UpcomingRowView: View {
         case .radarr: return "film"
         case .sonarr: return "tv"
         case .lidarr: return "music.note"
+        case .whisparr: return "flame"
         }
     }
 
@@ -73,6 +74,7 @@ public struct UpcomingRowView: View {
         case .radarr: return configStore.radarr.apiKey
         case .sonarr: return configStore.sonarr.apiKey
         case .lidarr: return configStore.lidarr.apiKey
+        case .whisparr: return configStore.whisparr.apiKey
         }
     }
 

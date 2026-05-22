@@ -34,9 +34,10 @@ public struct PopoverContentView: View {
     private var sonarrConfigured: Bool { isVisible(configStore.sonarr) }
     private var radarrConfigured: Bool { isVisible(configStore.radarr) }
     private var lidarrConfigured: Bool { isVisible(configStore.lidarr) }
-    private var anyArrConfigured: Bool { sonarrConfigured || radarrConfigured || lidarrConfigured }
+    private var whisparrConfigured: Bool { isVisible(configStore.whisparr) }
+    private var anyArrConfigured: Bool { sonarrConfigured || radarrConfigured || lidarrConfigured || whisparrConfigured }
 
-    private var searchAvailable: Bool { sonarrConfigured || radarrConfigured || lidarrConfigured }
+    private var searchAvailable: Bool { sonarrConfigured || radarrConfigured || lidarrConfigured || whisparrConfigured }
 
     private var chatAvailable: Bool {
         guard configStore.aiEnabled else { return false }
@@ -78,7 +79,8 @@ public struct PopoverContentView: View {
                 searchViewModel.setup(
                     radarrConfig: configStore.radarr,
                     sonarrConfig: configStore.sonarr,
-                    lidarrConfig: configStore.lidarr
+                    lidarrConfig: configStore.lidarr,
+                    whisparrConfig: configStore.whisparr
                 )
                 chatHolder.reconfigure(store: configStore)
             }
@@ -357,7 +359,7 @@ public struct PopoverContentView: View {
     private var queueContent: some View {
         ScrollView {
             Group {
-                if viewModel.isLoading && viewModel.radarr.isEmpty && viewModel.sonarr.isEmpty && viewModel.lidarr.isEmpty {
+                if viewModel.isLoading && viewModel.radarr.isEmpty && viewModel.sonarr.isEmpty && viewModel.lidarr.isEmpty && viewModel.whisparr.isEmpty {
                     VStack(spacing: 10) {
                         ProgressView()
                             .controlSize(.small)
@@ -464,6 +466,7 @@ public struct PopoverContentView: View {
         case .sonarr: return sonarrConfigured
         case .radarr: return radarrConfigured
         case .lidarr: return lidarrConfigured
+        case .whisparr: return whisparrConfigured
         }
     }
 
@@ -472,6 +475,7 @@ public struct PopoverContentView: View {
         case .sonarr: return viewModel.sonarr
         case .radarr: return viewModel.radarr
         case .lidarr: return viewModel.lidarr
+        case .whisparr: return viewModel.whisparr
         }
     }
 
@@ -491,6 +495,7 @@ public struct PopoverContentView: View {
         case .sonarr: return viewModel.sonarrError
         case .radarr: return viewModel.radarrError
         case .lidarr: return viewModel.lidarrError
+        case .whisparr: return viewModel.whisparrError
         }
     }
 
@@ -500,6 +505,7 @@ public struct PopoverContentView: View {
         case .sonarr: return viewModel.health.sonarr
         case .radarr: return viewModel.health.radarr
         case .lidarr: return viewModel.health.lidarr
+        case .whisparr: return viewModel.health.whisparr
         }
     }
 

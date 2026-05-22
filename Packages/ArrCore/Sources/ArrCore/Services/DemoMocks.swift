@@ -454,6 +454,7 @@ public enum DemoMocks {
         case .radarr: return radarrHistory
         case .sonarr: return sonarrHistory
         case .lidarr: return lidarrHistory
+        case .whisparr: return []
         }
     }
 
@@ -1051,6 +1052,7 @@ public enum DemoMocks {
         case .radarr: pool = radarrSearchPool
         case .sonarr: pool = sonarrSearchPool
         case .lidarr: pool = []
+        case .whisparr: pool = []
         }
         guard !query.isEmpty else { return Array(pool.prefix(6)) }
         let q = query.lowercased()

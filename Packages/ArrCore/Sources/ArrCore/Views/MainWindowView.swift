@@ -61,9 +61,10 @@ public struct MainWindowView: View {
     private var sonarrConfigured: Bool { isVisible(configStore.sonarr) }
     private var radarrConfigured: Bool { isVisible(configStore.radarr) }
     private var lidarrConfigured: Bool { isVisible(configStore.lidarr) }
-    private var anyArrConfigured: Bool { sonarrConfigured || radarrConfigured || lidarrConfigured }
+    private var whisparrConfigured: Bool { isVisible(configStore.whisparr) }
+    private var anyArrConfigured: Bool { sonarrConfigured || radarrConfigured || lidarrConfigured || whisparrConfigured }
 
-    private var searchConfigured: Bool { sonarrConfigured || radarrConfigured || lidarrConfigured }
+    private var searchConfigured: Bool { sonarrConfigured || radarrConfigured || lidarrConfigured || whisparrConfigured }
 
     private var chatAvailable: Bool {
         guard configStore.aiEnabled else { return false }
@@ -102,7 +103,8 @@ public struct MainWindowView: View {
             searchViewModel.setup(
                 radarrConfig: configStore.radarr,
                 sonarrConfig: configStore.sonarr,
-                lidarrConfig: configStore.lidarr
+                lidarrConfig: configStore.lidarr,
+                whisparrConfig: configStore.whisparr
             )
             chatHolder.reconfigure(store: configStore)
         }
@@ -198,6 +200,7 @@ public struct MainWindowView: View {
                     if sonarrConfigured { sourceRow(.sonarr) }
                     if radarrConfigured { sourceRow(.radarr) }
                     if lidarrConfigured { sourceRow(.lidarr) }
+                    if whisparrConfigured { sourceRow(.whisparr) }
                 } header: {
                     Text("Sources")
                 }
@@ -234,6 +237,7 @@ public struct MainWindowView: View {
         case .sonarr: return .indigo
         case .radarr: return .red
         case .lidarr: return .green
+        case .whisparr: return .pink
         }
     }
 
@@ -277,7 +281,8 @@ public struct MainWindowView: View {
             if viewModel.isLoading
                 && viewModel.radarr.isEmpty
                 && viewModel.sonarr.isEmpty
-                && viewModel.lidarr.isEmpty {
+                && viewModel.lidarr.isEmpty
+                && viewModel.whisparr.isEmpty {
                 VStack(spacing: 10) {
                     ProgressView().controlSize(.small)
                     Text("Loading…").font(.subheadline).foregroundStyle(.secondary)
@@ -410,6 +415,7 @@ public struct MainWindowView: View {
         case .sonarr: return sonarrConfigured
         case .radarr: return radarrConfigured
         case .lidarr: return lidarrConfigured
+        case .whisparr: return whisparrConfigured
         }
     }
 
@@ -418,6 +424,7 @@ public struct MainWindowView: View {
         case .sonarr: return viewModel.sonarr
         case .radarr: return viewModel.radarr
         case .lidarr: return viewModel.lidarr
+        case .whisparr: return viewModel.whisparr
         }
     }
 
@@ -436,6 +443,7 @@ public struct MainWindowView: View {
         case .sonarr: return viewModel.sonarrError
         case .radarr: return viewModel.radarrError
         case .lidarr: return viewModel.lidarrError
+        case .whisparr: return viewModel.whisparrError
         }
     }
 
@@ -445,6 +453,7 @@ public struct MainWindowView: View {
         case .sonarr: return viewModel.health.sonarr
         case .radarr: return viewModel.health.radarr
         case .lidarr: return viewModel.health.lidarr
+        case .whisparr: return viewModel.health.whisparr
         }
     }
 }

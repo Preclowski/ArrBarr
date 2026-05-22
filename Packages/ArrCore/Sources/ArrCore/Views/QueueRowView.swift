@@ -205,7 +205,7 @@ public struct QueueRowView: View {
 
     private var posterSize: CGSize {
         switch item.source {
-        case .radarr, .sonarr: return CGSize(width: 40, height: 60)
+        case .radarr, .sonarr, .whisparr: return CGSize(width: 40, height: 60)
         case .lidarr: return CGSize(width: 40, height: 40)
         }
     }
@@ -215,6 +215,7 @@ public struct QueueRowView: View {
         case .radarr: return "film"
         case .sonarr: return "tv"
         case .lidarr: return "music.note"
+        case .whisparr: return "flame"
         }
     }
 
@@ -223,6 +224,7 @@ public struct QueueRowView: View {
         case .radarr: return configStore.radarr.apiKey
         case .sonarr: return configStore.sonarr.apiKey
         case .lidarr: return configStore.lidarr.apiKey
+        case .whisparr: return configStore.whisparr.apiKey
         }
     }
 
@@ -355,7 +357,7 @@ public struct QueueItemTooltip: View {
 
     private var posterSize: CGSize {
         switch item.source {
-        case .radarr, .sonarr: return CGSize(width: 110, height: 165)
+        case .radarr, .sonarr, .whisparr: return CGSize(width: 110, height: 165)
         case .lidarr: return CGSize(width: 110, height: 110)
         }
     }
@@ -365,6 +367,7 @@ public struct QueueItemTooltip: View {
         case .radarr: return "film"
         case .sonarr: return "tv"
         case .lidarr: return "music.note"
+        case .whisparr: return "flame"
         }
     }
 

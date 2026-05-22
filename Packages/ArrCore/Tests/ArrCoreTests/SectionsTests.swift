@@ -15,21 +15,22 @@ struct ArrOrderMigrationTests {
     @MainActor
     func legacyMigration() {
         let result = ConfigStore.normalizeArrOrder(["radarr", "sonarr", "lidarr"])
-        // tonight is inserted last so it ends up at index 0; needsyou at index 1.
-        #expect(result == ["tonight", "needsyou", "radarr", "sonarr", "lidarr"])
+        // tonight is inserted last so it ends up at index 0; needsyou at index 1;
+        // whisparr is appended at the end (new key migration).
+        #expect(result == ["tonight", "needsyou", "radarr", "sonarr", "lidarr", "whisparr"])
     }
 
     @Test("Stored order with only needsyou prepends just tonight")
     @MainActor
     func partialMigration() {
         let result = ConfigStore.normalizeArrOrder(["needsyou", "sonarr", "radarr", "lidarr"])
-        #expect(result == ["tonight", "needsyou", "sonarr", "radarr", "lidarr"])
+        #expect(result == ["tonight", "needsyou", "sonarr", "radarr", "lidarr", "whisparr"])
     }
 
     @Test("User custom order is preserved when complete")
     @MainActor
     func customOrderPreserved() {
-        let custom = ["sonarr", "tonight", "lidarr", "needsyou", "radarr"]
+        let custom = ["sonarr", "tonight", "lidarr", "needsyou", "radarr", "whisparr"]
         let result = ConfigStore.normalizeArrOrder(custom)
         #expect(result == custom)
     }
@@ -38,15 +39,15 @@ struct ArrOrderMigrationTests {
     @MainActor
     func unknownKeys() {
         let result = ConfigStore.normalizeArrOrder(["radarr", "bogus", "sonarr"])
-        // tonight + needsyou prepended, lidarr appended, bogus dropped.
-        #expect(result == ["tonight", "needsyou", "radarr", "sonarr", "lidarr"])
+        // tonight + needsyou prepended, lidarr + whisparr appended, bogus dropped.
+        #expect(result == ["tonight", "needsyou", "radarr", "sonarr", "lidarr", "whisparr"])
     }
 
     @Test("Duplicates are deduplicated, first occurrence wins")
     @MainActor
     func duplicates() {
         let result = ConfigStore.normalizeArrOrder(["radarr", "sonarr", "radarr", "lidarr"])
-        #expect(result == ["tonight", "needsyou", "radarr", "sonarr", "lidarr"])
+        #expect(result == ["tonight", "needsyou", "radarr", "sonarr", "lidarr", "whisparr"])
     }
 }
 

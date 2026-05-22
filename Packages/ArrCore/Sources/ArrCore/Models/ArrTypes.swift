@@ -367,6 +367,91 @@ public struct SonarrLibraryStatistics: Decodable, Sendable, Equatable {
     let seasonCount: Int?
 }
 
+// MARK: - Whisparr
+
+public struct WhisparrQueueRecord: Decodable {
+    let id: Int
+    let movieId: Int?
+    let title: String?
+    let status: String?
+    let trackedDownloadStatus: String?
+    let trackedDownloadState: String?
+    let downloadId: String?
+    let downloadClient: String?
+    let indexer: String?
+    let `protocol`: String?
+    let size: Double?
+    let sizeleft: Double?
+    let timeleft: String?
+    let estimatedCompletionTime: String?
+    let customFormats: [ArrCustomFormat]?
+    let customFormatScore: Int?
+    let quality: ArrQuality?
+    let movie: WhisparrMovie?
+}
+
+public struct WhisparrMovie: Decodable {
+    let id: Int
+    let title: String
+    let year: Int?
+    let studio: String?
+    let hasFile: Bool?
+    let titleSlug: String?
+    let images: [ArrImage]?
+    let movieFile: ArrFile?
+}
+
+public struct WhisparrCalendarRecord: Decodable {
+    let id: Int
+    let title: String
+    let year: Int?
+    let digitalRelease: String?
+    let physicalRelease: String?
+    let inCinemas: String?
+    let hasFile: Bool?
+    let overview: String?
+    let images: [ArrImage]?
+    let titleSlug: String?
+    let studio: String?
+}
+
+public struct WhisparrHistoryRecord: Decodable {
+    let id: Int
+    let movieId: Int?
+    let sourceTitle: String?
+    let date: String?
+    let eventType: String?
+    let quality: ArrQuality?
+    let customFormats: [ArrCustomFormat]?
+    let customFormatScore: Int?
+    let movie: WhisparrMovie?
+}
+
+public struct WhisparrLibraryRecord: Decodable, Sendable, Equatable {
+    public let id: Int?
+    public let foreignId: String?
+    public let tmdbId: Int?
+    public let title: String?
+    public let year: Int?
+    public let studio: String?
+    public let hasFile: Bool?
+    public let monitored: Bool?
+    public let images: [ArrImage]?
+}
+
+public struct WhisparrLookupRecord: Decodable {
+    public let foreignId: String?
+    public let tmdbId: Int?
+    public let title: String
+    public let year: Int?
+    public let overview: String?
+    public let runtime: Int?
+    public let studio: String?
+    public let images: [ArrImage]?
+    public let genres: [String]?
+    public let ratings: RadarrLookupRatings?
+}
+
 // MARK: - ArrImage helpers
 
 public extension Array where Element == ArrImage {

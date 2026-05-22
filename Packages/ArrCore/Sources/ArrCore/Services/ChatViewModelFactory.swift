@@ -14,12 +14,17 @@ public enum ChatViewModelFactory {
         sonarr: ServiceConfig,
         radarr: ServiceConfig,
         lidarr: ServiceConfig = .empty,
+        whisparr: ServiceConfig = .empty,
+        aiKnowsAboutWhisparr: Bool = false,
         chatProvider: ChatProvider,
         openai: OpenAIConfig
     ) -> ChatViewModel {
-        let backend: ToolBackend = LocalToolBackend(sonarr: sonarr, radarr: radarr, lidarr: lidarr)
+        let backend: ToolBackend = LocalToolBackend(
+            sonarr: sonarr, radarr: radarr, lidarr: lidarr,
+            whisparr: whisparr, aiKnowsAboutWhisparr: aiKnowsAboutWhisparr
+        )
 
-        let llmTools = ChatToolCatalog.llmTools
+        let llmTools = ChatToolCatalog.llmTools(includeWhisparr: aiKnowsAboutWhisparr)
 
         let invoke: @Sendable (String, JSONValue) async throws -> ToolCallOutput = { name, args in
             try await backend.callTool(name: name, arguments: args)

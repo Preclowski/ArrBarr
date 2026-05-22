@@ -8,6 +8,7 @@ public actor SearchClient {
     private var apiBase: String {
         source == .lidarr ? "/api/v1" : "/api/v3"
     }
+    // .whisparr stays /api/v3 — no change needed since lidarr is the special case
 
     init(config: ServiceConfig, source: QueueItem.Source) {
         self.config = config
@@ -47,6 +48,12 @@ public actor SearchClient {
             let data = try await http.get(url, headers: headers)
             let records = try JSONDecoder().decode([LidarrLookupRecord].self, from: data)
             return records.compactMap { Self.unifyLidarr($0, baseURL: config.baseURL) }
+        case .whisparr:
+            let url = try http.url(base: config.baseURL, path: "\(apiBase)/movie/lookup",
+                                   query: [URLQueryItem(name: "term", value: query)])
+            let data = try await http.get(url, headers: headers)
+            let records = try JSONDecoder().decode([WhisparrLookupRecord].self, from: data)
+            return records.compactMap { Self.unifyWhisparr($0, baseURL: config.baseURL) }
         }
     }
 
@@ -71,6 +78,15 @@ public actor SearchClient {
             let data = try await http.get(url, headers: headers)
             let records = (try? JSONDecoder().decode([LidarrLibraryRecord].self, from: data)) ?? []
             return Set(records.compactMap { $0.foreignArtistId.map { abs($0.hashValue) & 0x7fffffff } })
+        case .whisparr:
+            let url = try http.url(base: config.baseURL, path: "\(apiBase)/movie")
+            let data = try await http.get(url, headers: headers)
+            let records = (try? JSONDecoder().decode([WhisparrLibraryRecord].self, from: data)) ?? []
+            return Set(records.compactMap { rec -> Int? in
+                if let tmdbId = rec.tmdbId, tmdbId != 0 { return tmdbId }
+                if let fid = rec.foreignId { return abs(fid.hashValue) & 0x7fffffff }
+                return nil
+            })
         }
     }
 
@@ -164,6 +180,34 @@ public actor SearchClient {
         _ = try await http.post(url, headers: headers.merging(["Content-Type": "application/json"]) { $1 }, body: data)
     }
 
+    func addScene(_ result: SearchResult, qualityProfileId: Int, rootFolderPath: String,
+                  monitor: RadarrMonitorMode = .movieOnly) async throws {
+        if DemoMode.isActive {
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            return
+        }
+        guard config.isConfigured else { throw HTTPError.notConfigured }
+        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
+        let url = try http.url(base: config.baseURL, path: "\(apiBase)/movie")
+        // Use tmdbId as integer if foreignId is all digits, otherwise use foreignId string
+        var body: [String: Any] = [
+            "title": result.title,
+            "qualityProfileId": qualityProfileId,
+            "rootFolderPath": rootFolderPath,
+            "monitored": true,
+            "monitor": monitor.rawValue,
+            "addOptions": ["searchForMovie": true]
+        ]
+        let foreignId = result.foreignId
+        if let tmdbId = Int(foreignId), tmdbId != 0 {
+            body["tmdbId"] = tmdbId
+        } else {
+            body["foreignId"] = foreignId
+        }
+        let data = try JSONSerialization.data(withJSONObject: body)
+        _ = try await http.post(url, headers: headers.merging(["Content-Type": "application/json"]) { $1 }, body: data)
+    }
+
     func addArtist(_ result: SearchResult, qualityProfileId: Int, metadataProfileId: Int,
                    rootFolderPath: String, monitor: String = "all") async throws {
         if DemoMode.isActive {
@@ -224,6 +268,39 @@ public actor SearchClient {
             network: r.network,
             certification: nil,
             posterURL: poster, source: .sonarr
+        )
+    }
+
+    internal static func unifyWhisparr(_ r: WhisparrLookupRecord, baseURL: String) -> SearchResult? {
+        let stableId: Int
+        let foreign: String
+        if let tmdb = r.tmdbId, tmdb != 0 {
+            stableId = tmdb
+            foreign = String(tmdb)
+        } else if let fid = r.foreignId, !fid.isEmpty {
+            stableId = abs(fid.hashValue) & 0x7fffffff
+            foreign = fid
+        } else {
+            return nil
+        }
+        let poster = r.images?.posterURL(baseURL: baseURL) ?? (nil, false)
+        return SearchResult(
+            id: stableId,
+            foreignId: foreign,
+            title: r.title,
+            subtitle: nil,
+            year: r.year,
+            rating: r.ratings?.tmdb?.value,
+            imdb: nil,
+            rottenTomatoes: nil,
+            metacritic: nil,
+            overview: r.overview,
+            runtime: r.runtime,
+            genres: r.genres ?? [],
+            network: r.studio,
+            certification: nil,
+            posterURL: poster.0,
+            source: .whisparr
         )
     }
 

@@ -26,6 +26,8 @@ public final class QueueAggregator {
     private var cachedSonarrConfig: ServiceConfig?
     private var cachedLidarrClient: LidarrClient?
     private var cachedLidarrConfig: ServiceConfig?
+    private var cachedWhisparrClient: WhisparrClient?
+    private var cachedWhisparrConfig: ServiceConfig?
     private var cachedQbitClient: QbittorrentClient?
     private var cachedQbitConfig: ServiceConfig?
     private var cachedTransmissionClient: TransmissionClient?
@@ -41,14 +43,16 @@ public final class QueueAggregator {
         let radarrClient = self.radarrClient(for: configStore.radarr)
         let sonarrClient = self.sonarrClient(for: configStore.sonarr)
         let lidarrClient = self.lidarrClient(for: configStore.lidarr)
+        let whisparrClient = self.whisparrClient(for: configStore.whisparr)
 
         async let radarr = Self.safeFetch { try await radarrClient.fetchQueue() }
         async let sonarr = Self.safeFetch { try await sonarrClient.fetchQueue() }
         async let lidarr = Self.safeFetch { try await lidarrClient.fetchQueue() }
-        let (r, s, l) = await (radarr, sonarr, lidarr)
+        async let whisparr = Self.safeFetch { try await whisparrClient.fetchQueue() }
+        let (r, s, l, w) = await (radarr, sonarr, lidarr, whisparr)
         return AggregateResult(
-            radarr: r.items, sonarr: s.items, lidarr: l.items,
-            radarrError: r.error, sonarrError: s.error, lidarrError: l.error
+            radarr: r.items, sonarr: s.items, lidarr: l.items, whisparr: w.items,
+            radarrError: r.error, sonarrError: s.error, lidarrError: l.error, whisparrError: w.error
         )
     }
 
@@ -56,15 +60,18 @@ public final class QueueAggregator {
         let radarrCfg = configStore.radarr
         let sonarrCfg = configStore.sonarr
         let lidarrCfg = configStore.lidarr
+        let whisparrCfg = configStore.whisparr
 
         let radarrClient = self.radarrClient(for: radarrCfg)
         let sonarrClient = self.sonarrClient(for: sonarrCfg)
         let lidarrClient = self.lidarrClient(for: lidarrCfg)
+        let whisparrClient = self.whisparrClient(for: whisparrCfg)
         async let radarr = Self.safeFetchHealth { try await radarrClient.fetchHealth() }
         async let sonarr = Self.safeFetchHealth { try await sonarrClient.fetchHealth() }
         async let lidarr = Self.safeFetchHealth { try await lidarrClient.fetchHealth() }
-        let (r, s, l) = await (radarr, sonarr, lidarr)
-        return HealthResult(radarr: r, sonarr: s, lidarr: l)
+        async let whisparr = Self.safeFetchHealth { try await whisparrClient.fetchHealth() }
+        let (r, s, l, w) = await (radarr, sonarr, lidarr, whisparr)
+        return HealthResult(radarr: r, sonarr: s, lidarr: l, whisparr: w)
     }
 
     private static func safeFetchHealth(_ block: () async throws -> [ArrHealthRecord]) async -> [ArrHealthRecord] {
@@ -78,6 +85,7 @@ public final class QueueAggregator {
             case .radarr: items = try await radarrClient(for: configStore.radarr).fetchHistory()
             case .sonarr: items = try await sonarrClient(for: configStore.sonarr).fetchHistory()
             case .lidarr: items = try await lidarrClient(for: configStore.lidarr).fetchHistory()
+            case .whisparr: items = try await whisparrClient(for: configStore.whisparr).fetchHistory()
             }
             return HistoryResult(items: items, error: nil)
         } catch {
@@ -110,20 +118,31 @@ public final class QueueAggregator {
         return client
     }
 
+    private func whisparrClient(for cfg: ServiceConfig) -> WhisparrClient {
+        if let cached = cachedWhisparrClient, cachedWhisparrConfig == cfg { return cached }
+        let client = WhisparrClient(config: cfg)
+        cachedWhisparrClient = client
+        cachedWhisparrConfig = cfg
+        return client
+    }
+
     func fetchUpcoming() async -> [UpcomingItem] {
         let radarrCfg = configStore.radarr
         let sonarrCfg = configStore.sonarr
         let lidarrCfg = configStore.lidarr
+        let whisparrCfg = configStore.whisparr
 
         let radarrClient = self.radarrClient(for: radarrCfg)
         let sonarrClient = self.sonarrClient(for: sonarrCfg)
         let lidarrClient = self.lidarrClient(for: lidarrCfg)
+        let whisparrClient = self.whisparrClient(for: whisparrCfg)
         async let radarr = Self.safeFetchUpcoming { try await radarrClient.fetchCalendar() }
         async let sonarr = Self.safeFetchUpcoming { try await sonarrClient.fetchCalendar() }
         async let lidarr = Self.safeFetchUpcoming { try await lidarrClient.fetchCalendar() }
-        let (r, s, l) = await (radarr, sonarr, lidarr)
+        async let whisparr = Self.safeFetchUpcoming { try await whisparrClient.fetchCalendar() }
+        let (r, s, l, w) = await (radarr, sonarr, lidarr, whisparr)
         let startOfToday = Calendar.current.startOfDay(for: Date())
-        return (r + s + l)
+        return (r + s + l + w)
             .filter { $0.airDate >= startOfToday }
             .sorted { $0.airDate < $1.airDate }
     }
@@ -171,6 +190,7 @@ public final class QueueAggregator {
         case .radarr: try await radarrClient(for: configStore.radarr).deleteQueueItem(id: item.arrQueueId, removeFromClient: removeFromClient)
         case .sonarr: try await sonarrClient(for: configStore.sonarr).deleteQueueItem(id: item.arrQueueId, removeFromClient: removeFromClient)
         case .lidarr: try await lidarrClient(for: configStore.lidarr).deleteQueueItem(id: item.arrQueueId, removeFromClient: removeFromClient)
+        case .whisparr: try await whisparrClient(for: configStore.whisparr).deleteQueueItem(id: item.arrQueueId, removeFromClient: removeFromClient)
         }
     }
 
@@ -317,22 +337,34 @@ public struct HealthResult: Equatable {
     public let radarr: [ArrHealthRecord]
     public let sonarr: [ArrHealthRecord]
     public let lidarr: [ArrHealthRecord]
-    public init(radarr: [ArrHealthRecord], sonarr: [ArrHealthRecord], lidarr: [ArrHealthRecord]) {
-        self.radarr = radarr; self.sonarr = sonarr; self.lidarr = lidarr
+    public let whisparr: [ArrHealthRecord]
+    public init(radarr: [ArrHealthRecord], sonarr: [ArrHealthRecord], lidarr: [ArrHealthRecord],
+                whisparr: [ArrHealthRecord] = []) {
+        self.radarr = radarr; self.sonarr = sonarr; self.lidarr = lidarr; self.whisparr = whisparr
     }
-    public static let empty = HealthResult(radarr: [], sonarr: [], lidarr: [])
+    public static let empty = HealthResult(radarr: [], sonarr: [], lidarr: [], whisparr: [])
 }
 
 public struct AggregateResult: Equatable {
     let radarr: [QueueItem]
     let sonarr: [QueueItem]
     let lidarr: [QueueItem]
+    let whisparr: [QueueItem]
     var radarrError: String?
     var sonarrError: String?
     var lidarrError: String?
+    var whisparrError: String?
 
-    var totalCount: Int { radarr.count + sonarr.count + lidarr.count }
+    init(radarr: [QueueItem], sonarr: [QueueItem], lidarr: [QueueItem], whisparr: [QueueItem] = [],
+         radarrError: String? = nil, sonarrError: String? = nil, lidarrError: String? = nil,
+         whisparrError: String? = nil) {
+        self.radarr = radarr; self.sonarr = sonarr; self.lidarr = lidarr; self.whisparr = whisparr
+        self.radarrError = radarrError; self.sonarrError = sonarrError; self.lidarrError = lidarrError
+        self.whisparrError = whisparrError
+    }
+
+    var totalCount: Int { radarr.count + sonarr.count + lidarr.count + whisparr.count }
     var activeCount: Int {
-        (radarr + sonarr + lidarr).filter { $0.status != .completed }.count
+        (radarr + sonarr + lidarr + whisparr).filter { $0.status != .completed }.count
     }
 }

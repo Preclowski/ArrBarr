@@ -8,9 +8,11 @@ public final class QueueViewModel: ObservableObject {
     @Published public private(set) var radarr: [QueueItem] = []
     @Published public private(set) var sonarr: [QueueItem] = []
     @Published public private(set) var lidarr: [QueueItem] = []
+    @Published public private(set) var whisparr: [QueueItem] = []
     @Published public private(set) var radarrError: String?
     @Published public private(set) var sonarrError: String?
     @Published public private(set) var lidarrError: String?
+    @Published public private(set) var whisparrError: String?
     @Published public private(set) var upcoming: [UpcomingItem] = []
     @Published public private(set) var tonight: [UpcomingItem] = []
     @Published public private(set) var needsYou: [NeedsYouItem] = []
@@ -49,7 +51,7 @@ public final class QueueViewModel: ObservableObject {
     }
 
     public var activeCount: Int {
-        (radarr + sonarr + lidarr).filter { $0.status != .completed }.count
+        (radarr + sonarr + lidarr + whisparr).filter { $0.status != .completed }.count
     }
 
     /// Fires a sample banner so the user can preview the notification UI
@@ -149,17 +151,20 @@ public final class QueueViewModel: ObservableObject {
             self.radarr = DemoMocks.radarrQueue
             self.sonarr = DemoMocks.sonarrQueue
             self.lidarr = DemoMocks.lidarrQueue
+            self.whisparr = []
             self.upcoming = DemoMocks.upcoming
             self.tonight = Self.tonightSlice(from: DemoMocks.upcoming, hours: configStore.tonightHours)
             self.health = DemoMocks.health
             self.radarrError = nil
             self.sonarrError = nil
             self.lidarrError = nil
+            self.whisparrError = nil
             self.unreachableArrs = []
             self.needsYou = Self.computeNeedsYou(
                 radarr: DemoMocks.radarrQueue,
                 sonarr: DemoMocks.sonarrQueue,
                 lidarr: DemoMocks.lidarrQueue,
+                whisparr: [],
                 health: DemoMocks.health
             )
             self.lastError = nil
@@ -172,23 +177,27 @@ public final class QueueViewModel: ObservableObject {
         let newRadarr = applyOverrides(to: queue.radarr)
         let newSonarr = applyOverrides(to: queue.sonarr)
         let newLidarr = applyOverrides(to: queue.lidarr)
-        notifyNewItems(radarr: newRadarr, sonarr: newSonarr, lidarr: newLidarr)
+        let newWhisparr = applyOverrides(to: queue.whisparr)
+        notifyNewItems(radarr: newRadarr, sonarr: newSonarr, lidarr: newLidarr, whisparr: newWhisparr)
         self.radarr = newRadarr
         self.sonarr = newSonarr
         self.lidarr = newLidarr
+        self.whisparr = newWhisparr
         self.radarrError = queue.radarrError
         self.sonarrError = queue.sonarrError
         self.lidarrError = queue.lidarrError
+        self.whisparrError = queue.whisparrError
         self.upcoming = upcoming
         self.tonight = Self.tonightSlice(from: upcoming, hours: configStore.tonightHours)
         self.health = health
         self.unreachableArrs = updateUnreachable(
             radarrError: queue.radarrError,
             sonarrError: queue.sonarrError,
-            lidarrError: queue.lidarrError
+            lidarrError: queue.lidarrError,
+            whisparrError: queue.whisparrError
         )
         self.needsYou = Self.computeNeedsYou(
-            radarr: newRadarr, sonarr: newSonarr, lidarr: newLidarr, health: health
+            radarr: newRadarr, sonarr: newSonarr, lidarr: newLidarr, whisparr: newWhisparr, health: health
         )
         self.lastError = nil
     }
@@ -203,9 +212,10 @@ public final class QueueViewModel: ObservableObject {
 
     static func computeNeedsYou(
         radarr: [QueueItem], sonarr: [QueueItem], lidarr: [QueueItem],
+        whisparr: [QueueItem] = [],
         health: HealthResult
     ) -> [NeedsYouItem] {
-        (radarr + sonarr + lidarr)
+        (radarr + sonarr + lidarr + whisparr)
             .filter { $0.status == .failed || $0.status == .warning }
             .map(NeedsYouItem.init)
     }
@@ -213,12 +223,14 @@ public final class QueueViewModel: ObservableObject {
     /// Returns the set of arrs that have failed at least `unreachableThreshold` consecutive
     /// refresh cycles. A nil error string for an arr resets that arr's counter.
     private func updateUnreachable(
-        radarrError: String?, sonarrError: String?, lidarrError: String?
+        radarrError: String?, sonarrError: String?, lidarrError: String?,
+        whisparrError: String? = nil
     ) -> Set<QueueItem.Source> {
         let errors: [(QueueItem.Source, String?, Bool)] = [
             (.radarr, radarrError, configStore.radarr.isConfigured),
             (.sonarr, sonarrError, configStore.sonarr.isConfigured),
             (.lidarr, lidarrError, configStore.lidarr.isConfigured),
+            (.whisparr, whisparrError, configStore.whisparr.isConfigured),
         ]
         var unreachable: Set<QueueItem.Source> = []
         for (source, error, configured) in errors {
@@ -263,8 +275,9 @@ public final class QueueViewModel: ObservableObject {
 
     // MARK: - Notifications
 
-    private func notifyNewItems(radarr: [QueueItem], sonarr: [QueueItem], lidarr: [QueueItem]) {
-        let allItems = radarr + sonarr + lidarr
+    private func notifyNewItems(radarr: [QueueItem], sonarr: [QueueItem], lidarr: [QueueItem],
+                               whisparr: [QueueItem] = []) {
+        let allItems = radarr + sonarr + lidarr + whisparr
         let currentIDs = Set(allItems.map(\.id))
 
         guard let known = knownItemIDs else {
@@ -280,6 +293,7 @@ public final class QueueViewModel: ObservableObject {
             case .radarr: configStore.notifyRadarr
             case .sonarr: configStore.notifySonarr
             case .lidarr: configStore.notifyLidarr
+            case .whisparr: false  // no notify toggle for Whisparr
             }
             if allowed { coalescer.enqueue(item) }
         }
@@ -351,6 +365,7 @@ public final class QueueViewModel: ObservableObject {
         case .radarr: update(&radarr)
         case .sonarr: update(&sonarr)
         case .lidarr: update(&lidarr)
+        case .whisparr: update(&whisparr)
         }
     }
 }

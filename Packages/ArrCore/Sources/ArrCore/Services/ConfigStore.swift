@@ -47,6 +47,7 @@ public final class ConfigStore: ObservableObject {
     @Published public var radarr: ServiceConfig
     @Published public var sonarr: ServiceConfig
     @Published public var lidarr: ServiceConfig
+    @Published public var whisparr: ServiceConfig
     @Published public var sabnzbd: ServiceConfig
     @Published public var qbittorrent: ServiceConfig
     @Published public var nzbget: ServiceConfig
@@ -58,6 +59,8 @@ public final class ConfigStore: ObservableObject {
     @Published public var notifyRadarr: Bool
     @Published public var notifySonarr: Bool
     @Published public var notifyLidarr: Bool
+    @Published public var blurWhisparrPosters: Bool
+    @Published public var aiKnowsAboutWhisparr: Bool
     @Published public var launchAtLogin: Bool
     @Published public var appLanguage: String
     @Published public var arrOrder: [String]
@@ -76,7 +79,7 @@ public final class ConfigStore: ObservableObject {
 
     public static let needsYouOrderKey = "needsyou"
     public static let tonightOrderKey = "tonight"
-    public static let defaultArrOrder = ["tonight", "needsyou", "radarr", "sonarr", "lidarr"]
+    public static let defaultArrOrder = ["tonight", "needsyou", "radarr", "sonarr", "lidarr", "whisparr"]
     public static let tonightHoursOptions = [12, 24, 72]
 
     public static let appLanguageOptions: [(code: String, label: String)] = [
@@ -104,6 +107,8 @@ public final class ConfigStore: ObservableObject {
     private static let notifyRadarrKey = "ArrBarr.notifyRadarr"
     private static let notifySonarrKey = "ArrBarr.notifySonarr"
     private static let notifyLidarrKey = "ArrBarr.notifyLidarr"
+    private static let blurWhisparrPostersKey = "ArrBarr.blurWhisparrPosters"
+    private static let aiKnowsAboutWhisparrKey = "ArrBarr.aiKnowsAboutWhisparr"
     private static let launchAtLoginKey = "ArrBarr.launchAtLogin"
     private static let appLanguageKey = "ArrBarr.appLanguage"
     private static let arrOrderKey = "ArrBarr.arrOrder"
@@ -133,6 +138,7 @@ public final class ConfigStore: ObservableObject {
         self.radarr = Self.load(.radarr, from: defaults)
         self.sonarr = Self.load(.sonarr, from: defaults)
         self.lidarr = Self.load(.lidarr, from: defaults)
+        self.whisparr = Self.load(.whisparr, from: defaults)
         self.sabnzbd = Self.load(.sabnzbd, from: defaults)
         self.qbittorrent = Self.load(.qbittorrent, from: defaults)
         self.nzbget = Self.load(.nzbget, from: defaults)
@@ -146,6 +152,8 @@ public final class ConfigStore: ObservableObject {
         self.notifyRadarr = defaults.object(forKey: Self.notifyRadarrKey) != nil ? defaults.bool(forKey: Self.notifyRadarrKey) : false
         self.notifySonarr = defaults.object(forKey: Self.notifySonarrKey) != nil ? defaults.bool(forKey: Self.notifySonarrKey) : false
         self.notifyLidarr = defaults.object(forKey: Self.notifyLidarrKey) != nil ? defaults.bool(forKey: Self.notifyLidarrKey) : false
+        self.blurWhisparrPosters = defaults.object(forKey: Self.blurWhisparrPostersKey) != nil ? defaults.bool(forKey: Self.blurWhisparrPostersKey) : true
+        self.aiKnowsAboutWhisparr = defaults.object(forKey: Self.aiKnowsAboutWhisparrKey) != nil ? defaults.bool(forKey: Self.aiKnowsAboutWhisparrKey) : false
         self.launchAtLogin = defaults.object(forKey: Self.launchAtLoginKey) != nil ? defaults.bool(forKey: Self.launchAtLoginKey) : false
         self.appLanguage = defaults.string(forKey: Self.appLanguageKey) ?? "system"
         self.arrOrder = Self.normalizeArrOrder(defaults.stringArray(forKey: Self.arrOrderKey))
@@ -185,6 +193,12 @@ public final class ConfigStore: ObservableObject {
         }.store(in: &cancellables)
         $notifyLidarr.dropFirst().sink { [weak self] val in
             self?.defaults.set(val, forKey: Self.notifyLidarrKey)
+        }.store(in: &cancellables)
+        $blurWhisparrPosters.dropFirst().sink { [weak self] val in
+            self?.defaults.set(val, forKey: Self.blurWhisparrPostersKey)
+        }.store(in: &cancellables)
+        $aiKnowsAboutWhisparr.dropFirst().sink { [weak self] val in
+            self?.defaults.set(val, forKey: Self.aiKnowsAboutWhisparrKey)
         }.store(in: &cancellables)
         $launchAtLogin.dropFirst().sink { [weak self] val in
             self?.defaults.set(val, forKey: Self.launchAtLoginKey)
@@ -242,6 +256,7 @@ public final class ConfigStore: ObservableObject {
         case .radarr: $radarr
         case .sonarr: $sonarr
         case .lidarr: $lidarr
+        case .whisparr: $whisparr
         case .sabnzbd: $sabnzbd
         case .qbittorrent: $qbittorrent
         case .nzbget: $nzbget
@@ -256,6 +271,7 @@ public final class ConfigStore: ObservableObject {
         case .radarr: return radarr
         case .sonarr: return sonarr
         case .lidarr: return lidarr
+        case .whisparr: return whisparr
         case .sabnzbd: return sabnzbd
         case .qbittorrent: return qbittorrent
         case .nzbget: return nzbget
@@ -285,6 +301,7 @@ public final class ConfigStore: ObservableObject {
         case .radarr: radarr = config
         case .sonarr: sonarr = config
         case .lidarr: lidarr = config
+        case .whisparr: whisparr = config
         case .sabnzbd: sabnzbd = config
         case .qbittorrent: qbittorrent = config
         case .nzbget: nzbget = config

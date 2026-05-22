@@ -17,6 +17,7 @@ public struct DetailView: View {
         case .radarr: viewModel.radarr
         case .sonarr: viewModel.sonarr
         case .lidarr: viewModel.lidarr
+        case .whisparr: viewModel.whisparr
         }
         guard let id = item.entityId else { return [item] }
         let matched = pool.filter { $0.entityId == id }
@@ -101,6 +102,7 @@ public struct DetailView: View {
             case .radarr: radarrContent
             case .sonarr: sonarrContent
             case .lidarr: lidarrContent
+            case .whisparr: radarrContent // Whisparr uses the same movie layout as Radarr
             }
         }
     }
@@ -357,6 +359,7 @@ public struct DetailView: View {
         case .radarr: return configStore.radarr.apiKey
         case .sonarr: return configStore.sonarr.apiKey
         case .lidarr: return configStore.lidarr.apiKey
+        case .whisparr: return configStore.whisparr.apiKey
         }
     }
 
@@ -366,6 +369,7 @@ public struct DetailView: View {
         case .radarr: (configStore.radarr, "/movie/\(slug)")
         case .sonarr: (configStore.sonarr, "/series/\(slug)")
         case .lidarr: (configStore.lidarr, "/album/\(slug)")
+        case .whisparr: (configStore.whisparr, "/movie/\(slug)")
         }
         return URL(string: cfg.baseURL)?.appendingPathComponent(path)
     }
@@ -375,6 +379,7 @@ public struct DetailView: View {
         case .radarr: configStore.radarr.baseURL
         case .sonarr: configStore.sonarr.baseURL
         case .lidarr: configStore.lidarr.baseURL
+        case .whisparr: configStore.whisparr.baseURL
         }
         let (url, _) = (images?.posterURL(baseURL: baseURL, coverTypes: ["poster", "cover"]) ?? (nil, false))
         return url
@@ -407,6 +412,9 @@ public struct DetailView: View {
                 async let ts = client.fetchTracks(albumId: entityId)
                 lidarrAlbum = try await a
                 lidarrTracks = try await ts
+            case .whisparr:
+                let client = WhisparrClient(config: configStore.whisparr)
+                radarrDetail = try await client.fetchMovieDetails(id: entityId)
             }
         } catch {
             loadError = "Couldn't load details: \(error.localizedDescription)"

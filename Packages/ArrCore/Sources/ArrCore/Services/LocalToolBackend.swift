@@ -6,18 +6,27 @@ public actor LocalToolBackend: ToolBackend {
     private let sonarr: ServiceConfig
     private let radarr: ServiceConfig
     private let lidarr: ServiceConfig
+    private let whisparr: ServiceConfig
+    private let aiKnowsAboutWhisparr: Bool
 
-    public init(sonarr: ServiceConfig, radarr: ServiceConfig, lidarr: ServiceConfig = .empty) {
+    public init(sonarr: ServiceConfig, radarr: ServiceConfig, lidarr: ServiceConfig = .empty,
+                whisparr: ServiceConfig = .empty, aiKnowsAboutWhisparr: Bool = false) {
         self.sonarr = sonarr
         self.radarr = radarr
         self.lidarr = lidarr
+        self.whisparr = whisparr
+        self.aiKnowsAboutWhisparr = aiKnowsAboutWhisparr
     }
 
     public func listTools() async throws -> [MCPTool] {
-        ChatToolCatalog.tools
+        ChatToolCatalog.tools(includeWhisparr: aiKnowsAboutWhisparr)
     }
 
     public func callTool(name: String, arguments: JSONValue) async throws -> ToolCallOutput {
+        // Guard Whisparr tools when the toggle is off
+        if name.hasPrefix("whisparr_") && !aiKnowsAboutWhisparr {
+            return ToolCallOutput(text: "Whisparr AI access is disabled in Settings.")
+        }
         switch name {
         case "sonarr_search":       return try await searchSeries(arguments)
         case "radarr_search":       return try await searchMovie(arguments)
@@ -31,6 +40,10 @@ public actor LocalToolBackend: ToolBackend {
         case "lidarr_get_artists":  return try await listArtists(arguments)
         case "lidarr_get_calendar": return try await lidarrCalendar()
         case "lidarr_add_artist":   return try await addArtist(arguments)
+        case "whisparr_search":     return try await searchScene(arguments)
+        case "whisparr_get_movies": return try await listScenes(arguments)
+        case "whisparr_get_calendar": return try await whisparrCalendar()
+        case "whisparr_add_scene":  return try await addScene(arguments)
         default:
             throw LocalToolError.unknownTool(name)
         }
@@ -431,6 +444,99 @@ public actor LocalToolBackend: ToolBackend {
             return "• \(name)\(idPart)\(albumCount)"
         }
         var out = "Lidarr library — \(items.count) artist\(items.count == 1 ? "" : "s")"
+        if !filter.isEmpty { out += " matching '\(filter)'" }
+        out += ":\n" + lines.joined(separator: "\n")
+        if items.count > top.count { out += "\n(\(items.count - top.count) more not shown)" }
+        return out
+    }
+
+    // MARK: - Whisparr tool implementations
+
+    private func searchScene(_ args: JSONValue) async throws -> ToolCallOutput {
+        let query = Self.stringArg(args, key: "query")
+        guard !query.isEmpty else {
+            return ToolCallOutput(text: "Please provide a search query.")
+        }
+        guard whisparr.isConfigured else {
+            return ToolCallOutput(text: "Whisparr is not configured.")
+        }
+        let client = SearchClient(config: whisparr, source: .whisparr)
+        let results = try await client.lookup(query: query)
+        let text = Self.formatSearchResultsCondensed(results, query: query, kind: "scene")
+        return ToolCallOutput(text: text, rich: .searchSceneResults(results))
+    }
+
+    private func listScenes(_ args: JSONValue) async throws -> ToolCallOutput {
+        guard whisparr.isConfigured else {
+            return ToolCallOutput(text: "Whisparr is not configured.")
+        }
+        let filter = Self.stringArg(args, key: "query").lowercased()
+        let client = WhisparrClient(config: whisparr)
+        let all = try await client.fetchAllMovies()
+        let matched = filter.isEmpty
+            ? all
+            : all.filter { ($0.title ?? "").lowercased().contains(filter) }
+        let text = Self.formatSceneLibraryCondensed(matched, filter: filter)
+        return ToolCallOutput(text: text, rich: .libraryScenes(matched))
+    }
+
+    private func whisparrCalendar() async throws -> ToolCallOutput {
+        guard whisparr.isConfigured else {
+            return ToolCallOutput(text: "Whisparr is not configured.")
+        }
+        let client = WhisparrClient(config: whisparr)
+        let items = try await client.fetchCalendar()
+        let text = Self.formatCalendarCondensed(items)
+        return ToolCallOutput(text: text, rich: .calendar(items))
+    }
+
+    private func addScene(_ args: JSONValue) async throws -> ToolCallOutput {
+        let foreignId = Self.stringArg(args, key: "foreignId")
+        let title = Self.stringArg(args, key: "title")
+        let chosenProfileId = Self.intArg(args, key: "qualityProfileId")
+        let chosenFolderPath = Self.stringArg(args, key: "rootFolderPath")
+        guard !foreignId.isEmpty || !title.isEmpty else {
+            return ToolCallOutput(text: "Need a foreignId (preferred) or title to add a scene. Run whisparr_search first.")
+        }
+        guard whisparr.isConfigured else {
+            return ToolCallOutput(text: "Whisparr is not configured.")
+        }
+        let client = SearchClient(config: whisparr, source: .whisparr)
+        let lookupQuery = !foreignId.isEmpty ? foreignId : title
+        let candidates = try await client.lookup(query: lookupQuery)
+        let chosen: SearchResult?
+        if !foreignId.isEmpty {
+            chosen = candidates.first(where: { $0.foreignId == foreignId }) ?? candidates.first
+        } else {
+            chosen = candidates.first
+        }
+        guard let pick = chosen else {
+            return ToolCallOutput(text: "Couldn't find any scenes matching '\(lookupQuery)'.")
+        }
+        let profiles = try await client.fetchQualityProfiles()
+        let folders = try await client.fetchRootFolders()
+        let profile = profiles.first(where: { $0.id == chosenProfileId }) ?? profiles.first
+        let folder = folders.first(where: { $0.path == chosenFolderPath }) ?? folders.first
+        guard let profile, let folder else {
+            return ToolCallOutput(text: "Whisparr is missing a quality profile or root folder.")
+        }
+        try await client.addScene(pick, qualityProfileId: profile.id, rootFolderPath: folder.path)
+        let yearPart = pick.year.map { " (\($0))" } ?? ""
+        return ToolCallOutput(text: "Added '\(pick.title)\(yearPart)' to Whisparr (profile: \(profile.name), folder: \(folder.path)).")
+    }
+
+    private static func formatSceneLibraryCondensed(_ items: [WhisparrLibraryRecord], filter: String) -> String {
+        guard !items.isEmpty else {
+            return filter.isEmpty ? "Whisparr library is empty." : "No scenes in your library match '\(filter)'."
+        }
+        let top = items.prefix(20)
+        let lines = top.map { r -> String in
+            let title = r.title ?? "(untitled)"
+            let yearPart = r.year.map { " (\($0))" } ?? ""
+            let fileMark = (r.hasFile ?? false) ? " · downloaded" : " · missing"
+            return "• \(title)\(yearPart)\(fileMark)"
+        }
+        var out = "Whisparr library — \(items.count) scene\(items.count == 1 ? "" : "s")"
         if !filter.isEmpty { out += " matching '\(filter)'" }
         out += ":\n" + lines.joined(separator: "\n")
         if items.count > top.count { out += "\n(\(items.count - top.count) more not shown)" }

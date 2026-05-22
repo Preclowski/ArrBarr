@@ -1,13 +1,14 @@
 import Foundation
 
 public struct QueueItem: Identifiable, Equatable, Hashable {
-    public enum Source: String, CaseIterable, Sendable { case radarr, sonarr, lidarr
+    public enum Source: String, CaseIterable, Sendable { case radarr, sonarr, lidarr, whisparr
 
         public var displayName: String {
             switch self {
             case .radarr: return "Radarr"
             case .sonarr: return "Sonarr"
             case .lidarr: return "Lidarr"
+            case .whisparr: return "Whisparr"
             }
         }
 
@@ -16,6 +17,7 @@ public struct QueueItem: Identifiable, Equatable, Hashable {
             case .radarr: return "film"
             case .sonarr: return "tv"
             case .lidarr: return "music.note"
+            case .whisparr: return "flame"
             }
         }
     }

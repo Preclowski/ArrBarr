@@ -93,6 +93,7 @@ public struct HistoryView: View {
         case .radarr: return "film"
         case .sonarr: return "tv"
         case .lidarr: return "music.note"
+        case .whisparr: return "flame"
         }
     }
 
@@ -101,6 +102,7 @@ public struct HistoryView: View {
         case .radarr: return "Radarr"
         case .sonarr: return "Sonarr"
         case .lidarr: return "Lidarr"
+        case .whisparr: return "Whisparr"
         }
     }
 

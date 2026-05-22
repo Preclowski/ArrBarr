@@ -8,9 +8,11 @@ public struct SearchView: View {
     @State private var radarrCollapsed = false
     @State private var sonarrCollapsed = false
     @State private var lidarrCollapsed = false
+    @State private var whisparrCollapsed = false
     @State private var radarrShowAll = false
     @State private var sonarrShowAll = false
     @State private var lidarrShowAll = false
+    @State private var whisparrShowAll = false
     @FocusState private var queryFocused: Bool
 
     private static let collapsedLimit = 5
@@ -23,6 +25,7 @@ public struct SearchView: View {
     private var radarrConfigured: Bool { configStore.radarr.isConfigured || DemoMode.isActive }
     private var sonarrConfigured: Bool { configStore.sonarr.isConfigured || DemoMode.isActive }
     private var lidarrConfigured: Bool { configStore.lidarr.isConfigured || DemoMode.isActive }
+    private var whisparrConfigured: Bool { configStore.whisparr.isConfigured }
 
     private var orderedSources: [QueueItem.Source] {
         configStore.arrOrder.compactMap { key -> QueueItem.Source? in
@@ -31,6 +34,7 @@ public struct SearchView: View {
             case .radarr: return radarrConfigured ? .radarr : nil
             case .sonarr: return sonarrConfigured ? .sonarr : nil
             case .lidarr: return lidarrConfigured ? .lidarr : nil
+            case .whisparr: return whisparrConfigured ? .whisparr : nil
             }
         }
     }
@@ -67,6 +71,7 @@ public struct SearchView: View {
                 radarrShowAll = false
                 sonarrShowAll = false
                 lidarrShowAll = false
+                whisparrShowAll = false
             }
             viewModel.onQueryChange()
         }
@@ -83,6 +88,7 @@ public struct SearchView: View {
             case .radarr: return viewModel.radarrResults
             case .sonarr: return viewModel.sonarrResults
             case .lidarr: return viewModel.lidarrResults
+            case .whisparr: return viewModel.whisparrResults
             }
         }()
         let isCollapsed: Bool = {
@@ -90,6 +96,7 @@ public struct SearchView: View {
             case .radarr: return radarrCollapsed
             case .sonarr: return sonarrCollapsed
             case .lidarr: return lidarrCollapsed
+            case .whisparr: return whisparrCollapsed
             }
         }()
         let showAll: Bool = {
@@ -97,6 +104,7 @@ public struct SearchView: View {
             case .radarr: return radarrShowAll
             case .sonarr: return sonarrShowAll
             case .lidarr: return lidarrShowAll
+            case .whisparr: return whisparrShowAll
             }
         }()
         let title: LocalizedStringKey = {
@@ -104,6 +112,7 @@ public struct SearchView: View {
             case .radarr: return "Movies"
             case .sonarr: return "Series"
             case .lidarr: return "Artists"
+            case .whisparr: return "Scenes"
             }
         }()
         let visibleResults: [SearchResult] = (showAll || results.count <= Self.collapsedLimit)
@@ -119,6 +128,7 @@ public struct SearchView: View {
                     case .radarr: radarrCollapsed.toggle()
                     case .sonarr: sonarrCollapsed.toggle()
                     case .lidarr: lidarrCollapsed.toggle()
+                    case .whisparr: whisparrCollapsed.toggle()
                     }
                 }
             } label: {
@@ -147,6 +157,7 @@ public struct SearchView: View {
                         case .radarr: return "No movies match this query."
                         case .sonarr: return "No series match this query."
                         case .lidarr: return "No artists match this query."
+                        case .whisparr: return "No scenes match this query."
                         }
                     }()
                     Text(noMatchKey, bundle: .module)
@@ -165,6 +176,7 @@ public struct SearchView: View {
                                 case .radarr: radarrShowAll = true
                                 case .sonarr: sonarrShowAll = true
                                 case .lidarr: lidarrShowAll = true
+                                case .whisparr: whisparrShowAll = true
                                 }
                             }
                         } label: {

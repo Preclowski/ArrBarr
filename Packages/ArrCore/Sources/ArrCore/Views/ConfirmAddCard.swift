@@ -11,6 +11,8 @@ public struct ConfirmAddCard: View {
     let sonarr: ServiceConfig
     let radarr: ServiceConfig
     let lidarr: ServiceConfig
+    var whisparr: ServiceConfig = .empty
+    var blurWhisparrPosters: Bool = true
     let onConfirm: (JSONValue) -> Void
     let onCancel: () -> Void
 
@@ -18,14 +20,17 @@ public struct ConfirmAddCard: View {
 
     private var isSonarr: Bool { call.name.hasPrefix("sonarr_") }
     private var isLidarr: Bool { call.name.hasPrefix("lidarr_") }
+    private var isWhisparr: Bool { call.name.hasPrefix("whisparr_") }
     private var config: ServiceConfig {
         if isSonarr { return sonarr }
         if isLidarr { return lidarr }
+        if isWhisparr { return whisparr }
         return radarr
     }
     private var source: QueueItem.Source {
         if isSonarr { return .sonarr }
         if isLidarr { return .lidarr }
+        if isWhisparr { return .whisparr }
         return .radarr
     }
     private var idKey: String { isSonarr ? "tvdbId" : "tmdbId" }
@@ -34,6 +39,10 @@ public struct ConfirmAddCard: View {
         if isLidarr {
             let name = argString("artistName")
             return name.isEmpty ? argString("foreignArtistId") : name
+        }
+        if isWhisparr {
+            let foreignId = argString("foreignId")
+            return foreignId.isEmpty ? argString("title") : foreignId
         }
         let id = argInt(idKey)
         if id != 0 {
@@ -48,6 +57,9 @@ public struct ConfirmAddCard: View {
     @State private var selectedProfileId: Int = 0
     @State private var selectedFolderPath: String = ""
     @State private var selectedMetadataProfileId: Int = 0
+    @State private var posterRevealed = false
+
+    private var effectivelyBlurred: Bool { isWhisparr && blurWhisparrPosters && !posterRevealed }
 
     enum Phase {
         case loading
@@ -117,6 +129,8 @@ public struct ConfirmAddCard: View {
                     size: CGSize(width: 60, height: 90),
                     cornerRadius: 6
                 )
+                .blur(radius: effectivelyBlurred ? 14 : 0)
+                .onTapGesture { if isWhisparr && blurWhisparrPosters { posterRevealed.toggle() } }
                 VStack(alignment: .leading, spacing: 3) {
                     Text(result.title)
                         .font(.system(size: 14, weight: .semibold))
@@ -269,6 +283,14 @@ public struct ConfirmAddCard: View {
             if isLidarr {
                 // For Lidarr, match by foreignArtistId if available
                 let targetForeignId = argString("foreignArtistId")
+                if !targetForeignId.isEmpty {
+                    picked = results.first(where: { $0.foreignId == targetForeignId }) ?? results.first
+                } else {
+                    picked = results.first
+                }
+            } else if isWhisparr {
+                // For Whisparr, match by foreignId if available
+                let targetForeignId = argString("foreignId")
                 if !targetForeignId.isEmpty {
                     picked = results.first(where: { $0.foreignId == targetForeignId }) ?? results.first
                 } else {

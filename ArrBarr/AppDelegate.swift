@@ -598,6 +598,7 @@ extension AppDelegate: @preconcurrency UNUserNotificationCenterDelegate {
         case .radarr: pool = queueVM.radarr
         case .sonarr: pool = queueVM.sonarr
         case .lidarr: pool = queueVM.lidarr
+        case .whisparr: pool = queueVM.whisparr
         }
         return pool.first { $0.arrQueueId == arrQueueId }
     }

@@ -5,7 +5,27 @@ import Foundation
 /// in-process implementation) and ChatViewModelFactory (which advertises the
 /// tools to the LLM provider) read from here.
 public enum ChatToolCatalog {
-    public static let tools: [MCPTool] = [
+
+    /// Returns the catalog of tools. Pass `includeWhisparr: true` only when
+    /// `ConfigStore.aiKnowsAboutWhisparr` is true — Whisparr tools are hidden
+    /// by default to avoid surfacing NSFW content to the LLM.
+    public static func tools(includeWhisparr: Bool = false) -> [MCPTool] {
+        var arr = baseTools
+        if includeWhisparr { arr.append(contentsOf: whisparrTools) }
+        return arr
+    }
+
+    /// Deprecated shim for callers that haven't adopted the function form yet.
+    public static var allTools: [MCPTool] { tools(includeWhisparr: false) }
+
+    /// Convert the catalog into `LLMTool` values for provider advertisement.
+    public static func llmTools(includeWhisparr: Bool = false) -> [LLMTool] {
+        tools(includeWhisparr: includeWhisparr).map {
+            LLMTool(name: $0.name, description: $0.description, inputSchema: $0.inputSchema)
+        }
+    }
+
+    private static let baseTools: [MCPTool] = [
         MCPTool(
             name: "sonarr_search",
             description: "Search Sonarr's metadata source (TVDB) for a TV series. Returns a list of matches with their tvdbId. Use this BEFORE sonarr_add_series so the user can disambiguate and you can pass the correct tvdbId.",
@@ -155,8 +175,55 @@ public enum ChatToolCatalog {
         ),
     ]
 
-    /// Convert the catalog into `LLMTool` values for provider advertisement.
-    public static var llmTools: [LLMTool] {
-        tools.map { LLMTool(name: $0.name, description: $0.description, inputSchema: $0.inputSchema) }
-    }
+    private static let whisparrTools: [MCPTool] = [
+        MCPTool(
+            name: "whisparr_search",
+            description: "Search Whisparr's adult scene library (StashDB/TPDB) for a scene or performer. Returns matches with their id. Use BEFORE whisparr_add_scene.",
+            inputSchema: .object([
+                "type": .string("object"),
+                "properties": .object([
+                    "query": .object([
+                        "type": .string("string"),
+                        "description": .string("Scene title, performer, or studio to search for"),
+                    ]),
+                ]),
+                "required": .array([.string("query")]),
+            ])
+        ),
+        MCPTool(
+            name: "whisparr_get_movies",
+            description: "List adult scenes currently in the Whisparr library. Use when the user asks about their Whisparr collection.",
+            inputSchema: .object([
+                "type": .string("object"),
+                "properties": .object([
+                    "query": .object([
+                        "type": .string("string"),
+                        "description": .string("Optional title filter — case-insensitive substring match. Omit to list all."),
+                    ]),
+                ]),
+            ])
+        ),
+        MCPTool(
+            name: "whisparr_get_calendar",
+            description: "Get upcoming scene releases from Whisparr (next ~30 days, items already monitored).",
+            inputSchema: .object(["type": .string("object"), "properties": .object([:])])
+        ),
+        MCPTool(
+            name: "whisparr_add_scene",
+            description: "Add an adult scene to Whisparr for tracking and automatic download. ALWAYS run whisparr_search first and pass the id from the result.",
+            inputSchema: .object([
+                "type": .string("object"),
+                "properties": .object([
+                    "foreignId": .object([
+                        "type": .string("string"),
+                        "description": .string("Scene id from whisparr_search results (tmdbId as string or StashDB/TPDB id)"),
+                    ]),
+                    "title": .object([
+                        "type": .string("string"),
+                        "description": .string("Scene title (fallback when no foreignId is known)"),
+                    ]),
+                ]),
+            ])
+        ),
+    ]
 }

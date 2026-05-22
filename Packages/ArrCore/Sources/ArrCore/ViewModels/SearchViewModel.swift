@@ -7,6 +7,7 @@ public final class SearchViewModel: ObservableObject {
     @Published var radarrResults: [SearchResult] = []
     @Published var sonarrResults: [SearchResult] = []
     @Published var lidarrResults: [SearchResult] = []
+    @Published var whisparrResults: [SearchResult] = []
     @Published var isSearching = false
     @Published var errorMessage: String?
 
@@ -22,11 +23,14 @@ public final class SearchViewModel: ObservableObject {
     private var radarrClient: SearchClient?
     private var sonarrClient: SearchClient?
     private var lidarrClient: SearchClient?
+    private var whisparrClient: SearchClient?
 
-    func setup(radarrConfig: ServiceConfig, sonarrConfig: ServiceConfig, lidarrConfig: ServiceConfig = .empty) {
+    func setup(radarrConfig: ServiceConfig, sonarrConfig: ServiceConfig,
+               lidarrConfig: ServiceConfig = .empty, whisparrConfig: ServiceConfig = .empty) {
         if radarrConfig.isConfigured { radarrClient = SearchClient(config: radarrConfig, source: .radarr) }
         if sonarrConfig.isConfigured { sonarrClient = SearchClient(config: sonarrConfig, source: .sonarr) }
         if lidarrConfig.isConfigured { lidarrClient = SearchClient(config: lidarrConfig, source: .lidarr) }
+        if whisparrConfig.isConfigured { whisparrClient = SearchClient(config: whisparrConfig, source: .whisparr) }
     }
 
     func onQueryChange() {
@@ -34,6 +38,7 @@ public final class SearchViewModel: ObservableObject {
         radarrResults = []
         sonarrResults = []
         lidarrResults = []
+        whisparrResults = []
         errorMessage = nil
         guard !query.trimmingCharacters(in: .whitespaces).isEmpty else { return }
         searchTask = Task {
@@ -49,6 +54,7 @@ public final class SearchViewModel: ObservableObject {
         radarrResults = []
         sonarrResults = []
         lidarrResults = []
+        whisparrResults = []
         errorMessage = nil
     }
 
@@ -58,10 +64,12 @@ public final class SearchViewModel: ObservableObject {
         async let radarr = fetchOne(client: radarrClient)
         async let sonarr = fetchOne(client: sonarrClient)
         async let lidarr = fetchOne(client: lidarrClient)
-        let (rRes, sRes, lRes) = await (radarr, sonarr, lidarr)
+        async let whisparr = fetchOne(client: whisparrClient)
+        let (rRes, sRes, lRes, wRes) = await (radarr, sonarr, lidarr, whisparr)
         radarrResults = rRes
         sonarrResults = sRes
         lidarrResults = lRes
+        whisparrResults = wRes
     }
 
     private func fetchOne(client: SearchClient?) async -> [SearchResult] {
@@ -90,6 +98,20 @@ public final class SearchViewModel: ObservableObject {
             metadataProfiles = (try? await client.fetchMetadataProfiles()) ?? []
         } else {
             metadataProfiles = []
+        }
+    }
+
+    func addScene(_ result: SearchResult, qualityProfileId: Int, rootFolderPath: String,
+                  monitor: RadarrMonitorMode = .movieOnly) async {
+        guard let client = whisparrClient else { return }
+        isAdding = true; addError = nil
+        defer { isAdding = false }
+        do {
+            try await client.addScene(result, qualityProfileId: qualityProfileId,
+                                      rootFolderPath: rootFolderPath, monitor: monitor)
+            whisparrResults.removeAll { $0.id == result.id }
+        } catch {
+            addError = error.localizedDescription
         }
     }
 
@@ -143,6 +165,7 @@ public final class SearchViewModel: ObservableObject {
         case .radarr: return radarrClient
         case .sonarr: return sonarrClient
         case .lidarr: return lidarrClient
+        case .whisparr: return whisparrClient
         }
     }
 }
