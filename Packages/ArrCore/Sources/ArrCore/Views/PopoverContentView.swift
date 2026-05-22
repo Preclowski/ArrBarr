@@ -26,7 +26,6 @@ public struct PopoverContentView: View {
     @State private var historySource: QueueItem.Source?
     @State private var historyRefreshNonce = 0
     @StateObject private var searchViewModel = SearchViewModel()
-    @StateObject private var chatViewModel = ChatViewModelFactory.makePlaceholder()
     @State private var searchResult: SearchResult?
     @State private var detailItem: QueueItem?
 
@@ -118,7 +117,7 @@ public struct PopoverContentView: View {
                     case .queue: queueContent
                     case .upcoming: upcomingContent
                     case .chat:
-                        ChatView(viewModel: chatViewModel)
+                        ChatHost(config: configStore.mcp)
                     case .search:
                         if let result = searchResult {
                             SearchAddPanel(result: result, viewModel: searchViewModel) {
@@ -598,15 +597,28 @@ private struct TabPillBackground: View {
     }
 }
 
-// MARK: - Chat view-model factory
+// MARK: - Chat host
 
-enum ChatViewModelFactory {
-    @MainActor static func makePlaceholder() -> ChatViewModel {
-        ChatViewModel(
-            provider: UnavailableLLMProvider(),
-            tools: [],
-            invokeTool: { _, _ in "" }
-        )
+@MainActor
+struct ChatHost: View {
+    let config: MCPConfig
+    var body: some View {
+        // Re-mount the inner view when the URL or token changes — this
+        // re-creates @StateObject so the new VM picks up the new config.
+        ChatHostInner(config: config).id(config.baseURL + "|" + config.bearerToken + "|\(config.enabled)")
+    }
+}
+
+@MainActor
+private struct ChatHostInner: View {
+    let config: MCPConfig
+    @StateObject private var vm: ChatViewModel
+    init(config: MCPConfig) {
+        self.config = config
+        _vm = StateObject(wrappedValue: ChatViewModelFactory.make(config: config))
+    }
+    var body: some View {
+        ChatView(viewModel: vm)
     }
 }
 

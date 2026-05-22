@@ -116,6 +116,21 @@ public struct SettingsView: View {
                     }
                 }
             }
+            Section("AI Chat") {
+                Toggle("Enable chat", isOn: $configStore.chatEnabled)
+                if configStore.chatEnabled {
+                    TextField("MCP server URL", text: $configStore.mcp.baseURL,
+                              prompt: Text(verbatim: "http://nas.local:3000/mcp"))
+                    SecureField("MCP bearer token (optional)", text: $configStore.mcp.bearerToken)
+                    Toggle("MCP connection enabled", isOn: $configStore.mcp.enabled)
+                    if #unavailable(iOS 26.0) {
+                        Label("Chat requires iOS 26 with Apple Intelligence.",
+                              systemImage: "exclamationmark.triangle")
+                            .foregroundStyle(.secondary)
+                            .font(.caption)
+                    }
+                }
+            }
             if devModeRevealed {
                 Section("Developer options") {
                     Toggle("Demo mode", isOn: Binding(
@@ -252,6 +267,21 @@ public struct SettingsView: View {
                 Picker("Background", selection: $configStore.backgroundInterval) {
                     ForEach(ConfigStore.backgroundIntervalOptions, id: \.self) { interval in
                         Text(Self.formatInterval(interval)).tag(interval)
+                    }
+                }
+            }
+            Section("AI Chat") {
+                Toggle("Enable chat", isOn: $configStore.chatEnabled)
+                if configStore.chatEnabled {
+                    TextField("MCP server URL", text: $configStore.mcp.baseURL,
+                              prompt: Text(verbatim: "http://nas.local:3000/mcp"))
+                    SecureField("MCP bearer token (optional)", text: $configStore.mcp.bearerToken)
+                    Toggle("MCP connection enabled", isOn: $configStore.mcp.enabled)
+                    if #unavailable(macOS 26.0) {
+                        Label("Chat requires macOS 26 with Apple Intelligence.",
+                              systemImage: "exclamationmark.triangle")
+                            .foregroundStyle(.secondary)
+                            .font(.caption)
                     }
                 }
             }

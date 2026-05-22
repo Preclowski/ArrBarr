@@ -53,7 +53,6 @@ public struct MainWindowView: View {
     @State private var historySource: QueueItem.Source?
     @State private var historyRefreshNonce = 0
     @StateObject private var searchViewModel = SearchViewModel()
-    @StateObject private var chatViewModel = ChatViewModelFactory.makePlaceholder()
     @State private var searchResult: SearchResult?
 
     // MARK: - Visibility helpers (mirrored from PopoverContentView)
@@ -230,7 +229,7 @@ public struct MainWindowView: View {
             case .search:
                 searchContent
             case .chat:
-                ChatView(viewModel: chatViewModel)
+                ChatHost(config: configStore.mcp)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
