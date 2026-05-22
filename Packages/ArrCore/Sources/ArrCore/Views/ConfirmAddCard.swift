@@ -130,35 +130,25 @@ public struct ConfirmAddCard: View {
                 Spacer(minLength: 0)
             }
 
-            Divider()
-
-            // — Pickers
-            if !profiles.isEmpty {
-                pickerRow(
-                    label: Self.locStr("Quality profile"),
-                    selection: Binding(
-                        get: { selectedProfileId },
-                        set: { selectedProfileId = $0 }
-                    ),
-                    options: profiles.map { ($0.id, $0.name) }
-                )
-            }
-            if !folders.isEmpty {
-                pickerRow(
-                    label: Self.locStr("Root folder"),
-                    selection: Binding(
-                        get: { selectedFolderPath },
-                        set: { selectedFolderPath = $0 }
-                    ),
-                    options: folders.map { ($0.path, $0.path) }
-                )
-            }
-
-            // — Action buttons
-            HStack {
+            // — Single-row controls: profile · folder · cancel · confirm
+            HStack(spacing: 8) {
+                if profiles.count > 1 {
+                    inlinePicker(
+                        icon: "slider.horizontal.3",
+                        selection: Binding(get: { selectedProfileId }, set: { selectedProfileId = $0 }),
+                        options: profiles.map { ($0.id, $0.name) }
+                    )
+                }
+                if folders.count > 1 {
+                    inlinePicker(
+                        icon: "folder",
+                        selection: Binding(get: { selectedFolderPath }, set: { selectedFolderPath = $0 }),
+                        options: folders.map { ($0.path, Self.shortenPath($0.path)) }
+                    )
+                }
+                Spacer(minLength: 0)
                 Button(Self.locStr("Cancel"), action: onCancel)
                     .controlSize(.small)
-                Spacer()
                 Button(Self.locStr("Confirm")) {
                     onConfirm(mergedArgs(profiles: profiles, folders: folders))
                 }
@@ -170,26 +160,43 @@ public struct ConfirmAddCard: View {
         }
     }
 
-    // Generic int/string picker row using opaque id type
-    private func pickerRow<ID: Hashable>(
-        label: String,
+    /// Compact pill-style picker: icon + selected value, no label.
+    private func inlinePicker<ID: Hashable>(
+        icon: String,
         selection: Binding<ID>,
         options: [(ID, String)]
     ) -> some View {
-        HStack {
-            Text(label)
-                .font(.system(size: 12))
-                .foregroundStyle(.secondary)
-                .frame(width: 100, alignment: .leading)
-            Picker(label, selection: selection) {
-                ForEach(options, id: \.0) { id, name in
-                    Text(name).tag(id)
-                }
+        Menu {
+            ForEach(options, id: \.0) { id, name in
+                Button(name) { selection.wrappedValue = id }
             }
-            .labelsHidden()
-            .pickerStyle(.menu)
-            .font(.system(size: 12))
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.system(size: 10))
+                    .foregroundStyle(.secondary)
+                Text(options.first(where: { $0.0 == selection.wrappedValue })?.1 ?? "—")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.system(size: 8, weight: .semibold))
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(.horizontal, 6)
+            .padding(.vertical, 3)
+            .background(Color.primary.opacity(0.06), in: Capsule())
         }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
+    }
+
+    /// Display only the trailing path component so the chip stays narrow.
+    /// e.g. "/data/media/Movies" → "Movies"
+    private static func shortenPath(_ path: String) -> String {
+        let trimmed = path.trimmingCharacters(in: CharacterSet(charactersIn: "/ "))
+        return trimmed.split(separator: "/").last.map(String.init) ?? path
     }
 
     // MARK: - Helpers
