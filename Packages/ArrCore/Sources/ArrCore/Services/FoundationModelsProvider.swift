@@ -58,20 +58,41 @@ public struct FoundationModelsProvider: LLMProvider {
     // MARK: - Private
 
     private static func buildInstructions(tools: [LLMTool]) -> Instructions {
-        let toolList = tools
-            .map { "- \($0.name): \($0.description)" }
-            .joined(separator: "\n")
+        // Foundation Models sees only a single stringified `json` argument on
+        // each DynamicMCPTool, so the framework can't expose the real schema
+        // to the model. We compensate by spelling each tool's JSON schema out
+        // in the system prompt — the model is then expected to produce a JSON
+        // payload matching that shape inside the `json` arg.
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
+        let toolBlock = tools.map { t -> String in
+            let schemaJSON = (try? String(data: encoder.encode(t.inputSchema), encoding: .utf8)) ?? "{}"
+            return """
+            • Tool: \(t.name)
+              Purpose: \(t.description)
+              Args (JSON): \(schemaJSON)
+            """
+        }.joined(separator: "\n\n")
 
         return Instructions(
             """
             You are ArrBarr's in-app assistant for Sonarr (TV) and Radarr (movies).
             Reply in English, in a short, friendly tone.
-            The user may be Polish — keep media titles exactly as the user wrote them.
+            The user may write in Polish — keep media titles exactly as the user wrote them.
 
-            Available tools:
-            \(toolList)
+            Tools you can call. For each tool the `json` argument MUST be a
+            JSON-encoded object matching the schema shown:
 
-            Call a tool when the request needs live server data or an action.
+            \(toolBlock)
+
+            How to call a tool:
+            - Build the JSON object per the schema, then pass it as the
+              tool's `json` argument (e.g. {"query": "Severance"}).
+            - For add-style tools, first run the matching search tool and
+              pass the returned tvdbId/tmdbId; don't guess ids.
+            - If a search returns multiple matches, ask the user which one
+              before calling an add tool.
+
             Otherwise, answer directly without calling a tool.
             Never invent tool names that are not listed above.
             """

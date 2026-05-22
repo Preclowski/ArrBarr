@@ -565,16 +565,13 @@ public struct PopoverContentView: View {
                         Task { await viewModel.refresh() }
                     }
                 }) {
-                    ZStack {
-                        Image(systemName: "arrow.clockwise")
-                            .opacity(viewModel.isRefreshing ? 0 : 1)
-                        if viewModel.isRefreshing {
-                            ProgressView()
-                                .controlSize(.mini)
-                                .scaleEffect(0.7)
-                        }
-                    }
-                    .frame(width: 14, height: 14)
+                    Image(systemName: "arrow.clockwise")
+                        .rotationEffect(.degrees(viewModel.isRefreshing ? 360 : 0))
+                        .animation(viewModel.isRefreshing
+                                   ? .linear(duration: 0.9).repeatForever(autoreverses: false)
+                                   : .default,
+                                   value: viewModel.isRefreshing)
+                        .frame(width: 14, height: 14)
                 }
                 .modifier(GlassButtonStyle())
                 .controlSize(.small)

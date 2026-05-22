@@ -331,10 +331,24 @@ public struct SettingsView: View {
 
     private var generalPane: some View {
         Form {
-            Section("Startup") {
+            Section {
                 Toggle("Launch at login", isOn: $configStore.launchAtLogin)
+                Picker("Language", selection: $configStore.appLanguage) {
+                    ForEach(ConfigStore.appLanguageOptions, id: \.code) { opt in
+                        Text(LocalizedStringKey(opt.label)).tag(opt.code)
+                    }
+                }
+            } header: {
+                Text("Application", bundle: .module)
+            } footer: {
+                if languageChanged {
+                    HStack(spacing: 8) {
+                        Text("Restart required to apply the new language.", bundle: .module)
+                        Button("Relaunch") { relaunchApp() }
+                            .controlSize(.small)
+                    }
+                }
             }
-            languageSection
             Section("Section order") {
                 ForEach(configStore.arrOrder, id: \.self) { key in
                     arrOrderRow(key: key)

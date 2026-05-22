@@ -12,7 +12,7 @@ public actor LocalToolBackend: ToolBackend {
     }
 
     public func listTools() async throws -> [MCPTool] {
-        Self.staticTools
+        ChatToolCatalog.tools
     }
 
     public func callTool(name: String, arguments: JSONValue) async throws -> String {
@@ -194,82 +194,6 @@ public actor LocalToolBackend: ToolBackend {
         return out
     }
 
-    // MARK: - Static tool list
-
-    private static let staticTools: [MCPTool] = [
-        MCPTool(
-            name: "sonarr_search",
-            description: "Search Sonarr for a TV series by title.",
-            inputSchema: .object([
-                "type": .string("object"),
-                "properties": .object([
-                    "query": .object([
-                        "type": .string("string"),
-                        "description": .string("Series title or keyword to search for"),
-                    ]),
-                ]),
-                "required": .array([.string("query")]),
-            ])
-        ),
-        MCPTool(
-            name: "radarr_search",
-            description: "Search Radarr for a movie by title.",
-            inputSchema: .object([
-                "type": .string("object"),
-                "properties": .object([
-                    "query": .object([
-                        "type": .string("string"),
-                        "description": .string("Movie title or keyword to search for"),
-                    ]),
-                ]),
-                "required": .array([.string("query")]),
-            ])
-        ),
-        MCPTool(
-            name: "sonarr_get_calendar",
-            description: "Get upcoming TV episode releases from Sonarr.",
-            inputSchema: .object(["type": .string("object"), "properties": .object([:])])
-        ),
-        MCPTool(
-            name: "radarr_get_calendar",
-            description: "Get upcoming movie releases from Radarr.",
-            inputSchema: .object(["type": .string("object"), "properties": .object([:])])
-        ),
-        MCPTool(
-            name: "sonarr_add_series",
-            description: "Add a TV series to Sonarr. ALWAYS run sonarr_search first to get the tvdbId; pass it here. Title is a fallback only.",
-            inputSchema: .object([
-                "type": .string("object"),
-                "properties": .object([
-                    "tvdbId": .object([
-                        "type": .string("integer"),
-                        "description": .string("TVDB id of the series, from sonarr_search results"),
-                    ]),
-                    "title": .object([
-                        "type": .string("string"),
-                        "description": .string("Series title (fallback when no tvdbId — picks the first match)"),
-                    ]),
-                ]),
-            ])
-        ),
-        MCPTool(
-            name: "radarr_add_movie",
-            description: "Add a movie to Radarr. ALWAYS run radarr_search first to get the tmdbId; pass it here. Title is a fallback only.",
-            inputSchema: .object([
-                "type": .string("object"),
-                "properties": .object([
-                    "tmdbId": .object([
-                        "type": .string("integer"),
-                        "description": .string("TMDB id of the movie, from radarr_search results"),
-                    ]),
-                    "title": .object([
-                        "type": .string("string"),
-                        "description": .string("Movie title (fallback when no tmdbId — picks the first match)"),
-                    ]),
-                ]),
-            ])
-        ),
-    ]
 }
 
 public enum LocalToolError: Error, Equatable, Sendable, LocalizedError {

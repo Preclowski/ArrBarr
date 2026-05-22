@@ -4167,6 +4167,9 @@
     },
     "MCP": {
       "extractionState": "manual"
+    },
+    "Application": {
+      "extractionState": "manual"
     }
   }
 }

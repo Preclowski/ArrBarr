@@ -121,11 +121,12 @@ public struct MainWindowView: View {
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button(action: { Task { await viewModel.refresh() } }) {
-                    if viewModel.isRefreshing {
-                        ProgressView().controlSize(.small)
-                    } else {
-                        Image(systemName: "arrow.clockwise")
-                    }
+                    Image(systemName: "arrow.clockwise")
+                        .rotationEffect(.degrees(viewModel.isRefreshing ? 360 : 0))
+                        .animation(viewModel.isRefreshing
+                                   ? .linear(duration: 0.9).repeatForever(autoreverses: false)
+                                   : .default,
+                                   value: viewModel.isRefreshing)
                 }
                 .help(Text("Refresh"))
                 .disabled(viewModel.isRefreshing)

@@ -27,13 +27,7 @@ public enum ChatViewModelFactory {
             backend = MCPClient(config: mcp)
         }
 
-        let toolNames = MCPToolWhitelist.v1Allowed.sorted()
-        let llmTools = toolNames.map { name in
-            LLMTool(name: name, description: "ArrBarr tool: \(name)", inputSchema: .object([
-                "type": .string("object"),
-                "properties": .object([:]),
-            ]))
-        }
+        let llmTools = ChatToolCatalog.llmTools
 
         let invoke: @Sendable (String, JSONValue) async throws -> String = { name, args in
             try await backend.callTool(name: name, arguments: args)
