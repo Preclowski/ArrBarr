@@ -151,7 +151,7 @@ public final class QueueViewModel: ObservableObject {
             self.radarr = DemoMocks.radarrQueue
             self.sonarr = DemoMocks.sonarrQueue
             self.lidarr = DemoMocks.lidarrQueue
-            self.whisparr = []
+            self.whisparr = DemoMocks.whisparrQueue
             self.upcoming = DemoMocks.upcoming
             self.tonight = Self.tonightSlice(from: DemoMocks.upcoming, hours: configStore.tonightHours)
             self.health = DemoMocks.health
@@ -164,7 +164,7 @@ public final class QueueViewModel: ObservableObject {
                 radarr: DemoMocks.radarrQueue,
                 sonarr: DemoMocks.sonarrQueue,
                 lidarr: DemoMocks.lidarrQueue,
-                whisparr: [],
+                whisparr: DemoMocks.whisparrQueue,
                 health: DemoMocks.health
             )
             self.lastError = nil

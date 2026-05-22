@@ -56,6 +56,7 @@ public enum DemoMode {
         if store.radarr == .empty { store.radarr.enabled = true }
         if store.sonarr == .empty { store.sonarr.enabled = true }
         if store.lidarr == .empty { store.lidarr.enabled = true }
+        if store.whisparr == .empty { store.whisparr.enabled = true }
         UserDefaults.standard.set(true, forKey: seedDoneKey)
     }
 }
@@ -75,9 +76,20 @@ public enum DemoMocks {
         "caminandes":        "Blender_Foundation_-_Caminandes_-_Episode_3_-_Llamigos_-_Cover_thumbnail.png",
         "pioneerone":        "Artwork_for_the_2010_Pioneer_One_series.jpg",
         "ninghosts":         "Nine_Inch_Nails_-_Ghosts_I-IV.png",
+        "bradsucks":         "Brad_Sucks_Out_of_It.jpg",
+        "coultonsomeguys":   "Jonathan_Coulton_-_Some_Guys.jpg",
     ]
 
     private static func poster(label: String, seed: String, w: Int = 200, h: Int = 300) -> URL? {
+        // Whisparr demo: posters are kittens. seed is "kitten:<image_id>" — e.g.
+        // "kitten:neo", "kitten:millie". placecats.com is a free, no-auth cat
+        // placeholder service that takes a named image plus dimensions.
+        if seed.hasPrefix("kitten:") {
+            let id = String(seed.dropFirst("kitten:".count))
+            // placecats.com format: https://placecats.com/<image_id>/<w>/<h>
+            return URL(string: "https://placecats.com/\(id)/\(w)/\(h)")
+        }
+
         if let filename = realPosters[seed] {
             let encoded = filename.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? filename
             return URL(string: "https://en.wikipedia.org/wiki/Special:FilePath/\(encoded)?width=\(w * 2)")
@@ -386,6 +398,38 @@ public enum DemoMocks {
         ]
     }
 
+    static var whisparrQueue: [QueueItem] {
+        [
+            queueItem(
+                source: .whisparr, id: "demo-whisparr-1",
+                title: "Kitten Cam: Backyard Drama (2024)",
+                releaseName: "Kitten.Cam.Backyard.Drama.2024.1080p.WEB-DL.x264-DEMO",
+                status: .downloading, progress: 0.55,
+                quality: "WEB-DL 1080p", formats: ["x264", "Atmos", "HQ Source Group"], score: 280,
+                client: "qBittorrent", indexer: "DemoTracker",
+                upgrade: false,
+                posterSeed: "kitten:neo", aspect: .portrait,
+                entityId: 401
+            ),
+            queueItem(
+                source: .whisparr, id: "demo-whisparr-2",
+                title: "The Black Cat Chronicles (2023)",
+                releaseName: "The.Black.Cat.Chronicles.2023.2160p.WEB-DL.HDR-DEMO",
+                status: .completed, progress: 1.0,
+                quality: "WEB-DL 2160p", formats: ["HDR10", "AV1"], score: 690,
+                client: "SABnzbd", indexer: "DemoUsenet",
+                upgrade: true,
+                existing: ExistingFile(
+                    quality: "WEB-DL 1080p", formats: ["x264"], score: 240,
+                    size: 2_400_000_000,
+                    fileName: "The.Black.Cat.Chronicles.2023.1080p.WEB-DL.x264-OLD.mkv"
+                ),
+                posterSeed: "kitten:millie", aspect: .portrait,
+                entityId: 402
+            ),
+        ]
+    }
+
     // MARK: - Upcoming
 
     static var upcoming: [UpcomingItem] {
@@ -429,6 +473,18 @@ public enum DemoMocks {
                 daysAhead: 8, releaseType: "Airing", hasFile: false,
                 posterSeed: "pioneerone", aspect: .portrait
             ),
+            upcomingItem(
+                source: .whisparr, id: "demo-cal-whisparr-1",
+                title: "Garage Cat Files (2024)",
+                daysAhead: 4, releaseType: "Digital", hasFile: false,
+                posterSeed: "kitten:poppy", aspect: .portrait
+            ),
+            upcomingItem(
+                source: .whisparr, id: "demo-cal-whisparr-2",
+                title: "Whiskers & Whispers Vol. II",
+                daysAhead: 9, releaseType: "Digital", hasFile: false,
+                posterSeed: "kitten:bella", aspect: .portrait
+            ),
         ]
         .sorted { $0.airDate < $1.airDate }
     }
@@ -443,7 +499,12 @@ public enum DemoMocks {
                                 message: "Indexer 'Demo Tracker' is unavailable due to errors for more than 6 hours",
                                 wikiUrl: nil),
             ],
-            lidarr: []
+            lidarr: [],
+            whisparr: [
+                ArrHealthRecord(source: "ImportCheck", type: "warning",
+                                message: "Whisparr remote storage at 87% capacity",
+                                wikiUrl: nil),
+            ]
         )
     }
 
@@ -454,7 +515,7 @@ public enum DemoMocks {
         case .radarr: return radarrHistory
         case .sonarr: return sonarrHistory
         case .lidarr: return lidarrHistory
-        case .whisparr: return []
+        case .whisparr: return whisparrHistory
         }
     }
 
@@ -520,6 +581,24 @@ public enum DemoMocks {
                         subtitle: "Out of It",
                         sourceTitle: "Brad.Sucks-Out.of.It-MP3-DEMO",
                         quality: "MP3-320", formats: [], score: 0),
+        ]
+    }
+
+    private static var whisparrHistory: [HistoryItem] {
+        [
+            historyItem(.whisparr, id: "wh1", minutesAgo: 360, event: .imported,
+                        title: "The Black Cat Chronicles (2023)",
+                        subtitle: "Upgrade — Bluray-2160p HDR",
+                        sourceTitle: "Black.Cat.Chronicles.2023.2160p.BluRay.HDR.x265.DV-DEMO",
+                        quality: "Bluray-2160p", formats: ["HDR10", "DV", "x265"], score: 920),
+            historyItem(.whisparr, id: "wh2", minutesAgo: 840, event: .grabbed,
+                        title: "Kitten Cam: Backyard Drama (2024)",
+                        sourceTitle: "Kitten.Cam.Backyard.Drama.2024.1080p.WEB-DL.x264-DEMO",
+                        quality: "WEB-DL 1080p", formats: ["x264"], score: 280),
+            historyItem(.whisparr, id: "wh3", minutesAgo: 1560, event: .failed,
+                        title: "Nine Lives of Mittens (2022)",
+                        sourceTitle: "Nine.Lives.of.Mittens.2022.720p.WEB-DL-DEMO",
+                        quality: "WEB-DL 720p", formats: ["x264"], score: -120),
         ]
     }
 
@@ -1049,10 +1128,10 @@ public enum DemoMocks {
     public static func searchResults(for query: String, source: QueueItem.Source) -> [SearchResult] {
         let pool: [SearchResult]
         switch source {
-        case .radarr: pool = radarrSearchPool
-        case .sonarr: pool = sonarrSearchPool
-        case .lidarr: pool = []
-        case .whisparr: pool = []
+        case .radarr:   pool = radarrSearchPool
+        case .sonarr:   pool = sonarrSearchPool
+        case .lidarr:   pool = lidarrSearchPool
+        case .whisparr: pool = whisparrSearchPool
         }
         guard !query.isEmpty else { return Array(pool.prefix(6)) }
         let q = query.lowercased()
@@ -1148,6 +1227,190 @@ public enum DemoMocks {
                 certification: "G",
                 posterURL: poster(label: "Coffee Run", seed: "coffeerun", w: 200, h: 300),
                 source: .radarr
+            ),
+        ]
+    }
+
+    private static var lidarrSearchPool: [SearchResult] {
+        [
+            SearchResult(
+                id: 30001, foreignId: "b7ffd2af-418f-4be2-bdd1-22f8b48613da",
+                title: "Nine Inch Nails",
+                subtitle: "Industrial rock",
+                year: nil,
+                rating: 8.5,
+                imdb: nil, rottenTomatoes: nil, metacritic: nil,
+                overview: "Trent Reznor's industrial-rock project. Released the four-volume instrumental 'Ghosts I-IV' under Creative Commons in 2008.",
+                runtime: nil,
+                genres: ["Industrial", "Rock", "Electronic"],
+                network: nil,
+                certification: nil,
+                posterURL: poster(label: "NIN", seed: "ninghosts", w: 200, h: 200),
+                source: .lidarr
+            ),
+            SearchResult(
+                id: 30002, foreignId: "1ce18a52-ca5f-4f34-9bc6-5f2af0d33f5e",
+                title: "Brad Sucks",
+                subtitle: "One-man band",
+                year: nil,
+                rating: 7.2,
+                imdb: nil, rottenTomatoes: nil, metacritic: nil,
+                overview: "Ottawa one-man indie pop project. Every album he's released has been free / Creative Commons since 2003.",
+                runtime: nil,
+                genres: ["Indie", "Pop"],
+                network: nil,
+                certification: nil,
+                posterURL: poster(label: "Brad Sucks", seed: "bradsucks", w: 200, h: 200),
+                source: .lidarr
+            ),
+            SearchResult(
+                id: 30003, foreignId: "30c4c46c-2c4e-44a3-b9f2-c0ultonforeignid",
+                title: "Jonathan Coulton",
+                subtitle: "Geek folk",
+                year: nil,
+                rating: 7.8,
+                imdb: nil, rottenTomatoes: nil, metacritic: nil,
+                overview: "American musician known for 'Code Monkey' and 'Still Alive' (Portal). Releases most work under CC-BY-NC.",
+                runtime: nil,
+                genres: ["Folk", "Comedy", "Indie"],
+                network: nil,
+                certification: nil,
+                posterURL: poster(label: "Coulton", seed: "coultonsomeguys", w: 200, h: 200),
+                source: .lidarr
+            ),
+            SearchResult(
+                id: 30004, foreignId: "kevinmacleod-incompetech",
+                title: "Kevin MacLeod",
+                subtitle: "Royalty-free composer",
+                year: nil,
+                rating: 7.0,
+                imdb: nil, rottenTomatoes: nil, metacritic: nil,
+                overview: "Prolific incompetech.com composer. Over 2000 royalty-free tracks under CC-BY 4.0 — every YouTube tutorial ever uses his work.",
+                runtime: nil,
+                genres: ["Soundtrack", "Ambient", "Electronic"],
+                network: nil,
+                certification: nil,
+                posterURL: poster(label: "Kevin MacLeod", seed: "kevinmacleod", w: 200, h: 200),
+                source: .lidarr
+            ),
+            SearchResult(
+                id: 30005, foreignId: "tobu-musicbrainz",
+                title: "Tobu",
+                subtitle: "Electronic / EDM",
+                year: nil,
+                rating: 7.5,
+                imdb: nil, rottenTomatoes: nil, metacritic: nil,
+                overview: "Latvian electronic producer who releases under No Copyright Sounds. Heavy presence on YouTube-creator playlists.",
+                runtime: nil,
+                genres: ["EDM", "Electronic", "House"],
+                network: nil,
+                certification: nil,
+                posterURL: poster(label: "Tobu", seed: "tobu", w: 200, h: 200),
+                source: .lidarr
+            ),
+            SearchResult(
+                id: 30006, foreignId: "komiku-fma",
+                title: "Komiku",
+                subtitle: "Chiptune / 8-bit",
+                year: nil,
+                rating: 7.1,
+                imdb: nil, rottenTomatoes: nil, metacritic: nil,
+                overview: "French chiptune composer. Whole catalog on Free Music Archive under CC0 — game devs and podcasters love them.",
+                runtime: nil,
+                genres: ["Chiptune", "Soundtrack", "Electronic"],
+                network: nil,
+                certification: nil,
+                posterURL: poster(label: "Komiku", seed: "komiku", w: 200, h: 200),
+                source: .lidarr
+            ),
+        ]
+    }
+
+    private static var whisparrSearchPool: [SearchResult] {
+        [
+            SearchResult(
+                id: 40001, foreignId: "40001",
+                title: "Kitten Cam: Backyard Drama", subtitle: nil,
+                year: 2024,
+                rating: 8.4,
+                imdb: nil, rottenTomatoes: nil, metacritic: nil,
+                overview: "A long-running observational documentary about feline politics in a suburban garden. Episode count varies depending on neighbour cats.",
+                runtime: 24,
+                genres: ["Documentary", "Comedy"],
+                network: "Whisparr Studio",
+                certification: nil,
+                posterURL: poster(label: "Kitten Cam", seed: "kitten:neo", w: 200, h: 300),
+                source: .whisparr
+            ),
+            SearchResult(
+                id: 40002, foreignId: "40002",
+                title: "The Black Cat Chronicles", subtitle: nil,
+                year: 2023,
+                rating: 7.8,
+                imdb: nil, rottenTomatoes: nil, metacritic: nil,
+                overview: "Award-winning short film series following the social lives of three sibling cats sharing a Brooklyn apartment.",
+                runtime: 18,
+                genres: ["Short", "Drama"],
+                network: "Whisparr Studio",
+                certification: nil,
+                posterURL: poster(label: "Black Cat", seed: "kitten:millie", w: 200, h: 300),
+                source: .whisparr
+            ),
+            SearchResult(
+                id: 40003, foreignId: "40003",
+                title: "Nine Lives of Mittens", subtitle: nil,
+                year: 2022,
+                rating: 7.1,
+                imdb: nil, rottenTomatoes: nil, metacritic: nil,
+                overview: "An anthology, one short per life. Tenth episode somehow exists.",
+                runtime: 22,
+                genres: ["Anthology", "Drama"],
+                network: "Whisparr Studio",
+                certification: nil,
+                posterURL: poster(label: "Mittens", seed: "kitten:poppy", w: 200, h: 300),
+                source: .whisparr
+            ),
+            SearchResult(
+                id: 40004, foreignId: "40004",
+                title: "Whiskers & Whispers", subtitle: nil,
+                year: 2024,
+                rating: 6.9,
+                imdb: nil, rottenTomatoes: nil, metacritic: nil,
+                overview: "ASMR podcast hosted by three cats. Episodes are mostly purring with occasional commentary on the texture of cardboard boxes.",
+                runtime: 32,
+                genres: ["Podcast", "Lifestyle"],
+                network: nil,
+                certification: nil,
+                posterURL: poster(label: "Whiskers", seed: "kitten:bella", w: 200, h: 300),
+                source: .whisparr
+            ),
+            SearchResult(
+                id: 40005, foreignId: "40005",
+                title: "Cat Burglar", subtitle: nil,
+                year: 2021,
+                rating: 7.3,
+                imdb: nil, rottenTomatoes: nil, metacritic: nil,
+                overview: "Mockumentary about a tabby who keeps stealing tools from the neighbour's workshop. Three seasons, no leads.",
+                runtime: 26,
+                genres: ["Mockumentary", "Crime", "Comedy"],
+                network: "Whisparr Studio",
+                certification: nil,
+                posterURL: poster(label: "Cat Burglar", seed: "kitten:g", w: 200, h: 300),
+                source: .whisparr
+            ),
+            SearchResult(
+                id: 40006, foreignId: "40006",
+                title: "Garage Cat Files", subtitle: nil,
+                year: 2024,
+                rating: 7.6,
+                imdb: nil, rottenTomatoes: nil, metacritic: nil,
+                overview: "Industrial-cinema treatment of a stray that adopted a mechanic's garage. Lots of slow pans and one bench grinder.",
+                runtime: 41,
+                genres: ["Documentary", "Drama"],
+                network: nil,
+                certification: nil,
+                posterURL: poster(label: "Garage Cat", seed: "kitten:mu", w: 200, h: 300),
+                source: .whisparr
             ),
         ]
     }
