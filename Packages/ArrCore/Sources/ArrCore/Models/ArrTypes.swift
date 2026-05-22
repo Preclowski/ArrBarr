@@ -109,6 +109,11 @@ public struct SonarrSeries: Decodable {
     let year: Int?
     let titleSlug: String?
     let images: [ArrImage]?
+    // Calendar fetches the series with `includeSeries=true`, so both of
+    // these are populated when the upstream record came from /calendar.
+    // SonarrLookupRatings just wraps a `value: Double?` — reuse it.
+    let runtime: Int?
+    let ratings: SonarrLookupRatings?
 }
 
 public struct SonarrEpisode: Decodable {
@@ -245,6 +250,10 @@ public struct RadarrCalendarRecord: Decodable {
     let overview: String?
     let images: [ArrImage]?
     let titleSlug: String?
+    // Same fields the search lookup decoder already extracts — calendar
+    // returns identical movie records, just filtered by release window.
+    let runtime: Int?
+    let ratings: RadarrLookupRatings?
 }
 
 public struct SonarrCalendarRecord: Decodable {
@@ -413,6 +422,9 @@ public struct WhisparrCalendarRecord: Decodable {
     let images: [ArrImage]?
     let titleSlug: String?
     let studio: String?
+    // Whisparr is a Radarr fork and returns the same shape for scenes.
+    let runtime: Int?
+    let ratings: RadarrLookupRatings?
 }
 
 public struct WhisparrHistoryRecord: Decodable {

@@ -23,6 +23,43 @@ public extension View {
     }
 }
 
+/// Floating glass back button — same Liquid Glass capsule treatment as
+/// the tab bar / chat input. Used at the top-left of DetailView,
+/// HistoryView, SearchAddPanel and the search overlay so the navigation
+/// affordance is visually consistent with the rest of the floating
+/// chrome.
+public struct FloatingBackButton: View {
+    let action: () -> Void
+    @State private var isHovering = false
+
+    public init(action: @escaping () -> Void) {
+        self.action = action
+    }
+
+    public var body: some View {
+        Button(action: action) {
+            HStack(spacing: 3) {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 11, weight: .semibold))
+                Text("Back", bundle: .module)
+                    .font(.system(size: 12, weight: .medium))
+            }
+            .foregroundStyle(isHovering ? .primary : .secondary)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .glassyFloatingBar()
+        #if os(macOS)
+        .onHover { hovering in
+            withAnimation(.easeInOut(duration: 0.15)) { isHovering = hovering }
+            if hovering { NSCursor.pointingHand.push() } else { NSCursor.pop() }
+        }
+        #endif
+    }
+}
+
 private struct GlassPillModifier: ViewModifier {
     func body(content: Content) -> some View {
         #if os(macOS)

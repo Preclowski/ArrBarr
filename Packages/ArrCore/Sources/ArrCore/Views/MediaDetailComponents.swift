@@ -960,7 +960,8 @@ struct ExistingFilePopover: View {
         }
         .padding(10)
         .frame(width: 320)
-        .background(.regularMaterial)
+        // Match QueueItemTooltip — no SwiftUI material backdrop, so the
+        // native NSPopover chrome carries through.
     }
 }
 

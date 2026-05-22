@@ -183,33 +183,17 @@ public struct PopoverContentView: View {
             }
         }
         .frame(width: 400, height: 600)
-        // The popover itself paints macOS 26's Liquid Glass for us now
-        // (AppDelegate cleared the hosting view's background so the
-        // system chrome shows through). What we add here is just the
-        // depth — a thin top→bottom rim that reads as the edge of a
-        // glass tile catching ambient light.
-        //
-        // Critical: `.screen` (or `.softLight`) survives NSPopover's
-        // vibrancy. `.plusLighter` does NOT — it gets eaten by the
-        // vibrancy filter and renders as nothing on dark desktops.
-        // Corner radius 10pt matches NSPopover's outer chrome on macOS 26.
+        // Transparent background lets NSPopover's native chrome show
+        // through (AppDelegate clears the hosting view's layer too). We
+        // used to paint a rim-light overlay here on top of this — meant
+        // to approximate macOS 26's Liquid Glass edge — but the stroke
+        // ran straight through where NSPopover's arrow attaches to the
+        // frame, leaving a visible cut, and the arrow itself doesn't get
+        // the overlay (it's outside our 400×600 SwiftUI surface). Without
+        // bumping the deployment target to 26 the rim couldn't ever look
+        // like real glass anyway, so it's gone — arrow + frame stay
+        // visually consistent.
         .background(Color.clear)
-        .overlay(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .stroke(
-                    LinearGradient(
-                        colors: [
-                            Color.white.opacity(0.55),
-                            Color.white.opacity(0.08),
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    ),
-                    lineWidth: 0.75
-                )
-                .blendMode(.screen)
-                .allowsHitTesting(false)
-        )
     }
 
     @ViewBuilder
@@ -230,17 +214,7 @@ public struct PopoverContentView: View {
         } else {
             VStack(spacing: 0) {
                 HStack(spacing: 6) {
-                    Button(action: closeSearch) {
-                        HStack(spacing: 3) {
-                            Image(systemName: "chevron.left")
-                                .font(.system(size: 11, weight: .semibold))
-                            Text("Back", bundle: .module)
-                                .font(.system(size: 12))
-                        }
-                        .foregroundStyle(.secondary)
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
+                    FloatingBackButton(action: closeSearch)
                     Spacer()
                     Image(systemName: "plus.magnifyingglass")
                         .font(.system(size: 11))
@@ -250,7 +224,8 @@ public struct PopoverContentView: View {
                         .foregroundStyle(.tertiary)
                 }
                 .padding(.horizontal, 12)
-                .padding(.vertical, 8)
+                .padding(.top, 10)
+                .padding(.bottom, 8)
                 SearchView(viewModel: searchViewModel) { result in
                     searchResult = result
                 }

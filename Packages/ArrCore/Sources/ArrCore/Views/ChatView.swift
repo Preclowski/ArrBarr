@@ -115,7 +115,7 @@ public struct ChatView: View {
             Spacer(minLength: 0)
             Image(systemName: "sparkles")
                 .font(.system(size: 36, weight: .light))
-                .foregroundStyle(.purple)
+                .foregroundStyle(.secondary)
             Text("Ask about Sonarr, Radarr or Lidarr", bundle: .module)
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(.primary)

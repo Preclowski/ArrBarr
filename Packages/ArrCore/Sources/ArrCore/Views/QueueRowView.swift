@@ -308,7 +308,11 @@ public struct QueueItemTooltip: View {
         }
         .padding(12)
         .frame(width: 480)
-        .background(.regularMaterial)
+        // No `.background(.regularMaterial)` — that would paint a SwiftUI
+        // material brighter than NSPopover's native chrome, making the
+        // tooltip read as a lighter rectangle next to the parent popover.
+        // PopoverBehaviorAdjuster clears the hosting view's layer instead
+        // so the native chrome shines through and the tooltip matches.
     }
 
     private var posterSize: CGSize {
@@ -545,31 +549,29 @@ public struct TooltipFlowLayout: Layout {
     }
 }
 
-/// Overlays hover-only `actions` on the top-trailing edge of a content
-/// block, with a short gradient fade behind the buttons so any tags / chips
-/// they overlap fade out cleanly. The content keeps its full width
-/// regardless of hover state — actions don't push the layout sideways
-/// (which is what was wrapping title-row badges to a second line).
+/// Overlays hover-only `actions` on the trailing edge of a content block.
+/// Uses `.overlay(alignment:)` rather than a ZStack so the action cluster
+/// — which is taller than the title HStack it's anchored to (~30pt vs
+/// ~17pt) — does NOT force the parent to grow on hover. A ZStack here was
+/// pushing the progress bar (and everything below the title row) down by
+/// ~13pt the moment the cluster appeared, which read as the bar's height
+/// jumping. Overlay modifier draws on top without contributing to layout
+/// size; the cluster overlaps the right edge of the title row but the row
+/// itself stays put.
 public struct HoverActionOverlay<Actions: View>: ViewModifier {
     let visible: Bool
     @ViewBuilder let actions: () -> Actions
 
     public func body(content: Content) -> some View {
-        ZStack(alignment: .topTrailing) {
-            content
-                .frame(maxWidth: .infinity, alignment: .leading)
-            if visible {
-                // Used to fade the row content out behind the action cluster
-                // via a LinearGradient that became visible as a rectangular
-                // "tail" past the capsule's rounded edge. The glass capsule
-                // itself now provides the visual separation from row content
-                // (the material obscures text behind it naturally), so the
-                // gradient is gone — no shape clash with the capsule.
-                actions()
-                    .padding(.trailing, 4)
-                    .transition(.opacity)
+        content
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .overlay(alignment: .trailing) {
+                if visible {
+                    actions()
+                        .padding(.trailing, 4)
+                        .transition(.opacity)
+                }
             }
-        }
     }
 }
 

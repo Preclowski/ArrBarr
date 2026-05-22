@@ -3,102 +3,63 @@ import SwiftUI
 public struct UpcomingRowView: View {
     let item: UpcomingItem
     @EnvironmentObject var configStore: ConfigStore
-    @State private var isHovering = false
-
-    private var shouldBlur: Bool {
-        configStore.shouldBlurPoster(for: item.source)
-    }
 
     public var body: some View {
-        Button {
-            guard let entityId = item.entityId else { return }
-            DetailRequest.post(
-                DetailRequest.syntheticItem(
-                    source: item.source,
-                    entityId: entityId,
-                    title: item.title,
-                    posterURL: item.posterURL,
-                    posterRequiresAuth: item.posterRequiresAuth
-                )
-            )
-        } label: {
-            rowContent
+        PosterMetadataRow(
+            posterURL: item.posterURL,
+            posterAPIKey: item.posterRequiresAuth ? apiKeyForSource : nil,
+            posterSize: posterSize,
+            posterBlurred: configStore.shouldBlurPoster(for: item.source),
+            posterFallbackSymbol: item.source.symbol,
+            title: item.title,
+            metadataSegments: metadataSegments,
+            disabled: item.entityId == nil,
+            onTap: openDetail
+        ) {
+            // hasFile is the only "indicator" left after metadata folded
+            // everything else into the dot-joined line. Keep it as a tiny
+            // trailing affordance so a row that's already on disk reads at
+            // a glance — mirrors how `+` keeps its plus icon trailing.
+            if item.hasFile {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.green)
+            }
         }
-        .buttonStyle(.plain)
-        .disabled(item.entityId == nil)
         .help(tooltipText)
-        // Hover tint mirrors QueueRowView — signals that the row is
-        // tappable now that it opens DetailView. Skipped when there's no
-        // entityId (button is disabled, no interaction to advertise).
-        #if os(macOS)
-        .background(
-            RoundedRectangle(cornerRadius: 6)
-                .fill(isHovering && item.entityId != nil
-                      ? Color.primary.opacity(0.06)
-                      : Color.clear)
-                .padding(.horizontal, 6)
-        )
-        .onHover { hovering in
-            withAnimation(.easeInOut(duration: 0.15)) { isHovering = hovering }
-        }
-        #endif
     }
 
-    private var rowContent: some View {
-        HStack(spacing: 8) {
-            PosterBlurContainer(blurred: shouldBlur, cornerRadius: 3) {
-                RemotePoster(
-                    url: item.posterURL,
-                    apiKey: item.posterRequiresAuth ? apiKeyForSource : nil,
-                    size: posterSize,
-                    cornerRadius: 3,
-                    fallbackSymbol: item.source.symbol
-                )
-            }
+    /// Dot-joined metadata mirroring `SearchResultRow`. Order: subtitle
+    /// (S00E00 etc) → releaseType (Airing / Digital / In Cinemas) →
+    /// IMDb → runtime. airDate is deliberately *not* here — the upcoming
+    /// list groups by day with the date as a section header, so showing
+    /// it again per row would just be noise.
+    private var metadataSegments: [String] {
+        [
+            item.subtitle.flatMap { $0.isEmpty ? nil : $0 },
+            item.releaseType.flatMap { $0.isEmpty ? nil : $0 },
+            item.imdb.map { String(format: "IMDb %.1f", $0) },
+            item.runtime.flatMap { $0 > 0 ? "\($0) min" : nil },
+        ].compactMap { $0 }
+    }
 
-            VStack(alignment: .leading, spacing: 1) {
-                Text(item.title)
-                    .font(.system(size: 12, weight: .medium))
-                    .lineLimit(1)
-
-                if let sub = item.subtitle {
-                    Text(sub)
-                        .font(.system(size: 11))
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
-            }
-
-            Spacer(minLength: 4)
-
-            VStack(alignment: .trailing, spacing: 1) {
-                Text(item.airDateFormatted(locale: configStore.currentLocale))
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(.secondary)
-
-                HStack(spacing: 4) {
-                    if let type = item.releaseType {
-                        Text(type)
-                            .font(.system(size: 9, weight: .medium))
-                            .foregroundStyle(.tertiary)
-                    }
-                    if item.hasFile {
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 9))
-                            .foregroundStyle(.green)
-                    }
-                }
-            }
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 5)
-        .contentShape(Rectangle())
+    private func openDetail() {
+        guard let entityId = item.entityId else { return }
+        DetailRequest.post(
+            DetailRequest.syntheticItem(
+                source: item.source,
+                entityId: entityId,
+                title: item.title,
+                posterURL: item.posterURL,
+                posterRequiresAuth: item.posterRequiresAuth
+            )
+        )
     }
 
     private var posterSize: CGSize {
         switch item.source {
-        case .radarr, .sonarr, .whisparr: return CGSize(width: 24, height: 36)
-        case .lidarr: return CGSize(width: 24, height: 24)
+        case .radarr, .sonarr, .whisparr: return CGSize(width: 26, height: 38)
+        case .lidarr: return CGSize(width: 26, height: 26)
         }
     }
 

@@ -297,7 +297,9 @@ public struct QueueGroupTooltip: View {
         }
         .padding(12)
         .frame(width: 480)
-        .background(.regularMaterial)
+        // See QueueItemTooltip — letting NSPopover's native chrome paint
+        // the backdrop instead of `.regularMaterial` keeps tooltip and
+        // parent popover visually unified.
     }
 
     private var tooltipContent: some View {

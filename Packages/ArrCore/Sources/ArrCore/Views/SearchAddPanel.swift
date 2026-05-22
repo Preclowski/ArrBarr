@@ -34,7 +34,6 @@ public struct SearchAddPanel: View {
     public var body: some View {
         VStack(spacing: 0) {
             header
-            Divider()
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
@@ -97,17 +96,7 @@ public struct SearchAddPanel: View {
 
     private var header: some View {
         HStack(spacing: 6) {
-            Button(action: onBack) {
-                HStack(spacing: 3) {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 11, weight: .semibold))
-                    Text("Back")
-                        .font(.system(size: 12))
-                }
-                .foregroundStyle(.secondary)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
+            FloatingBackButton(action: onBack)
 
             Spacer()
 
@@ -119,7 +108,8 @@ public struct SearchAddPanel: View {
                 .foregroundStyle(.tertiary)
         }
         .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .padding(.top, 10)
+        .padding(.bottom, 8)
     }
 
     // MARK: - Hero
