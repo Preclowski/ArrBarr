@@ -5,6 +5,7 @@ public struct SearchResultRow: View {
     let onTap: () -> Void
 
     @EnvironmentObject var configStore: ConfigStore
+    @State private var isHovering = false
 
     private var shouldBlur: Bool {
         configStore.shouldBlurPoster(for: result.source)
@@ -55,5 +56,17 @@ public struct SearchResultRow: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        // Hover tint mirroring QueueRowView / UpcomingRowView — signals
+        // that the row is interactive (tap opens the SearchAddPanel).
+        #if os(macOS)
+        .background(
+            RoundedRectangle(cornerRadius: 6)
+                .fill(isHovering ? Color.primary.opacity(0.06) : Color.clear)
+                .padding(.horizontal, 6)
+        )
+        .onHover { hovering in
+            withAnimation(.easeInOut(duration: 0.15)) { isHovering = hovering }
+        }
+        #endif
     }
 }
