@@ -3110,7 +3110,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Redémarrer"
+            "value": "Relancer"
           }
         },
         "pl": {
@@ -3987,6 +3987,93 @@
           "stringUnit": {
             "state": "translated",
             "value": "Zastępuje istniejące pliki"
+          }
+        }
+      }
+    },
+    "Restart required to apply the new language.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neustart erforderlich, um die neue Sprache zu übernehmen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reinicia para aplicar el nuevo idioma."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Redémarrage requis pour appliquer la nouvelle langue."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wymagany restart, aby zastosować nowy język."
+          }
+        }
+      }
+    },
+    "Quit and reopen the app to apply the new language.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beende die App und öffne sie erneut, um die neue Sprache zu übernehmen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cierra y vuelve a abrir la app para aplicar el nuevo idioma."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quittez et rouvrez l’application pour appliquer la nouvelle langue."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zamknij i otwórz aplikację ponownie, aby zastosować nowy język."
+          }
+        }
+      }
+    },
+    "Replacing all %lld episodes": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ersetze alle %lld Episoden"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reemplazando los %lld episodios"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remplacement des %lld épisodes"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zastępowanie wszystkich %lld odcinków"
           }
         }
       }

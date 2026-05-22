@@ -272,8 +272,6 @@ public struct QueueGroupTooltip: View {
 
     private var rep: QueueItem { group.representative }
 
-    private func loc(_ key: String) -> String { LocaleBundle.string(key, locale: locale) }
-
     public var body: some View {
         HStack(alignment: .top, spacing: 12) {
             RemotePoster(
@@ -312,7 +310,7 @@ public struct QueueGroupTooltip: View {
             }
 
             if !group.items.isEmpty {
-                Text(verbatim: loc("Episodes"))
+                Text("Episodes", bundle: .module)
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(.secondary)
                     .textCase(.uppercase)
@@ -372,7 +370,7 @@ public struct QueueGroupTooltip: View {
                 Image(systemName: "arrow.up.doc.fill")
                     .font(.system(size: 9))
                     .foregroundStyle(.indigo)
-                Text(verbatim: String(format: loc("Replacing all %lld episodes"), upgradeCount))
+                Text("Replacing all \(upgradeCount) episodes", bundle: .module)
                     .font(.system(size: 9, weight: .semibold))
                     .textCase(.uppercase)
                     .tracking(0.5)
@@ -443,7 +441,7 @@ public struct QueueGroupTooltip: View {
                     Text(label)
                     Text("·").foregroundStyle(.tertiary)
                 }
-                Text(String(format: loc("%lld episodes"), group.memberCount))
+                Text("\(group.memberCount) episodes", bundle: .module)
             }
             .font(.system(size: 11))
             .foregroundStyle(.secondary)
@@ -484,10 +482,14 @@ public struct QueueGroupTooltip: View {
     private var seasonLabel: String? {
         let seasons = Set(group.items.compactMap(\.seasonNumber))
         if seasons.count == 1, let s = seasons.first {
-            return String(format: loc("Season %02lld"), s)
+            // %02lld is a zero-padded format specifier — LocalizedStringKey
+            // interpolation can't express it, so resolve the format string
+            // through the catalog and feed it to String(format:).
+            let fmt = String(localized: "Season %02lld", bundle: Bundle.module)
+            return String(format: fmt, s)
         }
         if seasons.count > 1 {
-            return loc("Multiple seasons")
+            return String(localized: "Multiple seasons", bundle: Bundle.module)
         }
         return nil
     }
@@ -499,7 +501,7 @@ public struct QueueGroupTooltip: View {
     @ViewBuilder
     private func row(_ label: String, value: String, mono: Bool = false, wraps: Bool = false) -> some View {
         GridRow(alignment: .firstTextBaseline) {
-            Text(verbatim: loc(label))
+            Text(LocalizedStringKey(label), bundle: .module)
                 .font(.system(size: 11))
                 .foregroundStyle(.secondary)
                 .gridColumnAlignment(.leading)

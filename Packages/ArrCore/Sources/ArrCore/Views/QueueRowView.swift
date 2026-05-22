@@ -337,8 +337,6 @@ public struct QueueItemTooltip: View {
     var apiKey: String? = nil
     var locale: Locale = Locale(identifier: "en")
 
-    private func loc(_ key: String) -> String { LocaleBundle.string(key, locale: locale) }
-
     public var body: some View {
         HStack(alignment: .top, spacing: 12) {
             RemotePoster(
@@ -389,7 +387,7 @@ public struct QueueItemTooltip: View {
                 || item.existingQuality != nil
                 || !item.existingCustomFormats.isEmpty {
                 upgradeDivider
-                Text(verbatim: loc("Existing file"))
+                Text("Existing file", bundle: .module)
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(.secondary)
                     .textCase(.uppercase)
@@ -451,7 +449,7 @@ public struct QueueItemTooltip: View {
             Rectangle()
                 .fill(.quaternary)
                 .frame(height: 1)
-            Text(verbatim: loc("Upgrade"))
+            Text("Upgrade", bundle: .module)
                 .font(.system(size: 9, weight: .semibold))
                 .foregroundStyle(.indigo)
                 .padding(.horizontal, 5)
@@ -511,7 +509,7 @@ private var sizeString: String {
     @ViewBuilder
     private func row(_ label: String, value: String, valueColor: Color? = nil, mono: Bool = false, wraps: Bool = false) -> some View {
         GridRow(alignment: .firstTextBaseline) {
-            Text(verbatim: loc(label))
+            Text(LocalizedStringKey(label), bundle: .module)
                 .font(.system(size: 11))
                 .foregroundStyle(.secondary)
                 .gridColumnAlignment(.leading)
@@ -659,10 +657,10 @@ public struct IconButton: View {
         }
         .modifier(GlassButtonStyle())
         .controlSize(.mini)
-        .localizedHelp(helpKey, locale: configStore.currentLocale)
+        .help(Text(LocalizedStringKey(helpKey), bundle: .module))
         .accessibilityLabel(
             accessibilityLabel.isEmpty
-                ? Text(verbatim: LocaleBundle.string(helpKey, locale: configStore.currentLocale))
+                ? Text(LocalizedStringKey(helpKey), bundle: .module)
                 : Text(verbatim: accessibilityLabel)
         )
     }
