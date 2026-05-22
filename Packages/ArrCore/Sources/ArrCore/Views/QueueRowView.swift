@@ -559,19 +559,14 @@ public struct HoverActionOverlay<Actions: View>: ViewModifier {
             content
                 .frame(maxWidth: .infinity, alignment: .leading)
             if visible {
+                // Used to fade the row content out behind the action cluster
+                // via a LinearGradient that became visible as a rectangular
+                // "tail" past the capsule's rounded edge. The glass capsule
+                // itself now provides the visual separation from row content
+                // (the material obscures text behind it naturally), so the
+                // gradient is gone — no shape clash with the capsule.
                 actions()
-                    .padding(.leading, 8)
-                    .background(
-                        LinearGradient(
-                            colors: [
-                                Color.platformWindowBackground.opacity(0),
-                                Color.platformWindowBackground.opacity(0.95),
-                                Color.platformWindowBackground.opacity(0.95),
-                            ],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
+                    .padding(.trailing, 4)
                     .transition(.opacity)
             }
         }
