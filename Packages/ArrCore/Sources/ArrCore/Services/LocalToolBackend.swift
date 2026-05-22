@@ -236,7 +236,14 @@ public actor LocalToolBackend: ToolBackend {
             let yearPart = r.year.map { " (\($0))" } ?? " (year unknown)"
             let ratingPart = r.rating.map { String(format: " · ★ %.1f", $0) } ?? ""
             let yearMatchMark = (queryYear != nil && r.year == queryYear) ? " ← year matches" : ""
-            return "• \(idLabel)=\(r.id) — \(r.title)\(yearPart)\(ratingPart)\(yearMatchMark)"
+            var line = "• \(idLabel)=\(r.id) — \(r.title)\(yearPart)\(ratingPart)\(yearMatchMark)"
+            if let overview = r.overview, !overview.isEmpty {
+                // Truncate to ~180 chars; the LLM only needs a sense of the plot.
+                let trimmed = overview.replacingOccurrences(of: "\n", with: " ")
+                let short = trimmed.count > 180 ? String(trimmed.prefix(180)) + "…" : trimmed
+                line += "\n   \(short)"
+            }
+            return line
         }
         var out = "Top \(top.count) \(kind) result\(top.count == 1 ? "" : "s") from upstream (use \(idLabel) when calling add):"
         out += "\n" + lines.joined(separator: "\n")

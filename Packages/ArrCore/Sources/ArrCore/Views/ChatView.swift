@@ -168,7 +168,7 @@ private struct MessageBubble: View {
                             .textSelection(.enabled)
                     }
                 } else {
-                    Text(message.content)
+                    Text(Self.attributed(message.content))
                         .font(.system(size: 13))
                         .textSelection(.enabled)
                         .fixedSize(horizontal: false, vertical: true)
@@ -177,6 +177,19 @@ private struct MessageBubble: View {
             Spacer(minLength: 0)
         }
     }
+    /// Parse inline markdown (bold, italic, code, links). Block-level markdown
+    /// like headings or lists falls back to inline rendering — the model
+    /// usually emits paragraph + inline emphasis which renders cleanly.
+    static func attributed(_ raw: String) -> AttributedString {
+        let opts = AttributedString.MarkdownParsingOptions(
+            interpretedSyntax: .inlineOnlyPreservingWhitespace
+        )
+        if let attr = try? AttributedString(markdown: raw, options: opts) {
+            return attr
+        }
+        return AttributedString(raw)
+    }
+
     private var symbol: String {
         switch message.role {
         case .user: return "person.circle"
