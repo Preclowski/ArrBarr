@@ -3,11 +3,13 @@ import Testing
 
 @Suite("MCPToolWhitelist")
 struct MCPToolWhitelistTests {
-    @Test("v1 whitelist exposes exactly the six chosen tools")
+    @Test("v1 whitelist exposes exactly the eight chosen tools")
     func v1Tools() {
         #expect(MCPToolWhitelist.v1Allowed == Set([
             "sonarr_search",
             "radarr_search",
+            "sonarr_get_series",
+            "radarr_get_movies",
             "sonarr_get_calendar",
             "radarr_get_calendar",
             "sonarr_add_series",

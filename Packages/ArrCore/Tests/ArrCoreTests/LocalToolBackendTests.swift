@@ -48,10 +48,10 @@ struct LocalToolBackendTests {
         LocalToolBackend(sonarr: sonarrConfig(), radarr: radarrConfig())
     }
 
-    @Test("listTools returns 6 expected tool names")
-    func listToolsReturns6Tools() async throws {
+    @Test("listTools returns 8 expected tool names")
+    func listToolsReturns8Tools() async throws {
         let tools = try await backend().listTools()
-        #expect(tools.count == 6)
+        #expect(tools.count == 8)
         let names = Set(tools.map(\.name))
         #expect(names == MCPToolWhitelist.v1Allowed)
     }
@@ -123,5 +123,63 @@ struct LocalToolBackendTests {
         let result = try await backend().callTool(name: "sonarr_get_calendar", arguments: .object([:]))
         #expect(result.contains("My Show"))
         #expect(result.hasPrefix("Upcoming releases:"))
+    }
+
+    @Test("callTool sonarr_get_series stubs HTTP and returns library with filter")
+    func sonarrGetSeriesFiltered() async throws {
+        URLProtocol.registerClass(LocalStubProtocol.self)
+        defer {
+            URLProtocol.unregisterClass(LocalStubProtocol.self)
+            LocalStubProtocol.reset()
+        }
+
+        let json = """
+        [
+          {"id":1,"tvdbId":369232,"title":"Severance","year":2022,"status":"continuing","monitored":true},
+          {"id":2,"tvdbId":121361,"title":"Game of Thrones","year":2011,"status":"ended","monitored":false}
+        ]
+        """.data(using: .utf8)!
+        LocalStubProtocol.handlers["/api/v3/series"] = (200, json)
+
+        let result = try await backend().callTool(
+            name: "sonarr_get_series",
+            arguments: .object(["query": .string("severance")])
+        )
+        #expect(result.contains("Severance"))
+        #expect(result.contains("tvdbId=369232"))
+        #expect(!result.contains("Game of Thrones"))
+    }
+
+    @Test("callTool radarr_get_movies stubs HTTP and returns library with filter")
+    func radarrGetMoviesFiltered() async throws {
+        URLProtocol.registerClass(LocalStubProtocol.self)
+        defer {
+            URLProtocol.unregisterClass(LocalStubProtocol.self)
+            LocalStubProtocol.reset()
+        }
+
+        let json = """
+        [
+          {"id":1,"tmdbId":361743,"title":"Colony","year":2013,"hasFile":true,"monitored":true},
+          {"id":2,"tmdbId":12345,"title":"Dune","year":2021,"hasFile":false,"monitored":true}
+        ]
+        """.data(using: .utf8)!
+        LocalStubProtocol.handlers["/api/v3/movie"] = (200, json)
+
+        let result = try await backend().callTool(
+            name: "radarr_get_movies",
+            arguments: .object(["query": .string("colony")])
+        )
+        #expect(result.contains("Colony"))
+        #expect(result.contains("tmdbId=361743"))
+        #expect(result.contains("downloaded"))
+        #expect(!result.contains("Dune"))
+    }
+
+    @Test("callTool radarr_get_movies when radarr not configured returns informative string")
+    func radarrGetMoviesNotConfigured() async throws {
+        let b = LocalToolBackend(sonarr: sonarrConfig(), radarr: .empty)
+        let result = try await b.callTool(name: "radarr_get_movies", arguments: .object([:]))
+        #expect(result == "Radarr is not configured.")
     }
 }

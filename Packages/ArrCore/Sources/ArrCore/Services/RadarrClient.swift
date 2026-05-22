@@ -186,6 +186,14 @@ public actor RadarrClient {
         return (try? JSONDecoder().decode([ArrHealthRecord].self, from: data)) ?? []
     }
 
+    func fetchAllMovies() async throws -> [RadarrLibraryRecord] {
+        if DemoMode.isActive { return [] }
+        guard config.isConfigured else { throw HTTPError.notConfigured }
+        let url = try http.url(base: config.baseURL, path: "/api/v3/movie")
+        let data = try await http.get(url, headers: ["X-Api-Key": config.apiKey])
+        return (try? JSONDecoder().decode([RadarrLibraryRecord].self, from: data)) ?? []
+    }
+
     private static func unifyCalendar(_ r: RadarrCalendarRecord, baseURL: String) -> UpcomingItem? {
         let (dateStr, releaseType): (String?, String) =
             if r.digitalRelease != nil { (r.digitalRelease, "Digital") }

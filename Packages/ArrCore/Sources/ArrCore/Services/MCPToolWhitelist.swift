@@ -4,6 +4,8 @@ public enum MCPToolWhitelist {
     public static let v1Allowed: Set<String> = [
         "sonarr_search",
         "radarr_search",
+        "sonarr_get_series",
+        "radarr_get_movies",
         "sonarr_get_calendar",
         "radarr_get_calendar",
         "sonarr_add_series",

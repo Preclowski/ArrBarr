@@ -83,6 +83,32 @@ public enum ChatToolCatalog {
                 ]),
             ])
         ),
+        MCPTool(
+            name: "sonarr_get_series",
+            description: "List TV series currently in the Sonarr library (already added by the user). Use this when the user references a show they already have — to look it up, check its status, or get its tvdbId. Different from sonarr_search, which queries TVDB to find NEW series to add.",
+            inputSchema: .object([
+                "type": .string("object"),
+                "properties": .object([
+                    "query": .object([
+                        "type": .string("string"),
+                        "description": .string("Optional title filter — case-insensitive substring match. Omit to list all series."),
+                    ]),
+                ]),
+            ])
+        ),
+        MCPTool(
+            name: "radarr_get_movies",
+            description: "List movies currently in the Radarr library (already added by the user). Use this when the user references a movie they already have — to look it up, check status, or get its tmdbId. Different from radarr_search, which queries TMDB to find NEW movies to add.",
+            inputSchema: .object([
+                "type": .string("object"),
+                "properties": .object([
+                    "query": .object([
+                        "type": .string("string"),
+                        "description": .string("Optional title filter — case-insensitive substring match. Omit to list all movies."),
+                    ]),
+                ]),
+            ])
+        ),
     ]
 
     /// Convert the catalog into `LLMTool` values for provider advertisement.

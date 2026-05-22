@@ -204,6 +204,14 @@ public actor SonarrClient {
         return (try? JSONDecoder().decode([ArrHealthRecord].self, from: data)) ?? []
     }
 
+    func fetchAllSeries() async throws -> [SonarrLibraryRecord] {
+        if DemoMode.isActive { return [] }
+        guard config.isConfigured else { throw HTTPError.notConfigured }
+        let url = try http.url(base: config.baseURL, path: "/api/v3/series")
+        let data = try await http.get(url, headers: ["X-Api-Key": config.apiKey])
+        return (try? JSONDecoder().decode([SonarrLibraryRecord].self, from: data)) ?? []
+    }
+
     private static func unifyCalendar(_ r: SonarrCalendarRecord, baseURL: String) -> UpcomingItem? {
         guard let dateStr = r.airDateUtc, let date = parseArrDate(dateStr) else { return nil }
 

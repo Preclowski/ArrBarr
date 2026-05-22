@@ -307,6 +307,26 @@ public struct SonarrLookupStats: Decodable {
     let seasonCount: Int?
 }
 
-// Used to fetch existing library ids
-public struct RadarrLibraryRecord: Decodable { let tmdbId: Int? }
-public struct SonarrLibraryRecord: Decodable { let tvdbId: Int? }
+// Used to fetch existing library ids and list library contents
+public struct RadarrLibraryRecord: Decodable {
+    let id: Int?
+    let tmdbId: Int?
+    let title: String?
+    let year: Int?
+    let hasFile: Bool?
+    let monitored: Bool?
+}
+public struct SonarrLibraryRecord: Decodable {
+    let id: Int?
+    let tvdbId: Int?
+    let title: String?
+    let year: Int?
+    let status: String?
+    let monitored: Bool?
+    let statistics: SonarrLibraryStatistics?
+}
+public struct SonarrLibraryStatistics: Decodable {
+    let episodeCount: Int?
+    let episodeFileCount: Int?
+    let seasonCount: Int?
+}

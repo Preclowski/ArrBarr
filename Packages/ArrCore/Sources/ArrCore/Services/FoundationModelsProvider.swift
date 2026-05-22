@@ -92,6 +92,12 @@ public struct FoundationModelsProvider: LLMProvider {
               pass the returned tvdbId/tmdbId; don't guess ids.
             - If a search returns multiple matches, ask the user which one
               before calling an add tool.
+            - If the user asks about something they already have
+              (e.g. "do I have X?", "what's the status of Y?", "find X in
+              my library"), use sonarr_get_series / radarr_get_movies, NOT
+              the *_search tools. The *_search tools find NEW content to
+              add from TVDB/TMDB; the *_get_* tools query the user's
+              existing library.
 
             Otherwise, answer directly without calling a tool.
             Never invent tool names that are not listed above.

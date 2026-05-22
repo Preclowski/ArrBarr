@@ -19,6 +19,8 @@ public actor LocalToolBackend: ToolBackend {
         switch name {
         case "sonarr_search":       return try await searchSeries(arguments)
         case "radarr_search":       return try await searchMovie(arguments)
+        case "sonarr_get_series":   return try await listSeries(arguments)
+        case "radarr_get_movies":   return try await listMovies(arguments)
         case "sonarr_get_calendar": return try await sonarrCalendar()
         case "radarr_get_calendar": return try await radarrCalendar()
         case "sonarr_add_series":   return try await addSeries(arguments)
@@ -46,6 +48,28 @@ public actor LocalToolBackend: ToolBackend {
         let client = SearchClient(config: radarr, source: .radarr)
         let results = try await client.lookup(query: query)
         return Self.formatSearchResults(results, kind: "movie")
+    }
+
+    private func listSeries(_ args: JSONValue) async throws -> String {
+        guard sonarr.isConfigured else { return "Sonarr is not configured." }
+        let filter = Self.stringArg(args, key: "query").lowercased()
+        let client = SonarrClient(config: sonarr)
+        let all = try await client.fetchAllSeries()
+        let matched = filter.isEmpty
+            ? all
+            : all.filter { ($0.title ?? "").lowercased().contains(filter) }
+        return Self.formatSeriesLibrary(matched, filter: filter)
+    }
+
+    private func listMovies(_ args: JSONValue) async throws -> String {
+        guard radarr.isConfigured else { return "Radarr is not configured." }
+        let filter = Self.stringArg(args, key: "query").lowercased()
+        let client = RadarrClient(config: radarr)
+        let all = try await client.fetchAllMovies()
+        let matched = filter.isEmpty
+            ? all
+            : all.filter { ($0.title ?? "").lowercased().contains(filter) }
+        return Self.formatMovieLibrary(matched, filter: filter)
     }
 
     private func sonarrCalendar() async throws -> String {
@@ -156,20 +180,58 @@ public actor LocalToolBackend: ToolBackend {
 
     private static func formatSearchResults(_ results: [SearchResult], kind: String) -> String {
         guard !results.isEmpty else { return "No results found." }
-        let top = results.prefix(8)
+        let top = results.prefix(15)
         // For series the id is tvdbId; for movies it's tmdbId. The label
         // helps the LLM pick the right arg name when calling *_add_*.
         let idLabel = kind == "series" ? "tvdbId" : "tmdbId"
         let lines = top.map { r -> String in
-            let yearPart = r.year.map { " (\($0))" } ?? ""
+            let yearPart = r.year.map { " (\($0))" } ?? " (year unknown)"
             let ratingPart = r.rating.map { String(format: " · ★ %.1f", $0) } ?? ""
             return "• \(idLabel)=\(r.id) — \(r.title)\(yearPart)\(ratingPart)"
         }
-        var out = "Top \(top.count) \(kind) result\(top.count == 1 ? "" : "s") (use \(idLabel) when calling add):"
+        var out = "Top \(top.count) \(kind) result\(top.count == 1 ? "" : "s") from upstream (use \(idLabel) when calling add):"
         out += "\n" + lines.joined(separator: "\n")
         if results.count > top.count {
-            out += "\n(\(results.count - top.count) more not shown)"
+            out += "\n(\(results.count - top.count) more not shown — refine query if needed)"
         }
+        return out
+    }
+
+    private static func formatSeriesLibrary(_ items: [SonarrLibraryRecord], filter: String) -> String {
+        guard !items.isEmpty else {
+            return filter.isEmpty ? "Sonarr library is empty." : "No series in your library match '\(filter)'."
+        }
+        let top = items.prefix(20)
+        let lines = top.map { r -> String in
+            let title = r.title ?? "(untitled)"
+            let yearPart = r.year.map { " (\($0))" } ?? ""
+            let idPart = r.tvdbId.map { " · tvdbId=\($0)" } ?? ""
+            let statusPart = r.status.map { " · \($0)" } ?? ""
+            return "• \(title)\(yearPart)\(idPart)\(statusPart)"
+        }
+        var out = "Sonarr library — \(items.count) series"
+        if !filter.isEmpty { out += " matching '\(filter)'" }
+        out += ":\n" + lines.joined(separator: "\n")
+        if items.count > top.count { out += "\n(\(items.count - top.count) more not shown)" }
+        return out
+    }
+
+    private static func formatMovieLibrary(_ items: [RadarrLibraryRecord], filter: String) -> String {
+        guard !items.isEmpty else {
+            return filter.isEmpty ? "Radarr library is empty." : "No movies in your library match '\(filter)'."
+        }
+        let top = items.prefix(20)
+        let lines = top.map { r -> String in
+            let title = r.title ?? "(untitled)"
+            let yearPart = r.year.map { " (\($0))" } ?? ""
+            let idPart = r.tmdbId.map { " · tmdbId=\($0)" } ?? ""
+            let fileMark = (r.hasFile ?? false) ? " · downloaded" : " · missing"
+            return "• \(title)\(yearPart)\(idPart)\(fileMark)"
+        }
+        var out = "Radarr library — \(items.count) movie\(items.count == 1 ? "" : "s")"
+        if !filter.isEmpty { out += " matching '\(filter)'" }
+        out += ":\n" + lines.joined(separator: "\n")
+        if items.count > top.count { out += "\n(\(items.count - top.count) more not shown)" }
         return out
     }
 
