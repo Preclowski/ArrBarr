@@ -237,6 +237,20 @@ public struct QueueRowView: View {
                 }
             }
         }
+        // NSPopover (the row's hover-tooltip) is .transient by default —
+        // the first click anywhere outside it dismisses the popover AND
+        // gets eaten in the process, so users had to click twice on
+        // pause/play/trash. Killing the tooltip eagerly when the cursor
+        // enters the button cluster lets the next click hit the button
+        // directly.
+        #if os(macOS)
+        .onHover { hovering in
+            if hovering {
+                hoverTask?.cancel()
+                showTooltip = false
+            }
+        }
+        #endif
     }
 
     // MARK: - Custom format tags
