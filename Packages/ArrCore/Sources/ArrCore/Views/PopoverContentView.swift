@@ -93,10 +93,27 @@ public struct PopoverContentView: View {
                 }
             }
             .background {
+                // Hidden keyboard shortcuts so cmd+N (Add) and cmd+, (Settings)
+                // work globally inside the popover, not just inside the More menu.
                 Button("", action: onOpenSettings)
                     .keyboardShortcut(",", modifiers: .command)
                     .opacity(0)
                     .frame(width: 0, height: 0)
+                Button("") {
+                    if searchAvailable {
+                        searchViewModel.reset()
+                        showSearch = true
+                    }
+                }
+                .keyboardShortcut("n", modifiers: .command)
+                .opacity(0)
+                .frame(width: 0, height: 0)
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .arrBarrTriggerAdd)) { _ in
+                if searchAvailable {
+                    searchViewModel.reset()
+                    showSearch = true
+                }
             }
     }
 
@@ -604,9 +621,14 @@ public struct PopoverContentView: View {
                 Spacer()
 
                 Menu {
+                    if searchAvailable {
+                        Button("Add…") { searchViewModel.reset(); showSearch = true }
+                            .keyboardShortcut("n", modifiers: .command)
+                        Divider()
+                    }
                     if let onOpenWindow {
                         Button("Open Window…", action: onOpenWindow)
-                            .keyboardShortcut("n", modifiers: .command)
+                            .keyboardShortcut("n", modifiers: [.command, .shift])
                         Divider()
                     }
                     Button("Settings…", action: onOpenSettings)

@@ -4209,6 +4209,9 @@
     },
     "Show %lld more": {
       "extractionState": "manual"
+    },
+    "Add…": {
+      "extractionState": "manual"
     }
   }
 }

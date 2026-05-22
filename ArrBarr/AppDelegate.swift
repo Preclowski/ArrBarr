@@ -218,8 +218,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func showStatusMenu() {
         let menu = NSMenu()
         menu.addItem(withTitle: String(localized: "Refresh"), action: #selector(menuRefresh), keyEquivalent: "r").target = self
+        let addItem = menu.addItem(withTitle: String(localized: "Add…"), action: #selector(menuAdd), keyEquivalent: "n")
+        addItem.target = self
         menu.addItem(.separator())
-        menu.addItem(withTitle: String(localized: "Open Window…"), action: #selector(menuOpenWindow), keyEquivalent: "n").target = self
+        let openWindowItem = menu.addItem(withTitle: String(localized: "Open Window…"), action: #selector(menuOpenWindow), keyEquivalent: "n")
+        openWindowItem.keyEquivalentModifierMask = [.command, .shift]
+        openWindowItem.target = self
         menu.addItem(withTitle: String(localized: "Settings…"), action: #selector(menuSettings), keyEquivalent: ",").target = self
         menu.addItem(.separator())
         menu.addItem(withTitle: String(localized: "Quit ArrBarr"), action: #selector(menuQuit), keyEquivalent: "q").target = self
@@ -230,6 +234,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func menuRefresh() { Task { await queueVM.refresh() } }
     @objc private func menuOpenWindow() { openMainWindow() }
+    @objc private func menuAdd() {
+        // Show the popover (if not already) then ask PopoverContentView to
+        // flip into the search overlay.
+        if !popover.isShown, let button = statusItem.button {
+            popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+        }
+        // Defer one runloop tick so onAppear has wired the notification listener
+        // before we post.
+        DispatchQueue.main.async {
+            NotificationCenter.default.post(name: .arrBarrTriggerAdd, object: nil)
+        }
+    }
     @objc private func menuSettings() { openSettings() }
     @objc private func menuQuit() { NSApp.terminate(nil) }
 
