@@ -121,6 +121,19 @@ public struct ConfirmAddCard: View {
 
     private func cardView(result: SearchResult, profiles: [QualityProfile], folders: [RootFolder], metadataProfiles: [MetadataProfile]) -> some View {
         VStack(alignment: .leading, spacing: 10) {
+            // — Banner header so the user immediately knows what this card is.
+            HStack(spacing: 6) {
+                Image(systemName: "arrow.down.circle.fill")
+                    .font(.system(size: 11))
+                    .foregroundStyle(Color.accentColor)
+                Text("Confirm download", bundle: .module)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .textCase(.uppercase)
+                    .tracking(0.5)
+                Spacer(minLength: 0)
+            }
+
             // — Header: poster + metadata
             HStack(alignment: .top, spacing: 10) {
                 RemotePoster(
@@ -159,54 +172,30 @@ public struct ConfirmAddCard: View {
                 Spacer(minLength: 0)
             }
 
-            // — Profile pickers on the left, Cancel/Confirm on the right.
-            //   Metadata profile picker shown for Lidarr when multiple options.
-            //   Folder picker only when there's actually a choice to make.
+            // — Settings: labeled formPicker rows matching SearchAddPanel.
+            //   Always rendered even with a single option, so the user can
+            //   see what they're committing to before clicking Confirm.
+            VStack(spacing: 4) {
+                formPicker(
+                    label: Self.locStr("Quality Profile"),
+                    selection: Binding(get: { selectedProfileId }, set: { selectedProfileId = $0 }),
+                    options: profiles.map { ($0.id, $0.name) }
+                )
+                if isLidarr {
+                    formPicker(
+                        label: Self.locStr("Metadata Profile"),
+                        selection: Binding(get: { selectedMetadataProfileId }, set: { selectedMetadataProfileId = $0 }),
+                        options: metadataProfiles.map { ($0.id, $0.name) }
+                    )
+                }
+                formPicker(
+                    label: Self.locStr("Root Folder"),
+                    selection: Binding(get: { selectedFolderPath }, set: { selectedFolderPath = $0 }),
+                    options: folders.map { ($0.path, Self.shortenPath($0.path)) }
+                )
+            }
+
             HStack(spacing: 6) {
-                if profiles.count > 1 {
-                    Image(systemName: "slider.horizontal.3")
-                        .font(.system(size: 11))
-                        .foregroundStyle(.secondary)
-                    Picker("Quality profile", selection: Binding(get: { selectedProfileId }, set: { selectedProfileId = $0 })) {
-                        ForEach(profiles, id: \.id) { p in
-                            Text(p.name).tag(p.id)
-                        }
-                    }
-                    .labelsHidden()
-                    .pickerStyle(.menu)
-                    .controlSize(.small)
-                    .frame(maxWidth: 160)
-                }
-                if isLidarr && metadataProfiles.count > 1 {
-                    Image(systemName: "music.note.list")
-                        .font(.system(size: 11))
-                        .foregroundStyle(.secondary)
-                        .padding(.leading, 4)
-                    Picker("Metadata profile", selection: Binding(get: { selectedMetadataProfileId }, set: { selectedMetadataProfileId = $0 })) {
-                        ForEach(metadataProfiles, id: \.id) { p in
-                            Text(p.name).tag(p.id)
-                        }
-                    }
-                    .labelsHidden()
-                    .pickerStyle(.menu)
-                    .controlSize(.small)
-                    .frame(maxWidth: 140)
-                }
-                if folders.count > 1 {
-                    Image(systemName: "folder")
-                        .font(.system(size: 11))
-                        .foregroundStyle(.secondary)
-                        .padding(.leading, 4)
-                    Picker("Root folder", selection: Binding(get: { selectedFolderPath }, set: { selectedFolderPath = $0 })) {
-                        ForEach(folders, id: \.path) { f in
-                            Text(Self.shortenPath(f.path)).tag(f.path)
-                        }
-                    }
-                    .labelsHidden()
-                    .pickerStyle(.menu)
-                    .controlSize(.small)
-                    .frame(maxWidth: 140)
-                }
                 Spacer(minLength: 0)
                 Button(Self.locStr("Cancel"), action: onCancel)
                     .controlSize(.small)
@@ -219,6 +208,38 @@ public struct ConfirmAddCard: View {
                 #endif
             }
         }
+    }
+
+    /// Same shape as `SearchAddPanel.formPicker` — labeled row with a Menu
+    /// chevron on the right. Renders even with a single option so the user
+    /// can see the chosen profile/folder, not just trust an invisible default.
+    private func formPicker<T: Hashable>(label: String, selection: Binding<T>,
+                                         options: [(T, String)]) -> some View {
+        HStack {
+            Text(label)
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+            Spacer()
+            Menu {
+                ForEach(options, id: \.0) { val, name in
+                    Button(name) { selection.wrappedValue = val }
+                }
+            } label: {
+                HStack(spacing: 3) {
+                    Text(options.first(where: { $0.0 == selection.wrappedValue })?.1
+                         ?? options.first?.1 ?? "—")
+                        .font(.system(size: 11))
+                    Image(systemName: "chevron.up.chevron.down")
+                        .font(.system(size: 9))
+                        .foregroundStyle(.tertiary)
+                }
+            }
+            .menuStyle(.borderlessButton)
+            .fixedSize()
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 6))
     }
 
     /// Display only the trailing path component so the chip stays narrow.

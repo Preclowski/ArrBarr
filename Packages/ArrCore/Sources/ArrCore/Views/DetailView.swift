@@ -24,6 +24,14 @@ public struct DetailView: View {
         return matched.isEmpty ? [item] : matched
     }
 
+    /// True when at least one sibling is a real queue row (non-zero arrQueueId).
+    /// `false` means this view was opened from a synthetic lookup item (chat
+    /// card / upcoming row tap) and there's nothing to download right now —
+    /// rendering a 0%/Unknown progress bar would be misleading.
+    private var hasActiveDownloads: Bool {
+        siblings.contains { $0.arrQueueId != 0 }
+    }
+
     @State private var radarrDetail: RadarrMovieDetail?
     @State private var sonarrDetail: SonarrSeriesDetail?
     @State private var sonarrEpisodes: [SonarrEpisodeDetail] = []
@@ -133,13 +141,15 @@ public struct DetailView: View {
                 ExpandableOverview(text: overview)
             }
 
-            DownloadSection(
-                items: siblings,
-                focused: item,
-                showInlineUpgrade: false,
-                showCustomFormats: true,
-                showListingBadges: true
-            )
+            if hasActiveDownloads {
+                DownloadSection(
+                    items: siblings,
+                    focused: item,
+                    showInlineUpgrade: false,
+                    showCustomFormats: true,
+                    showListingBadges: true
+                )
+            }
 
             if let err = loadError {
                 Text(err)
@@ -196,15 +206,17 @@ public struct DetailView: View {
                 Divider().padding(.vertical, 2)
             }
 
-            DownloadSection(
-                items: siblings,
-                focused: item,
-                showInlineUpgrade: true,
-                showCustomFormats: true,
-                rowHoverDetail: true,
-                listCollapsible: true,
-                listExpandedDefault: false
-            )
+            if hasActiveDownloads {
+                DownloadSection(
+                    items: siblings,
+                    focused: item,
+                    showInlineUpgrade: true,
+                    showCustomFormats: true,
+                    rowHoverDetail: true,
+                    listCollapsible: true,
+                    listExpandedDefault: false
+                )
+            }
 
             if let err = loadError {
                 Text(err)
@@ -229,7 +241,9 @@ public struct DetailView: View {
                 ExpandableOverview(text: overview)
             }
 
-            DownloadSection(items: siblings, focused: item)
+            if hasActiveDownloads {
+                DownloadSection(items: siblings, focused: item)
+            }
 
             if !lidarrTracks.isEmpty {
                 Divider().padding(.vertical, 2)

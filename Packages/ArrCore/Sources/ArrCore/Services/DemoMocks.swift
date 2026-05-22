@@ -53,10 +53,11 @@ public enum DemoMode {
     public static func seedConfigsIfNeeded(_ store: ConfigStore) {
         guard isActive else { return }
         guard !UserDefaults.standard.bool(forKey: seedDoneKey) else { return }
+        // Lidarr / Whisparr are intentionally NOT seeded — they're niche
+        // and should stay off by default. The user opts in from Settings
+        // when they actually use them.
         if store.radarr == .empty { store.radarr.enabled = true }
         if store.sonarr == .empty { store.sonarr.enabled = true }
-        if store.lidarr == .empty { store.lidarr.enabled = true }
-        if store.whisparr == .empty { store.whisparr.enabled = true }
         UserDefaults.standard.set(true, forKey: seedDoneKey)
     }
 }
