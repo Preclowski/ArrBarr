@@ -41,7 +41,6 @@ public struct SearchAddPanel: View {
                     hero
                         .padding(.horizontal, 14)
                         .padding(.top, 12)
-                    Divider().padding(.horizontal, 14)
                     if viewModel.isLoadingOptions {
                         ProgressView().controlSize(.small).frame(maxWidth: .infinity).padding(.vertical, 16)
                     } else {
