@@ -72,6 +72,8 @@ public final class ConfigStore: ObservableObject {
     @Published public var welcomeSeenVersion: String?
     @Published public var chatEnabled: Bool
     @Published public var mcp: MCPConfig
+    @Published public var chatProvider: ChatProvider
+    @Published public var openai: OpenAIConfig
 
     public static let needsYouOrderKey = "needsyou"
     public static let tonightOrderKey = "tonight"
@@ -114,6 +116,8 @@ public final class ConfigStore: ObservableObject {
     private static let welcomeSeenVersionKey = "ArrBarr.welcomeSeenVersion"
     private static let chatEnabledKey = "ArrBarr.chatEnabled"
     private static let mcpConfigKey = "ArrBarr.mcp"
+    private static let chatProviderKey = "ArrBarr.chatProvider"
+    private static let openaiConfigKey = "ArrBarr.openai"
     private static let keychainMigrationDoneKey = "ArrBarr.keychainMigrationDone"
 
     public init(defaults: UserDefaults = .standard) {
@@ -161,6 +165,13 @@ public final class ConfigStore: ObservableObject {
             self.mcp = cfg
         } else {
             self.mcp = .empty
+        }
+        self.chatProvider = ChatProvider(rawValue: defaults.string(forKey: Self.chatProviderKey) ?? "") ?? .foundationModels
+        if let data = defaults.data(forKey: Self.openaiConfigKey),
+           let cfg = try? JSONDecoder().decode(OpenAIConfig.self, from: data) {
+            self.openai = cfg
+        } else {
+            self.openai = .empty
         }
 
         for kind in ServiceKind.allCases {
@@ -227,6 +238,14 @@ public final class ConfigStore: ObservableObject {
         $mcp.dropFirst().sink { [weak self] cfg in
             if let data = try? JSONEncoder().encode(cfg) {
                 self?.defaults.set(data, forKey: Self.mcpConfigKey)
+            }
+        }.store(in: &cancellables)
+        $chatProvider.dropFirst().sink { [weak self] val in
+            self?.defaults.set(val.rawValue, forKey: Self.chatProviderKey)
+        }.store(in: &cancellables)
+        $openai.dropFirst().sink { [weak self] cfg in
+            if let data = try? JSONEncoder().encode(cfg) {
+                self?.defaults.set(data, forKey: Self.openaiConfigKey)
             }
         }.store(in: &cancellables)
     }

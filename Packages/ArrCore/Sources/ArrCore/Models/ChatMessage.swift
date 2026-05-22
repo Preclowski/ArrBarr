@@ -25,9 +25,13 @@ public struct ChatMessage: Identifiable, Equatable, Sendable {
 }
 
 public struct ToolCall: Equatable, Sendable {
+    /// Provider-side correlation id (e.g. OpenAI's tool_call_id). Optional;
+    /// Foundation Models doesn't need this, OpenAI does.
+    public let id: String?
     public let name: String
     public let arguments: JSONValue
-    public init(name: String, arguments: JSONValue) {
+    public init(id: String? = nil, name: String, arguments: JSONValue) {
+        self.id = id
         self.name = name
         self.arguments = arguments
     }

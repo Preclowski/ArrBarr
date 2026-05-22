@@ -42,4 +42,35 @@ struct ConfigStoreChatTests {
         let s2 = ConfigStore(defaults: d)
         #expect(s2.mcp == cfg)
     }
+
+    @Test("defaults: chatProvider foundationModels, openai empty")
+    func defaultsProvider() {
+        let d = freshDefaults()
+        let store = ConfigStore(defaults: d)
+        #expect(store.chatProvider == .foundationModels)
+        #expect(store.openai == .empty)
+    }
+
+    @Test("persists chatProvider across instances")
+    func persistChatProvider() {
+        let d = freshDefaults()
+        do {
+            let s = ConfigStore(defaults: d)
+            s.chatProvider = .openai
+        }
+        let s2 = ConfigStore(defaults: d)
+        #expect(s2.chatProvider == .openai)
+    }
+
+    @Test("persists openai across instances")
+    func persistOpenAI() {
+        let d = freshDefaults()
+        let cfg = OpenAIConfig(baseURL: "https://openrouter.ai/api/v1", apiKey: "sk-or-abc", model: "openai/gpt-4o-mini")
+        do {
+            let s = ConfigStore(defaults: d)
+            s.openai = cfg
+        }
+        let s2 = ConfigStore(defaults: d)
+        #expect(s2.openai == cfg)
+    }
 }

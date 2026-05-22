@@ -73,8 +73,13 @@ public struct MainWindowView: View {
     private var chatAvailable: Bool {
         guard configStore.chatEnabled else { return false }
         guard configStore.mcp.isConfigured else { return false }
-        if #available(macOS 26.0, *) { return true }
-        return false
+        switch configStore.chatProvider {
+        case .openai:
+            return configStore.openai.isConfigured
+        case .foundationModels:
+            if #available(macOS 26.0, *) { return true }
+            return false
+        }
     }
 
     private func isVisible(_ config: ServiceConfig) -> Bool {
@@ -229,7 +234,7 @@ public struct MainWindowView: View {
             case .search:
                 searchContent
             case .chat:
-                ChatHost(config: configStore.mcp)
+                ChatHost(mcp: configStore.mcp, provider: configStore.chatProvider, openai: configStore.openai)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }

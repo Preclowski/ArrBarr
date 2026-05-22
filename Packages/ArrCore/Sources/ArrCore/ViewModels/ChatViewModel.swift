@@ -97,7 +97,7 @@ public final class ChatViewModel: ObservableObject {
                     pendingConfirm = nil
                     isThinking = true
                     if !proceed {
-                        messages.append(ChatMessage(role: .tool, content: call.name, toolResult: "(cancelled by user)"))
+                        messages.append(ChatMessage(role: .tool, content: call.name, toolCall: call, toolResult: "(cancelled by user)"))
                         nextPrompt = "Tool \(call.name) was cancelled by the user."
                         continue
                     }
@@ -109,7 +109,7 @@ public final class ChatViewModel: ObservableObject {
                 } catch {
                     result = "(tool error: \(error.localizedDescription))"
                 }
-                messages.append(ChatMessage(role: .tool, content: call.name, toolResult: result))
+                messages.append(ChatMessage(role: .tool, content: call.name, toolCall: call, toolResult: result))
                 nextPrompt = "Tool \(call.name) returned: \(result)"
             }
             if roundsLeft == 0 {

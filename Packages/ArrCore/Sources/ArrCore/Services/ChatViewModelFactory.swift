@@ -10,13 +10,14 @@ public enum ChatViewModelFactory {
         )
     }
 
-    /// Build a fully-wired chat view-model. Caller is responsible for
-    /// re-creating it (via `.id(...)`) when MCP config changes.
-    public static func make(config: MCPConfig) -> ChatViewModel {
-        guard config.isConfigured else { return makePlaceholder() }
-        let client = MCPClient(config: config)
+    public static func make(mcp: MCPConfig, chatProvider: ChatProvider, openai: OpenAIConfig) -> ChatViewModel {
+        guard mcp.isConfigured else { return makePlaceholder() }
+        let client = MCPClient(config: mcp)
         let mcpTools = MCPToolWhitelist.v1Allowed.sorted().map { name in
-            LLMTool(name: name, description: "MCP tool: \(name)", inputSchema: .object([:]))
+            LLMTool(name: name, description: "MCP tool: \(name)", inputSchema: .object([
+                "type": .string("object"),
+                "properties": .object([:]),
+            ]))
         }
 
         let invoke: @Sendable (String, JSONValue) async throws -> String = { name, args in
@@ -24,8 +25,6 @@ public enum ChatViewModelFactory {
             return result.content.compactMap(\.text).joined(separator: "\n")
         }
 
-        // The ChatViewModel hosts the destructive-confirm state. We pass a closure
-        // that surfaces it via awaitConfirm. Use weak capture to avoid a retain cycle.
         var vmRef: ChatViewModel? = nil
         let confirm: @Sendable (ToolCall) async -> Bool = { [weak vmRef] call in
             guard let vm = vmRef else { return false }
@@ -33,10 +32,19 @@ public enum ChatViewModelFactory {
         }
 
         let provider: LLMProvider
-        if #available(macOS 26.0, iOS 26.0, *) {
-            provider = FoundationModelsProvider(invokeTool: invoke, confirmDestructive: confirm)
-        } else {
-            provider = UnavailableLLMProvider()
+        switch chatProvider {
+        case .foundationModels:
+            if #available(macOS 26.0, iOS 26.0, *) {
+                provider = FoundationModelsProvider(invokeTool: invoke, confirmDestructive: confirm)
+            } else {
+                provider = UnavailableLLMProvider()
+            }
+        case .openai:
+            if openai.isConfigured {
+                provider = OpenAIProvider(config: openai)
+            } else {
+                provider = UnavailableLLMProvider()
+            }
         }
 
         let vm = ChatViewModel(

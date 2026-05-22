@@ -5,6 +5,15 @@
     "AI Chat": {
       "extractionState": "manual"
     },
+    "AI provider": {
+      "extractionState": "manual"
+    },
+    "Apple Intelligence": {
+      "extractionState": "manual"
+    },
+    "Apple Intelligence requires macOS 26.": {
+      "extractionState": "manual"
+    },
     "Apple Intelligence is unavailable. Try turning it on in System Settings.": {
       "extractionState": "manual"
     },
@@ -29,7 +38,19 @@
     "Enable chat": {
       "extractionState": "manual"
     },
+    "API key": {
+      "extractionState": "manual"
+    },
+    "Base URL": {
+      "extractionState": "manual"
+    },
     "MCP bearer token (optional)": {
+      "extractionState": "manual"
+    },
+    "Model": {
+      "extractionState": "manual"
+    },
+    "OpenAI / OpenRouter": {
       "extractionState": "manual"
     },
     "MCP connection enabled": {

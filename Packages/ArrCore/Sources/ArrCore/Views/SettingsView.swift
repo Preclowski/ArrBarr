@@ -170,11 +170,25 @@ public struct SettingsView: View {
                               prompt: Text(verbatim: "http://nas.local:3000/mcp"))
                     SecureField("MCP bearer token (optional)", text: $configStore.mcp.bearerToken)
                 }
-                if #unavailable(iOS 26.0) {
-                    Label("Chat requires iOS 26 with Apple Intelligence.",
-                          systemImage: "exclamationmark.triangle")
-                        .foregroundStyle(.secondary)
-                        .font(.caption)
+                Picker("AI provider", selection: $configStore.chatProvider) {
+                    ForEach(ChatProvider.allCases) { p in
+                        Text(p.displayName).tag(p)
+                    }
+                }
+                if configStore.chatProvider == .openai {
+                    TextField("Base URL", text: $configStore.openai.baseURL,
+                              prompt: Text(verbatim: "https://openrouter.ai/api/v1"))
+                    SecureField("API key", text: $configStore.openai.apiKey)
+                    TextField("Model", text: $configStore.openai.model,
+                              prompt: Text(verbatim: "openai/gpt-4o-mini"))
+                }
+                if configStore.chatProvider == .foundationModels {
+                    if #unavailable(iOS 26.0) {
+                        Label("Apple Intelligence requires iOS 26.",
+                              systemImage: "exclamationmark.triangle")
+                            .foregroundStyle(.secondary)
+                            .font(.caption)
+                    }
                 }
             }
             if devModeRevealed {
@@ -318,11 +332,25 @@ public struct SettingsView: View {
                               prompt: Text(verbatim: "http://nas.local:3000/mcp"))
                     SecureField("MCP bearer token (optional)", text: $configStore.mcp.bearerToken)
                 }
-                if #unavailable(macOS 26.0) {
-                    Label("Chat requires macOS 26 with Apple Intelligence.",
-                          systemImage: "exclamationmark.triangle")
-                        .foregroundStyle(.secondary)
-                        .font(.caption)
+                Picker("AI provider", selection: $configStore.chatProvider) {
+                    ForEach(ChatProvider.allCases) { p in
+                        Text(p.displayName).tag(p)
+                    }
+                }
+                if configStore.chatProvider == .openai {
+                    TextField("Base URL", text: $configStore.openai.baseURL,
+                              prompt: Text(verbatim: "https://openrouter.ai/api/v1"))
+                    SecureField("API key", text: $configStore.openai.apiKey)
+                    TextField("Model", text: $configStore.openai.model,
+                              prompt: Text(verbatim: "openai/gpt-4o-mini"))
+                }
+                if configStore.chatProvider == .foundationModels {
+                    if #unavailable(macOS 26.0) {
+                        Label("Apple Intelligence requires macOS 26.",
+                              systemImage: "exclamationmark.triangle")
+                            .foregroundStyle(.secondary)
+                            .font(.caption)
+                    }
                 }
             }
             if DeveloperMode.isActive {

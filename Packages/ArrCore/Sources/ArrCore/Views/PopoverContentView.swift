@@ -48,8 +48,13 @@ public struct PopoverContentView: View {
     private var chatAvailable: Bool {
         guard configStore.chatEnabled else { return false }
         guard configStore.mcp.isConfigured else { return false }
-        if #available(macOS 26.0, iOS 26.0, *) { return true }
-        return false
+        switch configStore.chatProvider {
+        case .openai:
+            return configStore.openai.isConfigured
+        case .foundationModels:
+            if #available(macOS 26.0, iOS 26.0, *) { return true }
+            return false
+        }
     }
 
     /// In demo mode, show an arr whenever it's enabled (the configs are seeded to
@@ -122,7 +127,7 @@ public struct PopoverContentView: View {
                     case .queue: queueContent
                     case .upcoming: upcomingContent
                     case .chat:
-                        ChatHost(config: configStore.mcp)
+                        ChatHost(mcp: configStore.mcp, provider: configStore.chatProvider, openai: configStore.openai)
                     case .search:
                         if let result = searchResult {
                             SearchAddPanel(result: result, viewModel: searchViewModel) {
@@ -606,21 +611,26 @@ private struct TabPillBackground: View {
 
 @MainActor
 struct ChatHost: View {
-    let config: MCPConfig
+    let mcp: MCPConfig
+    let provider: ChatProvider
+    let openai: OpenAIConfig
     var body: some View {
-        // Re-mount the inner view when the URL or token changes — this
-        // re-creates @StateObject so the new VM picks up the new config.
-        ChatHostInner(config: config).id(config.baseURL + "|" + config.bearerToken + "|\(config.enabled)")
+        ChatHostInner(mcp: mcp, provider: provider, openai: openai)
+            .id(mcp.baseURL + "|" + mcp.bearerToken + "|\(mcp.enabled)|\(provider.rawValue)|\(openai.baseURL)|\(openai.apiKey)|\(openai.model)")
     }
 }
 
 @MainActor
 private struct ChatHostInner: View {
-    let config: MCPConfig
+    let mcp: MCPConfig
+    let provider: ChatProvider
+    let openai: OpenAIConfig
     @StateObject private var vm: ChatViewModel
-    init(config: MCPConfig) {
-        self.config = config
-        _vm = StateObject(wrappedValue: ChatViewModelFactory.make(config: config))
+    init(mcp: MCPConfig, provider: ChatProvider, openai: OpenAIConfig) {
+        self.mcp = mcp
+        self.provider = provider
+        self.openai = openai
+        _vm = StateObject(wrappedValue: ChatViewModelFactory.make(mcp: mcp, chatProvider: provider, openai: openai))
     }
     var body: some View {
         if !vm.providerIsAvailable {
