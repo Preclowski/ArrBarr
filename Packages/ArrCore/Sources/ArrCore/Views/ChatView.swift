@@ -149,6 +149,7 @@ public struct ChatView: View {
 
 private struct MessageBubble: View {
     let message: ChatMessage
+    @State private var expanded = false
     var body: some View {
         HStack(alignment: .top, spacing: 8) {
             Image(systemName: symbol)
@@ -158,14 +159,28 @@ private struct MessageBubble: View {
                 .padding(.top, 2)
             VStack(alignment: .leading, spacing: 2) {
                 if message.role == .tool {
-                    Text(message.content)
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(.secondary)
-                    if let result = message.toolResult {
+                    Button {
+                        withAnimation(.smooth(duration: 0.18)) { expanded.toggle() }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: expanded ? "chevron.down" : "chevron.right")
+                                .font(.system(size: 9, weight: .semibold))
+                                .foregroundStyle(.secondary)
+                            Text("Tool call: \(message.content)", bundle: .module)
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(.secondary)
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    if expanded, let result = message.toolResult, !result.isEmpty {
                         Text(result)
-                            .font(.system(size: 12).monospaced())
-                            .foregroundStyle(.primary)
+                            .font(.system(size: 11).monospaced())
+                            .foregroundStyle(.secondary)
                             .textSelection(.enabled)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.leading, 13)
+                            .padding(.top, 2)
                     }
                 } else {
                     Text(Self.attributed(message.content))

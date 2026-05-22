@@ -4170,6 +4170,9 @@
     },
     "Application": {
       "extractionState": "manual"
+    },
+    "Tool call: %@": {
+      "extractionState": "manual"
     }
   }
 }
