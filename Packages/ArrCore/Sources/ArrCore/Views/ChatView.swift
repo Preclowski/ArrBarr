@@ -183,19 +183,40 @@ private struct MessageBubble: View {
     @State private var expanded = false
     @EnvironmentObject var configStore: ConfigStore
 
+    /// `content` carries a friendly label (e.g. "Add Spring (2019)") when the
+    /// chat called `requestAdd` from a poster tap; the LLM path stuffs the
+    /// raw tool name there instead. Inequality is the cheapest way to tell
+    /// them apart — used to drop the "Tool call:" prefix + chevron for the
+    /// user-tap case so it reads like a status line, not a debug breadcrumb.
+    private var isUserInitiated: Bool {
+        message.role == .tool && message.content != (message.toolCall?.name ?? "")
+    }
+
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
-            Image(systemName: symbol)
-                .font(.system(size: 12))
-                .foregroundStyle(tint)
-                .frame(width: 18, alignment: .center)
+            if !isUserInitiated || message.richContent != nil {
+                Image(systemName: symbol)
+                    .font(.system(size: 12))
+                    .foregroundStyle(tint)
+                    .frame(width: 18, alignment: .center)
+            } else {
+                // No icon for user-tap text-only outcomes — the row would be
+                // a tiny status line floating next to a wrench, looks noisy.
+                Spacer().frame(width: 18 + 8)
+            }
             VStack(alignment: .leading, spacing: 2) {
                 if message.role == .tool {
                     if let rich = message.richContent {
                         // Rich result: always-visible header chip + carousel
-                        Text("Tool call: \(message.content)", bundle: .module)
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(.secondary)
+                        Group {
+                            if isUserInitiated {
+                                Text(message.content)
+                            } else {
+                                Text("Tool call: \(message.content)", bundle: .module)
+                            }
+                        }
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(.secondary)
                         RichToolResultView(
                             content: rich,
                             sonarr: configStore.sonarr,
@@ -205,8 +226,18 @@ private struct MessageBubble: View {
                             blurWhisparr: configStore.blurWhisparrPosters
                         )
                         .padding(.top, 4)
+                    } else if isUserInitiated {
+                        // User-tap outcome: inline status line, no chevron.
+                        // toolResult already encodes the state (e.g.
+                        // "(cancelled by user)") via the message.content
+                        // suffix; the raw tool text adds nothing.
+                        Text(message.content)
+                            .font(.system(size: 12))
+                            .foregroundStyle(.secondary)
                     } else {
-                        // Plain result: chevron-collapsible (add confirmations, errors, etc.)
+                        // LLM-issued tool call: chevron-collapsible to keep
+                        // the raw tool name + result peekable without
+                        // dominating the chat.
                         Button {
                             withAnimation(.smooth(duration: 0.18)) { expanded.toggle() }
                         } label: {
