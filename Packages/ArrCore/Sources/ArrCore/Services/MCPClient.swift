@@ -52,14 +52,9 @@ public actor MCPClient {
             req.setValue("Bearer \(config.bearerToken)", forHTTPHeaderField: "Authorization")
         }
         let body = JSONRPCRequest(id: nextRequestID(), method: method, params: params)
-        // Encode without slash-escaping so method strings like "tools/list"
-        // are preserved verbatim (JSONEncoder escapes "/" as "\/" by default).
-        let encoded = try JSONEncoder().encode(body)
-        if let str = String(data: encoded, encoding: .utf8) {
-            req.httpBody = str.replacingOccurrences(of: "\\/", with: "/").data(using: .utf8) ?? encoded
-        } else {
-            req.httpBody = encoded
-        }
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .withoutEscapingSlashes
+        req.httpBody = try encoder.encode(body)
 
         let (data, response) = try await session.data(for: req)
         guard let http = response as? HTTPURLResponse else { throw MCPError.empty }
