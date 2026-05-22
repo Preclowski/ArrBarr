@@ -173,6 +173,7 @@ private struct MessageBubble: View {
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
+                    .padding(.top, 2)
                     if expanded, let result = message.toolResult, !result.isEmpty {
                         Text(result)
                             .font(.system(size: 11).monospaced())
