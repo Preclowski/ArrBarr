@@ -26,6 +26,15 @@
 	<true/>
 	<key>NSAppTransportSecurity</key>
 	<dict>
+		<!-- ArrBarr connects to user-configured self-hosted services
+		     (Sonarr/Radarr/Lidarr/MCP/etc.) which often run over plain HTTP
+		     on LAN IPs (192.168.x.x, 10.x.x.x). NSAllowsLocalNetworking
+		     only covers .local hostnames and loopback; LAN IP literals are
+		     not. Since the user explicitly types each URL into Settings,
+		     they own the trust decision — we don't gain anything by also
+		     enforcing ATS on top. Not App Store distributed. -->
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
