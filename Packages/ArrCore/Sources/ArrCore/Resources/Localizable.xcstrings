@@ -2,44 +2,44 @@
   "sourceLanguage": "en",
   "version": "1.0",
   "strings": {
-    "AI Chat" : {
-      "extractionState" : "manual"
+    "AI Chat": {
+      "extractionState": "manual"
     },
-    "Apple Intelligence is unavailable. Try turning it on in System Settings." : {
-      "extractionState" : "manual"
+    "Apple Intelligence is unavailable. Try turning it on in System Settings.": {
+      "extractionState": "manual"
     },
-    "Ask anything about your Sonarr / Radarr." : {
-      "extractionState" : "manual"
+    "Ask anything about your Sonarr / Radarr.": {
+      "extractionState": "manual"
     },
-    "Ask anything…" : {
-      "extractionState" : "manual"
+    "Ask anything…": {
+      "extractionState": "manual"
     },
-    "Chat" : {
-      "extractionState" : "manual"
+    "Chat": {
+      "extractionState": "manual"
     },
-    "Chat requires iOS 26 with Apple Intelligence." : {
-      "extractionState" : "manual"
+    "Chat requires iOS 26 with Apple Intelligence.": {
+      "extractionState": "manual"
     },
-    "Chat requires macOS 26 with Apple Intelligence." : {
-      "extractionState" : "manual"
+    "Chat requires macOS 26 with Apple Intelligence.": {
+      "extractionState": "manual"
     },
-    "Confirm" : {
-      "extractionState" : "manual"
+    "Confirm": {
+      "extractionState": "manual"
     },
-    "Enable chat" : {
-      "extractionState" : "manual"
+    "Enable chat": {
+      "extractionState": "manual"
     },
-    "MCP bearer token (optional)" : {
-      "extractionState" : "manual"
+    "MCP bearer token (optional)": {
+      "extractionState": "manual"
     },
-    "MCP connection enabled" : {
-      "extractionState" : "manual"
+    "MCP connection enabled": {
+      "extractionState": "manual"
     },
-    "MCP server URL" : {
-      "extractionState" : "manual"
+    "MCP server URL": {
+      "extractionState": "manual"
     },
-    "Set MCP server URL in Settings to start chatting." : {
-      "extractionState" : "manual"
+    "Set MCP server URL in Settings to start chatting.": {
+      "extractionState": "manual"
     },
     "Add your Radarr or Sonarr connection to get started.": {
       "localizations": {
@@ -4116,6 +4116,9 @@
           }
         }
       }
+    },
+    "Enable MCP": {
+      "extractionState": "manual"
     }
   }
 }

@@ -164,17 +164,17 @@ public struct SettingsView: View {
             }
             Section("AI Chat") {
                 Toggle("Enable chat", isOn: $configStore.chatEnabled)
-                if configStore.chatEnabled {
+                Toggle("Enable MCP", isOn: $configStore.mcp.enabled)
+                if configStore.mcp.enabled {
                     TextField("MCP server URL", text: $configStore.mcp.baseURL,
                               prompt: Text(verbatim: "http://nas.local:3000/mcp"))
                     SecureField("MCP bearer token (optional)", text: $configStore.mcp.bearerToken)
-                    Toggle("MCP connection enabled", isOn: $configStore.mcp.enabled)
-                    if #unavailable(iOS 26.0) {
-                        Label("Chat requires iOS 26 with Apple Intelligence.",
-                              systemImage: "exclamationmark.triangle")
-                            .foregroundStyle(.secondary)
-                            .font(.caption)
-                    }
+                }
+                if #unavailable(iOS 26.0) {
+                    Label("Chat requires iOS 26 with Apple Intelligence.",
+                          systemImage: "exclamationmark.triangle")
+                        .foregroundStyle(.secondary)
+                        .font(.caption)
                 }
             }
             if devModeRevealed {
@@ -312,17 +312,17 @@ public struct SettingsView: View {
             }
             Section("AI Chat") {
                 Toggle("Enable chat", isOn: $configStore.chatEnabled)
-                if configStore.chatEnabled {
+                Toggle("Enable MCP", isOn: $configStore.mcp.enabled)
+                if configStore.mcp.enabled {
                     TextField("MCP server URL", text: $configStore.mcp.baseURL,
                               prompt: Text(verbatim: "http://nas.local:3000/mcp"))
                     SecureField("MCP bearer token (optional)", text: $configStore.mcp.bearerToken)
-                    Toggle("MCP connection enabled", isOn: $configStore.mcp.enabled)
-                    if #unavailable(macOS 26.0) {
-                        Label("Chat requires macOS 26 with Apple Intelligence.",
-                              systemImage: "exclamationmark.triangle")
-                            .foregroundStyle(.secondary)
-                            .font(.caption)
-                    }
+                }
+                if #unavailable(macOS 26.0) {
+                    Label("Chat requires macOS 26 with Apple Intelligence.",
+                          systemImage: "exclamationmark.triangle")
+                        .foregroundStyle(.secondary)
+                        .font(.caption)
                 }
             }
             if DeveloperMode.isActive {
