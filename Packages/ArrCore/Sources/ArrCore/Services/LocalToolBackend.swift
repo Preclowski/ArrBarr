@@ -159,6 +159,25 @@ public actor LocalToolBackend: ToolBackend {
         return ToolCallOutput(text: text, rich: .calendar(items))
     }
 
+    /// Post-lookup add prerequisites — pull the lists, resolve the user's
+    /// chosen IDs (or first available), bail with the standard "missing X"
+    /// error. All four `addX` handlers ran this block verbatim before the
+    /// arr-specific add call; Lidarr keeps its metadata-profile resolution at
+    /// the call site since it's the one genuine divergence.
+    private static func resolveAddDefaults(
+        client: SearchClient,
+        serviceName: String,
+        chosenProfileId: Int,
+        chosenFolderPath: String
+    ) async throws -> (QualityProfile, RootFolder)? {
+        let profiles = try await client.fetchQualityProfiles()
+        let folders = try await client.fetchRootFolders()
+        let profile = profiles.first(where: { $0.id == chosenProfileId }) ?? profiles.first
+        let folder = folders.first(where: { $0.path == chosenFolderPath }) ?? folders.first
+        guard let profile, let folder else { return nil }
+        return (profile, folder)
+    }
+
     // MARK: - Tool implementations
 
     private func searchSeries(_ args: JSONValue) async throws -> ToolCallOutput {
@@ -283,11 +302,10 @@ public actor LocalToolBackend: ToolBackend {
         guard let pick = chosen else {
             return ToolCallOutput(text: "Couldn't find any series matching '\(lookupQuery)'.")
         }
-        let profiles = try await client.fetchQualityProfiles()
-        let folders = try await client.fetchRootFolders()
-        let profile = profiles.first(where: { $0.id == chosenProfileId }) ?? profiles.first
-        let folder = folders.first(where: { $0.path == chosenFolderPath }) ?? folders.first
-        guard let profile, let folder else {
+        guard let (profile, folder) = try await Self.resolveAddDefaults(
+            client: client, serviceName: "Sonarr",
+            chosenProfileId: chosenProfileId, chosenFolderPath: chosenFolderPath
+        ) else {
             return ToolCallOutput(text: "Sonarr is missing a quality profile or root folder.")
         }
         try await client.addSeries(
@@ -325,11 +343,10 @@ public actor LocalToolBackend: ToolBackend {
         guard let pick = chosen else {
             return ToolCallOutput(text: "Couldn't find any movies matching '\(lookupQuery)'.")
         }
-        let profiles = try await client.fetchQualityProfiles()
-        let folders = try await client.fetchRootFolders()
-        let profile = profiles.first(where: { $0.id == chosenProfileId }) ?? profiles.first
-        let folder = folders.first(where: { $0.path == chosenFolderPath }) ?? folders.first
-        guard let profile, let folder else {
+        guard let (profile, folder) = try await Self.resolveAddDefaults(
+            client: client, serviceName: "Radarr",
+            chosenProfileId: chosenProfileId, chosenFolderPath: chosenFolderPath
+        ) else {
             return ToolCallOutput(text: "Radarr is missing a quality profile or root folder.")
         }
         try await client.addMovie(
@@ -396,15 +413,16 @@ public actor LocalToolBackend: ToolBackend {
         guard let pick = chosen else {
             return ToolCallOutput(text: "Couldn't find any artist matching '\(lookupQuery)'.")
         }
-        let profiles = try await client.fetchQualityProfiles()
-        let metaProfiles = try await client.fetchMetadataProfiles()
-        let folders = try await client.fetchRootFolders()
-        let profile = profiles.first(where: { $0.id == chosenProfileId }) ?? profiles.first
-        let metaProfile = metaProfiles.first(where: { $0.id == chosenMetadataProfileId }) ?? metaProfiles.first
-        let folder = folders.first(where: { $0.path == chosenFolderPath }) ?? folders.first
-        guard let profile, let folder else {
+        guard let (profile, folder) = try await Self.resolveAddDefaults(
+            client: client, serviceName: "Lidarr",
+            chosenProfileId: chosenProfileId, chosenFolderPath: chosenFolderPath
+        ) else {
             return ToolCallOutput(text: "Lidarr is missing a quality profile or root folder.")
         }
+        // Metadata profile is Lidarr-specific; resolve it at the call site
+        // since no other arr has the concept.
+        let metaProfiles = try await client.fetchMetadataProfiles()
+        let metaProfile = metaProfiles.first(where: { $0.id == chosenMetadataProfileId }) ?? metaProfiles.first
         let metaProfileId = metaProfile?.id ?? 1
         try await client.addArtist(
             pick,
@@ -549,11 +567,10 @@ public actor LocalToolBackend: ToolBackend {
         guard let pick = chosen else {
             return ToolCallOutput(text: "Couldn't find any scenes matching '\(lookupQuery)'.")
         }
-        let profiles = try await client.fetchQualityProfiles()
-        let folders = try await client.fetchRootFolders()
-        let profile = profiles.first(where: { $0.id == chosenProfileId }) ?? profiles.first
-        let folder = folders.first(where: { $0.path == chosenFolderPath }) ?? folders.first
-        guard let profile, let folder else {
+        guard let (profile, folder) = try await Self.resolveAddDefaults(
+            client: client, serviceName: "Whisparr",
+            chosenProfileId: chosenProfileId, chosenFolderPath: chosenFolderPath
+        ) else {
             return ToolCallOutput(text: "Whisparr is missing a quality profile or root folder.")
         }
         try await client.addScene(pick, qualityProfileId: profile.id, rootFolderPath: folder.path)
