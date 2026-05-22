@@ -26,14 +26,6 @@ public struct ChatView: View {
             Divider()
             inputBar
         }
-        .onReceive(NotificationCenter.default.publisher(for: .arrBarrChatRequestAdd)) { note in
-            guard
-                let toolName = note.userInfo?["toolName"] as? String,
-                let draftArgs = note.userInfo?["draftArgs"] as? JSONValue,
-                let intent = note.userInfo?["userIntent"] as? String
-            else { return }
-            Task { await viewModel.requestAdd(toolName: toolName, draftArgs: draftArgs, userIntent: intent) }
-        }
     }
 
     @State private var clearHovered: Bool = false
@@ -170,21 +162,18 @@ private struct MessageBubble: View {
     @State private var expanded = false
     @EnvironmentObject var configStore: ConfigStore
 
-    /// iMessage-style routing: user prompts and user-tap statuses align to the
-    /// trailing edge in an accent bubble; assistant prose aligns leading in a
-    /// secondary bubble. Tool plumbing (rich carousels, raw LLM tool calls)
-    /// spans the full width — they don't fit a bubble and they're
-    /// conceptually "system output", not either party's voice.
+    /// iMessage-style routing: user prompts on the trailing edge in an accent
+    /// bubble, assistant prose leading in a secondary bubble. LLM tool calls
+    /// (plain + rich) span the full width — they're conceptually "system
+    /// output", not either party's voice. There used to be `.userAdd` cases
+    /// for tap-to-add status pills, but tap-to-add now opens a SearchAddPanel
+    /// overlay instead of writing a status row, so those cases are gone.
     var body: some View {
         switch kind {
         case .user:
             row(trailing: true) { userBubble(message.content) }
         case .assistant:
             row(trailing: false) { assistantBubble(message.content) }
-        case .userAdd(let cancelled):
-            row(trailing: true) { addStatusBubble(cancelled: cancelled) }
-        case .userAddWithResults:
-            row(trailing: false, fullWidth: true) { carouselSection(headerKey: nil) }
         case .llmTool:
             if message.richContent != nil {
                 row(trailing: false, fullWidth: true) {
@@ -237,24 +226,6 @@ private struct MessageBubble: View {
             .background(Color.primary.opacity(0.07), in: RoundedRectangle(cornerRadius: 14))
     }
 
-    /// Compact status pill for tap-to-add outcomes — same trailing column as
-    /// the user prompt that triggered it, so success and cancel read as a
-    /// continuation of the user's own action.
-    private func addStatusBubble(cancelled: Bool) -> some View {
-        HStack(spacing: 4) {
-            Image(systemName: cancelled ? "xmark.circle" : "plus.circle.fill")
-                .font(.system(size: 11))
-                .foregroundStyle(cancelled ? Color.secondary : Color.green)
-            Text(message.content)
-                .font(.system(size: 12))
-                .foregroundStyle(cancelled ? .secondary : .primary)
-                .strikethrough(cancelled, color: .secondary)
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .background(Color.primary.opacity(0.06), in: Capsule())
-    }
-
     @ViewBuilder
     private var llmToolBubble: some View {
         // Header layout intentionally mirrors `carouselSection`'s header so
@@ -292,31 +263,21 @@ private struct MessageBubble: View {
         }
     }
 
-    /// Full-width section for carousels (user-tap with results and LLM tool
-    /// results with rich payloads). Optional header is the "Tool call: X"
-    /// label that prepends LLM-driven carousels; user-tap pass nil.
+    /// Full-width section for an LLM-driven tool result that brought a rich
+    /// payload (search results, library lists, calendar etc.). The header
+    /// "Tool call: X" label sits above the carousel; tap on a card inside
+    /// is wired by the carousel itself.
     @ViewBuilder
-    private func carouselSection(headerKey: String?) -> some View {
+    private func carouselSection(headerKey: String) -> some View {
         if let rich = message.richContent {
             VStack(alignment: .leading, spacing: 4) {
-                if let headerKey {
-                    HStack(spacing: 6) {
-                        Image(systemName: "wrench.and.screwdriver")
-                            .font(.system(size: 10))
-                            .foregroundStyle(.blue)
-                        Text(verbatim: headerKey)
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(.secondary)
-                    }
-                } else {
-                    HStack(spacing: 6) {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.system(size: 10))
-                            .foregroundStyle(.green)
-                        Text(message.content)
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(.secondary)
-                    }
+                HStack(spacing: 6) {
+                    Image(systemName: "wrench.and.screwdriver")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.blue)
+                    Text(verbatim: headerKey)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(.secondary)
                 }
                 RichToolResultView(
                     content: rich,
@@ -357,50 +318,16 @@ private struct MessageBubble: View {
         }
     }
 
-    /// Display category derived from `ChatMessage`. The role alone doesn't
-    /// capture the user-tap vs LLM distinction for tool messages — we use
-    /// the convention that `requestAdd` stores `userIntent` in `content`
-    /// while the LLM path stores the raw tool name, and the toolResult's
-    /// "(cancelled by user)" marker flags the cancel branch.
-    private enum Kind {
-        case user, assistant
-        case userAdd(cancelled: Bool)
-        case userAddWithResults
-        case llmTool
-
-        var symbol: String {
-            switch self {
-            case .user: return "person.circle"
-            case .assistant: return "sparkles"
-            case .userAdd(let cancelled): return cancelled ? "xmark.circle" : "plus.circle.fill"
-            case .userAddWithResults: return "plus.circle.fill"
-            case .llmTool: return "wrench.and.screwdriver"
-            }
-        }
-
-        var tint: Color {
-            switch self {
-            case .user: return .secondary
-            case .assistant: return .purple
-            case .userAdd(let cancelled): return cancelled ? .secondary : .green
-            case .userAddWithResults: return .green
-            case .llmTool: return .blue
-            }
-        }
-    }
+    /// Display category derived from `ChatMessage`. Tool messages all come
+    /// from the LLM now; tap-to-add takes a different (overlay-based) path
+    /// that doesn't write to the chat.
+    private enum Kind { case user, assistant, llmTool }
 
     private var kind: Kind {
         switch message.role {
         case .user:      return .user
         case .assistant: return .assistant
-        case .tool:
-            // user-tap path stores friendly intent in content; LLM path
-            // stores the raw tool name there.
-            let isUserInitiated = message.content != (message.toolCall?.name ?? "")
-            if !isUserInitiated { return .llmTool }
-            if message.richContent != nil { return .userAddWithResults }
-            let cancelled = (message.toolResult ?? "").contains("cancelled")
-            return .userAdd(cancelled: cancelled)
+        case .tool:      return .llmTool
         }
     }
 

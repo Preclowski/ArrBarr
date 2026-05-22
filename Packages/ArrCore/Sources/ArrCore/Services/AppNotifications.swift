@@ -55,22 +55,18 @@ public enum DetailRequest {
 }
 
 public extension Notification.Name {
-    /// Posted when the user taps a search-result poster inside the chat. The
-    /// chat listens and runs the matching add tool through the normal confirm
-    /// gate (same `ConfirmAddCard` the LLM-proposed adds surface).
-    static let arrBarrChatRequestAdd = Notification.Name("ArrBarrChatRequestAdd")
+    /// Posted when the user taps a missing search-result poster inside the
+    /// chat. Popover/MainWindow listen and open the full `SearchAddPanel`
+    /// overlay so the user gets the same rich add UI as the `+` flow.
+    static let arrBarrOpenSearchAdd = Notification.Name("ArrBarrOpenSearchAdd")
 }
 
-public enum AddRequest {
-    public static func post(toolName: String, draftArgs: JSONValue, userIntent: String) {
+public enum SearchAddRequest {
+    public static func post(_ result: SearchResult) {
         NotificationCenter.default.post(
-            name: .arrBarrChatRequestAdd,
+            name: .arrBarrOpenSearchAdd,
             object: nil,
-            userInfo: [
-                "toolName": toolName,
-                "draftArgs": draftArgs,
-                "userIntent": userIntent,
-            ]
+            userInfo: ["result": result]
         )
     }
 }

@@ -479,6 +479,19 @@ struct ProgressLine: View {
     var hideDownloadClient: Bool = false
 
     public var body: some View {
+        // One row was cramming status + percentage + quality + time left +
+        // size + client all on a single line, which wrapped "Downloading" to
+        // two lines on narrow popovers. Split: status / progress / client on
+        // top (the "what's happening" line), technical details (quality ·
+        // time · size) below.
+        VStack(alignment: .leading, spacing: 2) {
+            statusRow
+            if hasDetails { detailsRow }
+        }
+    }
+
+    @ViewBuilder
+    private var statusRow: some View {
         HStack(spacing: 4) {
             Image(systemName: item.status.symbol)
                 .font(.system(size: 10))
@@ -486,35 +499,41 @@ struct ProgressLine: View {
             Text(LocalizedStringKey(item.status.displayName))
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(item.status.tint)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
             Text("·").foregroundStyle(.tertiary)
             Text(verbatim: "\(Int((item.progress * 100).rounded()))%")
                 .font(.system(size: 11, weight: .semibold).monospacedDigit())
                 .foregroundStyle(.secondary)
-            if let q = item.quality, !q.isEmpty {
-                Text("·").foregroundStyle(.tertiary)
-                Text(q)
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
-            }
-            if let t = formattedTimeLeft {
-                Text("·").foregroundStyle(.tertiary)
-                Text(verbatim: t)
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
-            }
-            if item.sizeTotal > 0 {
-                Text("·").foregroundStyle(.tertiary)
-                Text(verbatim: sizeText)
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
-            }
             if !hideDownloadClient, let client = item.downloadClient {
                 Spacer(minLength: 6)
                 Text(client)
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(downloadClientColor(client))
+                    .lineLimit(1)
             }
         }
+    }
+
+    @ViewBuilder
+    private var detailsRow: some View {
+        HStack(spacing: 4) {
+            let segments: [String] = [
+                item.quality.flatMap { $0.isEmpty ? nil : $0 },
+                formattedTimeLeft,
+                item.sizeTotal > 0 ? sizeText : nil,
+            ].compactMap { $0 }
+            ForEach(Array(segments.enumerated()), id: \.offset) { idx, segment in
+                if idx > 0 { Text("·").foregroundStyle(.tertiary) }
+                Text(verbatim: segment)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private var hasDetails: Bool {
+        (item.quality?.isEmpty == false) || formattedTimeLeft != nil || item.sizeTotal > 0
     }
 
     private var sizeText: String {

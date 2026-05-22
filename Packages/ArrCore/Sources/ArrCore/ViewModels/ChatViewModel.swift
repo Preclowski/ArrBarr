@@ -43,51 +43,6 @@ public final class ChatViewModel: ObservableObject {
         pendingResume = nil
     }
 
-    /// User-initiated add (tap on a search-result poster in chat). Drives the
-    /// exact same confirmation surface as an LLM-proposed add — pushes a
-    /// `ToolCall` into `pendingConfirm`, waits for the user to accept (with
-    /// possibly tweaked args) or cancel, runs the tool, appends a `.tool`
-    /// message. Bypasses the LLM entirely.
-    ///
-    /// The tool message stores `userIntent` (e.g. "Add Spring (2019)") in
-    /// `content` instead of the raw tool name; MessageBubble keys off
-    /// `content != toolCall.name` to render the friendlier "no prefix, no
-    /// chevron" surface for user-tap adds.
-    public func requestAdd(toolName: String, draftArgs: JSONValue, userIntent: String) async {
-        guard pendingResume == nil else { return }
-        messages.append(ChatMessage(role: .user, content: userIntent))
-        let call = ToolCall(name: toolName, arguments: draftArgs)
-        isThinking = true
-        defer { isThinking = false }
-        guard let confirmedArgs = await awaitConfirm(call) else {
-            // Cancel — surface the dropped intent so the chat doesn't end on
-            // a dangling user message. The "(cancelled by user)" marker in
-            // toolResult is what MessageBubble keys off to swap the icon and
-            // strikethrough the title; content stays the same userIntent so
-            // success and cancel rows visually mirror each other.
-            messages.append(ChatMessage(
-                role: .tool,
-                content: userIntent,
-                toolCall: call,
-                toolResult: "(cancelled by user)"
-            ))
-            return
-        }
-        let output: ToolCallOutput
-        do {
-            output = try await invokeTool(toolName, confirmedArgs)
-        } catch {
-            output = ToolCallOutput(text: "(tool error: \(error.localizedDescription))")
-        }
-        let confirmedCall = ToolCall(name: toolName, arguments: confirmedArgs)
-        messages.append(ChatMessage(
-            role: .tool,
-            content: userIntent,
-            toolCall: confirmedCall,
-            toolResult: output.text,
-            richContent: output.rich
-        ))
-    }
 
     /// Wipe the conversation. Refuses to clear while a tool is pending so we
     /// don't leak a CheckedContinuation.
