@@ -48,10 +48,10 @@ public struct ChatView: View {
 
     private var emptyHint: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("Ask anything about your Sonarr / Radarr.")
+            Text("Ask anything about your Sonarr / Radarr.", bundle: .module)
                 .foregroundStyle(.secondary)
                 .font(.subheadline)
-            Text("Try: \"What's coming this week?\" · \"Add Severance\"")
+            Text("Try: \"What's coming this week?\" · \"Add Severance\"", bundle: .module)
                 .foregroundStyle(.tertiary)
                 .font(.caption)
         }
@@ -176,7 +176,7 @@ private struct ThinkingRow: View {
     var body: some View {
         HStack(spacing: 6) {
             ProgressView().controlSize(.small)
-            Text("Thinking…").font(.caption).foregroundStyle(.secondary)
+            Text("Thinking…", bundle: .module).font(.caption).foregroundStyle(.secondary)
         }
         .padding(.leading, 26)
     }

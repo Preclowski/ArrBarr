@@ -15,7 +15,7 @@ public struct ChatUnavailableView: View {
             Image(systemName: symbol)
                 .font(.system(size: 28, weight: .light))
                 .foregroundStyle(.tertiary)
-            Text(title)
+            Text(title, bundle: .module)
                 .font(.subheadline)
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.secondary)
