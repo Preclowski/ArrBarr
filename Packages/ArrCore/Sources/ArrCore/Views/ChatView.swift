@@ -12,10 +12,6 @@ public struct ChatView: View {
 
     public var body: some View {
         VStack(spacing: 0) {
-            if !viewModel.messages.isEmpty {
-                topBar
-                Divider()
-            }
             messages
             if let confirm = viewModel.pendingConfirm {
                 ConfirmAddCard(
@@ -40,22 +36,7 @@ public struct ChatView: View {
         }
     }
 
-    private var topBar: some View {
-        HStack(spacing: 6) {
-            Spacer()
-            Button(action: { viewModel.clear() }) {
-                Label("Clear", systemImage: "trash")
-                    .labelStyle(.iconOnly)
-                    .font(.system(size: 12))
-            }
-            .buttonStyle(.plain)
-            .foregroundStyle(.secondary)
-            .help(Text("Clear conversation", bundle: .module))
-            .disabled(viewModel.pendingConfirm != nil)
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 4)
-    }
+    @State private var clearHovered: Bool = false
 
     private var messages: some View {
         ScrollViewReader { proxy in
@@ -82,6 +63,29 @@ public struct ChatView: View {
                     }
                 }
             }
+            // Trash button used to live in a dedicated topBar with a Divider
+            // — it dominated an otherwise minimal chat surface. Tuck it as a
+            // hover-revealed overlay at top-trailing instead; only appears
+            // when there's something to clear and the mouse is in the chat.
+            .overlay(alignment: .topTrailing) {
+                if !viewModel.messages.isEmpty {
+                    Button(action: { viewModel.clear() }) {
+                        Image(systemName: "trash")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+                            .padding(6)
+                            .background(.thinMaterial, in: Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .help(Text("Clear conversation", bundle: .module))
+                    .disabled(viewModel.pendingConfirm != nil)
+                    .opacity(clearHovered ? 1 : 0.0)
+                    .padding(.top, 6)
+                    .padding(.trailing, 8)
+                    .animation(.easeOut(duration: 0.15), value: clearHovered)
+                }
+            }
+            .onHover { clearHovered = $0 }
         }
     }
 
@@ -214,11 +218,14 @@ private struct MessageBubble: View {
     @ViewBuilder
     private func row<Content: View>(trailing: Bool, fullWidth: Bool = false,
                                     @ViewBuilder _ content: () -> Content) -> some View {
+        // Bubble max-width 340 (out of ~376 usable column) — wide enough to
+        // avoid skinny text columns on common chat phrases, narrow enough to
+        // still read as a side-aligned bubble.
         HStack(spacing: 0) {
-            if trailing && !fullWidth { Spacer(minLength: 36) }
+            if trailing && !fullWidth { Spacer(minLength: 16) }
             content()
-                .frame(maxWidth: fullWidth ? .infinity : 280, alignment: trailing ? .trailing : .leading)
-            if !trailing && !fullWidth { Spacer(minLength: 36) }
+                .frame(maxWidth: fullWidth ? .infinity : 340, alignment: trailing ? .trailing : .leading)
+            if !trailing && !fullWidth { Spacer(minLength: 16) }
         }
         .frame(maxWidth: .infinity, alignment: trailing ? .trailing : .leading)
     }
@@ -267,17 +274,39 @@ private struct MessageBubble: View {
 
     @ViewBuilder
     private var llmToolBubble: some View {
-        HStack(alignment: .top, spacing: 6) {
-            Image(systemName: "wrench.and.screwdriver")
-                .font(.system(size: 10))
-                .foregroundStyle(.blue)
-                .padding(.top, 2)
-            VStack(alignment: .leading, spacing: 2) {
-                chevronExpandable(label: "Tool call: \(message.content)")
+        // Header layout intentionally mirrors `carouselSection`'s header so
+        // a series of plain + rich tool calls in a row line up on the same
+        // leading X. The chevron lives at the trailing end of the header
+        // row, not before the label, so adding/removing it doesn't shift
+        // the label horizontally.
+        VStack(alignment: .leading, spacing: 2) {
+            Button {
+                withAnimation(.smooth(duration: 0.18)) { expanded.toggle() }
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "wrench.and.screwdriver")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.blue)
+                    Text(verbatim: "Tool call: \(message.content)")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                    Image(systemName: expanded ? "chevron.down" : "chevron.right")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(.tertiary)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            if expanded, let result = message.toolResult, !result.isEmpty {
+                Text(result)
+                    .font(.system(size: 11).monospaced())
+                    .foregroundStyle(.secondary)
+                    .textSelection(.enabled)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.leading, 16)
+                    .padding(.top, 2)
             }
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
     }
 
     /// Full-width section for carousels (user-tap with results and LLM tool
