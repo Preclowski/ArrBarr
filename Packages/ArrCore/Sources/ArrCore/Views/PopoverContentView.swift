@@ -84,6 +84,11 @@ public struct PopoverContentView: View {
                     searchResult = nil
                 }
             }
+            .onChange(of: chatAvailable) { _, available in
+                if !available && selectedTab == .chat {
+                    selectedTab = .queue
+                }
+            }
             .background {
                 Button("", action: onOpenSettings)
                     .keyboardShortcut(",", modifiers: .command)
@@ -618,7 +623,11 @@ private struct ChatHostInner: View {
         _vm = StateObject(wrappedValue: ChatViewModelFactory.make(config: config))
     }
     var body: some View {
-        ChatView(viewModel: vm)
+        if !vm.providerIsAvailable {
+            ChatUnavailableView(reason: .providerUnavailable)
+        } else {
+            ChatView(viewModel: vm)
+        }
     }
 }
 

@@ -19,20 +19,32 @@ public enum ChatViewModelFactory {
             LLMTool(name: name, description: "MCP tool: \(name)", inputSchema: .object([:]))
         }
 
+        let invoke: @Sendable (String, JSONValue) async throws -> String = { name, args in
+            let result = try await client.callTool(name: name, arguments: args)
+            return result.content.compactMap(\.text).joined(separator: "\n")
+        }
+
+        // The ChatViewModel hosts the destructive-confirm state. We pass a closure
+        // that surfaces it via awaitConfirm. Use weak capture to avoid a retain cycle.
+        var vmRef: ChatViewModel? = nil
+        let confirm: @Sendable (ToolCall) async -> Bool = { [weak vmRef] call in
+            guard let vm = vmRef else { return false }
+            return await vm.awaitConfirm(call)
+        }
+
         let provider: LLMProvider
         if #available(macOS 26.0, iOS 26.0, *) {
-            provider = FoundationModelsProvider()
+            provider = FoundationModelsProvider(invokeTool: invoke, confirmDestructive: confirm)
         } else {
             provider = UnavailableLLMProvider()
         }
 
-        return ChatViewModel(
+        let vm = ChatViewModel(
             provider: provider,
             tools: mcpTools,
-            invokeTool: { name, args in
-                let result = try await client.callTool(name: name, arguments: args)
-                return result.content.compactMap(\.text).joined(separator: "\n")
-            }
+            invokeTool: invoke
         )
+        vmRef = vm
+        return vm
     }
 }

@@ -11,7 +11,9 @@ public final class ChatViewModel: ObservableObject {
     private let provider: LLMProvider
     private let tools: [LLMTool]
     private let invokeTool: @Sendable (_ name: String, _ args: JSONValue) async throws -> String
-    private var pendingResume: CheckedContinuation<Bool, Never>?
+    private(set) var pendingResume: CheckedContinuation<Bool, Never>?
+
+    public var providerIsAvailable: Bool { provider.isAvailable }
 
     public init(provider: LLMProvider,
                 tools: [LLMTool],
@@ -41,6 +43,21 @@ public final class ChatViewModel: ObservableObject {
         pendingResume = nil
     }
 
+    /// Surfaces the confirm gate to external callers (e.g. injected into
+    /// `FoundationModelsProvider` so `DynamicMCPTool` can pause the FM session).
+    /// Re-entrant calls return false immediately.
+    public func awaitConfirm(_ call: ToolCall) async -> Bool {
+        guard pendingResume == nil else { return false }
+        pendingConfirm = call
+        isThinking = false
+        let proceed = await withCheckedContinuation { (cont: CheckedContinuation<Bool, Never>) in
+            self.pendingResume = cont
+        }
+        pendingConfirm = nil
+        isThinking = true
+        return proceed
+    }
+
     private func runLoop(prompt: String) async {
         isThinking = true
         defer { isThinking = false }
@@ -51,7 +68,22 @@ public final class ChatViewModel: ObservableObject {
             while let p = nextPrompt, roundsLeft > 0 {
                 roundsLeft -= 1
                 let response = try await provider.respond(prompt: p, tools: tools, history: messages)
-                let toolCall = response.toolCalls.first  // v1: handle one call per round.
+
+                // --- Pre-executed path (e.g. FoundationModelsProvider) ---
+                // The provider already ran the tools inside its session; toolResults is non-nil.
+                // We only render the messages — no re-execution, no further round.
+                if let toolResults = response.toolResults {
+                    let toolCall = response.toolCalls.first
+                    let assistantMsg = ChatMessage(role: .assistant, content: response.text, toolCall: toolCall)
+                    messages.append(assistantMsg)
+                    for (call, result) in zip(response.toolCalls, toolResults) {
+                        messages.append(ChatMessage(role: .tool, content: call.name, toolResult: result))
+                    }
+                    return
+                }
+
+                // --- View-model-executes path (e.g. future Anthropic API provider) ---
+                let toolCall = response.toolCalls.first
                 let assistantMsg = ChatMessage(role: .assistant, content: response.text, toolCall: toolCall)
                 messages.append(assistantMsg)
                 guard let call = toolCall else { return }

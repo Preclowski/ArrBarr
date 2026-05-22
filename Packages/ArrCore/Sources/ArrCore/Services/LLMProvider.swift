@@ -14,11 +14,17 @@ public struct LLMTool: Sendable {
 public struct LLMResponse: Sendable {
     /// Free-text the assistant produced.
     public let text: String
-    /// Zero or more tool calls the assistant wants executed.
+    /// Zero or more tool calls the assistant made.
     public let toolCalls: [ToolCall]
-    public init(text: String, toolCalls: [ToolCall] = []) {
+    /// Result strings, aligned with `toolCalls` by index. If non-nil,
+    /// the provider has already executed each call and the view-model
+    /// should NOT re-execute them — render them as `.tool` messages.
+    /// If nil, the view-model owns execution.
+    public let toolResults: [String]?
+    public init(text: String, toolCalls: [ToolCall] = [], toolResults: [String]? = nil) {
         self.text = text
         self.toolCalls = toolCalls
+        self.toolResults = toolResults
     }
 }
 

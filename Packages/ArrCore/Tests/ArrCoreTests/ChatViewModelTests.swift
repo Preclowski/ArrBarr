@@ -15,11 +15,24 @@ struct ChatViewModelTests {
         }
     }
 
+    /// A provider whose `respond` body is supplied as a closure, invoked on each call.
+    /// Used to simulate providers that call back into the VM (e.g., for confirm gates).
+    final class ConfirmingFakeProvider: LLMProvider {
+        var isAvailable: Bool = true
+        let onRespond: @Sendable () async -> LLMResponse
+        init(onRespond: @escaping @Sendable () async -> LLMResponse) { self.onRespond = onRespond }
+        func respond(prompt: String, tools: [LLMTool], history: [ChatMessage]) async throws -> LLMResponse {
+            await onRespond()
+        }
+    }
+
     /// A fake tool runner — pretends to be MCP.
     final class FakeMCP {
+        var callCount = 0
         var responses: [String: String] = [:]
         func call(name: String, arguments: JSONValue) async throws -> String {
-            responses[name] ?? "(no response)"
+            callCount += 1
+            return responses[name] ?? "(no response)"
         }
     }
 
@@ -46,86 +59,98 @@ struct ChatViewModelTests {
         #expect(vm.pendingConfirm == nil)
     }
 
-    @Test("non-destructive tool call runs without confirm")
+    @Test("provider pre-executed tool results render without re-invoking MCP")
     func nonDestructiveLoop() async throws {
         let p = FakeProvider()
         p.scripted = [
-            LLMResponse(text: "Looking it up", toolCalls: [
-                ToolCall(name: "sonarr_search", arguments: .object(["query": .string("X")]))
-            ]),
-            LLMResponse(text: "Found 1 series."),
+            LLMResponse(
+                text: "Found 1 series.",
+                toolCalls: [ToolCall(name: "sonarr_search", arguments: .object(["query": .string("X")]))],
+                toolResults: ["X (2025)"]
+            )
         ]
         let mcp = FakeMCP()
-        mcp.responses["sonarr_search"] = "X (2025)"
+        mcp.responses["sonarr_search"] = "SHOULD NOT BE CALLED"
         let vm = makeVM(provider: p, mcp: mcp)
         await vm.send("find X")
-        // user, assistant("Looking it up" + toolCall), tool, assistant("Found 1 series.")
-        #expect(vm.messages.count == 4)
+        // user, assistant, tool (display only)
+        #expect(vm.messages.count == 3)
+        #expect(vm.messages[1].role == .assistant)
+        #expect(vm.messages[1].content == "Found 1 series.")
         #expect(vm.messages[2].role == .tool)
         #expect(vm.messages[2].toolResult == "X (2025)")
-        #expect(vm.messages[3].content == "Found 1 series.")
-        #expect(p.callCount == 2)
+        #expect(p.callCount == 1)
+        #expect(mcp.callCount == 0, "MCP must not be called when provider pre-executed")
     }
 
-    @Test("destructive tool stalls until confirmed")
+    @Test("destructive tool gated via awaitConfirm path")
     func destructiveStalls() async throws {
-        let p = FakeProvider()
-        p.scripted = [
-            LLMResponse(text: "About to add", toolCalls: [
+        var vmCapture: ChatViewModel?
+        let provider = ConfirmingFakeProvider {
+            let proceed = await vmCapture!.awaitConfirm(
                 ToolCall(name: "sonarr_add_series", arguments: .object(["title": .string("X")]))
-            ]),
-            LLMResponse(text: "Added."),
-        ]
-        let mcp = FakeMCP()
-        mcp.responses["sonarr_add_series"] = "OK"
-        let vm = makeVM(provider: p, mcp: mcp)
+            )
+            if proceed {
+                return LLMResponse(
+                    text: "Added.",
+                    toolCalls: [ToolCall(name: "sonarr_add_series", arguments: .object(["title": .string("X")]))],
+                    toolResults: ["OK"]
+                )
+            } else {
+                return LLMResponse(text: "Skipped.", toolCalls: [], toolResults: nil)
+            }
+        }
+        let vm = ChatViewModel(
+            provider: provider,
+            tools: [],
+            invokeTool: { _, _ in "" }
+        )
+        vmCapture = vm
 
-        // Send returns when the loop is suspended on the confirm gate.
-        // We launch send() as a Task and wait for pendingConfirm to surface.
-        let sendTask = Task { await vm.send("add X") }
-        // Spin until pendingConfirm appears (the VM is @MainActor so we yield).
+        let task = Task { await vm.send("add X") }
         var spins = 0
         while vm.pendingConfirm == nil && spins < 100 {
             await Task.yield()
             spins += 1
         }
         #expect(vm.pendingConfirm != nil)
-        #expect(vm.pendingConfirm?.name == "sonarr_add_series")
-
         await vm.confirmPending()
-        await sendTask.value
-
-        #expect(vm.pendingConfirm == nil)
-        let lastTool = vm.messages.last(where: { $0.role == .tool })
-        #expect(lastTool?.toolResult == "OK")
-        #expect(vm.messages.last?.content == "Added.")
+        await task.value
+        let assistantMsg = vm.messages.last(where: { $0.role == .assistant })
+        #expect(assistantMsg?.content == "Added.")
+        let toolMsg = vm.messages.last(where: { $0.role == .tool })
+        #expect(toolMsg?.toolResult == "OK")
     }
 
-    @Test("destructive tool cancel skips execution")
+    @Test("destructive cancel skips execution")
     func destructiveCancel() async throws {
-        let p = FakeProvider()
-        p.scripted = [
-            LLMResponse(text: "About to add", toolCalls: [
+        var vmCapture: ChatViewModel?
+        let provider = ConfirmingFakeProvider {
+            let proceed = await vmCapture!.awaitConfirm(
                 ToolCall(name: "sonarr_add_series", arguments: .object(["title": .string("X")]))
-            ]),
-            LLMResponse(text: "OK, skipped."),
-        ]
-        let mcp = FakeMCP()
-        let vm = makeVM(provider: p, mcp: mcp)
+            )
+            if proceed {
+                return LLMResponse(text: "Added.", toolCalls: [], toolResults: nil)
+            } else {
+                return LLMResponse(text: "Skipped.", toolCalls: [], toolResults: nil)
+            }
+        }
+        let vm = ChatViewModel(
+            provider: provider,
+            tools: [],
+            invokeTool: { _, _ in "" }
+        )
+        vmCapture = vm
 
-        let sendTask = Task { await vm.send("add X") }
+        let task = Task { await vm.send("add X") }
         var spins = 0
         while vm.pendingConfirm == nil && spins < 100 {
             await Task.yield()
             spins += 1
         }
         await vm.cancelPending()
-        await sendTask.value
-
-        #expect(vm.pendingConfirm == nil)
-        let lastTool = vm.messages.last(where: { $0.role == .tool })
-        #expect(lastTool?.toolResult == "(cancelled by user)")
-        #expect(vm.messages.last?.content == "OK, skipped.")
+        await task.value
+        #expect(vm.messages.last?.content == "Skipped.")
     }
 
     @Test("send() while confirm pending is a no-op")
@@ -161,7 +186,7 @@ struct ChatViewModelTests {
     @Test("round cap surfaces a stop message after 6 tool rounds")
     func roundCapStops() async throws {
         let p = FakeProvider()
-        // 7 scripted responses each requesting the same non-destructive tool.
+        // 7 scripted responses each requesting the same non-destructive tool (toolResults nil).
         // Only 6 rounds will run, then the cap kicks in and the loop ends with
         // the synthetic stop message.
         for _ in 0..<7 {

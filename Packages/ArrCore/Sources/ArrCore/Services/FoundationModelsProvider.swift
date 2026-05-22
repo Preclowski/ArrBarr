@@ -8,7 +8,16 @@ import FoundationModels
 @available(macOS 26.0, iOS 26.0, *)
 public struct FoundationModelsProvider: LLMProvider {
 
-    public init() {}
+    private let invokeTool: @Sendable (String, JSONValue) async throws -> String
+    private let confirmDestructive: @Sendable (ToolCall) async -> Bool
+
+    public init(
+        invokeTool: @escaping @Sendable (String, JSONValue) async throws -> String,
+        confirmDestructive: @escaping @Sendable (ToolCall) async -> Bool
+    ) {
+        self.invokeTool = invokeTool
+        self.confirmDestructive = confirmDestructive
+    }
 
     public var isAvailable: Bool {
         if case .available = SystemLanguageModel.default.availability { return true }
@@ -17,17 +26,16 @@ public struct FoundationModelsProvider: LLMProvider {
 
     /// One round-trip to the on-device LLM.
     ///
-    /// Strategy for history replay: we replay the last few user messages in a
-    /// fresh session so the model has conversational context, then send the
-    /// current prompt. Tool calls are captured via `DynamicMCPToolBox` and
-    /// drained after the session responds; ChatViewModel handles the actual
-    /// MCP execution.
+    /// The provider executes all tool calls synchronously inside `DynamicMCPTool.call`,
+    /// then drains both calls and results from `DynamicMCPToolBox`. The returned
+    /// `LLMResponse` carries `toolResults` so `ChatViewModel` knows the calls are
+    /// already done and should only render them, not re-execute.
     public func respond(
         prompt: String,
         tools: [LLMTool],
         history: [ChatMessage]
     ) async throws -> LLMResponse {
-        let toolImpls = tools.map { DynamicMCPTool(spec: $0) }
+        let toolImpls = tools.map { DynamicMCPTool(spec: $0, invokeTool: invokeTool, confirmDestructive: confirmDestructive) }
         let instructions = Self.buildInstructions(tools: tools)
         let session = LanguageModelSession(tools: toolImpls, instructions: instructions)
 
@@ -40,8 +48,11 @@ public struct FoundationModelsProvider: LLMProvider {
         }
 
         let result = try await session.respond(to: prompt)
-        let calls = await DynamicMCPToolBox.shared.drainCalls()
-        return LLMResponse(text: result.content, toolCalls: calls)
+        let (calls, results) = await DynamicMCPToolBox.shared.drainResults()
+        if calls.isEmpty {
+            return LLMResponse(text: result.content)
+        }
+        return LLMResponse(text: result.content, toolCalls: calls, toolResults: results)
     }
 
     // MARK: - Private
@@ -70,21 +81,26 @@ public struct FoundationModelsProvider: LLMProvider {
 
 // MARK: - DynamicMCPToolBox
 
-/// Actor that collects tool calls recorded by `DynamicMCPTool.call(arguments:)`
+/// Actor that collects (tool call, result) pairs recorded by `DynamicMCPTool.call(arguments:)`
 /// during a single LLM session. ChatViewModel drains it after `respond` returns
-/// and performs the actual MCP execution.
+/// and renders them as `.tool` messages without re-executing.
 @available(macOS 26.0, iOS 26.0, *)
 actor DynamicMCPToolBox {
     static let shared = DynamicMCPToolBox()
-    private var pending: [ToolCall] = []
+    private var pendingCalls: [ToolCall] = []
+    private var pendingResults: [String] = []
 
-    func record(_ call: ToolCall) {
-        pending.append(call)
+    func record(call: ToolCall, result: String) {
+        pendingCalls.append(call)
+        pendingResults.append(result)
     }
 
-    func drainCalls() -> [ToolCall] {
-        defer { pending = [] }
-        return pending
+    func drainResults() -> ([ToolCall], [String]) {
+        defer {
+            pendingCalls = []
+            pendingResults = []
+        }
+        return (pendingCalls, pendingResults)
     }
 }
 
@@ -94,12 +110,15 @@ actor DynamicMCPToolBox {
 ///
 /// Because Foundation Models requires `@Generable` argument structs to be
 /// statically known at compile time, all dynamic tools share one argument
-/// struct: a single `json` string field. ChatViewModel decodes that JSON and
-/// routes it to the correct MCP tool.
+/// struct: a single `json` string field. The tool performs the real MCP call
+/// synchronously inside `call(arguments:)` and records both call and result
+/// in `DynamicMCPToolBox`.
 @available(macOS 26.0, iOS 26.0, *)
 struct DynamicMCPTool: Tool {
 
     let spec: LLMTool
+    let invokeTool: @Sendable (String, JSONValue) async throws -> String
+    let confirmDestructive: @Sendable (ToolCall) async -> Bool
 
     var name: String { spec.name }
     var description: String { spec.description }
@@ -119,10 +138,27 @@ struct DynamicMCPTool: Tool {
         } else {
             argsValue = .object([:])
         }
-        let call = ToolCall(name: spec.name, arguments: argsValue)
-        await DynamicMCPToolBox.shared.record(call)
-        // Return a sentinel; ChatViewModel will replace this with the real result.
-        return "(deferred — ArrBarr will invoke this tool and resume the conversation)"
+        let toolCall = ToolCall(name: spec.name, arguments: argsValue)
+
+        if MCPToolWhitelist.isDestructive(spec.name) {
+            let proceed = await confirmDestructive(toolCall)
+            if !proceed {
+                let result = "(cancelled by user)"
+                await DynamicMCPToolBox.shared.record(call: toolCall, result: result)
+                return result
+            }
+        }
+
+        let result: String
+        do {
+            result = try await invokeTool(spec.name, argsValue)
+        } catch {
+            let errResult = "(tool error: \(error.localizedDescription))"
+            await DynamicMCPToolBox.shared.record(call: toolCall, result: errResult)
+            return errResult
+        }
+        await DynamicMCPToolBox.shared.record(call: toolCall, result: result)
+        return result
     }
 }
 
@@ -133,7 +169,10 @@ struct DynamicMCPTool: Tool {
 /// Stub used when compiling on a host or SDK that does not include
 /// FoundationModels (macOS < 26 SDK). Reports unavailable at runtime.
 public struct FoundationModelsProvider: LLMProvider {
-    public init() {}
+    public init(
+        invokeTool: @escaping @Sendable (String, JSONValue) async throws -> String,
+        confirmDestructive: @escaping @Sendable (ToolCall) async -> Bool
+    ) {}
 
     public var isAvailable: Bool { false }
 
