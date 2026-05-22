@@ -55,7 +55,7 @@ public struct ChatView: View {
                     if viewModel.messages.isEmpty {
                         emptyHint
                     }
-                    ForEach(viewModel.messages) { msg in
+                    ForEach(viewModel.messages.filter { !Self.shouldHide($0) }) { msg in
                         MessageBubble(message: msg).id(msg.id)
                     }
                     if viewModel.isThinking {
@@ -108,6 +108,15 @@ public struct ChatView: View {
         let text = draft
         draft = ""
         Task { await viewModel.send(text) }
+    }
+
+    /// Filter out content-less assistant messages — when the model only emits
+    /// a tool call (no prose), we get an assistant ChatMessage with empty
+    /// content and the tool result lives in the separate .tool message that
+    /// follows. The bare icon for the empty assistant message is just noise.
+    static func shouldHide(_ msg: ChatMessage) -> Bool {
+        guard msg.role == .assistant else { return false }
+        return msg.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     static func summarize(_ value: JSONValue) -> String {

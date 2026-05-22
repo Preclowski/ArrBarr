@@ -56,7 +56,7 @@ public struct RichToolResultView: View {
             .padding(.vertical, 4)
             .padding(.horizontal, 2)
         }
-        .frame(minHeight: 200)
+        .fixedSize(horizontal: false, vertical: true)
         #if os(iOS)
         .scrollTargetBehavior(.viewAligned)
         #endif
