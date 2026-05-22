@@ -13,10 +13,11 @@ public enum ChatViewModelFactory {
     public static func make(
         sonarr: ServiceConfig,
         radarr: ServiceConfig,
+        lidarr: ServiceConfig = .empty,
         chatProvider: ChatProvider,
         openai: OpenAIConfig
     ) -> ChatViewModel {
-        let backend: ToolBackend = LocalToolBackend(sonarr: sonarr, radarr: radarr)
+        let backend: ToolBackend = LocalToolBackend(sonarr: sonarr, radarr: radarr, lidarr: lidarr)
 
         let llmTools = ChatToolCatalog.llmTools
 

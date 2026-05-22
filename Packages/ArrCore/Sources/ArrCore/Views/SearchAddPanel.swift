@@ -15,6 +15,9 @@ public struct SearchAddPanel: View {
     @State private var seriesType: SonarrSeriesType = .standard
     @State private var seasonFolder = true
 
+    // Lidarr state
+    @State private var selectedMetadataProfileId: Int?
+
     public var body: some View {
         VStack(spacing: 0) {
             header
@@ -31,8 +34,10 @@ public struct SearchAddPanel: View {
                     } else {
                         if result.source == .radarr {
                             radarrForm
-                        } else {
+                        } else if result.source == .sonarr {
                             sonarrForm
+                        } else {
+                            lidarrForm
                         }
                     }
                     if let err = viewModel.addError {
@@ -53,6 +58,7 @@ public struct SearchAddPanel: View {
             await viewModel.loadOptions(source: result.source)
             selectedProfileId = viewModel.qualityProfiles.first?.id
             selectedRootFolder = viewModel.rootFolders.first?.path
+            selectedMetadataProfileId = viewModel.metadataProfiles.first?.id
         }
     }
 
@@ -99,13 +105,44 @@ public struct SearchAddPanel: View {
                 genres: result.genres,
                 ratings: ratingChips,
                 posterURL: result.posterURL,
-                fallbackSymbol: result.source == .sonarr ? "tv" : "film",
+                fallbackSymbol: result.source == .sonarr ? "tv" : (result.source == .lidarr ? "music.note" : "film"),
                 posterAspect: 2.0/3.0
             )
             if let ov = result.overview, !ov.isEmpty {
                 ExpandableOverview(text: ov)
             }
         }
+    }
+
+    // MARK: - Lidarr form
+
+    private var lidarrForm: some View {
+        VStack(spacing: 4) {
+            formPicker("Quality Profile",
+                       selection: Binding(
+                           get: { selectedProfileId ?? viewModel.qualityProfiles.first?.id ?? 0 },
+                           set: { selectedProfileId = $0 }
+                       ),
+                       options: viewModel.qualityProfiles.map { ($0.id, $0.name) })
+
+            if viewModel.metadataProfiles.count > 1 {
+                formPicker("Metadata Profile",
+                           selection: Binding(
+                               get: { selectedMetadataProfileId ?? viewModel.metadataProfiles.first?.id ?? 0 },
+                               set: { selectedMetadataProfileId = $0 }
+                           ),
+                           options: viewModel.metadataProfiles.map { ($0.id, $0.name) })
+            }
+
+            formPicker("Root Folder",
+                       selection: Binding(
+                           get: { selectedRootFolder ?? viewModel.rootFolders.first?.path ?? "" },
+                           set: { selectedRootFolder = $0 }
+                       ),
+                       options: viewModel.rootFolders.map { ($0.path, $0.path) })
+        }
+        .padding(.horizontal, 14)
+        .padding(.bottom, 4)
     }
 
     private var ratingChips: [RatingChip] {
@@ -222,12 +259,18 @@ public struct SearchAddPanel: View {
                           let folder = selectedRootFolder ?? viewModel.rootFolders.first?.path else { return }
                     await viewModel.addMovie(result, qualityProfileId: pid,
                                             rootFolderPath: folder, monitor: radarrMonitor)
-                } else {
+                } else if result.source == .sonarr {
                     guard let pid = selectedProfileId ?? viewModel.qualityProfiles.first?.id,
                           let folder = selectedRootFolder ?? viewModel.rootFolders.first?.path else { return }
                     await viewModel.addSeries(result, qualityProfileId: pid,
                                              rootFolderPath: folder, monitor: sonarrMonitor,
                                              seriesType: seriesType, seasonFolder: seasonFolder)
+                } else {
+                    guard let pid = selectedProfileId ?? viewModel.qualityProfiles.first?.id,
+                          let folder = selectedRootFolder ?? viewModel.rootFolders.first?.path else { return }
+                    let metaPid = selectedMetadataProfileId ?? viewModel.metadataProfiles.first?.id ?? 1
+                    await viewModel.addArtist(result, qualityProfileId: pid,
+                                             metadataProfileId: metaPid, rootFolderPath: folder)
                 }
                 if viewModel.addError == nil { onBack() }
             }
@@ -236,7 +279,14 @@ public struct SearchAddPanel: View {
                 if viewModel.isAdding {
                     ProgressView().controlSize(.small)
                 } else {
-                    Text(result.source == .radarr ? "Add to Radarr" : "Add to Sonarr")
+                    let addLabel: String = {
+                        switch result.source {
+                        case .radarr: return "Add to Radarr"
+                        case .sonarr: return "Add to Sonarr"
+                        case .lidarr: return "Add to Lidarr"
+                        }
+                    }()
+                    Text(addLabel)
                         .font(.system(size: 12, weight: .semibold))
                         .frame(maxWidth: .infinity)
                 }

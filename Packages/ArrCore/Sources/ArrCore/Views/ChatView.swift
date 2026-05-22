@@ -22,6 +22,7 @@ public struct ChatView: View {
                     call: confirm,
                     sonarr: configStore.sonarr,
                     radarr: configStore.radarr,
+                    lidarr: configStore.lidarr,
                     onConfirm: { args in Task { await viewModel.confirmPending(with: args) } },
                     onCancel: { Task { await viewModel.cancelPending() } }
                 )
@@ -158,7 +159,8 @@ private struct MessageBubble: View {
                         RichToolResultView(
                             content: rich,
                             sonarr: configStore.sonarr,
-                            radarr: configStore.radarr
+                            radarr: configStore.radarr,
+                            lidarr: configStore.lidarr
                         )
                         .padding(.top, 4)
                     } else {

@@ -6,7 +6,9 @@ import Foundation
 public enum ChatRichContent: Sendable, Equatable {
     case searchSeriesResults([SearchResult])
     case searchMovieResults([SearchResult])
+    case searchArtistResults([SearchResult])
     case librarySeries([SonarrLibraryRecord])
     case libraryMovies([RadarrLibraryRecord])
+    case libraryArtists([LidarrLibraryRecord])
     case calendar([UpcomingItem])
 }

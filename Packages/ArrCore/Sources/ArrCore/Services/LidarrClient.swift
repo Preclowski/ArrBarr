@@ -153,6 +153,15 @@ public actor LidarrClient: ArrAPIClient {
         return (try? JSONDecoder().decode([LidarrTrackDetail].self, from: data)) ?? []
     }
 
+    func fetchAllArtists() async throws -> [LidarrLibraryRecord] {
+        if DemoMode.isActive { return [] }
+        guard config.isConfigured else { return [] }
+        guard !config.apiKey.isEmpty else { return [] }
+        let url = try http.url(base: config.baseURL, path: "/api/v1/artist")
+        let data = try await http.get(url, headers: ["X-Api-Key": config.apiKey])
+        return (try? JSONDecoder().decode([LidarrLibraryRecord].self, from: data)) ?? []
+    }
+
     func fetchHealth() async throws -> [ArrHealthRecord] {
         guard config.isConfigured else { throw HTTPError.notConfigured }
         guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }

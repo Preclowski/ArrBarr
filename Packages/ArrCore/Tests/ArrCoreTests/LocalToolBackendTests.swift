@@ -48,10 +48,10 @@ struct LocalToolBackendTests {
         LocalToolBackend(sonarr: sonarrConfig(), radarr: radarrConfig())
     }
 
-    @Test("listTools returns 8 expected tool names")
-    func listToolsReturns8Tools() async throws {
+    @Test("listTools returns 12 expected tool names")
+    func listToolsReturns12Tools() async throws {
         let tools = try await backend().listTools()
-        #expect(tools.count == 8)
+        #expect(tools.count == 12)
         let names = Set(tools.map(\.name))
         let expected: Set<String> = [
             "sonarr_search",
@@ -62,6 +62,10 @@ struct LocalToolBackendTests {
             "radarr_get_calendar",
             "sonarr_add_series",
             "radarr_add_movie",
+            "lidarr_search",
+            "lidarr_get_artists",
+            "lidarr_get_calendar",
+            "lidarr_add_artist",
         ]
         #expect(names == expected)
     }
@@ -242,6 +246,94 @@ struct LocalToolBackendTests {
         let b = LocalToolBackend(sonarr: sonarrConfig(), radarr: .empty)
         let output = try await b.callTool(name: "radarr_get_movies", arguments: .object([:]))
         #expect(output.text == "Radarr is not configured.")
+        #expect(output.rich == nil)
+    }
+
+    // MARK: - Lidarr
+
+    @Test("callTool lidarr_search when lidarr not configured returns informative string")
+    func lidarrSearchNotConfigured() async throws {
+        let b = LocalToolBackend(sonarr: sonarrConfig(), radarr: radarrConfig(), lidarr: .empty)
+        let output = try await b.callTool(name: "lidarr_search", arguments: .object(["query": .string("Radiohead")]))
+        #expect(output.text == "Lidarr is not configured.")
+        #expect(output.rich == nil)
+    }
+
+    @Test("callTool lidarr_search empty query returns prompt string")
+    func lidarrSearchEmptyQuery() async throws {
+        let lidarrConfig = ServiceConfig(enabled: true, baseURL: "http://lidarr.local:8686", apiKey: "test-key",
+                                         username: "", password: "")
+        let b = LocalToolBackend(sonarr: sonarrConfig(), radarr: radarrConfig(), lidarr: lidarrConfig)
+        let output = try await b.callTool(name: "lidarr_search", arguments: .object([:]))
+        #expect(output.text == "Please provide a search query.")
+        #expect(output.rich == nil)
+    }
+
+    @Test("callTool lidarr_search stubs HTTP and returns formatted results with rich payload")
+    func lidarrSearchFormatted() async throws {
+        URLProtocol.registerClass(LocalStubProtocol.self)
+        defer {
+            URLProtocol.unregisterClass(LocalStubProtocol.self)
+            LocalStubProtocol.reset()
+        }
+
+        let json = """
+        [{"foreignArtistId":"a74b1b7f-71a5-4011-9441-d0b5e4122711","artistName":"Radiohead",
+          "disambiguation":"","overview":"Alternative rock band","genres":["Alternative"],
+          "images":[],"ratings":{"value":8.9}}]
+        """.data(using: .utf8)!
+        LocalStubProtocol.handlers["/api/v1/artist/lookup"] = (200, json)
+        // library fetch returns empty
+        LocalStubProtocol.handlers["/api/v1/artist"] = (200, Data("[]".utf8))
+
+        let lidarrConfig = ServiceConfig(enabled: true, baseURL: "http://lidarr.local:8686", apiKey: "test-key",
+                                         username: "", password: "")
+        let b = LocalToolBackend(sonarr: sonarrConfig(), radarr: radarrConfig(), lidarr: lidarrConfig)
+        let output = try await b.callTool(
+            name: "lidarr_search",
+            arguments: .object(["query": .string("Radiohead")])
+        )
+        #expect(output.text.contains("Radiohead"))
+        #expect(output.text.contains("foreignArtistId="))
+        if case .searchArtistResults(let results) = output.rich {
+            #expect(results.count == 1)
+            #expect(results[0].title == "Radiohead")
+            #expect(results[0].foreignId == "a74b1b7f-71a5-4011-9441-d0b5e4122711")
+            #expect(results[0].source == .lidarr)
+        } else {
+            Issue.record("Expected .searchArtistResults rich payload")
+        }
+    }
+
+    @Test("unifyLidarr produces stable id and correct source")
+    func unifyLidarrHappyPath() {
+        let record = LidarrLookupRecord(
+            foreignArtistId: "a74b1b7f-71a5-4011-9441-d0b5e4122711",
+            artistName: "Radiohead",
+            disambiguation: "UK band",
+            overview: "Alt rock",
+            images: nil,
+            ratings: LidarrLookupRatings(value: 8.9),
+            genres: ["Alternative"]
+        )
+        let result = SearchClient.unifyLidarr(record, baseURL: "http://lidarr.local:8686")
+        #expect(result != nil)
+        #expect(result?.title == "Radiohead")
+        #expect(result?.subtitle == "UK band")
+        #expect(result?.foreignId == "a74b1b7f-71a5-4011-9441-d0b5e4122711")
+        #expect(result?.source == .lidarr)
+        #expect(result?.year == nil)
+        // id is hashed from foreignArtistId — must be non-negative
+        if let id = result?.id {
+            #expect(id >= 0)
+        }
+    }
+
+    @Test("callTool lidarr_get_artists when lidarr not configured returns informative string")
+    func lidarrGetArtistsNotConfigured() async throws {
+        let b = LocalToolBackend(sonarr: sonarrConfig(), radarr: radarrConfig(), lidarr: .empty)
+        let output = try await b.callTool(name: "lidarr_get_artists", arguments: .object([:]))
+        #expect(output.text == "Lidarr is not configured.")
         #expect(output.rich == nil)
     }
 }

@@ -104,6 +104,55 @@ public enum ChatToolCatalog {
                 ]),
             ])
         ),
+        MCPTool(
+            name: "lidarr_search",
+            description: "Search Lidarr's metadata source (MusicBrainz) for a music artist. Returns matches with their foreignArtistId. Use BEFORE lidarr_add_artist.",
+            inputSchema: .object([
+                "type": .string("object"),
+                "properties": .object([
+                    "query": .object([
+                        "type": .string("string"),
+                        "description": .string("Artist name to search for, e.g. 'Radiohead'"),
+                    ]),
+                ]),
+                "required": .array([.string("query")]),
+            ])
+        ),
+        MCPTool(
+            name: "lidarr_get_artists",
+            description: "List music artists currently in the Lidarr library. Use this when the user references an artist they already follow.",
+            inputSchema: .object([
+                "type": .string("object"),
+                "properties": .object([
+                    "query": .object([
+                        "type": .string("string"),
+                        "description": .string("Optional name filter — case-insensitive substring match. Omit to list all artists."),
+                    ]),
+                ]),
+            ])
+        ),
+        MCPTool(
+            name: "lidarr_get_calendar",
+            description: "Get upcoming album releases from Lidarr (next ~30 days, items already monitored).",
+            inputSchema: .object(["type": .string("object"), "properties": .object([:])])
+        ),
+        MCPTool(
+            name: "lidarr_add_artist",
+            description: "Add a music artist to Lidarr for tracking. ALWAYS run lidarr_search first and pass the foreignArtistId (a MusicBrainz UUID) here.",
+            inputSchema: .object([
+                "type": .string("object"),
+                "properties": .object([
+                    "foreignArtistId": .object([
+                        "type": .string("string"),
+                        "description": .string("MusicBrainz id (UUID) from lidarr_search results"),
+                    ]),
+                    "artistName": .object([
+                        "type": .string("string"),
+                        "description": .string("Artist name fallback when no foreignArtistId is known"),
+                    ]),
+                ]),
+            ])
+        ),
     ]
 
     /// Convert the catalog into `LLMTool` values for provider advertisement.

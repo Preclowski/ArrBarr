@@ -38,7 +38,7 @@ public struct PopoverContentView: View {
     private var lidarrConfigured: Bool { isVisible(configStore.lidarr) }
     private var anyArrConfigured: Bool { sonarrConfigured || radarrConfigured || lidarrConfigured }
 
-    private var searchAvailable: Bool { sonarrConfigured || radarrConfigured }
+    private var searchAvailable: Bool { sonarrConfigured || radarrConfigured || lidarrConfigured }
 
     private var chatAvailable: Bool {
         guard configStore.aiEnabled else { return false }
@@ -79,7 +79,8 @@ public struct PopoverContentView: View {
             .onAppear {
                 searchViewModel.setup(
                     radarrConfig: configStore.radarr,
-                    sonarrConfig: configStore.sonarr
+                    sonarrConfig: configStore.sonarr,
+                    lidarrConfig: configStore.lidarr
                 )
                 chatHolder.reconfigure(store: configStore)
             }

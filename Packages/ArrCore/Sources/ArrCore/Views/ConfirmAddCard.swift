@@ -3,24 +3,38 @@ import SwiftUI
 // MARK: - ConfirmAddCard
 
 /// Rich confirm card shown when the LLM calls a destructive add tool
-/// (`sonarr_add_series` / `radarr_add_movie`). Fetches the poster, quality
-/// profiles, and root folders in parallel so the user can review and adjust
-/// before confirming.
+/// (`sonarr_add_series` / `radarr_add_movie` / `lidarr_add_artist`). Fetches
+/// the poster, quality profiles, root folders (and metadata profiles for Lidarr)
+/// in parallel so the user can review and adjust before confirming.
 public struct ConfirmAddCard: View {
     let call: ToolCall
     let sonarr: ServiceConfig
     let radarr: ServiceConfig
+    let lidarr: ServiceConfig
     let onConfirm: (JSONValue) -> Void
     let onCancel: () -> Void
 
     // MARK: - Derived configuration
 
     private var isSonarr: Bool { call.name.hasPrefix("sonarr_") }
-    private var config: ServiceConfig { isSonarr ? sonarr : radarr }
-    private var source: QueueItem.Source { isSonarr ? .sonarr : .radarr }
+    private var isLidarr: Bool { call.name.hasPrefix("lidarr_") }
+    private var config: ServiceConfig {
+        if isSonarr { return sonarr }
+        if isLidarr { return lidarr }
+        return radarr
+    }
+    private var source: QueueItem.Source {
+        if isSonarr { return .sonarr }
+        if isLidarr { return .lidarr }
+        return .radarr
+    }
     private var idKey: String { isSonarr ? "tvdbId" : "tmdbId" }
 
     private var lookupQuery: String {
+        if isLidarr {
+            let name = argString("artistName")
+            return name.isEmpty ? argString("foreignArtistId") : name
+        }
         let id = argInt(idKey)
         if id != 0 {
             return isSonarr ? "tvdb:\(id)" : "tmdb:\(id)"
@@ -33,10 +47,11 @@ public struct ConfirmAddCard: View {
     @State private var phase: Phase = .loading
     @State private var selectedProfileId: Int = 0
     @State private var selectedFolderPath: String = ""
+    @State private var selectedMetadataProfileId: Int = 0
 
     enum Phase {
         case loading
-        case loaded(result: SearchResult, profiles: [QualityProfile], folders: [RootFolder])
+        case loaded(result: SearchResult, profiles: [QualityProfile], folders: [RootFolder], metadataProfiles: [MetadataProfile])
         case failed(String)
     }
 
@@ -49,8 +64,8 @@ public struct ConfirmAddCard: View {
                 switch phase {
                 case .loading:
                     loadingView
-                case .loaded(let result, let profiles, let folders):
-                    cardView(result: result, profiles: profiles, folders: folders)
+                case .loaded(let result, let profiles, let folders, let metadataProfiles):
+                    cardView(result: result, profiles: profiles, folders: folders, metadataProfiles: metadataProfiles)
                 case .failed(let msg):
                     failedView(msg)
                 }
@@ -92,7 +107,7 @@ public struct ConfirmAddCard: View {
         }
     }
 
-    private func cardView(result: SearchResult, profiles: [QualityProfile], folders: [RootFolder]) -> some View {
+    private func cardView(result: SearchResult, profiles: [QualityProfile], folders: [RootFolder], metadataProfiles: [MetadataProfile]) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             // — Header: poster + metadata
             HStack(alignment: .top, spacing: 10) {
@@ -130,7 +145,8 @@ public struct ConfirmAddCard: View {
                 Spacer(minLength: 0)
             }
 
-            // — Profile picker on the left, Cancel/Confirm on the right.
+            // — Profile pickers on the left, Cancel/Confirm on the right.
+            //   Metadata profile picker shown for Lidarr when multiple options.
             //   Folder picker only when there's actually a choice to make.
             HStack(spacing: 6) {
                 if profiles.count > 1 {
@@ -146,6 +162,21 @@ public struct ConfirmAddCard: View {
                     .pickerStyle(.menu)
                     .controlSize(.small)
                     .frame(maxWidth: 160)
+                }
+                if isLidarr && metadataProfiles.count > 1 {
+                    Image(systemName: "music.note.list")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                        .padding(.leading, 4)
+                    Picker("Metadata profile", selection: Binding(get: { selectedMetadataProfileId }, set: { selectedMetadataProfileId = $0 })) {
+                        ForEach(metadataProfiles, id: \.id) { p in
+                            Text(p.name).tag(p.id)
+                        }
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
+                    .controlSize(.small)
+                    .frame(maxWidth: 140)
                 }
                 if folders.count > 1 {
                     Image(systemName: "folder")
@@ -166,7 +197,7 @@ public struct ConfirmAddCard: View {
                 Button(Self.locStr("Cancel"), action: onCancel)
                     .controlSize(.small)
                 Button(Self.locStr("Confirm")) {
-                    onConfirm(mergedArgs(profiles: profiles, folders: folders))
+                    onConfirm(mergedArgs(profiles: profiles, folders: folders, metadataProfiles: metadataProfiles))
                 }
                 .controlSize(.small)
                 #if os(macOS)
@@ -204,7 +235,7 @@ public struct ConfirmAddCard: View {
         return s
     }
 
-    private func mergedArgs(profiles: [QualityProfile], folders: [RootFolder]) -> JSONValue {
+    private func mergedArgs(profiles: [QualityProfile], folders: [RootFolder], metadataProfiles: [MetadataProfile]) -> JSONValue {
         var dict: [String: JSONValue]
         if case .object(let d) = call.arguments {
             dict = d
@@ -213,6 +244,9 @@ public struct ConfirmAddCard: View {
         }
         dict["qualityProfileId"] = .number(Double(selectedProfileId))
         dict["rootFolderPath"] = .string(selectedFolderPath)
+        if isLidarr {
+            dict["metadataProfileId"] = .number(Double(selectedMetadataProfileId))
+        }
         return .object(dict)
     }
 
@@ -228,14 +262,25 @@ public struct ConfirmAddCard: View {
             async let resultsTask = client.lookup(query: lookupQuery)
             async let profilesTask = client.fetchQualityProfiles()
             async let foldersTask = client.fetchRootFolders()
-            let (results, profiles, folders) = try await (resultsTask, profilesTask, foldersTask)
+            async let metaProfilesTask: [MetadataProfile] = isLidarr ? client.fetchMetadataProfiles() : []
+            let (results, profiles, folders, metadataProfiles) = try await (resultsTask, profilesTask, foldersTask, metaProfilesTask)
 
-            let idVal = argInt(idKey)
             let picked: SearchResult?
-            if idVal != 0 {
-                picked = results.first(where: { $0.id == idVal }) ?? results.first
+            if isLidarr {
+                // For Lidarr, match by foreignArtistId if available
+                let targetForeignId = argString("foreignArtistId")
+                if !targetForeignId.isEmpty {
+                    picked = results.first(where: { $0.foreignId == targetForeignId }) ?? results.first
+                } else {
+                    picked = results.first
+                }
             } else {
-                picked = results.first
+                let idVal = argInt(idKey)
+                if idVal != 0 {
+                    picked = results.first(where: { $0.id == idVal }) ?? results.first
+                } else {
+                    picked = results.first
+                }
             }
             guard let pick = picked else {
                 phase = .failed("No results found.")
@@ -244,7 +289,8 @@ public struct ConfirmAddCard: View {
             // Default selections
             if let first = profiles.first { selectedProfileId = first.id }
             if let first = folders.first { selectedFolderPath = first.path }
-            phase = .loaded(result: pick, profiles: profiles, folders: folders)
+            if let first = metadataProfiles.first { selectedMetadataProfileId = first.id }
+            phase = .loaded(result: pick, profiles: profiles, folders: folders, metadataProfiles: metadataProfiles)
         } catch {
             phase = .failed(error.localizedDescription)
         }

@@ -63,7 +63,7 @@ public struct MainWindowView: View {
     private var lidarrConfigured: Bool { isVisible(configStore.lidarr) }
     private var anyArrConfigured: Bool { sonarrConfigured || radarrConfigured || lidarrConfigured }
 
-    private var searchConfigured: Bool { sonarrConfigured || radarrConfigured }
+    private var searchConfigured: Bool { sonarrConfigured || radarrConfigured || lidarrConfigured }
 
     private var chatAvailable: Bool {
         guard configStore.aiEnabled else { return false }
@@ -101,7 +101,8 @@ public struct MainWindowView: View {
         .onAppear {
             searchViewModel.setup(
                 radarrConfig: configStore.radarr,
-                sonarrConfig: configStore.sonarr
+                sonarrConfig: configStore.sonarr,
+                lidarrConfig: configStore.lidarr
             )
             chatHolder.reconfigure(store: configStore)
         }

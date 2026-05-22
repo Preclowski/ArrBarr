@@ -5,10 +5,12 @@ import Foundation
 public actor LocalToolBackend: ToolBackend {
     private let sonarr: ServiceConfig
     private let radarr: ServiceConfig
+    private let lidarr: ServiceConfig
 
-    public init(sonarr: ServiceConfig, radarr: ServiceConfig) {
+    public init(sonarr: ServiceConfig, radarr: ServiceConfig, lidarr: ServiceConfig = .empty) {
         self.sonarr = sonarr
         self.radarr = radarr
+        self.lidarr = lidarr
     }
 
     public func listTools() async throws -> [MCPTool] {
@@ -25,6 +27,10 @@ public actor LocalToolBackend: ToolBackend {
         case "radarr_get_calendar": return try await radarrCalendar()
         case "sonarr_add_series":   return try await addSeries(arguments)
         case "radarr_add_movie":    return try await addMovie(arguments)
+        case "lidarr_search":       return try await searchArtist(arguments)
+        case "lidarr_get_artists":  return try await listArtists(arguments)
+        case "lidarr_get_calendar": return try await lidarrCalendar()
+        case "lidarr_add_artist":   return try await addArtist(arguments)
         default:
             throw LocalToolError.unknownTool(name)
         }
@@ -233,6 +239,91 @@ public actor LocalToolBackend: ToolBackend {
         return ToolCallOutput(text: "Added '\(pick.title)\(yearPart)' to Radarr (profile: \(profile.name), folder: \(folder.path)).")
     }
 
+    // MARK: - Lidarr tool implementations
+
+    private func searchArtist(_ args: JSONValue) async throws -> ToolCallOutput {
+        let query = Self.stringArg(args, key: "query")
+        guard !query.isEmpty else {
+            return ToolCallOutput(text: "Please provide a search query.")
+        }
+        guard lidarr.isConfigured else {
+            return ToolCallOutput(text: "Lidarr is not configured.")
+        }
+        let client = SearchClient(config: lidarr, source: .lidarr)
+        let results = try await client.lookup(query: query)
+        let text = Self.formatArtistSearchCondensed(results, query: query)
+        return ToolCallOutput(text: text, rich: .searchArtistResults(results))
+    }
+
+    private func listArtists(_ args: JSONValue) async throws -> ToolCallOutput {
+        guard lidarr.isConfigured else {
+            return ToolCallOutput(text: "Lidarr is not configured.")
+        }
+        let filter = Self.stringArg(args, key: "query").lowercased()
+        let client = LidarrClient(config: lidarr)
+        let all = try await client.fetchAllArtists()
+        let matched = filter.isEmpty
+            ? all
+            : all.filter { ($0.artistName ?? "").lowercased().contains(filter) }
+        let text = Self.formatArtistLibraryCondensed(matched, filter: filter)
+        return ToolCallOutput(text: text, rich: .libraryArtists(matched))
+    }
+
+    private func lidarrCalendar() async throws -> ToolCallOutput {
+        guard lidarr.isConfigured else {
+            return ToolCallOutput(text: "Lidarr is not configured.")
+        }
+        let client = LidarrClient(config: lidarr)
+        let items = try await client.fetchCalendar()
+        let text = Self.formatCalendarCondensed(items)
+        return ToolCallOutput(text: text, rich: .calendar(items))
+    }
+
+    private func addArtist(_ args: JSONValue) async throws -> ToolCallOutput {
+        let foreignArtistId = Self.stringArg(args, key: "foreignArtistId")
+        let artistName = Self.stringArg(args, key: "artistName")
+        let chosenProfileId = Self.intArg(args, key: "qualityProfileId")
+        let chosenMetadataProfileId = Self.intArg(args, key: "metadataProfileId")
+        let chosenFolderPath = Self.stringArg(args, key: "rootFolderPath")
+        guard !foreignArtistId.isEmpty || !artistName.isEmpty else {
+            return ToolCallOutput(text: "Need a foreignArtistId (preferred) or artistName to add an artist. Run lidarr_search first.")
+        }
+        guard lidarr.isConfigured else {
+            return ToolCallOutput(text: "Lidarr is not configured.")
+        }
+        let client = SearchClient(config: lidarr, source: .lidarr)
+        // Look up by name to get a full SearchResult with posterURL etc.
+        let lookupQuery = !foreignArtistId.isEmpty ? artistName : artistName
+        let candidates = try await client.lookup(query: lookupQuery.isEmpty ? foreignArtistId : lookupQuery)
+        // Prefer exact foreign id match when we have it
+        let chosen: SearchResult?
+        if !foreignArtistId.isEmpty {
+            chosen = candidates.first(where: { $0.foreignId == foreignArtistId }) ?? candidates.first
+        } else {
+            chosen = candidates.first
+        }
+        guard let pick = chosen else {
+            return ToolCallOutput(text: "Couldn't find any artist matching '\(lookupQuery)'.")
+        }
+        let profiles = try await client.fetchQualityProfiles()
+        let metaProfiles = try await client.fetchMetadataProfiles()
+        let folders = try await client.fetchRootFolders()
+        let profile = profiles.first(where: { $0.id == chosenProfileId }) ?? profiles.first
+        let metaProfile = metaProfiles.first(where: { $0.id == chosenMetadataProfileId }) ?? metaProfiles.first
+        let folder = folders.first(where: { $0.path == chosenFolderPath }) ?? folders.first
+        guard let profile, let folder else {
+            return ToolCallOutput(text: "Lidarr is missing a quality profile or root folder.")
+        }
+        let metaProfileId = metaProfile?.id ?? 1
+        try await client.addArtist(
+            pick,
+            qualityProfileId: profile.id,
+            metadataProfileId: metaProfileId,
+            rootFolderPath: folder.path
+        )
+        return ToolCallOutput(text: "Added '\(pick.title)' to Lidarr (profile: \(profile.name), folder: \(folder.path)).")
+    }
+
     // MARK: - Formatting helpers
 
     private static func stringArg(_ value: JSONValue, key: String) -> String {
@@ -307,6 +398,39 @@ public actor LocalToolBackend: ToolBackend {
             return "• \(title)\(yearPart)\(idPart)\(fileMark)"
         }
         var out = "Radarr library — \(items.count) movie\(items.count == 1 ? "" : "s")"
+        if !filter.isEmpty { out += " matching '\(filter)'" }
+        out += ":\n" + lines.joined(separator: "\n")
+        if items.count > top.count { out += "\n(\(items.count - top.count) more not shown)" }
+        return out
+    }
+
+    private static func formatArtistSearchCondensed(_ results: [SearchResult], query: String) -> String {
+        guard !results.isEmpty else { return "No results found." }
+        let top = results.prefix(15)
+        let lines = top.map { r -> String in
+            let subPart = r.subtitle.map { " (\($0))" } ?? ""
+            return "• foreignArtistId=\(r.foreignId) — \(r.title)\(subPart)"
+        }
+        var out = "Found \(results.count) artist result\(results.count == 1 ? "" : "s") for \"\(query)\". Top matches (LLM: pass foreignArtistId to lidarr_add_artist):"
+        out += "\n" + lines.joined(separator: "\n")
+        if results.count > top.count {
+            out += "\n(\(results.count - top.count) more not shown — refine query if needed)"
+        }
+        return out
+    }
+
+    private static func formatArtistLibraryCondensed(_ items: [LidarrLibraryRecord], filter: String) -> String {
+        guard !items.isEmpty else {
+            return filter.isEmpty ? "Lidarr library is empty." : "No artists in your library match '\(filter)'."
+        }
+        let top = items.prefix(20)
+        let lines = top.map { r -> String in
+            let name = r.artistName ?? "(untitled)"
+            let idPart = r.foreignArtistId.map { " · foreignArtistId=\($0)" } ?? ""
+            let albumCount = r.statistics?.albumCount.map { " · \($0) album\($0 == 1 ? "" : "s")" } ?? ""
+            return "• \(name)\(idPart)\(albumCount)"
+        }
+        var out = "Lidarr library — \(items.count) artist\(items.count == 1 ? "" : "s")"
         if !filter.isEmpty { out += " matching '\(filter)'" }
         out += ":\n" + lines.joined(separator: "\n")
         if items.count > top.count { out += "\n(\(items.count - top.count) more not shown)" }

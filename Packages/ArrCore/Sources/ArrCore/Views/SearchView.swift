@@ -7,8 +7,10 @@ public struct SearchView: View {
 
     @State private var radarrCollapsed = false
     @State private var sonarrCollapsed = false
+    @State private var lidarrCollapsed = false
     @State private var radarrShowAll = false
     @State private var sonarrShowAll = false
+    @State private var lidarrShowAll = false
     @FocusState private var queryFocused: Bool
 
     private static let collapsedLimit = 5
@@ -20,6 +22,7 @@ public struct SearchView: View {
 
     private var radarrConfigured: Bool { configStore.radarr.isConfigured || DemoMode.isActive }
     private var sonarrConfigured: Bool { configStore.sonarr.isConfigured || DemoMode.isActive }
+    private var lidarrConfigured: Bool { configStore.lidarr.isConfigured || DemoMode.isActive }
 
     private var orderedSources: [QueueItem.Source] {
         configStore.arrOrder.compactMap { key -> QueueItem.Source? in
@@ -27,7 +30,7 @@ public struct SearchView: View {
             switch src {
             case .radarr: return radarrConfigured ? .radarr : nil
             case .sonarr: return sonarrConfigured ? .sonarr : nil
-            case .lidarr: return nil
+            case .lidarr: return lidarrConfigured ? .lidarr : nil
             }
         }
     }
@@ -63,6 +66,7 @@ public struct SearchView: View {
             if oldValue != viewModel.query {
                 radarrShowAll = false
                 sonarrShowAll = false
+                lidarrShowAll = false
             }
             viewModel.onQueryChange()
         }
@@ -74,10 +78,34 @@ public struct SearchView: View {
 
     @ViewBuilder
     private func sourceSection(_ source: QueueItem.Source) -> some View {
-        let results = source == .radarr ? viewModel.radarrResults : viewModel.sonarrResults
-        let isCollapsed = source == .radarr ? radarrCollapsed : sonarrCollapsed
-        let showAll = source == .radarr ? radarrShowAll : sonarrShowAll
-        let title: LocalizedStringKey = source == .radarr ? "Movies" : "Series"
+        let results: [SearchResult] = {
+            switch source {
+            case .radarr: return viewModel.radarrResults
+            case .sonarr: return viewModel.sonarrResults
+            case .lidarr: return viewModel.lidarrResults
+            }
+        }()
+        let isCollapsed: Bool = {
+            switch source {
+            case .radarr: return radarrCollapsed
+            case .sonarr: return sonarrCollapsed
+            case .lidarr: return lidarrCollapsed
+            }
+        }()
+        let showAll: Bool = {
+            switch source {
+            case .radarr: return radarrShowAll
+            case .sonarr: return sonarrShowAll
+            case .lidarr: return lidarrShowAll
+            }
+        }()
+        let title: LocalizedStringKey = {
+            switch source {
+            case .radarr: return "Movies"
+            case .sonarr: return "Series"
+            case .lidarr: return "Artists"
+            }
+        }()
         let visibleResults: [SearchResult] = (showAll || results.count <= Self.collapsedLimit)
             ? results
             : Array(results.prefix(Self.collapsedLimit))
@@ -87,10 +115,10 @@ public struct SearchView: View {
             // Section header
             Button {
                 withAnimation(.smooth(duration: 0.18)) {
-                    if source == .radarr {
-                        radarrCollapsed.toggle()
-                    } else {
-                        sonarrCollapsed.toggle()
+                    switch source {
+                    case .radarr: radarrCollapsed.toggle()
+                    case .sonarr: sonarrCollapsed.toggle()
+                    case .lidarr: lidarrCollapsed.toggle()
                     }
                 }
             } label: {
@@ -114,9 +142,13 @@ public struct SearchView: View {
 
             if !isCollapsed {
                 if results.isEmpty {
-                    let noMatchKey: LocalizedStringKey = source == .radarr
-                        ? "No movies match this query."
-                        : "No series match this query."
+                    let noMatchKey: LocalizedStringKey = {
+                        switch source {
+                        case .radarr: return "No movies match this query."
+                        case .sonarr: return "No series match this query."
+                        case .lidarr: return "No artists match this query."
+                        }
+                    }()
                     Text(noMatchKey, bundle: .module)
                         .font(.caption)
                         .foregroundStyle(.tertiary)
@@ -129,10 +161,10 @@ public struct SearchView: View {
                     if hiddenCount > 0 {
                         Button {
                             withAnimation(.smooth(duration: 0.18)) {
-                                if source == .radarr {
-                                    radarrShowAll = true
-                                } else {
-                                    sonarrShowAll = true
+                                switch source {
+                                case .radarr: radarrShowAll = true
+                                case .sonarr: sonarrShowAll = true
+                                case .lidarr: lidarrShowAll = true
                                 }
                             }
                         } label: {

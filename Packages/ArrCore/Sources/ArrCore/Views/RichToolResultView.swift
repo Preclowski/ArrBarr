@@ -6,11 +6,13 @@ public struct RichToolResultView: View {
     let content: ChatRichContent
     let sonarr: ServiceConfig
     let radarr: ServiceConfig
+    let lidarr: ServiceConfig
 
-    public init(content: ChatRichContent, sonarr: ServiceConfig, radarr: ServiceConfig) {
+    public init(content: ChatRichContent, sonarr: ServiceConfig, radarr: ServiceConfig, lidarr: ServiceConfig = .empty) {
         self.content = content
         self.sonarr = sonarr
         self.radarr = radarr
+        self.lidarr = lidarr
     }
 
     public var body: some View {
@@ -24,6 +26,10 @@ public struct RichToolResultView: View {
                 case .searchSeriesResults(let results):
                     ForEach(results) { r in
                         SearchResultCard(result: r, apiKey: sonarr.apiKey)
+                    }
+                case .searchArtistResults(let results):
+                    ForEach(results) { r in
+                        SearchResultCard(result: r, apiKey: lidarr.apiKey)
                     }
                 case .libraryMovies(let recs):
                     ForEach(Array(recs.enumerated()), id: \.offset) { _, rec in
@@ -47,9 +53,20 @@ public struct RichToolResultView: View {
                             apiKey: sonarr.apiKey
                         )
                     }
+                case .libraryArtists(let recs):
+                    ForEach(Array(recs.enumerated()), id: \.offset) { _, rec in
+                        LibraryRecordCard(
+                            title: rec.artistName ?? "(untitled)",
+                            year: nil,
+                            hasFile: nil,
+                            images: rec.images,
+                            baseURL: lidarr.baseURL,
+                            apiKey: lidarr.apiKey
+                        )
+                    }
                 case .calendar(let items):
                     ForEach(items) { item in
-                        CalendarRowView(item: item, sonarrApiKey: sonarr.apiKey, radarrApiKey: radarr.apiKey)
+                        CalendarRowView(item: item, sonarrApiKey: sonarr.apiKey, radarrApiKey: radarr.apiKey, lidarrApiKey: lidarr.apiKey)
                     }
                 }
             }
@@ -150,12 +167,13 @@ private struct CalendarRowView: View {
     let item: UpcomingItem
     let sonarrApiKey: String
     let radarrApiKey: String
+    let lidarrApiKey: String
 
     private var apiKey: String {
         switch item.source {
         case .sonarr: return sonarrApiKey
         case .radarr: return radarrApiKey
-        case .lidarr: return ""
+        case .lidarr: return lidarrApiKey
         }
     }
 

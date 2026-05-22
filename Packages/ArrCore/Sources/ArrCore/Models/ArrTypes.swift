@@ -307,6 +307,40 @@ public struct SonarrLookupStats: Decodable {
     let seasonCount: Int?
 }
 
+// MARK: - Lidarr library / lookup types
+
+public struct LidarrLibraryRecord: Decodable, Sendable, Equatable {
+    public let id: Int?
+    public let foreignArtistId: String?
+    public let artistName: String?
+    public let monitored: Bool?
+    public let images: [ArrImage]?
+    public let statistics: LidarrLibraryStatistics?
+}
+public struct LidarrLibraryStatistics: Decodable, Sendable, Equatable {
+    public let albumCount: Int?
+    public let trackCount: Int?
+    public let trackFileCount: Int?
+}
+
+public struct LidarrLookupRecord: Decodable {
+    public let foreignArtistId: String?
+    public let artistName: String
+    public let disambiguation: String?
+    public let overview: String?
+    public let images: [ArrImage]?
+    public let ratings: LidarrLookupRatings?
+    public let genres: [String]?
+}
+public struct LidarrLookupRatings: Decodable {
+    public let value: Double?
+}
+
+public struct MetadataProfile: Decodable, Sendable, Equatable, Identifiable {
+    public let id: Int
+    public let name: String
+}
+
 // Used to fetch existing library ids and list library contents
 public struct RadarrLibraryRecord: Decodable, Sendable, Equatable {
     let id: Int?
