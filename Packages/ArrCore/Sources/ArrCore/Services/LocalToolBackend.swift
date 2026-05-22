@@ -70,34 +70,105 @@ public actor LocalToolBackend: ToolBackend {
         }
     }
 
+    // MARK: - Generic helpers — collapse the per-arr handler boilerplate
+
+    /// Standard `*_search` shape: required `query` arg, configured check,
+    /// SearchClient lookup, condensed text + rich payload. Series/movie/scene
+    /// share this shape; lidarr_search uses its own helper because the
+    /// formatter and rich case both diverge (artist subtitle, foreignArtistId
+    /// label) — see `runSearchArtist`.
+    private func runSearch(
+        args: JSONValue,
+        source: QueueItem.Source,
+        config: ServiceConfig,
+        kind: String,
+        yearAware: Bool,
+        rich: ([SearchResult]) -> ChatRichContent
+    ) async throws -> ToolCallOutput {
+        let query = Self.stringArg(args, key: "query")
+        guard !query.isEmpty else {
+            return ToolCallOutput(text: "Please provide a search query.")
+        }
+        guard config.isConfigured else {
+            return ToolCallOutput(text: "\(source.displayName) is not configured.")
+        }
+        let client = SearchClient(config: config, source: source)
+        let results = yearAware
+            ? try await Self.searchWithYearAwareness(client: client, query: query)
+            : try await client.lookup(query: query)
+        let text = Self.formatSearchResultsCondensed(results, query: query, kind: kind)
+        return ToolCallOutput(text: text, rich: rich(results))
+    }
+
+    private func runSearchArtist(args: JSONValue) async throws -> ToolCallOutput {
+        let query = Self.stringArg(args, key: "query")
+        guard !query.isEmpty else {
+            return ToolCallOutput(text: "Please provide a search query.")
+        }
+        guard lidarr.isConfigured else {
+            return ToolCallOutput(text: "Lidarr is not configured.")
+        }
+        let client = SearchClient(config: lidarr, source: .lidarr)
+        let results = try await client.lookup(query: query)
+        let text = Self.formatArtistSearchCondensed(results, query: query)
+        return ToolCallOutput(text: text, rich: .searchArtistResults(results))
+    }
+
+    /// Standard `*_get_*` shape: configured check, fetch full library,
+    /// optional substring filter on a record-specific field, condensed text,
+    /// rich payload. The closure approach keeps it type-safe across the four
+    /// different record types without resorting to a protocol.
+    private func runLibraryList<Rec>(
+        args: JSONValue,
+        source: QueueItem.Source,
+        config: ServiceConfig,
+        itemNounSingular: String,
+        itemNounPlural: String,
+        fetch: () async throws -> [Rec],
+        filterMatch: (Rec, String) -> Bool,
+        line: (Rec) -> String,
+        rich: ([Rec]) -> ChatRichContent
+    ) async throws -> ToolCallOutput {
+        guard config.isConfigured else {
+            return ToolCallOutput(text: "\(source.displayName) is not configured.")
+        }
+        let filter = Self.stringArg(args, key: "query").lowercased()
+        let all = try await fetch()
+        let matched = filter.isEmpty ? all : all.filter { filterMatch($0, filter) }
+        let text = Self.formatLibrary(
+            serviceName: source.displayName,
+            itemNounSingular: itemNounSingular,
+            itemNounPlural: itemNounPlural,
+            items: matched, filter: filter, line: line
+        )
+        return ToolCallOutput(text: text, rich: rich(matched))
+    }
+
+    /// Standard `*_get_calendar` shape: configured check, fetch, format.
+    /// All four calendar handlers reduce to a one-line call to this.
+    private func runCalendar(
+        source: QueueItem.Source,
+        config: ServiceConfig,
+        fetch: () async throws -> [UpcomingItem]
+    ) async throws -> ToolCallOutput {
+        guard config.isConfigured else {
+            return ToolCallOutput(text: "\(source.displayName) is not configured.")
+        }
+        let items = try await fetch()
+        let text = Self.formatCalendarCondensed(items)
+        return ToolCallOutput(text: text, rich: .calendar(items))
+    }
+
     // MARK: - Tool implementations
 
     private func searchSeries(_ args: JSONValue) async throws -> ToolCallOutput {
-        let query = Self.stringArg(args, key: "query")
-        guard !query.isEmpty else {
-            return ToolCallOutput(text: "Please provide a search query.")
-        }
-        guard sonarr.isConfigured else {
-            return ToolCallOutput(text: "Sonarr is not configured.")
-        }
-        let client = SearchClient(config: sonarr, source: .sonarr)
-        let results = try await Self.searchWithYearAwareness(client: client, query: query)
-        let text = Self.formatSearchResultsCondensed(results, query: query, kind: "series")
-        return ToolCallOutput(text: text, rich: .searchSeriesResults(results))
+        try await runSearch(args: args, source: .sonarr, config: sonarr, kind: "series",
+                            yearAware: true, rich: { .searchSeriesResults($0) })
     }
 
     private func searchMovie(_ args: JSONValue) async throws -> ToolCallOutput {
-        let query = Self.stringArg(args, key: "query")
-        guard !query.isEmpty else {
-            return ToolCallOutput(text: "Please provide a search query.")
-        }
-        guard radarr.isConfigured else {
-            return ToolCallOutput(text: "Radarr is not configured.")
-        }
-        let client = SearchClient(config: radarr, source: .radarr)
-        let results = try await Self.searchWithYearAwareness(client: client, query: query)
-        let text = Self.formatSearchResultsCondensed(results, query: query, kind: "movie")
-        return ToolCallOutput(text: text, rich: .searchMovieResults(results))
+        try await runSearch(args: args, source: .radarr, config: radarr, kind: "movie",
+                            yearAware: true, rich: { .searchMovieResults($0) })
     }
 
     /// Detect a 4-digit year in the query and surface year-matching hits to
@@ -144,51 +215,49 @@ public actor LocalToolBackend: ToolBackend {
     }
 
     private func listSeries(_ args: JSONValue) async throws -> ToolCallOutput {
-        guard sonarr.isConfigured else {
-            return ToolCallOutput(text: "Sonarr is not configured.")
-        }
-        let filter = Self.stringArg(args, key: "query").lowercased()
-        let client = SonarrClient(config: sonarr)
-        let all = try await client.fetchAllSeries()
-        let matched = filter.isEmpty
-            ? all
-            : all.filter { ($0.title ?? "").lowercased().contains(filter) }
-        let text = Self.formatSeriesLibraryCondensed(matched, filter: filter)
-        return ToolCallOutput(text: text, rich: .librarySeries(matched))
+        try await runLibraryList(
+            args: args, source: .sonarr, config: sonarr,
+            itemNounSingular: "series", itemNounPlural: "series",
+            fetch: { try await SonarrClient(config: self.sonarr).fetchAllSeries() },
+            filterMatch: { rec, q in (rec.title ?? "").lowercased().contains(q) },
+            line: { r in
+                let title = r.title ?? "(untitled)"
+                let yearPart = r.year.map { " (\($0))" } ?? ""
+                let idPart = r.tvdbId.map { " · tvdbId=\($0)" } ?? ""
+                let statusPart = r.status.map { " · \($0)" } ?? ""
+                return "• \(title)\(yearPart)\(idPart)\(statusPart)"
+            },
+            rich: { .librarySeries($0) }
+        )
     }
 
     private func listMovies(_ args: JSONValue) async throws -> ToolCallOutput {
-        guard radarr.isConfigured else {
-            return ToolCallOutput(text: "Radarr is not configured.")
-        }
-        let filter = Self.stringArg(args, key: "query").lowercased()
-        let client = RadarrClient(config: radarr)
-        let all = try await client.fetchAllMovies()
-        let matched = filter.isEmpty
-            ? all
-            : all.filter { ($0.title ?? "").lowercased().contains(filter) }
-        let text = Self.formatMovieLibraryCondensed(matched, filter: filter)
-        return ToolCallOutput(text: text, rich: .libraryMovies(matched))
+        try await runLibraryList(
+            args: args, source: .radarr, config: radarr,
+            itemNounSingular: "movie", itemNounPlural: "movies",
+            fetch: { try await RadarrClient(config: self.radarr).fetchAllMovies() },
+            filterMatch: { rec, q in (rec.title ?? "").lowercased().contains(q) },
+            line: { r in
+                let title = r.title ?? "(untitled)"
+                let yearPart = r.year.map { " (\($0))" } ?? ""
+                let idPart = r.tmdbId.map { " · tmdbId=\($0)" } ?? ""
+                let fileMark = (r.hasFile ?? false) ? " · downloaded" : " · missing"
+                return "• \(title)\(yearPart)\(idPart)\(fileMark)"
+            },
+            rich: { .libraryMovies($0) }
+        )
     }
 
     private func sonarrCalendar() async throws -> ToolCallOutput {
-        guard sonarr.isConfigured else {
-            return ToolCallOutput(text: "Sonarr is not configured.")
+        try await runCalendar(source: .sonarr, config: sonarr) {
+            try await SonarrClient(config: self.sonarr).fetchCalendar()
         }
-        let client = SonarrClient(config: sonarr)
-        let items = try await client.fetchCalendar()
-        let text = Self.formatCalendarCondensed(items)
-        return ToolCallOutput(text: text, rich: .calendar(items))
     }
 
     private func radarrCalendar() async throws -> ToolCallOutput {
-        guard radarr.isConfigured else {
-            return ToolCallOutput(text: "Radarr is not configured.")
+        try await runCalendar(source: .radarr, config: radarr) {
+            try await RadarrClient(config: self.radarr).fetchCalendar()
         }
-        let client = RadarrClient(config: radarr)
-        let items = try await client.fetchCalendar()
-        let text = Self.formatCalendarCondensed(items)
-        return ToolCallOutput(text: text, rich: .calendar(items))
     }
 
     private func addSeries(_ args: JSONValue) async throws -> ToolCallOutput {
@@ -276,41 +345,29 @@ public actor LocalToolBackend: ToolBackend {
     // MARK: - Lidarr tool implementations
 
     private func searchArtist(_ args: JSONValue) async throws -> ToolCallOutput {
-        let query = Self.stringArg(args, key: "query")
-        guard !query.isEmpty else {
-            return ToolCallOutput(text: "Please provide a search query.")
-        }
-        guard lidarr.isConfigured else {
-            return ToolCallOutput(text: "Lidarr is not configured.")
-        }
-        let client = SearchClient(config: lidarr, source: .lidarr)
-        let results = try await client.lookup(query: query)
-        let text = Self.formatArtistSearchCondensed(results, query: query)
-        return ToolCallOutput(text: text, rich: .searchArtistResults(results))
+        try await runSearchArtist(args: args)
     }
 
     private func listArtists(_ args: JSONValue) async throws -> ToolCallOutput {
-        guard lidarr.isConfigured else {
-            return ToolCallOutput(text: "Lidarr is not configured.")
-        }
-        let filter = Self.stringArg(args, key: "query").lowercased()
-        let client = LidarrClient(config: lidarr)
-        let all = try await client.fetchAllArtists()
-        let matched = filter.isEmpty
-            ? all
-            : all.filter { ($0.artistName ?? "").lowercased().contains(filter) }
-        let text = Self.formatArtistLibraryCondensed(matched, filter: filter)
-        return ToolCallOutput(text: text, rich: .libraryArtists(matched))
+        try await runLibraryList(
+            args: args, source: .lidarr, config: lidarr,
+            itemNounSingular: "artist", itemNounPlural: "artists",
+            fetch: { try await LidarrClient(config: self.lidarr).fetchAllArtists() },
+            filterMatch: { rec, q in (rec.artistName ?? "").lowercased().contains(q) },
+            line: { r in
+                let name = r.artistName ?? "(untitled)"
+                let idPart = r.foreignArtistId.map { " · foreignArtistId=\($0)" } ?? ""
+                let albumCount = r.statistics?.albumCount.map { " · \($0) album\($0 == 1 ? "" : "s")" } ?? ""
+                return "• \(name)\(idPart)\(albumCount)"
+            },
+            rich: { .libraryArtists($0) }
+        )
     }
 
     private func lidarrCalendar() async throws -> ToolCallOutput {
-        guard lidarr.isConfigured else {
-            return ToolCallOutput(text: "Lidarr is not configured.")
+        try await runCalendar(source: .lidarr, config: lidarr) {
+            try await LidarrClient(config: self.lidarr).fetchCalendar()
         }
-        let client = LidarrClient(config: lidarr)
-        let items = try await client.fetchCalendar()
-        let text = Self.formatCalendarCondensed(items)
-        return ToolCallOutput(text: text, rich: .calendar(items))
     }
 
     private func addArtist(_ args: JSONValue) async throws -> ToolCallOutput {
@@ -400,40 +457,27 @@ public actor LocalToolBackend: ToolBackend {
         return out
     }
 
-    private static func formatSeriesLibraryCondensed(_ items: [SonarrLibraryRecord], filter: String) -> String {
+    /// Shared library-list formatter. Caller passes the line transform so
+    /// per-arr field selection (tvdbId vs tmdbId vs foreignArtistId vs file
+    /// state) stays where it belongs without four near-identical functions.
+    private static func formatLibrary<Rec>(
+        serviceName: String,
+        itemNounSingular: String,
+        itemNounPlural: String,
+        items: [Rec],
+        filter: String,
+        line: (Rec) -> String
+    ) -> String {
         guard !items.isEmpty else {
-            return filter.isEmpty ? "Sonarr library is empty." : "No series in your library match '\(filter)'."
+            return filter.isEmpty
+                ? "\(serviceName) library is empty."
+                : "No \(itemNounPlural) in your library match '\(filter)'."
         }
         let top = items.prefix(20)
-        let lines = top.map { r -> String in
-            let title = r.title ?? "(untitled)"
-            let yearPart = r.year.map { " (\($0))" } ?? ""
-            let idPart = r.tvdbId.map { " · tvdbId=\($0)" } ?? ""
-            let statusPart = r.status.map { " · \($0)" } ?? ""
-            return "• \(title)\(yearPart)\(idPart)\(statusPart)"
-        }
-        var out = "Sonarr library — \(items.count) series"
+        let noun = items.count == 1 ? itemNounSingular : itemNounPlural
+        var out = "\(serviceName) library — \(items.count) \(noun)"
         if !filter.isEmpty { out += " matching '\(filter)'" }
-        out += ":\n" + lines.joined(separator: "\n")
-        if items.count > top.count { out += "\n(\(items.count - top.count) more not shown)" }
-        return out
-    }
-
-    private static func formatMovieLibraryCondensed(_ items: [RadarrLibraryRecord], filter: String) -> String {
-        guard !items.isEmpty else {
-            return filter.isEmpty ? "Radarr library is empty." : "No movies in your library match '\(filter)'."
-        }
-        let top = items.prefix(20)
-        let lines = top.map { r -> String in
-            let title = r.title ?? "(untitled)"
-            let yearPart = r.year.map { " (\($0))" } ?? ""
-            let idPart = r.tmdbId.map { " · tmdbId=\($0)" } ?? ""
-            let fileMark = (r.hasFile ?? false) ? " · downloaded" : " · missing"
-            return "• \(title)\(yearPart)\(idPart)\(fileMark)"
-        }
-        var out = "Radarr library — \(items.count) movie\(items.count == 1 ? "" : "s")"
-        if !filter.isEmpty { out += " matching '\(filter)'" }
-        out += ":\n" + lines.joined(separator: "\n")
+        out += ":\n" + top.map(line).joined(separator: "\n")
         if items.count > top.count { out += "\n(\(items.count - top.count) more not shown)" }
         return out
     }
@@ -453,62 +497,33 @@ public actor LocalToolBackend: ToolBackend {
         return out
     }
 
-    private static func formatArtistLibraryCondensed(_ items: [LidarrLibraryRecord], filter: String) -> String {
-        guard !items.isEmpty else {
-            return filter.isEmpty ? "Lidarr library is empty." : "No artists in your library match '\(filter)'."
-        }
-        let top = items.prefix(20)
-        let lines = top.map { r -> String in
-            let name = r.artistName ?? "(untitled)"
-            let idPart = r.foreignArtistId.map { " · foreignArtistId=\($0)" } ?? ""
-            let albumCount = r.statistics?.albumCount.map { " · \($0) album\($0 == 1 ? "" : "s")" } ?? ""
-            return "• \(name)\(idPart)\(albumCount)"
-        }
-        var out = "Lidarr library — \(items.count) artist\(items.count == 1 ? "" : "s")"
-        if !filter.isEmpty { out += " matching '\(filter)'" }
-        out += ":\n" + lines.joined(separator: "\n")
-        if items.count > top.count { out += "\n(\(items.count - top.count) more not shown)" }
-        return out
-    }
-
     // MARK: - Whisparr tool implementations
 
     private func searchScene(_ args: JSONValue) async throws -> ToolCallOutput {
-        let query = Self.stringArg(args, key: "query")
-        guard !query.isEmpty else {
-            return ToolCallOutput(text: "Please provide a search query.")
-        }
-        guard whisparr.isConfigured else {
-            return ToolCallOutput(text: "Whisparr is not configured.")
-        }
-        let client = SearchClient(config: whisparr, source: .whisparr)
-        let results = try await client.lookup(query: query)
-        let text = Self.formatSearchResultsCondensed(results, query: query, kind: "scene")
-        return ToolCallOutput(text: text, rich: .searchSceneResults(results))
+        try await runSearch(args: args, source: .whisparr, config: whisparr, kind: "scene",
+                            yearAware: false, rich: { .searchSceneResults($0) })
     }
 
     private func listScenes(_ args: JSONValue) async throws -> ToolCallOutput {
-        guard whisparr.isConfigured else {
-            return ToolCallOutput(text: "Whisparr is not configured.")
-        }
-        let filter = Self.stringArg(args, key: "query").lowercased()
-        let client = WhisparrClient(config: whisparr)
-        let all = try await client.fetchAllMovies()
-        let matched = filter.isEmpty
-            ? all
-            : all.filter { ($0.title ?? "").lowercased().contains(filter) }
-        let text = Self.formatSceneLibraryCondensed(matched, filter: filter)
-        return ToolCallOutput(text: text, rich: .libraryScenes(matched))
+        try await runLibraryList(
+            args: args, source: .whisparr, config: whisparr,
+            itemNounSingular: "scene", itemNounPlural: "scenes",
+            fetch: { try await WhisparrClient(config: self.whisparr).fetchAllMovies() },
+            filterMatch: { rec, q in (rec.title ?? "").lowercased().contains(q) },
+            line: { r in
+                let title = r.title ?? "(untitled)"
+                let yearPart = r.year.map { " (\($0))" } ?? ""
+                let fileMark = (r.hasFile ?? false) ? " · downloaded" : " · missing"
+                return "• \(title)\(yearPart)\(fileMark)"
+            },
+            rich: { .libraryScenes($0) }
+        )
     }
 
     private func whisparrCalendar() async throws -> ToolCallOutput {
-        guard whisparr.isConfigured else {
-            return ToolCallOutput(text: "Whisparr is not configured.")
+        try await runCalendar(source: .whisparr, config: whisparr) {
+            try await WhisparrClient(config: self.whisparr).fetchCalendar()
         }
-        let client = WhisparrClient(config: whisparr)
-        let items = try await client.fetchCalendar()
-        let text = Self.formatCalendarCondensed(items)
-        return ToolCallOutput(text: text, rich: .calendar(items))
     }
 
     private func addScene(_ args: JSONValue) async throws -> ToolCallOutput {
@@ -544,24 +559,6 @@ public actor LocalToolBackend: ToolBackend {
         try await client.addScene(pick, qualityProfileId: profile.id, rootFolderPath: folder.path)
         let yearPart = pick.year.map { " (\($0))" } ?? ""
         return ToolCallOutput(text: "Added '\(pick.title)\(yearPart)' to Whisparr (profile: \(profile.name), folder: \(folder.path)).")
-    }
-
-    private static func formatSceneLibraryCondensed(_ items: [WhisparrLibraryRecord], filter: String) -> String {
-        guard !items.isEmpty else {
-            return filter.isEmpty ? "Whisparr library is empty." : "No scenes in your library match '\(filter)'."
-        }
-        let top = items.prefix(20)
-        let lines = top.map { r -> String in
-            let title = r.title ?? "(untitled)"
-            let yearPart = r.year.map { " (\($0))" } ?? ""
-            let fileMark = (r.hasFile ?? false) ? " · downloaded" : " · missing"
-            return "• \(title)\(yearPart)\(fileMark)"
-        }
-        var out = "Whisparr library — \(items.count) scene\(items.count == 1 ? "" : "s")"
-        if !filter.isEmpty { out += " matching '\(filter)'" }
-        out += ":\n" + lines.joined(separator: "\n")
-        if items.count > top.count { out += "\n(\(items.count - top.count) more not shown)" }
-        return out
     }
 
     private static func formatCalendarCondensed(_ items: [UpcomingItem]) -> String {
