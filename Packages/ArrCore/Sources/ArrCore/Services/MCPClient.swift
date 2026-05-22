@@ -61,9 +61,15 @@ public actor MCPClient {
         guard (200..<300).contains(http.statusCode) else { throw MCPError.http(status: http.statusCode) }
 
         let contentType = (http.value(forHTTPHeaderField: "Content-Type") ?? "").lowercased()
-        let envelopeData = contentType.contains("text/event-stream")
-            ? Self.firstSSEData(in: data) ?? Data()
-            : data
+        let envelopeData: Data
+        if contentType.contains("text/event-stream") {
+            guard let frame = Self.firstSSEData(in: data) else {
+                throw MCPError.decoding("SSE body contained no data: frame")
+            }
+            envelopeData = frame
+        } else {
+            envelopeData = data
+        }
 
         let envelope: JSONRPCResponse<R>
         do {

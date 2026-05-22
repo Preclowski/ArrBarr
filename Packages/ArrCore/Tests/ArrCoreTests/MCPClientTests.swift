@@ -132,6 +132,25 @@ struct MCPClientTests {
         }
     }
 
+    @Test("non-2xx HTTP status throws MCPError.http")
+    func httpError() async throws {
+        StubProtocol.reset()
+        StubProtocol.nextStatus = 503
+        StubProtocol.nextResponseBody = Data()
+        let client = MCPClient(
+            config: MCPConfig(enabled: true, baseURL: "http://x/mcp", bearerToken: ""),
+            session: session()
+        )
+        do {
+            _ = try await client.listTools()
+            Issue.record("expected throw")
+        } catch let MCPError.http(status) {
+            #expect(status == 503)
+        } catch {
+            Issue.record("expected MCPError.http, got \(error)")
+        }
+    }
+
     @Test("SSE response body is parsed (first data frame)")
     func sseFrame() async throws {
         StubProtocol.reset()
