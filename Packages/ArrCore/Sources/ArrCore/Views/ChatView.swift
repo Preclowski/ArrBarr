@@ -183,69 +183,129 @@ private struct MessageBubble: View {
     @State private var expanded = false
     @EnvironmentObject var configStore: ConfigStore
 
+    /// iMessage-style routing: user prompts and user-tap statuses align to the
+    /// trailing edge in an accent bubble; assistant prose aligns leading in a
+    /// secondary bubble. Tool plumbing (rich carousels, raw LLM tool calls)
+    /// spans the full width — they don't fit a bubble and they're
+    /// conceptually "system output", not either party's voice.
     var body: some View {
-        // Uniform layout for every chat row: icon column + content + optional
-        // expandable details. The kind enum decides which icon, label format,
-        // and whether the chevron is available.
-        HStack(alignment: .firstTextBaseline, spacing: 8) {
-            Image(systemName: kind.symbol)
-                .font(.system(size: 12))
-                .foregroundStyle(kind.tint)
-                .frame(width: 18, alignment: .center)
-            VStack(alignment: .leading, spacing: 2) {
-                content
+        switch kind {
+        case .user:
+            row(trailing: true) { userBubble(message.content) }
+        case .assistant:
+            row(trailing: false) { assistantBubble(message.content) }
+        case .userAdd(let cancelled):
+            row(trailing: true) { addStatusBubble(cancelled: cancelled) }
+        case .userAddWithResults:
+            row(trailing: false, fullWidth: true) { carouselSection(headerKey: nil) }
+        case .llmTool:
+            if message.richContent != nil {
+                row(trailing: false, fullWidth: true) {
+                    carouselSection(headerKey: "Tool call: \(message.content)")
+                }
+            } else {
+                row(trailing: false) { llmToolBubble }
             }
-            Spacer(minLength: 0)
         }
     }
 
+    /// Wraps a bubble in the side-aligned row with the right `Spacer`. With
+    /// `fullWidth`, the content takes the full chat column (carousels need it).
     @ViewBuilder
-    private var content: some View {
-        switch kind {
-        case .user, .assistant:
-            Text(Self.attributed(message.content))
-                .font(.system(size: 13))
-                .textSelection(.enabled)
-                .fixedSize(horizontal: false, vertical: true)
+    private func row<Content: View>(trailing: Bool, fullWidth: Bool = false,
+                                    @ViewBuilder _ content: () -> Content) -> some View {
+        HStack(spacing: 0) {
+            if trailing && !fullWidth { Spacer(minLength: 36) }
+            content()
+                .frame(maxWidth: fullWidth ? .infinity : 280, alignment: trailing ? .trailing : .leading)
+            if !trailing && !fullWidth { Spacer(minLength: 36) }
+        }
+        .frame(maxWidth: .infinity, alignment: trailing ? .trailing : .leading)
+    }
 
-        case .userAdd(let cancelled):
-            // Tap-to-add status line. Cancel state strikes through the title
-            // and dims to secondary — same icon family, just a different
-            // glyph, so success vs cancel reads at a glance.
+    // MARK: - Bubble flavours
+
+    private func userBubble(_ text: String) -> some View {
+        Text(Self.attributed(text))
+            .font(.system(size: 13))
+            .foregroundStyle(.white)
+            .textSelection(.enabled)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(Color.accentColor, in: RoundedRectangle(cornerRadius: 14))
+    }
+
+    private func assistantBubble(_ text: String) -> some View {
+        Text(Self.attributed(text))
+            .font(.system(size: 13))
+            .foregroundStyle(.primary)
+            .textSelection(.enabled)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(Color.primary.opacity(0.07), in: RoundedRectangle(cornerRadius: 14))
+    }
+
+    /// Compact status pill for tap-to-add outcomes — same trailing column as
+    /// the user prompt that triggered it, so success and cancel read as a
+    /// continuation of the user's own action.
+    private func addStatusBubble(cancelled: Bool) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: cancelled ? "xmark.circle" : "plus.circle.fill")
+                .font(.system(size: 11))
+                .foregroundStyle(cancelled ? Color.secondary : Color.green)
             Text(message.content)
                 .font(.system(size: 12))
                 .foregroundStyle(cancelled ? .secondary : .primary)
                 .strikethrough(cancelled, color: .secondary)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(Color.primary.opacity(0.06), in: Capsule())
+    }
 
-        case .llmTool:
-            // LLM-issued tool result with rich payload: header label +
-            // carousel. With plain text: chevron-collapsible — useful to
-            // inspect raw tool output without dominating the chat.
-            if let rich = message.richContent {
-                Text("Tool call: \(message.content)", bundle: .module)
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(.secondary)
-                RichToolResultView(
-                    content: rich,
-                    sonarr: configStore.sonarr,
-                    radarr: configStore.radarr,
-                    lidarr: configStore.lidarr,
-                    whisparr: configStore.whisparr,
-                    blurWhisparr: configStore.blurWhisparrPosters
-                )
-                .padding(.top, 4)
-            } else {
+    @ViewBuilder
+    private var llmToolBubble: some View {
+        HStack(alignment: .top, spacing: 6) {
+            Image(systemName: "wrench.and.screwdriver")
+                .font(.system(size: 10))
+                .foregroundStyle(.blue)
+                .padding(.top, 2)
+            VStack(alignment: .leading, spacing: 2) {
                 chevronExpandable(label: "Tool call: \(message.content)")
             }
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+    }
 
-        case .userAddWithResults:
-            // Tap-to-add that the backend turned into a result list (rare —
-            // e.g. add-by-title returned multiple candidates). Render same
-            // header as a user-tap status, then the carousel.
-            if let rich = message.richContent {
-                Text(message.content)
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(.secondary)
+    /// Full-width section for carousels (user-tap with results and LLM tool
+    /// results with rich payloads). Optional header is the "Tool call: X"
+    /// label that prepends LLM-driven carousels; user-tap pass nil.
+    @ViewBuilder
+    private func carouselSection(headerKey: String?) -> some View {
+        if let rich = message.richContent {
+            VStack(alignment: .leading, spacing: 4) {
+                if let headerKey {
+                    HStack(spacing: 6) {
+                        Image(systemName: "wrench.and.screwdriver")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.blue)
+                        Text(verbatim: headerKey)
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(.secondary)
+                    }
+                } else {
+                    HStack(spacing: 6) {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.green)
+                        Text(message.content)
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(.secondary)
+                    }
+                }
                 RichToolResultView(
                     content: rich,
                     sonarr: configStore.sonarr,
@@ -254,7 +314,6 @@ private struct MessageBubble: View {
                     whisparr: configStore.whisparr,
                     blurWhisparr: configStore.blurWhisparrPosters
                 )
-                .padding(.top, 4)
             }
         }
     }
