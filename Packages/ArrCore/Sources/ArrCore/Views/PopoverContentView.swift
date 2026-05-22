@@ -179,7 +179,7 @@ public struct PopoverContentView: View {
                     Image(systemName: "plus.magnifyingglass")
                         .font(.system(size: 11))
                         .foregroundStyle(.tertiary)
-                    Text("Add", bundle: .module)
+                    Text("Add new", bundle: .module)
                         .font(.system(size: 11))
                         .foregroundStyle(.tertiary)
                 }

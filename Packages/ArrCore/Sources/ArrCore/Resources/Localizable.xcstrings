@@ -4183,9 +4183,6 @@
     "Tool call: %@": {
       "extractionState": "manual"
     },
-    "Add": {
-      "extractionState": "manual"
-    },
     "Add new": {
       "extractionState": "manual"
     },
