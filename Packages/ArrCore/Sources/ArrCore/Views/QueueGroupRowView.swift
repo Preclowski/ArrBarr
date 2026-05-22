@@ -256,6 +256,17 @@ public struct QueueGroupRowView: View {
                 }
             }
         }
+        // See QueueRowView.actionButtons — dismiss the transient popover
+        // eagerly when the cursor enters the buttons so the first click
+        // hits the button instead of being eaten by popover dismissal.
+        #if os(macOS)
+        .onHover { hovering in
+            if hovering {
+                hoverTask?.cancel()
+                showTooltip = false
+            }
+        }
+        #endif
     }
 
 }
