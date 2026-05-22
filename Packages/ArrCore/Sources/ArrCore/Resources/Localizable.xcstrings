@@ -4209,6 +4209,27 @@
     },
     "Add…": {
       "extractionState": "manual"
+    },
+    "Chat with your arrs": {
+      "extractionState": "manual"
+    },
+    "A new Chat tab lets you ask questions in plain language — find a show, check what's coming this week, add a movie. Works with Apple Intelligence (macOS 26+) or any OpenAI-compatible API. Set up under Settings → AI.": {
+      "extractionState": "manual"
+    },
+    "Quicker way to add": {
+      "extractionState": "manual"
+    },
+    "The footer is gone. Add new content via the **+** button next to the tabs, or press **⌘N** anywhere in the popover. The **⋯** menu next to it holds Settings, Quit and Open Window — and everything's also in the right-click menu on the menu bar icon.": {
+      "extractionState": "manual"
+    },
+    "Lidarr support": {
+      "extractionState": "manual"
+    },
+    "If you've configured Lidarr, music artists now show up in search results and the AI chat. Add an artist the same way you'd add a series or movie.": {
+      "extractionState": "manual"
+    },
+    "ArrBarr stays out of your Dock and shows active downloads at a glance. **Left-click** the icon to open the popover. **Right-click** for Add, Refresh, Settings — every action also has a keyboard shortcut.": {
+      "extractionState": "manual"
     }
   }
 }

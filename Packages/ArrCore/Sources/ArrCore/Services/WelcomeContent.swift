@@ -17,7 +17,7 @@ import Foundation
 public enum WelcomeContent {
     /// Bump when shipping a release with features worth re-introducing.
     /// Must have a matching entry (with at least one item) in `whatsNewEntries`.
-    public static let currentVersion = "0.9.0"
+    public static let currentVersion = "0.10.0"
 
     public enum Variant: Equatable {
         case firstRun
@@ -77,7 +77,7 @@ public enum WelcomeContent {
             id: "menubar",
             symbol: "menubar.dock.rectangle",
             titleKey: "Lives in your menu bar",
-            bodyKey: "ArrBarr stays out of your Dock and shows active downloads at a glance. Click the icon for the popover; right-click for quick options.",
+            bodyKey: "ArrBarr stays out of your Dock and shows active downloads at a glance. **Left-click** the icon to open the popover. **Right-click** for Add, Refresh, Settings — every action also has a keyboard shortcut.",
             illustrationPosition: .below
         ),
         WelcomePage(
@@ -129,6 +129,26 @@ public enum WelcomeContent {
                 symbol: "sparkles",
                 titleKey: "Welcome screen",
                 bodyKey: "ArrBarr now shows a brief intro on first launch and after major updates so you know what's new. Reopen it any time from Settings → General."
+            ),
+        ],
+        "0.10.0": [
+            WelcomePage(
+                id: "ai-chat",
+                symbol: "bubble.left.and.text.bubble.right",
+                titleKey: "Chat with your arrs",
+                bodyKey: "A new Chat tab lets you ask questions in plain language — find a show, check what's coming this week, add a movie. Works with Apple Intelligence (macOS 26+) or any OpenAI-compatible API. Set up under Settings → AI."
+            ),
+            WelcomePage(
+                id: "add-shortcut",
+                symbol: "plus.circle",
+                titleKey: "Quicker way to add",
+                bodyKey: "The footer is gone. Add new content via the **+** button next to the tabs, or press **⌘N** anywhere in the popover. The **⋯** menu next to it holds Settings, Quit and Open Window — and everything's also in the right-click menu on the menu bar icon."
+            ),
+            WelcomePage(
+                id: "lidarr",
+                symbol: "music.note",
+                titleKey: "Lidarr support",
+                bodyKey: "If you've configured Lidarr, music artists now show up in search results and the AI chat. Add an artist the same way you'd add a series or movie."
             ),
         ],
     ]
