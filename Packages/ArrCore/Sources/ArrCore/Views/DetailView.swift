@@ -81,7 +81,7 @@ public struct DetailView: View {
                         .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
-                .localizedHelp("Open in browser", locale: configStore.currentLocale)
+                .help(Text("Open in browser", bundle: .module))
                 .padding(.leading, 4)
             }
         }

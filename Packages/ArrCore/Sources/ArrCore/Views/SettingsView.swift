@@ -1,4 +1,7 @@
 import SwiftUI
+#if canImport(AppKit)
+import AppKit
+#endif
 
 public struct SettingsView: View {
     var onShowWelcome: (() -> Void)? = nil
@@ -23,6 +26,15 @@ public struct SettingsView: View {
     /// users can't pass `--demo` on launch.
     @State private var versionTapCount: Int = 0
     @State private var devModeRevealed: Bool = DeveloperMode.isActive
+    /// The app language at the moment Settings opened. We compare against
+    /// `configStore.appLanguage` to decide whether the "restart required"
+    /// footer should appear — `nil` until the view first appears.
+    @State private var initialAppLanguage: String?
+
+    private var languageChanged: Bool {
+        guard let initial = initialAppLanguage else { return false }
+        return initial != configStore.appLanguage
+    }
 
     public var body: some View {
         Group {
@@ -50,7 +62,47 @@ public struct SettingsView: View {
             #endif
         }
         .environment(\.locale, configStore.currentLocale)
+        .onAppear {
+            if initialAppLanguage == nil { initialAppLanguage = configStore.appLanguage }
+        }
     }
+
+    /// Section content for the language picker. Shared between the macOS
+    /// General pane and the iOS combined form so the "restart required"
+    /// affordance behaves identically on both platforms.
+    @ViewBuilder
+    private var languageSection: some View {
+        Section {
+            Picker("Language", selection: $configStore.appLanguage) {
+                ForEach(ConfigStore.appLanguageOptions, id: \.code) { opt in
+                    Text(LocalizedStringKey(opt.label)).tag(opt.code)
+                }
+            }
+        } footer: {
+            if languageChanged {
+                #if os(macOS)
+                HStack(spacing: 8) {
+                    Text("Restart required to apply the new language.", bundle: .module)
+                    Button("Relaunch") { relaunchApp() }
+                        .controlSize(.small)
+                }
+                #else
+                Text("Quit and reopen the app to apply the new language.", bundle: .module)
+                #endif
+            }
+        }
+    }
+
+    #if os(macOS)
+    private func relaunchApp() {
+        let url = Bundle.main.bundleURL
+        let task = Process()
+        task.launchPath = "/usr/bin/open"
+        task.arguments = ["-n", url.path]
+        try? task.run()
+        NSApp.terminate(nil)
+    }
+    #endif
 
     #if os(iOS)
     private var iOSCombinedForm: some View {
@@ -85,13 +137,7 @@ public struct SettingsView: View {
             Section("Deluge") {
                 ServiceFields(config: $configStore.deluge, kind: .deluge)
             }
-            Section("Language") {
-                Picker("Language", selection: $configStore.appLanguage) {
-                    ForEach(ConfigStore.appLanguageOptions, id: \.code) { opt in
-                        Text(LocalizedStringKey(opt.label)).tag(opt.code)
-                    }
-                }
-            }
+            languageSection
             Section("Section order") {
                 ForEach(configStore.arrOrder, id: \.self) { key in
                     arrOrderRow(key: key)
@@ -237,13 +283,7 @@ public struct SettingsView: View {
             Section("Startup") {
                 Toggle("Launch at login", isOn: $configStore.launchAtLogin)
             }
-            Section("Language") {
-                Picker("Language", selection: $configStore.appLanguage) {
-                    ForEach(ConfigStore.appLanguageOptions, id: \.code) { opt in
-                        Text(LocalizedStringKey(opt.label)).tag(opt.code)
-                    }
-                }
-            }
+            languageSection
             Section("Section order") {
                 ForEach(configStore.arrOrder, id: \.self) { key in
                     arrOrderRow(key: key)
