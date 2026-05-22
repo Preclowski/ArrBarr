@@ -223,7 +223,13 @@ public struct QueueRowView: View {
     // MARK: - Actions
 
     private var actionButtons: some View {
-        HStack(spacing: 2) {
+        // Single glass capsule wrapping the whole action cluster — the
+        // cluster is the affordance, not the individual buttons. Red lives
+        // only in the trash glyph; the capsule stays neutral so it doesn't
+        // scream "destructive" at the user just because remove is one
+        // option in there. Matches the chat input bar's chrome (see
+        // `glassyFloatingBar`).
+        HStack(spacing: 4) {
             if canControl && canPauseResume {
                 if item.isPaused {
                     IconButton(symbol: "play.fill", helpKey: "Resume", accessibilityLabel: "Resume \(item.title)") {
@@ -243,6 +249,9 @@ public struct QueueRowView: View {
                 }
             }
         }
+        .padding(.horizontal, 6)
+        .padding(.vertical, 4)
+        .glassPill()
     }
 
     // MARK: - Custom format tags
@@ -551,7 +560,7 @@ public struct HoverActionOverlay<Actions: View>: ViewModifier {
                 .frame(maxWidth: .infinity, alignment: .leading)
             if visible {
                 actions()
-                    .padding(.leading, 6)
+                    .padding(.leading, 8)
                     .background(
                         LinearGradient(
                             colors: [
@@ -594,9 +603,9 @@ public struct IconButton: View {
     public var body: some View {
         Button(action: action) {
             Image(systemName: symbol)
-                .font(.system(size: 12, weight: .medium))
+                .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(isHovering ? (tint ?? .primary) : .secondary)
-                .frame(width: 24, height: 24)
+                .frame(width: 22, height: 22)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
