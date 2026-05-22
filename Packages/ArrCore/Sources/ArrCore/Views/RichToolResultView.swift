@@ -184,8 +184,10 @@ private struct SearchResultCard: View {
     let apiKey: String
     var blurred: Bool = false
 
+    private var isOwned: Bool { result.inLibraryArrId != nil }
+
     var body: some View {
-        Button(action: requestAdd) {
+        Button(action: handleTap) {
             cardContent
         }
         .buttonStyle(.plain)
@@ -193,13 +195,21 @@ private struct SearchResultCard: View {
 
     private var cardContent: some View {
         VStack(alignment: .leading, spacing: 4) {
-            PosterBlurContainer(blurred: blurred, cornerRadius: 6) {
-                RemotePoster(
-                    url: result.posterURL,
-                    apiKey: apiKey,
-                    size: CGSize(width: 90, height: 135),
-                    cornerRadius: 6
-                )
+            ZStack(alignment: .bottomTrailing) {
+                PosterBlurContainer(blurred: blurred, cornerRadius: 6) {
+                    RemotePoster(
+                        url: result.posterURL,
+                        apiKey: apiKey,
+                        size: CGSize(width: 90, height: 135),
+                        cornerRadius: 6
+                    )
+                }
+                if isOwned {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                        .background(Circle().fill(Color.black.opacity(0.5)).padding(-2))
+                        .padding(6)
+                }
             }
             Text(result.title)
                 .font(.system(size: 12, weight: .semibold))
@@ -225,31 +235,66 @@ private struct SearchResultCard: View {
         .frame(width: 100)
     }
 
+    /// Owned results route to DetailView; missing ones go through the add
+    /// flow. The owned check uses `inLibraryArrId` set by the TMDB handlers
+    /// when they cross-reference results against the arr library.
+    private func handleTap() {
+        if let arrId = result.inLibraryArrId {
+            DetailRequest.post(
+                DetailRequest.syntheticItem(
+                    source: result.source,
+                    entityId: arrId,
+                    title: result.title,
+                    posterURL: result.posterURL,
+                    posterRequiresAuth: false
+                )
+            )
+            return
+        }
+        requestAdd()
+    }
+
     private func requestAdd() {
         let intent = String(localized: "Add \(result.title)", bundle: .module)
+        // Always include `title` alongside the foreign id — TMDB-derived
+        // results (notably TV) carry id=0 and rely on title-based fallback in
+        // the backend. For native arr lookups the title is redundant but
+        // harmless; the backend prefers the id when both are present.
         switch result.source {
         case .sonarr:
             AddRequest.post(
                 toolName: "sonarr_add_series",
-                draftArgs: .object(["tvdbId": .number(Double(result.id))]),
+                draftArgs: .object([
+                    "tvdbId": .number(Double(result.id)),
+                    "title": .string(result.title),
+                ]),
                 userIntent: intent
             )
         case .radarr:
             AddRequest.post(
                 toolName: "radarr_add_movie",
-                draftArgs: .object(["tmdbId": .number(Double(result.id))]),
+                draftArgs: .object([
+                    "tmdbId": .number(Double(result.id)),
+                    "title": .string(result.title),
+                ]),
                 userIntent: intent
             )
         case .lidarr:
             AddRequest.post(
                 toolName: "lidarr_add_artist",
-                draftArgs: .object(["foreignArtistId": .string(result.foreignId)]),
+                draftArgs: .object([
+                    "foreignArtistId": .string(result.foreignId),
+                    "artistName": .string(result.title),
+                ]),
                 userIntent: intent
             )
         case .whisparr:
             AddRequest.post(
                 toolName: "whisparr_add_scene",
-                draftArgs: .object(["foreignId": .string(result.foreignId)]),
+                draftArgs: .object([
+                    "foreignId": .string(result.foreignId),
+                    "title": .string(result.title),
+                ]),
                 userIntent: intent
             )
         }
@@ -350,7 +395,7 @@ private struct CalendarRowView: View {
             guard let entityId = item.entityId else { return }
             DetailRequest.post(
                 DetailRequest.syntheticItem(
-                    source: queueSource,
+                    source: item.source,
                     entityId: entityId,
                     title: item.title,
                     posterURL: item.posterURL,
@@ -394,15 +439,6 @@ private struct CalendarRowView: View {
         .padding(8)
         .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 6))
         .contentShape(Rectangle())
-    }
-
-    private var queueSource: QueueItem.Source {
-        switch item.source {
-        case .radarr: return .radarr
-        case .sonarr: return .sonarr
-        case .lidarr: return .lidarr
-        case .whisparr: return .whisparr
-        }
     }
 
     private static func dateLabel(_ date: Date) -> String {

@@ -6,26 +6,50 @@ import Foundation
 /// tools to the LLM provider) read from here.
 public enum ChatToolCatalog {
 
-    /// Returns the catalog of tools. Pass `includeWhisparr: true` only when
-    /// `ConfigStore.aiKnowsAboutWhisparr` is true — Whisparr tools are hidden
-    /// by default to avoid surfacing NSFW content to the LLM.
-    public static func tools(includeWhisparr: Bool = false) -> [MCPTool] {
-        var arr = baseTools
+    /// Returns the catalog gated on what's actually configured. Each `include*`
+    /// flag should mirror `ConfigStore.<arr>.isConfigured` (and
+    /// `tmdbEnabled && <arr>.isConfigured` for the TMDB tools) so the LLM
+    /// doesn't see and call into services that would just error out.
+    public static func tools(
+        includeSonarr: Bool = true,
+        includeRadarr: Bool = true,
+        includeLidarr: Bool = false,
+        includeWhisparr: Bool = false,
+        includeTMDBMovies: Bool = false,
+        includeTMDBSeries: Bool = false
+    ) -> [MCPTool] {
+        var arr: [MCPTool] = []
+        if includeSonarr { arr.append(contentsOf: sonarrTools) }
+        if includeRadarr { arr.append(contentsOf: radarrTools) }
+        if includeLidarr { arr.append(contentsOf: lidarrTools) }
         if includeWhisparr { arr.append(contentsOf: whisparrTools) }
+        if includeTMDBMovies || includeTMDBSeries {
+            arr.append(contentsOf: tmdbSharedTools)
+        }
+        if includeTMDBMovies { arr.append(contentsOf: tmdbMovieTools) }
+        if includeTMDBSeries { arr.append(contentsOf: tmdbSeriesTools) }
         return arr
     }
 
-    /// Deprecated shim for callers that haven't adopted the function form yet.
-    public static var allTools: [MCPTool] { tools(includeWhisparr: false) }
-
     /// Convert the catalog into `LLMTool` values for provider advertisement.
-    public static func llmTools(includeWhisparr: Bool = false) -> [LLMTool] {
-        tools(includeWhisparr: includeWhisparr).map {
+    public static func llmTools(
+        includeSonarr: Bool = true,
+        includeRadarr: Bool = true,
+        includeLidarr: Bool = false,
+        includeWhisparr: Bool = false,
+        includeTMDBMovies: Bool = false,
+        includeTMDBSeries: Bool = false
+    ) -> [LLMTool] {
+        tools(includeSonarr: includeSonarr, includeRadarr: includeRadarr,
+              includeLidarr: includeLidarr, includeWhisparr: includeWhisparr,
+              includeTMDBMovies: includeTMDBMovies, includeTMDBSeries: includeTMDBSeries).map {
             LLMTool(name: $0.name, description: $0.description, inputSchema: $0.inputSchema)
         }
     }
 
-    private static let baseTools: [MCPTool] = [
+    // MARK: - Sonarr
+
+    private static let sonarrTools: [MCPTool] = [
         MCPTool(
             name: "sonarr_search",
             description: "Search Sonarr's metadata source (TVDB) for a TV series. Returns a list of matches with their tvdbId. Use this BEFORE sonarr_add_series so the user can disambiguate and you can pass the correct tvdbId.",
@@ -41,27 +65,8 @@ public enum ChatToolCatalog {
             ])
         ),
         MCPTool(
-            name: "radarr_search",
-            description: "Search Radarr's metadata source (TMDB) for a movie. Returns a list of matches with their tmdbId. Use this BEFORE radarr_add_movie so the user can disambiguate and you can pass the correct tmdbId.",
-            inputSchema: .object([
-                "type": .string("object"),
-                "properties": .object([
-                    "query": .object([
-                        "type": .string("string"),
-                        "description": .string("Movie title or keyword to search for, e.g. 'Severance' or 'Colony 2026'"),
-                    ]),
-                ]),
-                "required": .array([.string("query")]),
-            ])
-        ),
-        MCPTool(
             name: "sonarr_get_calendar",
             description: "Get upcoming TV episode releases from Sonarr (next ~7 days, items already monitored).",
-            inputSchema: .object(["type": .string("object"), "properties": .object([:])])
-        ),
-        MCPTool(
-            name: "radarr_get_calendar",
-            description: "Get upcoming movie releases from Radarr (next ~7 days, items already monitored).",
             inputSchema: .object(["type": .string("object"), "properties": .object([:])])
         ),
         MCPTool(
@@ -82,6 +87,43 @@ public enum ChatToolCatalog {
             ])
         ),
         MCPTool(
+            name: "sonarr_get_series",
+            description: "List TV series currently in the Sonarr library by TITLE. Use ONLY when the user names a specific show title. DO NOT use this to find shows by actor, director, genre, or year — the library record has no cast / crew / genre metadata. For those queries use tmdb_search_person + tmdb_person_tv_credits (or tmdb_discover_series).",
+            inputSchema: .object([
+                "type": .string("object"),
+                "properties": .object([
+                    "query": .object([
+                        "type": .string("string"),
+                        "description": .string("Optional title substring (case-insensitive). Omit to list all series — produces a large dump, prefer a query."),
+                    ]),
+                ]),
+            ])
+        ),
+    ]
+
+    // MARK: - Radarr
+
+    private static let radarrTools: [MCPTool] = [
+        MCPTool(
+            name: "radarr_search",
+            description: "Search Radarr's metadata source (TMDB) for a movie. Returns a list of matches with their tmdbId. Use this BEFORE radarr_add_movie so the user can disambiguate and you can pass the correct tmdbId.",
+            inputSchema: .object([
+                "type": .string("object"),
+                "properties": .object([
+                    "query": .object([
+                        "type": .string("string"),
+                        "description": .string("Movie title or keyword to search for, e.g. 'Severance' or 'Colony 2026'"),
+                    ]),
+                ]),
+                "required": .array([.string("query")]),
+            ])
+        ),
+        MCPTool(
+            name: "radarr_get_calendar",
+            description: "Get upcoming movie releases from Radarr (next ~7 days, items already monitored).",
+            inputSchema: .object(["type": .string("object"), "properties": .object([:])])
+        ),
+        MCPTool(
             name: "radarr_add_movie",
             description: "Add a movie to Radarr for tracking + automatic download. ALWAYS run radarr_search first and pass tmdbId from the result. Title is a last-resort fallback.",
             inputSchema: .object([
@@ -99,31 +141,23 @@ public enum ChatToolCatalog {
             ])
         ),
         MCPTool(
-            name: "sonarr_get_series",
-            description: "List TV series currently in the Sonarr library (already added by the user). Use this when the user references a show they already have — to look it up, check its status, or get its tvdbId. Different from sonarr_search, which queries TVDB to find NEW series to add.",
-            inputSchema: .object([
-                "type": .string("object"),
-                "properties": .object([
-                    "query": .object([
-                        "type": .string("string"),
-                        "description": .string("Optional title filter — case-insensitive substring match. Omit to list all series."),
-                    ]),
-                ]),
-            ])
-        ),
-        MCPTool(
             name: "radarr_get_movies",
-            description: "List movies currently in the Radarr library (already added by the user). Use this when the user references a movie they already have — to look it up, check status, or get its tmdbId. Different from radarr_search, which queries TMDB to find NEW movies to add.",
+            description: "List movies currently in the Radarr library by TITLE. Use ONLY when the user names a specific movie title. DO NOT use this to find movies by actor, director, genre, or year — the library record has no cast / crew / genre metadata, so a query like 'Adam Sandler' returns nothing useful. For those queries use tmdb_search_person + tmdb_person_movie_credits (or tmdb_discover_movies) — those tools already cross-reference results with the library and mark which are owned.",
             inputSchema: .object([
                 "type": .string("object"),
                 "properties": .object([
                     "query": .object([
                         "type": .string("string"),
-                        "description": .string("Optional title filter — case-insensitive substring match. Omit to list all movies."),
+                        "description": .string("Optional title substring (case-insensitive). Omit to list all movies — produces a large dump, prefer a query."),
                     ]),
                 ]),
             ])
         ),
+    ]
+
+    // MARK: - Lidarr
+
+    private static let lidarrTools: [MCPTool] = [
         MCPTool(
             name: "lidarr_search",
             description: "Search Lidarr's metadata source (MusicBrainz) for a music artist. Returns matches with their foreignArtistId. Use BEFORE lidarr_add_artist.",
@@ -175,6 +209,8 @@ public enum ChatToolCatalog {
         ),
     ]
 
+    // MARK: - Whisparr
+
     private static let whisparrTools: [MCPTool] = [
         MCPTool(
             name: "whisparr_search",
@@ -221,6 +257,113 @@ public enum ChatToolCatalog {
                     "title": .object([
                         "type": .string("string"),
                         "description": .string("Scene title (fallback when no foreignId is known)"),
+                    ]),
+                ]),
+            ])
+        ),
+    ]
+
+    // MARK: - TMDB shared (person lookup feeds both movie + tv credits)
+
+    private static let tmdbSharedTools: [MCPTool] = [
+        MCPTool(
+            name: "tmdb_search_person",
+            description: "FIRST CHOICE for any question that mentions an actor, director, writer, or other person — including 'films/shows with X', 'what did X make', 'X's best movies'. Resolves a name to a TMDB personId. ALWAYS use this before tmdb_person_movie_credits or tmdb_person_tv_credits; never try to guess the personId. NEVER use radarr_get_movies or sonarr_get_series for person queries — those library tools don't carry cast/crew metadata and will return nothing.",
+            inputSchema: .object([
+                "type": .string("object"),
+                "properties": .object([
+                    "query": .object([
+                        "type": .string("string"),
+                        "description": .string("Person's name, e.g. 'Adam Sandler' or 'Greta Gerwig'"),
+                    ]),
+                ]),
+                "required": .array([.string("query")]),
+            ])
+        ),
+    ]
+
+    // MARK: - TMDB movies (gated on tmdbEnabled && Radarr configured)
+
+    private static let tmdbMovieTools: [MCPTool] = [
+        MCPTool(
+            name: "tmdb_person_movie_credits",
+            description: "List movies a person appears in (or directed/wrote), sorted by popularity. Use after tmdb_search_person. Results are pre-cross-referenced with the Radarr library — entries already owned are marked [OWNED] in the text and surface as 'In library' cards in the UI, so do NOT re-check with radarr_get_movies. tmdbId is included for the rest, so taps add to Radarr.",
+            inputSchema: .object([
+                "type": .string("object"),
+                "properties": .object([
+                    "personId": .object([
+                        "type": .string("integer"),
+                        "description": .string("TMDB person id from tmdb_search_person"),
+                    ]),
+                ]),
+                "required": .array([.string("personId")]),
+            ])
+        ),
+        MCPTool(
+            name: "tmdb_discover_movies",
+            description: "Discover movies by genre and/or year range. Use this for 'suggest a horror for tonight', 'films from the 90s', 'best sci-fi from the last 5 years'. Sorted by popularity by default. Results include tmdbId so taps add to Radarr.",
+            inputSchema: .object([
+                "type": .string("object"),
+                "properties": .object([
+                    "genre": .object([
+                        "type": .string("string"),
+                        "description": .string("Genre name (case-insensitive). Known values: action, adventure, animation, comedy, crime, documentary, drama, family, fantasy, history, horror, music, mystery, romance, science fiction, thriller, war, western."),
+                    ]),
+                    "startYear": .object([
+                        "type": .string("integer"),
+                        "description": .string("Inclusive lower bound on release year (e.g. 1990 for '90s films')."),
+                    ]),
+                    "endYear": .object([
+                        "type": .string("integer"),
+                        "description": .string("Inclusive upper bound on release year (e.g. 1999 for '90s films')."),
+                    ]),
+                    "sortBy": .object([
+                        "type": .string("string"),
+                        "description": .string("Optional TMDB sort key. Defaults to 'popularity.desc'. Other useful values: 'vote_average.desc', 'primary_release_date.desc'."),
+                    ]),
+                ]),
+            ])
+        ),
+    ]
+
+    // MARK: - TMDB series (gated on tmdbEnabled && Sonarr configured)
+
+    private static let tmdbSeriesTools: [MCPTool] = [
+        MCPTool(
+            name: "tmdb_person_tv_credits",
+            description: "List TV series a person appears in (or created), sorted by popularity. Use after tmdb_search_person. Sonarr indexes by TVDB id but accepts a TMDB id lookup, so taps still route to sonarr_add_series.",
+            inputSchema: .object([
+                "type": .string("object"),
+                "properties": .object([
+                    "personId": .object([
+                        "type": .string("integer"),
+                        "description": .string("TMDB person id from tmdb_search_person"),
+                    ]),
+                ]),
+                "required": .array([.string("personId")]),
+            ])
+        ),
+        MCPTool(
+            name: "tmdb_discover_series",
+            description: "Discover TV series by genre and/or year range. Use this for 'suggest a sci-fi series from the 2010s' or 'best comedy shows of the last 3 years'. Sorted by popularity by default.",
+            inputSchema: .object([
+                "type": .string("object"),
+                "properties": .object([
+                    "genre": .object([
+                        "type": .string("string"),
+                        "description": .string("Genre name (case-insensitive). Known values: action, adventure, animation, comedy, crime, documentary, drama, family, kids, mystery, news, reality, sci-fi & fantasy, soap, talk, war & politics, western."),
+                    ]),
+                    "startYear": .object([
+                        "type": .string("integer"),
+                        "description": .string("Inclusive lower bound on first-air-date year."),
+                    ]),
+                    "endYear": .object([
+                        "type": .string("integer"),
+                        "description": .string("Inclusive upper bound on first-air-date year."),
+                    ]),
+                    "sortBy": .object([
+                        "type": .string("string"),
+                        "description": .string("Optional TMDB sort key. Defaults to 'popularity.desc'. Other useful values: 'vote_average.desc', 'first_air_date.desc'."),
                     ]),
                 ]),
             ])

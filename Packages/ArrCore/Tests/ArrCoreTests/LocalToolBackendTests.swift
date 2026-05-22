@@ -44,11 +44,16 @@ struct LocalToolBackendTests {
                       username: "", password: "")
     }
 
-    private func backend() -> LocalToolBackend {
-        LocalToolBackend(sonarr: sonarrConfig(), radarr: radarrConfig())
+    private func lidarrConfig() -> ServiceConfig {
+        ServiceConfig(enabled: true, baseURL: "http://lidarr.local:8686", apiKey: "test-key",
+                      username: "", password: "")
     }
 
-    @Test("listTools returns 12 expected tool names")
+    private func backend() -> LocalToolBackend {
+        LocalToolBackend(sonarr: sonarrConfig(), radarr: radarrConfig(), lidarr: lidarrConfig())
+    }
+
+    @Test("listTools returns 12 tools when sonarr/radarr/lidarr are all configured")
     func listToolsReturns12Tools() async throws {
         let tools = try await backend().listTools()
         #expect(tools.count == 12)
@@ -68,6 +73,33 @@ struct LocalToolBackendTests {
             "lidarr_add_artist",
         ]
         #expect(names == expected)
+    }
+
+    @Test("listTools omits unconfigured arrs")
+    func listToolsGatesOnConfigured() async throws {
+        let b = LocalToolBackend(sonarr: sonarrConfig(), radarr: .empty, lidarr: .empty)
+        let tools = try await b.listTools()
+        let names = Set(tools.map(\.name))
+        #expect(names.allSatisfy { $0.hasPrefix("sonarr_") })
+        #expect(tools.count == 4)
+    }
+
+    @Test("listTools includes TMDB tools when key set and matching arr configured")
+    func listToolsIncludesTMDBWhenKeyed() async throws {
+        let b = LocalToolBackend(sonarr: sonarrConfig(), radarr: radarrConfig(),
+                                 lidarr: .empty, tmdbApiKey: "abc123")
+        let names = Set(try await b.listTools().map(\.name))
+        #expect(names.contains("tmdb_search_person"))
+        #expect(names.contains("tmdb_discover_movies"))
+        #expect(names.contains("tmdb_discover_series"))
+        #expect(names.contains("tmdb_person_movie_credits"))
+        #expect(names.contains("tmdb_person_tv_credits"))
+    }
+
+    @Test("listTools omits TMDB tools when key empty")
+    func listToolsOmitsTMDBWithoutKey() async throws {
+        let names = Set(try await backend().listTools().map(\.name))
+        #expect(!names.contains(where: { $0.hasPrefix("tmdb_") }))
     }
 
     @Test("callTool unknown tool throws LocalToolError.unknownTool")

@@ -48,16 +48,27 @@ public final class ChatViewModel: ObservableObject {
     /// `ToolCall` into `pendingConfirm`, waits for the user to accept (with
     /// possibly tweaked args) or cancel, runs the tool, appends a `.tool`
     /// message. Bypasses the LLM entirely.
+    ///
+    /// The tool message stores `userIntent` (e.g. "Add Spring (2019)") in
+    /// `content` instead of the raw tool name; MessageBubble keys off
+    /// `content != toolCall.name` to render the friendlier "no prefix, no
+    /// chevron" surface for user-tap adds.
     public func requestAdd(toolName: String, draftArgs: JSONValue, userIntent: String) async {
         guard pendingResume == nil else { return }
-        // Surface the intent as a user message so the chat reads naturally.
         messages.append(ChatMessage(role: .user, content: userIntent))
         let call = ToolCall(name: toolName, arguments: draftArgs)
         isThinking = true
         defer { isThinking = false }
         guard let confirmedArgs = await awaitConfirm(call) else {
+            // Cancel — surface the dropped intent so the chat doesn't end on
+            // a dangling user message. The "(cancelled by user)" marker in
+            // toolResult is what MessageBubble keys off to swap the icon and
+            // strikethrough the title; content stays the same userIntent so
+            // success and cancel rows visually mirror each other.
             messages.append(ChatMessage(
-                role: .tool, content: toolName, toolCall: call,
+                role: .tool,
+                content: userIntent,
+                toolCall: call,
                 toolResult: "(cancelled by user)"
             ))
             return
@@ -70,8 +81,11 @@ public final class ChatViewModel: ObservableObject {
         }
         let confirmedCall = ToolCall(name: toolName, arguments: confirmedArgs)
         messages.append(ChatMessage(
-            role: .tool, content: toolName, toolCall: confirmedCall,
-            toolResult: output.text, richContent: output.rich
+            role: .tool,
+            content: userIntent,
+            toolCall: confirmedCall,
+            toolResult: output.text,
+            richContent: output.rich
         ))
     }
 

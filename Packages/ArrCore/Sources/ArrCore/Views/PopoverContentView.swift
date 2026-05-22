@@ -31,10 +31,10 @@ public struct PopoverContentView: View {
     @State private var detailItem: QueueItem?
     @State private var showSearch = false
 
-    private var sonarrConfigured: Bool { isVisible(configStore.sonarr) }
-    private var radarrConfigured: Bool { isVisible(configStore.radarr) }
-    private var lidarrConfigured: Bool { isVisible(configStore.lidarr) }
-    private var whisparrConfigured: Bool { isVisible(configStore.whisparr) }
+    private var sonarrConfigured: Bool { configStore.sonarr.isVisible }
+    private var radarrConfigured: Bool { configStore.radarr.isVisible }
+    private var lidarrConfigured: Bool { configStore.lidarr.isVisible }
+    private var whisparrConfigured: Bool { configStore.whisparr.isVisible }
     private var anyArrConfigured: Bool { sonarrConfigured || radarrConfigured || lidarrConfigured || whisparrConfigured }
 
     private var searchAvailable: Bool { sonarrConfigured || radarrConfigured || lidarrConfigured || whisparrConfigured }
@@ -48,13 +48,6 @@ public struct PopoverContentView: View {
         case .openai:
             return configStore.openai.isConfigured
         }
-    }
-
-    /// In demo mode, show an arr whenever it's enabled (the configs are seeded to
-    /// `enabled = true` on first demo launch — see `DemoMode.seedConfigsIfNeeded`).
-    /// Outside of demo mode, require a real configured connection.
-    private func isVisible(_ config: ServiceConfig) -> Bool {
-        DemoMode.isActive ? config.enabled : config.isConfigured
     }
 
     @ViewBuilder
@@ -124,10 +117,40 @@ public struct PopoverContentView: View {
     }
 
     private var mainContent: some View {
-        VStack(spacing: 0) {
-            if showSearch {
-                searchOverlayContent
-            } else if let detailItem {
+        // DetailView is rendered as a ZStack overlay so the underlying chat /
+        // queue / upcoming view stays alive while it's on screen. That keeps
+        // their scroll positions, lazy state, etc. intact — tapping Back lands
+        // the user back in the same carousel offset they came from. Search +
+        // History still use the swap pattern (they replace the surface fully
+        // and don't share state worth preserving).
+        ZStack {
+            VStack(spacing: 0) {
+                if showSearch {
+                    searchOverlayContent
+                } else if let historySource {
+                    HistoryView(
+                        source: historySource,
+                        viewModel: viewModel,
+                        refreshNonce: historyRefreshNonce,
+                        onClose: { self.historySource = nil }
+                    )
+                } else if anyArrConfigured {
+                    tabBar
+                    Divider()
+                    Group {
+                        switch selectedTab {
+                        case .queue: queueContent
+                        case .upcoming: upcomingContent
+                        case .chat:
+                            chatTabContent
+                        }
+                    }
+                } else {
+                    emptyState
+                }
+            }
+
+            if let detailItem {
                 DetailView(
                     item: detailItem,
                     onBack: {
@@ -135,26 +158,12 @@ public struct PopoverContentView: View {
                     },
                     viewModel: viewModel
                 )
-            } else if let historySource {
-                HistoryView(
-                    source: historySource,
-                    viewModel: viewModel,
-                    refreshNonce: historyRefreshNonce,
-                    onClose: { self.historySource = nil }
-                )
-            } else if anyArrConfigured {
-                tabBar
-                Divider()
-                Group {
-                    switch selectedTab {
-                    case .queue: queueContent
-                    case .upcoming: upcomingContent
-                    case .chat:
-                        chatTabContent
-                    }
-                }
-            } else {
-                emptyState
+                #if os(macOS)
+                .background(Color(nsColor: .windowBackgroundColor))
+                #else
+                .background(Color(uiColor: .systemBackground))
+                #endif
+                .transition(.opacity)
             }
         }
         .frame(width: 400, height: 600)
@@ -365,7 +374,7 @@ public struct PopoverContentView: View {
     private var queueContent: some View {
         ScrollView {
             Group {
-                if viewModel.isLoading && viewModel.radarr.isEmpty && viewModel.sonarr.isEmpty && viewModel.lidarr.isEmpty && viewModel.whisparr.isEmpty {
+                if viewModel.isLoading && viewModel.allEmpty {
                     VStack(spacing: 10) {
                         ProgressView()
                             .controlSize(.small)
@@ -444,7 +453,7 @@ public struct PopoverContentView: View {
             )
             .padding(.vertical, 12)
         case .arr(let source):
-            let arrError = error(for: source)
+            let arrError = viewModel.error(for: source)
             QueueSectionView(
                 title: source.displayName,
                 symbol: source.symbol,
@@ -476,43 +485,20 @@ public struct PopoverContentView: View {
         }
     }
 
-    private func items(for source: QueueItem.Source) -> [QueueItem] {
-        switch source {
-        case .sonarr: return viewModel.sonarr
-        case .radarr: return viewModel.radarr
-        case .lidarr: return viewModel.lidarr
-        case .whisparr: return viewModel.whisparr
-        }
-    }
-
     /// Sonarr items get bucketed by downloadId so a season pack collapses
     /// into one row matching the underlying download. Radarr / Lidarr stay
     /// one-row-per-item; grouping is sonarr-only for now.
     private func entries(for source: QueueItem.Source) -> [QueueRowEntry] {
-        let raw = items(for: source)
+        let raw = viewModel.items(for: source)
         switch source {
         case .sonarr: return QueueGrouping.group(raw)
         default:      return raw.map { .single($0) }
         }
     }
 
-    private func error(for source: QueueItem.Source) -> String? {
-        switch source {
-        case .sonarr: return viewModel.sonarrError
-        case .radarr: return viewModel.radarrError
-        case .lidarr: return viewModel.lidarrError
-        case .whisparr: return viewModel.whisparrError
-        }
-    }
-
     private func health(for source: QueueItem.Source) -> [ArrHealthRecord] {
         guard configStore.showIndexerIssues else { return [] }
-        switch source {
-        case .sonarr: return viewModel.health.sonarr
-        case .radarr: return viewModel.health.radarr
-        case .lidarr: return viewModel.health.lidarr
-        case .whisparr: return viewModel.health.whisparr
-        }
+        return viewModel.health.records(for: source)
     }
 
     // MARK: - Upcoming content

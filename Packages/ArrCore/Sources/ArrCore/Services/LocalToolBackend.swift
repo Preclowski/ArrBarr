@@ -8,24 +8,40 @@ public actor LocalToolBackend: ToolBackend {
     private let lidarr: ServiceConfig
     private let whisparr: ServiceConfig
     private let aiKnowsAboutWhisparr: Bool
+    private let tmdbApiKey: String
 
     public init(sonarr: ServiceConfig, radarr: ServiceConfig, lidarr: ServiceConfig = .empty,
-                whisparr: ServiceConfig = .empty, aiKnowsAboutWhisparr: Bool = false) {
+                whisparr: ServiceConfig = .empty, aiKnowsAboutWhisparr: Bool = false,
+                tmdbApiKey: String = "") {
         self.sonarr = sonarr
         self.radarr = radarr
         self.lidarr = lidarr
         self.whisparr = whisparr
         self.aiKnowsAboutWhisparr = aiKnowsAboutWhisparr
+        self.tmdbApiKey = tmdbApiKey
     }
 
+    private var tmdbEnabled: Bool { !tmdbApiKey.isEmpty }
+
     public func listTools() async throws -> [MCPTool] {
-        ChatToolCatalog.tools(includeWhisparr: aiKnowsAboutWhisparr)
+        ChatToolCatalog.tools(
+            includeSonarr: sonarr.isConfigured,
+            includeRadarr: radarr.isConfigured,
+            includeLidarr: lidarr.isConfigured,
+            includeWhisparr: whisparr.isConfigured && aiKnowsAboutWhisparr,
+            includeTMDBMovies: tmdbEnabled && radarr.isConfigured,
+            includeTMDBSeries: tmdbEnabled && sonarr.isConfigured
+        )
     }
 
     public func callTool(name: String, arguments: JSONValue) async throws -> ToolCallOutput {
         // Guard Whisparr tools when the toggle is off
         if name.hasPrefix("whisparr_") && !aiKnowsAboutWhisparr {
             return ToolCallOutput(text: "Whisparr AI access is disabled in Settings.")
+        }
+        // Guard TMDB tools when no key is configured
+        if name.hasPrefix("tmdb_") && !tmdbEnabled {
+            return ToolCallOutput(text: "TMDB API key is not configured in Settings → AI → Discovery.")
         }
         switch name {
         case "sonarr_search":       return try await searchSeries(arguments)
@@ -44,39 +60,134 @@ public actor LocalToolBackend: ToolBackend {
         case "whisparr_get_movies": return try await listScenes(arguments)
         case "whisparr_get_calendar": return try await whisparrCalendar()
         case "whisparr_add_scene":  return try await addScene(arguments)
+        case "tmdb_search_person":          return try await tmdbSearchPerson(arguments)
+        case "tmdb_person_movie_credits":   return try await tmdbPersonMovieCredits(arguments)
+        case "tmdb_person_tv_credits":      return try await tmdbPersonTVCredits(arguments)
+        case "tmdb_discover_movies":        return try await tmdbDiscoverMovies(arguments)
+        case "tmdb_discover_series":        return try await tmdbDiscoverSeries(arguments)
         default:
             throw LocalToolError.unknownTool(name)
         }
     }
 
+    // MARK: - Generic helpers — collapse the per-arr handler boilerplate
+
+    /// Standard `*_search` shape: required `query` arg, configured check,
+    /// SearchClient lookup, condensed text + rich payload. Series/movie/scene
+    /// share this shape; lidarr_search uses its own helper because the
+    /// formatter and rich case both diverge (artist subtitle, foreignArtistId
+    /// label) — see `runSearchArtist`.
+    private func runSearch(
+        args: JSONValue,
+        source: QueueItem.Source,
+        config: ServiceConfig,
+        kind: String,
+        yearAware: Bool,
+        rich: ([SearchResult]) -> ChatRichContent
+    ) async throws -> ToolCallOutput {
+        let query = Self.stringArg(args, key: "query")
+        guard !query.isEmpty else {
+            return ToolCallOutput(text: "Please provide a search query.")
+        }
+        guard config.isConfigured else {
+            return ToolCallOutput(text: "\(source.displayName) is not configured.")
+        }
+        let client = SearchClient(config: config, source: source)
+        let results = yearAware
+            ? try await Self.searchWithYearAwareness(client: client, query: query)
+            : try await client.lookup(query: query)
+        let text = Self.formatSearchResultsCondensed(results, query: query, kind: kind)
+        return ToolCallOutput(text: text, rich: rich(results))
+    }
+
+    private func runSearchArtist(args: JSONValue) async throws -> ToolCallOutput {
+        let query = Self.stringArg(args, key: "query")
+        guard !query.isEmpty else {
+            return ToolCallOutput(text: "Please provide a search query.")
+        }
+        guard lidarr.isConfigured else {
+            return ToolCallOutput(text: "Lidarr is not configured.")
+        }
+        let client = SearchClient(config: lidarr, source: .lidarr)
+        let results = try await client.lookup(query: query)
+        let text = Self.formatArtistSearchCondensed(results, query: query)
+        return ToolCallOutput(text: text, rich: .searchArtistResults(results))
+    }
+
+    /// Standard `*_get_*` shape: configured check, fetch full library,
+    /// optional substring filter on a record-specific field, condensed text,
+    /// rich payload. The closure approach keeps it type-safe across the four
+    /// different record types without resorting to a protocol.
+    private func runLibraryList<Rec>(
+        args: JSONValue,
+        source: QueueItem.Source,
+        config: ServiceConfig,
+        itemNounSingular: String,
+        itemNounPlural: String,
+        fetch: () async throws -> [Rec],
+        filterMatch: (Rec, String) -> Bool,
+        line: (Rec) -> String,
+        rich: ([Rec]) -> ChatRichContent
+    ) async throws -> ToolCallOutput {
+        guard config.isConfigured else {
+            return ToolCallOutput(text: "\(source.displayName) is not configured.")
+        }
+        let filter = Self.stringArg(args, key: "query").lowercased()
+        let all = try await fetch()
+        let matched = filter.isEmpty ? all : all.filter { filterMatch($0, filter) }
+        let text = Self.formatLibrary(
+            serviceName: source.displayName,
+            itemNounSingular: itemNounSingular,
+            itemNounPlural: itemNounPlural,
+            items: matched, filter: filter, line: line
+        )
+        return ToolCallOutput(text: text, rich: rich(matched))
+    }
+
+    /// Standard `*_get_calendar` shape: configured check, fetch, format.
+    /// All four calendar handlers reduce to a one-line call to this.
+    private func runCalendar(
+        source: QueueItem.Source,
+        config: ServiceConfig,
+        fetch: () async throws -> [UpcomingItem]
+    ) async throws -> ToolCallOutput {
+        guard config.isConfigured else {
+            return ToolCallOutput(text: "\(source.displayName) is not configured.")
+        }
+        let items = try await fetch()
+        let text = Self.formatCalendarCondensed(items)
+        return ToolCallOutput(text: text, rich: .calendar(items))
+    }
+
+    /// Post-lookup add prerequisites — pull the lists, resolve the user's
+    /// chosen IDs (or first available), bail with the standard "missing X"
+    /// error. All four `addX` handlers ran this block verbatim before the
+    /// arr-specific add call; Lidarr keeps its metadata-profile resolution at
+    /// the call site since it's the one genuine divergence.
+    private static func resolveAddDefaults(
+        client: SearchClient,
+        serviceName: String,
+        chosenProfileId: Int,
+        chosenFolderPath: String
+    ) async throws -> (QualityProfile, RootFolder)? {
+        let profiles = try await client.fetchQualityProfiles()
+        let folders = try await client.fetchRootFolders()
+        let profile = profiles.first(where: { $0.id == chosenProfileId }) ?? profiles.first
+        let folder = folders.first(where: { $0.path == chosenFolderPath }) ?? folders.first
+        guard let profile, let folder else { return nil }
+        return (profile, folder)
+    }
+
     // MARK: - Tool implementations
 
     private func searchSeries(_ args: JSONValue) async throws -> ToolCallOutput {
-        let query = Self.stringArg(args, key: "query")
-        guard !query.isEmpty else {
-            return ToolCallOutput(text: "Please provide a search query.")
-        }
-        guard sonarr.isConfigured else {
-            return ToolCallOutput(text: "Sonarr is not configured.")
-        }
-        let client = SearchClient(config: sonarr, source: .sonarr)
-        let results = try await Self.searchWithYearAwareness(client: client, query: query)
-        let text = Self.formatSearchResultsCondensed(results, query: query, kind: "series")
-        return ToolCallOutput(text: text, rich: .searchSeriesResults(results))
+        try await runSearch(args: args, source: .sonarr, config: sonarr, kind: "series",
+                            yearAware: true, rich: { .searchSeriesResults($0) })
     }
 
     private func searchMovie(_ args: JSONValue) async throws -> ToolCallOutput {
-        let query = Self.stringArg(args, key: "query")
-        guard !query.isEmpty else {
-            return ToolCallOutput(text: "Please provide a search query.")
-        }
-        guard radarr.isConfigured else {
-            return ToolCallOutput(text: "Radarr is not configured.")
-        }
-        let client = SearchClient(config: radarr, source: .radarr)
-        let results = try await Self.searchWithYearAwareness(client: client, query: query)
-        let text = Self.formatSearchResultsCondensed(results, query: query, kind: "movie")
-        return ToolCallOutput(text: text, rich: .searchMovieResults(results))
+        try await runSearch(args: args, source: .radarr, config: radarr, kind: "movie",
+                            yearAware: true, rich: { .searchMovieResults($0) })
     }
 
     /// Detect a 4-digit year in the query and surface year-matching hits to
@@ -123,51 +234,49 @@ public actor LocalToolBackend: ToolBackend {
     }
 
     private func listSeries(_ args: JSONValue) async throws -> ToolCallOutput {
-        guard sonarr.isConfigured else {
-            return ToolCallOutput(text: "Sonarr is not configured.")
-        }
-        let filter = Self.stringArg(args, key: "query").lowercased()
-        let client = SonarrClient(config: sonarr)
-        let all = try await client.fetchAllSeries()
-        let matched = filter.isEmpty
-            ? all
-            : all.filter { ($0.title ?? "").lowercased().contains(filter) }
-        let text = Self.formatSeriesLibraryCondensed(matched, filter: filter)
-        return ToolCallOutput(text: text, rich: .librarySeries(matched))
+        try await runLibraryList(
+            args: args, source: .sonarr, config: sonarr,
+            itemNounSingular: "series", itemNounPlural: "series",
+            fetch: { try await SonarrClient(config: self.sonarr).fetchAllSeries() },
+            filterMatch: { rec, q in (rec.title ?? "").lowercased().contains(q) },
+            line: { r in
+                let title = r.title ?? "(untitled)"
+                let yearPart = r.year.map { " (\($0))" } ?? ""
+                let idPart = r.tvdbId.map { " · tvdbId=\($0)" } ?? ""
+                let statusPart = r.status.map { " · \($0)" } ?? ""
+                return "• \(title)\(yearPart)\(idPart)\(statusPart)"
+            },
+            rich: { .librarySeries($0) }
+        )
     }
 
     private func listMovies(_ args: JSONValue) async throws -> ToolCallOutput {
-        guard radarr.isConfigured else {
-            return ToolCallOutput(text: "Radarr is not configured.")
-        }
-        let filter = Self.stringArg(args, key: "query").lowercased()
-        let client = RadarrClient(config: radarr)
-        let all = try await client.fetchAllMovies()
-        let matched = filter.isEmpty
-            ? all
-            : all.filter { ($0.title ?? "").lowercased().contains(filter) }
-        let text = Self.formatMovieLibraryCondensed(matched, filter: filter)
-        return ToolCallOutput(text: text, rich: .libraryMovies(matched))
+        try await runLibraryList(
+            args: args, source: .radarr, config: radarr,
+            itemNounSingular: "movie", itemNounPlural: "movies",
+            fetch: { try await RadarrClient(config: self.radarr).fetchAllMovies() },
+            filterMatch: { rec, q in (rec.title ?? "").lowercased().contains(q) },
+            line: { r in
+                let title = r.title ?? "(untitled)"
+                let yearPart = r.year.map { " (\($0))" } ?? ""
+                let idPart = r.tmdbId.map { " · tmdbId=\($0)" } ?? ""
+                let fileMark = (r.hasFile ?? false) ? " · downloaded" : " · missing"
+                return "• \(title)\(yearPart)\(idPart)\(fileMark)"
+            },
+            rich: { .libraryMovies($0) }
+        )
     }
 
     private func sonarrCalendar() async throws -> ToolCallOutput {
-        guard sonarr.isConfigured else {
-            return ToolCallOutput(text: "Sonarr is not configured.")
+        try await runCalendar(source: .sonarr, config: sonarr) {
+            try await SonarrClient(config: self.sonarr).fetchCalendar()
         }
-        let client = SonarrClient(config: sonarr)
-        let items = try await client.fetchCalendar()
-        let text = Self.formatCalendarCondensed(items)
-        return ToolCallOutput(text: text, rich: .calendar(items))
     }
 
     private func radarrCalendar() async throws -> ToolCallOutput {
-        guard radarr.isConfigured else {
-            return ToolCallOutput(text: "Radarr is not configured.")
+        try await runCalendar(source: .radarr, config: radarr) {
+            try await RadarrClient(config: self.radarr).fetchCalendar()
         }
-        let client = RadarrClient(config: radarr)
-        let items = try await client.fetchCalendar()
-        let text = Self.formatCalendarCondensed(items)
-        return ToolCallOutput(text: text, rich: .calendar(items))
     }
 
     private func addSeries(_ args: JSONValue) async throws -> ToolCallOutput {
@@ -193,11 +302,10 @@ public actor LocalToolBackend: ToolBackend {
         guard let pick = chosen else {
             return ToolCallOutput(text: "Couldn't find any series matching '\(lookupQuery)'.")
         }
-        let profiles = try await client.fetchQualityProfiles()
-        let folders = try await client.fetchRootFolders()
-        let profile = profiles.first(where: { $0.id == chosenProfileId }) ?? profiles.first
-        let folder = folders.first(where: { $0.path == chosenFolderPath }) ?? folders.first
-        guard let profile, let folder else {
+        guard let (profile, folder) = try await Self.resolveAddDefaults(
+            client: client, serviceName: "Sonarr",
+            chosenProfileId: chosenProfileId, chosenFolderPath: chosenFolderPath
+        ) else {
             return ToolCallOutput(text: "Sonarr is missing a quality profile or root folder.")
         }
         try await client.addSeries(
@@ -235,11 +343,10 @@ public actor LocalToolBackend: ToolBackend {
         guard let pick = chosen else {
             return ToolCallOutput(text: "Couldn't find any movies matching '\(lookupQuery)'.")
         }
-        let profiles = try await client.fetchQualityProfiles()
-        let folders = try await client.fetchRootFolders()
-        let profile = profiles.first(where: { $0.id == chosenProfileId }) ?? profiles.first
-        let folder = folders.first(where: { $0.path == chosenFolderPath }) ?? folders.first
-        guard let profile, let folder else {
+        guard let (profile, folder) = try await Self.resolveAddDefaults(
+            client: client, serviceName: "Radarr",
+            chosenProfileId: chosenProfileId, chosenFolderPath: chosenFolderPath
+        ) else {
             return ToolCallOutput(text: "Radarr is missing a quality profile or root folder.")
         }
         try await client.addMovie(
@@ -255,41 +362,29 @@ public actor LocalToolBackend: ToolBackend {
     // MARK: - Lidarr tool implementations
 
     private func searchArtist(_ args: JSONValue) async throws -> ToolCallOutput {
-        let query = Self.stringArg(args, key: "query")
-        guard !query.isEmpty else {
-            return ToolCallOutput(text: "Please provide a search query.")
-        }
-        guard lidarr.isConfigured else {
-            return ToolCallOutput(text: "Lidarr is not configured.")
-        }
-        let client = SearchClient(config: lidarr, source: .lidarr)
-        let results = try await client.lookup(query: query)
-        let text = Self.formatArtistSearchCondensed(results, query: query)
-        return ToolCallOutput(text: text, rich: .searchArtistResults(results))
+        try await runSearchArtist(args: args)
     }
 
     private func listArtists(_ args: JSONValue) async throws -> ToolCallOutput {
-        guard lidarr.isConfigured else {
-            return ToolCallOutput(text: "Lidarr is not configured.")
-        }
-        let filter = Self.stringArg(args, key: "query").lowercased()
-        let client = LidarrClient(config: lidarr)
-        let all = try await client.fetchAllArtists()
-        let matched = filter.isEmpty
-            ? all
-            : all.filter { ($0.artistName ?? "").lowercased().contains(filter) }
-        let text = Self.formatArtistLibraryCondensed(matched, filter: filter)
-        return ToolCallOutput(text: text, rich: .libraryArtists(matched))
+        try await runLibraryList(
+            args: args, source: .lidarr, config: lidarr,
+            itemNounSingular: "artist", itemNounPlural: "artists",
+            fetch: { try await LidarrClient(config: self.lidarr).fetchAllArtists() },
+            filterMatch: { rec, q in (rec.artistName ?? "").lowercased().contains(q) },
+            line: { r in
+                let name = r.artistName ?? "(untitled)"
+                let idPart = r.foreignArtistId.map { " · foreignArtistId=\($0)" } ?? ""
+                let albumCount = r.statistics?.albumCount.map { " · \($0) album\($0 == 1 ? "" : "s")" } ?? ""
+                return "• \(name)\(idPart)\(albumCount)"
+            },
+            rich: { .libraryArtists($0) }
+        )
     }
 
     private func lidarrCalendar() async throws -> ToolCallOutput {
-        guard lidarr.isConfigured else {
-            return ToolCallOutput(text: "Lidarr is not configured.")
+        try await runCalendar(source: .lidarr, config: lidarr) {
+            try await LidarrClient(config: self.lidarr).fetchCalendar()
         }
-        let client = LidarrClient(config: lidarr)
-        let items = try await client.fetchCalendar()
-        let text = Self.formatCalendarCondensed(items)
-        return ToolCallOutput(text: text, rich: .calendar(items))
     }
 
     private func addArtist(_ args: JSONValue) async throws -> ToolCallOutput {
@@ -318,15 +413,16 @@ public actor LocalToolBackend: ToolBackend {
         guard let pick = chosen else {
             return ToolCallOutput(text: "Couldn't find any artist matching '\(lookupQuery)'.")
         }
-        let profiles = try await client.fetchQualityProfiles()
-        let metaProfiles = try await client.fetchMetadataProfiles()
-        let folders = try await client.fetchRootFolders()
-        let profile = profiles.first(where: { $0.id == chosenProfileId }) ?? profiles.first
-        let metaProfile = metaProfiles.first(where: { $0.id == chosenMetadataProfileId }) ?? metaProfiles.first
-        let folder = folders.first(where: { $0.path == chosenFolderPath }) ?? folders.first
-        guard let profile, let folder else {
+        guard let (profile, folder) = try await Self.resolveAddDefaults(
+            client: client, serviceName: "Lidarr",
+            chosenProfileId: chosenProfileId, chosenFolderPath: chosenFolderPath
+        ) else {
             return ToolCallOutput(text: "Lidarr is missing a quality profile or root folder.")
         }
+        // Metadata profile is Lidarr-specific; resolve it at the call site
+        // since no other arr has the concept.
+        let metaProfiles = try await client.fetchMetadataProfiles()
+        let metaProfile = metaProfiles.first(where: { $0.id == chosenMetadataProfileId }) ?? metaProfiles.first
         let metaProfileId = metaProfile?.id ?? 1
         try await client.addArtist(
             pick,
@@ -379,40 +475,27 @@ public actor LocalToolBackend: ToolBackend {
         return out
     }
 
-    private static func formatSeriesLibraryCondensed(_ items: [SonarrLibraryRecord], filter: String) -> String {
+    /// Shared library-list formatter. Caller passes the line transform so
+    /// per-arr field selection (tvdbId vs tmdbId vs foreignArtistId vs file
+    /// state) stays where it belongs without four near-identical functions.
+    private static func formatLibrary<Rec>(
+        serviceName: String,
+        itemNounSingular: String,
+        itemNounPlural: String,
+        items: [Rec],
+        filter: String,
+        line: (Rec) -> String
+    ) -> String {
         guard !items.isEmpty else {
-            return filter.isEmpty ? "Sonarr library is empty." : "No series in your library match '\(filter)'."
+            return filter.isEmpty
+                ? "\(serviceName) library is empty."
+                : "No \(itemNounPlural) in your library match '\(filter)'."
         }
         let top = items.prefix(20)
-        let lines = top.map { r -> String in
-            let title = r.title ?? "(untitled)"
-            let yearPart = r.year.map { " (\($0))" } ?? ""
-            let idPart = r.tvdbId.map { " · tvdbId=\($0)" } ?? ""
-            let statusPart = r.status.map { " · \($0)" } ?? ""
-            return "• \(title)\(yearPart)\(idPart)\(statusPart)"
-        }
-        var out = "Sonarr library — \(items.count) series"
+        let noun = items.count == 1 ? itemNounSingular : itemNounPlural
+        var out = "\(serviceName) library — \(items.count) \(noun)"
         if !filter.isEmpty { out += " matching '\(filter)'" }
-        out += ":\n" + lines.joined(separator: "\n")
-        if items.count > top.count { out += "\n(\(items.count - top.count) more not shown)" }
-        return out
-    }
-
-    private static func formatMovieLibraryCondensed(_ items: [RadarrLibraryRecord], filter: String) -> String {
-        guard !items.isEmpty else {
-            return filter.isEmpty ? "Radarr library is empty." : "No movies in your library match '\(filter)'."
-        }
-        let top = items.prefix(20)
-        let lines = top.map { r -> String in
-            let title = r.title ?? "(untitled)"
-            let yearPart = r.year.map { " (\($0))" } ?? ""
-            let idPart = r.tmdbId.map { " · tmdbId=\($0)" } ?? ""
-            let fileMark = (r.hasFile ?? false) ? " · downloaded" : " · missing"
-            return "• \(title)\(yearPart)\(idPart)\(fileMark)"
-        }
-        var out = "Radarr library — \(items.count) movie\(items.count == 1 ? "" : "s")"
-        if !filter.isEmpty { out += " matching '\(filter)'" }
-        out += ":\n" + lines.joined(separator: "\n")
+        out += ":\n" + top.map(line).joined(separator: "\n")
         if items.count > top.count { out += "\n(\(items.count - top.count) more not shown)" }
         return out
     }
@@ -432,62 +515,33 @@ public actor LocalToolBackend: ToolBackend {
         return out
     }
 
-    private static func formatArtistLibraryCondensed(_ items: [LidarrLibraryRecord], filter: String) -> String {
-        guard !items.isEmpty else {
-            return filter.isEmpty ? "Lidarr library is empty." : "No artists in your library match '\(filter)'."
-        }
-        let top = items.prefix(20)
-        let lines = top.map { r -> String in
-            let name = r.artistName ?? "(untitled)"
-            let idPart = r.foreignArtistId.map { " · foreignArtistId=\($0)" } ?? ""
-            let albumCount = r.statistics?.albumCount.map { " · \($0) album\($0 == 1 ? "" : "s")" } ?? ""
-            return "• \(name)\(idPart)\(albumCount)"
-        }
-        var out = "Lidarr library — \(items.count) artist\(items.count == 1 ? "" : "s")"
-        if !filter.isEmpty { out += " matching '\(filter)'" }
-        out += ":\n" + lines.joined(separator: "\n")
-        if items.count > top.count { out += "\n(\(items.count - top.count) more not shown)" }
-        return out
-    }
-
     // MARK: - Whisparr tool implementations
 
     private func searchScene(_ args: JSONValue) async throws -> ToolCallOutput {
-        let query = Self.stringArg(args, key: "query")
-        guard !query.isEmpty else {
-            return ToolCallOutput(text: "Please provide a search query.")
-        }
-        guard whisparr.isConfigured else {
-            return ToolCallOutput(text: "Whisparr is not configured.")
-        }
-        let client = SearchClient(config: whisparr, source: .whisparr)
-        let results = try await client.lookup(query: query)
-        let text = Self.formatSearchResultsCondensed(results, query: query, kind: "scene")
-        return ToolCallOutput(text: text, rich: .searchSceneResults(results))
+        try await runSearch(args: args, source: .whisparr, config: whisparr, kind: "scene",
+                            yearAware: false, rich: { .searchSceneResults($0) })
     }
 
     private func listScenes(_ args: JSONValue) async throws -> ToolCallOutput {
-        guard whisparr.isConfigured else {
-            return ToolCallOutput(text: "Whisparr is not configured.")
-        }
-        let filter = Self.stringArg(args, key: "query").lowercased()
-        let client = WhisparrClient(config: whisparr)
-        let all = try await client.fetchAllMovies()
-        let matched = filter.isEmpty
-            ? all
-            : all.filter { ($0.title ?? "").lowercased().contains(filter) }
-        let text = Self.formatSceneLibraryCondensed(matched, filter: filter)
-        return ToolCallOutput(text: text, rich: .libraryScenes(matched))
+        try await runLibraryList(
+            args: args, source: .whisparr, config: whisparr,
+            itemNounSingular: "scene", itemNounPlural: "scenes",
+            fetch: { try await WhisparrClient(config: self.whisparr).fetchAllMovies() },
+            filterMatch: { rec, q in (rec.title ?? "").lowercased().contains(q) },
+            line: { r in
+                let title = r.title ?? "(untitled)"
+                let yearPart = r.year.map { " (\($0))" } ?? ""
+                let fileMark = (r.hasFile ?? false) ? " · downloaded" : " · missing"
+                return "• \(title)\(yearPart)\(fileMark)"
+            },
+            rich: { .libraryScenes($0) }
+        )
     }
 
     private func whisparrCalendar() async throws -> ToolCallOutput {
-        guard whisparr.isConfigured else {
-            return ToolCallOutput(text: "Whisparr is not configured.")
+        try await runCalendar(source: .whisparr, config: whisparr) {
+            try await WhisparrClient(config: self.whisparr).fetchCalendar()
         }
-        let client = WhisparrClient(config: whisparr)
-        let items = try await client.fetchCalendar()
-        let text = Self.formatCalendarCondensed(items)
-        return ToolCallOutput(text: text, rich: .calendar(items))
     }
 
     private func addScene(_ args: JSONValue) async throws -> ToolCallOutput {
@@ -513,34 +567,15 @@ public actor LocalToolBackend: ToolBackend {
         guard let pick = chosen else {
             return ToolCallOutput(text: "Couldn't find any scenes matching '\(lookupQuery)'.")
         }
-        let profiles = try await client.fetchQualityProfiles()
-        let folders = try await client.fetchRootFolders()
-        let profile = profiles.first(where: { $0.id == chosenProfileId }) ?? profiles.first
-        let folder = folders.first(where: { $0.path == chosenFolderPath }) ?? folders.first
-        guard let profile, let folder else {
+        guard let (profile, folder) = try await Self.resolveAddDefaults(
+            client: client, serviceName: "Whisparr",
+            chosenProfileId: chosenProfileId, chosenFolderPath: chosenFolderPath
+        ) else {
             return ToolCallOutput(text: "Whisparr is missing a quality profile or root folder.")
         }
         try await client.addScene(pick, qualityProfileId: profile.id, rootFolderPath: folder.path)
         let yearPart = pick.year.map { " (\($0))" } ?? ""
         return ToolCallOutput(text: "Added '\(pick.title)\(yearPart)' to Whisparr (profile: \(profile.name), folder: \(folder.path)).")
-    }
-
-    private static func formatSceneLibraryCondensed(_ items: [WhisparrLibraryRecord], filter: String) -> String {
-        guard !items.isEmpty else {
-            return filter.isEmpty ? "Whisparr library is empty." : "No scenes in your library match '\(filter)'."
-        }
-        let top = items.prefix(20)
-        let lines = top.map { r -> String in
-            let title = r.title ?? "(untitled)"
-            let yearPart = r.year.map { " (\($0))" } ?? ""
-            let fileMark = (r.hasFile ?? false) ? " · downloaded" : " · missing"
-            return "• \(title)\(yearPart)\(fileMark)"
-        }
-        var out = "Whisparr library — \(items.count) scene\(items.count == 1 ? "" : "s")"
-        if !filter.isEmpty { out += " matching '\(filter)'" }
-        out += ":\n" + lines.joined(separator: "\n")
-        if items.count > top.count { out += "\n(\(items.count - top.count) more not shown)" }
-        return out
     }
 
     private static func formatCalendarCondensed(_ items: [UpcomingItem]) -> String {
@@ -563,6 +598,256 @@ public actor LocalToolBackend: ToolBackend {
         return out
     }
 
+    // MARK: - TMDB tools
+
+    private func tmdbSearchPerson(_ args: JSONValue) async throws -> ToolCallOutput {
+        let query = Self.stringArg(args, key: "query")
+        guard !query.isEmpty else {
+            return ToolCallOutput(text: "Please provide a person name to search for.")
+        }
+        let client = TMDBClient(apiKey: tmdbApiKey)
+        let results = try await client.searchPerson(query: query)
+        guard !results.isEmpty else {
+            return ToolCallOutput(text: "No people found on TMDB for '\(query)'.")
+        }
+        let top = results.prefix(8)
+        var out = "Top \(top.count) match\(top.count == 1 ? "" : "es") for '\(query)' (pass personId to tmdb_person_movie_credits or tmdb_person_tv_credits):"
+        for p in top {
+            let dept = p.knownForDepartment.map { " (\($0))" } ?? ""
+            out += "\n- \(p.name)\(dept) — personId: \(p.id)"
+        }
+        return ToolCallOutput(text: out)
+    }
+
+    private func tmdbPersonMovieCredits(_ args: JSONValue) async throws -> ToolCallOutput {
+        let personId = Self.intArg(args, key: "personId")
+        guard personId != 0 else {
+            return ToolCallOutput(text: "Need a personId — run tmdb_search_person first.")
+        }
+        let client = TMDBClient(apiKey: tmdbApiKey)
+        let credits = try await client.personMovieCredits(personId: personId)
+        // TMDB returns credits unordered. Rank by `popularity` (TMDB's own
+        // "what people are searching/watching" metric) descending — voteAverage
+        // is misleading here because Sandler's best-rated entries are 7.5+
+        // niche cameos with a handful of votes, not Happy Gilmore (6.0, 4k
+        // votes). Tie-break on year desc so recent stuff floats.
+        let ranked = credits.sorted { lhs, rhs in
+            let lp = lhs.popularity ?? 0
+            let rp = rhs.popularity ?? 0
+            if lp != rp { return lp > rp }
+            return (lhs.year ?? 0) > (rhs.year ?? 0)
+        }
+        let libraryMap = await radarrLibraryByTMDBId()
+        let results = Self.tmdbMoviesToSearchResults(ranked.prefix(25), libraryMap: libraryMap)
+        guard !results.isEmpty else {
+            return ToolCallOutput(text: "TMDB returned no movie credits for personId \(personId).")
+        }
+        let text = Self.formatTMDBSummary(results, kind: "movie", origin: "personId \(personId)")
+        return ToolCallOutput(text: text, rich: .searchMovieResults(results))
+    }
+
+    private func tmdbPersonTVCredits(_ args: JSONValue) async throws -> ToolCallOutput {
+        let personId = Self.intArg(args, key: "personId")
+        guard personId != 0 else {
+            return ToolCallOutput(text: "Need a personId — run tmdb_search_person first.")
+        }
+        let client = TMDBClient(apiKey: tmdbApiKey)
+        let credits = try await client.personTVCredits(personId: personId)
+        // Same popularity-desc ranking rationale as the movie path — see
+        // tmdbPersonMovieCredits for why voteAverage is the wrong key here.
+        let ranked = credits.sorted { lhs, rhs in
+            let lp = lhs.popularity ?? 0
+            let rp = rhs.popularity ?? 0
+            if lp != rp { return lp > rp }
+            return (lhs.year ?? 0) > (rhs.year ?? 0)
+        }
+        let results = Self.tmdbTVToSearchResults(ranked.prefix(25))
+        guard !results.isEmpty else {
+            return ToolCallOutput(text: "TMDB returned no TV credits for personId \(personId).")
+        }
+        let text = Self.formatTMDBSummary(results, kind: "series", origin: "personId \(personId)")
+        return ToolCallOutput(text: text, rich: .searchSeriesResults(results))
+    }
+
+    private func tmdbDiscoverMovies(_ args: JSONValue) async throws -> ToolCallOutput {
+        let genreToken = Self.stringArg(args, key: "genre")
+        let startYear = Self.optionalIntArg(args, key: "startYear")
+        let endYear = Self.optionalIntArg(args, key: "endYear")
+        let sortBy = Self.stringArg(args, key: "sortBy")
+        let resolvedSort = sortBy.isEmpty ? "popularity.desc" : sortBy
+        var genreIds: [Int] = []
+        if !genreToken.isEmpty {
+            if let id = TMDBGenres.movieId(for: genreToken) {
+                genreIds = [id]
+            } else {
+                return ToolCallOutput(text: "Unknown movie genre '\(genreToken)'. Try: \(Self.knownMovieGenres()).")
+            }
+        }
+        let client = TMDBClient(apiKey: tmdbApiKey)
+        let movies = try await client.discoverMovies(
+            genreIds: genreIds, startYear: startYear, endYear: endYear, sortBy: resolvedSort
+        )
+        let libraryMap = await radarrLibraryByTMDBId()
+        let results = Self.tmdbMoviesToSearchResults(movies.prefix(25), libraryMap: libraryMap)
+        guard !results.isEmpty else {
+            return ToolCallOutput(text: "TMDB returned no movies matching that filter.")
+        }
+        let descParts = [
+            genreToken.isEmpty ? nil : "genre=\(genreToken)",
+            startYear.map { "from \($0)" },
+            endYear.map { "to \($0)" },
+        ].compactMap { $0 }
+        let origin = descParts.isEmpty ? "discover" : descParts.joined(separator: ", ")
+        let text = Self.formatTMDBSummary(results, kind: "movie", origin: origin)
+        return ToolCallOutput(text: text, rich: .searchMovieResults(results))
+    }
+
+    private func tmdbDiscoverSeries(_ args: JSONValue) async throws -> ToolCallOutput {
+        let genreToken = Self.stringArg(args, key: "genre")
+        let startYear = Self.optionalIntArg(args, key: "startYear")
+        let endYear = Self.optionalIntArg(args, key: "endYear")
+        let sortBy = Self.stringArg(args, key: "sortBy")
+        let resolvedSort = sortBy.isEmpty ? "popularity.desc" : sortBy
+        var genreIds: [Int] = []
+        if !genreToken.isEmpty {
+            if let id = TMDBGenres.tvId(for: genreToken) {
+                genreIds = [id]
+            } else {
+                return ToolCallOutput(text: "Unknown TV genre '\(genreToken)'. Try: \(Self.knownTVGenres()).")
+            }
+        }
+        let client = TMDBClient(apiKey: tmdbApiKey)
+        let shows = try await client.discoverTV(
+            genreIds: genreIds, startYear: startYear, endYear: endYear, sortBy: resolvedSort
+        )
+        let results = Self.tmdbTVToSearchResults(shows.prefix(25))
+        guard !results.isEmpty else {
+            return ToolCallOutput(text: "TMDB returned no series matching that filter.")
+        }
+        let descParts = [
+            genreToken.isEmpty ? nil : "genre=\(genreToken)",
+            startYear.map { "from \($0)" },
+            endYear.map { "to \($0)" },
+        ].compactMap { $0 }
+        let origin = descParts.isEmpty ? "discover" : descParts.joined(separator: ", ")
+        let text = Self.formatTMDBSummary(results, kind: "series", origin: origin)
+        return ToolCallOutput(text: text, rich: .searchSeriesResults(results))
+    }
+
+    // MARK: - TMDB → SearchResult adapters
+
+    /// Build `SearchResult`s the rest of the UI already knows how to render
+    /// (poster carousel, tap-to-add via ConfirmAddCard). Movie `id` carries
+    /// the tmdbId — Radarr's add path takes it as-is. `libraryMap` maps
+    /// tmdbId → Radarr movie id so already-owned results get tagged with
+    /// `inLibraryArrId` — the UI then routes the tap to DetailView instead
+    /// of ConfirmAddCard.
+    private static func tmdbMoviesToSearchResults(
+        _ movies: some Sequence<TMDBMovieSummary>,
+        libraryMap: [Int: Int] = [:]
+    ) -> [SearchResult] {
+        movies.map { m in
+            SearchResult(
+                id: m.id,
+                foreignId: String(m.id),
+                title: m.title,
+                subtitle: nil,
+                year: m.year,
+                rating: m.voteAverage,
+                imdb: nil, rottenTomatoes: nil, metacritic: nil,
+                overview: m.overview,
+                runtime: nil,
+                genres: [],
+                network: nil,
+                certification: nil,
+                posterURL: TMDBClient.imageURL(path: m.posterPath),
+                source: .radarr,
+                inLibraryArrId: libraryMap[m.id]
+            )
+        }
+    }
+
+    /// Build a `tmdbId → movie.id` map of the Radarr library so TMDB-sourced
+    /// results can be tagged as "owned" without each result paying for its
+    /// own lookup. Returns an empty map if Radarr isn't configured or the
+    /// fetch fails — callers should still proceed (owned status just won't be
+    /// shown). Demo mode handled by RadarrClient.fetchAllMovies.
+    private func radarrLibraryByTMDBId() async -> [Int: Int] {
+        guard radarr.isConfigured else { return [:] }
+        let client = RadarrClient(config: radarr)
+        guard let library = try? await client.fetchAllMovies() else { return [:] }
+        var map: [Int: Int] = [:]
+        for rec in library {
+            if let tmdb = rec.tmdbId, let arrId = rec.id {
+                map[tmdb] = arrId
+            }
+        }
+        return map
+    }
+
+    /// TV path is fuzzier: Sonarr indexes by tvdbId, but TMDB exposes its own
+    /// tv id. We stash 0 in `id` so the add-tap path falls back to a title
+    /// lookup — Sonarr resolves the right tvdbId at add-time. Good enough for
+    /// popular titles; ambiguous ones surface in ConfirmAddCard for review.
+    private static func tmdbTVToSearchResults(_ shows: some Sequence<TMDBTVSummary>) -> [SearchResult] {
+        shows.map { s in
+            SearchResult(
+                id: 0,
+                foreignId: "",
+                title: s.name,
+                subtitle: nil,
+                year: s.year,
+                rating: s.voteAverage,
+                imdb: nil, rottenTomatoes: nil, metacritic: nil,
+                overview: s.overview,
+                runtime: nil,
+                genres: [],
+                network: nil,
+                certification: nil,
+                posterURL: TMDBClient.imageURL(path: s.posterPath),
+                source: .sonarr
+            )
+        }
+    }
+
+    private static func formatTMDBSummary(_ results: [SearchResult], kind: String, origin: String) -> String {
+        let ownedCount = results.filter { $0.inLibraryArrId != nil }.count
+        var out = "TMDB returned \(results.count) \(kind) result\(results.count == 1 ? "" : "s") (\(origin))."
+        if ownedCount > 0 {
+            out += " \(ownedCount) already in the user's library (marked OWNED)."
+        }
+        out += " Top:"
+        for r in results.prefix(15) {
+            let year = r.year.map { " (\($0))" } ?? ""
+            let rating = r.rating.map { String(format: " ★%.1f", $0) } ?? ""
+            let owned = r.inLibraryArrId != nil ? " [OWNED]" : ""
+            out += "\n- \(r.title)\(year)\(rating)\(owned) — tmdbId: \(r.id == 0 ? "n/a" : String(r.id))"
+        }
+        if results.count > 15 { out += "\n…and \(results.count - 15) more." }
+        return out
+    }
+
+    private static func knownMovieGenres() -> String {
+        ["action", "comedy", "crime", "documentary", "drama", "fantasy",
+         "horror", "mystery", "romance", "science fiction", "thriller", "western"]
+            .joined(separator: ", ")
+    }
+
+    private static func knownTVGenres() -> String {
+        ["animation", "comedy", "crime", "documentary", "drama",
+         "mystery", "reality", "sci-fi & fantasy", "war & politics", "western"]
+            .joined(separator: ", ")
+    }
+
+    private static func optionalIntArg(_ value: JSONValue, key: String) -> Int? {
+        guard case .object(let dict) = value, let v = dict[key] else { return nil }
+        switch v {
+        case .number(let n): return Int(n)
+        case .string(let s): return Int(s)
+        case .null: return nil
+        default: return nil
+        }
+    }
 }
 
 public enum LocalToolError: Error, Equatable, Sendable, LocalizedError {

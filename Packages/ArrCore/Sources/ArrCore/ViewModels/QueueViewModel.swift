@@ -21,6 +21,35 @@ public final class QueueViewModel: ObservableObject {
     @Published public private(set) var tonightExpanded: Bool = false
 
     public func setTonightExpanded(_ expanded: Bool) { tonightExpanded = expanded }
+
+    /// Source-keyed accessors for the per-arr queue / error pair. Replaces
+    /// the four-way switches that PopoverContentView, DetailView and others
+    /// used to redeclare locally.
+    public func items(for source: QueueItem.Source) -> [QueueItem] {
+        switch source {
+        case .radarr:   return radarr
+        case .sonarr:   return sonarr
+        case .lidarr:   return lidarr
+        case .whisparr: return whisparr
+        }
+    }
+
+    public func error(for source: QueueItem.Source) -> String? {
+        switch source {
+        case .radarr:   return radarrError
+        case .sonarr:   return sonarrError
+        case .lidarr:   return lidarrError
+        case .whisparr: return whisparrError
+        }
+    }
+
+    /// True when no arr has any queued items. Used by both surfaces to show
+    /// the "Nothing in queue" empty state instead of dispatching to per-arr
+    /// sections that would each render their own empty placeholders.
+    public var allEmpty: Bool {
+        radarr.isEmpty && sonarr.isEmpty && lidarr.isEmpty && whisparr.isEmpty
+    }
+
     @Published public private(set) var health: HealthResult = .empty
     @Published public private(set) var isLoading = false
     @Published public private(set) var lastError: String?

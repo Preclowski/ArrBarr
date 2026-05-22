@@ -76,6 +76,11 @@ public final class ConfigStore: ObservableObject {
     @Published public var aiEnabled: Bool
     @Published public var chatProvider: ChatProvider
     @Published public var openai: OpenAIConfig
+    /// Empty string disables TMDB-backed chat tools (`tmdb_search_person`,
+    /// `tmdb_person_credits`, `tmdb_discover_*`). When non-empty, the chat
+    /// tool catalog appends those tools so the LLM can search by actor /
+    /// genre / decade.
+    @Published public var tmdbApiKey: String
 
     public static let needsYouOrderKey = "needsyou"
     public static let tonightOrderKey = "tonight"
@@ -121,6 +126,7 @@ public final class ConfigStore: ObservableObject {
     private static let aiEnabledKey = "ArrBarr.aiEnabled"
     private static let chatProviderKey = "ArrBarr.chatProvider"
     private static let openaiConfigKey = "ArrBarr.openai"
+    private static let tmdbApiKeyKey = "ArrBarr.tmdbApiKey"
     private static let keychainMigrationDoneKey = "ArrBarr.keychainMigrationDone"
 
     public init(defaults: UserDefaults = .standard) {
@@ -173,6 +179,7 @@ public final class ConfigStore: ObservableObject {
         } else {
             self.openai = .empty
         }
+        self.tmdbApiKey = defaults.string(forKey: Self.tmdbApiKeyKey) ?? ""
 
         for kind in ServiceKind.allCases {
             publisher(for: kind).dropFirst().sink { [weak self] cfg in
@@ -249,6 +256,33 @@ public final class ConfigStore: ObservableObject {
                 self?.defaults.set(data, forKey: Self.openaiConfigKey)
             }
         }.store(in: &cancellables)
+        $tmdbApiKey.dropFirst().sink { [weak self] val in
+            self?.defaults.set(val, forKey: Self.tmdbApiKeyKey)
+        }.store(in: &cancellables)
+    }
+
+    /// `true` when the user has supplied a TMDB v3 API key. Drives whether the
+    /// discovery chat tools are advertised to the LLM.
+    public var tmdbEnabled: Bool { !tmdbApiKey.isEmpty }
+
+    /// Lookup the matching `ServiceConfig` for an arr `Source`. Replaces the
+    /// four-way switch that several views and view-models duplicate when they
+    /// need to pull the poster auth key, base URL, etc.
+    public func serviceConfig(for source: QueueItem.Source) -> ServiceConfig {
+        switch source {
+        case .radarr:   return radarr
+        case .sonarr:   return sonarr
+        case .lidarr:   return lidarr
+        case .whisparr: return whisparr
+        }
+    }
+
+    /// True when posters from this source should render blurred (currently
+    /// only Whisparr, gated by `blurWhisparrPosters`). Eight or so views
+    /// previously inlined `source == .whisparr && blurWhisparrPosters`; this
+    /// keeps the policy in one place.
+    public func shouldBlurPoster(for source: QueueItem.Source) -> Bool {
+        source == .whisparr && blurWhisparrPosters
     }
 
     private func publisher(for kind: ServiceKind) -> Published<ServiceConfig>.Publisher {

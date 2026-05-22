@@ -5,7 +5,7 @@ public struct UpcomingRowView: View {
     @EnvironmentObject var configStore: ConfigStore
 
     private var shouldBlur: Bool {
-        item.source == .whisparr && configStore.blurWhisparrPosters
+        configStore.shouldBlurPoster(for: item.source)
     }
 
     public var body: some View {
@@ -13,7 +13,7 @@ public struct UpcomingRowView: View {
             guard let entityId = item.entityId else { return }
             DetailRequest.post(
                 DetailRequest.syntheticItem(
-                    source: queueSource,
+                    source: item.source,
                     entityId: entityId,
                     title: item.title,
                     posterURL: item.posterURL,
@@ -36,7 +36,7 @@ public struct UpcomingRowView: View {
                     apiKey: item.posterRequiresAuth ? apiKeyForSource : nil,
                     size: posterSize,
                     cornerRadius: 3,
-                    fallbackSymbol: fallbackSymbol
+                    fallbackSymbol: item.source.symbol
                 )
             }
 
@@ -79,15 +79,6 @@ public struct UpcomingRowView: View {
         .contentShape(Rectangle())
     }
 
-    private var queueSource: QueueItem.Source {
-        switch item.source {
-        case .radarr: return .radarr
-        case .sonarr: return .sonarr
-        case .lidarr: return .lidarr
-        case .whisparr: return .whisparr
-        }
-    }
-
     private var posterSize: CGSize {
         switch item.source {
         case .radarr, .sonarr, .whisparr: return CGSize(width: 24, height: 36)
@@ -95,22 +86,8 @@ public struct UpcomingRowView: View {
         }
     }
 
-    private var fallbackSymbol: String {
-        switch item.source {
-        case .radarr: return "film"
-        case .sonarr: return "tv"
-        case .lidarr: return "music.note"
-        case .whisparr: return "flame"
-        }
-    }
-
     private var apiKeyForSource: String? {
-        switch item.source {
-        case .radarr: return configStore.radarr.apiKey
-        case .sonarr: return configStore.sonarr.apiKey
-        case .lidarr: return configStore.lidarr.apiKey
-        case .whisparr: return configStore.whisparr.apiKey
-        }
+        configStore.serviceConfig(for: item.source).apiKey
     }
 
     private var tooltipText: String {
