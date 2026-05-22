@@ -151,12 +151,11 @@ private struct MessageBubble: View {
     let message: ChatMessage
     @State private var expanded = false
     var body: some View {
-        HStack(alignment: .top, spacing: 8) {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
             Image(systemName: symbol)
                 .font(.system(size: 12))
                 .foregroundStyle(tint)
                 .frame(width: 18, alignment: .center)
-                .padding(.top, 2)
             VStack(alignment: .leading, spacing: 2) {
                 if message.role == .tool {
                     Button {
@@ -173,7 +172,6 @@ private struct MessageBubble: View {
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    .padding(.top, 2)
                     if expanded, let result = message.toolResult, !result.isEmpty {
                         Text(result)
                             .font(.system(size: 11).monospaced())
