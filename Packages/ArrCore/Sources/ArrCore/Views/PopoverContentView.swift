@@ -124,10 +124,40 @@ public struct PopoverContentView: View {
     }
 
     private var mainContent: some View {
-        VStack(spacing: 0) {
-            if showSearch {
-                searchOverlayContent
-            } else if let detailItem {
+        // DetailView is rendered as a ZStack overlay so the underlying chat /
+        // queue / upcoming view stays alive while it's on screen. That keeps
+        // their scroll positions, lazy state, etc. intact — tapping Back lands
+        // the user back in the same carousel offset they came from. Search +
+        // History still use the swap pattern (they replace the surface fully
+        // and don't share state worth preserving).
+        ZStack {
+            VStack(spacing: 0) {
+                if showSearch {
+                    searchOverlayContent
+                } else if let historySource {
+                    HistoryView(
+                        source: historySource,
+                        viewModel: viewModel,
+                        refreshNonce: historyRefreshNonce,
+                        onClose: { self.historySource = nil }
+                    )
+                } else if anyArrConfigured {
+                    tabBar
+                    Divider()
+                    Group {
+                        switch selectedTab {
+                        case .queue: queueContent
+                        case .upcoming: upcomingContent
+                        case .chat:
+                            chatTabContent
+                        }
+                    }
+                } else {
+                    emptyState
+                }
+            }
+
+            if let detailItem {
                 DetailView(
                     item: detailItem,
                     onBack: {
@@ -135,26 +165,12 @@ public struct PopoverContentView: View {
                     },
                     viewModel: viewModel
                 )
-            } else if let historySource {
-                HistoryView(
-                    source: historySource,
-                    viewModel: viewModel,
-                    refreshNonce: historyRefreshNonce,
-                    onClose: { self.historySource = nil }
-                )
-            } else if anyArrConfigured {
-                tabBar
-                Divider()
-                Group {
-                    switch selectedTab {
-                    case .queue: queueContent
-                    case .upcoming: upcomingContent
-                    case .chat:
-                        chatTabContent
-                    }
-                }
-            } else {
-                emptyState
+                #if os(macOS)
+                .background(Color(nsColor: .windowBackgroundColor))
+                #else
+                .background(Color(uiColor: .systemBackground))
+                #endif
+                .transition(.opacity)
             }
         }
         .frame(width: 400, height: 600)
