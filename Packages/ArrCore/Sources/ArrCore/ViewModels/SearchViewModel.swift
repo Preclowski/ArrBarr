@@ -4,7 +4,8 @@ import Combine
 @MainActor
 public final class SearchViewModel: ObservableObject {
     @Published var query = ""
-    @Published var results: [SearchResult] = []
+    @Published var radarrResults: [SearchResult] = []
+    @Published var sonarrResults: [SearchResult] = []
     @Published var isSearching = false
     @Published var errorMessage: String?
 
@@ -15,7 +16,6 @@ public final class SearchViewModel: ObservableObject {
     @Published var addError: String?
     @Published var isAdding = false
 
-    private var libraryIds: Set<Int> = []
     private var searchTask: Task<Void, Never>?
     private var radarrClient: SearchClient?
     private var sonarrClient: SearchClient?
@@ -25,38 +25,47 @@ public final class SearchViewModel: ObservableObject {
         if sonarrConfig.isConfigured { sonarrClient = SearchClient(config: sonarrConfig, source: .sonarr) }
     }
 
-    func onQueryChange(source: QueueItem.Source) {
+    func onQueryChange() {
         searchTask?.cancel()
-        results = []
+        radarrResults = []
+        sonarrResults = []
         errorMessage = nil
         guard !query.trimmingCharacters(in: .whitespaces).isEmpty else { return }
         searchTask = Task {
             try? await Task.sleep(for: .milliseconds(300))
             guard !Task.isCancelled else { return }
-            await search(source: source)
+            await search()
         }
     }
 
-    func resetForSource() {
-        results = []
-        errorMessage = nil
-        libraryIds = []
+    public func reset() {
         searchTask?.cancel()
+        query = ""
+        radarrResults = []
+        sonarrResults = []
+        errorMessage = nil
     }
 
-    private func search(source: QueueItem.Source) async {
-        let client = client(for: source)
-        guard let client else { return }
+    private func search() async {
         isSearching = true
         defer { isSearching = false }
+        async let radarr = fetchOne(client: radarrClient)
+        async let sonarr = fetchOne(client: sonarrClient)
+        let (rRes, sRes) = await (radarr, sonarr)
+        radarrResults = rRes
+        sonarrResults = sRes
+    }
+
+    private func fetchOne(client: SearchClient?) async -> [SearchResult] {
+        guard let client else { return [] }
         do {
             async let fetchResults = client.lookup(query: query)
             async let fetchLibrary = client.fetchLibraryIds()
             let (raw, ids) = try await (fetchResults, fetchLibrary)
-            libraryIds = ids
-            results = raw.filter { !ids.contains($0.id) }
+            return raw.filter { !ids.contains($0.id) }
         } catch {
             errorMessage = error.localizedDescription
+            return []
         }
     }
 
@@ -79,7 +88,7 @@ public final class SearchViewModel: ObservableObject {
         do {
             try await client.addMovie(result, qualityProfileId: qualityProfileId,
                                       rootFolderPath: rootFolderPath, monitor: monitor)
-            results.removeAll { $0.id == result.id }
+            radarrResults.removeAll { $0.id == result.id }
         } catch {
             addError = error.localizedDescription
         }
@@ -95,7 +104,7 @@ public final class SearchViewModel: ObservableObject {
             try await client.addSeries(result, qualityProfileId: qualityProfileId,
                                        rootFolderPath: rootFolderPath, monitor: monitor,
                                        seriesType: seriesType, seasonFolder: seasonFolder)
-            results.removeAll { $0.id == result.id }
+            sonarrResults.removeAll { $0.id == result.id }
         } catch {
             addError = error.localizedDescription
         }

@@ -29,6 +29,7 @@ public struct PopoverContentView: View {
     @StateObject private var chatHolder = ChatViewModelHolder()
     @State private var searchResult: SearchResult?
     @State private var detailItem: QueueItem?
+    @State private var showSearch = false
 
     private let maxScrollHeight: CGFloat = 520
 
@@ -37,14 +38,7 @@ public struct PopoverContentView: View {
     private var lidarrConfigured: Bool { isVisible(configStore.lidarr) }
     private var anyArrConfigured: Bool { sonarrConfigured || radarrConfigured || lidarrConfigured }
 
-    private var searchSources: [QueueItem.Source] {
-        [
-            sonarrConfigured ? QueueItem.Source.sonarr : nil,
-            radarrConfigured ? QueueItem.Source.radarr : nil,
-        ].compactMap { $0 }
-    }
-
-    private var searchConfigured: Bool { !searchSources.isEmpty }
+    private var searchAvailable: Bool { sonarrConfigured || radarrConfigured }
 
     private var chatAvailable: Bool {
         guard configStore.aiEnabled else { return false }
@@ -76,7 +70,6 @@ public struct PopoverContentView: View {
     enum Tab: String, CaseIterable {
         case queue = "Queue"
         case upcoming = "Upcoming"
-        case search = "Search"
         case chat = "Chat"
     }
 
@@ -93,15 +86,6 @@ public struct PopoverContentView: View {
             .onChange(of: ChatViewModelHolder.signature(store: configStore)) { _, _ in
                 chatHolder.reconfigure(store: configStore)
             }
-            .onChange(of: selectedTab) { _, newTab in
-                if newTab != .search { searchResult = nil }
-            }
-            .onChange(of: searchConfigured) { _, configured in
-                if !configured && selectedTab == .search {
-                    selectedTab = .queue
-                    searchResult = nil
-                }
-            }
             .onChange(of: chatAvailable) { _, available in
                 if !available && selectedTab == .chat {
                     selectedTab = .queue
@@ -117,7 +101,9 @@ public struct PopoverContentView: View {
 
     private var mainContent: some View {
         VStack(spacing: 0) {
-            if let detailItem {
+            if showSearch {
+                searchOverlayContent
+            } else if let detailItem {
                 DetailView(
                     item: detailItem,
                     onBack: {
@@ -141,19 +127,6 @@ public struct PopoverContentView: View {
                     case .upcoming: upcomingContent
                     case .chat:
                         chatTabContent
-                    case .search:
-                        if let result = searchResult {
-                            SearchAddPanel(result: result, viewModel: searchViewModel) {
-                                searchResult = nil
-                            }
-                        } else {
-                            SearchView(
-                                viewModel: searchViewModel,
-                                configuredSources: searchSources
-                            ) { result in
-                                searchResult = result
-                            }
-                        }
                     }
                 }
             } else {
@@ -162,6 +135,41 @@ public struct PopoverContentView: View {
             footer
         }
         .frame(width: 400, height: 600)
+    }
+
+    @ViewBuilder
+    private var searchOverlayContent: some View {
+        if let result = searchResult {
+            SearchAddPanel(result: result, viewModel: searchViewModel) {
+                searchResult = nil
+            }
+        } else {
+            VStack(spacing: 0) {
+                HStack(spacing: 6) {
+                    Button(action: closeSearch) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 12, weight: .semibold))
+                    }
+                    .buttonStyle(.plain)
+                    Text("Add", bundle: .module)
+                        .font(.system(size: 13, weight: .semibold))
+                    Spacer()
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                Divider()
+                SearchView(viewModel: searchViewModel) { result in
+                    searchResult = result
+                }
+                .environmentObject(configStore)
+            }
+        }
+    }
+
+    private func closeSearch() {
+        showSearch = false
+        searchResult = nil
+        searchViewModel.reset()
     }
 
     // MARK: - Tonight banner
@@ -230,9 +238,8 @@ public struct PopoverContentView: View {
     private var visibleTabs: [Tab] {
         Tab.allCases.filter { tab in
             switch tab {
-            case .search: return searchConfigured
-            case .chat:   return chatAvailable
-            default:      return true
+            case .chat:  return chatAvailable
+            default:     return true
             }
         }
     }
@@ -573,6 +580,16 @@ public struct PopoverContentView: View {
                 .controlSize(.small)
                 .help(Text("Refresh", bundle: .module))
                 .disabled(viewModel.isRefreshing && historySource == nil)
+
+                if searchAvailable {
+                    Button(action: { searchViewModel.reset(); showSearch = true }) {
+                        Image(systemName: "plus")
+                            .frame(width: 14, height: 14)
+                    }
+                    .modifier(GlassButtonStyle())
+                    .controlSize(.small)
+                    .help(Text("Add new", bundle: .module))
+                }
 
                 Spacer()
 

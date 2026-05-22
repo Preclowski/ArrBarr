@@ -42,7 +42,6 @@ public struct MainWindowView: View {
         /// All configured sources, grouped (parity with popover Queue tab).
         case allQueue
         case upcoming
-        case search
         case chat
         /// Queue filtered to one source.
         case source(QueueItem.Source)
@@ -55,6 +54,7 @@ public struct MainWindowView: View {
     @StateObject private var searchViewModel = SearchViewModel()
     @StateObject private var chatHolder = ChatViewModelHolder()
     @State private var searchResult: SearchResult?
+    @State private var showSearch = false
 
     // MARK: - Visibility helpers (mirrored from PopoverContentView)
 
@@ -63,13 +63,7 @@ public struct MainWindowView: View {
     private var lidarrConfigured: Bool { isVisible(configStore.lidarr) }
     private var anyArrConfigured: Bool { sonarrConfigured || radarrConfigured || lidarrConfigured }
 
-    private var searchSources: [QueueItem.Source] {
-        [
-            sonarrConfigured ? QueueItem.Source.sonarr : nil,
-            radarrConfigured ? QueueItem.Source.radarr : nil,
-        ].compactMap { $0 }
-    }
-    private var searchConfigured: Bool { !searchSources.isEmpty }
+    private var searchConfigured: Bool { sonarrConfigured || radarrConfigured }
 
     private var chatAvailable: Bool {
         guard configStore.aiEnabled else { return false }
@@ -128,11 +122,43 @@ public struct MainWindowView: View {
                 .disabled(viewModel.isRefreshing)
             }
             ToolbarItem(placement: .primaryAction) {
+                Button(action: { searchViewModel.reset(); showSearch = true }) {
+                    Image(systemName: "plus")
+                }
+                .help(Text("Add new"))
+                .disabled(!searchConfigured)
+            }
+            ToolbarItem(placement: .primaryAction) {
                 Button(action: onOpenSettings) {
                     Image(systemName: "gearshape")
                 }
                 .help(Text("Settings…"))
                 .keyboardShortcut(",", modifiers: .command)
+            }
+        }
+        .sheet(isPresented: $showSearch) {
+            NavigationStack {
+                if let result = searchResult {
+                    SearchAddPanel(result: result, viewModel: searchViewModel) {
+                        searchResult = nil
+                        showSearch = false
+                    }
+                } else {
+                    SearchView(viewModel: searchViewModel) { result in
+                        searchResult = result
+                    }
+                    .environmentObject(configStore)
+                }
+            }
+            .frame(minWidth: 480, minHeight: 560)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        showSearch = false
+                        searchResult = nil
+                        searchViewModel.reset()
+                    }
+                }
             }
         }
         .navigationTitle(navigationTitle)
@@ -142,7 +168,6 @@ public struct MainWindowView: View {
         switch selection {
         case .allQueue: return String(localized: "Queue")
         case .upcoming: return String(localized: "Upcoming")
-        case .search:   return String(localized: "Search")
         case .chat:     return String(localized: "Chat")
         case .source(let s): return s.displayName
         }
@@ -158,10 +183,6 @@ public struct MainWindowView: View {
                         .tag(Destination.allQueue)
                     Label("Upcoming", systemImage: "calendar")
                         .tag(Destination.upcoming)
-                }
-                if searchConfigured {
-                    Label("Search", systemImage: "magnifyingglass")
-                        .tag(Destination.search)
                 }
                 if chatAvailable {
                     Label("Chat", systemImage: "sparkles")
@@ -236,8 +257,6 @@ public struct MainWindowView: View {
                 queueScroll(sources: [s])
             case .upcoming:
                 upcomingContent
-            case .search:
-                searchContent
             case .chat:
                 chatContent
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -301,22 +320,6 @@ public struct MainWindowView: View {
             ChatUnavailableView(reason: .providerUnavailable)
         } else {
             ChatView(viewModel: chatHolder.vm)
-        }
-    }
-
-    @ViewBuilder
-    private var searchContent: some View {
-        if let result = searchResult {
-            SearchAddPanel(result: result, viewModel: searchViewModel) {
-                searchResult = nil
-            }
-        } else {
-            SearchView(
-                viewModel: searchViewModel,
-                configuredSources: searchSources
-            ) { result in
-                searchResult = result
-            }
         }
     }
 

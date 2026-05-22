@@ -4182,6 +4182,30 @@
     },
     "Tool call: %@": {
       "extractionState": "manual"
+    },
+    "Add": {
+      "extractionState": "manual"
+    },
+    "Add new": {
+      "extractionState": "manual"
+    },
+    "Search movies and TV series": {
+      "extractionState": "manual"
+    },
+    "Start typing to search across Radarr and Sonarr.": {
+      "extractionState": "manual"
+    },
+    "Movies": {
+      "extractionState": "manual"
+    },
+    "Series": {
+      "extractionState": "manual"
+    },
+    "No movies match this query.": {
+      "extractionState": "manual"
+    },
+    "No series match this query.": {
+      "extractionState": "manual"
     }
   }
 }
