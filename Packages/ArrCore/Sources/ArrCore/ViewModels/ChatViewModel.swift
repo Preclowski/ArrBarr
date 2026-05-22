@@ -43,6 +43,38 @@ public final class ChatViewModel: ObservableObject {
         pendingResume = nil
     }
 
+    /// User-initiated add (tap on a search-result poster in chat). Drives the
+    /// exact same confirmation surface as an LLM-proposed add — pushes a
+    /// `ToolCall` into `pendingConfirm`, waits for the user to accept (with
+    /// possibly tweaked args) or cancel, runs the tool, appends a `.tool`
+    /// message. Bypasses the LLM entirely.
+    public func requestAdd(toolName: String, draftArgs: JSONValue, userIntent: String) async {
+        guard pendingResume == nil else { return }
+        // Surface the intent as a user message so the chat reads naturally.
+        messages.append(ChatMessage(role: .user, content: userIntent))
+        let call = ToolCall(name: toolName, arguments: draftArgs)
+        isThinking = true
+        defer { isThinking = false }
+        guard let confirmedArgs = await awaitConfirm(call) else {
+            messages.append(ChatMessage(
+                role: .tool, content: toolName, toolCall: call,
+                toolResult: "(cancelled by user)"
+            ))
+            return
+        }
+        let output: ToolCallOutput
+        do {
+            output = try await invokeTool(toolName, confirmedArgs)
+        } catch {
+            output = ToolCallOutput(text: "(tool error: \(error.localizedDescription))")
+        }
+        let confirmedCall = ToolCall(name: toolName, arguments: confirmedArgs)
+        messages.append(ChatMessage(
+            role: .tool, content: toolName, toolCall: confirmedCall,
+            toolResult: output.text, richContent: output.rich
+        ))
+    }
+
     /// Wipe the conversation. Refuses to clear while a tool is pending so we
     /// don't leak a CheckedContinuation.
     public func clear() {

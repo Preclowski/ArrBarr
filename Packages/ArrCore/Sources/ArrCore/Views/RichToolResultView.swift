@@ -185,6 +185,13 @@ private struct SearchResultCard: View {
     var blurred: Bool = false
 
     var body: some View {
+        Button(action: requestAdd) {
+            cardContent
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var cardContent: some View {
         VStack(alignment: .leading, spacing: 4) {
             PosterBlurContainer(blurred: blurred, cornerRadius: 6) {
                 RemotePoster(
@@ -216,6 +223,36 @@ private struct SearchResultCard: View {
             }
         }
         .frame(width: 100)
+    }
+
+    private func requestAdd() {
+        let intent = String(localized: "Add \(result.title)", bundle: .module)
+        switch result.source {
+        case .sonarr:
+            AddRequest.post(
+                toolName: "sonarr_add_series",
+                draftArgs: .object(["tvdbId": .number(Double(result.id))]),
+                userIntent: intent
+            )
+        case .radarr:
+            AddRequest.post(
+                toolName: "radarr_add_movie",
+                draftArgs: .object(["tmdbId": .number(Double(result.id))]),
+                userIntent: intent
+            )
+        case .lidarr:
+            AddRequest.post(
+                toolName: "lidarr_add_artist",
+                draftArgs: .object(["foreignArtistId": .string(result.foreignId)]),
+                userIntent: intent
+            )
+        case .whisparr:
+            AddRequest.post(
+                toolName: "whisparr_add_scene",
+                draftArgs: .object(["foreignId": .string(result.foreignId)]),
+                userIntent: intent
+            )
+        }
     }
 }
 
@@ -309,6 +346,25 @@ private struct CalendarRowView: View {
     }
 
     var body: some View {
+        Button {
+            guard let entityId = item.entityId else { return }
+            DetailRequest.post(
+                DetailRequest.syntheticItem(
+                    source: queueSource,
+                    entityId: entityId,
+                    title: item.title,
+                    posterURL: item.posterURL,
+                    posterRequiresAuth: item.posterRequiresAuth
+                )
+            )
+        } label: {
+            rowContent
+        }
+        .buttonStyle(.plain)
+        .disabled(item.entityId == nil)
+    }
+
+    private var rowContent: some View {
         HStack(alignment: .top, spacing: 8) {
             PosterBlurContainer(blurred: effectivelyBlurred, cornerRadius: 4) {
                 RemotePoster(
@@ -337,6 +393,16 @@ private struct CalendarRowView: View {
         .frame(width: 200, alignment: .leading)
         .padding(8)
         .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 6))
+        .contentShape(Rectangle())
+    }
+
+    private var queueSource: QueueItem.Source {
+        switch item.source {
+        case .radarr: return .radarr
+        case .sonarr: return .sonarr
+        case .lidarr: return .lidarr
+        case .whisparr: return .whisparr
+        }
     }
 
     private static func dateLabel(_ date: Date) -> String {

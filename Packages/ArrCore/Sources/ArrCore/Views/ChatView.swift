@@ -30,6 +30,14 @@ public struct ChatView: View {
             Divider()
             inputBar
         }
+        .onReceive(NotificationCenter.default.publisher(for: .arrBarrChatRequestAdd)) { note in
+            guard
+                let toolName = note.userInfo?["toolName"] as? String,
+                let draftArgs = note.userInfo?["draftArgs"] as? JSONValue,
+                let intent = note.userInfo?["userIntent"] as? String
+            else { return }
+            Task { await viewModel.requestAdd(toolName: toolName, draftArgs: draftArgs, userIntent: intent) }
+        }
     }
 
     private var topBar: some View {
@@ -192,7 +200,9 @@ private struct MessageBubble: View {
                             content: rich,
                             sonarr: configStore.sonarr,
                             radarr: configStore.radarr,
-                            lidarr: configStore.lidarr
+                            lidarr: configStore.lidarr,
+                            whisparr: configStore.whisparr,
+                            blurWhisparr: configStore.blurWhisparrPosters
                         )
                         .padding(.top, 4)
                     } else {
