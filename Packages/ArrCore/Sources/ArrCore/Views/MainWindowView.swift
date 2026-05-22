@@ -42,7 +42,7 @@ public struct MainWindowView: View {
         /// All configured sources, grouped (parity with popover Queue tab).
         case allQueue
         case upcoming
-        case search
+        case chat
         /// Queue filtered to one source.
         case source(QueueItem.Source)
     }
@@ -52,22 +52,30 @@ public struct MainWindowView: View {
     @State private var historySource: QueueItem.Source?
     @State private var historyRefreshNonce = 0
     @StateObject private var searchViewModel = SearchViewModel()
+    @StateObject private var chatHolder = ChatViewModelHolder()
     @State private var searchResult: SearchResult?
+    @State private var showSearch = false
 
     // MARK: - Visibility helpers (mirrored from PopoverContentView)
 
     private var sonarrConfigured: Bool { isVisible(configStore.sonarr) }
     private var radarrConfigured: Bool { isVisible(configStore.radarr) }
     private var lidarrConfigured: Bool { isVisible(configStore.lidarr) }
-    private var anyArrConfigured: Bool { sonarrConfigured || radarrConfigured || lidarrConfigured }
+    private var whisparrConfigured: Bool { isVisible(configStore.whisparr) }
+    private var anyArrConfigured: Bool { sonarrConfigured || radarrConfigured || lidarrConfigured || whisparrConfigured }
 
-    private var searchSources: [QueueItem.Source] {
-        [
-            sonarrConfigured ? QueueItem.Source.sonarr : nil,
-            radarrConfigured ? QueueItem.Source.radarr : nil,
-        ].compactMap { $0 }
+    private var searchConfigured: Bool { sonarrConfigured || radarrConfigured || lidarrConfigured || whisparrConfigured }
+
+    private var chatAvailable: Bool {
+        guard configStore.aiEnabled else { return false }
+        switch configStore.chatProvider {
+        case .foundationModels:
+            if #available(macOS 26.0, *) { return true }
+            return false
+        case .openai:
+            return configStore.openai.isConfigured
+        }
     }
-    private var searchConfigured: Bool { !searchSources.isEmpty }
 
     private func isVisible(_ config: ServiceConfig) -> Bool {
         DemoMode.isActive ? config.enabled : config.isConfigured
@@ -94,20 +102,34 @@ public struct MainWindowView: View {
         .onAppear {
             searchViewModel.setup(
                 radarrConfig: configStore.radarr,
-                sonarrConfig: configStore.sonarr
+                sonarrConfig: configStore.sonarr,
+                lidarrConfig: configStore.lidarr,
+                whisparrConfig: configStore.whisparr
             )
+            chatHolder.reconfigure(store: configStore)
+        }
+        .onChange(of: ChatViewModelHolder.signature(store: configStore)) { _, _ in
+            chatHolder.reconfigure(store: configStore)
         }
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button(action: { Task { await viewModel.refresh() } }) {
-                    if viewModel.isRefreshing {
-                        ProgressView().controlSize(.small)
-                    } else {
-                        Image(systemName: "arrow.clockwise")
-                    }
+                    Image(systemName: "arrow.clockwise")
+                        .rotationEffect(.degrees(viewModel.isRefreshing ? 360 : 0))
+                        .animation(viewModel.isRefreshing
+                                   ? .linear(duration: 0.9).repeatForever(autoreverses: false)
+                                   : .default,
+                                   value: viewModel.isRefreshing)
                 }
                 .help(Text("Refresh"))
                 .disabled(viewModel.isRefreshing)
+            }
+            ToolbarItem(placement: .primaryAction) {
+                Button(action: { searchViewModel.reset(); showSearch = true }) {
+                    Image(systemName: "plus")
+                }
+                .help(Text("Add new"))
+                .disabled(!searchConfigured)
             }
             ToolbarItem(placement: .primaryAction) {
                 Button(action: onOpenSettings) {
@@ -117,14 +139,43 @@ public struct MainWindowView: View {
                 .keyboardShortcut(",", modifiers: .command)
             }
         }
+        .sheet(isPresented: $showSearch) {
+            NavigationStack {
+                if let result = searchResult {
+                    SearchAddPanel(result: result, viewModel: searchViewModel) {
+                        searchResult = nil
+                        showSearch = false
+                    }
+                } else {
+                    SearchView(viewModel: searchViewModel) { result in
+                        searchResult = result
+                    }
+                    .environmentObject(configStore)
+                }
+            }
+            .frame(minWidth: 480, minHeight: 560)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        showSearch = false
+                        searchResult = nil
+                        searchViewModel.reset()
+                    }
+                }
+            }
+        }
         .navigationTitle(navigationTitle)
+        .onReceive(NotificationCenter.default.publisher(for: .arrBarrOpenDetail)) { note in
+            guard let item = note.userInfo?["item"] as? QueueItem else { return }
+            withAnimation(.smooth(duration: 0.22)) { detailItem = item }
+        }
     }
 
     private var navigationTitle: String {
         switch selection {
         case .allQueue: return String(localized: "Queue")
         case .upcoming: return String(localized: "Upcoming")
-        case .search:   return String(localized: "Search")
+        case .chat:     return String(localized: "Chat")
         case .source(let s): return s.displayName
         }
     }
@@ -140,9 +191,9 @@ public struct MainWindowView: View {
                     Label("Upcoming", systemImage: "calendar")
                         .tag(Destination.upcoming)
                 }
-                if searchConfigured {
-                    Label("Search", systemImage: "magnifyingglass")
-                        .tag(Destination.search)
+                if chatAvailable {
+                    Label("Chat", systemImage: "sparkles")
+                        .tag(Destination.chat)
                 }
             } header: {
                 Text("Library")
@@ -153,6 +204,7 @@ public struct MainWindowView: View {
                     if sonarrConfigured { sourceRow(.sonarr) }
                     if radarrConfigured { sourceRow(.radarr) }
                     if lidarrConfigured { sourceRow(.lidarr) }
+                    if whisparrConfigured { sourceRow(.whisparr) }
                 } header: {
                     Text("Sources")
                 }
@@ -189,6 +241,7 @@ public struct MainWindowView: View {
         case .sonarr: return .indigo
         case .radarr: return .red
         case .lidarr: return .green
+        case .whisparr: return .pink
         }
     }
 
@@ -213,8 +266,9 @@ public struct MainWindowView: View {
                 queueScroll(sources: [s])
             case .upcoming:
                 upcomingContent
-            case .search:
-                searchContent
+            case .chat:
+                chatContent
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
     }
@@ -231,7 +285,8 @@ public struct MainWindowView: View {
             if viewModel.isLoading
                 && viewModel.radarr.isEmpty
                 && viewModel.sonarr.isEmpty
-                && viewModel.lidarr.isEmpty {
+                && viewModel.lidarr.isEmpty
+                && viewModel.whisparr.isEmpty {
                 VStack(spacing: 10) {
                     ProgressView().controlSize(.small)
                     Text("Loading…").font(.subheadline).foregroundStyle(.secondary)
@@ -270,18 +325,11 @@ public struct MainWindowView: View {
     }
 
     @ViewBuilder
-    private var searchContent: some View {
-        if let result = searchResult {
-            SearchAddPanel(result: result, viewModel: searchViewModel) {
-                searchResult = nil
-            }
+    private var chatContent: some View {
+        if !chatHolder.vm.providerIsAvailable {
+            ChatUnavailableView(reason: .providerUnavailable)
         } else {
-            SearchView(
-                viewModel: searchViewModel,
-                configuredSources: searchSources
-            ) { result in
-                searchResult = result
-            }
+            ChatView(viewModel: chatHolder.vm)
         }
     }
 
@@ -371,6 +419,7 @@ public struct MainWindowView: View {
         case .sonarr: return sonarrConfigured
         case .radarr: return radarrConfigured
         case .lidarr: return lidarrConfigured
+        case .whisparr: return whisparrConfigured
         }
     }
 
@@ -379,6 +428,7 @@ public struct MainWindowView: View {
         case .sonarr: return viewModel.sonarr
         case .radarr: return viewModel.radarr
         case .lidarr: return viewModel.lidarr
+        case .whisparr: return viewModel.whisparr
         }
     }
 
@@ -397,6 +447,7 @@ public struct MainWindowView: View {
         case .sonarr: return viewModel.sonarrError
         case .radarr: return viewModel.radarrError
         case .lidarr: return viewModel.lidarrError
+        case .whisparr: return viewModel.whisparrError
         }
     }
 
@@ -406,6 +457,7 @@ public struct MainWindowView: View {
         case .sonarr: return viewModel.health.sonarr
         case .radarr: return viewModel.health.radarr
         case .lidarr: return viewModel.health.lidarr
+        case .whisparr: return viewModel.health.whisparr
         }
     }
 }

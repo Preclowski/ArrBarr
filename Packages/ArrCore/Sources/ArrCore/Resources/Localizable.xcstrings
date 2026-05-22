@@ -2,6 +2,75 @@
   "sourceLanguage": "en",
   "version": "1.0",
   "strings": {
+    "AI Chat": {
+      "extractionState": "manual"
+    },
+    "AI provider": {
+      "extractionState": "manual"
+    },
+    "Apple Intelligence": {
+      "extractionState": "manual"
+    },
+    "Apple Intelligence requires macOS 26.": {
+      "extractionState": "manual"
+    },
+    "Apple Intelligence is unavailable. Try turning it on in System Settings.": {
+      "extractionState": "manual"
+    },
+    "Ask anything about your Sonarr / Radarr.": {
+      "extractionState": "manual"
+    },
+    "Ask anything…": {
+      "extractionState": "manual"
+    },
+    "Chat": {
+      "extractionState": "manual"
+    },
+    "Chat requires iOS 26 with Apple Intelligence.": {
+      "extractionState": "manual"
+    },
+    "Chat requires macOS 26 with Apple Intelligence.": {
+      "extractionState": "manual"
+    },
+    "Confirm": {
+      "extractionState": "manual"
+    },
+    "Couldn't load metadata": {
+      "extractionState": "manual"
+    },
+    "Quality profile": {
+      "extractionState": "manual"
+    },
+    "Root folder": {
+      "extractionState": "manual"
+    },
+    "Enable chat": {
+      "extractionState": "manual"
+    },
+    "API key": {
+      "extractionState": "manual"
+    },
+    "Base URL": {
+      "extractionState": "manual"
+    },
+    "MCP bearer token (optional)": {
+      "extractionState": "manual"
+    },
+    "Model": {
+      "extractionState": "manual"
+    },
+    "OpenAI / OpenRouter": {
+      "extractionState": "manual"
+    },
+    "MCP connection enabled": {
+      "extractionState": "manual"
+    },
+    "MCP server URL": {
+      "extractionState": "manual"
+    },
+    "Set MCP server URL in Settings to start chatting.": {
+      "extractionState": "manual"
+    },
     "Add your Radarr or Sonarr connection to get started.": {
       "localizations": {
         "de": {
@@ -4077,6 +4146,111 @@
           }
         }
       }
+    },
+    "Enable MCP": {
+      "extractionState": "manual"
+    },
+    "AI": {
+      "extractionState": "manual"
+    },
+    "Enable AI": {
+      "extractionState": "manual"
+    },
+    "API base URL": {
+      "extractionState": "manual"
+    },
+    "Clear conversation": {
+      "extractionState": "manual"
+    },
+    "Clear": {
+      "extractionState": "manual"
+    },
+    "Tools": {
+      "extractionState": "manual"
+    },
+    "Built-in (Sonarr + Radarr)": {
+      "extractionState": "manual"
+    },
+    "External MCP server": {
+      "extractionState": "manual"
+    },
+    "MCP": {
+      "extractionState": "manual"
+    },
+    "Application": {
+      "extractionState": "manual"
+    },
+    "Tool call: %@": {
+      "extractionState": "manual"
+    },
+    "Add new": {
+      "extractionState": "manual"
+    },
+    "Search movies and TV series": {
+      "extractionState": "manual"
+    },
+    "Start typing to search across Radarr and Sonarr.": {
+      "extractionState": "manual"
+    },
+    "Movies": {
+      "extractionState": "manual"
+    },
+    "Series": {
+      "extractionState": "manual"
+    },
+    "No movies match this query.": {
+      "extractionState": "manual"
+    },
+    "No series match this query.": {
+      "extractionState": "manual"
+    },
+    "Show %lld more": {
+      "extractionState": "manual"
+    },
+    "Add…": {
+      "extractionState": "manual"
+    },
+    "Chat with your arrs": {
+      "extractionState": "manual"
+    },
+    "A new Chat tab lets you ask questions in plain language — find a show, check what's coming this week, add a movie. Works with Apple Intelligence (macOS 26+) or any OpenAI-compatible API. Set up under Settings → AI.": {
+      "extractionState": "manual"
+    },
+    "Quicker way to add": {
+      "extractionState": "manual"
+    },
+    "The footer is gone. Add new content via the **+** button next to the tabs, or press **⌘N** anywhere in the popover. The **⋯** menu next to it holds Settings, Quit and Open Window — and everything's also in the right-click menu on the menu bar icon.": {
+      "extractionState": "manual"
+    },
+    "Lidarr support": {
+      "extractionState": "manual"
+    },
+    "If you've configured Lidarr, music artists now show up in search results and the AI chat. Add an artist the same way you'd add a series or movie.": {
+      "extractionState": "manual"
+    },
+    "ArrBarr stays out of your Dock and shows active downloads at a glance. **Left-click** the icon to open the popover. **Right-click** for Add, Refresh, Settings — every action also has a keyboard shortcut.": {
+      "extractionState": "manual"
+    },
+    "Whisparr": {
+      "extractionState": "manual"
+    },
+    "Scenes": {
+      "extractionState": "manual"
+    },
+    "Add to Whisparr": {
+      "extractionState": "manual"
+    },
+    "Blur posters #nsfw": {
+      "extractionState": "manual"
+    },
+    "AI knows about Whisparr": {
+      "extractionState": "manual"
+    },
+    "No scenes match this query.": {
+      "extractionState": "manual"
+    },
+    "Whisparr AI access is disabled in Settings.": {
+      "extractionState": "manual"
     }
   }
 }

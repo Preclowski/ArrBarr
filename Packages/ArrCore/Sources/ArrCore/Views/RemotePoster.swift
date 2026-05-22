@@ -1,5 +1,32 @@
 import SwiftUI
 
+/// Wraps a poster (or any view) and blurs it when `blurred` is true. Used to
+/// hide NSFW Whisparr posters. There's no tap-to-reveal — toggle is a global
+/// preference in Settings, not a per-poster trick.
+///
+/// SwiftUI's `.blur(radius:)` is a Gaussian convolution that bleeds past the
+/// content's frame, producing fuzzy edges past the poster. We `.compositingGroup()`
+/// to rasterize the blur, then `.clipShape(RoundedRectangle)` to confine it back
+/// to the poster's shape so the bleed disappears.
+public struct PosterBlurContainer<Content: View>: View {
+    let blurred: Bool
+    let cornerRadius: CGFloat
+    @ViewBuilder let content: () -> Content
+
+    public init(blurred: Bool, cornerRadius: CGFloat = 4, @ViewBuilder content: @escaping () -> Content) {
+        self.blurred = blurred
+        self.cornerRadius = cornerRadius
+        self.content = content
+    }
+
+    public var body: some View {
+        content()
+            .blur(radius: blurred ? 12 : 0)
+            .compositingGroup()
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+    }
+}
+
 public struct RemotePoster: View {
     let url: URL?
     let apiKey: String?

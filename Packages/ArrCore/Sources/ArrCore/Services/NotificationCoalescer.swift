@@ -7,6 +7,7 @@ public extension QueueItem.Source {
         case .radarr: return .radarr
         case .sonarr: return .sonarr
         case .lidarr: return .lidarr
+        case .whisparr: return .whisparr
         }
     }
 }

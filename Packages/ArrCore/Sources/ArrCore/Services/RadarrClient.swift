@@ -1,8 +1,9 @@
 import Foundation
 
-public actor RadarrClient {
-    private let config: ServiceConfig
-    private let http = HTTPClient()
+public actor RadarrClient: ArrAPIClient {
+    public let config: ServiceConfig
+    public let apiBase = "/api/v3"
+    public let http = HTTPClient()
 
     private struct CachedMovieFile { let file: RadarrMovieFile; let expiry: Date }
     private var movieFileCache: [Int: CachedMovieFile] = [:]
@@ -15,8 +16,8 @@ public actor RadarrClient {
     func testConnection() async throws -> String {
         guard config.isConfigured else { throw HTTPError.notConfigured }
         guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
-        let url = try http.url(base: config.baseURL, path: "/api/v3/system/status")
-        let data = try await http.get(url, headers: ["X-Api-Key": config.apiKey])
+        let url = try http.url(base: config.baseURL, path: "\(apiBase)/system/status")
+        let data = try await http.get(url, headers: apiHeaders)
         struct Status: Decodable { let version: String? }
         let status = try? JSONDecoder().decode(Status.self, from: data)
         return status?.version.map { "Radarr \($0)" } ?? "OK"
@@ -28,14 +29,14 @@ public actor RadarrClient {
 
         let url = try http.url(
             base: config.baseURL,
-            path: "/api/v3/queue",
+            path: "\(apiBase)/queue",
             query: [
                 URLQueryItem(name: "pageSize", value: "1000"),
                 URLQueryItem(name: "includeMovie", value: "true"),
                 URLQueryItem(name: "includeUnknownMovieItems", value: "true"),
             ]
         )
-        let data = try await http.get(url, headers: ["X-Api-Key": config.apiKey])
+        let data = try await http.get(url, headers: apiHeaders)
 
         let page: ArrQueuePage<RadarrQueueRecord>
         do { page = try JSONDecoder().decode(ArrQueuePage<RadarrQueueRecord>.self, from: data) }
@@ -63,8 +64,8 @@ public actor RadarrClient {
         guard !misses.isEmpty else { return result }
 
         let items = misses.map { URLQueryItem(name: "movieId", value: String($0)) }
-        let url = try http.url(base: config.baseURL, path: "/api/v3/moviefile", query: items)
-        let data = try await http.get(url, headers: ["X-Api-Key": config.apiKey])
+        let url = try http.url(base: config.baseURL, path: "\(apiBase)/moviefile", query: items)
+        let data = try await http.get(url, headers: apiHeaders)
         let files = (try? JSONDecoder().decode([RadarrMovieFile].self, from: data)) ?? []
 
         let expiry = now.addingTimeInterval(movieFileCacheTTL)
@@ -93,14 +94,14 @@ public actor RadarrClient {
 
         let url = try http.url(
             base: config.baseURL,
-            path: "/api/v3/calendar",
+            path: "\(apiBase)/calendar",
             query: [
                 URLQueryItem(name: "start", value: fmt.string(from: now)),
                 URLQueryItem(name: "end", value: fmt.string(from: end)),
                 URLQueryItem(name: "unmonitored", value: "false"),
             ]
         )
-        let data = try await http.get(url, headers: ["X-Api-Key": config.apiKey])
+        let data = try await http.get(url, headers: apiHeaders)
 
         let records: [RadarrCalendarRecord]
         do {
@@ -118,7 +119,7 @@ public actor RadarrClient {
         guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
         let url = try http.url(
             base: config.baseURL,
-            path: "/api/v3/history",
+            path: "\(apiBase)/history",
             query: [
                 URLQueryItem(name: "page", value: "1"),
                 URLQueryItem(name: "pageSize", value: "50"),
@@ -127,7 +128,7 @@ public actor RadarrClient {
                 URLQueryItem(name: "includeMovie", value: "true"),
             ]
         )
-        let data = try await http.get(url, headers: ["X-Api-Key": config.apiKey])
+        let data = try await http.get(url, headers: apiHeaders)
         let page: ArrQueuePage<RadarrHistoryRecord>
         do { page = try JSONDecoder().decode(ArrQueuePage<RadarrHistoryRecord>.self, from: data) }
         catch { throw HTTPError.decoding(error) }
@@ -155,13 +156,13 @@ public actor RadarrClient {
         guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
         let url = try http.url(
             base: config.baseURL,
-            path: "/api/v3/queue/\(id)",
+            path: "\(apiBase)/queue/\(id)",
             query: [
                 URLQueryItem(name: "removeFromClient", value: removeFromClient ? "true" : "false"),
                 URLQueryItem(name: "blocklist", value: blocklist ? "true" : "false"),
             ]
         )
-        _ = try await http.delete(url, headers: ["X-Api-Key": config.apiKey])
+        _ = try await http.delete(url, headers: apiHeaders)
     }
 
     func fetchMovieDetails(id: Int) async throws -> RadarrMovieDetail {
@@ -172,8 +173,8 @@ public actor RadarrClient {
         }
         guard config.isConfigured else { throw HTTPError.notConfigured }
         guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
-        let url = try http.url(base: config.baseURL, path: "/api/v3/movie/\(id)")
-        let data = try await http.get(url, headers: ["X-Api-Key": config.apiKey])
+        let url = try http.url(base: config.baseURL, path: "\(apiBase)/movie/\(id)")
+        let data = try await http.get(url, headers: apiHeaders)
         do { return try JSONDecoder().decode(RadarrMovieDetail.self, from: data) }
         catch { throw HTTPError.decoding(error) }
     }
@@ -181,9 +182,17 @@ public actor RadarrClient {
     func fetchHealth() async throws -> [ArrHealthRecord] {
         guard config.isConfigured else { throw HTTPError.notConfigured }
         guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
-        let url = try http.url(base: config.baseURL, path: "/api/v3/health")
-        let data = try await http.get(url, headers: ["X-Api-Key": config.apiKey])
+        let url = try http.url(base: config.baseURL, path: "\(apiBase)/health")
+        let data = try await http.get(url, headers: apiHeaders)
         return (try? JSONDecoder().decode([ArrHealthRecord].self, from: data)) ?? []
+    }
+
+    func fetchAllMovies() async throws -> [RadarrLibraryRecord] {
+        if DemoMode.isActive { return [] }
+        guard config.isConfigured else { throw HTTPError.notConfigured }
+        let url = try http.url(base: config.baseURL, path: "\(apiBase)/movie")
+        let data = try await http.get(url, headers: apiHeaders)
+        return (try? JSONDecoder().decode([RadarrLibraryRecord].self, from: data)) ?? []
     }
 
     private static func unifyCalendar(_ r: RadarrCalendarRecord, baseURL: String) -> UpcomingItem? {
@@ -195,7 +204,7 @@ public actor RadarrClient {
         guard let dateStr, let date = parseArrDate(dateStr) else { return nil }
 
         let title = r.year.map { "\(r.title) (\($0))" } ?? r.title
-        let (poster, auth) = pickPosterURL(from: r.images, coverTypes: ["poster"], baseURL: baseURL)
+        let (poster, auth) = (r.images ?? []).posterURL(baseURL: baseURL)
 
         return UpcomingItem(
             id: "radarr-cal-\(r.id)",
@@ -207,7 +216,8 @@ public actor RadarrClient {
             hasFile: r.hasFile ?? false,
             overview: r.overview,
             posterURL: poster,
-            posterRequiresAuth: auth
+            posterRequiresAuth: auth,
+            entityId: r.id
         )
     }
 
@@ -222,7 +232,7 @@ public actor RadarrClient {
         } else {
             movieTitle = r.title ?? "Unknown"
         }
-        let (poster, posterAuth) = pickPosterURL(from: r.movie?.images, coverTypes: ["poster"], baseURL: baseURL)
+        let (poster, posterAuth) = (r.movie?.images ?? []).posterURL(baseURL: baseURL)
 
         let existingFile = (r.movieId ?? r.movie?.id).flatMap { fileMap[$0] }
 
@@ -257,37 +267,6 @@ public actor RadarrClient {
             posterRequiresAuth: posterAuth
         )
     }
-}
-
-/// Resolves a poster URL from an Arr `images[]` array.
-/// Prefers `remoteUrl` (typically TMDB / MusicBrainz, no auth) over the local server URL.
-/// Returns the URL plus whether it requires the X-Api-Key header.
-func pickPosterURL(
-    from images: [ArrImage]?,
-    coverTypes: [String],
-    baseURL: String
-) -> (URL?, Bool) {
-    guard let images else { return (nil, false) }
-    let normalized = coverTypes.map { $0.lowercased() }
-    let match = images.first { img in
-        guard let type = img.coverType?.lowercased() else { return false }
-        return normalized.contains(type)
-    }
-    guard let match else { return (nil, false) }
-
-    if let remote = match.remoteUrl, let url = URL(string: remote) {
-        return (url, false)
-    }
-    if let path = match.url, let base = URL(string: baseURL) {
-        // Some Arrs return absolute, some relative. Strip query (cache-busting hash) for stable cache keys.
-        if let abs = URL(string: path), abs.scheme != nil {
-            return (abs, true)
-        }
-        let trimmed = path.split(separator: "?", maxSplits: 1).first.map(String.init) ?? path
-        let composed = URL(string: trimmed, relativeTo: base)?.absoluteURL
-        return (composed, true)
-    }
-    return (nil, false)
 }
 
 func parseArrDate(_ string: String) -> Date? {

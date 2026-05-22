@@ -2,256 +2,243 @@ import SwiftUI
 
 public struct SearchView: View {
     @ObservedObject var viewModel: SearchViewModel
-    let configuredSources: [QueueItem.Source]
+    @EnvironmentObject var configStore: ConfigStore
     let onSelectResult: (SearchResult) -> Void
 
-    @State private var selectedSource: QueueItem.Source
+    @State private var radarrCollapsed = false
+    @State private var sonarrCollapsed = false
+    @State private var lidarrCollapsed = false
+    @State private var whisparrCollapsed = false
+    @State private var radarrShowAll = false
+    @State private var sonarrShowAll = false
+    @State private var lidarrShowAll = false
+    @State private var whisparrShowAll = false
+    @FocusState private var queryFocused: Bool
 
-    init(viewModel: SearchViewModel, configuredSources: [QueueItem.Source],
-         onSelectResult: @escaping (SearchResult) -> Void) {
+    private static let collapsedLimit = 5
+
+    public init(viewModel: SearchViewModel, onSelectResult: @escaping (SearchResult) -> Void) {
         self.viewModel = viewModel
-        self.configuredSources = configuredSources
         self.onSelectResult = onSelectResult
-        _selectedSource = State(initialValue: configuredSources.first ?? .radarr)
+    }
+
+    private var radarrConfigured: Bool { configStore.radarr.isConfigured || DemoMode.isActive }
+    private var sonarrConfigured: Bool { configStore.sonarr.isConfigured || DemoMode.isActive }
+    private var lidarrConfigured: Bool { configStore.lidarr.isConfigured || DemoMode.isActive }
+    private var whisparrConfigured: Bool { configStore.whisparr.isConfigured }
+
+    private var orderedSources: [QueueItem.Source] {
+        configStore.arrOrder.compactMap { key -> QueueItem.Source? in
+            guard let src = QueueItem.Source(rawValue: key) else { return nil }
+            switch src {
+            case .radarr: return radarrConfigured ? .radarr : nil
+            case .sonarr: return sonarrConfigured ? .sonarr : nil
+            case .lidarr: return lidarrConfigured ? .lidarr : nil
+            case .whisparr: return whisparrConfigured ? .whisparr : nil
+            }
+        }
     }
 
     public var body: some View {
-        #if os(iOS)
-        // iOS: search field floats at the bottom as a Liquid Glass capsule.
-        // Content scrolls *behind* it (so the blur reads), with bottom inset
-        // applied so the last row clears the bar.
         VStack(spacing: 0) {
-            if configuredSources.count > 1 {
-                subTabs
-                Divider().padding(.top, 4)
-            }
-            ScrollView {
-                resultContent
-                    .padding(.bottom, 88) // clear the floating bar
-            }
-            .scrollBounceBehavior(.basedOnSize)
-        }
-        .overlay(alignment: .bottom) {
-            FloatingGlassSearchBar(
-                placeholder: placeholder,
-                query: $viewModel.query
-            )
-            .padding(.horizontal, 16)
-            .padding(.bottom, 12)
-        }
-        .onChange(of: selectedSource) { _, _ in
-            viewModel.resetForSource()
-            if !viewModel.query.isEmpty {
-                viewModel.onQueryChange(source: selectedSource)
-            }
-        }
-        .onChange(of: viewModel.query) { _, _ in
-            viewModel.onQueryChange(source: selectedSource)
-        }
-        #else
-        // macOS popover: inline field at the top — floating glass would look
-        // wrong inside a 320pt popover.
-        VStack(spacing: 0) {
-            HStack(spacing: 6) {
-                Image(systemName: "magnifyingglass")
-                    .font(.system(size: 12))
-                    .foregroundStyle(.tertiary)
-                TextField(placeholder, text: $viewModel.query)
-                    .font(.system(size: 12))
-                    .textFieldStyle(.plain)
-                    .onChange(of: viewModel.query) { _, _ in
-                        viewModel.onQueryChange(source: selectedSource)
+            searchBar
+            Divider()
+            if viewModel.query.isEmpty && !viewModel.isSearching {
+                emptyHint
+            } else if viewModel.isSearching {
+                VStack {
+                    ProgressView()
+                        .controlSize(.small)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 0) {
+                        ForEach(orderedSources, id: \.self) { src in
+                            sourceSection(src)
+                        }
                     }
-                if !viewModel.query.isEmpty {
-                    Button { viewModel.query = "" } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 11))
-                            .foregroundStyle(.tertiary)
+                    .padding(.vertical, 4)
+                }
+                .scrollBounceBehavior(.basedOnSize)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+        .onChange(of: viewModel.query) { _, oldValue in
+            // Reset "show all" toggles whenever the query changes — new
+            // results, fresh 5-item view.
+            if oldValue != viewModel.query {
+                radarrShowAll = false
+                sonarrShowAll = false
+                lidarrShowAll = false
+                whisparrShowAll = false
+            }
+            viewModel.onQueryChange()
+        }
+        .task {
+            // Autofocus the search field when the overlay opens.
+            queryFocused = true
+        }
+    }
+
+    @ViewBuilder
+    private func sourceSection(_ source: QueueItem.Source) -> some View {
+        let results: [SearchResult] = {
+            switch source {
+            case .radarr: return viewModel.radarrResults
+            case .sonarr: return viewModel.sonarrResults
+            case .lidarr: return viewModel.lidarrResults
+            case .whisparr: return viewModel.whisparrResults
+            }
+        }()
+        let isCollapsed: Bool = {
+            switch source {
+            case .radarr: return radarrCollapsed
+            case .sonarr: return sonarrCollapsed
+            case .lidarr: return lidarrCollapsed
+            case .whisparr: return whisparrCollapsed
+            }
+        }()
+        let showAll: Bool = {
+            switch source {
+            case .radarr: return radarrShowAll
+            case .sonarr: return sonarrShowAll
+            case .lidarr: return lidarrShowAll
+            case .whisparr: return whisparrShowAll
+            }
+        }()
+        let title: LocalizedStringKey = {
+            switch source {
+            case .radarr: return "Movies"
+            case .sonarr: return "Series"
+            case .lidarr: return "Artists"
+            case .whisparr: return "Scenes"
+            }
+        }()
+        let visibleResults: [SearchResult] = (showAll || results.count <= Self.collapsedLimit)
+            ? results
+            : Array(results.prefix(Self.collapsedLimit))
+        let hiddenCount = results.count - visibleResults.count
+
+        VStack(alignment: .leading, spacing: 0) {
+            // Section header
+            Button {
+                withAnimation(.smooth(duration: 0.18)) {
+                    switch source {
+                    case .radarr: radarrCollapsed.toggle()
+                    case .sonarr: sonarrCollapsed.toggle()
+                    case .lidarr: lidarrCollapsed.toggle()
+                    case .whisparr: whisparrCollapsed.toggle()
                     }
-                    .buttonStyle(.plain)
+                }
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: isCollapsed ? "chevron.right" : "chevron.down")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(.tertiary)
+                    Text(title, bundle: .module)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                    Text("\(results.count)")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.tertiary)
+                    Spacer()
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            if !isCollapsed {
+                if results.isEmpty {
+                    let noMatchKey: LocalizedStringKey = {
+                        switch source {
+                        case .radarr: return "No movies match this query."
+                        case .sonarr: return "No series match this query."
+                        case .lidarr: return "No artists match this query."
+                        case .whisparr: return "No scenes match this query."
+                        }
+                    }()
+                    Text(noMatchKey, bundle: .module)
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                        .padding(.horizontal, 12)
+                        .padding(.bottom, 8)
+                } else {
+                    ForEach(visibleResults) { r in
+                        SearchResultRow(result: r) { onSelectResult(r) }
+                    }
+                    if hiddenCount > 0 {
+                        Button {
+                            withAnimation(.smooth(duration: 0.18)) {
+                                switch source {
+                                case .radarr: radarrShowAll = true
+                                case .sonarr: sonarrShowAll = true
+                                case .lidarr: lidarrShowAll = true
+                                case .whisparr: whisparrShowAll = true
+                                }
+                            }
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: "chevron.down")
+                                    .font(.system(size: 9, weight: .semibold))
+                                Text("Show \(hiddenCount) more", bundle: .module)
+                                    .font(.system(size: 11, weight: .medium))
+                            }
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 7)
-            .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 7))
-            .padding(.horizontal, 12)
-            .padding(.top, 8)
-
-            if configuredSources.count > 1 {
-                subTabs
-            }
-
-            Divider().padding(.top, 4)
-
-            ScrollView {
-                resultContent
-            }
-            .scrollBounceBehavior(.basedOnSize)
-            .frame(maxHeight: 440)
         }
-        .onChange(of: selectedSource) { _, _ in
-            viewModel.resetForSource()
-            if !viewModel.query.isEmpty {
-                viewModel.onQueryChange(source: selectedSource)
-            }
-        }
-        #endif
     }
 
-    private var placeholder: String {
-        selectedSource == .radarr ? "Search movies…" : "Search shows…"
-    }
-
-    /// Empty-state copy that fills the body before the user types. Without
-    /// it the popover looks broken — search bar, then nothing.
-    private var emptyPrompt: some View {
-        VStack(spacing: 10) {
-            Image(systemName: selectedSource == .radarr ? "film.stack" : "tv.inset.filled")
-                .font(.system(size: 26, weight: .light))
+    private var searchBar: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 12))
                 .foregroundStyle(.tertiary)
-            VStack(spacing: 4) {
-                Text(emptyHeadline)
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(.secondary)
-                Text(emptyHint)
-                    .font(.system(size: 11))
-                    .foregroundStyle(.tertiary)
-                    .multilineTextAlignment(.center)
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.horizontal, 24)
-        .padding(.vertical, 36)
-    }
-
-    private var emptyHeadline: LocalizedStringKey {
-        selectedSource == .radarr
-            ? "Find a movie to add"
-            : "Find a show to add"
-    }
-
-    private var emptyHint: LocalizedStringKey {
-        selectedSource == .radarr
-            ? "Type a title above to search TMDB through Radarr's lookup, then add it to your library."
-            : "Type a title above to search TVDB through Sonarr's lookup, then add it to your library."
-    }
-
-    private var subTabs: some View {
-        HStack(spacing: 0) {
-            ForEach(configuredSources, id: \.self) { source in
-                Button {
-                    selectedSource = source
-                } label: {
-                    VStack(spacing: 0) {
-                        Text(source.displayName)
-                            .font(.system(size: 11, weight: selectedSource == source ? .semibold : .regular))
-                            .foregroundStyle(selectedSource == source ? .primary : .secondary)
-                            .padding(.vertical, 6)
-                        Rectangle()
-                            .fill(selectedSource == source ? Color.accentColor : Color.clear)
-                            .frame(height: 1.5)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .contentShape(Rectangle())
+            TextField(
+                String(localized: "Search movies and TV series", bundle: .module),
+                text: $viewModel.query
+            )
+            .font(.system(size: 12))
+            .textFieldStyle(.plain)
+            .focused($queryFocused)
+            if !viewModel.query.isEmpty {
+                Button { viewModel.query = "" } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.tertiary)
                 }
                 .buttonStyle(.plain)
             }
         }
         .padding(.horizontal, 12)
-        .padding(.top, 6)
+        .padding(.vertical, 7)
+        .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 7))
+        .padding(.horizontal, 12)
+        .padding(.top, 8)
+        .padding(.bottom, 8)
     }
 
-    @ViewBuilder
-    private var resultContent: some View {
-        if viewModel.isSearching {
-            ProgressView()
-                .controlSize(.small)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 32)
-        } else if let err = viewModel.errorMessage {
-            Text(err)
-                .font(.caption)
-                .foregroundStyle(.red)
-                .padding(12)
-        } else if viewModel.query.isEmpty {
-            emptyPrompt
-        } else if viewModel.results.isEmpty {
-            VStack(spacing: 8) {
-                Image(systemName: "magnifyingglass")
-                    .font(.system(size: 24, weight: .light))
-                    .foregroundStyle(.tertiary)
-                Text("No results")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 32)
-        } else {
-            let lastID = viewModel.results.last?.id
-            LazyVStack(spacing: 0) {
-                ForEach(viewModel.results) { result in
-                    SearchResultRow(result: result) { onSelectResult(result) }
-                    if result.id != lastID {
-                        Divider().padding(.leading, 46)
-                    }
-                }
-            }
-            .padding(.vertical, 4)
-        }
-    }
-}
-
-#if os(iOS)
-/// Floating Liquid Glass search bar for iOS. Sits at the bottom of the screen,
-/// capsule-shaped, content scrolls behind it.
-///
-/// On iOS 26 we use `.glassEffect()` for true Liquid Glass; earlier OSes
-/// fall back to `.ultraThinMaterial` which is the closest visual approximation.
-private struct FloatingGlassSearchBar: View {
-    let placeholder: String
-    @Binding var query: String
-    @FocusState private var focused: Bool
-
-    var body: some View {
-        HStack(spacing: 10) {
+    private var emptyHint: some View {
+        VStack(spacing: 10) {
             Image(systemName: "magnifyingglass")
-                .font(.system(size: 16, weight: .regular))
+                .font(.system(size: 26, weight: .light))
+                .foregroundStyle(.tertiary)
+            Text("Start typing to search across Radarr and Sonarr.", bundle: .module)
+                .font(.subheadline)
                 .foregroundStyle(.secondary)
-            TextField(placeholder, text: $query)
-                .font(.system(size: 16))
-                .textFieldStyle(.plain)
-                .submitLabel(.search)
-                .focused($focused)
-                .autocorrectionDisabled()
-                .textInputAutocapitalization(.never)
-            if !query.isEmpty {
-                Button {
-                    query = ""
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 16))
-                        .foregroundStyle(.tertiary)
-                }
-                .buttonStyle(.plain)
-                .transition(.opacity.combined(with: .scale(scale: 0.85)))
-            }
+                .multilineTextAlignment(.center)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(glassBackground)
-        .overlay(
-            Capsule()
-                .strokeBorder(Color.white.opacity(0.10), lineWidth: 0.5)
-        )
-        .shadow(color: .black.opacity(0.25), radius: 18, x: 0, y: 6)
-        .animation(.easeInOut(duration: 0.18), value: query.isEmpty)
-    }
-
-    /// `ultraThinMaterial` reads as Liquid Glass on iOS 26 (the system swaps
-    /// material rendering in) and as a vibrant blur on iOS 17+. Same call site,
-    /// no `#available` gate needed.
-    private var glassBackground: some View {
-        Capsule().fill(.ultraThinMaterial)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(24)
     }
 }
-#endif

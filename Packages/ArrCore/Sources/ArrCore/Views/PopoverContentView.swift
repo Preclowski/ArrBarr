@@ -26,24 +26,29 @@ public struct PopoverContentView: View {
     @State private var historySource: QueueItem.Source?
     @State private var historyRefreshNonce = 0
     @StateObject private var searchViewModel = SearchViewModel()
+    @StateObject private var chatHolder = ChatViewModelHolder()
     @State private var searchResult: SearchResult?
     @State private var detailItem: QueueItem?
-
-    private let maxScrollHeight: CGFloat = 520
+    @State private var showSearch = false
 
     private var sonarrConfigured: Bool { isVisible(configStore.sonarr) }
     private var radarrConfigured: Bool { isVisible(configStore.radarr) }
     private var lidarrConfigured: Bool { isVisible(configStore.lidarr) }
-    private var anyArrConfigured: Bool { sonarrConfigured || radarrConfigured || lidarrConfigured }
+    private var whisparrConfigured: Bool { isVisible(configStore.whisparr) }
+    private var anyArrConfigured: Bool { sonarrConfigured || radarrConfigured || lidarrConfigured || whisparrConfigured }
 
-    private var searchSources: [QueueItem.Source] {
-        [
-            sonarrConfigured ? QueueItem.Source.sonarr : nil,
-            radarrConfigured ? QueueItem.Source.radarr : nil,
-        ].compactMap { $0 }
+    private var searchAvailable: Bool { sonarrConfigured || radarrConfigured || lidarrConfigured || whisparrConfigured }
+
+    private var chatAvailable: Bool {
+        guard configStore.aiEnabled else { return false }
+        switch configStore.chatProvider {
+        case .foundationModels:
+            if #available(macOS 26.0, iOS 26.0, *) { return true }
+            return false
+        case .openai:
+            return configStore.openai.isConfigured
+        }
     }
-
-    private var searchConfigured: Bool { !searchSources.isEmpty }
 
     /// In demo mode, show an arr whenever it's enabled (the configs are seeded to
     /// `enabled = true` on first demo launch — see `DemoMode.seedConfigsIfNeeded`).
@@ -52,10 +57,19 @@ public struct PopoverContentView: View {
         DemoMode.isActive ? config.enabled : config.isConfigured
     }
 
+    @ViewBuilder
+    private var chatTabContent: some View {
+        if !chatHolder.vm.providerIsAvailable {
+            ChatUnavailableView(reason: .providerUnavailable)
+        } else {
+            ChatView(viewModel: chatHolder.vm)
+        }
+    }
+
     enum Tab: String, CaseIterable {
         case queue = "Queue"
         case upcoming = "Upcoming"
-        case search = "Search"
+        case chat = "Chat"
     }
 
     public var body: some View {
@@ -64,29 +78,56 @@ public struct PopoverContentView: View {
             .onAppear {
                 searchViewModel.setup(
                     radarrConfig: configStore.radarr,
-                    sonarrConfig: configStore.sonarr
+                    sonarrConfig: configStore.sonarr,
+                    lidarrConfig: configStore.lidarr,
+                    whisparrConfig: configStore.whisparr
                 )
+                chatHolder.reconfigure(store: configStore)
             }
-            .onChange(of: selectedTab) { _, newTab in
-                if newTab != .search { searchResult = nil }
+            .onChange(of: ChatViewModelHolder.signature(store: configStore)) { _, _ in
+                chatHolder.reconfigure(store: configStore)
             }
-            .onChange(of: searchConfigured) { _, configured in
-                if !configured && selectedTab == .search {
+            .onChange(of: chatAvailable) { _, available in
+                if !available && selectedTab == .chat {
                     selectedTab = .queue
-                    searchResult = nil
                 }
             }
             .background {
+                // Hidden keyboard shortcuts so cmd+N (Add) and cmd+, (Settings)
+                // work globally inside the popover, not just inside the More menu.
                 Button("", action: onOpenSettings)
                     .keyboardShortcut(",", modifiers: .command)
                     .opacity(0)
                     .frame(width: 0, height: 0)
+                Button("") {
+                    if searchAvailable {
+                        searchViewModel.reset()
+                        showSearch = true
+                    }
+                }
+                .keyboardShortcut("n", modifiers: .command)
+                .opacity(0)
+                .frame(width: 0, height: 0)
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .arrBarrTriggerAdd)) { _ in
+                if searchAvailable {
+                    searchViewModel.reset()
+                    showSearch = true
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .arrBarrOpenDetail)) { note in
+                guard let item = note.userInfo?["item"] as? QueueItem else { return }
+                showSearch = false
+                historySource = nil
+                withAnimation(.smooth(duration: 0.22)) { detailItem = item }
             }
     }
 
     private var mainContent: some View {
         VStack(spacing: 0) {
-            if let detailItem {
+            if showSearch {
+                searchOverlayContent
+            } else if let detailItem {
                 DetailView(
                     item: detailItem,
                     onBack: {
@@ -108,27 +149,59 @@ public struct PopoverContentView: View {
                     switch selectedTab {
                     case .queue: queueContent
                     case .upcoming: upcomingContent
-                    case .search:
-                        if let result = searchResult {
-                            SearchAddPanel(result: result, viewModel: searchViewModel) {
-                                searchResult = nil
-                            }
-                        } else {
-                            SearchView(
-                                viewModel: searchViewModel,
-                                configuredSources: searchSources
-                            ) { result in
-                                searchResult = result
-                            }
-                        }
+                    case .chat:
+                        chatTabContent
                     }
                 }
             } else {
                 emptyState
             }
-            footer
         }
         .frame(width: 400, height: 600)
+    }
+
+    @ViewBuilder
+    private var searchOverlayContent: some View {
+        if let result = searchResult {
+            SearchAddPanel(result: result, viewModel: searchViewModel) {
+                searchResult = nil
+            }
+        } else {
+            VStack(spacing: 0) {
+                HStack(spacing: 6) {
+                    Button(action: closeSearch) {
+                        HStack(spacing: 3) {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 11, weight: .semibold))
+                            Text("Back", bundle: .module)
+                                .font(.system(size: 12))
+                        }
+                        .foregroundStyle(.secondary)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    Spacer()
+                    Image(systemName: "plus.magnifyingglass")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.tertiary)
+                    Text("Add new", bundle: .module)
+                        .font(.system(size: 11))
+                        .foregroundStyle(.tertiary)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                SearchView(viewModel: searchViewModel) { result in
+                    searchResult = result
+                }
+                .environmentObject(configStore)
+            }
+        }
+    }
+
+    private func closeSearch() {
+        showSearch = false
+        searchResult = nil
+        searchViewModel.reset()
     }
 
     // MARK: - Tonight banner
@@ -143,7 +216,7 @@ public struct PopoverContentView: View {
                 .foregroundStyle(.purple)
                 .padding(.top, 1)
             VStack(alignment: .leading, spacing: 2) {
-                Text("Tonight")
+                Text("Upcoming", bundle: .module)
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(.secondary)
                 ForEach(visible) { item in
@@ -196,12 +269,25 @@ public struct PopoverContentView: View {
 
     private var visibleTabs: [Tab] {
         Tab.allCases.filter { tab in
-            if tab == .search { return searchConfigured }
-            return true
+            switch tab {
+            case .chat:  return chatAvailable
+            default:     return true
+            }
         }
     }
 
     private var tabBar: some View {
+        HStack(spacing: 8) {
+            tabPills
+                .frame(maxWidth: .infinity)
+            accessoryButtons
+        }
+        .padding(.horizontal, 12)
+        .padding(.top, 8)
+        .padding(.bottom, 4)
+    }
+
+    private var tabPills: some View {
         HStack(spacing: 0) {
             ForEach(visibleTabs, id: \.self) { tab in
                 Button {
@@ -227,9 +313,51 @@ public struct PopoverContentView: View {
                     .offset(x: segment * index + 2, y: 2)
             }
         )
-        .padding(.horizontal, 12)
-        .padding(.top, 8)
-        .padding(.bottom, 4)
+    }
+
+    private var accessoryButtons: some View {
+        HStack(spacing: 4) {
+            if searchAvailable {
+                Button {
+                    searchViewModel.reset()
+                    showSearch = true
+                } label: {
+                    Image(systemName: "plus")
+                        .font(.system(size: 12, weight: .semibold))
+                        .frame(width: 22, height: 22)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+                .help(Text("Add new", bundle: .module))
+            }
+            moreMenu
+        }
+    }
+
+    private var moreMenu: some View {
+        Menu {
+            if let onOpenWindow {
+                Button("Open Window…", action: onOpenWindow)
+                    .keyboardShortcut("n", modifiers: [.command, .shift])
+                Divider()
+            }
+            Button("Settings…", action: onOpenSettings)
+                .keyboardShortcut(",", modifiers: .command)
+            Divider()
+            Button("Quit ArrBarr") { onQuit() }
+                .keyboardShortcut("q", modifiers: .command)
+        } label: {
+            Image(systemName: "ellipsis")
+                .font(.system(size: 12, weight: .semibold))
+                .frame(width: 22, height: 22)
+                .contentShape(Rectangle())
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .foregroundStyle(.secondary)
+        .help(Text("More options", bundle: .module))
     }
 
     // MARK: - Queue content
@@ -237,7 +365,7 @@ public struct PopoverContentView: View {
     private var queueContent: some View {
         ScrollView {
             Group {
-                if viewModel.isLoading && viewModel.radarr.isEmpty && viewModel.sonarr.isEmpty && viewModel.lidarr.isEmpty {
+                if viewModel.isLoading && viewModel.radarr.isEmpty && viewModel.sonarr.isEmpty && viewModel.lidarr.isEmpty && viewModel.whisparr.isEmpty {
                     VStack(spacing: 10) {
                         ProgressView()
                             .controlSize(.small)
@@ -344,6 +472,7 @@ public struct PopoverContentView: View {
         case .sonarr: return sonarrConfigured
         case .radarr: return radarrConfigured
         case .lidarr: return lidarrConfigured
+        case .whisparr: return whisparrConfigured
         }
     }
 
@@ -352,6 +481,7 @@ public struct PopoverContentView: View {
         case .sonarr: return viewModel.sonarr
         case .radarr: return viewModel.radarr
         case .lidarr: return viewModel.lidarr
+        case .whisparr: return viewModel.whisparr
         }
     }
 
@@ -371,6 +501,7 @@ public struct PopoverContentView: View {
         case .sonarr: return viewModel.sonarrError
         case .radarr: return viewModel.radarrError
         case .lidarr: return viewModel.lidarrError
+        case .whisparr: return viewModel.whisparrError
         }
     }
 
@@ -380,6 +511,7 @@ public struct PopoverContentView: View {
         case .sonarr: return viewModel.health.sonarr
         case .radarr: return viewModel.health.radarr
         case .lidarr: return viewModel.health.lidarr
+        case .whisparr: return viewModel.health.whisparr
         }
     }
 
@@ -459,39 +591,45 @@ public struct PopoverContentView: View {
     // MARK: - Empty state
 
     private var emptyState: some View {
-        VStack(spacing: 14) {
-            Image(systemName: "gearshape.2")
-                .font(.system(size: 28, weight: .light))
-                .foregroundStyle(.secondary)
-                .symbolRenderingMode(.hierarchical)
-
-            VStack(spacing: 4) {
-                Text("ArrBarr is not configured")
-                    .font(.headline)
-                Text("Connect Radarr, Sonarr or Lidarr to get started.")
-                    .font(.subheadline)
+        ZStack(alignment: .topTrailing) {
+            VStack(spacing: 14) {
+                Image(systemName: "gearshape.2")
+                    .font(.system(size: 28, weight: .light))
                     .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-            }
+                    .symbolRenderingMode(.hierarchical)
 
-            VStack(alignment: .leading, spacing: 6) {
-                emptyStep(number: 1, text: "Open your arr's web UI → Settings → General")
-                emptyStep(number: 2, text: "Copy the API Key")
-                emptyStep(number: 3, text: "Paste it here, along with the URL")
-            }
-            .font(.system(size: 11))
-            .foregroundStyle(.secondary)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 8))
+                VStack(spacing: 4) {
+                    Text("ArrBarr is not configured")
+                        .font(.headline)
+                    Text("Connect Radarr, Sonarr or Lidarr to get started.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                }
 
-            Button("Open Settings…", action: onOpenSettings)
-                .modifier(GlassProminentButtonStyle())
-                .controlSize(.regular)
+                VStack(alignment: .leading, spacing: 6) {
+                    emptyStep(number: 1, text: "Open your arr's web UI → Settings → General")
+                    emptyStep(number: 2, text: "Copy the API Key")
+                    emptyStep(number: 3, text: "Paste it here, along with the URL")
+                }
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 8))
+
+                Button("Open Settings…", action: onOpenSettings)
+                    .modifier(GlassProminentButtonStyle())
+                    .controlSize(.regular)
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 22)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            moreMenu
+                .padding(8)
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 22)
     }
 
     private func emptyStep(number: Int, text: LocalizedStringKey) -> some View {
@@ -503,69 +641,6 @@ public struct PopoverContentView: View {
         }
     }
 
-    // MARK: - Footer
-
-    private var footer: some View {
-        VStack(spacing: 0) {
-            if let err = viewModel.lastError {
-                Text(err)
-                    .font(.caption)
-                    .foregroundStyle(.red)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color.red.opacity(0.08))
-            }
-            Divider()
-            HStack(spacing: 6) {
-                Button(action: {
-                    if historySource != nil {
-                        historyRefreshNonce &+= 1
-                    } else {
-                        Task { await viewModel.refresh() }
-                    }
-                }) {
-                    ZStack {
-                        Image(systemName: "arrow.clockwise")
-                            .opacity(viewModel.isRefreshing ? 0 : 1)
-                        if viewModel.isRefreshing {
-                            ProgressView()
-                                .controlSize(.mini)
-                                .scaleEffect(0.7)
-                        }
-                    }
-                    .frame(width: 14, height: 14)
-                }
-                .modifier(GlassButtonStyle())
-                .controlSize(.small)
-                .help(Text("Refresh", bundle: .module))
-                .disabled(viewModel.isRefreshing && historySource == nil)
-
-                Spacer()
-
-                Menu {
-                    if let onOpenWindow {
-                        Button("Open Window…", action: onOpenWindow)
-                            .keyboardShortcut("n", modifiers: .command)
-                        Divider()
-                    }
-                    Button("Settings…", action: onOpenSettings)
-                        .keyboardShortcut(",", modifiers: .command)
-                    Divider()
-                    Button("Quit ArrBarr") { onQuit() }
-                        .keyboardShortcut("q", modifiers: .command)
-                } label: {
-                    Image(systemName: "ellipsis.circle")
-                        .font(.system(size: 14))
-                }
-                .menuStyle(.borderlessButton)
-                .fixedSize()
-                .help(Text("More options", bundle: .module))
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-        }
-    }
 }
 
 private struct UpcomingGroup {
@@ -583,6 +658,7 @@ private struct TabPillBackground: View {
             .fill(Color.primary.opacity(0.10))
     }
 }
+
 
 // MARK: - Shared button styles
 

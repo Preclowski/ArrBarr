@@ -49,6 +49,8 @@ public struct SettingsView: View {
                         .tabItem { Label("Usenet", systemImage: "doc.zipper") }
                     torrentsPane
                         .tabItem { Label("Torrents", systemImage: "arrow.triangle.2.circlepath") }
+                    aiPane
+                        .tabItem { Label("AI", systemImage: "sparkles") }
                 }
                 bottomBar
             }
@@ -93,6 +95,60 @@ public struct SettingsView: View {
         }
     }
 
+    /// Shared "AI" section. One master toggle at the top kills the whole
+    /// feature; provider controls only appear when AI is on.
+    @ViewBuilder
+    private var aiSection: some View {
+        Section("AI") {
+            Toggle("Enable AI", isOn: $configStore.aiEnabled)
+        }
+        if configStore.aiEnabled {
+            Section("Model") {
+                Picker("AI provider", selection: $configStore.chatProvider) {
+                    ForEach(ChatProvider.allCases) { p in
+                        Text(p.displayName).tag(p)
+                    }
+                }
+                if configStore.chatProvider == .openai {
+                    TextField("API base URL", text: $configStore.openai.baseURL,
+                              prompt: Text(verbatim: "https://api.openai.com/v1"))
+                    SecureField("API key", text: $configStore.openai.apiKey)
+                    TextField("Model", text: $configStore.openai.model,
+                              prompt: Text(verbatim: "gpt-4o-mini"))
+                }
+                if configStore.chatProvider == .foundationModels {
+                    #if os(macOS)
+                    if #unavailable(macOS 26.0) {
+                        Label("Apple Intelligence requires macOS 26.",
+                              systemImage: "exclamationmark.triangle")
+                            .foregroundStyle(.secondary)
+                            .font(.caption)
+                    }
+                    #else
+                    if #unavailable(iOS 26.0) {
+                        Label("Apple Intelligence requires iOS 26.",
+                              systemImage: "exclamationmark.triangle")
+                            .foregroundStyle(.secondary)
+                            .font(.caption)
+                    }
+                    #endif
+                }
+                if configStore.whisparr.isConfigured {
+                    Toggle("AI knows about Whisparr", isOn: $configStore.aiKnowsAboutWhisparr)
+                }
+            }
+        }
+    }
+
+    #if os(macOS)
+    private var aiPane: some View {
+        Form {
+            aiSection
+        }
+        .formStyle(.grouped)
+    }
+    #endif
+
     #if os(macOS)
     private func relaunchApp() {
         let url = Bundle.main.bundleURL
@@ -118,6 +174,12 @@ public struct SettingsView: View {
             Section("Lidarr") {
                 ServiceFields(config: $configStore.lidarr, kind: .lidarr,
                               notifyBinding: $configStore.notifyLidarr)
+            }
+            Section("Whisparr") {
+                ServiceFields(config: $configStore.whisparr, kind: .whisparr)
+                if configStore.whisparr.enabled {
+                    Toggle("Blur posters #nsfw", isOn: $configStore.blurWhisparrPosters)
+                }
             }
             Section("SABnzbd") {
                 ServiceFields(config: $configStore.sabnzbd, kind: .sabnzbd)
@@ -145,7 +207,7 @@ public struct SettingsView: View {
             }
             Section("Display") {
                 Toggle("Show indexer issues warning", isOn: $configStore.showIndexerIssues)
-                Picker("Tonight window", selection: $configStore.tonightHours) {
+                Picker("Upcoming window", selection: $configStore.tonightHours) {
                     ForEach(ConfigStore.tonightHoursOptions, id: \.self) { hours in
                         Text(Self.formatTonight(hours: hours)).tag(hours)
                     }
@@ -162,6 +224,7 @@ public struct SettingsView: View {
                     }
                 }
             }
+            aiSection
             if devModeRevealed {
                 Section("Developer options") {
                     Toggle("Demo mode", isOn: Binding(
@@ -229,6 +292,12 @@ public struct SettingsView: View {
                 ServiceFields(config: $configStore.lidarr, kind: .lidarr,
                               notifyBinding: $configStore.notifyLidarr)
             }
+            Section("Whisparr") {
+                ServiceFields(config: $configStore.whisparr, kind: .whisparr)
+                if configStore.whisparr.enabled {
+                    Toggle("Blur posters #nsfw", isOn: $configStore.blurWhisparrPosters)
+                }
+            }
         }
         .formStyle(.grouped)
     }
@@ -265,10 +334,24 @@ public struct SettingsView: View {
 
     private var generalPane: some View {
         Form {
-            Section("Startup") {
+            Section {
                 Toggle("Launch at login", isOn: $configStore.launchAtLogin)
+                Picker("Language", selection: $configStore.appLanguage) {
+                    ForEach(ConfigStore.appLanguageOptions, id: \.code) { opt in
+                        Text(LocalizedStringKey(opt.label)).tag(opt.code)
+                    }
+                }
+            } header: {
+                Text("Application", bundle: .module)
+            } footer: {
+                if languageChanged {
+                    HStack(spacing: 8) {
+                        Text("Restart required to apply the new language.", bundle: .module)
+                        Button("Relaunch") { relaunchApp() }
+                            .controlSize(.small)
+                    }
+                }
             }
-            languageSection
             Section("Section order") {
                 ForEach(configStore.arrOrder, id: \.self) { key in
                     arrOrderRow(key: key)
@@ -276,7 +359,7 @@ public struct SettingsView: View {
             }
             Section("Popover") {
                 Toggle("Show indexer issues warning", isOn: $configStore.showIndexerIssues)
-                Picker("Tonight window", selection: $configStore.tonightHours) {
+                Picker("Upcoming window", selection: $configStore.tonightHours) {
                     ForEach(ConfigStore.tonightHoursOptions, id: \.self) { hours in
                         Text(Self.formatTonight(hours: hours)).tag(hours)
                     }
@@ -371,7 +454,7 @@ public struct SettingsView: View {
 
     private func orderRowSpec(for key: String) -> OrderRowSpec? {
         if key == ConfigStore.tonightOrderKey {
-            return .init(title: "Tonight", symbol: "moon.stars.fill")
+            return .init(title: "Upcoming", symbol: "moon.stars.fill")
         }
         if key == ConfigStore.needsYouOrderKey {
             return .init(title: "Needs you", symbol: "exclamationmark.bubble.fill")
@@ -570,6 +653,7 @@ private enum ConnectionTester {
         case .radarr:       return try await RadarrClient(config: config).testConnection()
         case .sonarr:       return try await SonarrClient(config: config).testConnection()
         case .lidarr:       return try await LidarrClient(config: config).testConnection()
+        case .whisparr:     return try await WhisparrClient(config: config).testConnection()
         case .sabnzbd:      return try await SabnzbdClient(config: config).testConnection()
         case .nzbget:       return try await NzbgetClient(config: config).testConnection()
         case .qbittorrent:  return try await QbittorrentClient(config: config).testConnection()

@@ -105,7 +105,8 @@ private struct QueueTab: View {
                 onItemTap: { needs in
                     if let item = viewModel.radarr.first(where: { $0.id == needs.item.id })
                         ?? viewModel.sonarr.first(where: { $0.id == needs.item.id })
-                        ?? viewModel.lidarr.first(where: { $0.id == needs.item.id }) {
+                        ?? viewModel.lidarr.first(where: { $0.id == needs.item.id })
+                        ?? viewModel.whisparr.first(where: { $0.id == needs.item.id }) {
                         detailItem = item
                     }
                 }
@@ -164,6 +165,7 @@ private struct QueueTab: View {
         case .sonarr: return viewModel.sonarr
         case .radarr: return viewModel.radarr
         case .lidarr: return viewModel.lidarr
+        case .whisparr: return viewModel.whisparr
         }
     }
 
@@ -180,6 +182,7 @@ private struct QueueTab: View {
         case .sonarr: return viewModel.sonarrError
         case .radarr: return viewModel.radarrError
         case .lidarr: return viewModel.lidarrError
+        case .whisparr: return viewModel.whisparrError
         }
     }
 
@@ -189,6 +192,7 @@ private struct QueueTab: View {
         case .sonarr: return viewModel.health.sonarr
         case .radarr: return viewModel.health.radarr
         case .lidarr: return viewModel.health.lidarr
+        case .whisparr: return viewModel.health.whisparr
         }
     }
 }
@@ -292,7 +296,9 @@ private struct SearchTab: View {
         .onAppear {
             searchVM.setup(
                 radarrConfig: configStore.radarr,
-                sonarrConfig: configStore.sonarr
+                sonarrConfig: configStore.sonarr,
+                lidarrConfig: configStore.lidarr,
+                whisparrConfig: configStore.whisparr
             )
         }
     }
@@ -301,8 +307,12 @@ private struct SearchTab: View {
         var s: [QueueItem.Source] = []
         let sonarrVisible = DemoMode.isActive ? configStore.sonarr.enabled : configStore.sonarr.isConfigured
         let radarrVisible = DemoMode.isActive ? configStore.radarr.enabled : configStore.radarr.isConfigured
+        let lidarrVisible = DemoMode.isActive ? configStore.lidarr.enabled : configStore.lidarr.isConfigured
+        let whisparrVisible = DemoMode.isActive ? configStore.whisparr.enabled : configStore.whisparr.isConfigured
         if sonarrVisible { s.append(.sonarr) }
         if radarrVisible { s.append(.radarr) }
+        if lidarrVisible { s.append(.lidarr) }
+        if whisparrVisible { s.append(.whisparr) }
         return s
     }
 }

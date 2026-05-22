@@ -17,10 +17,19 @@ public struct DetailView: View {
         case .radarr: viewModel.radarr
         case .sonarr: viewModel.sonarr
         case .lidarr: viewModel.lidarr
+        case .whisparr: viewModel.whisparr
         }
         guard let id = item.entityId else { return [item] }
         let matched = pool.filter { $0.entityId == id }
         return matched.isEmpty ? [item] : matched
+    }
+
+    /// True when at least one sibling is a real queue row (non-zero arrQueueId).
+    /// `false` means this view was opened from a synthetic lookup item (chat
+    /// card / upcoming row tap) and there's nothing to download right now —
+    /// rendering a 0%/Unknown progress bar would be misleading.
+    private var hasActiveDownloads: Bool {
+        siblings.contains { $0.arrQueueId != 0 }
     }
 
     @State private var radarrDetail: RadarrMovieDetail?
@@ -101,6 +110,7 @@ public struct DetailView: View {
             case .radarr: radarrContent
             case .sonarr: sonarrContent
             case .lidarr: lidarrContent
+            case .whisparr: radarrContent // Whisparr uses the same movie layout as Radarr
             }
         }
     }
@@ -131,13 +141,15 @@ public struct DetailView: View {
                 ExpandableOverview(text: overview)
             }
 
-            DownloadSection(
-                items: siblings,
-                focused: item,
-                showInlineUpgrade: false,
-                showCustomFormats: true,
-                showListingBadges: true
-            )
+            if hasActiveDownloads {
+                DownloadSection(
+                    items: siblings,
+                    focused: item,
+                    showInlineUpgrade: false,
+                    showCustomFormats: true,
+                    showListingBadges: true
+                )
+            }
 
             if let err = loadError {
                 Text(err)
@@ -194,15 +206,17 @@ public struct DetailView: View {
                 Divider().padding(.vertical, 2)
             }
 
-            DownloadSection(
-                items: siblings,
-                focused: item,
-                showInlineUpgrade: true,
-                showCustomFormats: true,
-                rowHoverDetail: true,
-                listCollapsible: true,
-                listExpandedDefault: false
-            )
+            if hasActiveDownloads {
+                DownloadSection(
+                    items: siblings,
+                    focused: item,
+                    showInlineUpgrade: true,
+                    showCustomFormats: true,
+                    rowHoverDetail: true,
+                    listCollapsible: true,
+                    listExpandedDefault: false
+                )
+            }
 
             if let err = loadError {
                 Text(err)
@@ -227,7 +241,9 @@ public struct DetailView: View {
                 ExpandableOverview(text: overview)
             }
 
-            DownloadSection(items: siblings, focused: item)
+            if hasActiveDownloads {
+                DownloadSection(items: siblings, focused: item)
+            }
 
             if !lidarrTracks.isEmpty {
                 Divider().padding(.vertical, 2)
@@ -346,6 +362,7 @@ public struct DetailView: View {
             apiKey: apiKeyForSource,
             fallbackSymbol: fallbackSymbol,
             posterAspect: posterAspect,
+            blurred: item.source == .whisparr && configStore.blurWhisparrPosters,
             trailing: existingTrailer.map { AnyView(ExistingFileLine(item: $0)) }
         )
     }
@@ -357,6 +374,7 @@ public struct DetailView: View {
         case .radarr: return configStore.radarr.apiKey
         case .sonarr: return configStore.sonarr.apiKey
         case .lidarr: return configStore.lidarr.apiKey
+        case .whisparr: return configStore.whisparr.apiKey
         }
     }
 
@@ -366,6 +384,7 @@ public struct DetailView: View {
         case .radarr: (configStore.radarr, "/movie/\(slug)")
         case .sonarr: (configStore.sonarr, "/series/\(slug)")
         case .lidarr: (configStore.lidarr, "/album/\(slug)")
+        case .whisparr: (configStore.whisparr, "/movie/\(slug)")
         }
         return URL(string: cfg.baseURL)?.appendingPathComponent(path)
     }
@@ -375,8 +394,9 @@ public struct DetailView: View {
         case .radarr: configStore.radarr.baseURL
         case .sonarr: configStore.sonarr.baseURL
         case .lidarr: configStore.lidarr.baseURL
+        case .whisparr: configStore.whisparr.baseURL
         }
-        let (url, _) = pickPosterURL(from: images, coverTypes: ["poster", "cover"], baseURL: baseURL)
+        let (url, _) = (images?.posterURL(baseURL: baseURL, coverTypes: ["poster", "cover"]) ?? (nil, false))
         return url
     }
 
@@ -407,6 +427,9 @@ public struct DetailView: View {
                 async let ts = client.fetchTracks(albumId: entityId)
                 lidarrAlbum = try await a
                 lidarrTracks = try await ts
+            case .whisparr:
+                let client = WhisparrClient(config: configStore.whisparr)
+                radarrDetail = try await client.fetchMovieDetails(id: entityId)
             }
         } catch {
             loadError = "Couldn't load details: \(error.localizedDescription)"
@@ -439,19 +462,22 @@ public struct MediaHeaderCard: View {
     var apiKey: String? = nil
     var fallbackSymbol: String = "film"
     var posterAspect: CGFloat = 2.0/3.0
+    var blurred: Bool = false
     var trailing: AnyView? = nil
 
     public var body: some View {
         let posterWidth: CGFloat = 110
         let posterHeight = posterWidth / posterAspect
         HStack(alignment: .top, spacing: 12) {
-            RemotePoster(
-                url: posterURL,
-                apiKey: posterRequiresAuth ? apiKey : nil,
-                size: CGSize(width: posterWidth, height: posterHeight),
-                cornerRadius: 6,
-                fallbackSymbol: fallbackSymbol
-            )
+            PosterBlurContainer(blurred: blurred, cornerRadius: 6) {
+                RemotePoster(
+                    url: posterURL,
+                    apiKey: posterRequiresAuth ? apiKey : nil,
+                    size: CGSize(width: posterWidth, height: posterHeight),
+                    cornerRadius: 6,
+                    fallbackSymbol: fallbackSymbol
+                )
+            }
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
                     .font(.system(size: 15, weight: .semibold))

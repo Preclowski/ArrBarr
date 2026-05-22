@@ -19,7 +19,7 @@ public struct ArrQuality: Decodable {
     var name: String? { quality?.name }
 }
 
-public struct ArrImage: Decodable, Equatable {
+public struct ArrImage: Decodable, Equatable, Sendable {
     let coverType: String?
     let url: String?
     let remoteUrl: String?
@@ -307,6 +307,179 @@ public struct SonarrLookupStats: Decodable {
     let seasonCount: Int?
 }
 
-// Used to fetch existing library ids
-public struct RadarrLibraryRecord: Decodable { let tmdbId: Int? }
-public struct SonarrLibraryRecord: Decodable { let tvdbId: Int? }
+// MARK: - Lidarr library / lookup types
+
+public struct LidarrLibraryRecord: Decodable, Sendable, Equatable {
+    public let id: Int?
+    public let foreignArtistId: String?
+    public let artistName: String?
+    public let monitored: Bool?
+    public let images: [ArrImage]?
+    public let statistics: LidarrLibraryStatistics?
+}
+public struct LidarrLibraryStatistics: Decodable, Sendable, Equatable {
+    public let albumCount: Int?
+    public let trackCount: Int?
+    public let trackFileCount: Int?
+}
+
+public struct LidarrLookupRecord: Decodable {
+    public let foreignArtistId: String?
+    public let artistName: String
+    public let disambiguation: String?
+    public let overview: String?
+    public let images: [ArrImage]?
+    public let ratings: LidarrLookupRatings?
+    public let genres: [String]?
+}
+public struct LidarrLookupRatings: Decodable {
+    public let value: Double?
+}
+
+public struct MetadataProfile: Decodable, Sendable, Equatable, Identifiable {
+    public let id: Int
+    public let name: String
+}
+
+// Used to fetch existing library ids and list library contents
+public struct RadarrLibraryRecord: Decodable, Sendable, Equatable {
+    let id: Int?
+    let tmdbId: Int?
+    let title: String?
+    let year: Int?
+    let hasFile: Bool?
+    let monitored: Bool?
+    let images: [ArrImage]?
+}
+public struct SonarrLibraryRecord: Decodable, Sendable, Equatable {
+    let id: Int?
+    let tvdbId: Int?
+    let title: String?
+    let year: Int?
+    let status: String?
+    let monitored: Bool?
+    let statistics: SonarrLibraryStatistics?
+    let images: [ArrImage]?
+}
+public struct SonarrLibraryStatistics: Decodable, Sendable, Equatable {
+    let episodeCount: Int?
+    let episodeFileCount: Int?
+    let seasonCount: Int?
+}
+
+// MARK: - Whisparr
+
+public struct WhisparrQueueRecord: Decodable {
+    let id: Int
+    let movieId: Int?
+    let title: String?
+    let status: String?
+    let trackedDownloadStatus: String?
+    let trackedDownloadState: String?
+    let downloadId: String?
+    let downloadClient: String?
+    let indexer: String?
+    let `protocol`: String?
+    let size: Double?
+    let sizeleft: Double?
+    let timeleft: String?
+    let estimatedCompletionTime: String?
+    let customFormats: [ArrCustomFormat]?
+    let customFormatScore: Int?
+    let quality: ArrQuality?
+    let movie: WhisparrMovie?
+}
+
+public struct WhisparrMovie: Decodable {
+    let id: Int
+    let title: String
+    let year: Int?
+    let studio: String?
+    let hasFile: Bool?
+    let titleSlug: String?
+    let images: [ArrImage]?
+    let movieFile: ArrFile?
+}
+
+public struct WhisparrCalendarRecord: Decodable {
+    let id: Int
+    let title: String
+    let year: Int?
+    let digitalRelease: String?
+    let physicalRelease: String?
+    let inCinemas: String?
+    let hasFile: Bool?
+    let overview: String?
+    let images: [ArrImage]?
+    let titleSlug: String?
+    let studio: String?
+}
+
+public struct WhisparrHistoryRecord: Decodable {
+    let id: Int
+    let movieId: Int?
+    let sourceTitle: String?
+    let date: String?
+    let eventType: String?
+    let quality: ArrQuality?
+    let customFormats: [ArrCustomFormat]?
+    let customFormatScore: Int?
+    let movie: WhisparrMovie?
+}
+
+public struct WhisparrLibraryRecord: Decodable, Sendable, Equatable {
+    public let id: Int?
+    public let foreignId: String?
+    public let tmdbId: Int?
+    public let title: String?
+    public let year: Int?
+    public let studio: String?
+    public let hasFile: Bool?
+    public let monitored: Bool?
+    public let images: [ArrImage]?
+}
+
+public struct WhisparrLookupRecord: Decodable {
+    public let foreignId: String?
+    public let tmdbId: Int?
+    public let title: String
+    public let year: Int?
+    public let overview: String?
+    public let runtime: Int?
+    public let studio: String?
+    public let images: [ArrImage]?
+    public let genres: [String]?
+    public let ratings: RadarrLookupRatings?
+}
+
+// MARK: - ArrImage helpers
+
+public extension Array where Element == ArrImage {
+    /// Resolves a poster URL from an Arr images array.
+    /// Prefers `remoteUrl` (TMDB / MusicBrainz / etc., no auth) over the local server URL.
+    /// - Parameter baseURL: The arr server base URL (used when only a local path is available).
+    /// - Parameter coverTypes: Cover type names to match, in priority order (default: `["poster"]`).
+    /// - Returns: the URL plus whether it requires the X-Api-Key header.
+    func posterURL(baseURL: String, coverTypes: [String] = ["poster"]) -> (URL?, Bool) {
+        let normalized = coverTypes.map { $0.lowercased() }
+        let match = first { img in
+            guard let type = img.coverType?.lowercased() else { return false }
+            return normalized.contains(type)
+        }
+        guard let match else { return (nil, false) }
+
+        if let remote = match.remoteUrl, let url = URL(string: remote) {
+            return (url, false)
+        }
+        if let path = match.url, let base = URL(string: baseURL) {
+            // Some Arrs return absolute, some relative. Strip query (cache-busting hash) for stable cache keys.
+            if let abs = URL(string: path), abs.scheme != nil {
+                return (abs, true)
+            }
+            let trimmed = path.split(separator: "?", maxSplits: 1).first.map(String.init) ?? path
+            let composed = URL(string: trimmed, relativeTo: base)?.absoluteURL
+            return (composed, true)
+        }
+        return (nil, false)
+    }
+}

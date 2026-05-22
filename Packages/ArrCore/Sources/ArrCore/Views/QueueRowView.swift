@@ -66,13 +66,15 @@ public struct QueueRowView: View {
 
     public var body: some View {
         HStack(alignment: .top, spacing: 10) {
-            RemotePoster(
-                url: item.posterURL,
-                apiKey: item.posterRequiresAuth ? apiKeyForSource : nil,
-                size: posterSize,
-                cornerRadius: 4,
-                fallbackSymbol: fallbackSymbol
-            )
+            PosterBlurContainer(blurred: item.source == .whisparr && configStore.blurWhisparrPosters, cornerRadius: 4) {
+                RemotePoster(
+                    url: item.posterURL,
+                    apiKey: item.posterRequiresAuth ? apiKeyForSource : nil,
+                    size: posterSize,
+                    cornerRadius: 4,
+                    fallbackSymbol: fallbackSymbol
+                )
+            }
 
             VStack(alignment: .leading, spacing: 4) {
                 VStack(alignment: .leading, spacing: 1) {
@@ -205,7 +207,7 @@ public struct QueueRowView: View {
 
     private var posterSize: CGSize {
         switch item.source {
-        case .radarr, .sonarr: return CGSize(width: 40, height: 60)
+        case .radarr, .sonarr, .whisparr: return CGSize(width: 40, height: 60)
         case .lidarr: return CGSize(width: 40, height: 40)
         }
     }
@@ -215,6 +217,7 @@ public struct QueueRowView: View {
         case .radarr: return "film"
         case .sonarr: return "tv"
         case .lidarr: return "music.note"
+        case .whisparr: return "flame"
         }
     }
 
@@ -223,6 +226,7 @@ public struct QueueRowView: View {
         case .radarr: return configStore.radarr.apiKey
         case .sonarr: return configStore.sonarr.apiKey
         case .lidarr: return configStore.lidarr.apiKey
+        case .whisparr: return configStore.whisparr.apiKey
         }
     }
 
@@ -336,16 +340,19 @@ public struct QueueItemTooltip: View {
     let item: QueueItem
     var apiKey: String? = nil
     var locale: Locale = Locale(identifier: "en")
+    @EnvironmentObject var configStore: ConfigStore
 
     public var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            RemotePoster(
-                url: item.posterURL,
-                apiKey: apiKey,
-                size: posterSize,
-                cornerRadius: 6,
-                fallbackSymbol: fallbackSymbol
-            )
+            PosterBlurContainer(blurred: item.source == .whisparr && configStore.blurWhisparrPosters, cornerRadius: 6) {
+                RemotePoster(
+                    url: item.posterURL,
+                    apiKey: apiKey,
+                    size: posterSize,
+                    cornerRadius: 6,
+                    fallbackSymbol: fallbackSymbol
+                )
+            }
             tooltipContent
         }
         .padding(12)
@@ -355,7 +362,7 @@ public struct QueueItemTooltip: View {
 
     private var posterSize: CGSize {
         switch item.source {
-        case .radarr, .sonarr: return CGSize(width: 110, height: 165)
+        case .radarr, .sonarr, .whisparr: return CGSize(width: 110, height: 165)
         case .lidarr: return CGSize(width: 110, height: 110)
         }
     }
@@ -365,6 +372,7 @@ public struct QueueItemTooltip: View {
         case .radarr: return "film"
         case .sonarr: return "tv"
         case .lidarr: return "music.note"
+        case .whisparr: return "flame"
         }
     }
 

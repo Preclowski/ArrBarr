@@ -4,15 +4,41 @@ public struct UpcomingRowView: View {
     let item: UpcomingItem
     @EnvironmentObject var configStore: ConfigStore
 
+    private var shouldBlur: Bool {
+        item.source == .whisparr && configStore.blurWhisparrPosters
+    }
+
     public var body: some View {
-        HStack(spacing: 8) {
-            RemotePoster(
-                url: item.posterURL,
-                apiKey: item.posterRequiresAuth ? apiKeyForSource : nil,
-                size: posterSize,
-                cornerRadius: 3,
-                fallbackSymbol: fallbackSymbol
+        Button {
+            guard let entityId = item.entityId else { return }
+            DetailRequest.post(
+                DetailRequest.syntheticItem(
+                    source: queueSource,
+                    entityId: entityId,
+                    title: item.title,
+                    posterURL: item.posterURL,
+                    posterRequiresAuth: item.posterRequiresAuth
+                )
             )
+        } label: {
+            rowContent
+        }
+        .buttonStyle(.plain)
+        .disabled(item.entityId == nil)
+        .help(tooltipText)
+    }
+
+    private var rowContent: some View {
+        HStack(spacing: 8) {
+            PosterBlurContainer(blurred: shouldBlur, cornerRadius: 3) {
+                RemotePoster(
+                    url: item.posterURL,
+                    apiKey: item.posterRequiresAuth ? apiKeyForSource : nil,
+                    size: posterSize,
+                    cornerRadius: 3,
+                    fallbackSymbol: fallbackSymbol
+                )
+            }
 
             VStack(alignment: .leading, spacing: 1) {
                 Text(item.title)
@@ -50,12 +76,21 @@ public struct UpcomingRowView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 5)
-        .help(tooltipText)
+        .contentShape(Rectangle())
+    }
+
+    private var queueSource: QueueItem.Source {
+        switch item.source {
+        case .radarr: return .radarr
+        case .sonarr: return .sonarr
+        case .lidarr: return .lidarr
+        case .whisparr: return .whisparr
+        }
     }
 
     private var posterSize: CGSize {
         switch item.source {
-        case .radarr, .sonarr: return CGSize(width: 24, height: 36)
+        case .radarr, .sonarr, .whisparr: return CGSize(width: 24, height: 36)
         case .lidarr: return CGSize(width: 24, height: 24)
         }
     }
@@ -65,6 +100,7 @@ public struct UpcomingRowView: View {
         case .radarr: return "film"
         case .sonarr: return "tv"
         case .lidarr: return "music.note"
+        case .whisparr: return "flame"
         }
     }
 
@@ -73,6 +109,7 @@ public struct UpcomingRowView: View {
         case .radarr: return configStore.radarr.apiKey
         case .sonarr: return configStore.sonarr.apiKey
         case .lidarr: return configStore.lidarr.apiKey
+        case .whisparr: return configStore.whisparr.apiKey
         }
     }
 

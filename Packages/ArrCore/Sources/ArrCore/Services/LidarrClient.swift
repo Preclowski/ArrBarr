@@ -1,8 +1,9 @@
 import Foundation
 
-public actor LidarrClient {
-    private let config: ServiceConfig
-    private let http = HTTPClient()
+public actor LidarrClient: ArrAPIClient {
+    public let config: ServiceConfig
+    public let apiBase = "/api/v1"
+    public let http = HTTPClient()
 
     init(config: ServiceConfig) {
         self.config = config
@@ -152,6 +153,15 @@ public actor LidarrClient {
         return (try? JSONDecoder().decode([LidarrTrackDetail].self, from: data)) ?? []
     }
 
+    func fetchAllArtists() async throws -> [LidarrLibraryRecord] {
+        if DemoMode.isActive { return [] }
+        guard config.isConfigured else { return [] }
+        guard !config.apiKey.isEmpty else { return [] }
+        let url = try http.url(base: config.baseURL, path: "/api/v1/artist")
+        let data = try await http.get(url, headers: ["X-Api-Key": config.apiKey])
+        return (try? JSONDecoder().decode([LidarrLibraryRecord].self, from: data)) ?? []
+    }
+
     func fetchHealth() async throws -> [ArrHealthRecord] {
         guard config.isConfigured else { throw HTTPError.notConfigured }
         guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
@@ -166,9 +176,9 @@ public actor LidarrClient {
         let artistName = r.artist?.artistName
         let title = artistName.map { "\($0) — \(r.title)" } ?? r.title
         // Try album cover first, fall back to artist image.
-        var (poster, auth) = pickPosterURL(from: r.images, coverTypes: ["cover", "poster"], baseURL: baseURL)
+        var (poster, auth) = (r.images?.posterURL(baseURL: baseURL, coverTypes: ["cover", "poster"]) ?? (nil, false))
         if poster == nil {
-            (poster, auth) = pickPosterURL(from: r.artist?.images, coverTypes: ["poster", "cover"], baseURL: baseURL)
+            (poster, auth) = (r.artist?.images?.posterURL(baseURL: baseURL, coverTypes: ["poster", "cover"]) ?? (nil, false))
         }
 
         return UpcomingItem(
@@ -181,7 +191,8 @@ public actor LidarrClient {
             hasFile: false,
             overview: r.overview,
             posterURL: poster,
-            posterRequiresAuth: auth
+            posterRequiresAuth: auth,
+            entityId: r.id
         )
     }
 
@@ -193,9 +204,9 @@ public actor LidarrClient {
         let artistName = r.artist?.artistName ?? r.album?.artist?.artistName
         let albumTitle = r.album?.title ?? r.title ?? "Unknown"
         let displayTitle = artistName.map { "\($0) — \(albumTitle)" } ?? albumTitle
-        var (poster, posterAuth) = pickPosterURL(from: r.album?.images, coverTypes: ["cover", "poster"], baseURL: baseURL)
+        var (poster, posterAuth) = (r.album?.images?.posterURL(baseURL: baseURL, coverTypes: ["cover", "poster"]) ?? (nil, false))
         if poster == nil {
-            (poster, posterAuth) = pickPosterURL(from: r.artist?.images, coverTypes: ["poster", "cover"], baseURL: baseURL)
+            (poster, posterAuth) = (r.artist?.images?.posterURL(baseURL: baseURL, coverTypes: ["poster", "cover"]) ?? (nil, false))
         }
 
         return QueueItem(
