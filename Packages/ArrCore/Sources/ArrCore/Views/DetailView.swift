@@ -76,7 +76,7 @@ public struct DetailView: View {
                 .font(.system(size: 11))
                 .foregroundStyle(.tertiary)
 
-            if let url = webURL {
+            if let url = arrWebURL(for: item, in: configStore) {
                 Button {
                     PlatformURLOpener.open(url)
                 } label: {
@@ -102,18 +102,18 @@ public struct DetailView: View {
                 .padding(.vertical, 60)
         } else {
             switch item.source {
-            case .radarr: radarrContent
-            case .sonarr: sonarrContent
-            case .lidarr: lidarrContent
-            case .whisparr: radarrContent // Whisparr uses the same movie layout as Radarr
+            case .radarr, .whisparr: movieContent
+            case .sonarr:            sonarrContent
+            case .lidarr:            lidarrContent
             }
         }
     }
 
-    // MARK: - Radarr
+    // MARK: - Movie (Radarr + Whisparr share the same layout since Whisparr
+    //          is a Radarr fork operating on the same RadarrMovieDetail type)
 
     @ViewBuilder
-    private var radarrContent: some View {
+    private var movieContent: some View {
         VStack(alignment: .leading, spacing: 12) {
             headerCard(
                 title: radarrDetail?.title ?? item.title,
@@ -121,9 +121,9 @@ public struct DetailView: View {
                 runtime: radarrDetail?.runtime,
                 genres: radarrDetail?.genres ?? [],
                 certification: radarrDetail?.certification,
-                ratings: radarrRatingChips,
+                ratings: movieRatingChips,
                 existingTrailer: nil,
-                posterUrl: posterURL(images: radarrDetail?.images),
+                posterUrl: arrPosterURL(images: radarrDetail?.images, for: item, in: configStore),
                 fallbackSymbol: "film",
                 posterAspect: 2.0/3.0
             )
@@ -154,7 +154,7 @@ public struct DetailView: View {
         }
     }
 
-    private var radarrRatingChips: [RatingChip] {
+    private var movieRatingChips: [RatingChip] {
         guard let r = radarrDetail?.ratings else { return [] }
         var chips: [RatingChip] = []
         if let v = r.imdb?.value { chips.append(RatingChip(label: "IMDb", value: String(format: "%.1f", v), color: .yellow)) }
@@ -177,7 +177,7 @@ public struct DetailView: View {
                 certification: sonarrDetail?.network,
                 ratings: sonarrRatingChips,
                 existingTrailer: nil,
-                posterUrl: posterURL(images: sonarrDetail?.images),
+                posterUrl: arrPosterURL(images: sonarrDetail?.images, for: item, in: configStore),
                 fallbackSymbol: "tv",
                 posterAspect: 2.0/3.0
             )
@@ -271,7 +271,8 @@ public struct DetailView: View {
 
     private var lidarrHeaderCard: some View {
         let album = lidarrAlbum
-        let posterUrl = posterURL(images: album?.images) ?? posterURL(images: album?.artist?.images)
+        let posterUrl = arrPosterURL(images: album?.images, for: item, in: configStore)
+            ?? arrPosterURL(images: album?.artist?.images, for: item, in: configStore)
         return HStack(alignment: .top, spacing: 12) {
             RemotePoster(
                 url: posterUrl ?? item.posterURL,
@@ -354,35 +355,12 @@ public struct DetailView: View {
             ratings: ratings,
             posterURL: posterUrl ?? item.posterURL,
             posterRequiresAuth: item.posterRequiresAuth,
-            apiKey: apiKeyForSource,
+            apiKey: arrAPIKey(for: item, in: configStore),
             fallbackSymbol: fallbackSymbol,
             posterAspect: posterAspect,
             blurred: configStore.shouldBlurPoster(for: item.source),
             trailing: existingTrailer.map { AnyView(ExistingFileLine(item: $0)) }
         )
-    }
-
-    // MARK: - Helpers
-
-    private var apiKeyForSource: String? {
-        configStore.serviceConfig(for: item.source).apiKey
-    }
-
-    private var webURL: URL? {
-        guard let slug = item.contentSlug else { return nil }
-        let cfg = configStore.serviceConfig(for: item.source)
-        let path: String = switch item.source {
-        case .radarr, .whisparr: "/movie/\(slug)"
-        case .sonarr: "/series/\(slug)"
-        case .lidarr: "/album/\(slug)"
-        }
-        return URL(string: cfg.baseURL)?.appendingPathComponent(path)
-    }
-
-    private func posterURL(images: [ArrImage]?) -> URL? {
-        let baseURL = configStore.serviceConfig(for: item.source).baseURL
-        let (url, _) = (images?.posterURL(baseURL: baseURL, coverTypes: ["poster", "cover"]) ?? (nil, false))
-        return url
     }
 
     // MARK: - Loading
