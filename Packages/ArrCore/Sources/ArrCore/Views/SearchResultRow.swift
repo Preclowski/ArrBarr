@@ -7,7 +7,7 @@ public struct SearchResultRow: View {
     @EnvironmentObject var configStore: ConfigStore
 
     private var shouldBlur: Bool {
-        result.source == .whisparr && configStore.blurWhisparrPosters
+        configStore.shouldBlurPoster(for: result.source)
     }
 
     public var body: some View {

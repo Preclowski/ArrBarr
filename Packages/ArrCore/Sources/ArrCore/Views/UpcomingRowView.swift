@@ -5,7 +5,7 @@ public struct UpcomingRowView: View {
     @EnvironmentObject var configStore: ConfigStore
 
     private var shouldBlur: Bool {
-        item.source == .whisparr && configStore.blurWhisparrPosters
+        configStore.shouldBlurPoster(for: item.source)
     }
 
     public var body: some View {

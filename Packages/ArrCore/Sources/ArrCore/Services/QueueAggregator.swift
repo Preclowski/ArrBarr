@@ -343,6 +343,15 @@ public struct HealthResult: Equatable {
         self.radarr = radarr; self.sonarr = sonarr; self.lidarr = lidarr; self.whisparr = whisparr
     }
     public static let empty = HealthResult(radarr: [], sonarr: [], lidarr: [], whisparr: [])
+
+    public func records(for source: QueueItem.Source) -> [ArrHealthRecord] {
+        switch source {
+        case .radarr:   return radarr
+        case .sonarr:   return sonarr
+        case .lidarr:   return lidarr
+        case .whisparr: return whisparr
+        }
+    }
 }
 
 public struct AggregateResult: Equatable {

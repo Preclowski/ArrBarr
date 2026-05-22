@@ -460,7 +460,7 @@ public struct PopoverContentView: View {
             )
             .padding(.vertical, 12)
         case .arr(let source):
-            let arrError = error(for: source)
+            let arrError = viewModel.error(for: source)
             QueueSectionView(
                 title: source.displayName,
                 symbol: source.symbol,
@@ -492,43 +492,20 @@ public struct PopoverContentView: View {
         }
     }
 
-    private func items(for source: QueueItem.Source) -> [QueueItem] {
-        switch source {
-        case .sonarr: return viewModel.sonarr
-        case .radarr: return viewModel.radarr
-        case .lidarr: return viewModel.lidarr
-        case .whisparr: return viewModel.whisparr
-        }
-    }
-
     /// Sonarr items get bucketed by downloadId so a season pack collapses
     /// into one row matching the underlying download. Radarr / Lidarr stay
     /// one-row-per-item; grouping is sonarr-only for now.
     private func entries(for source: QueueItem.Source) -> [QueueRowEntry] {
-        let raw = items(for: source)
+        let raw = viewModel.items(for: source)
         switch source {
         case .sonarr: return QueueGrouping.group(raw)
         default:      return raw.map { .single($0) }
         }
     }
 
-    private func error(for source: QueueItem.Source) -> String? {
-        switch source {
-        case .sonarr: return viewModel.sonarrError
-        case .radarr: return viewModel.radarrError
-        case .lidarr: return viewModel.lidarrError
-        case .whisparr: return viewModel.whisparrError
-        }
-    }
-
     private func health(for source: QueueItem.Source) -> [ArrHealthRecord] {
         guard configStore.showIndexerIssues else { return [] }
-        switch source {
-        case .sonarr: return viewModel.health.sonarr
-        case .radarr: return viewModel.health.radarr
-        case .lidarr: return viewModel.health.lidarr
-        case .whisparr: return viewModel.health.whisparr
-        }
+        return viewModel.health.records(for: source)
     }
 
     // MARK: - Upcoming content

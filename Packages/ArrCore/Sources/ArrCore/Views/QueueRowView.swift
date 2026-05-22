@@ -66,7 +66,7 @@ public struct QueueRowView: View {
 
     public var body: some View {
         HStack(alignment: .top, spacing: 10) {
-            PosterBlurContainer(blurred: item.source == .whisparr && configStore.blurWhisparrPosters, cornerRadius: 4) {
+            PosterBlurContainer(blurred: configStore.shouldBlurPoster(for: item.source), cornerRadius: 4) {
                 RemotePoster(
                     url: item.posterURL,
                     apiKey: item.posterRequiresAuth ? apiKeyForSource : nil,
@@ -339,7 +339,7 @@ public struct QueueItemTooltip: View {
 
     public var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            PosterBlurContainer(blurred: item.source == .whisparr && configStore.blurWhisparrPosters, cornerRadius: 6) {
+            PosterBlurContainer(blurred: configStore.shouldBlurPoster(for: item.source), cornerRadius: 6) {
                 RemotePoster(
                     url: item.posterURL,
                     apiKey: apiKey,

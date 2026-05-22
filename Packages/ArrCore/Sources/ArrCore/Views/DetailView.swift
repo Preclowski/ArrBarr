@@ -13,12 +13,7 @@ public struct DetailView: View {
     /// One item → render the single-item form; multiple → stacked list with
     /// the originally-clicked row highlighted.
     private var siblings: [QueueItem] {
-        let pool: [QueueItem] = switch item.source {
-        case .radarr: viewModel.radarr
-        case .sonarr: viewModel.sonarr
-        case .lidarr: viewModel.lidarr
-        case .whisparr: viewModel.whisparr
-        }
+        let pool = viewModel.items(for: item.source)
         guard let id = item.entityId else { return [item] }
         let matched = pool.filter { $0.entityId == id }
         return matched.isEmpty ? [item] : matched
@@ -362,7 +357,7 @@ public struct DetailView: View {
             apiKey: apiKeyForSource,
             fallbackSymbol: fallbackSymbol,
             posterAspect: posterAspect,
-            blurred: item.source == .whisparr && configStore.blurWhisparrPosters,
+            blurred: configStore.shouldBlurPoster(for: item.source),
             trailing: existingTrailer.map { AnyView(ExistingFileLine(item: $0)) }
         )
     }

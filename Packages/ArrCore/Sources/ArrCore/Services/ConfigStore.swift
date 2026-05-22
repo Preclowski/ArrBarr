@@ -277,6 +277,14 @@ public final class ConfigStore: ObservableObject {
         }
     }
 
+    /// True when posters from this source should render blurred (currently
+    /// only Whisparr, gated by `blurWhisparrPosters`). Eight or so views
+    /// previously inlined `source == .whisparr && blurWhisparrPosters`; this
+    /// keeps the policy in one place.
+    public func shouldBlurPoster(for source: QueueItem.Source) -> Bool {
+        source == .whisparr && blurWhisparrPosters
+    }
+
     private func publisher(for kind: ServiceKind) -> Published<ServiceConfig>.Publisher {
         switch kind {
         case .radarr: $radarr
