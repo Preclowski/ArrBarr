@@ -133,18 +133,26 @@ public struct ConfirmAddCard: View {
             // — Single-row controls: profile · folder · cancel · confirm
             HStack(spacing: 8) {
                 if profiles.count > 1 {
-                    inlinePicker(
-                        icon: "slider.horizontal.3",
-                        selection: Binding(get: { selectedProfileId }, set: { selectedProfileId = $0 }),
-                        options: profiles.map { ($0.id, $0.name) }
-                    )
+                    Picker("", selection: Binding(get: { selectedProfileId }, set: { selectedProfileId = $0 })) {
+                        ForEach(profiles, id: \.id) { p in
+                            Text(p.name).tag(p.id)
+                        }
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
+                    .controlSize(.small)
+                    .fixedSize()
                 }
                 if folders.count > 1 {
-                    inlinePicker(
-                        icon: "folder",
-                        selection: Binding(get: { selectedFolderPath }, set: { selectedFolderPath = $0 }),
-                        options: folders.map { ($0.path, Self.shortenPath($0.path)) }
-                    )
+                    Picker("", selection: Binding(get: { selectedFolderPath }, set: { selectedFolderPath = $0 })) {
+                        ForEach(folders, id: \.path) { f in
+                            Text(Self.shortenPath(f.path)).tag(f.path)
+                        }
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
+                    .controlSize(.small)
+                    .fixedSize()
                 }
                 Spacer(minLength: 0)
                 Button(Self.locStr("Cancel"), action: onCancel)
@@ -158,38 +166,6 @@ public struct ConfirmAddCard: View {
                 #endif
             }
         }
-    }
-
-    /// Compact pill-style picker: icon + selected value, no label.
-    private func inlinePicker<ID: Hashable>(
-        icon: String,
-        selection: Binding<ID>,
-        options: [(ID, String)]
-    ) -> some View {
-        Menu {
-            ForEach(options, id: \.0) { id, name in
-                Button(name) { selection.wrappedValue = id }
-            }
-        } label: {
-            HStack(spacing: 4) {
-                Image(systemName: icon)
-                    .font(.system(size: 10))
-                    .foregroundStyle(.secondary)
-                Text(options.first(where: { $0.0 == selection.wrappedValue })?.1 ?? "—")
-                    .font(.system(size: 11))
-                    .foregroundStyle(.primary)
-                    .lineLimit(1)
-                Image(systemName: "chevron.up.chevron.down")
-                    .font(.system(size: 8, weight: .semibold))
-                    .foregroundStyle(.tertiary)
-            }
-            .padding(.horizontal, 6)
-            .padding(.vertical, 3)
-            .background(Color.primary.opacity(0.06), in: Capsule())
-        }
-        .menuStyle(.borderlessButton)
-        .menuIndicator(.hidden)
-        .fixedSize()
     }
 
     /// Display only the trailing path component so the chip stays narrow.
