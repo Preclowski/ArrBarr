@@ -77,11 +77,16 @@ public struct ChatView: View {
             .overlay(alignment: .topLeading) {
                 if !viewModel.messages.isEmpty {
                     Button(action: { viewModel.clear() }) {
-                        Image(systemName: "trash")
-                            .font(.system(size: 11))
-                            .foregroundStyle(.secondary)
-                            .padding(6)
-                            .background(.thinMaterial, in: Circle())
+                        HStack(spacing: 4) {
+                            Image(systemName: "trash")
+                                .font(.system(size: 11))
+                            Text("Clear chat", bundle: .module)
+                                .font(.system(size: 11, weight: .medium))
+                        }
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 5)
+                        .background(.thinMaterial, in: Capsule())
                     }
                     .buttonStyle(.plain)
                     .help(Text("Clear conversation", bundle: .module))

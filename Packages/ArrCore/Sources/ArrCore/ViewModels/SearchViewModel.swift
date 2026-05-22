@@ -100,6 +100,38 @@ public final class SearchViewModel: ObservableObject {
         }
     }
 
+    /// Replace a TMDB-sourced "lean" SearchResult with the arr's own lookup
+    /// hit so the SearchAddPanel hero card shows the full IMDB/RT/Metacritic
+    /// + runtime + genre chips that the `+` path gets natively. Returns nil
+    /// (caller keeps the lean version) when the arr can't enrich the row —
+    /// Lidarr/Whisparr already come from their own lookups, and TMDB-TV
+    /// items with no tvdbId fall back to a title match that may miss.
+    func enrich(_ result: SearchResult) async -> SearchResult? {
+        guard let client = client(for: result.source) else { return nil }
+        let candidates: [SearchResult]
+        do {
+            switch result.source {
+            case .radarr:
+                guard result.id > 0 else { return nil }
+                candidates = try await client.lookup(query: "tmdb:\(result.id)")
+            case .sonarr:
+                if result.id > 0 {
+                    candidates = try await client.lookup(query: "tvdb:\(result.id)")
+                } else {
+                    // TMDB-TV ids aren't TVDB ids — fall back to title match
+                    // and accept the first identical-title hit.
+                    let raw = try await client.lookup(query: result.title)
+                    candidates = raw.filter { $0.title.lowercased() == result.title.lowercased() }
+                }
+            case .lidarr, .whisparr:
+                return nil
+            }
+        } catch {
+            return nil
+        }
+        return candidates.first
+    }
+
     func loadOptions(source: QueueItem.Source) async {
         let client = client(for: source)
         guard let client else { return }
