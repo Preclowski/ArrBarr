@@ -223,7 +223,7 @@ public struct QueueRowView: View {
     // MARK: - Actions
 
     private var actionButtons: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 2) {
             if canControl && canPauseResume {
                 if item.isPaused {
                     IconButton(symbol: "play.fill", helpKey: "Resume", accessibilityLabel: "Resume \(item.title)") {
@@ -594,13 +594,13 @@ public struct IconButton: View {
     public var body: some View {
         Button(action: action) {
             Image(systemName: symbol)
-                .font(.system(size: 11, weight: .medium))
+                .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(isHovering ? (tint ?? .primary) : .secondary)
-                .frame(width: 22, height: 22)
+                .frame(width: 28, height: 28)
                 .background(
                     Circle()
                         .fill(isHovering
-                              ? (tint?.opacity(0.12) ?? Color.primary.opacity(0.08))
+                              ? (tint?.opacity(0.14) ?? Color.primary.opacity(0.08))
                               : Color.clear)
                 )
                 .contentShape(Circle())
