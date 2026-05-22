@@ -3,19 +3,28 @@ import SwiftUI
 /// Wraps a poster (or any view) and blurs it until tapped, when `blurred` is true.
 /// Used to hide NSFW Whisparr posters by default. Reveal is per-instance and
 /// session-only — closing the view restores the blur.
+///
+/// SwiftUI's `.blur(radius:)` is a Gaussian convolution that bleeds past the
+/// content's frame, producing fuzzy edges past the poster. We `.compositingGroup()`
+/// to rasterize the blur, then `.clipShape(RoundedRectangle)` to confine it back
+/// to the poster's shape so the bleed disappears.
 public struct PosterBlurContainer<Content: View>: View {
     let blurred: Bool
+    let cornerRadius: CGFloat
     @ViewBuilder let content: () -> Content
     @State private var revealed = false
 
-    public init(blurred: Bool, @ViewBuilder content: @escaping () -> Content) {
+    public init(blurred: Bool, cornerRadius: CGFloat = 4, @ViewBuilder content: @escaping () -> Content) {
         self.blurred = blurred
+        self.cornerRadius = cornerRadius
         self.content = content
     }
 
     public var body: some View {
         content()
             .blur(radius: (blurred && !revealed) ? 12 : 0)
+            .compositingGroup()
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
             .contentShape(Rectangle())
             .onTapGesture {
                 if blurred { revealed.toggle() }

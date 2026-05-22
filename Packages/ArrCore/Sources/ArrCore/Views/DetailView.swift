@@ -455,7 +455,7 @@ public struct MediaHeaderCard: View {
         let posterWidth: CGFloat = 110
         let posterHeight = posterWidth / posterAspect
         HStack(alignment: .top, spacing: 12) {
-            PosterBlurContainer(blurred: blurred) {
+            PosterBlurContainer(blurred: blurred, cornerRadius: 6) {
                 RemotePoster(
                     url: posterURL,
                     apiKey: posterRequiresAuth ? apiKey : nil,

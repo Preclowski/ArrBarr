@@ -10,7 +10,7 @@ public struct UpcomingRowView: View {
 
     public var body: some View {
         HStack(spacing: 8) {
-            PosterBlurContainer(blurred: shouldBlur) {
+            PosterBlurContainer(blurred: shouldBlur, cornerRadius: 3) {
                 RemotePoster(
                     url: item.posterURL,
                     apiKey: item.posterRequiresAuth ? apiKeyForSource : nil,

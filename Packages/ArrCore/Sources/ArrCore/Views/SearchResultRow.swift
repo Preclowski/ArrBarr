@@ -13,7 +13,7 @@ public struct SearchResultRow: View {
     public var body: some View {
         Button(action: onTap) {
             HStack(spacing: 8) {
-                PosterBlurContainer(blurred: shouldBlur) {
+                PosterBlurContainer(blurred: shouldBlur, cornerRadius: 3) {
                     RemotePoster(url: result.posterURL, apiKey: nil, size: CGSize(width: 26, height: 38), cornerRadius: 3)
                 }
 
