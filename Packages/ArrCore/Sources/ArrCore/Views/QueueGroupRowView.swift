@@ -237,11 +237,10 @@ public struct QueueGroupRowView: View {
     // MARK: - Actions
 
     private var actionButtons: some View {
-        // Spacing 6 (not 4) because macOS 26's `.glass` button style
-        // auto-merges adjacent buttons into a single "joined glass" capsule
-        // when they're closer together — that's what was making them look
-        // glued in some rows. A wider gap keeps them distinct.
-        HStack(spacing: 6) {
+        // 2pt gap — the ghost IconButton's own 28pt circle already gives
+        // the visual breathing room; bigger spacing made them look like
+        // separate floating widgets rather than a paired action cluster.
+        HStack(spacing: 2) {
             if canControl && canPauseResume {
                 if rep.isPaused {
                     IconButton(symbol: "play.fill", helpKey: "Resume", accessibilityLabel: "Resume \(headerLabel)") {
