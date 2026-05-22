@@ -43,6 +43,7 @@ public struct MainWindowView: View {
         case allQueue
         case upcoming
         case search
+        case chat
         /// Queue filtered to one source.
         case source(QueueItem.Source)
     }
@@ -52,6 +53,7 @@ public struct MainWindowView: View {
     @State private var historySource: QueueItem.Source?
     @State private var historyRefreshNonce = 0
     @StateObject private var searchViewModel = SearchViewModel()
+    @StateObject private var chatViewModel = ChatViewModelFactory.makePlaceholder()
     @State private var searchResult: SearchResult?
 
     // MARK: - Visibility helpers (mirrored from PopoverContentView)
@@ -68,6 +70,13 @@ public struct MainWindowView: View {
         ].compactMap { $0 }
     }
     private var searchConfigured: Bool { !searchSources.isEmpty }
+
+    private var chatAvailable: Bool {
+        guard configStore.chatEnabled else { return false }
+        guard configStore.mcp.isConfigured else { return false }
+        if #available(macOS 26.0, *) { return true }
+        return false
+    }
 
     private func isVisible(_ config: ServiceConfig) -> Bool {
         DemoMode.isActive ? config.enabled : config.isConfigured
@@ -125,6 +134,7 @@ public struct MainWindowView: View {
         case .allQueue: return String(localized: "Queue")
         case .upcoming: return String(localized: "Upcoming")
         case .search:   return String(localized: "Search")
+        case .chat:     return String(localized: "Chat")
         case .source(let s): return s.displayName
         }
     }
@@ -143,6 +153,10 @@ public struct MainWindowView: View {
                 if searchConfigured {
                     Label("Search", systemImage: "magnifyingglass")
                         .tag(Destination.search)
+                }
+                if chatAvailable {
+                    Label("Chat", systemImage: "sparkles")
+                        .tag(Destination.chat)
                 }
             } header: {
                 Text("Library")
@@ -215,6 +229,9 @@ public struct MainWindowView: View {
                 upcomingContent
             case .search:
                 searchContent
+            case .chat:
+                ChatView(viewModel: chatViewModel)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
     }
