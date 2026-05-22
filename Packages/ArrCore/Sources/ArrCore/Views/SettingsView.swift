@@ -49,6 +49,8 @@ public struct SettingsView: View {
                         .tabItem { Label("Usenet", systemImage: "doc.zipper") }
                     torrentsPane
                         .tabItem { Label("Torrents", systemImage: "arrow.triangle.2.circlepath") }
+                    aiPane
+                        .tabItem { Label("AI", systemImage: "sparkles") }
                 }
                 bottomBar
             }
@@ -92,6 +94,61 @@ public struct SettingsView: View {
             }
         }
     }
+
+    /// Shared "AI" section. One master toggle at the top kills the whole
+    /// feature; nested controls (MCP + provider) only appear when AI is on.
+    @ViewBuilder
+    private var aiSection: some View {
+        Section("AI") {
+            Toggle("Enable AI", isOn: $configStore.aiEnabled)
+            if configStore.aiEnabled {
+                Toggle("Enable MCP", isOn: $configStore.mcp.enabled)
+                if configStore.mcp.enabled {
+                    TextField("MCP server URL", text: $configStore.mcp.baseURL,
+                              prompt: Text(verbatim: "http://nas.local:3000/mcp"))
+                    SecureField("MCP bearer token (optional)", text: $configStore.mcp.bearerToken)
+                }
+                Picker("AI provider", selection: $configStore.chatProvider) {
+                    ForEach(ChatProvider.allCases) { p in
+                        Text(p.displayName).tag(p)
+                    }
+                }
+                if configStore.chatProvider == .openai {
+                    TextField("API base URL", text: $configStore.openai.baseURL,
+                              prompt: Text(verbatim: "https://api.openai.com/v1"))
+                    SecureField("API key", text: $configStore.openai.apiKey)
+                    TextField("Model", text: $configStore.openai.model,
+                              prompt: Text(verbatim: "gpt-4o-mini"))
+                }
+                if configStore.chatProvider == .foundationModels {
+                    #if os(macOS)
+                    if #unavailable(macOS 26.0) {
+                        Label("Apple Intelligence requires macOS 26.",
+                              systemImage: "exclamationmark.triangle")
+                            .foregroundStyle(.secondary)
+                            .font(.caption)
+                    }
+                    #else
+                    if #unavailable(iOS 26.0) {
+                        Label("Apple Intelligence requires iOS 26.",
+                              systemImage: "exclamationmark.triangle")
+                            .foregroundStyle(.secondary)
+                            .font(.caption)
+                    }
+                    #endif
+                }
+            }
+        }
+    }
+
+    #if os(macOS)
+    private var aiPane: some View {
+        Form {
+            aiSection
+        }
+        .formStyle(.grouped)
+    }
+    #endif
 
     #if os(macOS)
     private func relaunchApp() {
@@ -162,35 +219,7 @@ public struct SettingsView: View {
                     }
                 }
             }
-            Section("AI Chat") {
-                Toggle("Enable chat", isOn: $configStore.chatEnabled)
-                Toggle("Enable MCP", isOn: $configStore.mcp.enabled)
-                if configStore.mcp.enabled {
-                    TextField("MCP server URL", text: $configStore.mcp.baseURL,
-                              prompt: Text(verbatim: "http://nas.local:3000/mcp"))
-                    SecureField("MCP bearer token (optional)", text: $configStore.mcp.bearerToken)
-                }
-                Picker("AI provider", selection: $configStore.chatProvider) {
-                    ForEach(ChatProvider.allCases) { p in
-                        Text(p.displayName).tag(p)
-                    }
-                }
-                if configStore.chatProvider == .openai {
-                    TextField("Base URL", text: $configStore.openai.baseURL,
-                              prompt: Text(verbatim: "https://openrouter.ai/api/v1"))
-                    SecureField("API key", text: $configStore.openai.apiKey)
-                    TextField("Model", text: $configStore.openai.model,
-                              prompt: Text(verbatim: "openai/gpt-4o-mini"))
-                }
-                if configStore.chatProvider == .foundationModels {
-                    if #unavailable(iOS 26.0) {
-                        Label("Apple Intelligence requires iOS 26.",
-                              systemImage: "exclamationmark.triangle")
-                            .foregroundStyle(.secondary)
-                            .font(.caption)
-                    }
-                }
-            }
+            aiSection
             if devModeRevealed {
                 Section("Developer options") {
                     Toggle("Demo mode", isOn: Binding(
@@ -321,35 +350,6 @@ public struct SettingsView: View {
                 Picker("Background", selection: $configStore.backgroundInterval) {
                     ForEach(ConfigStore.backgroundIntervalOptions, id: \.self) { interval in
                         Text(Self.formatInterval(interval)).tag(interval)
-                    }
-                }
-            }
-            Section("AI Chat") {
-                Toggle("Enable chat", isOn: $configStore.chatEnabled)
-                Toggle("Enable MCP", isOn: $configStore.mcp.enabled)
-                if configStore.mcp.enabled {
-                    TextField("MCP server URL", text: $configStore.mcp.baseURL,
-                              prompt: Text(verbatim: "http://nas.local:3000/mcp"))
-                    SecureField("MCP bearer token (optional)", text: $configStore.mcp.bearerToken)
-                }
-                Picker("AI provider", selection: $configStore.chatProvider) {
-                    ForEach(ChatProvider.allCases) { p in
-                        Text(p.displayName).tag(p)
-                    }
-                }
-                if configStore.chatProvider == .openai {
-                    TextField("Base URL", text: $configStore.openai.baseURL,
-                              prompt: Text(verbatim: "https://openrouter.ai/api/v1"))
-                    SecureField("API key", text: $configStore.openai.apiKey)
-                    TextField("Model", text: $configStore.openai.model,
-                              prompt: Text(verbatim: "openai/gpt-4o-mini"))
-                }
-                if configStore.chatProvider == .foundationModels {
-                    if #unavailable(macOS 26.0) {
-                        Label("Apple Intelligence requires macOS 26.",
-                              systemImage: "exclamationmark.triangle")
-                            .foregroundStyle(.secondary)
-                            .font(.caption)
                     }
                 }
             }

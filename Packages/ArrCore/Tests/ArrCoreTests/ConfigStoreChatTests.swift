@@ -12,23 +12,23 @@ struct ConfigStoreChatTests {
         return d
     }
 
-    @Test("defaults: chatEnabled false, mcp empty")
+    @Test("defaults: aiEnabled false, mcp empty")
     func defaults() {
         let d = freshDefaults()
         let store = ConfigStore(defaults: d)
-        #expect(store.chatEnabled == false)
+        #expect(store.aiEnabled == false)
         #expect(store.mcp == .empty)
     }
 
-    @Test("persists chatEnabled across instances")
+    @Test("persists aiEnabled across instances")
     func persistChatEnabled() {
         let d = freshDefaults()
         do {
             let s = ConfigStore(defaults: d)
-            s.chatEnabled = true
+            s.aiEnabled = true
         }
         let s2 = ConfigStore(defaults: d)
-        #expect(s2.chatEnabled == true)
+        #expect(s2.aiEnabled == true)
     }
 
     @Test("persists mcp across instances")

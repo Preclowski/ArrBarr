@@ -9,22 +9,22 @@ struct OpenAIConfigTests {
         #expect(OpenAIConfig.empty.isConfigured == false)
     }
 
-    @Test("default config has openrouter URL + model")
+    @Test("default config has no provider-specific defaults")
     func defaults() {
-        #expect(OpenAIConfig.empty.baseURL == "https://openrouter.ai/api/v1")
-        #expect(OpenAIConfig.empty.model == "openai/gpt-4o-mini")
+        #expect(OpenAIConfig.empty.baseURL == "")
+        #expect(OpenAIConfig.empty.apiKey == "")
+        #expect(OpenAIConfig.empty.model == "")
     }
 
     @Test("filled config is configured")
     func filled() {
-        let cfg = OpenAIConfig(baseURL: "https://openrouter.ai/api/v1", apiKey: "sk-or-x", model: "openai/gpt-4o-mini")
+        let cfg = OpenAIConfig(baseURL: "https://api.example.com/v1", apiKey: "sk-x", model: "gpt-4o-mini")
         #expect(cfg.isConfigured == true)
     }
 
     @Test("missing key rejected")
     func noKey() {
-        var cfg = OpenAIConfig.empty
-        cfg.model = "x"
+        let cfg = OpenAIConfig(baseURL: "https://x/v1", apiKey: "", model: "x")
         #expect(cfg.isConfigured == false)
     }
 

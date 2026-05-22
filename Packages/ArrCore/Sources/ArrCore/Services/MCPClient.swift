@@ -1,11 +1,21 @@
 import Foundation
 
-public enum MCPError: Error, Equatable, Sendable {
+public enum MCPError: Error, Equatable, Sendable, LocalizedError {
     case invalidURL
     case http(status: Int)
     case rpc(code: Int, message: String)
     case decoding(String)
     case empty
+
+    public var errorDescription: String? {
+        switch self {
+        case .invalidURL: return "MCP server URL is invalid."
+        case .http(let status): return "MCP server returned HTTP \(status)."
+        case .rpc(let code, let message): return "MCP error \(code): \(message)"
+        case .decoding(let msg): return "Couldn't decode MCP response: \(msg)"
+        case .empty: return "MCP server returned an empty response."
+        }
+    }
 }
 
 public actor MCPClient {

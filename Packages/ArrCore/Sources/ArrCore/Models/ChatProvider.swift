@@ -9,7 +9,7 @@ public enum ChatProvider: String, Codable, CaseIterable, Sendable, Identifiable 
     public var displayName: String {
         switch self {
         case .foundationModels: return "Apple Intelligence"
-        case .openai: return "OpenAI / OpenRouter"
+        case .openai: return "OpenAI-compatible API"
         }
     }
 }
@@ -34,5 +34,5 @@ public struct OpenAIConfig: Codable, Equatable, Sendable {
         return !model.isEmpty
     }
 
-    public static let empty = OpenAIConfig(baseURL: "https://openrouter.ai/api/v1", apiKey: "", model: "openai/gpt-4o-mini")
+    public static let empty = OpenAIConfig(baseURL: "", apiKey: "", model: "")
 }

@@ -118,10 +118,28 @@ public struct OpenAIProvider: LLMProvider {
     }
 }
 
-public enum OpenAIError: Error, Equatable, Sendable {
+public enum OpenAIError: Error, Equatable, Sendable, LocalizedError {
     case http(status: Int, body: String)
     case decoding(String)
     case empty
+
+    public var errorDescription: String? {
+        switch self {
+        case .http(let status, let body):
+            // Try to surface the OpenAI/OpenRouter-style {"error":{"message":"..."}}.
+            if let data = body.data(using: .utf8),
+               let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let err = obj["error"] as? [String: Any],
+               let msg = err["message"] as? String, !msg.isEmpty {
+                return "HTTP \(status): \(msg)"
+            }
+            return "HTTP \(status) from AI provider."
+        case .decoding(let msg):
+            return "Couldn't decode AI response: \(msg)"
+        case .empty:
+            return "AI provider returned an empty response."
+        }
+    }
 }
 
 // MARK: - Wire types

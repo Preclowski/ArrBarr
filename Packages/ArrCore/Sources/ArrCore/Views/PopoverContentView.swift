@@ -46,7 +46,7 @@ public struct PopoverContentView: View {
     private var searchConfigured: Bool { !searchSources.isEmpty }
 
     private var chatAvailable: Bool {
-        guard configStore.chatEnabled else { return false }
+        guard configStore.aiEnabled else { return false }
         guard configStore.mcp.isConfigured else { return false }
         switch configStore.chatProvider {
         case .openai:

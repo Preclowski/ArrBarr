@@ -4140,6 +4140,15 @@
     },
     "Enable MCP": {
       "extractionState": "manual"
+    },
+    "AI": {
+      "extractionState": "manual"
+    },
+    "Enable AI": {
+      "extractionState": "manual"
+    },
+    "API base URL": {
+      "extractionState": "manual"
     }
   }
 }
