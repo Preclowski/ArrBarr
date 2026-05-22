@@ -594,22 +594,10 @@ public struct IconButton: View {
     public var body: some View {
         Button(action: action) {
             Image(systemName: symbol)
-                .font(.system(size: 11, weight: .medium))
+                .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(isHovering ? (tint ?? .primary) : .secondary)
-                // play.fill's bounding box is symmetric, but the triangle's
-                // visual mass sits left of its geometric centre — the apex
-                // sticks out to the right of the optical centroid. A 1pt
-                // leading nudge brings the triangle back into the hover
-                // circle. Other symbols stay where they are.
-                .offset(x: symbol == "play.fill" ? -1 : 0)
-                .frame(width: 28, height: 28)
-                .background(
-                    Circle()
-                        .fill(isHovering
-                              ? (tint?.opacity(0.14) ?? Color.primary.opacity(0.08))
-                              : Color.clear)
-                )
-                .contentShape(Circle())
+                .frame(width: 24, height: 24)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         #if os(macOS)
