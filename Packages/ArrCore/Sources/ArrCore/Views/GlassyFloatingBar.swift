@@ -12,6 +12,41 @@ public extension View {
     func glassyFloatingBar() -> some View {
         modifier(GlassyFloatingBarModifier())
     }
+
+    /// Compact glass pill for inline clusters (row action buttons etc).
+    /// Same Liquid Glass / material chrome as `glassyFloatingBar` but
+    /// without the drop shadow — meant to live inside another rectangle
+    /// (the row's hover-action overlay) where a shadow would muddy the
+    /// edge against the fade gradient.
+    func glassPill() -> some View {
+        modifier(GlassPillModifier())
+    }
+}
+
+private struct GlassPillModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        #if os(macOS)
+        if #available(macOS 26.0, *) {
+            content.glassEffect(.regular, in: .capsule)
+        } else {
+            content
+                .background(.thinMaterial, in: Capsule())
+                .overlay(
+                    Capsule().stroke(Color.primary.opacity(0.08), lineWidth: 0.5)
+                )
+        }
+        #else
+        if #available(iOS 26.0, *) {
+            content.glassEffect(.regular, in: .capsule)
+        } else {
+            content
+                .background(.thinMaterial, in: Capsule())
+                .overlay(
+                    Capsule().stroke(Color.primary.opacity(0.08), lineWidth: 0.5)
+                )
+        }
+        #endif
+    }
 }
 
 private struct GlassyFloatingBarModifier: ViewModifier {

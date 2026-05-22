@@ -237,10 +237,10 @@ public struct QueueGroupRowView: View {
     // MARK: - Actions
 
     private var actionButtons: some View {
-        // 2pt gap — the ghost IconButton's own 28pt circle already gives
-        // the visual breathing room; bigger spacing made them look like
-        // separate floating widgets rather than a paired action cluster.
-        HStack(spacing: 2) {
+        // Mirrors QueueRowView.actionButtons — see there for rationale.
+        // Single neutral glass capsule wraps both glyphs; red lives only
+        // in the trash glyph itself.
+        HStack(spacing: 4) {
             if canControl && canPauseResume {
                 if rep.isPaused {
                     IconButton(symbol: "play.fill", helpKey: "Resume", accessibilityLabel: "Resume \(headerLabel)") {
@@ -260,6 +260,9 @@ public struct QueueGroupRowView: View {
                 }
             }
         }
+        .padding(.horizontal, 6)
+        .padding(.vertical, 4)
+        .glassPill()
     }
 
 }

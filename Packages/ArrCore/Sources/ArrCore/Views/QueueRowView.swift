@@ -223,7 +223,13 @@ public struct QueueRowView: View {
     // MARK: - Actions
 
     private var actionButtons: some View {
-        HStack(spacing: 2) {
+        // Single glass capsule wrapping the whole action cluster — the
+        // cluster is the affordance, not the individual buttons. Red lives
+        // only in the trash glyph; the capsule stays neutral so it doesn't
+        // scream "destructive" at the user just because remove is one
+        // option in there. Matches the chat input bar's chrome (see
+        // `glassyFloatingBar`).
+        HStack(spacing: 4) {
             if canControl && canPauseResume {
                 if item.isPaused {
                     IconButton(symbol: "play.fill", helpKey: "Resume", accessibilityLabel: "Resume \(item.title)") {
@@ -243,6 +249,9 @@ public struct QueueRowView: View {
                 }
             }
         }
+        .padding(.horizontal, 6)
+        .padding(.vertical, 4)
+        .glassPill()
     }
 
     // MARK: - Custom format tags
@@ -550,19 +559,14 @@ public struct HoverActionOverlay<Actions: View>: ViewModifier {
             content
                 .frame(maxWidth: .infinity, alignment: .leading)
             if visible {
+                // Used to fade the row content out behind the action cluster
+                // via a LinearGradient that became visible as a rectangular
+                // "tail" past the capsule's rounded edge. The glass capsule
+                // itself now provides the visual separation from row content
+                // (the material obscures text behind it naturally), so the
+                // gradient is gone — no shape clash with the capsule.
                 actions()
-                    .padding(.leading, 6)
-                    .background(
-                        LinearGradient(
-                            colors: [
-                                Color.platformWindowBackground.opacity(0),
-                                Color.platformWindowBackground.opacity(0.95),
-                                Color.platformWindowBackground.opacity(0.95),
-                            ],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
+                    .padding(.trailing, 4)
                     .transition(.opacity)
             }
         }
@@ -596,14 +600,8 @@ public struct IconButton: View {
             Image(systemName: symbol)
                 .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(isHovering ? (tint ?? .primary) : .secondary)
-                .frame(width: 28, height: 28)
-                .background(
-                    Circle()
-                        .fill(isHovering
-                              ? (tint?.opacity(0.14) ?? Color.primary.opacity(0.08))
-                              : Color.clear)
-                )
-                .contentShape(Circle())
+                .frame(width: 22, height: 22)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         #if os(macOS)
