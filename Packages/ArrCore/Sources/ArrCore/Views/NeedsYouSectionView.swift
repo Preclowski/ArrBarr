@@ -84,5 +84,6 @@ public struct NeedsYouSectionView: View {
             RoundedRectangle(cornerRadius: 4)
                 .fill(Color.primary.opacity(0.07))
         )
+        .padding(.top, 3)
     }
 }
