@@ -24,6 +24,14 @@ public struct ServiceConfig: Codable, Equatable, Sendable {
         return true
     }
 
+    /// `isConfigured` requires a real URL; demo mode runs entirely on mocks
+    /// so the URL field stays blank but we still want the arr to render in
+    /// the UI as long as the user has flipped `enabled`. Both PopoverContentView
+    /// and MainWindowView gate their rendering on this property.
+    public var isVisible: Bool {
+        DemoMode.isActive ? enabled : isConfigured
+    }
+
     public static let empty = ServiceConfig(enabled: false, baseURL: "", apiKey: "", username: "", password: "")
 }
 

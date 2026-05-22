@@ -58,10 +58,10 @@ public struct MainWindowView: View {
 
     // MARK: - Visibility helpers (mirrored from PopoverContentView)
 
-    private var sonarrConfigured: Bool { isVisible(configStore.sonarr) }
-    private var radarrConfigured: Bool { isVisible(configStore.radarr) }
-    private var lidarrConfigured: Bool { isVisible(configStore.lidarr) }
-    private var whisparrConfigured: Bool { isVisible(configStore.whisparr) }
+    private var sonarrConfigured: Bool { configStore.sonarr.isVisible }
+    private var radarrConfigured: Bool { configStore.radarr.isVisible }
+    private var lidarrConfigured: Bool { configStore.lidarr.isVisible }
+    private var whisparrConfigured: Bool { configStore.whisparr.isVisible }
     private var anyArrConfigured: Bool { sonarrConfigured || radarrConfigured || lidarrConfigured || whisparrConfigured }
 
     private var searchConfigured: Bool { sonarrConfigured || radarrConfigured || lidarrConfigured || whisparrConfigured }
@@ -77,9 +77,6 @@ public struct MainWindowView: View {
         }
     }
 
-    private func isVisible(_ config: ServiceConfig) -> Bool {
-        DemoMode.isActive ? config.enabled : config.isConfigured
-    }
 
     // MARK: - Body
 
@@ -215,7 +212,7 @@ public struct MainWindowView: View {
 
     @ViewBuilder
     private func sourceRow(_ source: QueueItem.Source) -> some View {
-        let count = items(for: source).count
+        let count = viewModel.items(for: source).count
         Label {
             HStack {
                 Text(source.displayName)
@@ -301,12 +298,12 @@ public struct MainWindowView: View {
                             title: source.displayName,
                             symbol: source.symbol,
                             entries: entries(for: source),
-                            error: error(for: source),
+                            error: viewModel.error(for: source),
                             health: health(for: source),
                             isCollapsed: false,
                             onToggleCollapse: nil,
                             viewModel: viewModel,
-                            onShowHistory: error(for: source) == nil
+                            onShowHistory: viewModel.error(for: source) == nil
                                 ? { self.historySource = source }
                                 : nil,
                             onShowDetail: { item in
@@ -412,53 +409,25 @@ public struct MainWindowView: View {
         .padding(40)
     }
 
-    // MARK: - Data helpers (mirrored from PopoverContentView)
+    // MARK: - Data helpers
 
     private func isConfigured(_ source: QueueItem.Source) -> Bool {
-        switch source {
-        case .sonarr: return sonarrConfigured
-        case .radarr: return radarrConfigured
-        case .lidarr: return lidarrConfigured
-        case .whisparr: return whisparrConfigured
-        }
-    }
-
-    private func items(for source: QueueItem.Source) -> [QueueItem] {
-        switch source {
-        case .sonarr: return viewModel.sonarr
-        case .radarr: return viewModel.radarr
-        case .lidarr: return viewModel.lidarr
-        case .whisparr: return viewModel.whisparr
-        }
+        configStore.serviceConfig(for: source).isVisible
     }
 
     /// Sonarr items get bucketed by downloadId so a season pack collapses
     /// into one row matching the underlying download. Same rule as the popover.
     private func entries(for source: QueueItem.Source) -> [QueueRowEntry] {
-        let raw = items(for: source)
+        let raw = viewModel.items(for: source)
         switch source {
         case .sonarr: return QueueGrouping.group(raw)
         default:      return raw.map { .single($0) }
         }
     }
 
-    private func error(for source: QueueItem.Source) -> String? {
-        switch source {
-        case .sonarr: return viewModel.sonarrError
-        case .radarr: return viewModel.radarrError
-        case .lidarr: return viewModel.lidarrError
-        case .whisparr: return viewModel.whisparrError
-        }
-    }
-
     private func health(for source: QueueItem.Source) -> [ArrHealthRecord] {
         guard configStore.showIndexerIssues else { return [] }
-        switch source {
-        case .sonarr: return viewModel.health.sonarr
-        case .radarr: return viewModel.health.radarr
-        case .lidarr: return viewModel.health.lidarr
-        case .whisparr: return viewModel.health.whisparr
-        }
+        return viewModel.health.records(for: source)
     }
 }
 #endif

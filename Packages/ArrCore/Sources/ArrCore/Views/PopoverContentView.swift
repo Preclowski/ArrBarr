@@ -31,10 +31,10 @@ public struct PopoverContentView: View {
     @State private var detailItem: QueueItem?
     @State private var showSearch = false
 
-    private var sonarrConfigured: Bool { isVisible(configStore.sonarr) }
-    private var radarrConfigured: Bool { isVisible(configStore.radarr) }
-    private var lidarrConfigured: Bool { isVisible(configStore.lidarr) }
-    private var whisparrConfigured: Bool { isVisible(configStore.whisparr) }
+    private var sonarrConfigured: Bool { configStore.sonarr.isVisible }
+    private var radarrConfigured: Bool { configStore.radarr.isVisible }
+    private var lidarrConfigured: Bool { configStore.lidarr.isVisible }
+    private var whisparrConfigured: Bool { configStore.whisparr.isVisible }
     private var anyArrConfigured: Bool { sonarrConfigured || radarrConfigured || lidarrConfigured || whisparrConfigured }
 
     private var searchAvailable: Bool { sonarrConfigured || radarrConfigured || lidarrConfigured || whisparrConfigured }
@@ -48,13 +48,6 @@ public struct PopoverContentView: View {
         case .openai:
             return configStore.openai.isConfigured
         }
-    }
-
-    /// In demo mode, show an arr whenever it's enabled (the configs are seeded to
-    /// `enabled = true` on first demo launch — see `DemoMode.seedConfigsIfNeeded`).
-    /// Outside of demo mode, require a real configured connection.
-    private func isVisible(_ config: ServiceConfig) -> Bool {
-        DemoMode.isActive ? config.enabled : config.isConfigured
     }
 
     @ViewBuilder
