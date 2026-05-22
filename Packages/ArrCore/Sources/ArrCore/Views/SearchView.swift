@@ -34,23 +34,22 @@ public struct SearchView: View {
             if viewModel.query.isEmpty && !viewModel.isSearching {
                 emptyHint
             } else if viewModel.isSearching {
-                ProgressView()
-                    .controlSize(.small)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 32)
+                VStack {
+                    ProgressView()
+                        .controlSize(.small)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
                         ForEach(orderedSources, id: \.self) { src in
                             sourceSection(src)
-                            if src != orderedSources.last {
-                                Divider().padding(.horizontal, 12)
-                            }
                         }
                     }
                     .padding(.vertical, 4)
                 }
                 .scrollBounceBehavior(.basedOnSize)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
         .onChange(of: viewModel.query) { _, _ in
@@ -104,12 +103,8 @@ public struct SearchView: View {
                         .padding(.horizontal, 12)
                         .padding(.bottom, 8)
                 } else {
-                    let lastID = results.last?.id
                     ForEach(results) { r in
                         SearchResultRow(result: r) { onSelectResult(r) }
-                        if r.id != lastID {
-                            Divider().padding(.leading, 46)
-                        }
                     }
                 }
             }
