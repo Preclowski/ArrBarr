@@ -47,7 +47,11 @@ public struct MediaHeaderCard: View {
                 )
             }
             VStack(alignment: .leading, spacing: 4) {
-                Text(title)
+                // Title + year on one line ("Movie Title (1994)"). The
+                // metadata strip below loses its leading "1994 · " segment;
+                // saves a whole text row of vertical space and reads more
+                // like the way people refer to films in conversation.
+                titleWithYear
                     .font(.system(size: 15, weight: .semibold))
                     .lineLimit(3)
                 if let subtitle, !subtitle.isEmpty {
@@ -55,22 +59,10 @@ public struct MediaHeaderCard: View {
                         .font(.system(size: 11))
                         .foregroundStyle(.secondary)
                 }
-                HStack(spacing: 6) {
-                    if let year { Text(verbatim: String(year)).foregroundStyle(.secondary) }
-                    if let runtime, runtime > 0 {
-                        Text("·").foregroundStyle(.tertiary)
-                        Text("\(runtime) min").foregroundStyle(.secondary)
-                    }
-                    if let network, !network.isEmpty {
-                        Text("·").foregroundStyle(.tertiary)
-                        Text(network).foregroundStyle(.secondary)
-                    }
-                    if let cert = certification, !cert.isEmpty {
-                        Text("·").foregroundStyle(.tertiary)
-                        Text(cert).foregroundStyle(.secondary)
-                    }
+                if hasMetadataStrip {
+                    metadataStrip
+                        .font(.system(size: 11))
                 }
-                .font(.system(size: 11))
                 if !genres.isEmpty {
                     GenreChips(genres: genres)
                 }
@@ -86,6 +78,37 @@ public struct MediaHeaderCard: View {
                 }
             }
             Spacer(minLength: 0)
+        }
+    }
+
+    private var titleWithYear: Text {
+        if let year {
+            return Text(verbatim: "\(title) (\(year))")
+        }
+        return Text(verbatim: title)
+    }
+
+    private var hasMetadataStrip: Bool {
+        (runtime ?? 0) > 0
+            || (network.map { !$0.isEmpty } ?? false)
+            || (certification.map { !$0.isEmpty } ?? false)
+    }
+
+    /// Metadata dots row — runtime · network · certification. Year used to
+    /// lead this row but moved into the title above, which also means we
+    /// only render the row when at least one of the remaining bits exists.
+    @ViewBuilder
+    private var metadataStrip: some View {
+        HStack(spacing: 6) {
+            let segments: [String] = [
+                (runtime ?? 0) > 0 ? "\(runtime!) min" : nil,
+                network.flatMap { $0.isEmpty ? nil : $0 },
+                certification.flatMap { $0.isEmpty ? nil : $0 },
+            ].compactMap { $0 }
+            ForEach(Array(segments.enumerated()), id: \.offset) { idx, segment in
+                if idx > 0 { Text("·").foregroundStyle(.tertiary) }
+                Text(segment).foregroundStyle(.secondary)
+            }
         }
     }
 }
