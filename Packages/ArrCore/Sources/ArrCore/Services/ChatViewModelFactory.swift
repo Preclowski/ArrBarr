@@ -16,15 +16,25 @@ public enum ChatViewModelFactory {
         lidarr: ServiceConfig = .empty,
         whisparr: ServiceConfig = .empty,
         aiKnowsAboutWhisparr: Bool = false,
+        tmdbApiKey: String = "",
         chatProvider: ChatProvider,
         openai: OpenAIConfig
     ) -> ChatViewModel {
         let backend: ToolBackend = LocalToolBackend(
             sonarr: sonarr, radarr: radarr, lidarr: lidarr,
-            whisparr: whisparr, aiKnowsAboutWhisparr: aiKnowsAboutWhisparr
+            whisparr: whisparr, aiKnowsAboutWhisparr: aiKnowsAboutWhisparr,
+            tmdbApiKey: tmdbApiKey
         )
 
-        let llmTools = ChatToolCatalog.llmTools(includeWhisparr: aiKnowsAboutWhisparr)
+        let tmdbEnabled = !tmdbApiKey.isEmpty
+        let llmTools = ChatToolCatalog.llmTools(
+            includeSonarr: sonarr.isConfigured,
+            includeRadarr: radarr.isConfigured,
+            includeLidarr: lidarr.isConfigured,
+            includeWhisparr: whisparr.isConfigured && aiKnowsAboutWhisparr,
+            includeTMDBMovies: tmdbEnabled && radarr.isConfigured,
+            includeTMDBSeries: tmdbEnabled && sonarr.isConfigured
+        )
 
         let invoke: @Sendable (String, JSONValue) async throws -> ToolCallOutput = { name, args in
             try await backend.callTool(name: name, arguments: args)

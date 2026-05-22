@@ -8,24 +8,40 @@ public actor LocalToolBackend: ToolBackend {
     private let lidarr: ServiceConfig
     private let whisparr: ServiceConfig
     private let aiKnowsAboutWhisparr: Bool
+    private let tmdbApiKey: String
 
     public init(sonarr: ServiceConfig, radarr: ServiceConfig, lidarr: ServiceConfig = .empty,
-                whisparr: ServiceConfig = .empty, aiKnowsAboutWhisparr: Bool = false) {
+                whisparr: ServiceConfig = .empty, aiKnowsAboutWhisparr: Bool = false,
+                tmdbApiKey: String = "") {
         self.sonarr = sonarr
         self.radarr = radarr
         self.lidarr = lidarr
         self.whisparr = whisparr
         self.aiKnowsAboutWhisparr = aiKnowsAboutWhisparr
+        self.tmdbApiKey = tmdbApiKey
     }
 
+    private var tmdbEnabled: Bool { !tmdbApiKey.isEmpty }
+
     public func listTools() async throws -> [MCPTool] {
-        ChatToolCatalog.tools(includeWhisparr: aiKnowsAboutWhisparr)
+        ChatToolCatalog.tools(
+            includeSonarr: sonarr.isConfigured,
+            includeRadarr: radarr.isConfigured,
+            includeLidarr: lidarr.isConfigured,
+            includeWhisparr: whisparr.isConfigured && aiKnowsAboutWhisparr,
+            includeTMDBMovies: tmdbEnabled && radarr.isConfigured,
+            includeTMDBSeries: tmdbEnabled && sonarr.isConfigured
+        )
     }
 
     public func callTool(name: String, arguments: JSONValue) async throws -> ToolCallOutput {
         // Guard Whisparr tools when the toggle is off
         if name.hasPrefix("whisparr_") && !aiKnowsAboutWhisparr {
             return ToolCallOutput(text: "Whisparr AI access is disabled in Settings.")
+        }
+        // Guard TMDB tools when no key is configured
+        if name.hasPrefix("tmdb_") && !tmdbEnabled {
+            return ToolCallOutput(text: "TMDB API key is not configured in Settings → AI → Discovery.")
         }
         switch name {
         case "sonarr_search":       return try await searchSeries(arguments)
@@ -44,6 +60,11 @@ public actor LocalToolBackend: ToolBackend {
         case "whisparr_get_movies": return try await listScenes(arguments)
         case "whisparr_get_calendar": return try await whisparrCalendar()
         case "whisparr_add_scene":  return try await addScene(arguments)
+        case "tmdb_search_person":          return try await tmdbSearchPerson(arguments)
+        case "tmdb_person_movie_credits":   return try await tmdbPersonMovieCredits(arguments)
+        case "tmdb_person_tv_credits":      return try await tmdbPersonTVCredits(arguments)
+        case "tmdb_discover_movies":        return try await tmdbDiscoverMovies(arguments)
+        case "tmdb_discover_series":        return try await tmdbDiscoverSeries(arguments)
         default:
             throw LocalToolError.unknownTool(name)
         }
@@ -563,6 +584,217 @@ public actor LocalToolBackend: ToolBackend {
         return out
     }
 
+    // MARK: - TMDB tools
+
+    private func tmdbSearchPerson(_ args: JSONValue) async throws -> ToolCallOutput {
+        let query = Self.stringArg(args, key: "query")
+        guard !query.isEmpty else {
+            return ToolCallOutput(text: "Please provide a person name to search for.")
+        }
+        let client = TMDBClient(apiKey: tmdbApiKey)
+        let results = try await client.searchPerson(query: query)
+        guard !results.isEmpty else {
+            return ToolCallOutput(text: "No people found on TMDB for '\(query)'.")
+        }
+        let top = results.prefix(8)
+        var out = "Top \(top.count) match\(top.count == 1 ? "" : "es") for '\(query)' (pass personId to tmdb_person_movie_credits or tmdb_person_tv_credits):"
+        for p in top {
+            let dept = p.knownForDepartment.map { " (\($0))" } ?? ""
+            out += "\n- \(p.name)\(dept) — personId: \(p.id)"
+        }
+        return ToolCallOutput(text: out)
+    }
+
+    private func tmdbPersonMovieCredits(_ args: JSONValue) async throws -> ToolCallOutput {
+        let personId = Self.intArg(args, key: "personId")
+        guard personId != 0 else {
+            return ToolCallOutput(text: "Need a personId — run tmdb_search_person first.")
+        }
+        let client = TMDBClient(apiKey: tmdbApiKey)
+        let credits = try await client.personMovieCredits(personId: personId)
+        // TMDB returns credits unordered; rank by voteAverage then by year desc.
+        let ranked = credits.sorted { lhs, rhs in
+            let lv = lhs.voteAverage ?? 0
+            let rv = rhs.voteAverage ?? 0
+            if lv != rv { return lv > rv }
+            return (lhs.year ?? 0) > (rhs.year ?? 0)
+        }
+        let results = Self.tmdbMoviesToSearchResults(ranked.prefix(25))
+        guard !results.isEmpty else {
+            return ToolCallOutput(text: "TMDB returned no movie credits for personId \(personId).")
+        }
+        let text = Self.formatTMDBSummary(results, kind: "movie", origin: "personId \(personId)")
+        return ToolCallOutput(text: text, rich: .searchMovieResults(results))
+    }
+
+    private func tmdbPersonTVCredits(_ args: JSONValue) async throws -> ToolCallOutput {
+        let personId = Self.intArg(args, key: "personId")
+        guard personId != 0 else {
+            return ToolCallOutput(text: "Need a personId — run tmdb_search_person first.")
+        }
+        let client = TMDBClient(apiKey: tmdbApiKey)
+        let credits = try await client.personTVCredits(personId: personId)
+        let ranked = credits.sorted { lhs, rhs in
+            let lv = lhs.voteAverage ?? 0
+            let rv = rhs.voteAverage ?? 0
+            if lv != rv { return lv > rv }
+            return (lhs.year ?? 0) > (rhs.year ?? 0)
+        }
+        let results = Self.tmdbTVToSearchResults(ranked.prefix(25))
+        guard !results.isEmpty else {
+            return ToolCallOutput(text: "TMDB returned no TV credits for personId \(personId).")
+        }
+        let text = Self.formatTMDBSummary(results, kind: "series", origin: "personId \(personId)")
+        return ToolCallOutput(text: text, rich: .searchSeriesResults(results))
+    }
+
+    private func tmdbDiscoverMovies(_ args: JSONValue) async throws -> ToolCallOutput {
+        let genreToken = Self.stringArg(args, key: "genre")
+        let startYear = Self.optionalIntArg(args, key: "startYear")
+        let endYear = Self.optionalIntArg(args, key: "endYear")
+        let sortBy = Self.stringArg(args, key: "sortBy")
+        let resolvedSort = sortBy.isEmpty ? "popularity.desc" : sortBy
+        var genreIds: [Int] = []
+        if !genreToken.isEmpty {
+            if let id = TMDBGenres.movieId(for: genreToken) {
+                genreIds = [id]
+            } else {
+                return ToolCallOutput(text: "Unknown movie genre '\(genreToken)'. Try: \(Self.knownMovieGenres()).")
+            }
+        }
+        let client = TMDBClient(apiKey: tmdbApiKey)
+        let movies = try await client.discoverMovies(
+            genreIds: genreIds, startYear: startYear, endYear: endYear, sortBy: resolvedSort
+        )
+        let results = Self.tmdbMoviesToSearchResults(movies.prefix(25))
+        guard !results.isEmpty else {
+            return ToolCallOutput(text: "TMDB returned no movies matching that filter.")
+        }
+        let descParts = [
+            genreToken.isEmpty ? nil : "genre=\(genreToken)",
+            startYear.map { "from \($0)" },
+            endYear.map { "to \($0)" },
+        ].compactMap { $0 }
+        let origin = descParts.isEmpty ? "discover" : descParts.joined(separator: ", ")
+        let text = Self.formatTMDBSummary(results, kind: "movie", origin: origin)
+        return ToolCallOutput(text: text, rich: .searchMovieResults(results))
+    }
+
+    private func tmdbDiscoverSeries(_ args: JSONValue) async throws -> ToolCallOutput {
+        let genreToken = Self.stringArg(args, key: "genre")
+        let startYear = Self.optionalIntArg(args, key: "startYear")
+        let endYear = Self.optionalIntArg(args, key: "endYear")
+        let sortBy = Self.stringArg(args, key: "sortBy")
+        let resolvedSort = sortBy.isEmpty ? "popularity.desc" : sortBy
+        var genreIds: [Int] = []
+        if !genreToken.isEmpty {
+            if let id = TMDBGenres.tvId(for: genreToken) {
+                genreIds = [id]
+            } else {
+                return ToolCallOutput(text: "Unknown TV genre '\(genreToken)'. Try: \(Self.knownTVGenres()).")
+            }
+        }
+        let client = TMDBClient(apiKey: tmdbApiKey)
+        let shows = try await client.discoverTV(
+            genreIds: genreIds, startYear: startYear, endYear: endYear, sortBy: resolvedSort
+        )
+        let results = Self.tmdbTVToSearchResults(shows.prefix(25))
+        guard !results.isEmpty else {
+            return ToolCallOutput(text: "TMDB returned no series matching that filter.")
+        }
+        let descParts = [
+            genreToken.isEmpty ? nil : "genre=\(genreToken)",
+            startYear.map { "from \($0)" },
+            endYear.map { "to \($0)" },
+        ].compactMap { $0 }
+        let origin = descParts.isEmpty ? "discover" : descParts.joined(separator: ", ")
+        let text = Self.formatTMDBSummary(results, kind: "series", origin: origin)
+        return ToolCallOutput(text: text, rich: .searchSeriesResults(results))
+    }
+
+    // MARK: - TMDB → SearchResult adapters
+
+    /// Build `SearchResult`s the rest of the UI already knows how to render
+    /// (poster carousel, tap-to-add via ConfirmAddCard). Movie `id` carries
+    /// the tmdbId — Radarr's add path takes it as-is.
+    private static func tmdbMoviesToSearchResults(_ movies: some Sequence<TMDBMovieSummary>) -> [SearchResult] {
+        movies.map { m in
+            SearchResult(
+                id: m.id,
+                foreignId: String(m.id),
+                title: m.title,
+                subtitle: nil,
+                year: m.year,
+                rating: m.voteAverage,
+                imdb: nil, rottenTomatoes: nil, metacritic: nil,
+                overview: m.overview,
+                runtime: nil,
+                genres: [],
+                network: nil,
+                certification: nil,
+                posterURL: TMDBClient.imageURL(path: m.posterPath),
+                source: .radarr
+            )
+        }
+    }
+
+    /// TV path is fuzzier: Sonarr indexes by tvdbId, but TMDB exposes its own
+    /// tv id. We stash 0 in `id` so the add-tap path falls back to a title
+    /// lookup — Sonarr resolves the right tvdbId at add-time. Good enough for
+    /// popular titles; ambiguous ones surface in ConfirmAddCard for review.
+    private static func tmdbTVToSearchResults(_ shows: some Sequence<TMDBTVSummary>) -> [SearchResult] {
+        shows.map { s in
+            SearchResult(
+                id: 0,
+                foreignId: "",
+                title: s.name,
+                subtitle: nil,
+                year: s.year,
+                rating: s.voteAverage,
+                imdb: nil, rottenTomatoes: nil, metacritic: nil,
+                overview: s.overview,
+                runtime: nil,
+                genres: [],
+                network: nil,
+                certification: nil,
+                posterURL: TMDBClient.imageURL(path: s.posterPath),
+                source: .sonarr
+            )
+        }
+    }
+
+    private static func formatTMDBSummary(_ results: [SearchResult], kind: String, origin: String) -> String {
+        var out = "TMDB returned \(results.count) \(kind) result\(results.count == 1 ? "" : "s") (\(origin)). Top:"
+        for r in results.prefix(10) {
+            let year = r.year.map { " (\($0))" } ?? ""
+            let rating = r.rating.map { String(format: " ★%.1f", $0) } ?? ""
+            out += "\n- \(r.title)\(year)\(rating) — tmdbId: \(r.id == 0 ? "n/a" : String(r.id))"
+        }
+        if results.count > 10 { out += "\n…and \(results.count - 10) more." }
+        return out
+    }
+
+    private static func knownMovieGenres() -> String {
+        ["action", "comedy", "crime", "documentary", "drama", "fantasy",
+         "horror", "mystery", "romance", "science fiction", "thriller", "western"]
+            .joined(separator: ", ")
+    }
+
+    private static func knownTVGenres() -> String {
+        ["animation", "comedy", "crime", "documentary", "drama",
+         "mystery", "reality", "sci-fi & fantasy", "war & politics", "western"]
+            .joined(separator: ", ")
+    }
+
+    private static func optionalIntArg(_ value: JSONValue, key: String) -> Int? {
+        guard case .object(let dict) = value, let v = dict[key] else { return nil }
+        switch v {
+        case .number(let n): return Int(n)
+        case .string(let s): return Int(s)
+        case .null: return nil
+        default: return nil
+        }
+    }
 }
 
 public enum LocalToolError: Error, Equatable, Sendable, LocalizedError {

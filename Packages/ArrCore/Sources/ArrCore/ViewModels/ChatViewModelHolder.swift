@@ -26,6 +26,7 @@ public final class ChatViewModelHolder: ObservableObject {
             lidarr: store.lidarr,
             whisparr: store.whisparr,
             aiKnowsAboutWhisparr: store.aiKnowsAboutWhisparr,
+            tmdbApiKey: store.tmdbApiKey,
             chatProvider: store.chatProvider,
             openai: store.openai
         )
@@ -38,6 +39,7 @@ public final class ChatViewModelHolder: ObservableObject {
             store.lidarr.baseURL, store.lidarr.apiKey, "\(store.lidarr.enabled)",
             store.whisparr.baseURL, store.whisparr.apiKey, "\(store.whisparr.enabled)",
             "\(store.aiKnowsAboutWhisparr)",
+            store.tmdbApiKey,
             store.chatProvider.rawValue,
             store.openai.baseURL, store.openai.apiKey, store.openai.model,
         ].joined(separator: "|")

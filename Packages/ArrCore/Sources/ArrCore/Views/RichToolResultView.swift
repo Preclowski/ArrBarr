@@ -227,29 +227,45 @@ private struct SearchResultCard: View {
 
     private func requestAdd() {
         let intent = String(localized: "Add \(result.title)", bundle: .module)
+        // Always include `title` alongside the foreign id — TMDB-derived
+        // results (notably TV) carry id=0 and rely on title-based fallback in
+        // the backend. For native arr lookups the title is redundant but
+        // harmless; the backend prefers the id when both are present.
         switch result.source {
         case .sonarr:
             AddRequest.post(
                 toolName: "sonarr_add_series",
-                draftArgs: .object(["tvdbId": .number(Double(result.id))]),
+                draftArgs: .object([
+                    "tvdbId": .number(Double(result.id)),
+                    "title": .string(result.title),
+                ]),
                 userIntent: intent
             )
         case .radarr:
             AddRequest.post(
                 toolName: "radarr_add_movie",
-                draftArgs: .object(["tmdbId": .number(Double(result.id))]),
+                draftArgs: .object([
+                    "tmdbId": .number(Double(result.id)),
+                    "title": .string(result.title),
+                ]),
                 userIntent: intent
             )
         case .lidarr:
             AddRequest.post(
                 toolName: "lidarr_add_artist",
-                draftArgs: .object(["foreignArtistId": .string(result.foreignId)]),
+                draftArgs: .object([
+                    "foreignArtistId": .string(result.foreignId),
+                    "artistName": .string(result.title),
+                ]),
                 userIntent: intent
             )
         case .whisparr:
             AddRequest.post(
                 toolName: "whisparr_add_scene",
-                draftArgs: .object(["foreignId": .string(result.foreignId)]),
+                draftArgs: .object([
+                    "foreignId": .string(result.foreignId),
+                    "title": .string(result.title),
+                ]),
                 userIntent: intent
             )
         }
