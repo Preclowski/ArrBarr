@@ -358,34 +358,12 @@ struct DownloadSection: View {
         }
     }
 
-    /// "Listing" badges that mirror the row-level title chips in QueueRowView:
-    /// Upgrade/New capsule + download-client capsule. Used for Radarr's
-    /// single-item card so the detail view echoes the listing's badges.
+    /// Wrapper that defers to the public `ListingBadgesView`. Kept so the
+    /// DownloadSection's existing `if showListingBadges` block doesn't need
+    /// to reach into the public namespace.
     @ViewBuilder
     private func listingBadges(_ item: QueueItem) -> some View {
-        HStack(spacing: 4) {
-            Text(item.isUpgrade ? "Upgrade" : "New")
-                .font(.system(size: 9, weight: .semibold))
-                .foregroundStyle(item.isUpgrade ? Color.indigo : Color.accentColor)
-                .padding(.horizontal, 5)
-                .padding(.vertical, 1)
-                .background(
-                    (item.isUpgrade ? Color.indigo : Color.accentColor).opacity(0.15),
-                    in: Capsule()
-                )
-
-            if let client = item.downloadClient {
-                let color = downloadClientColor(client)
-                Text(client)
-                    .font(.system(size: 9, weight: .semibold))
-                    .foregroundStyle(color)
-                    .padding(.horizontal, 5)
-                    .padding(.vertical, 1)
-                    .background(color.opacity(0.15), in: Capsule())
-                    .lineLimit(1)
-            }
-            Spacer()
-        }
+        ListingBadgesView(item: item)
     }
 
     @ViewBuilder
@@ -713,6 +691,40 @@ struct MultiRow: View {
 
 /// Full-width existing-file banner for Radarr details. Sits between the
 /// header card and the overview so the chips have room to breathe.
+/// "Listing" badges mirroring the queue row's title chips: Upgrade/New
+/// capsule + download-client capsule. Shown in the movie detail header
+/// (under the ratings) so the user knows which client is grinding away
+/// without having to scroll to the download section.
+public struct ListingBadgesView: View {
+    let item: QueueItem
+
+    public var body: some View {
+        HStack(spacing: 4) {
+            Text(item.isUpgrade ? "Upgrade" : "New")
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundStyle(item.isUpgrade ? Color.indigo : Color.accentColor)
+                .padding(.horizontal, 5)
+                .padding(.vertical, 1)
+                .background(
+                    (item.isUpgrade ? Color.indigo : Color.accentColor).opacity(0.15),
+                    in: Capsule()
+                )
+
+            if let client = item.downloadClient {
+                let color = downloadClientColor(client)
+                Text(client)
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(color)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 1)
+                    .background(color.opacity(0.15), in: Capsule())
+                    .lineLimit(1)
+            }
+            Spacer()
+        }
+    }
+}
+
 /// Banner describing the file an arr already has on disk for this item.
 /// Two callers:
 ///   - upgrade-in-progress (queue item) — fields come from the queue

@@ -122,7 +122,12 @@ public struct DetailView: View {
                 genres: radarrDetail?.genres ?? [],
                 certification: radarrDetail?.certification,
                 ratings: movieRatingChips,
-                existingTrailer: nil,
+                // Listing badges (Upgrade/New + download client) used to live
+                // at the top of the download section. Hoisted into the header
+                // trailing slot so the right column under the ratings — which
+                // was empty for movies — earns its keep. Only shown when
+                // there's an active download to badge.
+                existingTrailer: hasActiveDownloads ? AnyView(ListingBadgesView(item: item)) : nil,
                 posterUrl: arrPosterURL(images: radarrDetail?.images, for: item, in: configStore),
                 fallbackSymbol: "film",
                 posterAspect: 2.0/3.0
@@ -132,28 +137,30 @@ public struct DetailView: View {
                 ExpandableOverview(text: overview)
             }
 
-            // Two ways to surface the "existing file" info, mutually exclusive:
-            //  - active upgrade in queue → `item.existing*` fields (set by
-            //    Radarr's queue endpoint when a download will replace something).
-            //  - no queue activity, already in library → `radarrDetail.movieFile`
-            //    (the file Radarr already owns on disk).
-            // The upgrade case wins when both apply because the queue side has
-            // fresher metadata. Placed after the overview so the description
-            // sits with the title block at the top of the card.
-            if item.isUpgrade {
-                ExistingFileBanner(item: item)
-            } else if let movieFile = radarrDetail?.movieFile {
-                ExistingFileBanner(movieFile: movieFile)
-            }
-
+            // Active downloads first; the existing-file banner reads like a
+            // footnote after, since for upgrade-in-progress rows the queue
+            // section already shows the "new" file and the banner is the
+            // counterpart "old" — natural reading order.
             if hasActiveDownloads {
                 DownloadSection(
                     items: siblings,
                     focused: item,
                     showInlineUpgrade: false,
                     showCustomFormats: true,
-                    showListingBadges: true
+                    // Badges moved to the header card above.
+                    showListingBadges: false
                 )
+            }
+
+            // Two ways to surface the "existing file" info, mutually exclusive:
+            //  - active upgrade in queue → `item.existing*` fields (set by
+            //    Radarr's queue endpoint when a download will replace something).
+            //  - no queue activity, already in library → `radarrDetail.movieFile`
+            //    (the file Radarr already owns on disk).
+            if item.isUpgrade {
+                ExistingFileBanner(item: item)
+            } else if let movieFile = radarrDetail?.movieFile {
+                ExistingFileBanner(movieFile: movieFile)
             }
 
             if let err = loadError {
@@ -350,7 +357,10 @@ public struct DetailView: View {
         genres: [String],
         certification: String?,
         ratings: [RatingChip],
-        existingTrailer: QueueItem?,
+        /// Anything that should sit in the header's right column under the
+        /// rating chips. Used for the listing badges (Upgrade/New + download
+        /// client) on movie rows. `nil` leaves the area empty.
+        existingTrailer: AnyView?,
         posterUrl: URL?,
         fallbackSymbol: String,
         posterAspect: CGFloat
@@ -369,7 +379,7 @@ public struct DetailView: View {
             fallbackSymbol: fallbackSymbol,
             posterAspect: posterAspect,
             blurred: configStore.shouldBlurPoster(for: item.source),
-            trailing: existingTrailer.map { AnyView(ExistingFileLine(item: $0)) }
+            trailing: existingTrailer
         )
     }
 
