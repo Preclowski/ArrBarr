@@ -612,11 +612,15 @@ public actor LocalToolBackend: ToolBackend {
         }
         let client = TMDBClient(apiKey: tmdbApiKey)
         let credits = try await client.personMovieCredits(personId: personId)
-        // TMDB returns credits unordered; rank by voteAverage then by year desc.
+        // TMDB returns credits unordered. Rank by `popularity` (TMDB's own
+        // "what people are searching/watching" metric) descending — voteAverage
+        // is misleading here because Sandler's best-rated entries are 7.5+
+        // niche cameos with a handful of votes, not Happy Gilmore (6.0, 4k
+        // votes). Tie-break on year desc so recent stuff floats.
         let ranked = credits.sorted { lhs, rhs in
-            let lv = lhs.voteAverage ?? 0
-            let rv = rhs.voteAverage ?? 0
-            if lv != rv { return lv > rv }
+            let lp = lhs.popularity ?? 0
+            let rp = rhs.popularity ?? 0
+            if lp != rp { return lp > rp }
             return (lhs.year ?? 0) > (rhs.year ?? 0)
         }
         let results = Self.tmdbMoviesToSearchResults(ranked.prefix(25))
@@ -634,10 +638,12 @@ public actor LocalToolBackend: ToolBackend {
         }
         let client = TMDBClient(apiKey: tmdbApiKey)
         let credits = try await client.personTVCredits(personId: personId)
+        // Same popularity-desc ranking rationale as the movie path — see
+        // tmdbPersonMovieCredits for why voteAverage is the wrong key here.
         let ranked = credits.sorted { lhs, rhs in
-            let lv = lhs.voteAverage ?? 0
-            let rv = rhs.voteAverage ?? 0
-            if lv != rv { return lv > rv }
+            let lp = lhs.popularity ?? 0
+            let rp = rhs.popularity ?? 0
+            if lp != rp { return lp > rp }
             return (lhs.year ?? 0) > (rhs.year ?? 0)
         }
         let results = Self.tmdbTVToSearchResults(ranked.prefix(25))

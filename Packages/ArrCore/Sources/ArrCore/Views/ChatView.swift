@@ -272,10 +272,17 @@ private struct MessageBubble: View {
 
 private struct ThinkingRow: View {
     var body: some View {
-        HStack(spacing: 6) {
-            ProgressView().controlSize(.small)
-            Text("Thinking…", bundle: .module).font(.caption).foregroundStyle(.secondary)
+        // Match MessageBubble's icon-column layout (18pt frame + 8pt spacing)
+        // so the spinner sits exactly where a message's sparkles/wrench icon
+        // would, and the "Thinking…" label aligns with bubble text.
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            ProgressView()
+                .controlSize(.small)
+                .frame(width: 18, alignment: .center)
+            Text("Thinking…", bundle: .module)
+                .font(.system(size: 13))
+                .foregroundStyle(.secondary)
+            Spacer(minLength: 0)
         }
-        .padding(.leading, 26)
     }
 }

@@ -29,15 +29,18 @@ public struct TMDBMovieSummary: Decodable, Sendable, Equatable {
     public let releaseDate: String?
     public let posterPath: String?
     public let voteAverage: Double?
+    public let voteCount: Int?
+    public let popularity: Double?
     public let overview: String?
     public let genreIds: [Int]?
     public let character: String?   // present on credits responses
 
     enum CodingKeys: String, CodingKey {
-        case id, title, overview, character
+        case id, title, overview, character, popularity
         case releaseDate = "release_date"
         case posterPath = "poster_path"
         case voteAverage = "vote_average"
+        case voteCount = "vote_count"
         case genreIds = "genre_ids"
     }
 
@@ -53,15 +56,18 @@ public struct TMDBTVSummary: Decodable, Sendable, Equatable {
     public let firstAirDate: String?
     public let posterPath: String?
     public let voteAverage: Double?
+    public let voteCount: Int?
+    public let popularity: Double?
     public let overview: String?
     public let genreIds: [Int]?
     public let character: String?
 
     enum CodingKeys: String, CodingKey {
-        case id, name, overview, character
+        case id, name, overview, character, popularity
         case firstAirDate = "first_air_date"
         case posterPath = "poster_path"
         case voteAverage = "vote_average"
+        case voteCount = "vote_count"
         case genreIds = "genre_ids"
     }
 
