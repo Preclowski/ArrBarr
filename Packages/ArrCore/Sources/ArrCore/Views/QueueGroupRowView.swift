@@ -48,13 +48,15 @@ public struct QueueGroupRowView: View {
 
     public var body: some View {
         HStack(alignment: .top, spacing: 10) {
-            RemotePoster(
-                url: rep.posterURL,
-                apiKey: rep.posterRequiresAuth ? configStore.sonarr.apiKey : nil,
-                size: CGSize(width: 40, height: 60),
-                cornerRadius: 4,
-                fallbackSymbol: "tv"
-            )
+            PosterBlurContainer(blurred: rep.source == .whisparr && configStore.blurWhisparrPosters) {
+                RemotePoster(
+                    url: rep.posterURL,
+                    apiKey: rep.posterRequiresAuth ? configStore.sonarr.apiKey : nil,
+                    size: CGSize(width: 40, height: 60),
+                    cornerRadius: 4,
+                    fallbackSymbol: "tv"
+                )
+            }
 
             VStack(alignment: .leading, spacing: 4) {
                 VStack(alignment: .leading, spacing: 1) {
@@ -269,18 +271,21 @@ public struct QueueGroupTooltip: View {
     let group: QueueGroup
     var apiKey: String? = nil
     var locale: Locale = Locale(identifier: "en")
+    @EnvironmentObject var configStore: ConfigStore
 
     private var rep: QueueItem { group.representative }
 
     public var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            RemotePoster(
-                url: rep.posterURL,
-                apiKey: apiKey,
-                size: CGSize(width: 110, height: 165),
-                cornerRadius: 6,
-                fallbackSymbol: "tv"
-            )
+            PosterBlurContainer(blurred: rep.source == .whisparr && configStore.blurWhisparrPosters) {
+                RemotePoster(
+                    url: rep.posterURL,
+                    apiKey: apiKey,
+                    size: CGSize(width: 110, height: 165),
+                    cornerRadius: 6,
+                    fallbackSymbol: "tv"
+                )
+            }
             tooltipContent
         }
         .padding(12)

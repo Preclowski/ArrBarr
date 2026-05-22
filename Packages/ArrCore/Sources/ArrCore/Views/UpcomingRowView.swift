@@ -4,15 +4,21 @@ public struct UpcomingRowView: View {
     let item: UpcomingItem
     @EnvironmentObject var configStore: ConfigStore
 
+    private var shouldBlur: Bool {
+        item.source == .whisparr && configStore.blurWhisparrPosters
+    }
+
     public var body: some View {
         HStack(spacing: 8) {
-            RemotePoster(
-                url: item.posterURL,
-                apiKey: item.posterRequiresAuth ? apiKeyForSource : nil,
-                size: posterSize,
-                cornerRadius: 3,
-                fallbackSymbol: fallbackSymbol
-            )
+            PosterBlurContainer(blurred: shouldBlur) {
+                RemotePoster(
+                    url: item.posterURL,
+                    apiKey: item.posterRequiresAuth ? apiKeyForSource : nil,
+                    size: posterSize,
+                    cornerRadius: 3,
+                    fallbackSymbol: fallbackSymbol
+                )
+            }
 
             VStack(alignment: .leading, spacing: 1) {
                 Text(item.title)

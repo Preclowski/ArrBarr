@@ -4,10 +4,18 @@ public struct SearchResultRow: View {
     let result: SearchResult
     let onTap: () -> Void
 
+    @EnvironmentObject var configStore: ConfigStore
+
+    private var shouldBlur: Bool {
+        result.source == .whisparr && configStore.blurWhisparrPosters
+    }
+
     public var body: some View {
         Button(action: onTap) {
             HStack(spacing: 8) {
-                RemotePoster(url: result.posterURL, apiKey: nil, size: CGSize(width: 26, height: 38), cornerRadius: 3)
+                PosterBlurContainer(blurred: shouldBlur) {
+                    RemotePoster(url: result.posterURL, apiKey: nil, size: CGSize(width: 26, height: 38), cornerRadius: 3)
+                }
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(result.title)

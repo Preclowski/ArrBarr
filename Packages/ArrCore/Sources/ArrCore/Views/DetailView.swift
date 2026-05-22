@@ -348,6 +348,7 @@ public struct DetailView: View {
             apiKey: apiKeyForSource,
             fallbackSymbol: fallbackSymbol,
             posterAspect: posterAspect,
+            blurred: item.source == .whisparr && configStore.blurWhisparrPosters,
             trailing: existingTrailer.map { AnyView(ExistingFileLine(item: $0)) }
         )
     }
@@ -447,19 +448,22 @@ public struct MediaHeaderCard: View {
     var apiKey: String? = nil
     var fallbackSymbol: String = "film"
     var posterAspect: CGFloat = 2.0/3.0
+    var blurred: Bool = false
     var trailing: AnyView? = nil
 
     public var body: some View {
         let posterWidth: CGFloat = 110
         let posterHeight = posterWidth / posterAspect
         HStack(alignment: .top, spacing: 12) {
-            RemotePoster(
-                url: posterURL,
-                apiKey: posterRequiresAuth ? apiKey : nil,
-                size: CGSize(width: posterWidth, height: posterHeight),
-                cornerRadius: 6,
-                fallbackSymbol: fallbackSymbol
-            )
+            PosterBlurContainer(blurred: blurred) {
+                RemotePoster(
+                    url: posterURL,
+                    apiKey: posterRequiresAuth ? apiKey : nil,
+                    size: CGSize(width: posterWidth, height: posterHeight),
+                    cornerRadius: 6,
+                    fallbackSymbol: fallbackSymbol
+                )
+            }
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
                     .font(.system(size: 15, weight: .semibold))

@@ -1,5 +1,28 @@
 import SwiftUI
 
+/// Wraps a poster (or any view) and blurs it until tapped, when `blurred` is true.
+/// Used to hide NSFW Whisparr posters by default. Reveal is per-instance and
+/// session-only — closing the view restores the blur.
+public struct PosterBlurContainer<Content: View>: View {
+    let blurred: Bool
+    @ViewBuilder let content: () -> Content
+    @State private var revealed = false
+
+    public init(blurred: Bool, @ViewBuilder content: @escaping () -> Content) {
+        self.blurred = blurred
+        self.content = content
+    }
+
+    public var body: some View {
+        content()
+            .blur(radius: (blurred && !revealed) ? 12 : 0)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                if blurred { revealed.toggle() }
+            }
+    }
+}
+
 public struct RemotePoster: View {
     let url: URL?
     let apiKey: String?
