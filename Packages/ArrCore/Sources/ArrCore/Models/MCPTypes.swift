@@ -50,6 +50,18 @@ public struct JSONRPCRequest: Encodable, Sendable {
     }
 }
 
+public struct JSONRPCNotification: Encodable, Sendable {
+    public let jsonrpc: String
+    public let method: String
+    public let params: JSONValue
+
+    public init(method: String, params: JSONValue) {
+        self.jsonrpc = "2.0"
+        self.method = method
+        self.params = params
+    }
+}
+
 public struct JSONRPCError: Decodable, Equatable, Sendable {
     public let code: Int
     public let message: String
@@ -72,6 +84,16 @@ public struct MCPTool: Decodable, Sendable, Equatable {
 
 public struct ToolsListResult: Decodable, Sendable, Equatable {
     public let tools: [MCPTool]
+}
+
+public struct InitializeResult: Decodable, Sendable, Equatable {
+    public let protocolVersion: String
+    public let serverInfo: ServerInfo?
+
+    public struct ServerInfo: Decodable, Sendable, Equatable {
+        public let name: String?
+        public let version: String?
+    }
 }
 
 public struct ToolsCallContent: Decodable, Sendable, Equatable {
