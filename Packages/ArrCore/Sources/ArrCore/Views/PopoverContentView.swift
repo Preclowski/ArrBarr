@@ -115,6 +115,12 @@ public struct PopoverContentView: View {
                     showSearch = true
                 }
             }
+            .onReceive(NotificationCenter.default.publisher(for: .arrBarrOpenDetail)) { note in
+                guard let item = note.userInfo?["item"] as? QueueItem else { return }
+                showSearch = false
+                historySource = nil
+                withAnimation(.smooth(duration: 0.22)) { detailItem = item }
+            }
     }
 
     private var mainContent: some View {

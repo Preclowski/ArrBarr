@@ -165,6 +165,10 @@ public struct MainWindowView: View {
             }
         }
         .navigationTitle(navigationTitle)
+        .onReceive(NotificationCenter.default.publisher(for: .arrBarrOpenDetail)) { note in
+            guard let item = note.userInfo?["item"] as? QueueItem else { return }
+            withAnimation(.smooth(duration: 0.22)) { detailItem = item }
+        }
     }
 
     private var navigationTitle: String {

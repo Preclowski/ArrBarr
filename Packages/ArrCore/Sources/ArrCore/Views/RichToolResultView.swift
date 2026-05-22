@@ -77,7 +77,9 @@ public struct RichToolResultView: View {
                             hasFile: rec.hasFile ?? false,
                             images: rec.images,
                             baseURL: radarr.baseURL,
-                            apiKey: radarr.apiKey
+                            apiKey: radarr.apiKey,
+                            source: .radarr,
+                            entityId: rec.id
                         )
                     }
                     if visible.count < recs.count {
@@ -94,7 +96,9 @@ public struct RichToolResultView: View {
                             hasFile: nil,
                             images: rec.images,
                             baseURL: sonarr.baseURL,
-                            apiKey: sonarr.apiKey
+                            apiKey: sonarr.apiKey,
+                            source: .sonarr,
+                            entityId: rec.id
                         )
                     }
                     if visible.count < recs.count {
@@ -111,7 +115,9 @@ public struct RichToolResultView: View {
                             hasFile: nil,
                             images: rec.images,
                             baseURL: lidarr.baseURL,
-                            apiKey: lidarr.apiKey
+                            apiKey: lidarr.apiKey,
+                            source: .lidarr,
+                            entityId: rec.id
                         )
                     }
                 case .libraryScenes(let recs):
@@ -124,6 +130,8 @@ public struct RichToolResultView: View {
                             images: rec.images,
                             baseURL: whisparr.baseURL,
                             apiKey: whisparr.apiKey,
+                            source: .whisparr,
+                            entityId: rec.id,
                             blurred: blurWhisparr
                         )
                     }
@@ -176,20 +184,16 @@ private struct SearchResultCard: View {
     let apiKey: String
     var blurred: Bool = false
 
-    @State private var manuallyRevealed = false
-
-    private var effectivelyBlurred: Bool { blurred && !manuallyRevealed }
-
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            RemotePoster(
-                url: result.posterURL,
-                apiKey: apiKey,
-                size: CGSize(width: 90, height: 135),
-                cornerRadius: 6
-            )
-            .blur(radius: effectivelyBlurred ? 14 : 0)
-            .onTapGesture { if blurred { manuallyRevealed.toggle() } }
+            PosterBlurContainer(blurred: blurred, cornerRadius: 6) {
+                RemotePoster(
+                    url: result.posterURL,
+                    apiKey: apiKey,
+                    size: CGSize(width: 90, height: 135),
+                    cornerRadius: 6
+                )
+            }
             Text(result.title)
                 .font(.system(size: 12, weight: .semibold))
                 .lineLimit(2, reservesSpace: true)
@@ -226,23 +230,40 @@ private struct LibraryRecordCard: View {
     let images: [ArrImage]?
     let baseURL: String
     let apiKey: String
+    let source: QueueItem.Source
+    let entityId: Int?
     var blurred: Bool = false
 
-    @State private var manuallyRevealed = false
-
-    private var effectivelyBlurred: Bool { blurred && !manuallyRevealed }
-
     var body: some View {
+        Button {
+            guard let entityId else { return }
+            let url = images?.posterURL(baseURL: baseURL).0
+            DetailRequest.post(
+                DetailRequest.syntheticItem(
+                    source: source,
+                    entityId: entityId,
+                    title: title,
+                    posterURL: url
+                )
+            )
+        } label: {
+            cardContent
+        }
+        .buttonStyle(.plain)
+        .disabled(entityId == nil)
+    }
+
+    private var cardContent: some View {
         VStack(alignment: .leading, spacing: 4) {
             ZStack(alignment: .bottomTrailing) {
-                RemotePoster(
-                    url: images?.posterURL(baseURL: baseURL).0,
-                    apiKey: apiKey,
-                    size: CGSize(width: 90, height: 135),
-                    cornerRadius: 6
-                )
-                .blur(radius: effectivelyBlurred ? 14 : 0)
-                .onTapGesture { if blurred { manuallyRevealed.toggle() } }
+                PosterBlurContainer(blurred: blurred, cornerRadius: 6) {
+                    RemotePoster(
+                        url: images?.posterURL(baseURL: baseURL).0,
+                        apiKey: apiKey,
+                        size: CGSize(width: 90, height: 135),
+                        cornerRadius: 6
+                    )
+                }
                 if let hasFile {
                     Image(systemName: hasFile ? "checkmark.circle.fill" : "questionmark.circle")
                         .foregroundStyle(hasFile ? .green : .orange)
@@ -274,10 +295,8 @@ private struct CalendarRowView: View {
     var whisparrApiKey: String = ""
     var blurWhisparr: Bool = false
 
-    @State private var manuallyRevealed = false
-
     private var effectivelyBlurred: Bool {
-        item.source == .whisparr && blurWhisparr && !manuallyRevealed
+        item.source == .whisparr && blurWhisparr
     }
 
     private var apiKey: String {
@@ -291,14 +310,14 @@ private struct CalendarRowView: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 8) {
-            RemotePoster(
-                url: item.posterURL,
-                apiKey: item.posterRequiresAuth ? apiKey : nil,
-                size: CGSize(width: 40, height: 60),
-                cornerRadius: 4
-            )
-            .blur(radius: effectivelyBlurred ? 14 : 0)
-            .onTapGesture { if item.source == .whisparr && blurWhisparr { manuallyRevealed.toggle() } }
+            PosterBlurContainer(blurred: effectivelyBlurred, cornerRadius: 4) {
+                RemotePoster(
+                    url: item.posterURL,
+                    apiKey: item.posterRequiresAuth ? apiKey : nil,
+                    size: CGSize(width: 40, height: 60),
+                    cornerRadius: 4
+                )
+            }
             VStack(alignment: .leading, spacing: 2) {
                 Text(Self.dateLabel(item.airDate))
                     .font(.system(size: 10, weight: .semibold))
