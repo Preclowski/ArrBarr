@@ -22,6 +22,7 @@ public final class ChatViewModel: ObservableObject {
     }
 
     public func send(_ text: String) async {
+        guard pendingResume == nil else { return }
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         messages.append(ChatMessage(role: .user, content: trimmed))
@@ -78,6 +79,10 @@ public final class ChatViewModel: ObservableObject {
                 }
                 messages.append(ChatMessage(role: .tool, content: call.name, toolResult: result))
                 nextPrompt = "Tool \(call.name) returned: \(result)"
+            }
+            if roundsLeft == 0 {
+                lastError = "Reached the maximum number of tool-call rounds."
+                messages.append(ChatMessage(role: .assistant, content: "Sorry — I got stuck in a loop and stopped."))
             }
         } catch {
             lastError = error.localizedDescription

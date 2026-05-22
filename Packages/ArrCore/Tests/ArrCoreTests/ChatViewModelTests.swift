@@ -127,4 +127,59 @@ struct ChatViewModelTests {
         #expect(lastTool?.toolResult == "(cancelled by user)")
         #expect(vm.messages.last?.content == "OK, skipped.")
     }
+
+    @Test("send() while confirm pending is a no-op")
+    func sendIgnoredWhilePending() async throws {
+        let p = FakeProvider()
+        p.scripted = [
+            LLMResponse(text: "About to add", toolCalls: [
+                ToolCall(name: "sonarr_add_series", arguments: .object(["title": .string("X")]))
+            ]),
+            LLMResponse(text: "Added."),
+        ]
+        let mcp = FakeMCP()
+        mcp.responses["sonarr_add_series"] = "OK"
+        let vm = makeVM(provider: p, mcp: mcp)
+
+        let firstSend = Task { await vm.send("add X") }
+        var spins = 0
+        while vm.pendingConfirm == nil && spins < 100 {
+            await Task.yield()
+            spins += 1
+        }
+        #expect(vm.pendingConfirm != nil)
+        let messagesBefore = vm.messages.count
+
+        // Re-entry attempt: should be ignored, not crash or queue.
+        await vm.send("ignored")
+        #expect(vm.messages.count == messagesBefore, "send() must not append while gated")
+
+        await vm.confirmPending()
+        await firstSend.value
+    }
+
+    @Test("round cap surfaces a stop message after 6 tool rounds")
+    func roundCapStops() async throws {
+        let p = FakeProvider()
+        // 7 scripted responses each requesting the same non-destructive tool.
+        // Only 6 rounds will run, then the cap kicks in and the loop ends with
+        // the synthetic stop message.
+        for _ in 0..<7 {
+            p.scripted.append(
+                LLMResponse(text: "calling", toolCalls: [
+                    ToolCall(name: "sonarr_search", arguments: .object([:]))
+                ])
+            )
+        }
+        let mcp = FakeMCP()
+        mcp.responses["sonarr_search"] = "result"
+        let vm = makeVM(provider: p, mcp: mcp)
+        await vm.send("loop forever")
+        #expect(vm.lastError == "Reached the maximum number of tool-call rounds.")
+        #expect(vm.messages.last?.role == .assistant)
+        #expect(vm.messages.last?.content == "Sorry — I got stuck in a loop and stopped.")
+        // user + 6 (assistant+tool) pairs + 1 final synthetic = 14 messages.
+        let expectedCount = 1 + 6 * 2 + 1
+        #expect(vm.messages.count == expectedCount)
+    }
 }
