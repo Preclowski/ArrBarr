@@ -37,8 +37,11 @@ public actor LocalToolBackend: ToolBackend {
         guard !query.isEmpty else { return "Please provide a search query." }
         guard sonarr.isConfigured else { return "Sonarr is not configured." }
         let client = SearchClient(config: sonarr, source: .sonarr)
-        let results = try await client.lookup(query: query)
-        return Self.formatSearchResults(results, kind: "series")
+        // Try the full query first; if the query carries a year and we lose
+        // the right hit to popularity ranking, re-query without the year
+        // and merge the year-matching results.
+        let results = try await Self.searchWithYearAwareness(client: client, query: query)
+        return Self.formatSearchResults(results, kind: "series", query: query)
     }
 
     private func searchMovie(_ args: JSONValue) async throws -> String {
@@ -46,8 +49,52 @@ public actor LocalToolBackend: ToolBackend {
         guard !query.isEmpty else { return "Please provide a search query." }
         guard radarr.isConfigured else { return "Radarr is not configured." }
         let client = SearchClient(config: radarr, source: .radarr)
-        let results = try await client.lookup(query: query)
-        return Self.formatSearchResults(results, kind: "movie")
+        let results = try await Self.searchWithYearAwareness(client: client, query: query)
+        return Self.formatSearchResults(results, kind: "movie", query: query)
+    }
+
+    /// Detect a 4-digit year in the query and surface year-matching hits to
+    /// the top of the result list. Helps when TMDB's popularity ranking
+    /// buries upcoming / niche entries under same-titled hits from years ago.
+    private static func searchWithYearAwareness(client: SearchClient, query: String) async throws -> [SearchResult] {
+        let primary = try await client.lookup(query: query)
+        guard let year = extractYear(from: query) else { return primary }
+        // If we already have year-matching hits in the primary list, surface them.
+        let matched = primary.filter { $0.year == year }
+        let rest = primary.filter { $0.year != year }
+        if !matched.isEmpty {
+            return matched + rest
+        }
+        // Year wasn't found in the year-tagged search. Re-query without the
+        // year so TMDB's lookup has a cleaner term, then filter by year.
+        let bareQuery = query
+            .replacingOccurrences(of: String(year), with: "")
+            .trimmingCharacters(in: CharacterSet(charactersIn: " ()[]-,"))
+        guard bareQuery != query, !bareQuery.isEmpty else { return primary }
+        let secondary = try await client.lookup(query: bareQuery)
+        let secondaryYear = secondary.filter { $0.year == year }
+        // Merge: year-matching from broader search first, then everything else.
+        var seen = Set<Int>()
+        var merged: [SearchResult] = []
+        for r in secondaryYear + primary + secondary where seen.insert(r.id).inserted {
+            merged.append(r)
+        }
+        return merged
+    }
+
+    private static func extractYear(from query: String) -> Int? {
+        // Look for any 4-digit run that's a plausible year (1900..currentYear+5).
+        let now = Calendar.current.component(.year, from: Date())
+        // NSRegularExpression on a Swift String — straightforward way to find 4-digit groups.
+        guard let regex = try? NSRegularExpression(pattern: #"\b(19|20)\d{2}\b"#) else { return nil }
+        let ns = query as NSString
+        let matches = regex.matches(in: query, range: NSRange(location: 0, length: ns.length))
+        for m in matches {
+            if let year = Int(ns.substring(with: m.range)), year <= now + 5 {
+                return year
+            }
+        }
+        return nil
     }
 
     private func listSeries(_ args: JSONValue) async throws -> String {
@@ -178,16 +225,18 @@ public actor LocalToolBackend: ToolBackend {
         }
     }
 
-    private static func formatSearchResults(_ results: [SearchResult], kind: String) -> String {
+    private static func formatSearchResults(_ results: [SearchResult], kind: String, query: String) -> String {
         guard !results.isEmpty else { return "No results found." }
-        let top = results.prefix(15)
+        let top = results.prefix(25)
         // For series the id is tvdbId; for movies it's tmdbId. The label
         // helps the LLM pick the right arg name when calling *_add_*.
         let idLabel = kind == "series" ? "tvdbId" : "tmdbId"
+        let queryYear = extractYear(from: query)
         let lines = top.map { r -> String in
             let yearPart = r.year.map { " (\($0))" } ?? " (year unknown)"
             let ratingPart = r.rating.map { String(format: " · ★ %.1f", $0) } ?? ""
-            return "• \(idLabel)=\(r.id) — \(r.title)\(yearPart)\(ratingPart)"
+            let yearMatchMark = (queryYear != nil && r.year == queryYear) ? " ← year matches" : ""
+            return "• \(idLabel)=\(r.id) — \(r.title)\(yearPart)\(ratingPart)\(yearMatchMark)"
         }
         var out = "Top \(top.count) \(kind) result\(top.count == 1 ? "" : "s") from upstream (use \(idLabel) when calling add):"
         out += "\n" + lines.joined(separator: "\n")
