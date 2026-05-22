@@ -128,21 +128,22 @@ public struct DetailView: View {
                 posterAspect: 2.0/3.0
             )
 
+            if let overview = radarrDetail?.overview, !overview.isEmpty {
+                ExpandableOverview(text: overview)
+            }
+
             // Two ways to surface the "existing file" info, mutually exclusive:
             //  - active upgrade in queue → `item.existing*` fields (set by
             //    Radarr's queue endpoint when a download will replace something).
             //  - no queue activity, already in library → `radarrDetail.movieFile`
             //    (the file Radarr already owns on disk).
             // The upgrade case wins when both apply because the queue side has
-            // fresher metadata.
+            // fresher metadata. Placed after the overview so the description
+            // sits with the title block at the top of the card.
             if item.isUpgrade {
                 ExistingFileBanner(item: item)
             } else if let movieFile = radarrDetail?.movieFile {
                 ExistingFileBanner(movieFile: movieFile)
-            }
-
-            if let overview = radarrDetail?.overview, !overview.isEmpty {
-                ExpandableOverview(text: overview)
             }
 
             if hasActiveDownloads {
