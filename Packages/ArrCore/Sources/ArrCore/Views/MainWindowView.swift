@@ -53,6 +53,7 @@ public struct MainWindowView: View {
     @State private var historySource: QueueItem.Source?
     @State private var historyRefreshNonce = 0
     @StateObject private var searchViewModel = SearchViewModel()
+    @StateObject private var chatHolder = ChatViewModelHolder()
     @State private var searchResult: SearchResult?
 
     // MARK: - Visibility helpers (mirrored from PopoverContentView)
@@ -109,6 +110,10 @@ public struct MainWindowView: View {
                 radarrConfig: configStore.radarr,
                 sonarrConfig: configStore.sonarr
             )
+            chatHolder.reconfigure(mcp: configStore.mcp, provider: configStore.chatProvider, openai: configStore.openai)
+        }
+        .onChange(of: ChatViewModelHolder.signature(mcp: configStore.mcp, provider: configStore.chatProvider, openai: configStore.openai)) { _, _ in
+            chatHolder.reconfigure(mcp: configStore.mcp, provider: configStore.chatProvider, openai: configStore.openai)
         }
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
@@ -234,7 +239,7 @@ public struct MainWindowView: View {
             case .search:
                 searchContent
             case .chat:
-                ChatHost(mcp: configStore.mcp, provider: configStore.chatProvider, openai: configStore.openai)
+                chatContent
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
@@ -288,6 +293,15 @@ public struct MainWindowView: View {
             }
         }
         .scrollBounceBehavior(.basedOnSize)
+    }
+
+    @ViewBuilder
+    private var chatContent: some View {
+        if !chatHolder.vm.providerIsAvailable {
+            ChatUnavailableView(reason: .providerUnavailable)
+        } else {
+            ChatView(viewModel: chatHolder.vm)
+        }
     }
 
     @ViewBuilder

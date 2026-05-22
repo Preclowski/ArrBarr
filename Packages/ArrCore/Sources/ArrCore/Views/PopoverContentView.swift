@@ -26,6 +26,7 @@ public struct PopoverContentView: View {
     @State private var historySource: QueueItem.Source?
     @State private var historyRefreshNonce = 0
     @StateObject private var searchViewModel = SearchViewModel()
+    @StateObject private var chatHolder = ChatViewModelHolder()
     @State private var searchResult: SearchResult?
     @State private var detailItem: QueueItem?
 
@@ -64,6 +65,15 @@ public struct PopoverContentView: View {
         DemoMode.isActive ? config.enabled : config.isConfigured
     }
 
+    @ViewBuilder
+    private var chatTabContent: some View {
+        if !chatHolder.vm.providerIsAvailable {
+            ChatUnavailableView(reason: .providerUnavailable)
+        } else {
+            ChatView(viewModel: chatHolder.vm)
+        }
+    }
+
     enum Tab: String, CaseIterable {
         case queue = "Queue"
         case upcoming = "Upcoming"
@@ -79,6 +89,10 @@ public struct PopoverContentView: View {
                     radarrConfig: configStore.radarr,
                     sonarrConfig: configStore.sonarr
                 )
+                chatHolder.reconfigure(mcp: configStore.mcp, provider: configStore.chatProvider, openai: configStore.openai)
+            }
+            .onChange(of: ChatViewModelHolder.signature(mcp: configStore.mcp, provider: configStore.chatProvider, openai: configStore.openai)) { _, _ in
+                chatHolder.reconfigure(mcp: configStore.mcp, provider: configStore.chatProvider, openai: configStore.openai)
             }
             .onChange(of: selectedTab) { _, newTab in
                 if newTab != .search { searchResult = nil }
@@ -127,7 +141,7 @@ public struct PopoverContentView: View {
                     case .queue: queueContent
                     case .upcoming: upcomingContent
                     case .chat:
-                        ChatHost(mcp: configStore.mcp, provider: configStore.chatProvider, openai: configStore.openai)
+                        chatTabContent
                     case .search:
                         if let result = searchResult {
                             SearchAddPanel(result: result, viewModel: searchViewModel) {
@@ -607,39 +621,6 @@ private struct TabPillBackground: View {
     }
 }
 
-// MARK: - Chat host
-
-@MainActor
-struct ChatHost: View {
-    let mcp: MCPConfig
-    let provider: ChatProvider
-    let openai: OpenAIConfig
-    var body: some View {
-        ChatHostInner(mcp: mcp, provider: provider, openai: openai)
-            .id(mcp.baseURL + "|" + mcp.bearerToken + "|\(mcp.enabled)|\(provider.rawValue)|\(openai.baseURL)|\(openai.apiKey)|\(openai.model)")
-    }
-}
-
-@MainActor
-private struct ChatHostInner: View {
-    let mcp: MCPConfig
-    let provider: ChatProvider
-    let openai: OpenAIConfig
-    @StateObject private var vm: ChatViewModel
-    init(mcp: MCPConfig, provider: ChatProvider, openai: OpenAIConfig) {
-        self.mcp = mcp
-        self.provider = provider
-        self.openai = openai
-        _vm = StateObject(wrappedValue: ChatViewModelFactory.make(mcp: mcp, chatProvider: provider, openai: openai))
-    }
-    var body: some View {
-        if !vm.providerIsAvailable {
-            ChatUnavailableView(reason: .providerUnavailable)
-        } else {
-            ChatView(viewModel: vm)
-        }
-    }
-}
 
 // MARK: - Shared button styles
 

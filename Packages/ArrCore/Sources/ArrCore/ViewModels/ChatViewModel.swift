@@ -43,6 +43,14 @@ public final class ChatViewModel: ObservableObject {
         pendingResume = nil
     }
 
+    /// Wipe the conversation. Refuses to clear while a tool is pending so we
+    /// don't leak a CheckedContinuation.
+    public func clear() {
+        guard pendingResume == nil else { return }
+        messages = []
+        lastError = nil
+    }
+
     /// Surfaces the confirm gate to external callers (e.g. injected into
     /// `FoundationModelsProvider` so `DynamicMCPTool` can pause the FM session).
     /// Re-entrant calls return false immediately.

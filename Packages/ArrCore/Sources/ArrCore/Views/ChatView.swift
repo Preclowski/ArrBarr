@@ -11,6 +11,10 @@ public struct ChatView: View {
 
     public var body: some View {
         VStack(spacing: 0) {
+            if !viewModel.messages.isEmpty {
+                topBar
+                Divider()
+            }
             messages
             if let confirm = viewModel.pendingConfirm {
                 confirmBanner(for: confirm)
@@ -18,6 +22,23 @@ public struct ChatView: View {
             Divider()
             inputBar
         }
+    }
+
+    private var topBar: some View {
+        HStack(spacing: 6) {
+            Spacer()
+            Button(action: { viewModel.clear() }) {
+                Label("Clear", systemImage: "trash")
+                    .labelStyle(.iconOnly)
+                    .font(.system(size: 12))
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.secondary)
+            .help(Text("Clear conversation", bundle: .module))
+            .disabled(viewModel.pendingConfirm != nil)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 4)
     }
 
     private var messages: some View {
