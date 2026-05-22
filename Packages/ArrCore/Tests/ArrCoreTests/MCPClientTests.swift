@@ -198,8 +198,7 @@ struct MCPClientTests {
             headers: [:]
         )
         let result = try await client().callTool(name: "sonarr_search", arguments: .object(["query": .string("Severance")]))
-        #expect(result.content.first?.text == "OK")
-        #expect(result.isError == false)
+        #expect(result == "OK")
     }
 
     @Test("JSON-RPC error surfaces as thrown MCPError")

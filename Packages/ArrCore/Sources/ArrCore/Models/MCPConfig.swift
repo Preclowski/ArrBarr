@@ -12,7 +12,6 @@ public struct MCPConfig: Codable, Equatable, Sendable {
     }
 
     public var isConfigured: Bool {
-        guard enabled else { return false }
         guard let url = URL(string: baseURL),
               let scheme = url.scheme?.lowercased(),
               ["http", "https"].contains(scheme),

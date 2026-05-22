@@ -71,6 +71,7 @@ public final class ConfigStore: ObservableObject {
     /// firstRun variant.
     @Published public var welcomeSeenVersion: String?
     @Published public var aiEnabled: Bool
+    @Published public var toolSource: ToolSource
     @Published public var mcp: MCPConfig
     @Published public var chatProvider: ChatProvider
     @Published public var openai: OpenAIConfig
@@ -115,6 +116,7 @@ public final class ConfigStore: ObservableObject {
     private static let showIndexerIssuesKey = "ArrBarr.showIndexerIssues"
     private static let welcomeSeenVersionKey = "ArrBarr.welcomeSeenVersion"
     private static let aiEnabledKey = "ArrBarr.aiEnabled"
+    private static let toolSourceKey = "ArrBarr.toolSource"
     private static let mcpConfigKey = "ArrBarr.mcp"
     private static let chatProviderKey = "ArrBarr.chatProvider"
     private static let openaiConfigKey = "ArrBarr.openai"
@@ -160,6 +162,7 @@ public final class ConfigStore: ObservableObject {
         self.welcomeSeenVersion = defaults.string(forKey: Self.welcomeSeenVersionKey)
         self.aiEnabled = defaults.object(forKey: Self.aiEnabledKey) != nil
             ? defaults.bool(forKey: Self.aiEnabledKey) : false
+        self.toolSource = ToolSource(rawValue: defaults.string(forKey: Self.toolSourceKey) ?? "") ?? .builtIn
         if let data = defaults.data(forKey: Self.mcpConfigKey),
            let cfg = try? JSONDecoder().decode(MCPConfig.self, from: data) {
             self.mcp = cfg
@@ -234,6 +237,9 @@ public final class ConfigStore: ObservableObject {
         }.store(in: &cancellables)
         $aiEnabled.dropFirst().sink { [weak self] val in
             self?.defaults.set(val, forKey: Self.aiEnabledKey)
+        }.store(in: &cancellables)
+        $toolSource.dropFirst().sink { [weak self] val in
+            self?.defaults.set(val.rawValue, forKey: Self.toolSourceKey)
         }.store(in: &cancellables)
         $mcp.dropFirst().sink { [weak self] cfg in
             if let data = try? JSONEncoder().encode(cfg) {

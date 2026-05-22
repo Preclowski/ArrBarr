@@ -73,7 +73,10 @@ public struct MainWindowView: View {
 
     private var chatAvailable: Bool {
         guard configStore.aiEnabled else { return false }
-        guard configStore.mcp.isConfigured else { return false }
+        switch configStore.toolSource {
+        case .builtIn: break
+        case .externalMCP: guard configStore.mcp.isConfigured else { return false }
+        }
         switch configStore.chatProvider {
         case .openai:
             return configStore.openai.isConfigured
@@ -110,10 +113,10 @@ public struct MainWindowView: View {
                 radarrConfig: configStore.radarr,
                 sonarrConfig: configStore.sonarr
             )
-            chatHolder.reconfigure(mcp: configStore.mcp, provider: configStore.chatProvider, openai: configStore.openai)
+            chatHolder.reconfigure(store: configStore)
         }
-        .onChange(of: ChatViewModelHolder.signature(mcp: configStore.mcp, provider: configStore.chatProvider, openai: configStore.openai)) { _, _ in
-            chatHolder.reconfigure(mcp: configStore.mcp, provider: configStore.chatProvider, openai: configStore.openai)
+        .onChange(of: ChatViewModelHolder.signature(store: configStore)) { _, _ in
+            chatHolder.reconfigure(store: configStore)
         }
         .toolbar {
             ToolbarItem(placement: .primaryAction) {

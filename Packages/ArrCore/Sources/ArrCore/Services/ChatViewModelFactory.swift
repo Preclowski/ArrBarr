@@ -10,19 +10,33 @@ public enum ChatViewModelFactory {
         )
     }
 
-    public static func make(mcp: MCPConfig, chatProvider: ChatProvider, openai: OpenAIConfig) -> ChatViewModel {
-        guard mcp.isConfigured else { return makePlaceholder() }
-        let client = MCPClient(config: mcp)
-        let mcpTools = MCPToolWhitelist.v1Allowed.sorted().map { name in
-            LLMTool(name: name, description: "MCP tool: \(name)", inputSchema: .object([
+    public static func make(
+        toolSource: ToolSource,
+        mcp: MCPConfig,
+        sonarr: ServiceConfig,
+        radarr: ServiceConfig,
+        chatProvider: ChatProvider,
+        openai: OpenAIConfig
+    ) -> ChatViewModel {
+        let backend: ToolBackend
+        switch toolSource {
+        case .builtIn:
+            backend = LocalToolBackend(sonarr: sonarr, radarr: radarr)
+        case .externalMCP:
+            guard mcp.isConfigured else { return makePlaceholder() }
+            backend = MCPClient(config: mcp)
+        }
+
+        let toolNames = MCPToolWhitelist.v1Allowed.sorted()
+        let llmTools = toolNames.map { name in
+            LLMTool(name: name, description: "ArrBarr tool: \(name)", inputSchema: .object([
                 "type": .string("object"),
                 "properties": .object([:]),
             ]))
         }
 
         let invoke: @Sendable (String, JSONValue) async throws -> String = { name, args in
-            let result = try await client.callTool(name: name, arguments: args)
-            return result.content.compactMap(\.text).joined(separator: "\n")
+            try await backend.callTool(name: name, arguments: args)
         }
 
         var vmRef: ChatViewModel? = nil
@@ -49,7 +63,7 @@ public enum ChatViewModelFactory {
 
         let vm = ChatViewModel(
             provider: provider,
-            tools: mcpTools,
+            tools: llmTools,
             invokeTool: invoke
         )
         vmRef = vm

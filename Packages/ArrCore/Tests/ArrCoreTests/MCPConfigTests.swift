@@ -9,19 +9,13 @@ struct MCPConfigTests {
         #expect(MCPConfig.empty.isConfigured == false)
     }
 
-    @Test("disabled config is not configured even with valid URL")
-    func disabledNotConfigured() {
-        let cfg = MCPConfig(enabled: false, baseURL: "http://nas.local:3000/mcp", bearerToken: "")
-        #expect(cfg.isConfigured == false)
-    }
-
-    @Test("enabled with valid http URL is configured")
+    @Test("valid http URL is configured regardless of enabled flag")
     func httpConfigured() {
-        let cfg = MCPConfig(enabled: true, baseURL: "http://nas.local:3000/mcp", bearerToken: "")
+        let cfg = MCPConfig(enabled: false, baseURL: "http://nas.local:3000/mcp", bearerToken: "")
         #expect(cfg.isConfigured == true)
     }
 
-    @Test("enabled with valid https URL is configured")
+    @Test("valid https URL is configured")
     func httpsConfigured() {
         let cfg = MCPConfig(enabled: true, baseURL: "https://mcp.example.com/mcp", bearerToken: "abc")
         #expect(cfg.isConfigured == true)

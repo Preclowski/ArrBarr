@@ -43,14 +43,14 @@ public actor MCPClient {
         return result.tools
     }
 
-    public func callTool(name: String, arguments: JSONValue) async throws -> ToolsCallResult {
+    public func callTool(name: String, arguments: JSONValue) async throws -> String {
         try await ensureInitialized()
         let params: JSONValue = .object([
             "name": .string(name),
             "arguments": arguments,
         ])
         let result: ToolsCallResult = try await rpc(method: "tools/call", params: params)
-        return result
+        return result.content.compactMap(\.text).joined(separator: "\n")
     }
 
     /// MCP requires `initialize` (request) + `notifications/initialized` (notification)

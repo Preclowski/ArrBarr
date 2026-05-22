@@ -16,18 +16,28 @@ public final class ChatViewModelHolder: ObservableObject {
 
     /// Rebuild the underlying VM if (and only if) the relevant config bits changed.
     /// No-op when the signature matches the last build — preserves message history.
-    public func reconfigure(mcp: MCPConfig, provider: ChatProvider, openai: OpenAIConfig) {
-        let next = Self.signature(mcp: mcp, provider: provider, openai: openai)
+    public func reconfigure(store: ConfigStore) {
+        let next = Self.signature(store: store)
         guard next != lastSignature else { return }
         lastSignature = next
-        vm = ChatViewModelFactory.make(mcp: mcp, chatProvider: provider, openai: openai)
+        vm = ChatViewModelFactory.make(
+            toolSource: store.toolSource,
+            mcp: store.mcp,
+            sonarr: store.sonarr,
+            radarr: store.radarr,
+            chatProvider: store.chatProvider,
+            openai: store.openai
+        )
     }
 
-    static func signature(mcp: MCPConfig, provider: ChatProvider, openai: OpenAIConfig) -> String {
+    public static func signature(store: ConfigStore) -> String {
         [
-            mcp.baseURL, mcp.bearerToken, "\(mcp.enabled)",
-            provider.rawValue,
-            openai.baseURL, openai.apiKey, openai.model,
+            store.toolSource.rawValue,
+            store.mcp.baseURL, store.mcp.bearerToken, "\(store.mcp.enabled)",
+            store.sonarr.baseURL, store.sonarr.apiKey, "\(store.sonarr.enabled)",
+            store.radarr.baseURL, store.radarr.apiKey, "\(store.radarr.enabled)",
+            store.chatProvider.rawValue,
+            store.openai.baseURL, store.openai.apiKey, store.openai.model,
         ].joined(separator: "|")
     }
 }

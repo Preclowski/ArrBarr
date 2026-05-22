@@ -102,8 +102,12 @@ public struct SettingsView: View {
         Section("AI") {
             Toggle("Enable AI", isOn: $configStore.aiEnabled)
             if configStore.aiEnabled {
-                Toggle("Enable MCP", isOn: $configStore.mcp.enabled)
-                if configStore.mcp.enabled {
+                Picker("Tools", selection: $configStore.toolSource) {
+                    ForEach(ToolSource.allCases) { s in
+                        Text(s.displayName).tag(s)
+                    }
+                }
+                if configStore.toolSource == .externalMCP {
                     TextField("MCP server URL", text: $configStore.mcp.baseURL,
                               prompt: Text(verbatim: "http://nas.local:3000/mcp"))
                     SecureField("MCP bearer token (optional)", text: $configStore.mcp.bearerToken)

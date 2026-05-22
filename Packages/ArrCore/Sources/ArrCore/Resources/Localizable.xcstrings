@@ -4155,6 +4155,15 @@
     },
     "Clear": {
       "extractionState": "manual"
+    },
+    "Tools": {
+      "extractionState": "manual"
+    },
+    "Built-in (Sonarr + Radarr)": {
+      "extractionState": "manual"
+    },
+    "External MCP server": {
+      "extractionState": "manual"
     }
   }
 }

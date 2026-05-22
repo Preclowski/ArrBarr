@@ -73,4 +73,22 @@ struct ConfigStoreChatTests {
         let s2 = ConfigStore(defaults: d)
         #expect(s2.openai == cfg)
     }
+
+    @Test("defaults: toolSource builtIn")
+    func defaultsToolSource() {
+        let d = freshDefaults()
+        let store = ConfigStore(defaults: d)
+        #expect(store.toolSource == .builtIn)
+    }
+
+    @Test("persists toolSource across instances")
+    func persistToolSource() {
+        let d = freshDefaults()
+        do {
+            let s = ConfigStore(defaults: d)
+            s.toolSource = .externalMCP
+        }
+        let s2 = ConfigStore(defaults: d)
+        #expect(s2.toolSource == .externalMCP)
+    }
 }
