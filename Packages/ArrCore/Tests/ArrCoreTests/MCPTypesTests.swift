@@ -56,7 +56,7 @@ struct MCPTypesTests {
         {"jsonrpc":"2.0","id":3,"error":{"code":-32601,"message":"Method not found"}}
         """.data(using: .utf8)!
         let resp = try JSONDecoder().decode(JSONRPCResponse<ToolsCallResult>.self, from: json)
-        #expect((resp.result.map { _ in true } ?? false) == false)
+        #expect(resp.result == nil)
         #expect(resp.error?.code == -32601)
         #expect(resp.error?.message == "Method not found")
     }

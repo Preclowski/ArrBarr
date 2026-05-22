@@ -70,16 +70,16 @@ public struct MCPTool: Decodable, Sendable, Equatable {
     public let inputSchema: JSONValue
 }
 
-public struct ToolsListResult: Decodable, Sendable {
+public struct ToolsListResult: Decodable, Sendable, Equatable {
     public let tools: [MCPTool]
 }
 
-public struct ToolsCallContent: Decodable, Sendable {
+public struct ToolsCallContent: Decodable, Sendable, Equatable {
     public let type: String
     public let text: String?
 }
 
-public struct ToolsCallResult: Decodable, Sendable {
+public struct ToolsCallResult: Decodable, Sendable, Equatable {
     public let content: [ToolsCallContent]
     public let isError: Bool?
 }
