@@ -15,7 +15,7 @@ public struct RichToolResultView: View {
 
     public var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            LazyHStack(spacing: 10) {
+            LazyHStack(alignment: .top, spacing: 10) {
                 switch content {
                 case .searchMovieResults(let results):
                     ForEach(results) { r in
@@ -30,7 +30,10 @@ public struct RichToolResultView: View {
                         LibraryRecordCard(
                             title: rec.title ?? "(untitled)",
                             year: rec.year,
-                            hasFile: rec.hasFile ?? false
+                            hasFile: rec.hasFile ?? false,
+                            images: rec.images,
+                            baseURL: radarr.baseURL,
+                            apiKey: radarr.apiKey
                         )
                     }
                 case .librarySeries(let recs):
@@ -38,7 +41,10 @@ public struct RichToolResultView: View {
                         LibraryRecordCard(
                             title: rec.title ?? "(untitled)",
                             year: rec.year,
-                            hasFile: false
+                            hasFile: nil,
+                            images: rec.images,
+                            baseURL: sonarr.baseURL,
+                            apiKey: sonarr.apiKey
                         )
                     }
                 case .calendar(let items):
@@ -50,7 +56,7 @@ public struct RichToolResultView: View {
             .padding(.vertical, 4)
             .padding(.horizontal, 2)
         }
-        .frame(minHeight: 180)
+        .frame(minHeight: 200)
         #if os(iOS)
         .scrollTargetBehavior(.viewAligned)
         #endif
@@ -73,8 +79,8 @@ private struct SearchResultCard: View {
             )
             Text(result.title)
                 .font(.system(size: 12, weight: .semibold))
-                .lineLimit(2)
-                .fixedSize(horizontal: false, vertical: true)
+                .lineLimit(2, reservesSpace: true)
+                .multilineTextAlignment(.leading)
             HStack(spacing: 6) {
                 if let year = result.year {
                     Text(String(year))
@@ -101,26 +107,33 @@ private struct SearchResultCard: View {
 private struct LibraryRecordCard: View {
     let title: String
     let year: Int?
-    let hasFile: Bool
+    /// nil for series (they have season/episode statistics, not single-file).
+    /// Bool for movies — true = downloaded, false = missing.
+    let hasFile: Bool?
+    let images: [ArrImage]?
+    let baseURL: String
+    let apiKey: String
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             ZStack(alignment: .bottomTrailing) {
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(Color.secondary.opacity(0.15))
-                    .frame(width: 90, height: 135)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 6)
-                            .stroke(Color.primary.opacity(0.08), lineWidth: 0.5)
-                    )
-                Image(systemName: hasFile ? "checkmark.circle.fill" : "questionmark.circle")
-                    .foregroundStyle(hasFile ? .green : .orange)
-                    .padding(6)
+                RemotePoster(
+                    url: pickPosterURL(from: images, coverTypes: ["poster"], baseURL: baseURL).0,
+                    apiKey: apiKey,
+                    size: CGSize(width: 90, height: 135),
+                    cornerRadius: 6
+                )
+                if let hasFile {
+                    Image(systemName: hasFile ? "checkmark.circle.fill" : "questionmark.circle")
+                        .foregroundStyle(hasFile ? .green : .orange)
+                        .background(Circle().fill(Color.black.opacity(0.5)).padding(-2))
+                        .padding(6)
+                }
             }
             Text(title)
                 .font(.system(size: 12, weight: .semibold))
-                .lineLimit(2)
-                .fixedSize(horizontal: false, vertical: true)
+                .lineLimit(2, reservesSpace: true)
+                .multilineTextAlignment(.leading)
             if let year {
                 Text(String(year))
                     .font(.system(size: 11))

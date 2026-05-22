@@ -19,7 +19,7 @@ public struct ArrQuality: Decodable {
     var name: String? { quality?.name }
 }
 
-public struct ArrImage: Decodable, Equatable {
+public struct ArrImage: Decodable, Equatable, Sendable {
     let coverType: String?
     let url: String?
     let remoteUrl: String?
@@ -315,6 +315,7 @@ public struct RadarrLibraryRecord: Decodable, Sendable, Equatable {
     let year: Int?
     let hasFile: Bool?
     let monitored: Bool?
+    let images: [ArrImage]?
 }
 public struct SonarrLibraryRecord: Decodable, Sendable, Equatable {
     let id: Int?
@@ -324,6 +325,7 @@ public struct SonarrLibraryRecord: Decodable, Sendable, Equatable {
     let status: String?
     let monitored: Bool?
     let statistics: SonarrLibraryStatistics?
+    let images: [ArrImage]?
 }
 public struct SonarrLibraryStatistics: Decodable, Sendable, Equatable {
     let episodeCount: Int?
