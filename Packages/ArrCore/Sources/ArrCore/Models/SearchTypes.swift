@@ -31,6 +31,36 @@ public struct SearchResult: Identifiable, Equatable, Sendable {
     let certification: String?   // Radarr only
     let posterURL: URL?
     let source: QueueItem.Source
+    /// Set when the backend has cross-referenced this result with the arr's
+    /// library and found a match. Carries the arr's internal record id so the
+    /// chat UI can route a tap to DetailView instead of the add flow.
+    /// `nil` for non-cross-referenced results (e.g. regular `*_search` calls).
+    let inLibraryArrId: Int?
+
+    init(id: Int, foreignId: String, title: String, subtitle: String?,
+         year: Int?, rating: Double?, imdb: Double?, rottenTomatoes: Double?,
+         metacritic: Double?, overview: String?, runtime: Int?,
+         genres: [String], network: String?, certification: String?,
+         posterURL: URL?, source: QueueItem.Source,
+         inLibraryArrId: Int? = nil) {
+        self.id = id
+        self.foreignId = foreignId
+        self.title = title
+        self.subtitle = subtitle
+        self.year = year
+        self.rating = rating
+        self.imdb = imdb
+        self.rottenTomatoes = rottenTomatoes
+        self.metacritic = metacritic
+        self.overview = overview
+        self.runtime = runtime
+        self.genres = genres
+        self.network = network
+        self.certification = certification
+        self.posterURL = posterURL
+        self.source = source
+        self.inLibraryArrId = inLibraryArrId
+    }
 }
 
 // MARK: - Monitor modes

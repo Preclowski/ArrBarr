@@ -623,7 +623,8 @@ public actor LocalToolBackend: ToolBackend {
             if lp != rp { return lp > rp }
             return (lhs.year ?? 0) > (rhs.year ?? 0)
         }
-        let results = Self.tmdbMoviesToSearchResults(ranked.prefix(25))
+        let libraryMap = await radarrLibraryByTMDBId()
+        let results = Self.tmdbMoviesToSearchResults(ranked.prefix(25), libraryMap: libraryMap)
         guard !results.isEmpty else {
             return ToolCallOutput(text: "TMDB returned no movie credits for personId \(personId).")
         }
@@ -672,7 +673,8 @@ public actor LocalToolBackend: ToolBackend {
         let movies = try await client.discoverMovies(
             genreIds: genreIds, startYear: startYear, endYear: endYear, sortBy: resolvedSort
         )
-        let results = Self.tmdbMoviesToSearchResults(movies.prefix(25))
+        let libraryMap = await radarrLibraryByTMDBId()
+        let results = Self.tmdbMoviesToSearchResults(movies.prefix(25), libraryMap: libraryMap)
         guard !results.isEmpty else {
             return ToolCallOutput(text: "TMDB returned no movies matching that filter.")
         }
@@ -722,8 +724,14 @@ public actor LocalToolBackend: ToolBackend {
 
     /// Build `SearchResult`s the rest of the UI already knows how to render
     /// (poster carousel, tap-to-add via ConfirmAddCard). Movie `id` carries
-    /// the tmdbId — Radarr's add path takes it as-is.
-    private static func tmdbMoviesToSearchResults(_ movies: some Sequence<TMDBMovieSummary>) -> [SearchResult] {
+    /// the tmdbId — Radarr's add path takes it as-is. `libraryMap` maps
+    /// tmdbId → Radarr movie id so already-owned results get tagged with
+    /// `inLibraryArrId` — the UI then routes the tap to DetailView instead
+    /// of ConfirmAddCard.
+    private static func tmdbMoviesToSearchResults(
+        _ movies: some Sequence<TMDBMovieSummary>,
+        libraryMap: [Int: Int] = [:]
+    ) -> [SearchResult] {
         movies.map { m in
             SearchResult(
                 id: m.id,
@@ -739,9 +747,28 @@ public actor LocalToolBackend: ToolBackend {
                 network: nil,
                 certification: nil,
                 posterURL: TMDBClient.imageURL(path: m.posterPath),
-                source: .radarr
+                source: .radarr,
+                inLibraryArrId: libraryMap[m.id]
             )
         }
+    }
+
+    /// Build a `tmdbId → movie.id` map of the Radarr library so TMDB-sourced
+    /// results can be tagged as "owned" without each result paying for its
+    /// own lookup. Returns an empty map if Radarr isn't configured or the
+    /// fetch fails — callers should still proceed (owned status just won't be
+    /// shown). Demo mode handled by RadarrClient.fetchAllMovies.
+    private func radarrLibraryByTMDBId() async -> [Int: Int] {
+        guard radarr.isConfigured else { return [:] }
+        let client = RadarrClient(config: radarr)
+        guard let library = try? await client.fetchAllMovies() else { return [:] }
+        var map: [Int: Int] = [:]
+        for rec in library {
+            if let tmdb = rec.tmdbId, let arrId = rec.id {
+                map[tmdb] = arrId
+            }
+        }
+        return map
     }
 
     /// TV path is fuzzier: Sonarr indexes by tvdbId, but TMDB exposes its own
@@ -770,13 +797,19 @@ public actor LocalToolBackend: ToolBackend {
     }
 
     private static func formatTMDBSummary(_ results: [SearchResult], kind: String, origin: String) -> String {
-        var out = "TMDB returned \(results.count) \(kind) result\(results.count == 1 ? "" : "s") (\(origin)). Top:"
-        for r in results.prefix(10) {
+        let ownedCount = results.filter { $0.inLibraryArrId != nil }.count
+        var out = "TMDB returned \(results.count) \(kind) result\(results.count == 1 ? "" : "s") (\(origin))."
+        if ownedCount > 0 {
+            out += " \(ownedCount) already in the user's library (marked OWNED)."
+        }
+        out += " Top:"
+        for r in results.prefix(15) {
             let year = r.year.map { " (\($0))" } ?? ""
             let rating = r.rating.map { String(format: " ★%.1f", $0) } ?? ""
-            out += "\n- \(r.title)\(year)\(rating) — tmdbId: \(r.id == 0 ? "n/a" : String(r.id))"
+            let owned = r.inLibraryArrId != nil ? " [OWNED]" : ""
+            out += "\n- \(r.title)\(year)\(rating)\(owned) — tmdbId: \(r.id == 0 ? "n/a" : String(r.id))"
         }
-        if results.count > 10 { out += "\n…and \(results.count - 10) more." }
+        if results.count > 15 { out += "\n…and \(results.count - 15) more." }
         return out
     }
 

@@ -94,13 +94,13 @@ public enum ChatToolCatalog {
         ),
         MCPTool(
             name: "sonarr_get_series",
-            description: "List TV series currently in the Sonarr library (already added by the user). Use this when the user references a show they already have — to look it up, check its status, or get its tvdbId. Different from sonarr_search, which queries TVDB to find NEW series to add.",
+            description: "List TV series currently in the Sonarr library by TITLE. Use ONLY when the user names a specific show title. DO NOT use this to find shows by actor, director, genre, or year — the library record has no cast / crew / genre metadata. For those queries use tmdb_search_person + tmdb_person_tv_credits (or tmdb_discover_series).",
             inputSchema: .object([
                 "type": .string("object"),
                 "properties": .object([
                     "query": .object([
                         "type": .string("string"),
-                        "description": .string("Optional title filter — case-insensitive substring match. Omit to list all series."),
+                        "description": .string("Optional title substring (case-insensitive). Omit to list all series — produces a large dump, prefer a query."),
                     ]),
                 ]),
             ])
@@ -148,13 +148,13 @@ public enum ChatToolCatalog {
         ),
         MCPTool(
             name: "radarr_get_movies",
-            description: "List movies currently in the Radarr library (already added by the user). Use this when the user references a movie they already have — to look it up, check status, or get its tmdbId. Different from radarr_search, which queries TMDB to find NEW movies to add.",
+            description: "List movies currently in the Radarr library by TITLE. Use ONLY when the user names a specific movie title. DO NOT use this to find movies by actor, director, genre, or year — the library record has no cast / crew / genre metadata, so a query like 'Adam Sandler' returns nothing useful. For those queries use tmdb_search_person + tmdb_person_movie_credits (or tmdb_discover_movies) — those tools already cross-reference results with the library and mark which are owned.",
             inputSchema: .object([
                 "type": .string("object"),
                 "properties": .object([
                     "query": .object([
                         "type": .string("string"),
-                        "description": .string("Optional title filter — case-insensitive substring match. Omit to list all movies."),
+                        "description": .string("Optional title substring (case-insensitive). Omit to list all movies — produces a large dump, prefer a query."),
                     ]),
                 ]),
             ])
@@ -274,7 +274,7 @@ public enum ChatToolCatalog {
     private static let tmdbSharedTools: [MCPTool] = [
         MCPTool(
             name: "tmdb_search_person",
-            description: "Search TMDB for a person (actor/director/writer). Returns their TMDB id, name, and primary department. Use BEFORE tmdb_person_movie_credits or tmdb_person_tv_credits so you can pass the right personId — names are not unique. Example: 'Adam Sandler' → personId.",
+            description: "FIRST CHOICE for any question that mentions an actor, director, writer, or other person — including 'films/shows with X', 'what did X make', 'X's best movies'. Resolves a name to a TMDB personId. ALWAYS use this before tmdb_person_movie_credits or tmdb_person_tv_credits; never try to guess the personId. NEVER use radarr_get_movies or sonarr_get_series for person queries — those library tools don't carry cast/crew metadata and will return nothing.",
             inputSchema: .object([
                 "type": .string("object"),
                 "properties": .object([
@@ -293,7 +293,7 @@ public enum ChatToolCatalog {
     private static let tmdbMovieTools: [MCPTool] = [
         MCPTool(
             name: "tmdb_person_movie_credits",
-            description: "List movies a person appears in (or directed/wrote), sorted by popularity. Use after tmdb_search_person. The result includes tmdbId so the user can tap a card to add the movie to Radarr.",
+            description: "List movies a person appears in (or directed/wrote), sorted by popularity. Use after tmdb_search_person. Results are pre-cross-referenced with the Radarr library — entries already owned are marked [OWNED] in the text and surface as 'In library' cards in the UI, so do NOT re-check with radarr_get_movies. tmdbId is included for the rest, so taps add to Radarr.",
             inputSchema: .object([
                 "type": .string("object"),
                 "properties": .object([
