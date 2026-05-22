@@ -40,9 +40,10 @@ public struct SearchView: View {
     }
 
     public var body: some View {
-        VStack(spacing: 0) {
-            searchBar
-            Divider()
+        // Search bar floats at the bottom (Apple's recent search/Spotlight
+        // direction) — `safeAreaInset` keeps the result list from sliding
+        // under it.
+        Group {
             if viewModel.query.isEmpty && !viewModel.isSearching {
                 emptyHint
             } else if viewModel.isSearching {
@@ -63,6 +64,12 @@ public struct SearchView: View {
                 .scrollBounceBehavior(.basedOnSize)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            searchBar
+                .padding(.horizontal, 10)
+                .padding(.bottom, 10)
+                .padding(.top, 4)
         }
         .onChange(of: viewModel.query) { _, oldValue in
             // Reset "show all" toggles whenever the query changes — new
@@ -208,7 +215,7 @@ public struct SearchView: View {
                 String(localized: "Search movies and TV series", bundle: .module),
                 text: $viewModel.query
             )
-            .font(.system(size: 12))
+            .font(.system(size: 13))
             .textFieldStyle(.plain)
             .focused($queryFocused)
             if !viewModel.query.isEmpty {
@@ -220,12 +227,9 @@ public struct SearchView: View {
                 .buttonStyle(.plain)
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 7)
-        .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 7))
-        .padding(.horizontal, 12)
-        .padding(.top, 8)
-        .padding(.bottom, 8)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .glassyFloatingBar()
     }
 
     private var emptyHint: some View {
