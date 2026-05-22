@@ -147,17 +147,26 @@ public struct PopoverContentView: View {
             VStack(spacing: 0) {
                 HStack(spacing: 6) {
                     Button(action: closeSearch) {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 12, weight: .semibold))
+                        HStack(spacing: 3) {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 11, weight: .semibold))
+                            Text("Back", bundle: .module)
+                                .font(.system(size: 12))
+                        }
+                        .foregroundStyle(.secondary)
+                        .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    Text("Add", bundle: .module)
-                        .font(.system(size: 13, weight: .semibold))
                     Spacer()
+                    Image(systemName: "plus.magnifyingglass")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.tertiary)
+                    Text("Add", bundle: .module)
+                        .font(.system(size: 11))
+                        .foregroundStyle(.tertiary)
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
-                Divider()
                 SearchView(viewModel: searchViewModel) { result in
                     searchResult = result
                 }

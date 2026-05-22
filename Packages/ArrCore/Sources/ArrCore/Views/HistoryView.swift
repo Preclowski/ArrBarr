@@ -22,21 +22,15 @@ public struct HistoryView: View {
 
     private var header: some View {
         HStack(spacing: 6) {
-            Image(systemName: sourceSymbol)
-                .foregroundStyle(.secondary)
-                .font(.system(size: 11))
-            Text(LocalizedStringKey(sourceTitle))
-                .font(.system(size: 12, weight: .semibold))
-            Text("History")
-                .font(.system(size: 12))
-                .foregroundStyle(.secondary)
-            Spacer()
             Button(action: onClose) {
-                Image(systemName: "xmark")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(.secondary)
-                    .frame(width: 18, height: 18)
-                    .contentShape(Rectangle())
+                HStack(spacing: 3) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 11, weight: .semibold))
+                    Text("Back", bundle: .module)
+                        .font(.system(size: 12))
+                }
+                .foregroundStyle(.secondary)
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             #if os(macOS)
@@ -44,7 +38,16 @@ public struct HistoryView: View {
                 if hovering { NSCursor.pointingHand.push() } else { NSCursor.pop() }
             }
             #endif
-            .help(Text("Close", bundle: .module))
+            Spacer()
+            Image(systemName: sourceSymbol)
+                .font(.system(size: 11))
+                .foregroundStyle(.tertiary)
+            Text(LocalizedStringKey(sourceTitle))
+                .font(.system(size: 11))
+                .foregroundStyle(.tertiary)
+            Text("History", bundle: .module)
+                .font(.system(size: 11))
+                .foregroundStyle(.tertiary)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
