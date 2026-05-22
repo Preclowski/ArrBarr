@@ -96,25 +96,13 @@ public struct SettingsView: View {
     }
 
     /// Shared "AI" section. One master toggle at the top kills the whole
-    /// feature; nested controls (MCP + provider) only appear when AI is on.
+    /// feature; provider controls only appear when AI is on.
     @ViewBuilder
     private var aiSection: some View {
         Section("AI") {
             Toggle("Enable AI", isOn: $configStore.aiEnabled)
         }
         if configStore.aiEnabled {
-            Section("MCP") {
-                Picker("Tools", selection: $configStore.toolSource) {
-                    ForEach(ToolSource.allCases) { s in
-                        Text(s.displayName).tag(s)
-                    }
-                }
-                if configStore.toolSource == .externalMCP {
-                    TextField("MCP server URL", text: $configStore.mcp.baseURL,
-                              prompt: Text(verbatim: "http://nas.local:3000/mcp"))
-                    SecureField("MCP bearer token (optional)", text: $configStore.mcp.bearerToken)
-                }
-            }
             Section("Model") {
                 Picker("AI provider", selection: $configStore.chatProvider) {
                     ForEach(ChatProvider.allCases) { p in

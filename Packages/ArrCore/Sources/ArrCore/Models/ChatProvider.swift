@@ -1,19 +1,5 @@
 import Foundation
 
-public enum ToolSource: String, Codable, CaseIterable, Sendable, Identifiable {
-    case builtIn = "builtin"
-    case externalMCP = "external"
-
-    public var id: String { rawValue }
-
-    public var displayName: String {
-        switch self {
-        case .builtIn: return "Built-in (Sonarr + Radarr)"
-        case .externalMCP: return "External MCP server"
-        }
-    }
-}
-
 public enum ChatProvider: String, Codable, CaseIterable, Sendable, Identifiable {
     case foundationModels = "fm"
     case openai = "openai"

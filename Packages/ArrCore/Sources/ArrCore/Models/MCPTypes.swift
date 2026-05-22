@@ -34,47 +34,7 @@ public indirect enum JSONValue: Codable, Equatable, Sendable {
     }
 }
 
-// MARK: - JSON-RPC 2.0 envelope
-
-public struct JSONRPCRequest: Encodable, Sendable {
-    public let jsonrpc: String
-    public let id: Int
-    public let method: String
-    public let params: JSONValue
-
-    public init(id: Int, method: String, params: JSONValue) {
-        self.jsonrpc = "2.0"
-        self.id = id
-        self.method = method
-        self.params = params
-    }
-}
-
-public struct JSONRPCNotification: Encodable, Sendable {
-    public let jsonrpc: String
-    public let method: String
-    public let params: JSONValue
-
-    public init(method: String, params: JSONValue) {
-        self.jsonrpc = "2.0"
-        self.method = method
-        self.params = params
-    }
-}
-
-public struct JSONRPCError: Decodable, Equatable, Sendable {
-    public let code: Int
-    public let message: String
-}
-
-public struct JSONRPCResponse<R: Decodable & Sendable>: Decodable, Sendable {
-    public let jsonrpc: String
-    public let id: Int?
-    public let result: R?
-    public let error: JSONRPCError?
-}
-
-// MARK: - MCP method-specific result payloads
+// MARK: - Tool descriptor
 
 public struct MCPTool: Decodable, Sendable, Equatable {
     public let name: String
@@ -86,28 +46,4 @@ public struct MCPTool: Decodable, Sendable, Equatable {
         self.description = description
         self.inputSchema = inputSchema
     }
-}
-
-public struct ToolsListResult: Decodable, Sendable, Equatable {
-    public let tools: [MCPTool]
-}
-
-public struct InitializeResult: Decodable, Sendable, Equatable {
-    public let protocolVersion: String
-    public let serverInfo: ServerInfo?
-
-    public struct ServerInfo: Decodable, Sendable, Equatable {
-        public let name: String?
-        public let version: String?
-    }
-}
-
-public struct ToolsCallContent: Decodable, Sendable, Equatable {
-    public let type: String
-    public let text: String?
-}
-
-public struct ToolsCallResult: Decodable, Sendable, Equatable {
-    public let content: [ToolsCallContent]
-    public let isError: Bool?
 }

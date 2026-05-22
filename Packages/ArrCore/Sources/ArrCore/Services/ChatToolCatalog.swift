@@ -4,11 +4,6 @@ import Foundation
 /// for tool names, descriptions and input schemas. Both LocalToolBackend (the
 /// in-process implementation) and ChatViewModelFactory (which advertises the
 /// tools to the LLM provider) read from here.
-///
-/// External MCP servers will return their own schemas via `listTools()`; we
-/// don't currently fetch and use those, so the schemas in this catalog are
-/// what the LLM sees regardless of which backend serves them. Tool *names*
-/// are designed to match mcp-arr's, so call dispatch works either way.
 public enum ChatToolCatalog {
     public static let tools: [MCPTool] = [
         MCPTool(

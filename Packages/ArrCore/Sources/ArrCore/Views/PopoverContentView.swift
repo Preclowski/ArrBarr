@@ -48,16 +48,12 @@ public struct PopoverContentView: View {
 
     private var chatAvailable: Bool {
         guard configStore.aiEnabled else { return false }
-        switch configStore.toolSource {
-        case .builtIn: break
-        case .externalMCP: guard configStore.mcp.isConfigured else { return false }
-        }
         switch configStore.chatProvider {
-        case .openai:
-            return configStore.openai.isConfigured
         case .foundationModels:
             if #available(macOS 26.0, iOS 26.0, *) { return true }
             return false
+        case .openai:
+            return configStore.openai.isConfigured
         }
     }
 

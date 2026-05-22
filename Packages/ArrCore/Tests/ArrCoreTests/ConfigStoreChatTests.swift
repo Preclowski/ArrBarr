@@ -3,7 +3,7 @@ import Foundation
 @testable import ArrCore
 
 @MainActor
-@Suite("ConfigStore — chat & MCP")
+@Suite("ConfigStore — chat")
 struct ConfigStoreChatTests {
     private func freshDefaults() -> UserDefaults {
         let suite = "ArrBarrTests.\(UUID().uuidString)"
@@ -12,12 +12,11 @@ struct ConfigStoreChatTests {
         return d
     }
 
-    @Test("defaults: aiEnabled false, mcp empty")
+    @Test("defaults: aiEnabled false")
     func defaults() {
         let d = freshDefaults()
         let store = ConfigStore(defaults: d)
         #expect(store.aiEnabled == false)
-        #expect(store.mcp == .empty)
     }
 
     @Test("persists aiEnabled across instances")
@@ -29,18 +28,6 @@ struct ConfigStoreChatTests {
         }
         let s2 = ConfigStore(defaults: d)
         #expect(s2.aiEnabled == true)
-    }
-
-    @Test("persists mcp across instances")
-    func persistMCP() {
-        let d = freshDefaults()
-        let cfg = MCPConfig(enabled: true, baseURL: "https://x/mcp", bearerToken: "tok")
-        do {
-            let s = ConfigStore(defaults: d)
-            s.mcp = cfg
-        }
-        let s2 = ConfigStore(defaults: d)
-        #expect(s2.mcp == cfg)
     }
 
     @Test("defaults: chatProvider foundationModels, openai empty")
@@ -72,23 +59,5 @@ struct ConfigStoreChatTests {
         }
         let s2 = ConfigStore(defaults: d)
         #expect(s2.openai == cfg)
-    }
-
-    @Test("defaults: toolSource builtIn")
-    func defaultsToolSource() {
-        let d = freshDefaults()
-        let store = ConfigStore(defaults: d)
-        #expect(store.toolSource == .builtIn)
-    }
-
-    @Test("persists toolSource across instances")
-    func persistToolSource() {
-        let d = freshDefaults()
-        do {
-            let s = ConfigStore(defaults: d)
-            s.toolSource = .externalMCP
-        }
-        let s2 = ConfigStore(defaults: d)
-        #expect(s2.toolSource == .externalMCP)
     }
 }

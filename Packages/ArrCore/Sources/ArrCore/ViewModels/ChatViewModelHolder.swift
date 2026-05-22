@@ -3,7 +3,7 @@ import Combine
 
 /// Hosts the chat view-model at a scope above the tab bar so the conversation
 /// survives Queue ↔ Upcoming ↔ Chat switches. SwiftUI's `@StateObject` can't be
-/// reassigned, so we wrap the VM in a holder that rebuilds it when the AI/MCP
+/// reassigned, so we wrap the VM in a holder that rebuilds it when the AI
 /// configuration actually changes.
 @MainActor
 public final class ChatViewModelHolder: ObservableObject {
@@ -21,8 +21,6 @@ public final class ChatViewModelHolder: ObservableObject {
         guard next != lastSignature else { return }
         lastSignature = next
         vm = ChatViewModelFactory.make(
-            toolSource: store.toolSource,
-            mcp: store.mcp,
             sonarr: store.sonarr,
             radarr: store.radarr,
             chatProvider: store.chatProvider,
@@ -32,8 +30,6 @@ public final class ChatViewModelHolder: ObservableObject {
 
     public static func signature(store: ConfigStore) -> String {
         [
-            store.toolSource.rawValue,
-            store.mcp.baseURL, store.mcp.bearerToken, "\(store.mcp.enabled)",
             store.sonarr.baseURL, store.sonarr.apiKey, "\(store.sonarr.enabled)",
             store.radarr.baseURL, store.radarr.apiKey, "\(store.radarr.enabled)",
             store.chatProvider.rawValue,

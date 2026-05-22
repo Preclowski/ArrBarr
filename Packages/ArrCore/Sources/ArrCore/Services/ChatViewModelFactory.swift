@@ -11,21 +11,12 @@ public enum ChatViewModelFactory {
     }
 
     public static func make(
-        toolSource: ToolSource,
-        mcp: MCPConfig,
         sonarr: ServiceConfig,
         radarr: ServiceConfig,
         chatProvider: ChatProvider,
         openai: OpenAIConfig
     ) -> ChatViewModel {
-        let backend: ToolBackend
-        switch toolSource {
-        case .builtIn:
-            backend = LocalToolBackend(sonarr: sonarr, radarr: radarr)
-        case .externalMCP:
-            guard mcp.isConfigured else { return makePlaceholder() }
-            backend = MCPClient(config: mcp)
-        }
+        let backend: ToolBackend = LocalToolBackend(sonarr: sonarr, radarr: radarr)
 
         let llmTools = ChatToolCatalog.llmTools
 

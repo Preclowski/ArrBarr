@@ -53,7 +53,17 @@ struct LocalToolBackendTests {
         let tools = try await backend().listTools()
         #expect(tools.count == 8)
         let names = Set(tools.map(\.name))
-        #expect(names == MCPToolWhitelist.v1Allowed)
+        let expected: Set<String> = [
+            "sonarr_search",
+            "radarr_search",
+            "sonarr_get_series",
+            "radarr_get_movies",
+            "sonarr_get_calendar",
+            "radarr_get_calendar",
+            "sonarr_add_series",
+            "radarr_add_movie",
+        ]
+        #expect(names == expected)
     }
 
     @Test("callTool unknown tool throws LocalToolError.unknownTool")
