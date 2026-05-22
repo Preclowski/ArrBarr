@@ -11,21 +11,29 @@ public struct ChatView: View {
     }
 
     public var body: some View {
-        VStack(spacing: 0) {
-            messages
-            if let confirm = viewModel.pendingConfirm {
-                ConfirmAddCard(
-                    call: confirm,
-                    sonarr: configStore.sonarr,
-                    radarr: configStore.radarr,
-                    lidarr: configStore.lidarr,
-                    onConfirm: { args in Task { await viewModel.confirmPending(with: args) } },
-                    onCancel: { Task { await viewModel.cancelPending() } }
-                )
+        // iMessage-style: scrolling messages fill the surface, the input bar
+        // floats over the bottom with a liquid-glass / material background.
+        // `safeAreaInset` reserves space at the bottom of the scroll so
+        // messages can't slide under the input cluster.
+        messages
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                VStack(spacing: 8) {
+                    if let confirm = viewModel.pendingConfirm {
+                        ConfirmAddCard(
+                            call: confirm,
+                            sonarr: configStore.sonarr,
+                            radarr: configStore.radarr,
+                            lidarr: configStore.lidarr,
+                            onConfirm: { args in Task { await viewModel.confirmPending(with: args) } },
+                            onCancel: { Task { await viewModel.cancelPending() } }
+                        )
+                    }
+                    inputBar
+                }
+                .padding(.horizontal, 10)
+                .padding(.bottom, 10)
+                .padding(.top, 4)
             }
-            Divider()
-            inputBar
-        }
     }
 
     @State private var clearHovered: Bool = false
@@ -136,8 +144,9 @@ public struct ChatView: View {
             .buttonStyle(.plain)
             .disabled(draft.trimmingCharacters(in: .whitespaces).isEmpty || viewModel.isThinking)
         }
-        .padding(.horizontal, 12)
+        .padding(.horizontal, 14)
         .padding(.vertical, 8)
+        .glassyFloatingBar()
     }
 
     private func send() {
