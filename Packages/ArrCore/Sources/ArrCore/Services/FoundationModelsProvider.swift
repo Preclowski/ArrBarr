@@ -102,6 +102,16 @@ public struct FoundationModelsProvider: LLMProvider {
 
             Otherwise, answer directly without calling a tool.
             Never invent tool names that are not listed above.
+
+            Format your replies as plain prose. Do NOT use:
+              • markdown tables
+              • emoji
+              • heading syntax (no #, ##, ###)
+              • bullet or numbered lists (no -, *, 1.)
+            You may use ONLY inline emphasis: **bold**, *italic*, `code`,
+            [link](url). Keep replies short — usually one short paragraph.
+            When listing several items, write them out as a sentence with
+            commas, or use em-dashes inline.
             """
         )
     }

@@ -66,6 +66,16 @@ public struct OpenAIProvider: LLMProvider {
             Reply in English, in a short, friendly tone. The user may be Polish — keep titles as the user wrote them.
             Call a tool when the request needs server data or an action. Otherwise just answer.
             Only use tools from the provided list.
+
+            Format your replies as plain prose. Do NOT use:
+              • markdown tables
+              • emoji
+              • heading syntax (no #, ##, ###)
+              • bullet or numbered lists (no -, *, 1.)
+            You may use ONLY inline emphasis: **bold**, *italic*, `code`,
+            [link](url). Keep replies short — usually one short paragraph.
+            When listing several items, write them out as a sentence with
+            commas, or use em-dashes inline.
             """,
             tool_calls: nil,
             tool_call_id: nil
