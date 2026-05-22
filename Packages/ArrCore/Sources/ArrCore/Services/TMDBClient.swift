@@ -126,6 +126,25 @@ public enum TMDBGenres {
     public static func tvId(for token: String) -> Int? {
         tv[token.lowercased()]
     }
+
+    /// Reverse map for the "+ result card" hero — TMDB discover/credits
+    /// returns numeric `genre_ids`; the SearchResult model carries the
+    /// display name strings the SearchAddPanel renders as chips. We pick
+    /// the first matching name (the maps have aliases that all map to the
+    /// same id — e.g. "sci-fi" and "science fiction" both = 878).
+    public static func movieName(for id: Int) -> String? {
+        movie.first { $0.value == id }?.key.capitalized
+    }
+    public static func tvName(for id: Int) -> String? {
+        tv.first { $0.value == id }?.key.capitalized
+    }
+
+    public static func movieNames(for ids: [Int]) -> [String] {
+        ids.compactMap(movieName(for:))
+    }
+    public static func tvNames(for ids: [Int]) -> [String] {
+        ids.compactMap(tvName(for:))
+    }
 }
 
 // MARK: - Client

@@ -24,13 +24,28 @@ public final class SearchViewModel: ObservableObject {
     private var sonarrClient: SearchClient?
     private var lidarrClient: SearchClient?
     private var whisparrClient: SearchClient?
+    /// Per-source `ServiceConfig` kept so `loadOptions` can key the
+    /// `SearchOptionsCache` without round-tripping through the client.
+    private var configs: [QueueItem.Source: ServiceConfig] = [:]
 
     func setup(radarrConfig: ServiceConfig, sonarrConfig: ServiceConfig,
                lidarrConfig: ServiceConfig = .empty, whisparrConfig: ServiceConfig = .empty) {
-        if radarrConfig.isConfigured { radarrClient = SearchClient(config: radarrConfig, source: .radarr) }
-        if sonarrConfig.isConfigured { sonarrClient = SearchClient(config: sonarrConfig, source: .sonarr) }
-        if lidarrConfig.isConfigured { lidarrClient = SearchClient(config: lidarrConfig, source: .lidarr) }
-        if whisparrConfig.isConfigured { whisparrClient = SearchClient(config: whisparrConfig, source: .whisparr) }
+        if radarrConfig.isConfigured {
+            radarrClient = SearchClient(config: radarrConfig, source: .radarr)
+            configs[.radarr] = radarrConfig
+        }
+        if sonarrConfig.isConfigured {
+            sonarrClient = SearchClient(config: sonarrConfig, source: .sonarr)
+            configs[.sonarr] = sonarrConfig
+        }
+        if lidarrConfig.isConfigured {
+            lidarrClient = SearchClient(config: lidarrConfig, source: .lidarr)
+            configs[.lidarr] = lidarrConfig
+        }
+        if whisparrConfig.isConfigured {
+            whisparrClient = SearchClient(config: whisparrConfig, source: .whisparr)
+            configs[.whisparr] = whisparrConfig
+        }
     }
 
     func onQueryChange() {
@@ -88,16 +103,38 @@ public final class SearchViewModel: ObservableObject {
     func loadOptions(source: QueueItem.Source) async {
         let client = client(for: source)
         guard let client else { return }
+
+        // Cache hit: paint instantly. Server-side profile/folder lists rarely
+        // change; the 15-minute TTL covers the common "open SearchAddPanel
+        // three times in a row" pattern without making the user wait for
+        // identical results.
+        let cacheKey = configs[source].map {
+            SearchOptionsCache.key(source: source, config: $0)
+        }
+        if let key = cacheKey, let cached = SearchOptionsCache.shared.entry(for: key) {
+            qualityProfiles = cached.profiles
+            rootFolders = cached.folders
+            metadataProfiles = cached.metadataProfiles
+            return
+        }
+
         isLoadingOptions = true
         defer { isLoadingOptions = false }
         async let profiles = client.fetchQualityProfiles()
         async let folders = client.fetchRootFolders()
-        qualityProfiles = (try? await profiles) ?? []
-        rootFolders = (try? await folders) ?? []
-        if source == .lidarr {
-            metadataProfiles = (try? await client.fetchMetadataProfiles()) ?? []
-        } else {
-            metadataProfiles = []
+        let q = (try? await profiles) ?? []
+        let f = (try? await folders) ?? []
+        let mp: [MetadataProfile] = source == .lidarr
+            ? ((try? await client.fetchMetadataProfiles()) ?? [])
+            : []
+        qualityProfiles = q
+        rootFolders = f
+        metadataProfiles = mp
+        if let key = cacheKey {
+            SearchOptionsCache.shared.store(
+                .init(profiles: q, folders: f, metadataProfiles: mp),
+                for: key
+            )
         }
     }
 
