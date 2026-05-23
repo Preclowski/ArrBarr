@@ -28,6 +28,11 @@ public enum ChatToolCatalog {
         }
         if includeTMDBMovies { arr.append(contentsOf: tmdbMovieTools) }
         if includeTMDBSeries { arr.append(contentsOf: tmdbSeriesTools) }
+        // suggest_titles resolves through Sonarr / Radarr lookups, so it
+        // only makes sense when at least one of those arrs is configured.
+        if includeSonarr || includeRadarr {
+            arr.append(contentsOf: suggestTools)
+        }
         return arr
     }
 
@@ -366,6 +371,60 @@ public enum ChatToolCatalog {
                         "description": .string("Optional TMDB sort key. Defaults to 'popularity.desc'. Other useful values: 'vote_average.desc', 'first_air_date.desc'."),
                     ]),
                 ]),
+            ])
+        ),
+    ]
+
+    // MARK: - Curated suggestions (model-knowledge picks → rich cards)
+    //
+    // `suggest_titles` is the right answer for taste-based queries — "in
+    // the style of", "similar to", "in the mood for". The model picks
+    // titles from its own training-data associations (typically better
+    // than TMDB's algorithmic discover for these queries) and the tool
+    // resolves each through the Sonarr/Radarr lookup so the chat shows
+    // real, tappable cards with posters, ratings, and in-library state.
+
+    private static let suggestTools: [MCPTool] = [
+        MCPTool(
+            name: "suggest_titles",
+            description: """
+            Present a curated list of titles you (the model) recommend from your own knowledge, rendered as interactive cards with posters / ratings / in-library state.
+
+            USE THIS for taste-based queries: "suggest a show like Mr. Robot", "movies in the style of Wes Anderson", "something in the mood for noir tonight", "good follow-up to Breaking Bad". Your training-data associations are better than `tmdb_discover_*`'s algorithmic filters for these.
+
+            DO NOT use `tmdb_discover_*` for taste queries — those are for genre/year filters ("popular 90s horror", "highly-rated documentaries 2023") where the user picks the dimension and you do not need to curate.
+
+            Pass 5–12 picks. Include `year` whenever you're confident — it disambiguates remakes and same-titled works. All picks must share one `kind` per call (all series, or all movies). The tool will resolve each through Sonarr/Radarr; any pick that can't be found is silently dropped from the cards (and reported back to you) so the user only sees real, addable items.
+
+            After the call, briefly explain WHY this set (one or two sentences max) — the cards speak for themselves visually.
+            """,
+            inputSchema: .object([
+                "type": .string("object"),
+                "properties": .object([
+                    "kind": .object([
+                        "type": .string("string"),
+                        "description": .string("'series' to resolve picks through Sonarr, 'movie' through Radarr. All items in one call must share a kind."),
+                    ]),
+                    "items": .object([
+                        "type": .string("array"),
+                        "description": .string("Ordered list of picks; order is preserved in the surfaced cards."),
+                        "items": .object([
+                            "type": .string("object"),
+                            "properties": .object([
+                                "title": .object([
+                                    "type": .string("string"),
+                                    "description": .string("The work's title, e.g. 'The Wire'. Use the original-language title if that's how the metadata source indexes it."),
+                                ]),
+                                "year": .object([
+                                    "type": .string("integer"),
+                                    "description": .string("Optional release year — disambiguates remakes (Dune 1984 vs 2021). Omit when unsure."),
+                                ]),
+                            ]),
+                            "required": .array([.string("title")]),
+                        ]),
+                    ]),
+                ]),
+                "required": .array([.string("kind"), .string("items")]),
             ])
         ),
     ]

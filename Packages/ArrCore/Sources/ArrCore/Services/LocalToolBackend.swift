@@ -65,6 +65,7 @@ public actor LocalToolBackend: ToolBackend {
         case "tmdb_person_tv_credits":      return try await tmdbPersonTVCredits(arguments)
         case "tmdb_discover_movies":        return try await tmdbDiscoverMovies(arguments)
         case "tmdb_discover_series":        return try await tmdbDiscoverSeries(arguments)
+        case "suggest_titles":              return try await suggestTitles(arguments)
         default:
             throw LocalToolError.unknownTool(name)
         }
@@ -188,6 +189,133 @@ public actor LocalToolBackend: ToolBackend {
     private func searchMovie(_ args: JSONValue) async throws -> ToolCallOutput {
         try await runSearch(args: args, source: .radarr, config: radarr, kind: "movie",
                             yearAware: true, rich: { .searchMovieResults($0) })
+    }
+
+    /// Curated-recommendation tool. The LLM passes its own taste picks
+    /// (title + optional year) and we resolve each through the arr's
+    /// lookup endpoint so the chat surfaces rich cards (poster / ratings /
+    /// in-library state) instead of a markdown list the user can't act on.
+    ///
+    /// Why this exists: `tmdb_discover_*` filters by genre/year/popularity
+    /// and is algorithmic — it's poor for taste-based queries ("something
+    /// in the mood of Mr. Robot"). The model's own training-data
+    /// associations are usually better. This tool gives the model a way
+    /// to *present* those picks as interactive cards.
+    ///
+    /// Dual-channel output: condensed text to the model (one line per
+    /// pick + library state, so it knows what was actually surfaced and
+    /// what couldn't be resolved), full SearchResults to the UI.
+    private func suggestTitles(_ args: JSONValue) async throws -> ToolCallOutput {
+        let kind = Self.stringArg(args, key: "kind").lowercased()
+        guard kind == "series" || kind == "movie" else {
+            return ToolCallOutput(text: "suggest_titles requires kind='series' or kind='movie'.")
+        }
+        let items = Self.suggestItems(args)
+        guard !items.isEmpty else {
+            return ToolCallOutput(text: "suggest_titles needs a non-empty 'items' array of {title, year?} picks.")
+        }
+        // Hard cap so the tool stays responsive even if the model goes
+        // overboard ("here's 50 picks"). 15 is plenty for a single round
+        // of suggestions and matches the *_search top-N convention.
+        let capped = Array(items.prefix(15))
+
+        let source: QueueItem.Source = (kind == "series") ? .sonarr : .radarr
+        let config = (kind == "series") ? sonarr : radarr
+        guard config.isConfigured else {
+            return ToolCallOutput(text: "\(source.displayName) is not configured — can't resolve \(kind) suggestions.")
+        }
+        let client = SearchClient(config: config, source: source)
+
+        // Parallel lookups — each is a single HTTP. Order in the output
+        // preserves the model's curation (which is signal: a curator's
+        // ordering reflects relevance), so we collect by index.
+        var resolved: [(index: Int, result: SearchResult)] = []
+        var missing: [(index: Int, label: String)] = []
+
+        await withTaskGroup(of: (Int, Result<SearchResult?, Error>).self) { group in
+            for (idx, item) in capped.enumerated() {
+                group.addTask { [client] in
+                    do {
+                        let query = item.year.map { "\(item.title) \($0)" } ?? item.title
+                        let hits = try await Self.searchWithYearAwareness(client: client, query: query)
+                        // Year-tagged match wins; otherwise top hit; otherwise nil.
+                        let match = item.year.flatMap { y in hits.first(where: { $0.year == y }) }
+                            ?? hits.first
+                        return (idx, .success(match))
+                    } catch {
+                        return (idx, .failure(error))
+                    }
+                }
+            }
+            for await (idx, outcome) in group {
+                switch outcome {
+                case .success(let result?):
+                    resolved.append((idx, result))
+                case .success(nil), .failure:
+                    let label = capped[idx].year.map { "\(capped[idx].title) (\($0))" } ?? capped[idx].title
+                    missing.append((idx, label))
+                }
+            }
+        }
+        resolved.sort { $0.index < $1.index }
+        missing.sort { $0.index < $1.index }
+
+        let results = resolved.map { $0.result }
+        let text = Self.formatSuggestionsCondensed(
+            resolved: results,
+            missing: missing.map { $0.label },
+            kind: kind
+        )
+        let rich: ChatRichContent = (kind == "series") ? .searchSeriesResults(results) : .searchMovieResults(results)
+        return ToolCallOutput(text: text, rich: rich)
+    }
+
+    /// Pull `items: [{title, year?}]` out of the JSON-RPC arguments.
+    /// Permissive — drops malformed entries silently so a model that
+    /// fumbles one item doesn't kill the whole call.
+    private static func suggestItems(_ value: JSONValue) -> [(title: String, year: Int?)] {
+        guard case .object(let dict) = value, case .array(let arr) = dict["items"] else { return [] }
+        return arr.compactMap { entry -> (String, Int?)? in
+            guard case .object(let obj) = entry,
+                  case .string(let title) = obj["title"],
+                  !title.isEmpty else { return nil }
+            let year: Int? = {
+                guard let raw = obj["year"] else { return nil }
+                switch raw {
+                case .number(let n): return Int(n)
+                case .string(let s): return Int(s)
+                default: return nil
+                }
+            }()
+            return (title, year)
+        }
+    }
+
+    /// Condensed text for the model: surfaced picks + library state +
+    /// missing labels. Kept under ~300 tokens for 15 items so it doesn't
+    /// eat the local LLM's context window.
+    private static func formatSuggestionsCondensed(
+        resolved: [SearchResult],
+        missing: [String],
+        kind: String
+    ) -> String {
+        if resolved.isEmpty && missing.isEmpty {
+            return "No suggestions to surface."
+        }
+        var out: [String] = []
+        if !resolved.isEmpty {
+            let lines = resolved.map { r -> String in
+                let yearPart = r.year.map { " (\($0))" } ?? ""
+                let state = (r.inLibraryArrId != nil) ? " [in library]" : ""
+                return "• \(r.title)\(yearPart)\(state)"
+            }
+            out.append("Surfaced \(resolved.count) \(kind) card\(resolved.count == 1 ? "" : "s") in the chat:")
+            out.append(lines.joined(separator: "\n"))
+        }
+        if !missing.isEmpty {
+            out.append("Couldn't resolve: \(missing.joined(separator: ", ")).")
+        }
+        return out.joined(separator: "\n")
     }
 
     /// Detect a 4-digit year in the query and surface year-matching hits to
