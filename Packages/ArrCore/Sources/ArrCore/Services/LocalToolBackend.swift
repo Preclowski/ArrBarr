@@ -67,6 +67,7 @@ public actor LocalToolBackend: ToolBackend {
         case "tmdb_discover_movies":        return try await tmdbDiscoverMovies(arguments)
         case "tmdb_discover_series":        return try await tmdbDiscoverSeries(arguments)
         case "suggest_titles":              return try await suggestTitles(arguments)
+        case "arr_health":                  return try await arrHealth()
         default:
             throw LocalToolError.unknownTool(name)
         }
@@ -250,6 +251,81 @@ public actor LocalToolBackend: ToolBackend {
         )
         let rich: ChatRichContent = (kind == "series") ? .searchSeriesResults(results) : .searchMovieResults(results)
         return ToolCallOutput(text: text, rich: rich)
+    }
+
+    /// Aggregated health check across every configured arr. Each arr's
+    /// `/health` endpoint returns the warnings + errors its own UI shows in
+    /// the bell icon — disconnected indexers, missing root folders, full
+    /// disk, etc. The model gets a per-arr one-line summary; full-detail
+    /// messages are inlined only when there's something to report so the
+    /// output stays compact when everything's green.
+    private func arrHealth() async throws -> ToolCallOutput {
+        let configured: [(QueueItem.Source, ServiceConfig)] = [
+            (.sonarr, sonarr), (.radarr, radarr),
+            (.lidarr, lidarr), (.whisparr, whisparr),
+        ].filter { $0.1.isConfigured }
+
+        guard !configured.isEmpty else {
+            return ToolCallOutput(text: "No arr services are configured.")
+        }
+
+        // Each fetch is one HTTP — fan out in parallel.
+        var report: [(source: QueueItem.Source, records: [ArrHealthRecord], error: String?)] = []
+        await withTaskGroup(of: (QueueItem.Source, Result<[ArrHealthRecord], Error>).self) { group in
+            for (source, cfg) in configured {
+                group.addTask { [cfg] in
+                    do {
+                        let records: [ArrHealthRecord]
+                        switch source {
+                        case .sonarr:   records = try await SonarrClient(config: cfg).fetchHealth()
+                        case .radarr:   records = try await RadarrClient(config: cfg).fetchHealth()
+                        case .lidarr:   records = try await LidarrClient(config: cfg).fetchHealth()
+                        case .whisparr: records = try await WhisparrClient(config: cfg).fetchHealth()
+                        }
+                        return (source, .success(records))
+                    } catch {
+                        return (source, .failure(error))
+                    }
+                }
+            }
+            for await (source, outcome) in group {
+                switch outcome {
+                case .success(let records):
+                    report.append((source, records, nil))
+                case .failure(let err):
+                    report.append((source, [], err.localizedDescription))
+                }
+            }
+        }
+        report.sort { $0.source.displayName < $1.source.displayName }
+
+        var lines: [String] = []
+        for entry in report {
+            if let err = entry.error {
+                lines.append("\(entry.source.displayName): unreachable — \(err)")
+                continue
+            }
+            if entry.records.isEmpty {
+                lines.append("\(entry.source.displayName): healthy")
+                continue
+            }
+            let errorCount = entry.records.filter { ($0.type ?? "").lowercased() == "error" }.count
+            let warningCount = entry.records.count - errorCount
+            var summary = "\(entry.source.displayName): "
+            if errorCount > 0 { summary += "\(errorCount) error\(errorCount == 1 ? "" : "s")" }
+            if warningCount > 0 {
+                if errorCount > 0 { summary += ", " }
+                summary += "\(warningCount) warning\(warningCount == 1 ? "" : "s")"
+            }
+            lines.append(summary)
+            // Inline each message so the model has enough detail to relay.
+            for rec in entry.records {
+                let kind = (rec.type ?? "info").lowercased()
+                let msg = rec.message ?? "(no message)"
+                lines.append("  • [\(kind)] \(msg)")
+            }
+        }
+        return ToolCallOutput(text: lines.joined(separator: "\n"))
     }
 
     /// Pull `items: [{title, year?}]` out of the JSON-RPC arguments.

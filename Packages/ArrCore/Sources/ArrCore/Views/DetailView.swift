@@ -205,7 +205,6 @@ public struct DetailView: View {
                         episodes: sonarrEpisodes.filter { $0.seasonNumber == season.seasonNumber }
                     )
                 }
-                Divider().padding(.vertical, 2)
             }
 
             if hasActiveDownloads {

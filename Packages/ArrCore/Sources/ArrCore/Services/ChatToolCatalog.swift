@@ -33,6 +33,10 @@ public enum ChatToolCatalog {
         if includeSonarr || includeRadarr {
             arr.append(contentsOf: suggestTools)
         }
+        // arr_health needs at least one arr to query.
+        if includeSonarr || includeRadarr || includeLidarr || includeWhisparr {
+            arr.append(contentsOf: healthTools)
+        }
         return arr
     }
 
@@ -76,7 +80,7 @@ public enum ChatToolCatalog {
         ),
         MCPTool(
             name: "sonarr_get_series",
-            description: "List TV series currently in the Sonarr library by TITLE. Use ONLY when the user names a specific show title. DO NOT use this to find shows by actor, director, genre, or year — the library record has no cast / crew / genre metadata. For those queries use tmdb_search_person + tmdb_person_tv_credits (or tmdb_discover_series).",
+            description: "List TV series currently in the Sonarr library by TITLE. Use ONLY when the user names a specific show title. DO NOT use this to find shows by actor, director, genre, or year — the library record has no cast / crew / genre metadata. For those queries use tmdb_search_person + tmdb_person_tv_credits (or tmdb_discover_series). For 'is Sonarr healthy / what's the state of my arrs' use `arr_health` instead — listing the library tells you nothing about service health.",
             inputSchema: .object([
                 "type": .string("object"),
                 "properties": .object([
@@ -113,7 +117,7 @@ public enum ChatToolCatalog {
         ),
         MCPTool(
             name: "radarr_get_movies",
-            description: "List movies currently in the Radarr library by TITLE. Use ONLY when the user names a specific movie title. DO NOT use this to find movies by actor, director, genre, or year — the library record has no cast / crew / genre metadata, so a query like 'Adam Sandler' returns nothing useful. For those queries use tmdb_search_person + tmdb_person_movie_credits (or tmdb_discover_movies) — those tools already cross-reference results with the library and mark which are owned.",
+            description: "List movies currently in the Radarr library by TITLE. Use ONLY when the user names a specific movie title. DO NOT use this to find movies by actor, director, genre, or year — the library record has no cast / crew / genre metadata, so a query like 'Adam Sandler' returns nothing useful. For those queries use tmdb_search_person + tmdb_person_movie_credits (or tmdb_discover_movies) — those tools already cross-reference results with the library and mark which are owned. For 'is Radarr healthy / what's the state of my arrs' use `arr_health` instead.",
             inputSchema: .object([
                 "type": .string("object"),
                 "properties": .object([
@@ -358,6 +362,22 @@ public enum ChatToolCatalog {
                 ]),
                 "required": .array([.string("kind"), .string("items")]),
             ])
+        ),
+    ]
+
+    // MARK: - Cross-arr status / diagnostics
+
+    private static let healthTools: [MCPTool] = [
+        MCPTool(
+            name: "arr_health",
+            description: """
+            Aggregated health check across every configured arr (Sonarr, Radarr, Lidarr, Whisparr). Returns each service's warnings + errors — disconnected indexers, missing root folders, full disk, queue stuck, etc. Same bell-icon data each arr's own UI surfaces.
+
+            USE THIS for "what's the state of my arrs", "is everything working", "are there any issues", "any problems with Sonarr". DO NOT use `sonarr_get_series` / `radarr_get_movies` for status questions — those list library contents and tell you nothing about whether the service is healthy.
+
+            Output is plain text (no cards). Relay the per-service summary to the user briefly. Inline the most actionable warnings if any.
+            """,
+            inputSchema: .object(["type": .string("object"), "properties": .object([:])])
         ),
     ]
 }
