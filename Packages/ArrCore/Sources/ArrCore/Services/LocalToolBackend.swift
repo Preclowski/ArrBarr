@@ -50,16 +50,17 @@ public actor LocalToolBackend: ToolBackend {
         case "radarr_get_movies":   return try await listMovies(arguments)
         case "sonarr_get_calendar": return try await sonarrCalendar()
         case "radarr_get_calendar": return try await radarrCalendar()
-        case "sonarr_add_series":   return try await addSeries(arguments)
-        case "radarr_add_movie":    return try await addMovie(arguments)
+        // `*_add_*` tools used to live here. Removed in favour of "model
+        // surfaces, user adds via the SearchAddPanel card flow" — see
+        // ChatToolCatalog for the rationale. The model now drops the user
+        // off at a tappable card; tapping opens the same panel `+` uses,
+        // with profile/folder/quality pickers and a single confirm button.
         case "lidarr_search":       return try await searchArtist(arguments)
         case "lidarr_get_artists":  return try await listArtists(arguments)
         case "lidarr_get_calendar": return try await lidarrCalendar()
-        case "lidarr_add_artist":   return try await addArtist(arguments)
         case "whisparr_search":     return try await searchScene(arguments)
         case "whisparr_get_movies": return try await listScenes(arguments)
         case "whisparr_get_calendar": return try await whisparrCalendar()
-        case "whisparr_add_scene":  return try await addScene(arguments)
         case "tmdb_search_person":          return try await tmdbSearchPerson(arguments)
         case "tmdb_person_movie_credits":   return try await tmdbPersonMovieCredits(arguments)
         case "tmdb_person_tv_credits":      return try await tmdbPersonTVCredits(arguments)
@@ -158,25 +159,6 @@ public actor LocalToolBackend: ToolBackend {
         let items = try await fetch()
         let text = Self.formatCalendarCondensed(items)
         return ToolCallOutput(text: text, rich: .calendar(items))
-    }
-
-    /// Post-lookup add prerequisites — pull the lists, resolve the user's
-    /// chosen IDs (or first available), bail with the standard "missing X"
-    /// error. All four `addX` handlers ran this block verbatim before the
-    /// arr-specific add call; Lidarr keeps its metadata-profile resolution at
-    /// the call site since it's the one genuine divergence.
-    private static func resolveAddDefaults(
-        client: SearchClient,
-        serviceName: String,
-        chosenProfileId: Int,
-        chosenFolderPath: String
-    ) async throws -> (QualityProfile, RootFolder)? {
-        let profiles = try await client.fetchQualityProfiles()
-        let folders = try await client.fetchRootFolders()
-        let profile = profiles.first(where: { $0.id == chosenProfileId }) ?? profiles.first
-        let folder = folders.first(where: { $0.path == chosenFolderPath }) ?? folders.first
-        guard let profile, let folder else { return nil }
-        return (profile, folder)
     }
 
     // MARK: - Tool implementations
@@ -407,86 +389,6 @@ public actor LocalToolBackend: ToolBackend {
         }
     }
 
-    private func addSeries(_ args: JSONValue) async throws -> ToolCallOutput {
-        let tvdbId = Self.intArg(args, key: "tvdbId")
-        let title = Self.stringArg(args, key: "title")
-        let chosenProfileId = Self.intArg(args, key: "qualityProfileId")
-        let chosenFolderPath = Self.stringArg(args, key: "rootFolderPath")
-        guard tvdbId != 0 || !title.isEmpty else {
-            return ToolCallOutput(text: "Need a tvdbId (preferred) or title to add a series. Run sonarr_search first.")
-        }
-        guard sonarr.isConfigured else {
-            return ToolCallOutput(text: "Sonarr is not configured.")
-        }
-        let client = SearchClient(config: sonarr, source: .sonarr)
-        let lookupQuery = tvdbId != 0 ? "tvdb:\(tvdbId)" : title
-        let candidates = try await client.lookup(query: lookupQuery)
-        let chosen: SearchResult?
-        if tvdbId != 0 {
-            chosen = candidates.first(where: { $0.id == tvdbId }) ?? candidates.first
-        } else {
-            chosen = candidates.first
-        }
-        guard let pick = chosen else {
-            return ToolCallOutput(text: "Couldn't find any series matching '\(lookupQuery)'.")
-        }
-        guard let (profile, folder) = try await Self.resolveAddDefaults(
-            client: client, serviceName: "Sonarr",
-            chosenProfileId: chosenProfileId, chosenFolderPath: chosenFolderPath
-        ) else {
-            return ToolCallOutput(text: "Sonarr is missing a quality profile or root folder.")
-        }
-        try await client.addSeries(
-            pick,
-            qualityProfileId: profile.id,
-            rootFolderPath: folder.path,
-            monitor: .all,
-            seriesType: .standard,
-            seasonFolder: true
-        )
-        let yearPart = pick.year.map { " (\($0))" } ?? ""
-        return ToolCallOutput(text: "Added '\(pick.title)\(yearPart)' to Sonarr (profile: \(profile.name), folder: \(folder.path)).")
-    }
-
-    private func addMovie(_ args: JSONValue) async throws -> ToolCallOutput {
-        let tmdbId = Self.intArg(args, key: "tmdbId")
-        let title = Self.stringArg(args, key: "title")
-        let chosenProfileId = Self.intArg(args, key: "qualityProfileId")
-        let chosenFolderPath = Self.stringArg(args, key: "rootFolderPath")
-        guard tmdbId != 0 || !title.isEmpty else {
-            return ToolCallOutput(text: "Need a tmdbId (preferred) or title to add a movie. Run radarr_search first.")
-        }
-        guard radarr.isConfigured else {
-            return ToolCallOutput(text: "Radarr is not configured.")
-        }
-        let client = SearchClient(config: radarr, source: .radarr)
-        let lookupQuery = tmdbId != 0 ? "tmdb:\(tmdbId)" : title
-        let candidates = try await client.lookup(query: lookupQuery)
-        let chosen: SearchResult?
-        if tmdbId != 0 {
-            chosen = candidates.first(where: { $0.id == tmdbId }) ?? candidates.first
-        } else {
-            chosen = candidates.first
-        }
-        guard let pick = chosen else {
-            return ToolCallOutput(text: "Couldn't find any movies matching '\(lookupQuery)'.")
-        }
-        guard let (profile, folder) = try await Self.resolveAddDefaults(
-            client: client, serviceName: "Radarr",
-            chosenProfileId: chosenProfileId, chosenFolderPath: chosenFolderPath
-        ) else {
-            return ToolCallOutput(text: "Radarr is missing a quality profile or root folder.")
-        }
-        try await client.addMovie(
-            pick,
-            qualityProfileId: profile.id,
-            rootFolderPath: folder.path,
-            monitor: .movieOnly
-        )
-        let yearPart = pick.year.map { " (\($0))" } ?? ""
-        return ToolCallOutput(text: "Added '\(pick.title)\(yearPart)' to Radarr (profile: \(profile.name), folder: \(folder.path)).")
-    }
-
     // MARK: - Lidarr tool implementations
 
     private func searchArtist(_ args: JSONValue) async throws -> ToolCallOutput {
@@ -513,52 +415,6 @@ public actor LocalToolBackend: ToolBackend {
         try await runCalendar(source: .lidarr, config: lidarr) {
             try await LidarrClient(config: self.lidarr).fetchCalendar()
         }
-    }
-
-    private func addArtist(_ args: JSONValue) async throws -> ToolCallOutput {
-        let foreignArtistId = Self.stringArg(args, key: "foreignArtistId")
-        let artistName = Self.stringArg(args, key: "artistName")
-        let chosenProfileId = Self.intArg(args, key: "qualityProfileId")
-        let chosenMetadataProfileId = Self.intArg(args, key: "metadataProfileId")
-        let chosenFolderPath = Self.stringArg(args, key: "rootFolderPath")
-        guard !foreignArtistId.isEmpty || !artistName.isEmpty else {
-            return ToolCallOutput(text: "Need a foreignArtistId (preferred) or artistName to add an artist. Run lidarr_search first.")
-        }
-        guard lidarr.isConfigured else {
-            return ToolCallOutput(text: "Lidarr is not configured.")
-        }
-        let client = SearchClient(config: lidarr, source: .lidarr)
-        // Look up by name to get a full SearchResult with posterURL etc.
-        let lookupQuery = !foreignArtistId.isEmpty ? artistName : artistName
-        let candidates = try await client.lookup(query: lookupQuery.isEmpty ? foreignArtistId : lookupQuery)
-        // Prefer exact foreign id match when we have it
-        let chosen: SearchResult?
-        if !foreignArtistId.isEmpty {
-            chosen = candidates.first(where: { $0.foreignId == foreignArtistId }) ?? candidates.first
-        } else {
-            chosen = candidates.first
-        }
-        guard let pick = chosen else {
-            return ToolCallOutput(text: "Couldn't find any artist matching '\(lookupQuery)'.")
-        }
-        guard let (profile, folder) = try await Self.resolveAddDefaults(
-            client: client, serviceName: "Lidarr",
-            chosenProfileId: chosenProfileId, chosenFolderPath: chosenFolderPath
-        ) else {
-            return ToolCallOutput(text: "Lidarr is missing a quality profile or root folder.")
-        }
-        // Metadata profile is Lidarr-specific; resolve it at the call site
-        // since no other arr has the concept.
-        let metaProfiles = try await client.fetchMetadataProfiles()
-        let metaProfile = metaProfiles.first(where: { $0.id == chosenMetadataProfileId }) ?? metaProfiles.first
-        let metaProfileId = metaProfile?.id ?? 1
-        try await client.addArtist(
-            pick,
-            qualityProfileId: profile.id,
-            metadataProfileId: metaProfileId,
-            rootFolderPath: folder.path
-        )
-        return ToolCallOutput(text: "Added '\(pick.title)' to Lidarr (profile: \(profile.name), folder: \(folder.path)).")
     }
 
     // MARK: - Formatting helpers
@@ -590,12 +446,14 @@ public actor LocalToolBackend: ToolBackend {
     ) -> String {
         guard !results.isEmpty else { return "No results found." }
         let top = results.prefix(15)
-        let idLabel = kind == "series" ? "tvdbId" : "tmdbId"
         let lines = top.map { r -> String in
             let yearPart = r.year.map { " (\($0))" } ?? ""
-            return "• \(idLabel)=\(r.id) — \(r.title)\(yearPart)"
+            return "• \(r.title)\(yearPart)"
         }
-        var out = "Found \(results.count) \(kind) result\(results.count == 1 ? "" : "s") for \"\(query)\". Top matches (LLM: pass \(idLabel) to \(kind == "series" ? "sonarr_add_series" : "radarr_add_movie")):"
+        // No more "pass tvdbId to sonarr_add_series" instruction — add tools
+        // are gone. Cards in `rich` are tappable; the user opens
+        // SearchAddPanel from the chat to confirm/configure/add.
+        var out = "Surfaced \(results.count) \(kind) result\(results.count == 1 ? "" : "s") for \"\(query)\" as cards in the chat:"
         out += "\n" + lines.joined(separator: "\n")
         if results.count > top.count {
             out += "\n(\(results.count - top.count) more not shown — refine query if needed)"
@@ -635,7 +493,7 @@ public actor LocalToolBackend: ToolBackend {
             let subPart = r.subtitle.map { " (\($0))" } ?? ""
             return "• foreignArtistId=\(r.foreignId) — \(r.title)\(subPart)"
         }
-        var out = "Found \(results.count) artist result\(results.count == 1 ? "" : "s") for \"\(query)\". Top matches (LLM: pass foreignArtistId to lidarr_add_artist):"
+        var out = "Surfaced \(results.count) artist result\(results.count == 1 ? "" : "s") for \"\(query)\" as cards in the chat:"
         out += "\n" + lines.joined(separator: "\n")
         if results.count > top.count {
             out += "\n(\(results.count - top.count) more not shown — refine query if needed)"
@@ -670,40 +528,6 @@ public actor LocalToolBackend: ToolBackend {
         try await runCalendar(source: .whisparr, config: whisparr) {
             try await WhisparrClient(config: self.whisparr).fetchCalendar()
         }
-    }
-
-    private func addScene(_ args: JSONValue) async throws -> ToolCallOutput {
-        let foreignId = Self.stringArg(args, key: "foreignId")
-        let title = Self.stringArg(args, key: "title")
-        let chosenProfileId = Self.intArg(args, key: "qualityProfileId")
-        let chosenFolderPath = Self.stringArg(args, key: "rootFolderPath")
-        guard !foreignId.isEmpty || !title.isEmpty else {
-            return ToolCallOutput(text: "Need a foreignId (preferred) or title to add a scene. Run whisparr_search first.")
-        }
-        guard whisparr.isConfigured else {
-            return ToolCallOutput(text: "Whisparr is not configured.")
-        }
-        let client = SearchClient(config: whisparr, source: .whisparr)
-        let lookupQuery = !foreignId.isEmpty ? foreignId : title
-        let candidates = try await client.lookup(query: lookupQuery)
-        let chosen: SearchResult?
-        if !foreignId.isEmpty {
-            chosen = candidates.first(where: { $0.foreignId == foreignId }) ?? candidates.first
-        } else {
-            chosen = candidates.first
-        }
-        guard let pick = chosen else {
-            return ToolCallOutput(text: "Couldn't find any scenes matching '\(lookupQuery)'.")
-        }
-        guard let (profile, folder) = try await Self.resolveAddDefaults(
-            client: client, serviceName: "Whisparr",
-            chosenProfileId: chosenProfileId, chosenFolderPath: chosenFolderPath
-        ) else {
-            return ToolCallOutput(text: "Whisparr is missing a quality profile or root folder.")
-        }
-        try await client.addScene(pick, qualityProfileId: profile.id, rootFolderPath: folder.path)
-        let yearPart = pick.year.map { " (\($0))" } ?? ""
-        return ToolCallOutput(text: "Added '\(pick.title)\(yearPart)' to Whisparr (profile: \(profile.name), folder: \(folder.path)).")
     }
 
     private static func formatCalendarCondensed(_ items: [UpcomingItem]) -> String {

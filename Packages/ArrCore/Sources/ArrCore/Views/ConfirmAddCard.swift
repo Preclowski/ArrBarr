@@ -2,10 +2,16 @@ import SwiftUI
 
 // MARK: - ConfirmAddCard
 
-/// Rich confirm card shown when the LLM calls a destructive add tool
-/// (`sonarr_add_series` / `radarr_add_movie` / `lidarr_add_artist`). Fetches
-/// the poster, quality profiles, root folders (and metadata profiles for Lidarr)
-/// in parallel so the user can review and adjust before confirming.
+/// Rich confirm card shown when the LLM calls any destructive tool
+/// flagged by `MCPToolWhitelist.isDestructive` (`_add_` / `_delete_`
+/// prefixes). Fetches the poster, quality profiles, root folders (and
+/// metadata profiles for Lidarr) in parallel so the user can review and
+/// adjust before confirming.
+///
+/// As of the "drop *_add_* tools" change, no currently-shipped tool is
+/// destructive — the card is effectively unreachable. It stays as
+/// infrastructure: the moment a destructive tool ships again (batch add,
+/// queue delete, etc.) the confirm flow lights back up without a rebuild.
 public struct ConfirmAddCard: View {
     let call: ToolCall
     let sonarr: ServiceConfig

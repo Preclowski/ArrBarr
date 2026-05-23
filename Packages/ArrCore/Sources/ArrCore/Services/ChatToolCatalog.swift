@@ -57,7 +57,7 @@ public enum ChatToolCatalog {
     private static let sonarrTools: [MCPTool] = [
         MCPTool(
             name: "sonarr_search",
-            description: "Search Sonarr's metadata source (TVDB) for a TV series. Returns a list of matches with their tvdbId. Use this BEFORE sonarr_add_series so the user can disambiguate and you can pass the correct tvdbId.",
+            description: "Search Sonarr's metadata source (TVDB) for a TV series. Results surface in the chat as tappable cards — the user opens each one and confirms profile / folder / quality in the SearchAddPanel to actually add it. You do NOT add anything yourself; there is no `sonarr_add_*` tool. Briefly explain WHY this set after the call.",
             inputSchema: .object([
                 "type": .string("object"),
                 "properties": .object([
@@ -73,23 +73,6 @@ public enum ChatToolCatalog {
             name: "sonarr_get_calendar",
             description: "Get upcoming TV episode releases from Sonarr (next ~7 days, items already monitored).",
             inputSchema: .object(["type": .string("object"), "properties": .object([:])])
-        ),
-        MCPTool(
-            name: "sonarr_add_series",
-            description: "Add a TV series to Sonarr for tracking + automatic download. ALWAYS run sonarr_search first and pass tvdbId from the result. Title is a last-resort fallback.",
-            inputSchema: .object([
-                "type": .string("object"),
-                "properties": .object([
-                    "tvdbId": .object([
-                        "type": .string("integer"),
-                        "description": .string("TVDB id from sonarr_search results — strongly preferred"),
-                    ]),
-                    "title": .object([
-                        "type": .string("string"),
-                        "description": .string("Series title (fallback when no tvdbId is known)"),
-                    ]),
-                ]),
-            ])
         ),
         MCPTool(
             name: "sonarr_get_series",
@@ -111,7 +94,7 @@ public enum ChatToolCatalog {
     private static let radarrTools: [MCPTool] = [
         MCPTool(
             name: "radarr_search",
-            description: "Search Radarr's metadata source (TMDB) for a movie. Returns a list of matches with their tmdbId. Use this BEFORE radarr_add_movie so the user can disambiguate and you can pass the correct tmdbId.",
+            description: "Search Radarr's metadata source (TMDB) for a movie. Results surface in the chat as tappable cards — the user opens each one and confirms profile / folder / quality in the SearchAddPanel to actually add it. You do NOT add anything yourself; there is no `radarr_add_*` tool. Briefly explain WHY this set after the call.",
             inputSchema: .object([
                 "type": .string("object"),
                 "properties": .object([
@@ -127,23 +110,6 @@ public enum ChatToolCatalog {
             name: "radarr_get_calendar",
             description: "Get upcoming movie releases from Radarr (next ~7 days, items already monitored).",
             inputSchema: .object(["type": .string("object"), "properties": .object([:])])
-        ),
-        MCPTool(
-            name: "radarr_add_movie",
-            description: "Add a movie to Radarr for tracking + automatic download. ALWAYS run radarr_search first and pass tmdbId from the result. Title is a last-resort fallback.",
-            inputSchema: .object([
-                "type": .string("object"),
-                "properties": .object([
-                    "tmdbId": .object([
-                        "type": .string("integer"),
-                        "description": .string("TMDB id from radarr_search results — strongly preferred"),
-                    ]),
-                    "title": .object([
-                        "type": .string("string"),
-                        "description": .string("Movie title (fallback when no tmdbId is known)"),
-                    ]),
-                ]),
-            ])
         ),
         MCPTool(
             name: "radarr_get_movies",
@@ -165,7 +131,7 @@ public enum ChatToolCatalog {
     private static let lidarrTools: [MCPTool] = [
         MCPTool(
             name: "lidarr_search",
-            description: "Search Lidarr's metadata source (MusicBrainz) for a music artist. Returns matches with their foreignArtistId. Use BEFORE lidarr_add_artist.",
+            description: "Search Lidarr's metadata source (MusicBrainz) for a music artist. Results surface in the chat as tappable cards — the user taps to open SearchAddPanel and confirms profile/folder to add. You do NOT add anything yourself; there is no `lidarr_add_*` tool.",
             inputSchema: .object([
                 "type": .string("object"),
                 "properties": .object([
@@ -195,23 +161,6 @@ public enum ChatToolCatalog {
             description: "Get upcoming album releases from Lidarr (next ~30 days, items already monitored).",
             inputSchema: .object(["type": .string("object"), "properties": .object([:])])
         ),
-        MCPTool(
-            name: "lidarr_add_artist",
-            description: "Add a music artist to Lidarr for tracking. ALWAYS run lidarr_search first and pass the foreignArtistId (a MusicBrainz UUID) here.",
-            inputSchema: .object([
-                "type": .string("object"),
-                "properties": .object([
-                    "foreignArtistId": .object([
-                        "type": .string("string"),
-                        "description": .string("MusicBrainz id (UUID) from lidarr_search results"),
-                    ]),
-                    "artistName": .object([
-                        "type": .string("string"),
-                        "description": .string("Artist name fallback when no foreignArtistId is known"),
-                    ]),
-                ]),
-            ])
-        ),
     ]
 
     // MARK: - Whisparr
@@ -219,7 +168,7 @@ public enum ChatToolCatalog {
     private static let whisparrTools: [MCPTool] = [
         MCPTool(
             name: "whisparr_search",
-            description: "Search Whisparr's adult scene library (StashDB/TPDB) for a scene or performer. Returns matches with their id. Use BEFORE whisparr_add_scene.",
+            description: "Search Whisparr's adult scene library (StashDB/TPDB) for a scene or performer. Results surface in the chat as tappable cards — the user taps to open SearchAddPanel and confirms profile/folder to add. You do NOT add anything yourself; there is no `whisparr_add_*` tool.",
             inputSchema: .object([
                 "type": .string("object"),
                 "properties": .object([
@@ -248,23 +197,6 @@ public enum ChatToolCatalog {
             name: "whisparr_get_calendar",
             description: "Get upcoming scene releases from Whisparr (next ~30 days, items already monitored).",
             inputSchema: .object(["type": .string("object"), "properties": .object([:])])
-        ),
-        MCPTool(
-            name: "whisparr_add_scene",
-            description: "Add an adult scene to Whisparr for tracking and automatic download. ALWAYS run whisparr_search first and pass the id from the result.",
-            inputSchema: .object([
-                "type": .string("object"),
-                "properties": .object([
-                    "foreignId": .object([
-                        "type": .string("string"),
-                        "description": .string("Scene id from whisparr_search results (tmdbId as string or StashDB/TPDB id)"),
-                    ]),
-                    "title": .object([
-                        "type": .string("string"),
-                        "description": .string("Scene title (fallback when no foreignId is known)"),
-                    ]),
-                ]),
-            ])
         ),
     ]
 
@@ -336,7 +268,7 @@ public enum ChatToolCatalog {
     private static let tmdbSeriesTools: [MCPTool] = [
         MCPTool(
             name: "tmdb_person_tv_credits",
-            description: "List TV series a person appears in (or created), sorted by popularity. Use after tmdb_search_person. Sonarr indexes by TVDB id but accepts a TMDB id lookup, so taps still route to sonarr_add_series.",
+            description: "List TV series a person appears in (or created), sorted by popularity. Use after tmdb_search_person. Surfaces as tappable cards — user opens each in SearchAddPanel to add. Sonarr indexes by TVDB id but accepts a TMDB id lookup so the card flow works for TMDB-sourced results.",
             inputSchema: .object([
                 "type": .string("object"),
                 "properties": .object([

@@ -23,7 +23,11 @@ public struct SearchAddPanel: View {
     // Sonarr state
     @State private var sonarrMonitor: SonarrMonitorMode = .all
     @State private var seriesType: SonarrSeriesType = .standard
-    @State private var seasonFolder = true
+    /// Season folders default to on for every series we add. The toggle
+    /// used to live in the form but it was a power-user knob that almost
+    /// nobody flipped — Sonarr's own default is the same. Constant `true`
+    /// keeps the API call shape compatible without re-surfacing UI.
+    private let seasonFolder = true
 
     // Lidarr state
     @State private var selectedMetadataProfileId: Int?
@@ -232,6 +236,10 @@ public struct SearchAddPanel: View {
     private var sonarrForm: some View {
         VStack(alignment: .leading, spacing: 0) {
             sectionLabel("Library")
+            // Match the 14pt horizontal inset every other form here uses
+            // (radarrForm / whisparrForm / lidarrForm). Without it the
+            // picker capsules touch the popover edge while the section
+            // labels and chips around them are inset — reads as wonky.
             VStack(spacing: 4) {
                 formPicker("Quality Profile",
                            selection: Binding(
@@ -251,21 +259,12 @@ public struct SearchAddPanel: View {
                            selection: $seriesType,
                            options: SonarrSeriesType.allCases.map { ($0, $0.displayName) })
             }
+            .padding(.horizontal, 14)
 
             sectionLabel("Monitor")
             monitorChips
-
-            Toggle(isOn: $seasonFolder) {
-                Text("Season Folders")
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
-            }
-            .toggleStyle(.switch)
-            .controlSize(.mini)
-            .padding(.horizontal, 14)
-            .padding(.top, 6)
-            .padding(.bottom, 4)
         }
+        .padding(.bottom, 4)
     }
 
     private var monitorChips: some View {
