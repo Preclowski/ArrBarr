@@ -689,11 +689,11 @@ public actor LocalToolBackend: ToolBackend {
     // MARK: - TMDB → SearchResult adapters
 
     /// Build `SearchResult`s the rest of the UI already knows how to render
-    /// (poster carousel, tap-to-add via ConfirmAddCard). Movie `id` carries
+    /// (poster carousel, tap → SearchAddPanel for adds). Movie `id` carries
     /// the tmdbId — Radarr's add path takes it as-is. `libraryMap` maps
     /// tmdbId → Radarr movie id so already-owned results get tagged with
     /// `inLibraryArrId` — the UI then routes the tap to DetailView instead
-    /// of ConfirmAddCard.
+    /// of the add flow.
     private static func tmdbMoviesToSearchResults(
         _ movies: some Sequence<TMDBMovieSummary>,
         libraryMap: [Int: Int] = [:]
@@ -740,7 +740,7 @@ public actor LocalToolBackend: ToolBackend {
     /// TV path is fuzzier: Sonarr indexes by tvdbId, but TMDB exposes its own
     /// tv id. We stash 0 in `id` so the add-tap path falls back to a title
     /// lookup — Sonarr resolves the right tvdbId at add-time. Good enough for
-    /// popular titles; ambiguous ones surface in ConfirmAddCard for review.
+    /// popular titles; ambiguous ones surface in SearchAddPanel for review.
     private static func tmdbTVToSearchResults(_ shows: some Sequence<TMDBTVSummary>) -> [SearchResult] {
         shows.map { s in
             SearchResult(

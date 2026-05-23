@@ -9,14 +9,11 @@ import FoundationModels
 public struct FoundationModelsProvider: LLMProvider {
 
     private let invokeTool: @Sendable (String, JSONValue) async throws -> ToolCallOutput
-    private let confirmDestructive: @Sendable (ToolCall) async -> JSONValue?
 
     public init(
-        invokeTool: @escaping @Sendable (String, JSONValue) async throws -> ToolCallOutput,
-        confirmDestructive: @escaping @Sendable (ToolCall) async -> JSONValue?
+        invokeTool: @escaping @Sendable (String, JSONValue) async throws -> ToolCallOutput
     ) {
         self.invokeTool = invokeTool
-        self.confirmDestructive = confirmDestructive
     }
 
     public var isAvailable: Bool {
@@ -35,7 +32,7 @@ public struct FoundationModelsProvider: LLMProvider {
         tools: [LLMTool],
         history: [ChatMessage]
     ) async throws -> LLMResponse {
-        let toolImpls = tools.map { DynamicMCPTool(spec: $0, invokeTool: invokeTool, confirmDestructive: confirmDestructive) }
+        let toolImpls = tools.map { DynamicMCPTool(spec: $0, invokeTool: invokeTool) }
         let instructions = Self.buildInstructions(tools: tools)
         let session = LanguageModelSession(tools: toolImpls, instructions: instructions)
 
@@ -159,7 +156,6 @@ struct DynamicMCPTool: Tool {
 
     let spec: LLMTool
     let invokeTool: @Sendable (String, JSONValue) async throws -> ToolCallOutput
-    let confirmDestructive: @Sendable (ToolCall) async -> JSONValue?
 
     var name: String { spec.name }
     var description: String { spec.description }
@@ -181,26 +177,19 @@ struct DynamicMCPTool: Tool {
         }
         let toolCall = ToolCall(name: spec.name, arguments: argsValue)
 
-        var confirmedArgs = argsValue
-        if MCPToolWhitelist.isDestructive(spec.name) {
-            guard let args = await confirmDestructive(toolCall) else {
-                let result = "(cancelled by user)"
-                await DynamicMCPToolBox.shared.record(call: toolCall, result: result, rich: nil)
-                return result
-            }
-            confirmedArgs = args
-        }
-
-        let confirmedCall = ToolCall(id: toolCall.id, name: spec.name, arguments: confirmedArgs)
+        // No destructive-tool gate — every shipping tool is read-only or
+        // surfaces cards. Adds happen through SearchAddPanel after a card
+        // tap. Re-introduce a confirm hook here if a destructive tool ever
+        // ships again (batch add, queue delete, etc.).
         let output: ToolCallOutput
         do {
-            output = try await invokeTool(spec.name, confirmedArgs)
+            output = try await invokeTool(spec.name, argsValue)
         } catch {
             let errOutput = ToolCallOutput(text: "(tool error: \(error.localizedDescription))")
-            await DynamicMCPToolBox.shared.record(call: confirmedCall, result: errOutput.text, rich: nil)
+            await DynamicMCPToolBox.shared.record(call: toolCall, result: errOutput.text, rich: nil)
             return errOutput.text
         }
-        await DynamicMCPToolBox.shared.record(call: confirmedCall, result: output.text, rich: output.rich)
+        await DynamicMCPToolBox.shared.record(call: toolCall, result: output.text, rich: output.rich)
         return output.text
     }
 }
@@ -213,8 +202,7 @@ struct DynamicMCPTool: Tool {
 /// FoundationModels (macOS < 26 SDK). Reports unavailable at runtime.
 public struct FoundationModelsProvider: LLMProvider {
     public init(
-        invokeTool: @escaping @Sendable (String, JSONValue) async throws -> ToolCallOutput,
-        confirmDestructive: @escaping @Sendable (ToolCall) async -> JSONValue?
+        invokeTool: @escaping @Sendable (String, JSONValue) async throws -> ToolCallOutput
     ) {}
 
     public var isAvailable: Bool { false }

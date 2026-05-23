@@ -40,17 +40,11 @@ public enum ChatViewModelFactory {
             try await backend.callTool(name: name, arguments: args)
         }
 
-        var vmRef: ChatViewModel? = nil
-        let confirm: @Sendable (ToolCall) async -> JSONValue? = { [weak vmRef] call in
-            guard let vm = vmRef else { return nil }
-            return await vm.awaitConfirm(call)
-        }
-
         let provider: LLMProvider
         switch chatProvider {
         case .foundationModels:
             if #available(macOS 26.0, iOS 26.0, *) {
-                provider = FoundationModelsProvider(invokeTool: invoke, confirmDestructive: confirm)
+                provider = FoundationModelsProvider(invokeTool: invoke)
             } else {
                 provider = UnavailableLLMProvider()
             }
@@ -67,7 +61,6 @@ public enum ChatViewModelFactory {
             tools: llmTools,
             invokeTool: invoke
         )
-        vmRef = vm
         return vm
     }
 }

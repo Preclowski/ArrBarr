@@ -23,21 +23,9 @@ public struct ChatView: View {
         ZStack(alignment: .bottom) {
             messages
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-            VStack(spacing: 8) {
-                if let confirm = viewModel.pendingConfirm {
-                    ConfirmAddCard(
-                        call: confirm,
-                        sonarr: configStore.sonarr,
-                        radarr: configStore.radarr,
-                        lidarr: configStore.lidarr,
-                        onConfirm: { args in Task { await viewModel.confirmPending(with: args) } },
-                        onCancel: { Task { await viewModel.cancelPending() } }
-                    )
-                }
-                inputBar
-            }
-            .padding(.horizontal, 10)
-            .padding(.bottom, 10)
+            inputBar
+                .padding(.horizontal, 10)
+                .padding(.bottom, 10)
         }
     }
 
@@ -71,29 +59,34 @@ public struct ChatView: View {
                     }
                 }
             }
-            // Trash lives top-leading so it doesn't fight the user's own
-            // trailing-aligned message bubble. Hover-revealed thinMaterial
-            // pill, only when there's something to clear.
+            // "New chat" sits top-leading so it doesn't fight the user's
+            // trailing-aligned message bubble. Floating glass pill matching
+            // the rest of the app's chrome language (tab bar, back button).
+            // The trash icon used to live here but it read as destructive /
+            // intrusive and felt unApple-y for "wipe the conversation".
+            // `arrow.counterclockwise` + "New chat" carries the same intent
+            // with iOS Messages / ChatGPT cadence — start over, not delete.
+            // Visible at low opacity at rest so it's discoverable; lifts to
+            // full on hover.
             .overlay(alignment: .topLeading) {
                 if !viewModel.messages.isEmpty {
                     Button(action: { viewModel.clear() }) {
                         HStack(spacing: 4) {
-                            Image(systemName: "trash")
-                                .font(.system(size: 11))
-                            Text("Clear chat", bundle: .module)
+                            Image(systemName: "arrow.counterclockwise")
+                                .font(.system(size: 11, weight: .medium))
+                            Text("New chat", bundle: .module)
                                 .font(.system(size: 11, weight: .medium))
                         }
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, 8)
+                        .foregroundStyle(clearHovered ? .primary : .secondary)
+                        .padding(.horizontal, 10)
                         .padding(.vertical, 5)
-                        .background(.thinMaterial, in: Capsule())
                     }
                     .buttonStyle(.plain)
-                    .help(Text("Clear conversation", bundle: .module))
-                    .disabled(viewModel.pendingConfirm != nil)
-                    .opacity(clearHovered ? 1 : 0.0)
-                    .padding(.top, 6)
-                    .padding(.leading, 8)
+                    .glassyFloatingBar()
+                    .help(Text("Start a new chat", bundle: .module))
+                    .opacity(clearHovered ? 1 : 0.55)
+                    .padding(.top, 8)
+                    .padding(.leading, 10)
                     .animation(.easeOut(duration: 0.15), value: clearHovered)
                 }
             }
@@ -101,12 +94,18 @@ public struct ChatView: View {
         }
     }
 
+    /// Curated mix exercising each tool family the chat has:
+    /// - taste-based suggestions (suggest_titles, both kinds)
+    /// - person credits (tmdb_search_person → tmdb_person_*_credits)
+    /// - calendar (whats-on-this-week)
+    /// - discover-style filters (tmdb_discover_*)
+    /// — so a fresh user sees the breadth, not just "find a movie".
     private static let suggestions: [String] = [
+        "Suggest a series like Mr. Robot",
+        "Films in the style of Wes Anderson",
         "Movies with Adam Sandler",
-        "Suggest a horror for tonight",
-        "Sci-fi films from the 90s",
         "What's coming this week?",
-        "Do I have The Bear?",
+        "Sci-fi films from the 90s",
         "Best comedies of the last 5 years",
     ]
 

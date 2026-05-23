@@ -140,11 +140,16 @@ public struct PopoverContentView: View {
         // the user back in the same carousel offset they came from. Search +
         // History still use the swap pattern (they replace the surface fully
         // and don't share state worth preserving).
+        // Search overlay used to live inside this if/else chain as a sibling
+        // of the tab content — toggling `showSearch` unmounted the active
+        // tab. That tore down ChatView's scroll position (and its tool-result
+        // carousels' scroll positions), so coming back from SearchAddPanel
+        // dropped the user at the top. Promoted to a ZStack overlay alongside
+        // DetailView so chat / queue / upcoming all stay mounted underneath
+        // and resume exactly where the user left them.
         ZStack {
             VStack(spacing: 0) {
-                if showSearch {
-                    searchOverlayContent
-                } else if let historySource {
+                if let historySource {
                     HistoryView(
                         source: historySource,
                         viewModel: viewModel,
@@ -164,6 +169,16 @@ public struct PopoverContentView: View {
                 } else {
                     emptyState
                 }
+            }
+
+            if showSearch {
+                searchOverlayContent
+                    #if os(macOS)
+                    .background(Color(nsColor: .windowBackgroundColor))
+                    #else
+                    .background(Color(uiColor: .systemBackground))
+                    #endif
+                    .transition(.opacity)
             }
 
             if let detailItem {
