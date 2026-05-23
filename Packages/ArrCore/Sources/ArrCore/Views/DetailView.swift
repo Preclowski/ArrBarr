@@ -35,6 +35,13 @@ public struct DetailView: View {
     @State private var loading = true
     @State private var loadError: String?
 
+    /// Series-level "Search all missing" state. Lives in DetailView (not
+    /// in a sub-view) because the affordance sits in the seasons-section
+    /// header alongside the title — same level as the season+episode
+    /// rows that own their own spinners independently.
+    @State private var isSearchingAllMissing = false
+    @State private var didSearchAllMissing = false
+
     public var body: some View {
         VStack(spacing: 0) {
             header
@@ -194,15 +201,13 @@ public struct DetailView: View {
             }
 
             if let seasons = sonarrDetail?.seasons, !seasons.isEmpty {
-                Text("Seasons")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(.secondary)
-                    .textCase(.uppercase)
-                    .tracking(0.5)
+                seasonsHeader(seasons: seasons.filter { $0.seasonNumber > 0 })
                 ForEach(seasons.filter { $0.seasonNumber > 0 }, id: \.seasonNumber) { season in
                     SeasonRow(
                         season: season,
-                        episodes: sonarrEpisodes.filter { $0.seasonNumber == season.seasonNumber }
+                        episodes: sonarrEpisodes.filter { $0.seasonNumber == season.seasonNumber },
+                        onSearchSeason: searchSeasonClosure(seasonNumber: season.seasonNumber),
+                        onSearchEpisode: searchEpisodeClosure
                     )
                 }
             }
@@ -227,6 +232,95 @@ public struct DetailView: View {
         }
     }
 
+    // MARK: - Sonarr search-missing affordances
+
+    /// Total missing episodes across non-special seasons. Drives the
+    /// "Search N missing" pill visibility — no pill when there's nothing
+    /// to fetch.
+    private func totalMissing(across seasons: [SonarrSeasonInfo]) -> Int {
+        seasons.reduce(0) { acc, season in
+            let stats = season.statistics
+            let have = stats?.episodeFileCount ?? 0
+            let total = stats?.totalEpisodeCount ?? stats?.episodeCount ?? 0
+            return acc + max(0, total - have)
+        }
+    }
+
+    /// Section header for the seasons list with a glass pill on the right
+    /// that fires a full `SeriesSearch` against Sonarr. Same chrome
+    /// language as the per-season pill — but lives one level up so the
+    /// user can grab everything missing across the whole show in a tap.
+    @ViewBuilder
+    private func seasonsHeader(seasons: [SonarrSeasonInfo]) -> some View {
+        let missing = totalMissing(across: seasons)
+        HStack(spacing: 8) {
+            Text("Seasons", bundle: .module)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .textCase(.uppercase)
+                .tracking(0.5)
+            Spacer()
+            if missing > 0, item.entityId != nil {
+                Button(action: fireAllMissingSearch) {
+                    HStack(spacing: 3) {
+                        if isSearchingAllMissing {
+                            ProgressView().controlSize(.mini)
+                        } else if didSearchAllMissing {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 10, weight: .semibold))
+                                .foregroundStyle(.green)
+                        } else {
+                            Image(systemName: "magnifyingglass")
+                                .font(.system(size: 10, weight: .medium))
+                            Text("Search all \(missing) missing", bundle: .module)
+                                .font(.system(size: 10, weight: .medium))
+                        }
+                    }
+                    .foregroundStyle(.primary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .contentShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .glassPill()
+                .disabled(isSearchingAllMissing)
+                .help(Text("Search for every missing episode in this series", bundle: .module))
+            }
+        }
+    }
+
+    private func searchSeasonClosure(seasonNumber: Int) -> (() async -> Void)? {
+        guard let seriesId = item.entityId else { return nil }
+        return {
+            let client = SonarrClient(config: configStore.sonarr)
+            try? await client.searchSeason(seriesId: seriesId, seasonNumber: seasonNumber)
+        }
+    }
+
+    private var searchEpisodeClosure: ((Int) async -> Void)? {
+        // Series itself doesn't gate this — episode rows already only
+        // show their button when an episode is missing.
+        { episodeId in
+            let client = SonarrClient(config: configStore.sonarr)
+            try? await client.searchEpisodes(episodeIds: [episodeId])
+        }
+    }
+
+    private func fireAllMissingSearch() {
+        guard let seriesId = item.entityId, !isSearchingAllMissing else { return }
+        isSearchingAllMissing = true
+        Task {
+            let client = SonarrClient(config: configStore.sonarr)
+            try? await client.searchSeries(seriesId: seriesId)
+            await MainActor.run {
+                isSearchingAllMissing = false
+                didSearchAllMissing = true
+            }
+            try? await Task.sleep(nanoseconds: 1_400_000_000)
+            await MainActor.run { didSearchAllMissing = false }
+        }
+    }
+
     private var sonarrRatingChips: [RatingChip] {
         guard let r = sonarrDetail?.ratings, let v = r.value else { return [] }
         return [RatingChip(label: "Rating", value: String(format: "%.1f", v), color: .yellow)]
@@ -248,7 +342,7 @@ public struct DetailView: View {
 
             if !lidarrTracks.isEmpty {
                 Divider().padding(.vertical, 2)
-                Text("Tracks")
+                Text("Tracks", bundle: .module)
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(.secondary)
                     .textCase(.uppercase)
@@ -257,7 +351,7 @@ public struct DetailView: View {
                     .sorted { $0.key < $1.key }
                 ForEach(mediums, id: \.key) { medium, tracks in
                     if mediums.count > 1 {
-                        Text("Disc \(medium)")
+                        Text("Disc \(medium)", bundle: .module)
                             .font(.system(size: 10, weight: .semibold))
                             .foregroundStyle(.tertiary)
                             .padding(.top, 4)
@@ -306,7 +400,7 @@ public struct DetailView: View {
                     }
                     if let stats = album?.statistics, let count = stats.totalTrackCount, count > 0 {
                         Text("·").foregroundStyle(.tertiary)
-                        Text("\(count) tracks").foregroundStyle(.secondary)
+                        Text("\(count) tracks", bundle: .module).foregroundStyle(.secondary)
                     }
                     if let dur = album?.duration, dur > 0 {
                         Text("·").foregroundStyle(.tertiary)

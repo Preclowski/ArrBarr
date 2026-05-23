@@ -147,11 +147,11 @@ public struct SettingsView: View {
                     }
                 }
             } header: {
-                Text("Discovery")
+                Text("Discovery", bundle: .module)
             } footer: {
                 Text(configStore.tmdbEnabled
-                     ? "Chat can search by actor, genre, and decade."
-                     : "Add a TMDB key to let chat search by actor, genre, and decade.")
+                     ? String(localized: "Chat can search by actor, genre, and decade.", bundle: .module)
+                     : String(localized: "Add a TMDB key to let chat search by actor, genre, and decade.", bundle: .module))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -276,7 +276,7 @@ public struct SettingsView: View {
                     }
                 } label: {
                     HStack {
-                        Text("Version")
+                        Text("Version", bundle: .module)
                             .foregroundStyle(.primary)
                         Spacer()
                         Text(Self.versionString)

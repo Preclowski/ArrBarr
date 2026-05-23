@@ -197,6 +197,52 @@ public actor SonarrClient: ArrAPIClient {
         return (try? JSONDecoder().decode([SonarrEpisodeDetail].self, from: data)) ?? []
     }
 
+    // MARK: - Search commands
+    //
+    // Sonarr's `/command` endpoint fires async tasks against the configured
+    // indexers. Returns immediately with a commandId; the work happens in
+    // the background and any matching releases land in the regular queue.
+    // We don't poll commandId — the response confirms the command was
+    // accepted, that's all the UI needs to flip the button back. Results
+    // show up later in the Queue tab like any other download.
+
+    func searchEpisodes(episodeIds: [Int]) async throws {
+        try await postCommand([
+            "name": "EpisodeSearch",
+            "episodeIds": episodeIds,
+        ])
+    }
+
+    func searchSeason(seriesId: Int, seasonNumber: Int) async throws {
+        try await postCommand([
+            "name": "SeasonSearch",
+            "seriesId": seriesId,
+            "seasonNumber": seasonNumber,
+        ])
+    }
+
+    func searchSeries(seriesId: Int) async throws {
+        try await postCommand([
+            "name": "SeriesSearch",
+            "seriesId": seriesId,
+        ])
+    }
+
+    private func postCommand(_ body: [String: Any]) async throws {
+        if DemoMode.isActive {
+            // Pretend the indexers are thinking. No real-world work happens
+            // — demo libraries are static — but the UI's spinner-fade gets
+            // a chance to play.
+            try? await Task.sleep(nanoseconds: 800_000_000)
+            return
+        }
+        guard config.isConfigured else { throw HTTPError.notConfigured }
+        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
+        let url = try http.url(base: config.baseURL, path: "\(apiBase)/command")
+        let data = try JSONSerialization.data(withJSONObject: body)
+        _ = try await http.post(url, headers: apiHeaders.merging(["Content-Type": "application/json"]) { $1 }, body: data)
+    }
+
     func fetchHealth() async throws -> [ArrHealthRecord] {
         guard config.isConfigured else { throw HTTPError.notConfigured }
         guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }

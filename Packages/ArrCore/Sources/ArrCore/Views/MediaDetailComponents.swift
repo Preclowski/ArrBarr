@@ -176,7 +176,7 @@ public struct ExpandableOverview: View {
                 Button {
                     withAnimation(.smooth(duration: 0.18)) { expanded = true }
                 } label: {
-                    Text("Show more")
+                    Text("Show more", bundle: .module)
                         .font(.system(size: 11))
                         .foregroundStyle(Color.accentColor)
                 }
@@ -189,11 +189,21 @@ public struct ExpandableOverview: View {
 struct SeasonRow: View {
     let season: SonarrSeasonInfo
     let episodes: [SonarrEpisodeDetail]
+    /// Per-season search trigger. DetailView passes the closure (which
+    /// wraps `SonarrClient.searchSeason`); nil disables the affordance.
+    var onSearchSeason: (() async -> Void)? = nil
+    /// Per-episode search forwarded to `EpisodeRow`.
+    var onSearchEpisode: ((Int) async -> Void)? = nil
+
     @State private var expanded = false
+    @State private var isHoveringHeader = false
+    @State private var isSearchingSeason = false
+    @State private var didSearchSeason = false
 
     private var stats: SonarrSeasonStats? { season.statistics }
     private var have: Int { stats?.episodeFileCount ?? 0 }
     private var total: Int { stats?.totalEpisodeCount ?? stats?.episodeCount ?? 0 }
+    private var missing: Int { max(0, total - have) }
     private var pct: Double {
         guard total > 0 else { return 0 }
         return min(1.0, Double(have) / Double(total))
@@ -201,40 +211,63 @@ struct SeasonRow: View {
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Button {
-                withAnimation(.smooth(duration: 0.18)) { expanded.toggle() }
-            } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 9, weight: .semibold))
-                        .foregroundStyle(.tertiary)
-                        .rotationEffect(.degrees(expanded ? 90 : 0))
-                    Text(String(format: "Season %02d", season.seasonNumber))
-                        .font(.system(size: 12, weight: .medium))
-                    Spacer()
-                    GeometryReader { geo in
-                        ZStack(alignment: .leading) {
-                            RoundedRectangle(cornerRadius: 1)
-                                .fill(Color.primary.opacity(0.10))
-                            RoundedRectangle(cornerRadius: 1)
-                                .fill(have == total && total > 0 ? Color.green : Color.accentColor)
-                                .frame(width: geo.size.width * pct)
+            // ZStack-level onHover, not Button-level. The pill is its own
+            // Button — if hover-tracking lived on the header Button below,
+            // the pill's hit area would steal it the moment the cursor
+            // crossed the pill, dropping isHoveringHeader to false, fading
+            // the pill back out, ping-ponging into the visible "blink" the
+            // user reported. Tracking on the ZStack keeps both children
+            // inside one hover region.
+            ZStack(alignment: .trailing) {
+                Button {
+                    withAnimation(.smooth(duration: 0.18)) { expanded.toggle() }
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 9, weight: .semibold))
+                            .foregroundStyle(.tertiary)
+                            .rotationEffect(.degrees(expanded ? 90 : 0))
+                        Text(String(format: "Season %02d", season.seasonNumber))
+                            .font(.system(size: 12, weight: .medium))
+                        Spacer()
+                        GeometryReader { geo in
+                            ZStack(alignment: .leading) {
+                                RoundedRectangle(cornerRadius: 1)
+                                    .fill(Color.primary.opacity(0.10))
+                                RoundedRectangle(cornerRadius: 1)
+                                    .fill(have == total && total > 0 ? Color.green : Color.accentColor)
+                                    .frame(width: geo.size.width * pct)
+                            }
                         }
+                        .frame(width: 60, height: 3)
+                        Text("\(have)/\(total)")
+                            .font(.system(size: 10).monospacedDigit())
+                            .foregroundStyle(.secondary)
+                            .frame(width: 42, alignment: .trailing)
                     }
-                    .frame(width: 60, height: 3)
-                    Text("\(have)/\(total)")
-                        .font(.system(size: 10).monospacedDigit())
-                        .foregroundStyle(.secondary)
-                        .frame(width: 42, alignment: .trailing)
+                    .contentShape(Rectangle())
                 }
-                .contentShape(Rectangle())
+                .buttonStyle(.plain)
+
+                if missing > 0, onSearchSeason != nil {
+                    searchSeasonButton
+                        .opacity(isHoveringHeader || isSearchingSeason || didSearchSeason ? 1 : 0)
+                        .allowsHitTesting(isHoveringHeader || isSearchingSeason || didSearchSeason)
+                        .animation(.easeOut(duration: 0.12), value: isHoveringHeader)
+                        .animation(.easeOut(duration: 0.12), value: didSearchSeason)
+                        .offset(x: -2)
+                }
             }
-            .buttonStyle(.plain)
+            #if os(macOS)
+            .onHover { hovering in
+                withAnimation(.easeInOut(duration: 0.12)) { isHoveringHeader = hovering }
+            }
+            #endif
 
             if expanded {
                 VStack(alignment: .leading, spacing: 2) {
                     ForEach(episodes.sorted(by: { ($0.episodeNumber ?? 0) < ($1.episodeNumber ?? 0) })) { ep in
-                        EpisodeRow(episode: ep)
+                        EpisodeRow(episode: ep, onSearch: onSearchEpisode)
                     }
                 }
                 .padding(.leading, 0)
@@ -244,10 +277,66 @@ struct SeasonRow: View {
         }
         .padding(.vertical, 3)
     }
+
+    private var searchSeasonButton: some View {
+        Button(action: fireSeasonSearch) {
+            HStack(spacing: 3) {
+                if isSearchingSeason {
+                    ProgressView().controlSize(.mini)
+                } else if didSearchSeason {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(.green)
+                } else {
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 10, weight: .medium))
+                    Text("Search \(missing)", bundle: .module)
+                        .font(.system(size: 10, weight: .medium))
+                }
+            }
+            .foregroundStyle(.primary)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .glassPill()
+        .disabled(isSearchingSeason)
+        .help(Text("Search for missing episodes in this season", bundle: .module))
+    }
+
+    private func fireSeasonSearch() {
+        guard let onSearchSeason, !isSearchingSeason else { return }
+        isSearchingSeason = true
+        Task {
+            await onSearchSeason()
+            await MainActor.run {
+                isSearchingSeason = false
+                didSearchSeason = true
+            }
+            try? await Task.sleep(nanoseconds: 1_400_000_000)
+            await MainActor.run { didSearchSeason = false }
+        }
+    }
 }
 
 struct EpisodeRow: View {
     let episode: SonarrEpisodeDetail
+    /// Optional search trigger. Provided by DetailView (Sonarr), wired
+    /// to `SonarrClient.searchEpisodes`. Only meaningful when the episode
+    /// is missing — otherwise the indicator falls through to the file
+    /// state (green check) and no action surface appears.
+    var onSearch: ((Int) async -> Void)? = nil
+
+    @State private var isHovering = false
+    @State private var isSearching = false
+    /// Brief feedback after the command was accepted by Sonarr. The
+    /// indexer search happens in the background; user just gets a quick
+    /// "got it" pulse, then back to normal.
+    @State private var didSearch = false
+
+    private var isMissing: Bool { episode.hasFile != true }
+
     public var body: some View {
         HStack(spacing: 6) {
             Text(String(format: "%02d", episode.episodeNumber ?? 0))
@@ -263,11 +352,66 @@ struct EpisodeRow: View {
                     .font(.system(size: 10))
                     .foregroundStyle(.tertiary)
             }
+            // Single indicator slot — the empty circle (when missing) is
+            // swapped *in place* for a magnifyingglass on hover, so the
+            // row doesn't shift horizontally and the affordance lands
+            // where the user is already looking. State machine:
+            //   has file → green check, no action
+            //   missing + idle → empty circle
+            //   missing + hover → magnifyingglass (tappable)
+            //   searching → spinner
+            //   just searched → brief green check
+            stateIndicator
+                .frame(width: 14, height: 14, alignment: .center)
+        }
+        .contentShape(Rectangle())
+        #if os(macOS)
+        .onHover { hovering in
+            withAnimation(.easeInOut(duration: 0.12)) { isHovering = hovering }
+        }
+        #endif
+    }
+
+    @ViewBuilder
+    private var stateIndicator: some View {
+        if isSearching {
+            ProgressView().controlSize(.mini)
+        } else if didSearch {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 10))
+                .foregroundStyle(.green)
+        } else if isMissing, isHovering, onSearch != nil {
+            Button(action: fireSearch) {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.primary)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .help(Text("Search for this episode", bundle: .module))
+        } else {
             Image(systemName: episode.hasFile == true ? "checkmark.circle.fill" : "circle")
                 .font(.system(size: 10))
                 .foregroundStyle(episode.hasFile == true ? Color.green : Color.secondary.opacity(0.5))
         }
     }
+
+    private func fireSearch() {
+        guard let onSearch, !isSearching else { return }
+        isSearching = true
+        Task {
+            await onSearch(episode.id)
+            await MainActor.run {
+                isSearching = false
+                didSearch = true
+            }
+            // Quick confirmation pulse — keep it short so the row doesn't
+            // sit in "done" state forever.
+            try? await Task.sleep(nanoseconds: 1_200_000_000)
+            await MainActor.run { didSearch = false }
+        }
+    }
+
     private static let formatter: DateFormatter = {
         let f = DateFormatter(); f.dateStyle = .short; f.timeStyle = .none
         return f

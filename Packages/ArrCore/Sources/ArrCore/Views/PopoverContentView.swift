@@ -146,7 +146,11 @@ public struct PopoverContentView: View {
         // carousels' scroll positions), so coming back from SearchAddPanel
         // dropped the user at the top. Promoted to a ZStack overlay alongside
         // DetailView so chat / queue / upcoming all stay mounted underneath
-        // and resume exactly where the user left them.
+        // and resume exactly where the user left them. Tab content is
+        // opacity-hidden (and hit-testing-disabled) under the overlay so we
+        // don't need an opaque background on the overlay itself — the
+        // popover's native chrome shines through, matching the rest of the
+        // app.
         ZStack {
             VStack(spacing: 0) {
                 if let historySource {
@@ -170,18 +174,25 @@ public struct PopoverContentView: View {
                     emptyState
                 }
             }
+            // Tab content stays mounted under both overlays (search +
+            // detail) so scroll positions, expanded sections, and other
+            // transient view-state survive a round-trip. Opacity-hide
+            // keeps it visually out of the way; allowsHitTesting(false)
+            // prevents stray clicks from leaking through to it.
+            .opacity((showSearch || detailItem != nil) ? 0 : 1)
+            .allowsHitTesting(!(showSearch || detailItem != nil))
 
             if showSearch {
                 searchOverlayContent
-                    #if os(macOS)
-                    .background(Color(nsColor: .windowBackgroundColor))
-                    #else
-                    .background(Color(uiColor: .systemBackground))
-                    #endif
                     .transition(.opacity)
             }
 
             if let detailItem {
+                // No opaque background here — chat / queue / upcoming
+                // underneath are hidden via the opacity gate above, so
+                // the popover's native chrome shows through and the
+                // detail view feels tonally consistent with the rest of
+                // the app instead of a flat dark rectangle pasted on top.
                 DetailView(
                     item: detailItem,
                     onBack: {
@@ -189,11 +200,6 @@ public struct PopoverContentView: View {
                     },
                     viewModel: viewModel
                 )
-                #if os(macOS)
-                .background(Color(nsColor: .windowBackgroundColor))
-                #else
-                .background(Color(uiColor: .systemBackground))
-                #endif
                 .transition(.opacity)
             }
         }
@@ -328,15 +334,24 @@ public struct PopoverContentView: View {
     }
 
     private var tabBar: some View {
-        // Two floating glass capsules: the tab pills carry the section
-        // switcher, the accessory cluster carries +/⋯. Sitting on the
-        // popover material (not pushing content with a Divider) gives the
-        // "floating chrome over the content" feel the user asked for.
+        // Three floating glass capsules side by side, matching Apple HIG
+        // grouping by purpose:
+        //   1. section switcher (Queue / Upcoming / Chat)
+        //   2. primary action — Add (plus + label, like a real toolbar
+        //      button, not just a glyph)
+        //   3. overflow menu (kebab/ellipsis)
+        // Each in its own capsule so the visual grouping mirrors the
+        // semantic grouping. The previous "Add + kebab in one capsule"
+        // implied they belonged together, which they don't.
         HStack(spacing: 8) {
             tabPills
                 .frame(maxWidth: .infinity)
                 .glassyFloatingBar()
-            accessoryButtons
+            if searchAvailable {
+                addButton
+                    .glassyFloatingBar()
+            }
+            moreMenu
                 .glassyFloatingBar()
         }
         .padding(.horizontal, 12)
@@ -372,27 +387,40 @@ public struct PopoverContentView: View {
         )
     }
 
-    private var accessoryButtons: some View {
-        HStack(spacing: 2) {
-            if searchAvailable {
-                Button {
-                    searchViewModel.reset()
-                    showSearch = true
-                } label: {
-                    Image(systemName: "plus")
-                        .font(.system(size: 12, weight: .semibold))
-                        .frame(width: 28, height: 28)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
+    /// Canonical height for every floating pill in this toolbar. Tabs
+    /// pill uses the same rule via its per-tab `.padding(.vertical, 7)`
+    /// + 12pt font, which lands around 28pt. Keep this constant in sync
+    /// if the tab metrics ever move.
+    private static let pillHeight: CGFloat = 28
+
+    /// Add-new affordance — text-only "Add" label. Same height as the
+    /// tabs cluster, comfortable horizontal padding so the pill reads as
+    /// a proper toolbar action and not as a cramped chip.
+    private var addButton: some View {
+        Button {
+            searchViewModel.reset()
+            showSearch = true
+        } label: {
+            Text("Add", bundle: .module)
+                .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(.secondary)
-                .help(Text("Add new", bundle: .module))
-            }
-            moreMenu
+                .padding(.horizontal, 14)
+                .frame(height: Self.pillHeight)
+                .contentShape(Capsule())
         }
-        .padding(.horizontal, 2)
+        .buttonStyle(.plain)
+        .help(Text("Add new", bundle: .module))
     }
 
+    /// Overflow menu — capsule of equal width and height = a perfect
+    /// circle. The frame has to live OUTSIDE the Menu, not inside the
+    /// label closure: `.fixedSize()` on a Menu collapses it to its
+    /// label's *intrinsic* size (the bare ellipsis glyph, ~12×4pt),
+    /// which made the wrapping glass capsule hug the tiny glyph instead
+    /// of respecting the 28×28 frame we wanted. Putting `.frame(width:
+    /// height:)` after `.menuStyle` forces the actual Menu bounding box
+    /// to pill-height square, and the capsule glass then has a real
+    /// circle to wrap.
     private var moreMenu: some View {
         Menu {
             if let onOpenWindow {
@@ -408,13 +436,12 @@ public struct PopoverContentView: View {
         } label: {
             Image(systemName: "ellipsis")
                 .font(.system(size: 12, weight: .semibold))
-                .frame(width: 28, height: 28)
-                .contentShape(Rectangle())
+                .foregroundStyle(.secondary)
         }
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
-        .fixedSize()
-        .foregroundStyle(.secondary)
+        .frame(width: Self.pillHeight, height: Self.pillHeight)
+        .contentShape(Capsule())
         .help(Text("More options", bundle: .module))
     }
 
@@ -427,7 +454,7 @@ public struct PopoverContentView: View {
                     VStack(spacing: 10) {
                         ProgressView()
                             .controlSize(.small)
-                        Text("Loading…")
+                        Text("Loading…", bundle: .module)
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
@@ -560,7 +587,7 @@ public struct PopoverContentView: View {
                         Image(systemName: "calendar")
                             .font(.system(size: 24, weight: .light))
                             .foregroundStyle(.tertiary)
-                        Text("Nothing upcoming")
+                        Text("Nothing upcoming", bundle: .module)
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
@@ -634,9 +661,9 @@ public struct PopoverContentView: View {
                     .symbolRenderingMode(.hierarchical)
 
                 VStack(spacing: 4) {
-                    Text("ArrBarr is not configured")
+                    Text("ArrBarr is not configured", bundle: .module)
                         .font(.headline)
-                    Text("Connect Radarr, Sonarr or Lidarr to get started.")
+                    Text("Connect Radarr, Sonarr or Lidarr to get started.", bundle: .module)
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)

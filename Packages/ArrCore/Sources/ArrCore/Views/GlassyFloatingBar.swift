@@ -88,30 +88,37 @@ private struct GlassPillModifier: ViewModifier {
 
 private struct GlassyFloatingBarModifier: ViewModifier {
     func body(content: Content) -> some View {
+        // Stroke overlay is applied on *both* paths — macOS 26 + fallback.
+        // Without it, `.glassEffect(.regular, in: .capsule)` on small
+        // content (single text label, three dots) renders so subtly that
+        // the capsule outline disappears into the popover's vibrancy.
+        // Wide pills (tabs cluster) read fine because internal contrast
+        // suggests the shape; narrow pills (Add, kebab) need an explicit
+        // rim to read as "this is a pill, same as the one next to it".
+        let rim = Capsule().stroke(Color.primary.opacity(0.10), lineWidth: 0.5)
+
         #if os(macOS)
         if #available(macOS 26.0, *) {
             content
                 .glassEffect(.regular, in: .capsule)
+                .overlay(rim)
                 .shadow(color: .black.opacity(0.10), radius: 8, y: 2)
         } else {
             content
                 .background(.regularMaterial, in: Capsule())
-                .overlay(
-                    Capsule().stroke(Color.primary.opacity(0.08), lineWidth: 0.5)
-                )
+                .overlay(rim)
                 .shadow(color: .black.opacity(0.10), radius: 8, y: 2)
         }
         #else
         if #available(iOS 26.0, *) {
             content
                 .glassEffect(.regular, in: .capsule)
+                .overlay(rim)
                 .shadow(color: .black.opacity(0.10), radius: 8, y: 2)
         } else {
             content
                 .background(.regularMaterial, in: Capsule())
-                .overlay(
-                    Capsule().stroke(Color.primary.opacity(0.08), lineWidth: 0.5)
-                )
+                .overlay(rim)
                 .shadow(color: .black.opacity(0.10), radius: 8, y: 2)
         }
         #endif

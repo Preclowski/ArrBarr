@@ -217,28 +217,33 @@ public struct SearchView: View {
     }
 
     private var searchBar: some View {
-        HStack(spacing: 6) {
+        // Sized to match the chat input bar's visual weight. The previous
+        // 12pt magnifyingglass + 13pt field + 8pt vertical padding gave a
+        // cramped ~30pt pill that read as "lightweight chip". Bumped to
+        // 15pt icons + 14pt field + 10pt padding → ~38pt tall, parity
+        // with the chat input. Same `.glassyFloatingBar()` chrome.
+        HStack(spacing: 8) {
             Image(systemName: "magnifyingglass")
-                .font(.system(size: 12))
+                .font(.system(size: 15, weight: .medium))
                 .foregroundStyle(.tertiary)
             TextField(
                 String(localized: "Search movies and TV series", bundle: .module),
                 text: $viewModel.query
             )
-            .font(.system(size: 13))
+            .font(.system(size: 14))
             .textFieldStyle(.plain)
             .focused($queryFocused)
             if !viewModel.query.isEmpty {
                 Button { viewModel.query = "" } label: {
                     Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 11))
+                        .font(.system(size: 14))
                         .foregroundStyle(.tertiary)
                 }
                 .buttonStyle(.plain)
             }
         }
         .padding(.horizontal, 14)
-        .padding(.vertical, 8)
+        .padding(.vertical, 10)
         .glassyFloatingBar()
     }
 
