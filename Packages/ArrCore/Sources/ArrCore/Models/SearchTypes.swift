@@ -61,6 +61,24 @@ public struct SearchResult: Identifiable, Equatable, Sendable {
         self.source = source
         self.inLibraryArrId = inLibraryArrId
     }
+
+    /// Re-stamp `inLibraryArrId` without retyping every other field.
+    /// Used by tools (suggest_titles, *_search) that resolve results
+    /// first and then cross-reference against a library map.
+    func withInLibraryArrId(_ id: Int?) -> SearchResult {
+        SearchResult(
+            id: self.id, foreignId: self.foreignId,
+            title: self.title, subtitle: self.subtitle,
+            year: self.year, rating: self.rating,
+            imdb: self.imdb, rottenTomatoes: self.rottenTomatoes,
+            metacritic: self.metacritic,
+            overview: self.overview, runtime: self.runtime,
+            genres: self.genres, network: self.network,
+            certification: self.certification,
+            posterURL: self.posterURL, source: self.source,
+            inLibraryArrId: id
+        )
+    }
 }
 
 // MARK: - Monitor modes

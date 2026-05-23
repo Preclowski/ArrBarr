@@ -162,9 +162,38 @@ public actor SearchClient {
         }
         guard config.isConfigured else { throw HTTPError.notConfigured }
         guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
+
+        // SearchResults sourced from TMDB (tmdb_discover_series,
+        // tmdb_person_tv_credits, occasionally suggest_titles when the
+        // model fed us a title without a year) carry id=0 because the
+        // TMDB tv id is NOT a tvdbId. Posting tvdbId=0 to Sonarr returns
+        // HTTP 400. Do an inline lookup to resolve the real tvdbId before
+        // posting. Year-tolerant title match — Sonarr's lookup may return
+        // multiple shows with the same name (remakes, regional variants);
+        // prefer the year the model specified when available.
+        var tvdbId = result.id
+        if tvdbId <= 0 {
+            let candidates = try await lookup(query: result.title)
+            let titleMatch = candidates.first { c in
+                let titlesEqual = c.title.lowercased() == result.title.lowercased()
+                let yearOk = result.year == nil || c.year == result.year
+                return titlesEqual && yearOk
+            }
+            if let resolved = titleMatch?.id ?? candidates.first?.id, resolved > 0 {
+                tvdbId = resolved
+            } else {
+                throw HTTPError.decoding(NSError(
+                    domain: "ArrBarr.SonarrAdd",
+                    code: 0,
+                    userInfo: [NSLocalizedDescriptionKey:
+                        "Couldn't resolve TVDB id for '\(result.title)'. Try searching the title via + and adding from there."]
+                ))
+            }
+        }
+
         let url = try http.url(base: config.baseURL, path: "\(apiBase)/series")
         let body: [String: Any] = [
-            "tvdbId": result.id,
+            "tvdbId": tvdbId,
             "title": result.title,
             "qualityProfileId": qualityProfileId,
             "rootFolderPath": rootFolderPath,

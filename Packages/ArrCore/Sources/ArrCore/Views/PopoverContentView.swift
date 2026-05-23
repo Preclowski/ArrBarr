@@ -140,11 +140,16 @@ public struct PopoverContentView: View {
         // the user back in the same carousel offset they came from. Search +
         // History still use the swap pattern (they replace the surface fully
         // and don't share state worth preserving).
+        // Search overlay used to live inside this if/else chain as a sibling
+        // of the tab content — toggling `showSearch` unmounted the active
+        // tab. That tore down ChatView's scroll position (and its tool-result
+        // carousels' scroll positions), so coming back from SearchAddPanel
+        // dropped the user at the top. Promoted to a ZStack overlay alongside
+        // DetailView so chat / queue / upcoming all stay mounted underneath
+        // and resume exactly where the user left them.
         ZStack {
             VStack(spacing: 0) {
-                if showSearch {
-                    searchOverlayContent
-                } else if let historySource {
+                if let historySource {
                     HistoryView(
                         source: historySource,
                         viewModel: viewModel,
@@ -153,7 +158,6 @@ public struct PopoverContentView: View {
                     )
                 } else if anyArrConfigured {
                     tabBar
-                    Divider()
                     Group {
                         switch selectedTab {
                         case .queue: queueContent
@@ -165,6 +169,16 @@ public struct PopoverContentView: View {
                 } else {
                     emptyState
                 }
+            }
+
+            if showSearch {
+                searchOverlayContent
+                    #if os(macOS)
+                    .background(Color(nsColor: .windowBackgroundColor))
+                    #else
+                    .background(Color(uiColor: .systemBackground))
+                    #endif
+                    .transition(.opacity)
             }
 
             if let detailItem {
@@ -184,33 +198,17 @@ public struct PopoverContentView: View {
             }
         }
         .frame(width: 400, height: 600)
-        // The popover itself paints macOS 26's Liquid Glass for us now
-        // (AppDelegate cleared the hosting view's background so the
-        // system chrome shows through). What we add here is just the
-        // depth — a thin top→bottom rim that reads as the edge of a
-        // glass tile catching ambient light.
-        //
-        // Critical: `.screen` (or `.softLight`) survives NSPopover's
-        // vibrancy. `.plusLighter` does NOT — it gets eaten by the
-        // vibrancy filter and renders as nothing on dark desktops.
-        // Corner radius 10pt matches NSPopover's outer chrome on macOS 26.
+        // Transparent background lets NSPopover's native chrome show
+        // through (AppDelegate clears the hosting view's layer too). We
+        // used to paint a rim-light overlay here on top of this — meant
+        // to approximate macOS 26's Liquid Glass edge — but the stroke
+        // ran straight through where NSPopover's arrow attaches to the
+        // frame, leaving a visible cut, and the arrow itself doesn't get
+        // the overlay (it's outside our 400×600 SwiftUI surface). Without
+        // bumping the deployment target to 26 the rim couldn't ever look
+        // like real glass anyway, so it's gone — arrow + frame stay
+        // visually consistent.
         .background(Color.clear)
-        .overlay(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .stroke(
-                    LinearGradient(
-                        colors: [
-                            Color.white.opacity(0.55),
-                            Color.white.opacity(0.08),
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    ),
-                    lineWidth: 0.75
-                )
-                .blendMode(.screen)
-                .allowsHitTesting(false)
-        )
     }
 
     @ViewBuilder
@@ -231,17 +229,7 @@ public struct PopoverContentView: View {
         } else {
             VStack(spacing: 0) {
                 HStack(spacing: 6) {
-                    Button(action: closeSearch) {
-                        HStack(spacing: 3) {
-                            Image(systemName: "chevron.left")
-                                .font(.system(size: 11, weight: .semibold))
-                            Text("Back", bundle: .module)
-                                .font(.system(size: 12))
-                        }
-                        .foregroundStyle(.secondary)
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
+                    FloatingBackButton(action: closeSearch)
                     Spacer()
                     Image(systemName: "plus.magnifyingglass")
                         .font(.system(size: 11))
@@ -251,7 +239,8 @@ public struct PopoverContentView: View {
                         .foregroundStyle(.tertiary)
                 }
                 .padding(.horizontal, 12)
-                .padding(.vertical, 8)
+                .padding(.top, 10)
+                .padding(.bottom, 8)
                 SearchView(viewModel: searchViewModel) { result in
                     searchResult = result
                 }
@@ -339,14 +328,20 @@ public struct PopoverContentView: View {
     }
 
     private var tabBar: some View {
+        // Two floating glass capsules: the tab pills carry the section
+        // switcher, the accessory cluster carries +/⋯. Sitting on the
+        // popover material (not pushing content with a Divider) gives the
+        // "floating chrome over the content" feel the user asked for.
         HStack(spacing: 8) {
             tabPills
                 .frame(maxWidth: .infinity)
+                .glassyFloatingBar()
             accessoryButtons
+                .glassyFloatingBar()
         }
         .padding(.horizontal, 12)
-        .padding(.top, 8)
-        .padding(.bottom, 4)
+        .padding(.top, 10)
+        .padding(.bottom, 8)
     }
 
     private var tabPills: some View {
@@ -359,7 +354,7 @@ public struct PopoverContentView: View {
                         .font(.system(size: 12, weight: selectedTab == tab ? .semibold : .regular))
                         .foregroundStyle(selectedTab == tab ? .primary : .secondary)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 6)
+                        .padding(.vertical, 7)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -371,14 +366,14 @@ public struct PopoverContentView: View {
                 let segment = geo.size.width / count
                 let index = CGFloat(visibleTabs.firstIndex(of: selectedTab) ?? 0)
                 TabPillBackground()
-                    .frame(width: segment - 4, height: geo.size.height - 4)
-                    .offset(x: segment * index + 2, y: 2)
+                    .frame(width: segment - 6, height: geo.size.height - 6)
+                    .offset(x: segment * index + 3, y: 3)
             }
         )
     }
 
     private var accessoryButtons: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 2) {
             if searchAvailable {
                 Button {
                     searchViewModel.reset()
@@ -386,7 +381,7 @@ public struct PopoverContentView: View {
                 } label: {
                     Image(systemName: "plus")
                         .font(.system(size: 12, weight: .semibold))
-                        .frame(width: 22, height: 22)
+                        .frame(width: 28, height: 28)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -395,6 +390,7 @@ public struct PopoverContentView: View {
             }
             moreMenu
         }
+        .padding(.horizontal, 2)
     }
 
     private var moreMenu: some View {
@@ -412,7 +408,7 @@ public struct PopoverContentView: View {
         } label: {
             Image(systemName: "ellipsis")
                 .font(.system(size: 12, weight: .semibold))
-                .frame(width: 22, height: 22)
+                .frame(width: 28, height: 28)
                 .contentShape(Rectangle())
         }
         .menuStyle(.borderlessButton)
@@ -693,8 +689,12 @@ private struct UpcomingGroup {
 
 private struct TabPillBackground: View {
     public var body: some View {
-        RoundedRectangle(cornerRadius: 6)
-            .fill(Color.primary.opacity(0.10))
+        // Sits *inside* the outer glass capsule (the tabPills container),
+        // so we can't go glass-on-glass — it would vanish. A soft solid
+        // tint reads as the "selected slot" depression and lets the
+        // outer capsule keep its translucent feel.
+        Capsule()
+            .fill(Color.primary.opacity(0.14))
     }
 }
 

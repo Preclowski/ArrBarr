@@ -14,7 +14,6 @@ public struct HistoryView: View {
     public var body: some View {
         VStack(spacing: 0) {
             header
-            Divider()
             content
         }
         .task(id: refreshNonce) { await load() }
@@ -22,22 +21,7 @@ public struct HistoryView: View {
 
     private var header: some View {
         HStack(spacing: 6) {
-            Button(action: onClose) {
-                HStack(spacing: 3) {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 11, weight: .semibold))
-                    Text("Back", bundle: .module)
-                        .font(.system(size: 12))
-                }
-                .foregroundStyle(.secondary)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            #if os(macOS)
-            .onHover { hovering in
-                if hovering { NSCursor.pointingHand.push() } else { NSCursor.pop() }
-            }
-            #endif
+            FloatingBackButton(action: onClose)
             Spacer()
             Image(systemName: sourceSymbol)
                 .font(.system(size: 11))
@@ -50,7 +34,8 @@ public struct HistoryView: View {
                 .foregroundStyle(.tertiary)
         }
         .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .padding(.top, 10)
+        .padding(.bottom, 8)
     }
 
     @ViewBuilder

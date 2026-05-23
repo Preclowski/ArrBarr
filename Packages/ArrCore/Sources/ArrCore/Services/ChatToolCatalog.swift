@@ -28,6 +28,15 @@ public enum ChatToolCatalog {
         }
         if includeTMDBMovies { arr.append(contentsOf: tmdbMovieTools) }
         if includeTMDBSeries { arr.append(contentsOf: tmdbSeriesTools) }
+        // suggest_titles resolves through Sonarr / Radarr lookups, so it
+        // only makes sense when at least one of those arrs is configured.
+        if includeSonarr || includeRadarr {
+            arr.append(contentsOf: suggestTools)
+        }
+        // arr_health needs at least one arr to query.
+        if includeSonarr || includeRadarr || includeLidarr || includeWhisparr {
+            arr.append(contentsOf: healthTools)
+        }
         return arr
     }
 
@@ -52,7 +61,7 @@ public enum ChatToolCatalog {
     private static let sonarrTools: [MCPTool] = [
         MCPTool(
             name: "sonarr_search",
-            description: "Search Sonarr's metadata source (TVDB) for a TV series. Returns a list of matches with their tvdbId. Use this BEFORE sonarr_add_series so the user can disambiguate and you can pass the correct tvdbId.",
+            description: "Search Sonarr's metadata source (TVDB) for a TV series. Results surface in the chat as tappable cards — the user opens each one and confirms profile / folder / quality in the SearchAddPanel to actually add it. You do NOT add anything yourself; there is no `sonarr_add_*` tool. Briefly explain WHY this set after the call.",
             inputSchema: .object([
                 "type": .string("object"),
                 "properties": .object([
@@ -70,25 +79,8 @@ public enum ChatToolCatalog {
             inputSchema: .object(["type": .string("object"), "properties": .object([:])])
         ),
         MCPTool(
-            name: "sonarr_add_series",
-            description: "Add a TV series to Sonarr for tracking + automatic download. ALWAYS run sonarr_search first and pass tvdbId from the result. Title is a last-resort fallback.",
-            inputSchema: .object([
-                "type": .string("object"),
-                "properties": .object([
-                    "tvdbId": .object([
-                        "type": .string("integer"),
-                        "description": .string("TVDB id from sonarr_search results — strongly preferred"),
-                    ]),
-                    "title": .object([
-                        "type": .string("string"),
-                        "description": .string("Series title (fallback when no tvdbId is known)"),
-                    ]),
-                ]),
-            ])
-        ),
-        MCPTool(
             name: "sonarr_get_series",
-            description: "List TV series currently in the Sonarr library by TITLE. Use ONLY when the user names a specific show title. DO NOT use this to find shows by actor, director, genre, or year — the library record has no cast / crew / genre metadata. For those queries use tmdb_search_person + tmdb_person_tv_credits (or tmdb_discover_series).",
+            description: "List TV series currently in the Sonarr library by TITLE. Use ONLY when the user names a specific show title. DO NOT use this to find shows by actor, director, genre, or year — the library record has no cast / crew / genre metadata. For those queries use tmdb_search_person + tmdb_person_tv_credits (or tmdb_discover_series). For 'is Sonarr healthy / what's the state of my arrs' use `arr_health` instead — listing the library tells you nothing about service health.",
             inputSchema: .object([
                 "type": .string("object"),
                 "properties": .object([
@@ -106,7 +98,7 @@ public enum ChatToolCatalog {
     private static let radarrTools: [MCPTool] = [
         MCPTool(
             name: "radarr_search",
-            description: "Search Radarr's metadata source (TMDB) for a movie. Returns a list of matches with their tmdbId. Use this BEFORE radarr_add_movie so the user can disambiguate and you can pass the correct tmdbId.",
+            description: "Search Radarr's metadata source (TMDB) for a movie. Results surface in the chat as tappable cards — the user opens each one and confirms profile / folder / quality in the SearchAddPanel to actually add it. You do NOT add anything yourself; there is no `radarr_add_*` tool. Briefly explain WHY this set after the call.",
             inputSchema: .object([
                 "type": .string("object"),
                 "properties": .object([
@@ -124,25 +116,8 @@ public enum ChatToolCatalog {
             inputSchema: .object(["type": .string("object"), "properties": .object([:])])
         ),
         MCPTool(
-            name: "radarr_add_movie",
-            description: "Add a movie to Radarr for tracking + automatic download. ALWAYS run radarr_search first and pass tmdbId from the result. Title is a last-resort fallback.",
-            inputSchema: .object([
-                "type": .string("object"),
-                "properties": .object([
-                    "tmdbId": .object([
-                        "type": .string("integer"),
-                        "description": .string("TMDB id from radarr_search results — strongly preferred"),
-                    ]),
-                    "title": .object([
-                        "type": .string("string"),
-                        "description": .string("Movie title (fallback when no tmdbId is known)"),
-                    ]),
-                ]),
-            ])
-        ),
-        MCPTool(
             name: "radarr_get_movies",
-            description: "List movies currently in the Radarr library by TITLE. Use ONLY when the user names a specific movie title. DO NOT use this to find movies by actor, director, genre, or year — the library record has no cast / crew / genre metadata, so a query like 'Adam Sandler' returns nothing useful. For those queries use tmdb_search_person + tmdb_person_movie_credits (or tmdb_discover_movies) — those tools already cross-reference results with the library and mark which are owned.",
+            description: "List movies currently in the Radarr library by TITLE. Use ONLY when the user names a specific movie title. DO NOT use this to find movies by actor, director, genre, or year — the library record has no cast / crew / genre metadata, so a query like 'Adam Sandler' returns nothing useful. For those queries use tmdb_search_person + tmdb_person_movie_credits (or tmdb_discover_movies) — those tools already cross-reference results with the library and mark which are owned. For 'is Radarr healthy / what's the state of my arrs' use `arr_health` instead.",
             inputSchema: .object([
                 "type": .string("object"),
                 "properties": .object([
@@ -160,7 +135,7 @@ public enum ChatToolCatalog {
     private static let lidarrTools: [MCPTool] = [
         MCPTool(
             name: "lidarr_search",
-            description: "Search Lidarr's metadata source (MusicBrainz) for a music artist. Returns matches with their foreignArtistId. Use BEFORE lidarr_add_artist.",
+            description: "Search Lidarr's metadata source (MusicBrainz) for a music artist. Results surface in the chat as tappable cards — the user taps to open SearchAddPanel and confirms profile/folder to add. You do NOT add anything yourself; there is no `lidarr_add_*` tool.",
             inputSchema: .object([
                 "type": .string("object"),
                 "properties": .object([
@@ -190,23 +165,6 @@ public enum ChatToolCatalog {
             description: "Get upcoming album releases from Lidarr (next ~30 days, items already monitored).",
             inputSchema: .object(["type": .string("object"), "properties": .object([:])])
         ),
-        MCPTool(
-            name: "lidarr_add_artist",
-            description: "Add a music artist to Lidarr for tracking. ALWAYS run lidarr_search first and pass the foreignArtistId (a MusicBrainz UUID) here.",
-            inputSchema: .object([
-                "type": .string("object"),
-                "properties": .object([
-                    "foreignArtistId": .object([
-                        "type": .string("string"),
-                        "description": .string("MusicBrainz id (UUID) from lidarr_search results"),
-                    ]),
-                    "artistName": .object([
-                        "type": .string("string"),
-                        "description": .string("Artist name fallback when no foreignArtistId is known"),
-                    ]),
-                ]),
-            ])
-        ),
     ]
 
     // MARK: - Whisparr
@@ -214,7 +172,7 @@ public enum ChatToolCatalog {
     private static let whisparrTools: [MCPTool] = [
         MCPTool(
             name: "whisparr_search",
-            description: "Search Whisparr's adult scene library (StashDB/TPDB) for a scene or performer. Returns matches with their id. Use BEFORE whisparr_add_scene.",
+            description: "Search Whisparr's adult scene library (StashDB/TPDB) for a scene or performer. Results surface in the chat as tappable cards — the user taps to open SearchAddPanel and confirms profile/folder to add. You do NOT add anything yourself; there is no `whisparr_add_*` tool.",
             inputSchema: .object([
                 "type": .string("object"),
                 "properties": .object([
@@ -243,23 +201,6 @@ public enum ChatToolCatalog {
             name: "whisparr_get_calendar",
             description: "Get upcoming scene releases from Whisparr (next ~30 days, items already monitored).",
             inputSchema: .object(["type": .string("object"), "properties": .object([:])])
-        ),
-        MCPTool(
-            name: "whisparr_add_scene",
-            description: "Add an adult scene to Whisparr for tracking and automatic download. ALWAYS run whisparr_search first and pass the id from the result.",
-            inputSchema: .object([
-                "type": .string("object"),
-                "properties": .object([
-                    "foreignId": .object([
-                        "type": .string("string"),
-                        "description": .string("Scene id from whisparr_search results (tmdbId as string or StashDB/TPDB id)"),
-                    ]),
-                    "title": .object([
-                        "type": .string("string"),
-                        "description": .string("Scene title (fallback when no foreignId is known)"),
-                    ]),
-                ]),
-            ])
         ),
     ]
 
@@ -331,7 +272,7 @@ public enum ChatToolCatalog {
     private static let tmdbSeriesTools: [MCPTool] = [
         MCPTool(
             name: "tmdb_person_tv_credits",
-            description: "List TV series a person appears in (or created), sorted by popularity. Use after tmdb_search_person. Sonarr indexes by TVDB id but accepts a TMDB id lookup, so taps still route to sonarr_add_series.",
+            description: "List TV series a person appears in (or created), sorted by popularity. Use after tmdb_search_person. Surfaces as tappable cards — user opens each in SearchAddPanel to add. Sonarr indexes by TVDB id but accepts a TMDB id lookup so the card flow works for TMDB-sourced results.",
             inputSchema: .object([
                 "type": .string("object"),
                 "properties": .object([
@@ -367,6 +308,76 @@ public enum ChatToolCatalog {
                     ]),
                 ]),
             ])
+        ),
+    ]
+
+    // MARK: - Curated suggestions (model-knowledge picks → rich cards)
+    //
+    // `suggest_titles` is the right answer for taste-based queries — "in
+    // the style of", "similar to", "in the mood for". The model picks
+    // titles from its own training-data associations (typically better
+    // than TMDB's algorithmic discover for these queries) and the tool
+    // resolves each through the Sonarr/Radarr lookup so the chat shows
+    // real, tappable cards with posters, ratings, and in-library state.
+
+    private static let suggestTools: [MCPTool] = [
+        MCPTool(
+            name: "suggest_titles",
+            description: """
+            Present a curated list of titles you (the model) recommend from your own knowledge, rendered as interactive cards with posters / ratings / in-library state.
+
+            USE THIS for taste-based queries: "suggest a show like Mr. Robot", "movies in the style of Wes Anderson", "something in the mood for noir tonight", "good follow-up to Breaking Bad". Your training-data associations are better than `tmdb_discover_*`'s algorithmic filters for these.
+
+            DO NOT use `tmdb_discover_*` for taste queries — those are for genre/year filters ("popular 90s horror", "highly-rated documentaries 2023") where the user picks the dimension and you do not need to curate.
+
+            Pass 5–12 picks. Include `year` whenever you're confident — it disambiguates remakes and same-titled works. All picks must share one `kind` per call (all series, or all movies). The tool will resolve each through Sonarr/Radarr; any pick that can't be found is silently dropped from the cards (and reported back to you) so the user only sees real, addable items.
+
+            After the call, briefly explain WHY this set (one or two sentences max) — the cards speak for themselves visually.
+            """,
+            inputSchema: .object([
+                "type": .string("object"),
+                "properties": .object([
+                    "kind": .object([
+                        "type": .string("string"),
+                        "description": .string("'series' to resolve picks through Sonarr, 'movie' through Radarr. All items in one call must share a kind."),
+                    ]),
+                    "items": .object([
+                        "type": .string("array"),
+                        "description": .string("Ordered list of picks; order is preserved in the surfaced cards."),
+                        "items": .object([
+                            "type": .string("object"),
+                            "properties": .object([
+                                "title": .object([
+                                    "type": .string("string"),
+                                    "description": .string("The work's title, e.g. 'The Wire'. Use the original-language title if that's how the metadata source indexes it."),
+                                ]),
+                                "year": .object([
+                                    "type": .string("integer"),
+                                    "description": .string("Optional release year — disambiguates remakes (Dune 1984 vs 2021). Omit when unsure."),
+                                ]),
+                            ]),
+                            "required": .array([.string("title")]),
+                        ]),
+                    ]),
+                ]),
+                "required": .array([.string("kind"), .string("items")]),
+            ])
+        ),
+    ]
+
+    // MARK: - Cross-arr status / diagnostics
+
+    private static let healthTools: [MCPTool] = [
+        MCPTool(
+            name: "arr_health",
+            description: """
+            Aggregated health check across every configured arr (Sonarr, Radarr, Lidarr, Whisparr). Returns each service's warnings + errors — disconnected indexers, missing root folders, full disk, queue stuck, etc. Same bell-icon data each arr's own UI surfaces.
+
+            USE THIS for "what's the state of my arrs", "is everything working", "are there any issues", "any problems with Sonarr". DO NOT use `sonarr_get_series` / `radarr_get_movies` for status questions — those list library contents and tell you nothing about whether the service is healthy.
+
+            Output is plain text (no cards). Relay the per-service summary to the user briefly. Inline the most actionable warnings if any.
+            """,
+            inputSchema: .object(["type": .string("object"), "properties": .object([:])])
         ),
     ]
 }

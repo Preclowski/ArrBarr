@@ -18,6 +18,13 @@ public struct UpcomingItem: Identifiable, Equatable, Sendable {
     public let overview: String?
     public let posterURL: URL?
     public let posterRequiresAuth: Bool
+    /// IMDb rating from the arr's stored series/movie metadata. Same units
+    /// as `SearchResult.imdb` so the unified poster-metadata row can format
+    /// it identically across the + and Upcoming surfaces.
+    public let imdb: Double?
+    /// Runtime in minutes (episode for Sonarr, movie for Radarr/Whisparr).
+    /// `nil` for Lidarr — albums don't have a single runtime.
+    public let runtime: Int?
     /// Underlying arr entity id — Sonarr `series.id`, Radarr `movie.id`,
     /// Lidarr `album.id`, Whisparr `scene.id`. Lets the row open DetailView
     /// just like a queue tap. `nil` when the source didn't carry one
@@ -28,12 +35,14 @@ public struct UpcomingItem: Identifiable, Equatable, Sendable {
         id: String, source: Source, title: String, subtitle: String?,
         airDate: Date, releaseType: String?, hasFile: Bool, overview: String?,
         posterURL: URL? = nil, posterRequiresAuth: Bool = false,
+        imdb: Double? = nil, runtime: Int? = nil,
         entityId: Int? = nil
     ) {
         self.id = id; self.source = source; self.title = title; self.subtitle = subtitle
         self.airDate = airDate; self.releaseType = releaseType
         self.hasFile = hasFile; self.overview = overview
         self.posterURL = posterURL; self.posterRequiresAuth = posterRequiresAuth
+        self.imdb = imdb; self.runtime = runtime
         self.entityId = entityId
     }
 

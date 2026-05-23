@@ -5,13 +5,11 @@ import Combine
 public final class ChatViewModel: ObservableObject {
     @Published public private(set) var messages: [ChatMessage] = []
     @Published public private(set) var isThinking: Bool = false
-    @Published public private(set) var pendingConfirm: ToolCall?
     @Published public private(set) var lastError: String?
 
     private let provider: LLMProvider
     private let tools: [LLMTool]
     private let invokeTool: @Sendable (_ name: String, _ args: JSONValue) async throws -> ToolCallOutput
-    private(set) var pendingResume: CheckedContinuation<JSONValue?, Never>?
 
     public var providerIsAvailable: Bool { provider.isAvailable }
 
@@ -24,48 +22,16 @@ public final class ChatViewModel: ObservableObject {
     }
 
     public func send(_ text: String) async {
-        guard pendingResume == nil else { return }
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         messages.append(ChatMessage(role: .user, content: trimmed))
         await runLoop(prompt: trimmed)
     }
 
-    public func confirmPending(with arguments: JSONValue) async {
-        guard pendingConfirm != nil else { return }
-        pendingResume?.resume(returning: arguments)
-        pendingResume = nil
-    }
-
-    public func cancelPending() async {
-        guard pendingConfirm != nil else { return }
-        pendingResume?.resume(returning: nil)
-        pendingResume = nil
-    }
-
-
-    /// Wipe the conversation. Refuses to clear while a tool is pending so we
-    /// don't leak a CheckedContinuation.
+    /// Wipe the conversation.
     public func clear() {
-        guard pendingResume == nil else { return }
         messages = []
         lastError = nil
-    }
-
-    /// Surfaces the confirm gate to external callers (e.g. injected into
-    /// `FoundationModelsProvider` so `DynamicMCPTool` can pause the FM session).
-    /// Re-entrant calls return nil immediately. Returns nil for cancel, or the
-    /// (possibly user-modified) args JSONValue to proceed with.
-    public func awaitConfirm(_ call: ToolCall) async -> JSONValue? {
-        guard pendingResume == nil else { return nil }
-        pendingConfirm = call
-        isThinking = false
-        let result = await withCheckedContinuation { (cont: CheckedContinuation<JSONValue?, Never>) in
-            self.pendingResume = cont
-        }
-        pendingConfirm = nil
-        isThinking = true
-        return result
     }
 
     private func runLoop(prompt: String) async {
@@ -99,37 +65,25 @@ public final class ChatViewModel: ObservableObject {
                 }
 
                 // --- View-model-executes path (e.g. OpenAI provider) ---
+                // No destructive-tool confirmation gate any more: every shipping
+                // tool is read-only or surface-only. The user does additions
+                // through SearchAddPanel (tapping the surfaced cards). If a
+                // destructive tool is ever reintroduced, gate it back here.
                 let toolCall = response.toolCalls.first
                 let assistantMsg = ChatMessage(role: .assistant, content: response.text, toolCall: toolCall)
                 messages.append(assistantMsg)
                 guard let call = toolCall else { return }
 
-                var confirmedArgs = call.arguments
-                if MCPToolWhitelist.isDestructive(call.name) {
-                    guard let args = await awaitConfirm(call) else {
-                        messages.append(ChatMessage(
-                            role: .tool,
-                            content: call.name,
-                            toolCall: call,
-                            toolResult: "(cancelled by user)"
-                        ))
-                        nextPrompt = "Tool \(call.name) was cancelled by the user."
-                        continue
-                    }
-                    confirmedArgs = args
-                }
-
                 let output: ToolCallOutput
                 do {
-                    output = try await invokeTool(call.name, confirmedArgs)
+                    output = try await invokeTool(call.name, call.arguments)
                 } catch {
                     output = ToolCallOutput(text: "(tool error: \(error.localizedDescription))")
                 }
-                let confirmedCall = ToolCall(id: call.id, name: call.name, arguments: confirmedArgs)
                 messages.append(ChatMessage(
                     role: .tool,
                     content: call.name,
-                    toolCall: confirmedCall,
+                    toolCall: call,
                     toolResult: output.text,
                     richContent: output.rich
                 ))

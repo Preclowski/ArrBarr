@@ -48,6 +48,16 @@ private struct PopoverBehaviorAdjuster: NSViewRepresentable {
         DispatchQueue.main.async {
             guard let popover = Self.popover(hosting: nsView) else { return }
             popover.behavior = behavior
+            // Clear the hosting view's layer background so NSPopover's
+            // native translucent chrome shows through — same trick the
+            // main menubar popover uses in AppDelegate. Without this the
+            // NSHostingController paints `windowBackgroundColor` and the
+            // tooltip ends up visibly lighter than the parent popover,
+            // which reads as a chrome mismatch.
+            if let host = popover.contentViewController?.view {
+                host.wantsLayer = true
+                host.layer?.backgroundColor = .clear
+            }
             coord.didConfigure = true
         }
     }

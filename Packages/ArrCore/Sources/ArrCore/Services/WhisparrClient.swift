@@ -154,6 +154,8 @@ public actor WhisparrClient: ArrAPIClient {
             overview: r.overview,
             posterURL: poster,
             posterRequiresAuth: auth,
+            imdb: r.ratings?.imdb?.value,
+            runtime: r.runtime,
             entityId: r.id
         )
     }

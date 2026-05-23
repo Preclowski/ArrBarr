@@ -688,12 +688,27 @@ public enum DemoMocks {
         let withDays = cal.date(byAdding: .day, value: daysAhead, to: Date()) ?? Date()
         let date = cal.date(byAdding: .hour, value: hoursAhead, to: withDays) ?? withDays
         let (w, h) = (aspect == .square) ? (200, 200) : (200, 300)
+        // Fake ratings + runtime per source so the demo upcoming list shows
+        // the same metadata richness as real arr data. Deterministic from
+        // the title hash so each row gets a stable score across launches.
+        // Lidarr stays nil — album runtime isn't a single number.
+        let hash = abs(title.hashValue)
+        let imdb = (source == .lidarr) ? nil : Double(60 + hash % 35) / 10.0  // 6.0–9.5
+        let runtime: Int? = {
+            switch source {
+            case .radarr, .whisparr: return 90 + hash % 60   // 90–149 min
+            case .sonarr:            return 22 + hash % 40   // 22–61 min episode
+            case .lidarr:            return nil
+            }
+        }()
         return UpcomingItem(
             id: id, source: source, title: title, subtitle: subtitle,
             airDate: date, releaseType: releaseType, hasFile: hasFile,
             overview: "Demo overview text. \(title) is part of the open-source / CC-licensed sample content used for ArrBarr previews.",
             posterURL: poster(label: posterLabel(title: title, subtitle: subtitle), seed: posterSeed, w: w, h: h),
             posterRequiresAuth: false,
+            imdb: imdb,
+            runtime: runtime,
             entityId: entityId
         )
     }

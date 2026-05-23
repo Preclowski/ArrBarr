@@ -228,6 +228,10 @@ public actor SonarrClient: ArrAPIClient {
         }
         let (poster, auth) = (r.series?.images ?? []).posterURL(baseURL: baseURL)
 
+        // Sonarr returns runtime + ratings on the series, not the episode.
+        // SonarrLookupRatings.value is the IMDb score on calendar payloads —
+        // Sonarr only surfaces one rating slot, distinct from Radarr's
+        // multi-source ratings object.
         return UpcomingItem(
             id: "sonarr-cal-\(r.id)",
             source: .sonarr,
@@ -239,6 +243,8 @@ public actor SonarrClient: ArrAPIClient {
             overview: r.overview,
             posterURL: poster,
             posterRequiresAuth: auth,
+            imdb: r.series?.ratings?.value,
+            runtime: r.series?.runtime,
             entityId: r.seriesId
         )
     }

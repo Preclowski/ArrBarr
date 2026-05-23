@@ -240,7 +240,7 @@ private struct SearchResultCard: View {
     /// when they cross-reference results against the arr library. Missing
     /// items now route to the full `SearchAddPanel` overlay so the user gets
     /// the same hero card + form they'd see if they'd reached the result via
-    /// the `+` search flow — no more inline ConfirmAddCard for user-tap adds.
+    /// the `+` search flow — SearchAddPanel is the single source of truth.
     private func handleTap() {
         if let arrId = result.inLibraryArrId {
             DetailRequest.post(
