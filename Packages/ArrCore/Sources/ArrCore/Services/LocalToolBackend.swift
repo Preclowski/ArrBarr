@@ -209,6 +209,17 @@ public actor LocalToolBackend: ToolBackend {
         }
         let client = SearchClient(config: config, source: source)
 
+        // Library map fetched in parallel with the per-pick lookups. Each
+        // resolved SearchResult carries its arr-side metadata id (tvdbId
+        // for series, tmdbId for movies) in `.id`; we look that up in the
+        // map to set `inLibraryArrId` for items the user already owns.
+        // RichToolResultView reads that field to route the tap to
+        // DetailView instead of SearchAddPanel — without this, cards for
+        // owned series/movies surface as "add me" instead of "open me".
+        async let libraryMapFetch: [Int: Int] = (kind == "series")
+            ? sonarrLibraryByTVDBId()
+            : radarrLibraryByTMDBId()
+
         // Parallel lookups — each is a single HTTP. Order in the output
         // preserves the model's curation (which is signal: a curator's
         // ordering reflects relevance), so we collect by index.
@@ -243,7 +254,14 @@ public actor LocalToolBackend: ToolBackend {
         resolved.sort { $0.index < $1.index }
         missing.sort { $0.index < $1.index }
 
-        let results = resolved.map { $0.result }
+        let libraryMap = await libraryMapFetch
+        // Tag any resolved card that maps to an arr library record. .id
+        // is tvdbId for series / tmdbId for movies — matches the library
+        // map's keys exactly.
+        let results = resolved.map { entry -> SearchResult in
+            guard let arrId = libraryMap[entry.result.id] else { return entry.result }
+            return entry.result.withInLibraryArrId(arrId)
+        }
         let text = Self.formatSuggestionsCondensed(
             resolved: results,
             missing: missing.map { $0.label },
@@ -808,6 +826,25 @@ public actor LocalToolBackend: ToolBackend {
         for rec in library {
             if let tmdb = rec.tmdbId, let arrId = rec.id {
                 map[tmdb] = arrId
+            }
+        }
+        return map
+    }
+
+    /// Sonarr equivalent: `tvdbId → series.id`. Used by `suggest_titles`
+    /// to tag series the user already has, so card taps route to
+    /// DetailView instead of trying to add a duplicate. TMDB-discover
+    /// series can't use this directly because TMDB-TV ids aren't TVDB
+    /// ids — only flows that resolved through Sonarr's own lookup (with
+    /// real tvdbIds) can cross-reference here.
+    private func sonarrLibraryByTVDBId() async -> [Int: Int] {
+        guard sonarr.isConfigured else { return [:] }
+        let client = SonarrClient(config: sonarr)
+        guard let library = try? await client.fetchAllSeries() else { return [:] }
+        var map: [Int: Int] = [:]
+        for rec in library {
+            if let tvdb = rec.tvdbId, let arrId = rec.id {
+                map[tvdb] = arrId
             }
         }
         return map
