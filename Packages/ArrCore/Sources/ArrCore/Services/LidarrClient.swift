@@ -162,6 +162,68 @@ public actor LidarrClient: ArrAPIClient {
         return (try? JSONDecoder().decode([LidarrLibraryRecord].self, from: data)) ?? []
     }
 
+    /// List albums of a specific artist. Slim shape via
+    /// `LidarrAlbumListRecord` — enough for chat to filter by type/year
+    /// and pick targets to monitor/search without paying for full detail.
+    func fetchArtistAlbums(artistId: Int) async throws -> [LidarrAlbumListRecord] {
+        if DemoMode.isActive {
+            try? await Task.sleep(nanoseconds: 200_000_000)
+            return []
+        }
+        guard config.isConfigured else { throw HTTPError.notConfigured }
+        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
+        let url = try http.url(
+            base: config.baseURL,
+            path: "/api/v1/album",
+            query: [URLQueryItem(name: "artistId", value: String(artistId))]
+        )
+        let data = try await http.get(url, headers: apiHeaders)
+        return (try? JSONDecoder().decode([LidarrAlbumListRecord].self, from: data)) ?? []
+    }
+
+    /// Flip monitoring on a single album. Lidarr's PUT requires the
+    /// full album object; the lean approach (POST `/api/v1/album/monitor`
+    /// with a list) was deprecated. Fetch detail, mutate, put back.
+    /// One round-trip more than ideal, but keeps the call payload-safe.
+    func setAlbumMonitored(albumId: Int, monitored: Bool) async throws {
+        if DemoMode.isActive {
+            try? await Task.sleep(nanoseconds: 400_000_000)
+            return
+        }
+        guard config.isConfigured else { throw HTTPError.notConfigured }
+        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
+        // Fetch existing record raw — we don't strip-decode, we forward
+        // the object straight back with the one field toggled, so Lidarr
+        // sees the full shape it expects.
+        let getURL = try http.url(base: config.baseURL, path: "/api/v1/album/\(albumId)")
+        let getData = try await http.get(getURL, headers: apiHeaders)
+        guard var json = try JSONSerialization.jsonObject(with: getData) as? [String: Any] else {
+            throw HTTPError.decoding(NSError(domain: "ArrBarr.Lidarr.setAlbumMonitored", code: 0))
+        }
+        json["monitored"] = monitored
+        let putURL = try http.url(base: config.baseURL, path: "/api/v1/album/\(albumId)")
+        let body = try JSONSerialization.data(withJSONObject: json)
+        _ = try await http.put(putURL, headers: apiHeaders.merging(["Content-Type": "application/json"]) { $1 }, body: body)
+    }
+
+    /// Trigger an indexer search for a single album. Mirrors Sonarr's
+    /// `EpisodeSearch` / Radarr's `MoviesSearch` — same /command path.
+    func searchAlbum(albumId: Int) async throws {
+        if DemoMode.isActive {
+            try? await Task.sleep(nanoseconds: 600_000_000)
+            return
+        }
+        guard config.isConfigured else { throw HTTPError.notConfigured }
+        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
+        let body: [String: Any] = [
+            "name": "AlbumSearch",
+            "albumIds": [albumId],
+        ]
+        let url = try http.url(base: config.baseURL, path: "/api/v1/command")
+        let data = try JSONSerialization.data(withJSONObject: body)
+        _ = try await http.post(url, headers: apiHeaders.merging(["Content-Type": "application/json"]) { $1 }, body: data)
+    }
+
     func fetchHealth() async throws -> [ArrHealthRecord] {
         guard config.isConfigured else { throw HTTPError.notConfigured }
         guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
@@ -232,7 +294,8 @@ public actor LidarrClient: ArrAPIClient {
             contentSlug: r.album?.foreignAlbumId,
             entityId: r.album?.id ?? r.albumId,
             posterURL: poster,
-            posterRequiresAuth: posterAuth
+            posterRequiresAuth: posterAuth,
+            statusMessages: r.statusMessages.flattenToLines()
         )
     }
 }

@@ -142,15 +142,12 @@ public struct SearchView: View {
 
             if !isCollapsed {
                 if results.isEmpty {
-                    let noMatchKey: LocalizedStringKey = {
-                        switch source {
-                        case .radarr: return "No movies match this query."
-                        case .sonarr: return "No series match this query."
-                        case .lidarr: return "No artists match this query."
-                        case .whisparr: return "No scenes match this query."
-                        }
-                    }()
-                    Text(noMatchKey, bundle: .module)
+                    // Single "No matches." line — per UX review,
+                    // differentiating "nothing to add" vs "nothing in
+                    // library" is a distinction users don't think in.
+                    // Per-source copy ("No movies / series / artists")
+                    // was clutter in a 340pt-wide popover.
+                    Text("No matches.", bundle: .module)
                         .font(.caption)
                         .foregroundStyle(.tertiary)
                         .padding(.horizontal, 12)
@@ -189,9 +186,13 @@ public struct SearchView: View {
         }
     }
 
-    /// The result area underneath the floating search bar. The conditional
-    /// branches all reserve ~58pt at the bottom so nothing sits under the
-    /// glass pill.
+    /// The result area underneath the floating search bar. Three states:
+    ///   - empty query → onboarding hint
+    ///   - searching → full-screen loader (sticky from first keystroke
+    ///     through every subsequent fetch until the final results land,
+    ///     so the user never sees a flicker between partial results and
+    ///     spinner while typing)
+    ///   - settled → per-arr sections
     @ViewBuilder
     private var content: some View {
         if viewModel.query.isEmpty && !viewModel.isSearching {
@@ -217,28 +218,33 @@ public struct SearchView: View {
     }
 
     private var searchBar: some View {
-        HStack(spacing: 6) {
+        // Sized to match the chat input bar's visual weight. The previous
+        // 12pt magnifyingglass + 13pt field + 8pt vertical padding gave a
+        // cramped ~30pt pill that read as "lightweight chip". Bumped to
+        // 15pt icons + 14pt field + 10pt padding → ~38pt tall, parity
+        // with the chat input. Same `.glassyFloatingBar()` chrome.
+        HStack(spacing: 8) {
             Image(systemName: "magnifyingglass")
-                .font(.system(size: 12))
+                .font(.system(size: 15, weight: .medium))
                 .foregroundStyle(.tertiary)
             TextField(
                 String(localized: "Search movies and TV series", bundle: .module),
                 text: $viewModel.query
             )
-            .font(.system(size: 13))
+            .font(.system(size: 14))
             .textFieldStyle(.plain)
             .focused($queryFocused)
             if !viewModel.query.isEmpty {
                 Button { viewModel.query = "" } label: {
                     Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 11))
+                        .font(.system(size: 14))
                         .foregroundStyle(.tertiary)
                 }
                 .buttonStyle(.plain)
             }
         }
         .padding(.horizontal, 14)
-        .padding(.vertical, 8)
+        .padding(.vertical, 10)
         .glassyFloatingBar()
     }
 

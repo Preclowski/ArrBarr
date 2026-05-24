@@ -9,7 +9,13 @@ public struct ArrQueuePage<Record: Decodable>: Decodable {
 }
 
 public struct ArrCustomFormat: Decodable, Equatable {
-    let id: Int
+    // `id` is optional because some arr endpoints (notably Radarr's
+    // movie detail when CFs are referenced rather than embedded) ship
+    // the format with a name but no id. A required `id` made the
+    // whole `[ArrCustomFormat]` array fail decoding silently —
+    // upstream that surfaces as "no chips visible in detail view"
+    // even when the API has populated the list.
+    let id: Int?
     let name: String
 }
 
@@ -23,6 +29,44 @@ public struct ArrImage: Decodable, Equatable, Sendable {
     let coverType: String?
     let url: String?
     let remoteUrl: String?
+}
+
+/// Sonarr / Radarr / Lidarr / Whisparr all return queue warnings in
+/// the same shape: an array of objects, each with a one-line `title`
+/// summary (e.g. "Title mismatch") and a deeper `messages` list. We
+/// flatten both into a single user-facing string per entry when the
+/// status is `warning` / `failed`. No tracker-prefix or i18n parsing —
+/// the arr ships these in the user's configured server locale.
+public struct ArrStatusMessage: Decodable, Sendable, Equatable {
+    public let title: String?
+    public let messages: [String]?
+}
+
+public extension Optional where Wrapped == [ArrStatusMessage] {
+    /// Flatten the arr's nested status payload into one user-facing
+    /// line per actual message. We unfold each (title, [messages])
+    /// entry: when there are messages we join them with " — title:",
+    /// when there aren't we just take the title verbatim. Both forms
+    /// show up in the wild — Sonarr emits title-only entries for
+    /// "Title mismatch" and full message lists for "No files found".
+    /// Whitespace-only / empty strings dropped so the caller can just
+    /// check `isEmpty`.
+    func flattenToLines() -> [String] {
+        guard let self else { return [] }
+        var out: [String] = []
+        for entry in self {
+            let title = entry.title?.trimmingCharacters(in: .whitespacesAndNewlines)
+            let messages = (entry.messages ?? []).map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+            if messages.isEmpty {
+                if let t = title, !t.isEmpty { out.append(t) }
+            } else {
+                let prefix = (title?.isEmpty == false) ? "\(title!): " : ""
+                for m in messages { out.append(prefix + m) }
+            }
+        }
+        return out
+    }
 }
 
 // MARK: - Radarr
@@ -46,6 +90,7 @@ public struct RadarrQueueRecord: Decodable {
     let customFormatScore: Int?
     let quality: ArrQuality?
     let movie: RadarrMovie?
+    let statusMessages: [ArrStatusMessage]?
 }
 
 public struct RadarrMovie: Decodable {
@@ -101,6 +146,7 @@ public struct SonarrQueueRecord: Decodable {
     let quality: ArrQuality?
     let series: SonarrSeries?
     let episode: SonarrEpisode?
+    let statusMessages: [ArrStatusMessage]?
 }
 
 public struct SonarrSeries: Decodable {
@@ -158,6 +204,7 @@ public struct LidarrQueueRecord: Decodable {
     let quality: ArrQuality?
     let artist: LidarrArtist?
     let album: LidarrAlbum?
+    let statusMessages: [ArrStatusMessage]?
 }
 
 public struct LidarrArtist: Decodable {
@@ -369,11 +416,26 @@ public struct SonarrLibraryRecord: Decodable, Sendable, Equatable {
     let monitored: Bool?
     let statistics: SonarrLibraryStatistics?
     let images: [ArrImage]?
+    /// Per-season state. Populated by `/api/v3/series` when we ask for it
+    /// — the field has always been in the JSON, we just didn't decode it.
+    /// Lets `sonarr_get_series` answer "is S3 monitored?" without a
+    /// second round-trip to the series detail endpoint.
+    let seasons: [SonarrLibrarySeason]?
 }
 public struct SonarrLibraryStatistics: Decodable, Sendable, Equatable {
     let episodeCount: Int?
     let episodeFileCount: Int?
     let seasonCount: Int?
+}
+public struct SonarrLibrarySeason: Decodable, Sendable, Equatable {
+    let seasonNumber: Int
+    let monitored: Bool?
+    let statistics: SonarrLibrarySeasonStatistics?
+}
+public struct SonarrLibrarySeasonStatistics: Decodable, Sendable, Equatable {
+    let episodeCount: Int?
+    let episodeFileCount: Int?
+    let totalEpisodeCount: Int?
 }
 
 // MARK: - Whisparr
@@ -397,6 +459,7 @@ public struct WhisparrQueueRecord: Decodable {
     let customFormatScore: Int?
     let quality: ArrQuality?
     let movie: WhisparrMovie?
+    let statusMessages: [ArrStatusMessage]?
 }
 
 public struct WhisparrMovie: Decodable {

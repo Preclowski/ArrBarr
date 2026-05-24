@@ -40,11 +40,37 @@ public enum ChatViewModelFactory {
             try await backend.callTool(name: name, arguments: args)
         }
 
+        // The FM path drives tool execution from inside its own
+        // `DynamicMCPTool.call`, so the destructive-tool gate has to
+        // reach back into the view-model from there. ChatViewModel
+        // doesn't exist yet at this point, so we capture a `weak`
+        // reference through a holder that gets back-filled after the
+        // VM is constructed.
+        var vmRef: ChatViewModel? = nil
+        let confirm: @Sendable (ToolCall) async -> JSONValue? = { [weak vmRef] call in
+            guard let vm = vmRef else { return nil }
+            return await vm.awaitConfirm(call)
+        }
+
         let provider: LLMProvider
+        // Demo mode: short-circuit the provider switch before either real
+        // backend (OpenAI / FoundationModels) is consulted. The OpenAI
+        // path would fail without a key; the FM path would either be
+        // unavailable on older OSes or hit the real on-device model,
+        // which can't see our canned arrs anyway. DemoChatProvider
+        // returns pre-executed `suggest_titles`-shaped results so the
+        // existing chat pipeline renders rich cards without any other
+        // changes downstream.
+        if DemoMode.isActive {
+            provider = DemoChatProvider()
+            let vm = ChatViewModel(provider: provider, tools: llmTools, invokeTool: invoke)
+            vmRef = vm
+            return vm
+        }
         switch chatProvider {
         case .foundationModels:
             if #available(macOS 26.0, iOS 26.0, *) {
-                provider = FoundationModelsProvider(invokeTool: invoke)
+                provider = FoundationModelsProvider(invokeTool: invoke, confirmDestructive: confirm)
             } else {
                 provider = UnavailableLLMProvider()
             }
@@ -61,6 +87,7 @@ public enum ChatViewModelFactory {
             tools: llmTools,
             invokeTool: invoke
         )
+        vmRef = vm
         return vm
     }
 }

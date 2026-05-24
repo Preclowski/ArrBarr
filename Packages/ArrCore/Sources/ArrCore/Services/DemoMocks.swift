@@ -1045,7 +1045,8 @@ public enum DemoMocks {
             id: id, seasonNumber: season, episodeNumber: number,
             title: title, overview: overview,
             airDateUtc: fmt.string(from: date),
-            hasFile: hasFile, monitored: true, runtime: 45
+            hasFile: hasFile, monitored: true, runtime: 45,
+            episodeFileId: hasFile ? id : nil
         )
     }
 

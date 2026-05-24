@@ -59,34 +59,55 @@ public actor SearchClient {
 
     // MARK: - Library filter
 
-    func fetchLibraryIds() async throws -> Set<Int> {
-        if DemoMode.isActive { return [] }
-        guard config.isConfigured else { return [] }
+    /// Returns a map of `foreignId → arr internal id` for everything in
+    /// the user's library. Used to be `Set<Int>` (foreign-id only) when
+    /// search just hid library items; the new "Search" tab shows them
+    /// with an "In library" pill, so we also need the arr-side id to
+    /// deep-link into DetailView when tapped. The foreign-id key matches
+    /// what `SearchResult.id` carries for each source.
+    func fetchLibraryArrIdMap() async throws -> [Int: Int] {
+        if DemoMode.isActive { return [:] }
+        guard config.isConfigured else { return [:] }
         switch source {
         case .radarr:
             let url = try http.url(base: config.baseURL, path: "\(apiBase)/movie")
             let data = try await http.get(url, headers: headers)
             let records = (try? JSONDecoder().decode([RadarrLibraryRecord].self, from: data)) ?? []
-            return Set(records.compactMap(\.tmdbId))
+            var map: [Int: Int] = [:]
+            for r in records { if let f = r.tmdbId, let a = r.id { map[f] = a } }
+            return map
         case .sonarr:
             let url = try http.url(base: config.baseURL, path: "\(apiBase)/series")
             let data = try await http.get(url, headers: headers)
             let records = (try? JSONDecoder().decode([SonarrLibraryRecord].self, from: data)) ?? []
-            return Set(records.compactMap(\.tvdbId))
+            var map: [Int: Int] = [:]
+            for r in records { if let f = r.tvdbId, let a = r.id { map[f] = a } }
+            return map
         case .lidarr:
             let url = try http.url(base: config.baseURL, path: "\(apiBase)/artist")
             let data = try await http.get(url, headers: headers)
             let records = (try? JSONDecoder().decode([LidarrLibraryRecord].self, from: data)) ?? []
-            return Set(records.compactMap { $0.foreignArtistId.map { abs($0.hashValue) & 0x7fffffff } })
+            var map: [Int: Int] = [:]
+            for r in records {
+                if let fid = r.foreignArtistId, let a = r.id {
+                    map[abs(fid.hashValue) & 0x7fffffff] = a
+                }
+            }
+            return map
         case .whisparr:
             let url = try http.url(base: config.baseURL, path: "\(apiBase)/movie")
             let data = try await http.get(url, headers: headers)
             let records = (try? JSONDecoder().decode([WhisparrLibraryRecord].self, from: data)) ?? []
-            return Set(records.compactMap { rec -> Int? in
-                if let tmdbId = rec.tmdbId, tmdbId != 0 { return tmdbId }
-                if let fid = rec.foreignId { return abs(fid.hashValue) & 0x7fffffff }
-                return nil
-            })
+            var map: [Int: Int] = [:]
+            for rec in records {
+                let foreign: Int? = {
+                    if let tmdbId = rec.tmdbId, tmdbId != 0 { return tmdbId }
+                    if let fid = rec.foreignId { return abs(fid.hashValue) & 0x7fffffff }
+                    return nil
+                }()
+                if let f = foreign, let a = rec.id { map[f] = a }
+            }
+            return map
         }
     }
 

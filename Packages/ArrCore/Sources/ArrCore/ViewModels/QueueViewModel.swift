@@ -69,6 +69,12 @@ public final class QueueViewModel: ObservableObject {
     private var intervalObservers: Set<AnyCancellable> = []
     private var optimisticOverrides: [String: OptimisticOverride] = [:]
     @Published public private(set) var isRefreshing = false
+    /// Set when `refresh()` is called while another refresh is mid-flight.
+    /// The in-flight refresh's `defer` reads this and re-runs once so we
+    /// never silently drop a trigger (the previous code's `guard !isRefreshing
+    /// else { return }` was eating SignalR pushes that landed inside the
+    /// ~half-second polling refreshes were taking).
+    private var pendingRefresh = false
     private var knownItemIDs: Set<String>?
 
     /// Per-arr counter of consecutive refresh cycles where the queue fetch failed.
@@ -96,11 +102,28 @@ public final class QueueViewModel: ObservableObject {
         coalescer.postTest()
     }
 
+    /// Pushes real-time updates from each arr's SignalR hub straight
+    /// into a debounced refresh. Polling stays as fallback.
+    private let realtime: RealtimeManager
+
     public init(configStore: ConfigStore = .shared) {
         self.configStore = configStore
         self.aggregator = QueueAggregator(configStore: configStore)
         self.coalescer = NotificationCoalescer(configStore: configStore)
+
+        // Hold off setting `realtime`'s callback until `self` exists —
+        // we capture weakly to avoid the manager retaining the
+        // view-model. Coalesce bursts of queue events (Sonarr can
+        // emit several within milliseconds during an import) so we
+        // don't fan out N near-simultaneous HTTP refreshes.
+        let placeholder: @Sendable (RealtimeEvent) async -> Void = { _ in }
+        self.realtime = RealtimeManager(onEvent: placeholder)
+
         startBackgroundPolling()
+
+        Task { [weak self] in
+            await self?.bootstrapRealtime()
+        }
 
         configStore.$backgroundInterval
             .dropFirst()
@@ -123,7 +146,67 @@ public final class QueueViewModel: ObservableObject {
                 self.tonight = Self.tonightSlice(from: self.upcoming, hours: hours)
             }
             .store(in: &intervalObservers)
+
+        // Re-subscribe when any arr's connection details change. The
+        // manager diffs internally so unchanged arrs keep their open
+        // sockets.
+        Publishers.CombineLatest4(
+            configStore.$sonarr, configStore.$radarr,
+            configStore.$lidarr, configStore.$whisparr
+        )
+        .dropFirst()
+        .sink { [weak self] sonarr, radarr, lidarr, whisparr in
+            Task { [weak self] in
+                await self?.realtime.reconfigure(
+                    sonarr: sonarr, radarr: radarr,
+                    lidarr: lidarr, whisparr: whisparr
+                )
+            }
+        }
+        .store(in: &intervalObservers)
     }
+
+    deinit {
+        Task { [realtime] in await realtime.shutdown() }
+    }
+
+    /// Hook up the realtime callback and subscribe to the initial
+    /// configuration. Runs once at init time, after `self` is fully
+    /// constructed so the weak-self capture is valid.
+    private func bootstrapRealtime() async {
+        // Replace the placeholder callback with one that refreshes
+        // the queue for the affected arr. Debounce so a flurry of
+        // queue events (common during episode import) collapses into
+        // a single HTTP roundtrip.
+        await realtime.setHandler { [weak self] event in
+            guard let self else { return }
+            switch event {
+            case .queueChanged, .fileImported:
+                await self.scheduleRealtimeRefresh()
+            case .other:
+                break
+            }
+        }
+        await realtime.reconfigure(
+            sonarr: configStore.sonarr,
+            radarr: configStore.radarr,
+            lidarr: configStore.lidarr,
+            whisparr: configStore.whisparr
+        )
+    }
+
+    /// Coalesce realtime triggers: collapse a burst of arr events into
+    /// one refresh roughly 250 ms after the last one, so Sonarr's
+    /// "queue add, progress, file import" sequence becomes a single
+    /// fetch.
+    @MainActor
+    private func scheduleRealtimeRefresh() {
+        realtimeDebounce?.invalidate()
+        realtimeDebounce = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: false) { [weak self] _ in
+            Task { await self?.refresh() }
+        }
+    }
+    @MainActor private var realtimeDebounce: Timer?
 
     func fetchHistory(for source: QueueItem.Source) async -> HistoryResult {
         if DemoMode.isActive {
@@ -145,6 +228,20 @@ public final class QueueViewModel: ObservableObject {
     public func stopForegroundPolling() {
         foregroundTimer?.invalidate()
         foregroundTimer = nil
+    }
+
+    /// Called from AppDelegate's `NSWorkspace.didWakeNotification`
+    /// observer. macOS can let WebSockets sit half-dead for tens of
+    /// seconds after a wake; the reconnect loop only fires once the
+    /// OS surfaces the failed `receive`, so the user experiences a
+    /// dead-period of stale data. Force a tear-and-rebuild of every
+    /// SignalR connection + an immediate poll, so the moment the
+    /// user opens the popover post-wake everything is current.
+    public func systemDidWake() {
+        Task {
+            await self.realtime.forceReconnect()
+            await self.refresh()
+        }
     }
 
     private func restartForegroundPolling() {
@@ -172,18 +269,29 @@ public final class QueueViewModel: ObservableObject {
     }
 
     public func refresh() async {
-        guard !isRefreshing else { return }
+        // Queue-not-drop: if a refresh is already in flight, set
+        // `pendingRefresh` and bail out. After the in-flight one finishes
+        // the `defer` re-checks and runs once more — collapses bursts
+        // into "at most two back-to-back fetches" instead of dropping
+        // the second trigger entirely. The dropped-event case was
+        // observable: a SignalR push arriving 50 ms after a polling
+        // refresh started would `return` here and the SignalR update
+        // never reached the user.
+        guard !isRefreshing else {
+            pendingRefresh = true
+            return
+        }
         isRefreshing = true
-        // Show the spinner only on the very first load. Subsequent polls
-        // update the already-rendered rows in place — the previous logic
-        // flashed the spinner on every tick when the queue was empty
-        // (including the common idle case of "nothing in queue, just
-        // upcoming").
         if !hasLoadedOnce { isLoading = true }
         defer {
             isLoading = false
             hasLoadedOnce = true
             isRefreshing = false
+            // Drain any trigger we received while we were busy.
+            if pendingRefresh {
+                pendingRefresh = false
+                Task { await self.refresh() }
+            }
         }
         if DemoMode.isActive {
             // Simulate a real network round-trip so the spinner is visible and

@@ -8,8 +8,23 @@ public final class SearchViewModel: ObservableObject {
     @Published var sonarrResults: [SearchResult] = []
     @Published var lidarrResults: [SearchResult] = []
     @Published var whisparrResults: [SearchResult] = []
+    /// Single sticky flag — true from the first keystroke until the
+    /// final fetch (the one matching the latest query) returns. While
+    /// the user keeps typing, in-flight fetches get superseded and
+    /// their results are dropped via the generation check below, so
+    /// this stays `true` continuously and the view shows ONE stable
+    /// loader instead of flickering between partial results and
+    /// spinner per keystroke.
     @Published var isSearching = false
     @Published var errorMessage: String?
+
+    /// Bumped on every `onQueryChange`. The async search task carries
+    /// the generation it was launched with; only the task whose
+    /// generation still matches the current value is allowed to
+    /// commit results + clear `isSearching`. Stale tasks return
+    /// silently. Replaces the previous "set loading flag, cancel task,
+    /// blink between states" pattern.
+    private var searchGeneration: Int = 0
 
     // Add panel state
     @Published var qualityProfiles: [QualityProfile] = []
@@ -50,16 +65,33 @@ public final class SearchViewModel: ObservableObject {
 
     func onQueryChange() {
         searchTask?.cancel()
-        radarrResults = []
-        sonarrResults = []
-        lidarrResults = []
-        whisparrResults = []
         errorMessage = nil
-        guard !query.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+        searchGeneration += 1
+        let myGen = searchGeneration
+
+        let trimmed = query.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else {
+            // Empty query: kill the loader, clear results. Anything
+            // mid-flight that hasn't returned will be ignored when it
+            // does (its generation no longer matches).
+            isSearching = false
+            radarrResults = []
+            sonarrResults = []
+            lidarrResults = []
+            whisparrResults = []
+            return
+        }
+
+        // Sticky loader: set true here, leave it alone for the
+        // duration of typing. Stale fetches return silently and
+        // don't touch this flag. Only the matching-generation
+        // fetch will clear it (in `search`).
+        isSearching = true
+
         searchTask = Task {
             try? await Task.sleep(for: .milliseconds(300))
             guard !Task.isCancelled else { return }
-            await search()
+            await search(generation: myGen)
         }
     }
 
@@ -70,30 +102,50 @@ public final class SearchViewModel: ObservableObject {
         sonarrResults = []
         lidarrResults = []
         whisparrResults = []
+        isSearching = false
         errorMessage = nil
     }
 
-    private func search() async {
-        isSearching = true
-        defer { isSearching = false }
-        async let radarr = fetchOne(client: radarrClient)
-        async let sonarr = fetchOne(client: sonarrClient)
-        async let lidarr = fetchOne(client: lidarrClient)
-        async let whisparr = fetchOne(client: whisparrClient)
-        let (rRes, sRes, lRes, wRes) = await (radarr, sonarr, lidarr, whisparr)
+    private func search(generation: Int) async {
+        async let r = fetchOne(client: radarrClient)
+        async let s = fetchOne(client: sonarrClient)
+        async let l = fetchOne(client: lidarrClient)
+        async let w = fetchOne(client: whisparrClient)
+        let (rRes, sRes, lRes, wRes) = await (r, s, l, w)
+
+        // Generation gate. If the user kept typing while we were
+        // fetching, `onQueryChange` bumped `searchGeneration` past
+        // ours — our results are stale, drop them on the floor and
+        // let the newer task win. Critically we DO NOT flip
+        // `isSearching` to false here either, so the loader stays
+        // continuous through the keystroke storm.
+        guard searchGeneration == generation else { return }
         radarrResults = rRes
         sonarrResults = sRes
         lidarrResults = lRes
         whisparrResults = wRes
+        isSearching = false
     }
 
     private func fetchOne(client: SearchClient?) async -> [SearchResult] {
         guard let client else { return [] }
         do {
             async let fetchResults = client.lookup(query: query)
-            async let fetchLibrary = client.fetchLibraryIds()
-            let (raw, ids) = try await (fetchResults, fetchLibrary)
-            return raw.filter { !ids.contains($0.id) }
+            async let fetchLibrary = client.fetchLibraryArrIdMap()
+            let (raw, map) = try await (fetchResults, fetchLibrary)
+            // Used to be `raw.filter { !ids.contains($0.id) }` — hiding
+            // library hits entirely. The "Search" tab now wants both
+            // kinds in one list, so we keep them all and stamp
+            // `inLibraryArrId` on the ones we own. The row + selection
+            // routing diverge based on that field: in-library rows show
+            // an "In library" pill + drill into DetailView; addable
+            // rows keep the existing + flow into SearchAddPanel.
+            return raw.map { result in
+                if let arrId = map[result.id] {
+                    return result.withInLibraryArrId(arrId)
+                }
+                return result
+            }
         } catch {
             errorMessage = error.localizedDescription
             return []

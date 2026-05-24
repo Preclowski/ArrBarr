@@ -213,7 +213,7 @@ private struct SearchResultCard: View {
             }
             Text(result.title)
                 .font(.system(size: 12, weight: .semibold))
-                .lineLimit(2, reservesSpace: true)
+                .lineLimit(2)
                 .multilineTextAlignment(.leading)
             HStack(spacing: 6) {
                 if let year = result.year {
@@ -312,7 +312,7 @@ private struct LibraryRecordCard: View {
             }
             Text(title)
                 .font(.system(size: 12, weight: .semibold))
-                .lineLimit(2, reservesSpace: true)
+                .lineLimit(2)
                 .multilineTextAlignment(.leading)
             if let year {
                 Text(String(year))

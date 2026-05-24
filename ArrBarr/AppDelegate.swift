@@ -85,6 +85,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 let active = (radarr + sonarr + lidarr).filter { $0.status != .completed }.count
                 self?.updateStatusBarTitle(active: active)
             }
+
+        // Wake handler — WebSockets don't survive a Mac sleep cycle
+        // reliably; the OS can take 30-90 s to surface the dead socket,
+        // during which SignalR pushes silently drop. Force a tear-and-
+        // rebuild of every realtime connection right after wake so the
+        // data the user sees on the first popover open is current.
+        NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didWakeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in self?.queueVM.systemDidWake() }
+        }
     }
 
     // MARK: - Status item

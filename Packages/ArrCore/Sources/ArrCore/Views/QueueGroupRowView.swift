@@ -66,31 +66,10 @@ public struct QueueGroupRowView: View {
                             .lineLimit(1)
                             .truncationMode(.tail)
 
-                        // Title-row badges: Upgrade/New + download client,
-                        // matching QueueRowView (and Radarr's movie row)
-                        // exactly. The pack-shape callout used to live
-                        // here as a third teal pill — it's been demoted
-                        // into the subtitle line below where it belongs
-                        // alongside other shape descriptors.
-                        Text(rep.isUpgrade ? "Upgrade" : "New")
-                            .font(.system(size: 8, weight: .semibold))
-                            .foregroundStyle(rep.isUpgrade ? AnyShapeStyle(Color.indigo) : AnyShapeStyle(Color.accentColor))
-                            .padding(.horizontal, 4)
-                            .padding(.vertical, 1)
-                            .background(
-                                rep.isUpgrade ? AnyShapeStyle(Color.indigo.opacity(0.15)) : AnyShapeStyle(Color.accentColor.opacity(0.15)),
-                                in: Capsule()
-                            )
-
+                        MediaBadgeCluster(isUpgrade: rep.isUpgrade)
+                        Spacer(minLength: 4)
                         if let client = rep.downloadClient {
-                            let color = downloadClientColor(client)
-                            Text(client)
-                                .font(.system(size: 8, weight: .semibold))
-                                .foregroundStyle(color)
-                                .padding(.horizontal, 4)
-                                .padding(.vertical, 1)
-                                .background(color.opacity(0.15), in: Capsule())
-                                .lineLimit(1)
+                            DownloadClientLabel(name: client)
                         }
                     }
 
@@ -102,35 +81,27 @@ public struct QueueGroupRowView: View {
                     }
 
                     HStack(spacing: 3) {
-                        Image(systemName: rep.status.symbol)
-                            .foregroundStyle(rep.status.tint)
-                            .font(.system(size: 8))
-                        Text(LocalizedStringKey(rep.status.displayName))
-                            .foregroundStyle(rep.status.tint)
+                        StatusIconLabel(status: rep.status)
                         if let q = rep.quality, !q.isEmpty {
                             Text("·").foregroundStyle(.tertiary)
                             Text(q).foregroundStyle(.tertiary)
                         }
+                        Spacer(minLength: 4)
+                        ScoreLabel(score: rep.customFormatScore)
                     }
                     .font(.system(size: 10))
                     .lineLimit(1)
                 }
-                // See QueueRowView: tooltip popover steals the mouse, so we
-                // also treat `showTooltip` as "still hovering" to keep the
-                // pause/remove icons reachable while the tooltip is up.
-                // iOS has no hover so the icons stay always-visible.
-                #if os(macOS)
-                .hoverActions(visible: isHovering || showTooltip) { actionButtons }
-                #else
-                .hoverActions(visible: true) { actionButtons }
-                #endif
+                // Action cluster lives in the hover overlay — see
+                // QueueRowView. iOS inline path dropped (dead code).
 
                 ThinProgressBar(progress: aggregateProgress, tint: rep.status.tint)
 
-                if !rep.customFormats.isEmpty || rep.customFormatScore != 0 {
+                if !rep.customFormats.isEmpty {
                     CustomFormatStrip(
                         formats: rep.customFormats,
-                        score: rep.customFormatScore
+                        score: 0,
+                        fadeTrailing: !(isHovering && canControl)
                     )
                     .padding(.top, 2)
                 }
@@ -143,6 +114,31 @@ public struct QueueGroupRowView: View {
                 .fill(isHovering ? Color.primary.opacity(0.06) : Color.clear)
                 .padding(.horizontal, 6)
         )
+        // Bare-icon hover overlay — mirrors QueueRowView. Fade-in
+        // dark gradient backdrop cuts the icons visually from any
+        // content beneath.
+        #if os(macOS)
+        .overlay(alignment: .trailing) {
+            if isHovering && canControl {
+                inlineActionIcons
+                    .padding(.leading, 60)
+                    .padding(.trailing, 16)
+                    .frame(maxHeight: .infinity)
+                    .background(
+                        LinearGradient(
+                            stops: [
+                                .init(color: .clear, location: 0),
+                                .init(color: Color.black.opacity(0.55), location: 0.55),
+                                .init(color: Color.black.opacity(0.6), location: 1),
+                            ],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .transition(.opacity)
+            }
+        }
+        #endif
         .contentShape(Rectangle())
         .onTapGesture {
             onShowDetail?()
@@ -153,7 +149,6 @@ public struct QueueGroupRowView: View {
         #if os(macOS)
         .onHover { hovering in
             withAnimation(.easeInOut(duration: 0.15)) { isHovering = hovering }
-            // Skip the long-hover tooltip when the host has a detail pane.
             hoverTask?.cancel()
             if hovering && !suppressRowTooltip {
                 hoverTask = Task { @MainActor [self] in
@@ -170,16 +165,14 @@ public struct QueueGroupRowView: View {
                 apiKey: rep.posterRequiresAuth ? configStore.sonarr.apiKey : nil,
                 locale: configStore.currentLocale
             )
-            // See PopoverBehavior.swift — keep clicks from being eaten by the
-            // default .transient dismissal.
             .popoverBehavior(.applicationDefined)
         }
         #endif
-        .alert("Remove download?", isPresented: $showDeleteConfirmation) {
-            Button("Remove", role: .destructive) { onDelete() }
-            Button("Cancel", role: .cancel) {}
+        .alert(Text("Remove download?", bundle: .module), isPresented: $showDeleteConfirmation) {
+            Button(role: .destructive) { onDelete() } label: { Text("Remove", bundle: .module) }
+            Button(role: .cancel) {} label: { Text("Cancel", bundle: .module) }
         } message: {
-            Text("This will remove \"\(headerLabel)\" (\(group.memberCount) episodes) from the download client.")
+            Text(String(format: String(localized: "This will remove \"%@\" (%lld episodes) from the download client.", bundle: .module), headerLabel, group.memberCount))
         }
     }
 
@@ -236,10 +229,54 @@ public struct QueueGroupRowView: View {
 
     // MARK: - Actions
 
+    #if os(macOS)
+    /// Bare-icon action cluster used in the row's hover overlay. See
+    /// QueueRowView.inlineActionIcons for rationale.
+    @ViewBuilder
+    private var inlineActionIcons: some View {
+        HStack(spacing: 6) {
+            if canControl && canPauseResume {
+                if rep.isPaused {
+                    IconButton(symbol: "play.fill", helpKey: "Resume",
+                               accessibilityLabel: "Resume \(headerLabel)") { onResume() }
+                } else {
+                    IconButton(symbol: "pause.fill", helpKey: "Pause",
+                               accessibilityLabel: "Pause \(headerLabel)") { onPause() }
+                }
+            }
+            if canControl {
+                IconButton(symbol: "trash", helpKey: "Remove from client",
+                           accessibilityLabel: "Remove \(headerLabel)", tint: .red) {
+                    showDeleteConfirmation = true
+                }
+            }
+        }
+    }
+    #endif
+
+    @ViewBuilder
     private var actionButtons: some View {
         // Mirrors QueueRowView.actionButtons — see there for rationale.
-        // Single neutral glass capsule wraps both glyphs; red lives only
-        // in the trash glyph itself.
+        #if os(macOS)
+        VStack(spacing: 4) {
+            if canControl && canPauseResume {
+                if rep.isPaused {
+                    TooltipActionButton(symbol: "play.fill", labelKey: "Resume") {
+                        onResume()
+                    }
+                } else {
+                    TooltipActionButton(symbol: "pause.fill", labelKey: "Pause") {
+                        onPause()
+                    }
+                }
+            }
+            if canControl {
+                TooltipActionButton(symbol: "trash", labelKey: "Remove", tint: .red) {
+                    showDeleteConfirmation = true
+                }
+            }
+        }
+        #else
         HStack(spacing: 4) {
             if canControl && canPauseResume {
                 if rep.isPaused {
@@ -263,6 +300,7 @@ public struct QueueGroupRowView: View {
         .padding(.horizontal, 6)
         .padding(.vertical, 4)
         .glassPill()
+        #endif
     }
 
 }
@@ -278,6 +316,7 @@ public struct QueueGroupTooltip: View {
     let group: QueueGroup
     var apiKey: String? = nil
     var locale: Locale = Locale(identifier: "en")
+    /// Action cluster pinned at the bottom of the tooltip — see
     @EnvironmentObject var configStore: ConfigStore
 
     private var rep: QueueItem { group.representative }
@@ -324,7 +363,23 @@ public struct QueueGroupTooltip: View {
             }
 
             if !group.items.isEmpty {
-                Text("Episodes", bundle: .module)
+                // Header reads "Season 0X" when every queue item shares
+                // the same season (the common case — this tooltip
+                // *is* a season pack). Falls back to "Episodes" only
+                // for the rare mixed-season grouping. Combined with the
+                // per-row code dropping S/E prefixes and showing just
+                // "01, 02, …", the section now reads as one season's
+                // contents instead of repeating "S01" on every line.
+                let seasonHeader: Text = {
+                    let uniqueSeasons = Set(group.items.compactMap(\.seasonNumber))
+                    if uniqueSeasons.count == 1, let s = uniqueSeasons.first {
+                        return Text(String(format: NSLocalizedString("Season %02d",
+                                                                     bundle: .module,
+                                                                     comment: "Tooltip section header"), s))
+                    }
+                    return Text("Episodes", bundle: .module)
+                }()
+                seasonHeader
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(.secondary)
                     .textCase(.uppercase)
@@ -545,96 +600,82 @@ public struct TooltipQueueRow: View {
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 3) {
+            // Match `EpisodeRow`'s chrome — the row's background is
+            // the progress visualiser (status-tint bar filling
+            // `progress` % of the width), title takes the matching
+            // status colour so foreground + background share a hue.
+            // No standalone progress bar, no leading status icon —
+            // the coloured fill carries that information.
             HStack(spacing: 6) {
-                Image(systemName: item.status.symbol)
-                    .font(.system(size: 9))
-                    .foregroundStyle(item.status.tint)
                 if let code = episodeCode {
                     Text(code)
                         .font(.system(size: 11, weight: .semibold).monospacedDigit())
-                        .foregroundStyle(.primary)
+                        .foregroundStyle(.tertiary)
                 }
+                // Per-row Upgrade / New badge dropped — this tooltip
+                // is always a season-pack, every episode in the list
+                // shares the same upgrade state, so the pack header's
+                // badge covers it. Per-row was visual repetition.
                 Text(headline)
                     .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(item.status.tint)
                     .lineLimit(1)
                     .truncationMode(.tail)
-                // No per-episode upgrade arrow inside the season-pack
-                // tooltip — the pack header already says "Upgrade", and
-                // either the summary card (Variant A) or the per-row
-                // "↑ replaces …" line (Variant B) carries the indigo
-                // accent for episodes that need it.
                 Spacer(minLength: 4)
-                Text(trailing)
-                    .font(.system(size: 10).monospacedDigit())
-                    .foregroundStyle(.tertiary)
+                // Score delta replaces the trailing percent — for an
+                // active pack download, "+50 vs your existing" is
+                // more interesting than a number the progress bar
+                // already shows visually.
+                scoreDeltaView
             }
-            GeometryReader { geo in
+            .padding(.horizontal, 6)
+            .padding(.vertical, 4)
+            .background(
                 ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 1)
-                        .fill(Color.primary.opacity(0.10))
-                    RoundedRectangle(cornerRadius: 1)
-                        .fill(item.status.tint)
-                        .frame(width: geo.size.width * max(0, min(1, item.progress)))
-                }
-            }
-            .frame(height: 3)
-            if showNewFileMeta, !item.customFormats.isEmpty || item.customFormatScore != 0 {
-                TooltipFlowLayout(spacing: 3) {
-                    ForEach(item.customFormats, id: \.self) { TagChip(text: $0) }
-                    if item.customFormatScore != 0 {
-                        let sign = item.customFormatScore > 0 ? "+" : ""
-                        TagChip(
-                            text: "\(sign)\(item.customFormatScore)",
-                            color: item.customFormatScore > 0 ? .green : .red
-                        )
+                    GeometryReader { geo in
+                        Rectangle()
+                            .fill(item.status.tint.opacity(0.16))
+                            .frame(width: geo.size.width * max(0.02, min(1, item.progress)))
                     }
                 }
+                .clipShape(RoundedRectangle(cornerRadius: 4))
+            )
+            if showNewFileMeta, !item.customFormats.isEmpty {
+                TooltipFlowLayout(spacing: 3) {
+                    ForEach(item.customFormats, id: \.self) { TagChip(text: $0) }
+                }
                 .padding(.top, 1)
-            }
-
-            if showExistingFile, item.isUpgrade {
-                replacesLine
-                    .padding(.top, 1)
-                    .padding(.leading, 14)
             }
         }
     }
 
-    /// Single wrapping line that combines text + chips for the existing
-    /// file: "↑ replaces  720p HDTV · 1.8 GB · +50  [chip] [chip] [chip]".
-    /// Lays out via `TooltipFlowLayout` so all of it sits on one row when
-    /// it fits and wraps as a unit when it doesn't.
+    /// Score delta = new file score − existing file score. Green when
+    /// the upgrade gains points, red when it loses, neutral when
+    /// equal. Falls back to the raw score when no existing score is
+    /// known (fresh download with no replacement target).
     @ViewBuilder
-    private var replacesLine: some View {
-        let prefixText = Text("↑ replaces").foregroundStyle(Color.indigo).font(.system(size: 10, weight: .medium))
-        let qualityText: Text? = (item.existingQuality?.isEmpty == false)
-            ? Text(item.existingQuality!).foregroundStyle(.secondary).font(.system(size: 10))
-            : nil
-        let sizeText: Text? = (item.existingSize ?? 0) > 0
-            ? Text(ByteCountFormatter.string(fromByteCount: item.existingSize!, countStyle: .file))
-                .foregroundStyle(.secondary).font(.system(size: 10))
-            : nil
-        let scoreValue = item.existingCustomFormatScore ?? 0
-        let scoreText: Text? = scoreValue != 0
-            ? Text("\(scoreValue > 0 ? "+" : "")\(scoreValue)")
-                .foregroundStyle(scoreValue > 0 ? Color.green : Color.red)
-                .font(.system(size: 10, weight: .semibold))
-            : nil
-        let dot = Text("·").foregroundStyle(.tertiary).font(.system(size: 10))
-
-        TooltipFlowLayout(spacing: 4) {
-            prefixText
-            if let qualityText { qualityText }
-            if let sizeText { dot; sizeText }
-            if let scoreText { dot; scoreText }
-            ForEach(item.existingCustomFormats, id: \.self) { TagChip(text: $0) }
+    private var scoreDeltaView: some View {
+        if let existing = item.existingCustomFormatScore {
+            let delta = item.customFormatScore - existing
+            let sign = delta > 0 ? "+" : (delta == 0 ? "±" : "")
+            Text("\(sign)\(delta)")
+                .font(.system(size: 10, weight: .semibold).monospacedDigit())
+                .foregroundStyle(delta > 0 ? Color.green : (delta < 0 ? Color.red : .secondary))
+        } else if item.customFormatScore != 0 {
+            let sign = item.customFormatScore > 0 ? "+" : ""
+            Text("\(sign)\(item.customFormatScore)")
+                .font(.system(size: 10, weight: .semibold).monospacedDigit())
+                .foregroundStyle(item.customFormatScore > 0 ? Color.green : Color.red)
         }
     }
 
     private var episodeCode: String? {
-        guard let s = item.seasonNumber, let e = item.episodeNumber else { return nil }
-        return String(format: "S%02dE%02d", s, e)
+        // Pack header now carries the season ("Season 0X"), so the
+        // per-row code collapses to just the episode number — keeps
+        // the row narrow and reads as a list ("01, 02, 03…") instead
+        // of stuttering "S01" on every line.
+        guard let e = item.episodeNumber else { return nil }
+        return String(format: "%02d", e)
     }
 
     private var headline: String {
@@ -647,9 +688,5 @@ public struct TooltipQueueRow: View {
         return bits.joined(separator: " · ")
     }
 
-    private var trailing: String {
-        if item.status == .queued { return "Queued" }
-        return "\(Int((item.progress * 100).rounded()))%"
-    }
 }
 

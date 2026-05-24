@@ -6,8 +6,26 @@ import SwiftUI
 public struct DetailView: View {
     let item: QueueItem
     let onBack: () -> Void
+    /// Page title shown in the header — typically the name of the tab
+    /// the user came from ("Kolejka", "Nadchodzące", "Czat", "Dodaj").
+    /// Defaults to a generic "Details" if the caller doesn't pass one.
+    /// Using a context label (where they came from) rather than the
+    /// item title avoids title duplication with the hero card below.
+    var originLabel: LocalizedStringKey = "Details"
     @ObservedObject var viewModel: QueueViewModel
     @EnvironmentObject var configStore: ConfigStore
+
+    public init(
+        item: QueueItem,
+        onBack: @escaping () -> Void,
+        originLabel: LocalizedStringKey = "Details",
+        viewModel: QueueViewModel
+    ) {
+        self.item = item
+        self.onBack = onBack
+        self.originLabel = originLabel
+        self.viewModel = viewModel
+    }
 
     /// All queue items belonging to the same arr entity (movie/series/album).
     /// One item → render the single-item form; multiple → stacked list with
@@ -28,6 +46,11 @@ public struct DetailView: View {
     }
 
     @State private var radarrDetail: RadarrMovieDetail?
+    /// Separately-fetched movie file. Radarr's `/movie/{id}` returns a
+    /// stripped `movieFile` payload (no customFormats), so we hit
+    /// `/moviefile?movieId={id}` afterwards to get the chip-bearing
+    /// version for the ExistingFileBanner.
+    @State private var radarrMovieFile: ArrFile?
     @State private var sonarrDetail: SonarrSeriesDetail?
     @State private var sonarrEpisodes: [SonarrEpisodeDetail] = []
     @State private var lidarrAlbum: LidarrAlbumDetail?
@@ -35,26 +58,235 @@ public struct DetailView: View {
     @State private var loading = true
     @State private var loadError: String?
 
+    /// Series-level "Search all missing" state. Lives in DetailView (not
+    /// in a sub-view) because the affordance sits in the seasons-section
+    /// header alongside the title — same level as the season+episode
+    /// rows that own their own spinners independently.
+    @State private var isSearchingAllMissing = false
+    @State private var didSearchAllMissing = false
+    @State private var showAllMissingConfirm = false
+    /// Confirmation alert for the Remove action — mirrors the QueueRowView
+    /// flow. Same destructive-action contract everywhere in the app.
+    @State private var showDeleteConfirmation = false
+    /// Poster lightbox — set to a URL when the user taps the header
+    /// card's poster, cleared by the xmark button. Renders as an
+    /// overlay on top of the detail surface so it dismisses without
+    /// leaving the popover.
+    @State private var enlargedPoster: URL?
+    /// Episode drill-down — set when the user taps a row in a season's
+    /// expanded list. Renders `EpisodeDetailOverlay` on top of the
+    /// series detail.
+    @State private var selectedEpisode: SonarrEpisodeDetail?
+    /// Lazily-fetched episode-file payload. Driven off
+    /// `selectedEpisode.episodeFileId` — fetched on selection, cleared
+    /// when the episode overlay closes. Powers the quality / size /
+    /// custom-format chips in `EpisodeDetailOverlay`.
+    @State private var selectedEpisodeFile: ArrFile?
+    /// Currently-shown season number for Sonarr detail. Drives the
+    /// pill bar — only one season's episode list is rendered at a
+    /// time. `nil` means "no explicit pick yet", which the view
+    /// resolves to the latest season (or the first with unaired
+    /// missing episodes — that's where the user usually wants to
+    /// land).
+    @State private var selectedSeasonNumber: Int?
+
+    /// Currently-shown disc number for Lidarr multi-disc albums.
+    /// Mirrors `selectedSeasonNumber` — drives the disc pill bar,
+    /// only one disc's track list is rendered at a time. `nil` =
+    /// pick the first disc with missing tracks (or the lowest disc
+    /// number if everything's on disk).
+    @State private var selectedDiscNumber: Int?
+
+    // MARK: - Download action gating
+    //
+    // Mirrors QueueRowView.canControl / canPauseResume so the detail
+    // view's action buttons appear under the exact same conditions as
+    // the tooltip's: only when there's a configured download client for
+    // the item's protocol, and only Pause/Resume when the focused item
+    // is actually in a download-or-paused state.
+    private var canControl: Bool {
+        switch item.downloadProtocol {
+        case .usenet:
+            return (configStore.sabnzbd.isConfigured && !configStore.sabnzbd.apiKey.isEmpty)
+                || configStore.nzbget.isConfigured
+        case .torrent:
+            return configStore.qbittorrent.isConfigured
+                || configStore.transmission.isConfigured
+                || configStore.rtorrent.isConfigured
+                || configStore.deluge.isConfigured
+        case .unknown:
+            return false
+        }
+    }
+
+    private var canPauseResume: Bool {
+        item.status == .downloading || item.status == .paused
+    }
+
     public var body: some View {
-        VStack(spacing: 0) {
-            header
-            ScrollView {
-                content
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 12)
+        ZStack {
+            VStack(spacing: 0) {
+                header
+                ScrollView {
+                    content
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 12)
+                }
+                .scrollBounceBehavior(.basedOnSize)
+                .frame(maxHeight: .infinity)
             }
-            .scrollBounceBehavior(.basedOnSize)
-            .frame(maxHeight: .infinity)
+            // Hide the series detail when an overlay is active so we
+            // don't need a solid scrim on top — the popover's
+            // translucent chrome stays visible (Apple "Liquid Glass"
+            // feel), the user just sees the focused view.
+            .opacity((selectedEpisode != nil || enlargedPoster != nil) ? 0 : 1)
+            .allowsHitTesting(selectedEpisode == nil && enlargedPoster == nil)
+            .onAppear {
+                // Seed the pill bar with the *clicked* queue item's
+                // season when the user drilled in from a season-3
+                // episode in queue — opening to a different season
+                // would leave them hunting for the one they just
+                // clicked.
+                if selectedSeasonNumber == nil, let sn = item.seasonNumber, sn > 0 {
+                    selectedSeasonNumber = sn
+                }
+            }
+
+            // Episode drill-down. Layered above the series detail so
+            // it covers the back chevron / source pill / overview —
+            // the user sees a focused episode surface, dismisses with
+            // its own back button to return to the series.
+            if let ep = selectedEpisode {
+                EpisodeDetailOverlay(
+                    episode: ep,
+                    seriesTitle: sonarrDetail?.title ?? item.title,
+                    originLabel: originLabel,
+                    posterURL: arrPosterURL(images: sonarrDetail?.images, for: item, in: configStore) ?? item.posterURL,
+                    posterRequiresAuth: item.posterRequiresAuth,
+                    apiKey: configStore.sonarr.apiKey,
+                    episodeFile: selectedEpisodeFile,
+                    queueItem: siblings.first {
+                        $0.seasonNumber == ep.seasonNumber
+                            && $0.episodeNumber == ep.episodeNumber
+                            && $0.arrQueueId != 0
+                    },
+                    onPosterTap: { url in
+                        withAnimation(.smooth(duration: 0.22)) {
+                            enlargedPoster = url ?? item.posterURL
+                        }
+                    },
+                    onClose: {
+                        withAnimation(.smooth(duration: 0.22)) {
+                            selectedEpisode = nil
+                            selectedEpisodeFile = nil
+                        }
+                    },
+                    onSearch: searchEpisodeClosure
+                )
+                .transition(.opacity)
+                .task(id: ep.id) {
+                    // Fetch the episodefile lazily so the overlay can
+                    // show quality / size / CF chips without bloating
+                    // the initial series-detail load.
+                    selectedEpisodeFile = nil
+                    guard let fid = ep.episodeFileId, fid > 0 else { return }
+                    let client = SonarrClient(config: configStore.sonarr)
+                    if let f = try? await client.fetchEpisodeFile(id: fid) {
+                        await MainActor.run { selectedEpisodeFile = f }
+                    }
+                }
+            }
+
+            // Poster lightbox — rendered LAST in the ZStack so it
+            // sits on top of every other overlay (series detail AND
+            // episode overlay). User can tap an episode-detail
+            // poster and the lightbox covers the episode view.
+            if let url = enlargedPoster {
+                posterLightbox(url: url)
+                    .transition(.opacity)
+                    .zIndex(10)
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .task(id: item.id) { await load() }
+        .alert(Text("Search all missing episodes?", bundle: .module),
+               isPresented: $showAllMissingConfirm) {
+            Button { performAllMissingSearch() } label: { Text("Search", bundle: .module) }
+            Button(role: .cancel) {} label: { Text("Cancel", bundle: .module) }
+        } message: {
+            Text("Will query your indexers for every missing episode across the entire series.", bundle: .module)
+        }
+        .alert(Text("Remove download?", bundle: .module), isPresented: $showDeleteConfirmation) {
+            Button(role: .destructive) {
+                Task {
+                    await viewModel.delete(item)
+                    // Detail view is no longer meaningful once the
+                    // download it was opened for is gone — fall back to
+                    // the queue/list rather than stare at a stale row.
+                    await MainActor.run { onBack() }
+                }
+            } label: { Text("Remove", bundle: .module) }
+            Button(role: .cancel) {} label: { Text("Cancel", bundle: .module) }
+        } message: {
+            Text(String(format: String(localized: "This will remove \"%@\" from the download client.", bundle: .module), item.title))
+        }
+    }
+
+    // MARK: - Download actions cluster
+    //
+    // Renders below the DownloadSection on every detail surface (movie,
+    // series, album). Same `TooltipActionButton` chrome the tooltip
+    // uses, so a row's hover-actions and its detail-screen actions feel
+    // like the same control surfaced twice. Horizontal layout — we have
+    // ~370pt of width here, no need to stack vertically like the
+    // tooltip's narrow poster-column does.
+    @ViewBuilder
+    private var downloadActions: some View {
+        if hasActiveDownloads && canControl {
+            // Earlier draft used two full-width labeled buttons here —
+            // visually the loudest thing on the detail surface, ahead
+            // of the poster. Downtuned per designer pass: hug-content
+            // sizing, leading alignment, destructive "Remove" sits
+            // separately on the trailing edge so primary "Pause/
+            // Resume" still leads but the page no longer reads as
+            // "delete CTA".
+            HStack(spacing: 8) {
+                if canPauseResume {
+                    if item.isPaused {
+                        TooltipActionButton(symbol: "play.fill", labelKey: "Resume", fillsWidth: false) {
+                            Task { await viewModel.resume(item) }
+                        }
+                    } else {
+                        TooltipActionButton(symbol: "pause.fill", labelKey: "Pause", fillsWidth: false) {
+                            Task { await viewModel.pause(item) }
+                        }
+                    }
+                }
+                Spacer()
+                TooltipActionButton(symbol: "trash", labelKey: "Remove", tint: .red, fillsWidth: false) {
+                    showDeleteConfirmation = true
+                }
+            }
+        }
     }
 
     // MARK: - Header (floating glass back + source info)
 
     private var header: some View {
+        // Variant A: back chevron + page title leading, source meta
+        // and external-link button trailing. Title uses the *origin*
+        // tab name (Kolejka / Nadchodzące / Czat / Dodaj) — not the
+        // item title, which already lives big in the hero card below.
+        // Showing the item title twice (header + hero) read as visual
+        // stutter; an origin breadcrumb tells the user "you came from
+        // here" without duplication.
         HStack(spacing: 6) {
             FloatingBackButton(action: onBack)
+
+            Text(originLabel, bundle: .module)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(.primary)
+                .lineLimit(1)
 
             Spacer()
 
@@ -112,12 +344,11 @@ public struct DetailView: View {
                 genres: radarrDetail?.genres ?? [],
                 certification: radarrDetail?.certification,
                 ratings: movieRatingChips,
-                // Listing badges (Upgrade/New + download client) used to live
-                // at the top of the download section. Hoisted into the header
-                // trailing slot so the right column under the ratings — which
-                // was empty for movies — earns its keep. Only shown when
-                // there's an active download to badge.
-                existingTrailer: hasActiveDownloads ? AnyView(ListingBadgesView(item: item)) : nil,
+                // Upgrade badge now lives inline next to the title (via
+                // `titleBadge`). Trailing slot is empty for movies; the
+                // download client / score have their own gutter inside
+                // the download section.
+                existingTrailer: nil,
                 posterUrl: arrPosterURL(images: radarrDetail?.images, for: item, in: configStore),
                 fallbackSymbol: "film",
                 posterAspect: 2.0/3.0
@@ -140,17 +371,20 @@ public struct DetailView: View {
                     // Badges moved to the header card above.
                     showListingBadges: false
                 )
+                downloadActions
             }
 
-            // Two ways to surface the "existing file" info, mutually exclusive:
-            //  - active upgrade in queue → `item.existing*` fields (set by
-            //    Radarr's queue endpoint when a download will replace something).
-            //  - no queue activity, already in library → `radarrDetail.movieFile`
-            //    (the file Radarr already owns on disk).
-            if item.isUpgrade {
-                ExistingFileBanner(item: item)
-            } else if let movieFile = radarrDetail?.movieFile {
-                ExistingFileBanner(movieFile: movieFile)
+            // Standalone "already in library" banner — only when
+            // there's no active download. Prefer the separately-
+            // fetched `radarrMovieFile` because it carries
+            // customFormats; fall back to the stripped inline one
+            // from /movie/{id} only when the separate fetch failed.
+            if !hasActiveDownloads {
+                if let file = radarrMovieFile {
+                    ExistingFileBanner(movieFile: file)
+                } else if let movieFile = radarrDetail?.movieFile {
+                    ExistingFileBanner(movieFile: movieFile)
+                }
             }
 
             if let err = loadError {
@@ -193,37 +427,306 @@ public struct DetailView: View {
                 ExpandableOverview(text: overview)
             }
 
-            if let seasons = sonarrDetail?.seasons, !seasons.isEmpty {
-                Text("Seasons")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(.secondary)
-                    .textCase(.uppercase)
-                    .tracking(0.5)
-                ForEach(seasons.filter { $0.seasonNumber > 0 }, id: \.seasonNumber) { season in
-                    SeasonRow(
-                        season: season,
-                        episodes: sonarrEpisodes.filter { $0.seasonNumber == season.seasonNumber }
-                    )
+            if let seasons = sonarrDetail?.seasons {
+                let visibleSeasons = seasons.filter { $0.seasonNumber > 0 }
+                if !visibleSeasons.isEmpty {
+                    seasonsHeader(seasons: visibleSeasons)
+                    seasonPillBar(visibleSeasons)
+                    if let active = visibleSeasons.first(where: { $0.seasonNumber == effectiveSeasonNumber(in: visibleSeasons) }) {
+                        SeasonRow(
+                            season: active,
+                            episodes: sonarrEpisodes.filter { $0.seasonNumber == active.seasonNumber },
+                            queueByEpisodeId: queueByEpisodeId,
+                            onSearchSeason: searchSeasonClosure(seasonNumber: active.seasonNumber),
+                            onSearchEpisode: searchEpisodeClosure,
+                            onTapEpisode: { ep in
+                                withAnimation(.smooth(duration: 0.22)) { selectedEpisode = ep }
+                            },
+                            onPauseEpisode: { q in
+                                Task { await viewModel.pause(q) }
+                            },
+                            onResumeEpisode: { q in
+                                Task { await viewModel.resume(q) }
+                            },
+                            onDeleteEpisode: { q in
+                                Task { await viewModel.delete(q) }
+                            },
+                            onSetMonitored: setSeasonMonitoredClosure(seasonNumber: active.seasonNumber),
+                            initiallyExpanded: true,
+                            hideExpandChevron: true
+                        )
+                    }
                 }
             }
-
-            if hasActiveDownloads {
-                DownloadSection(
-                    items: siblings,
-                    focused: item,
-                    showInlineUpgrade: true,
-                    showCustomFormats: true,
-                    rowHoverDetail: true,
-                    listCollapsible: true,
-                    listExpandedDefault: false
-                )
-            }
+            // DownloadSection used to live here for series — the
+            // separate "w kolejce" list with all active episode
+            // downloads. Removed: each in-progress episode is now
+            // marked inline (status dot on the row + hover actions
+            // for pause/resume/remove), and the season pill carries
+            // a "currently downloading" indicator so the user can
+            // jump to the right season without scrolling a parallel
+            // list. One source of truth per episode = fewer surfaces
+            // for the action buttons to land out of reach.
 
             if let err = loadError {
                 Text(err)
                     .font(.system(size: 11))
                     .foregroundStyle(.tertiary)
             }
+        }
+    }
+
+    /// Resolves the `SonarrEpisodeDetail` that matches a queue item's
+    /// season/episode and pushes the episode overlay. Called from
+    /// EpisodeRow's hover-icon click → drill into the episode view.
+    /// If no matching episode is in `sonarrEpisodes` yet (timing
+    /// window — series detail finished loading before episodes), we
+    /// just no-op rather than open a half-populated view.
+    private func openEpisodeFromQueueItem(_ q: QueueItem) {
+        guard let sn = q.seasonNumber, let en = q.episodeNumber else { return }
+        guard let ep = sonarrEpisodes.first(where: {
+            $0.seasonNumber == sn && $0.episodeNumber == en
+        }) else { return }
+        withAnimation(.smooth(duration: 0.22)) { selectedEpisode = ep }
+    }
+
+    /// Map episode-id → active queue item, built from `siblings`
+    /// (queue items for this series) joined to the loaded
+    /// `sonarrEpisodes`. Powers the per-episode in-progress
+    /// indicator + hover action icons that replaced the standalone
+    /// "in queue" list.
+    private var queueByEpisodeId: [Int: QueueItem] {
+        var map: [Int: QueueItem] = [:]
+        for q in siblings where q.arrQueueId != 0 {
+            guard let sn = q.seasonNumber, let en = q.episodeNumber else { continue }
+            if let ep = sonarrEpisodes.first(where: {
+                $0.seasonNumber == sn && $0.episodeNumber == en
+            }) {
+                map[ep.id] = q
+            }
+        }
+        return map
+    }
+
+    /// Dominant queue status across all in-flight episodes for a
+    /// season. Priority: downloading > paused > other. Drives the
+    /// season-pill colour dot so it matches the actual state of the
+    /// episodes inside (blue dot on a season full of paused episodes
+    /// used to be a UX lie).
+    private func dominantQueueStatus(forSeason sn: Int) -> QueueItem.Status? {
+        let inSeason = siblings.filter {
+            $0.seasonNumber == sn && $0.arrQueueId != 0
+        }
+        guard !inSeason.isEmpty else { return nil }
+        if inSeason.contains(where: { $0.status == .downloading }) { return .downloading }
+        if inSeason.contains(where: { $0.status == .paused }) { return .paused }
+        return inSeason.first?.status
+    }
+
+    /// Wrapping pill-row of season selectors. Replaces the legacy
+    /// vertical list of expandable SeasonRows — only one season's
+    /// content is visible at a time, the pill bar is the navigation.
+    @ViewBuilder
+    private func seasonPillBar(_ seasons: [SonarrSeasonInfo]) -> some View {
+        let activeNumber = effectiveSeasonNumber(in: seasons)
+        TooltipFlowLayout(spacing: 6) {
+            ForEach(seasons, id: \.seasonNumber) { season in
+                seasonPill(season, isActive: season.seasonNumber == activeNumber)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func seasonPill(_ season: SonarrSeasonInfo, isActive: Bool) -> some View {
+        let have = season.statistics?.episodeFileCount ?? 0
+        let total = season.statistics?.totalEpisodeCount ?? season.statistics?.episodeCount ?? 0
+        let complete = total > 0 && have >= total
+        let queueStatus = dominantQueueStatus(forSeason: season.seasonNumber)
+        Button {
+            withAnimation(.smooth(duration: 0.2)) {
+                selectedSeasonNumber = season.seasonNumber
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Text(String(format: String(localized: "Season pill %lld", bundle: .module), season.seasonNumber))
+                    .font(.system(size: 10, weight: isActive ? .semibold : .medium))
+                    .foregroundStyle(isActive ? .primary : .secondary)
+                // Dot colour reflects what the user will see when
+                // they open the season: blue if anything's actively
+                // downloading, orange if everything's paused, green
+                // when the season is complete and idle. No dot when
+                // partial + nothing in queue (still missing).
+                if let s = queueStatus {
+                    Circle()
+                        .fill(isActive ? s.tint : s.tint.opacity(0.75))
+                        .frame(width: 4, height: 4)
+                } else if complete {
+                    Circle()
+                        .fill(isActive ? Color.green : Color.green.opacity(0.7))
+                        .frame(width: 4, height: 4)
+                }
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .background(
+                Capsule()
+                    .fill(isActive ? Color.primary.opacity(0.12) : Color.clear)
+            )
+            .overlay(
+                Capsule()
+                    .strokeBorder(
+                        Color.primary.opacity(isActive ? 0 : 0.18),
+                        lineWidth: 0.6
+                    )
+            )
+            .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// Resolves which season's content to show. User explicit pick
+    /// wins; otherwise default to the first season with aired
+    /// missing episodes (where the user is most likely heading);
+    /// fall back to the latest season.
+    private func effectiveSeasonNumber(in seasons: [SonarrSeasonInfo]) -> Int? {
+        if let picked = selectedSeasonNumber,
+           seasons.contains(where: { $0.seasonNumber == picked }) {
+            return picked
+        }
+        // First season with at least one aired-but-missing episode.
+        let now = Date()
+        if let firstMissing = seasons.first(where: { season in
+            sonarrEpisodes.contains { ep in
+                guard ep.seasonNumber == season.seasonNumber else { return false }
+                let aired = ep.airDateUtc.flatMap(parseArrDate).map { $0 <= now } ?? true
+                return aired && ep.hasFile != true
+            }
+        }) {
+            return firstMissing.seasonNumber
+        }
+        // Otherwise the latest season — most users want "what's
+        // happening now" rather than the back catalogue.
+        return seasons.max(by: { $0.seasonNumber < $1.seasonNumber })?.seasonNumber
+    }
+
+    // MARK: - Sonarr search-missing affordances
+
+    /// Total *aired* missing episodes across non-special seasons. Drives
+    /// the "Search all N missing" pill visibility. We use episode-level
+    /// data instead of season.statistics so unaired episodes don't pad
+    /// the count — searching for them would no-op against indexers and
+    /// the number would mislead the user.
+    private func totalMissing(across seasons: [SonarrSeasonInfo]) -> Int {
+        let now = Date()
+        return sonarrEpisodes.filter { ep in
+            // Skip specials and episodes outside the non-special set we
+            // surface in the UI.
+            guard let sn = ep.seasonNumber, sn > 0 else { return false }
+            guard seasons.contains(where: { $0.seasonNumber == sn }) else { return false }
+            let aired = ep.airDateUtc.flatMap(parseArrDate).map { $0 <= now } ?? true
+            return aired && ep.hasFile != true
+        }.count
+    }
+
+    /// Section header for the seasons list with a glass pill on the right
+    /// that fires a full `SeriesSearch` against Sonarr. Same chrome
+    /// language as the per-season pill — but lives one level up so the
+    /// user can grab everything missing across the whole show in a tap.
+    @ViewBuilder
+    private func seasonsHeader(seasons: [SonarrSeasonInfo]) -> some View {
+        let missing = totalMissing(across: seasons)
+        HStack(spacing: 8) {
+            Text("Seasons", bundle: .module)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .textCase(.uppercase)
+                .tracking(0.5)
+            Spacer()
+            if missing > 0, item.entityId != nil {
+                Button(action: fireAllMissingSearch) {
+                    HStack(spacing: 3) {
+                        if isSearchingAllMissing {
+                            ProgressView().controlSize(.mini)
+                        } else if didSearchAllMissing {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 10, weight: .semibold))
+                                .foregroundStyle(.green)
+                        } else {
+                            Image(systemName: "magnifyingglass")
+                                .font(.system(size: 10, weight: .medium))
+                            Text("Search all \(missing) missing", bundle: .module)
+                                .font(.system(size: 10, weight: .medium))
+                        }
+                    }
+                    .foregroundStyle(.primary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .contentShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .glassPill()
+                .disabled(isSearchingAllMissing)
+                .help(Text("Search", bundle: .module))
+            }
+        }
+    }
+
+    private func searchSeasonClosure(seasonNumber: Int) -> (() async -> Void)? {
+        guard let seriesId = item.entityId else { return nil }
+        return {
+            let client = SonarrClient(config: configStore.sonarr)
+            try? await client.searchSeason(seriesId: seriesId, seasonNumber: seasonNumber)
+        }
+    }
+
+    private var searchEpisodeClosure: ((Int) async -> Void)? {
+        // Series itself doesn't gate this — episode rows already only
+        // show their button when an episode is missing.
+        { episodeId in
+            let client = SonarrClient(config: configStore.sonarr)
+            try? await client.searchEpisodes(episodeIds: [episodeId])
+        }
+    }
+
+    /// Closure that flips season monitoring via Sonarr's `/seasonpass`
+    /// endpoint. The SeasonRow drives optimistic UI locally; on server
+    /// success we refresh `sonarrDetail` so the next read reconciles
+    /// state (also brings in any side-effects, e.g. Sonarr's
+    /// monitorNewItems policy auto-monitoring siblings).
+    private func setSeasonMonitoredClosure(seasonNumber: Int) -> ((Bool) async -> Void)? {
+        guard let seriesId = item.entityId else { return nil }
+        return { state in
+            let client = SonarrClient(config: configStore.sonarr)
+            try? await client.setSeasonMonitored(
+                seriesId: seriesId,
+                seasonNumber: seasonNumber,
+                monitored: state
+            )
+            // Refresh series detail so future paints see the true state
+            // from the server (covers any auto-mark policies Sonarr ran).
+            if let refreshed = try? await client.fetchSeriesDetails(id: seriesId) {
+                await MainActor.run { self.sonarrDetail = refreshed }
+            }
+        }
+    }
+
+    private func fireAllMissingSearch() {
+        guard !isSearchingAllMissing else { return }
+        showAllMissingConfirm = true
+    }
+
+    private func performAllMissingSearch() {
+        guard let seriesId = item.entityId, !isSearchingAllMissing else { return }
+        isSearchingAllMissing = true
+        Task {
+            let client = SonarrClient(config: configStore.sonarr)
+            try? await client.searchSeries(seriesId: seriesId)
+            await MainActor.run {
+                isSearchingAllMissing = false
+                didSearchAllMissing = true
+            }
+            try? await Task.sleep(nanoseconds: 1_400_000_000)
+            await MainActor.run { didSearchAllMissing = false }
         }
     }
 
@@ -244,27 +747,43 @@ public struct DetailView: View {
 
             if hasActiveDownloads {
                 DownloadSection(items: siblings, focused: item)
+                downloadActions
             }
 
             if !lidarrTracks.isEmpty {
                 Divider().padding(.vertical, 2)
-                Text("Tracks")
+                Text("Tracks", bundle: .module)
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(.secondary)
                     .textCase(.uppercase)
                     .tracking(0.5)
                 let mediums = Dictionary(grouping: lidarrTracks, by: { $0.mediumNumber ?? 1 })
                     .sorted { $0.key < $1.key }
-                ForEach(mediums, id: \.key) { medium, tracks in
-                    if mediums.count > 1 {
-                        Text("Disc \(medium)")
-                            .font(.system(size: 10, weight: .semibold))
-                            .foregroundStyle(.tertiary)
-                            .padding(.top, 4)
+                // Track list owns its own tight spacing (4pt) — the
+                // outer `VStack(spacing: 12)` was making every track
+                // sit 12pt from the next, which read as "list of
+                // sections" not "list of tracks". Mirrors the
+                // episode-list spacing inside `SeasonRow`.
+                if mediums.count > 1 {
+                    discPillBar(mediums.map { $0.key })
+                    let active = effectiveDiscNumber(in: mediums.map { $0.key }) ?? mediums.first!.key
+                    let tracks = mediums.first(where: { $0.key == active })?.value ?? []
+                    VStack(alignment: .leading, spacing: 4) {
+                        ForEach(tracks.sorted(by: { ($0.absoluteTrackNumber ?? 0) < ($1.absoluteTrackNumber ?? 0) })) { track in
+                            TrackRow(track: track)
+                        }
                     }
-                    ForEach(tracks.sorted(by: { ($0.absoluteTrackNumber ?? 0) < ($1.absoluteTrackNumber ?? 0) })) { track in
-                        TrackRow(track: track)
+                    .padding(.top, 6)
+                    .padding(.bottom, 4)
+                } else {
+                    let tracks = mediums.first?.value ?? []
+                    VStack(alignment: .leading, spacing: 4) {
+                        ForEach(tracks.sorted(by: { ($0.absoluteTrackNumber ?? 0) < ($1.absoluteTrackNumber ?? 0) })) { track in
+                            TrackRow(track: track)
+                        }
                     }
+                    .padding(.top, 6)
+                    .padding(.bottom, 4)
                 }
             }
             if let err = loadError {
@@ -279,22 +798,41 @@ public struct DetailView: View {
         let album = lidarrAlbum
         let posterUrl = arrPosterURL(images: album?.images, for: item, in: configStore)
             ?? arrPosterURL(images: album?.artist?.images, for: item, in: configStore)
+        let resolvedURL = posterUrl ?? item.posterURL
+        let poster = RemotePoster(
+            url: resolvedURL,
+            apiKey: item.posterRequiresAuth ? configStore.lidarr.apiKey : nil,
+            size: CGSize(width: 110, height: 110),
+            cornerRadius: 6,
+            fallbackSymbol: "music.note"
+        )
         return HStack(alignment: .top, spacing: 12) {
-            RemotePoster(
-                url: posterUrl ?? item.posterURL,
-                apiKey: item.posterRequiresAuth ? configStore.lidarr.apiKey : nil,
-                size: CGSize(width: 110, height: 110),
-                cornerRadius: 6,
-                fallbackSymbol: "music.note"
-            )
+            // Tap the poster to raise the lightbox — same affordance
+            // movie / series detail views ship. `lidarrHeaderCard`
+            // used to render a bare `RemotePoster`, so clicking it
+            // did nothing on this surface alone.
+            Button {
+                withAnimation(.smooth(duration: 0.22)) {
+                    enlargedPoster = resolvedURL ?? item.posterURL
+                }
+            } label: { poster }
+                .buttonStyle(.plain)
+                .help(Text("Show poster", bundle: .module))
             VStack(alignment: .leading, spacing: 4) {
                 Text(album?.title ?? item.title)
                     .font(.system(size: 15, weight: .semibold))
                     .lineLimit(2)
                 if let artist = album?.artist?.artistName {
+                    // Artist as subtitle — 12pt medium .secondary.
+                    // Subordinate to the 15pt album title above but
+                    // bumped from regular weight so it stays
+                    // legible. Matches `EpisodeDetailOverlay`'s
+                    // series-title treatment so the two detail
+                    // surfaces share the same hierarchy language.
                     Text(artist)
-                        .font(.system(size: 12))
+                        .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(.secondary)
+                        .lineLimit(2)
                 }
                 HStack(spacing: 6) {
                     if let year = lidarrYear {
@@ -306,7 +844,7 @@ public struct DetailView: View {
                     }
                     if let stats = album?.statistics, let count = stats.totalTrackCount, count > 0 {
                         Text("·").foregroundStyle(.tertiary)
-                        Text("\(count) tracks").foregroundStyle(.secondary)
+                        Text("\(count) tracks", bundle: .module).foregroundStyle(.secondary)
                     }
                     if let dur = album?.duration, dur > 0 {
                         Text("·").foregroundStyle(.tertiary)
@@ -326,6 +864,77 @@ public struct DetailView: View {
             }
             Spacer(minLength: 0)
         }
+    }
+
+    /// Wrapping pill-row of disc selectors. Same chrome as Sonarr's
+    /// `seasonPillBar` — capsule, mono weight active state, optional
+    /// status dot. Used only for multi-disc albums.
+    @ViewBuilder
+    private func discPillBar(_ discs: [Int]) -> some View {
+        let active = effectiveDiscNumber(in: discs)
+        TooltipFlowLayout(spacing: 6) {
+            ForEach(discs, id: \.self) { d in
+                discPill(d, isActive: d == active)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func discPill(_ disc: Int, isActive: Bool) -> some View {
+        // Dot states (mirroring seasonPill): green when every track
+        // on this disc is on-disk, no dot otherwise. There's no
+        // per-track queue mapping for Lidarr in the current detail
+        // view, so we skip the blue/orange queue tints — the album-
+        // level download chip in the header carries that signal.
+        let discTracks = lidarrTracks.filter { ($0.mediumNumber ?? 1) == disc }
+        let complete = !discTracks.isEmpty && discTracks.allSatisfy { $0.hasFile == true }
+        Button {
+            withAnimation(.smooth(duration: 0.2)) {
+                selectedDiscNumber = disc
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Text(String(format: String(localized: "Disc %lld", bundle: .module), disc))
+                    .font(.system(size: 10, weight: isActive ? .semibold : .medium))
+                    .foregroundStyle(isActive ? .primary : .secondary)
+                if complete {
+                    Circle()
+                        .fill(isActive ? Color.green : Color.green.opacity(0.7))
+                        .frame(width: 4, height: 4)
+                }
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .background(
+                Capsule()
+                    .fill(isActive ? Color.primary.opacity(0.12) : Color.clear)
+            )
+            .overlay(
+                Capsule()
+                    .strokeBorder(
+                        Color.primary.opacity(isActive ? 0 : 0.18),
+                        lineWidth: 0.6
+                    )
+            )
+            .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// Resolves which disc's content to show. User explicit pick
+    /// wins; otherwise default to the first disc with missing
+    /// tracks (most likely where the user wants to look), else
+    /// fall back to the lowest disc number.
+    private func effectiveDiscNumber(in discs: [Int]) -> Int? {
+        if let picked = selectedDiscNumber, discs.contains(picked) {
+            return picked
+        }
+        if let firstMissing = discs.first(where: { d in
+            lidarrTracks.contains { ($0.mediumNumber ?? 1) == d && $0.hasFile != true }
+        }) {
+            return firstMissing
+        }
+        return discs.min()
     }
 
     private var lidarrYear: String? {
@@ -368,8 +977,40 @@ public struct DetailView: View {
             fallbackSymbol: fallbackSymbol,
             posterAspect: posterAspect,
             blurred: configStore.shouldBlurPoster(for: item.source),
-            trailing: existingTrailer
+            trailing: existingTrailer,
+            titleBadge: hasActiveDownloads ? AnyView(titleBadges) : nil,
+            onPosterTap: { url in
+                withAnimation(.smooth(duration: 0.22)) {
+                    enlargedPoster = url ?? item.posterURL
+                }
+            }
         )
+    }
+
+    /// Full-popover poster preview — delegates to the shared
+    /// `PosterLightbox` so DetailView and SearchAddPanel render the
+    /// same chrome (frosted scrim + Apple xmark + tap-anywhere
+    /// dismiss).
+    @ViewBuilder
+    private func posterLightbox(url: URL) -> some View {
+        PosterLightbox(
+            url: url,
+            apiKey: item.posterRequiresAuth ? arrAPIKey(for: item, in: configStore) : nil,
+            aspectRatio: item.source == .lidarr ? 1.0 : 2.0 / 3.0,
+            onDismiss: { dismissPoster() }
+        )
+    }
+
+    private func dismissPoster() {
+        withAnimation(.smooth(duration: 0.22)) {
+            enlargedPoster = nil
+        }
+    }
+
+    /// Title-adjacent badge cluster. See `MediaBadgeCluster`.
+    @ViewBuilder
+    private var titleBadges: some View {
+        MediaBadgeCluster(isUpgrade: item.isUpgrade, size: .medium)
     }
 
     // MARK: - Loading
@@ -386,7 +1027,16 @@ public struct DetailView: View {
             switch item.source {
             case .radarr:
                 let client = RadarrClient(config: configStore.radarr)
-                radarrDetail = try await client.fetchMovieDetails(id: entityId)
+                async let detail = client.fetchMovieDetails(id: entityId)
+                // Movie-file is fetched separately because /movie/{id}
+                // doesn't include customFormats on the inline movieFile
+                // payload — only /moviefile?movieId={id} does. Run it
+                // in parallel with the main detail call; if it fails
+                // (older Radarr, network blip), the inline movieFile
+                // from the detail still backs the banner.
+                async let file = (try? client.fetchMovieFile(movieId: entityId)) ?? nil
+                radarrDetail = try await detail
+                radarrMovieFile = await file
             case .sonarr:
                 let client = SonarrClient(config: configStore.sonarr)
                 async let d = client.fetchSeriesDetails(id: entityId)

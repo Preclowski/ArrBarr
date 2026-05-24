@@ -34,41 +34,96 @@ public struct SearchAddPanel: View {
 
     // Whisparr state
     @State private var whisparrMonitor: RadarrMonitorMode = .movieOnly
+    /// Poster lightbox — set to a URL when the user taps the hero
+    /// poster, cleared by the xmark / scrim tap. Renders the shared
+    /// `PosterLightbox` as a ZStack overlay so the focused view
+    /// covers the entire popover (form + scroll).
+    @State private var enlargedPoster: URL?
 
     public var body: some View {
+        ZStack {
+            mainContent
+                // Hide the form + scroll while the lightbox is up so
+                // the frosted scrim doesn't blur a visible layout
+                // underneath. Same pattern DetailView uses.
+                .opacity(enlargedPoster != nil ? 0 : 1)
+                .allowsHitTesting(enlargedPoster == nil)
+
+            if let url = enlargedPoster {
+                PosterLightbox(
+                    url: url,
+                    apiKey: nil,
+                    aspectRatio: result.source == .lidarr ? 1.0 : 2.0 / 3.0,
+                    onDismiss: {
+                        withAnimation(.smooth(duration: 0.22)) { enlargedPoster = nil }
+                    }
+                )
+                .transition(.opacity)
+                .zIndex(10)
+            }
+        }
+    }
+
+    private var mainContent: some View {
         VStack(spacing: 0) {
             header
 
+            // Scrollable content — hero card + overview only. The
+            // parameter form + Add CTA used to live in here at the
+            // bottom of the scroll; the user reported having to scroll
+            // past a tall overview just to find the action. Pinned
+            // them to a sticky footer below so the CTA is always one
+            // tap away.
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
                     hero
                         .padding(.horizontal, 14)
                         .padding(.top, 12)
-                    if viewModel.isLoadingOptions {
-                        ProgressView().controlSize(.small).frame(maxWidth: .infinity).padding(.vertical, 16)
-                    } else {
-                        if result.source == .radarr {
-                            radarrForm
-                        } else if result.source == .sonarr {
-                            sonarrForm
-                        } else if result.source == .whisparr {
-                            whisparrForm
-                        } else {
-                            lidarrForm
-                        }
-                    }
-                    if let err = viewModel.addError {
-                        Text(err)
-                            .font(.caption)
-                            .foregroundStyle(.red)
-                            .padding(.horizontal, 14)
-                    }
-                    addButton
                 }
                 .padding(.bottom, 12)
             }
             .scrollBounceBehavior(.basedOnSize)
             .frame(maxHeight: .infinity)
+
+            // Sticky footer — parameter form + glass CTA pinned to
+            // the bottom of the popover. Thin material backdrop +
+            // divider so the footer reads as a distinct surface
+            // floating above the scroll content.
+            VStack(spacing: 6) {
+                if viewModel.isLoadingOptions {
+                    ProgressView()
+                        .controlSize(.small)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                } else {
+                    if result.source == .radarr {
+                        radarrForm
+                    } else if result.source == .sonarr {
+                        sonarrForm
+                    } else if result.source == .whisparr {
+                        whisparrForm
+                    } else {
+                        lidarrForm
+                    }
+                }
+                if let err = viewModel.addError {
+                    Text(err)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                        .padding(.horizontal, 14)
+                }
+                addButton
+                    .padding(.bottom, 10)
+            }
+            .padding(.top, 8)
+            .background(
+                Rectangle()
+                    .fill(.thinMaterial)
+                    .overlay(alignment: .top) {
+                        Divider().opacity(0.4)
+                    }
+                    .ignoresSafeArea(edges: .bottom)
+            )
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .task {
@@ -99,8 +154,15 @@ public struct SearchAddPanel: View {
     // MARK: - Header chrome (matches DetailView)
 
     private var header: some View {
+        // Variant A — back + page title leading, source tag trailing.
+        // Same shape as HistoryView and DetailView so all three back-
+        // navigable screens read consistently.
         HStack(spacing: 6) {
             FloatingBackButton(action: onBack)
+
+            Text("Add", bundle: .module)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(.primary)
 
             Spacer()
 
@@ -131,7 +193,12 @@ public struct SearchAddPanel: View {
                 ratings: ratingChips,
                 posterURL: result.posterURL,
                 fallbackSymbol: result.source == .sonarr ? "tv" : (result.source == .lidarr ? "music.note" : (result.source == .whisparr ? "flame" : "film")),
-                posterAspect: 2.0/3.0
+                posterAspect: 2.0/3.0,
+                onPosterTap: { url in
+                    withAnimation(.smooth(duration: 0.22)) {
+                        enlargedPoster = url ?? result.posterURL
+                    }
+                }
             )
             if let ov = result.overview, !ov.isEmpty {
                 ExpandableOverview(text: ov)

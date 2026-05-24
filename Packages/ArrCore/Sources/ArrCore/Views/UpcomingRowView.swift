@@ -3,6 +3,9 @@ import SwiftUI
 public struct UpcomingRowView: View {
     let item: UpcomingItem
     @EnvironmentObject var configStore: ConfigStore
+    @State private var isHovering = false
+    @State private var showTooltip = false
+    @State private var hoverTask: Task<Void, Never>?
 
     public var body: some View {
         PosterMetadataRow(
@@ -16,17 +19,34 @@ public struct UpcomingRowView: View {
             disabled: item.entityId == nil,
             onTap: openDetail
         ) {
-            // hasFile is the only "indicator" left after metadata folded
-            // everything else into the dot-joined line. Keep it as a tiny
-            // trailing affordance so a row that's already on disk reads at
-            // a glance — mirrors how `+` keeps its plus icon trailing.
             if item.hasFile {
                 Image(systemName: "checkmark.circle.fill")
                     .font(.system(size: 10))
                     .foregroundStyle(.green)
             }
         }
-        .help(tooltipText)
+        #if os(macOS)
+        // Long-hover rich tooltip — same 600 ms gate + .leading
+        // anchor as the queue rows', so the muscle memory carries
+        // across surfaces.
+        .onHover { hovering in
+            isHovering = hovering
+            hoverTask?.cancel()
+            if hovering {
+                hoverTask = Task { @MainActor [self] in
+                    try? await Task.sleep(nanoseconds: 600_000_000)
+                    if !Task.isCancelled && self.isHovering { showTooltip = true }
+                }
+            } else {
+                showTooltip = false
+            }
+        }
+        .popover(isPresented: $showTooltip, arrowEdge: .trailing) {
+            UpcomingItemTooltip(item: item, apiKey: apiKeyForSource)
+                .environmentObject(configStore)
+                .popoverBehavior(.applicationDefined)
+        }
+        #endif
     }
 
     /// Dot-joined metadata mirroring `SearchResultRow`. Order: subtitle
@@ -67,14 +87,65 @@ public struct UpcomingRowView: View {
         configStore.serviceConfig(for: item.source).apiKey
     }
 
-    private var tooltipText: String {
-        var lines = [item.title]
-        if let sub = item.subtitle { lines.append(sub) }
-        lines.append(item.airDateFormatted(locale: configStore.currentLocale))
-        if let overview = item.overview, !overview.isEmpty {
-            lines.append("")
-            lines.append(overview)
+}
+
+// MARK: - Rich tooltip
+//
+// Mirrors `QueueItemTooltip`'s chrome (poster + header + info grid +
+// overview) but pulls fields from `UpcomingItem` instead of a queue
+// row. Surfaces what's actually useful before the episode/movie airs:
+// air date/time, runtime, IMDb, release type, overview.
+
+public struct UpcomingItemTooltip: View {
+    let item: UpcomingItem
+    var apiKey: String? = nil
+    @EnvironmentObject var configStore: ConfigStore
+
+    public var body: some View {
+        MediaTooltipChrome(
+            title: item.title,
+            subtitle: item.subtitle,
+            posterURL: item.posterURL,
+            posterRequiresAuth: item.posterRequiresAuth,
+            apiKey: apiKey,
+            posterSize: posterSize,
+            blurred: configStore.shouldBlurPoster(for: item.source),
+            fallbackSymbol: item.source.symbol,
+            overview: item.overview
+        ) {
+            Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 10, verticalSpacing: 3) {
+                row("Airs", value: item.airDateFormatted(locale: configStore.currentLocale))
+                if let t = item.releaseType, !t.isEmpty {
+                    row("Type", value: t)
+                }
+                if let r = item.runtime, r > 0 {
+                    row("Runtime", value: "\(r) min")
+                }
+                if let v = item.imdb {
+                    row("IMDb", value: String(format: "%.1f", v))
+                }
+            }
         }
-        return lines.joined(separator: "\n")
+    }
+
+    private var posterSize: CGSize {
+        switch item.source {
+        case .radarr, .sonarr, .whisparr: return CGSize(width: 90, height: 135)
+        case .lidarr: return CGSize(width: 90, height: 90)
+        }
+    }
+
+    @ViewBuilder
+    private func row(_ label: String, value: String) -> some View {
+        GridRow(alignment: .firstTextBaseline) {
+            Text(LocalizedStringKey(label), bundle: .module)
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+                .gridColumnAlignment(.leading)
+            Text(value)
+                .font(.system(size: 11))
+                .foregroundStyle(.primary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
     }
 }

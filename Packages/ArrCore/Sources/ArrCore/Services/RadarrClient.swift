@@ -179,12 +179,59 @@ public actor RadarrClient: ArrAPIClient {
         catch { throw HTTPError.decoding(error) }
     }
 
+    /// Fetches the movie-file record for a movie. `/movie/{id}` returns
+    /// movieFile inline but Radarr strips `customFormats` from that
+    /// payload; the canonical place for the file's CF list is
+    /// `/moviefile?movieId={id}`. Used by DetailView to enrich the
+    /// "existing file" banner with chips.
+    ///
+    /// Note on the URL: the `movieId` value is passed via `query:` so
+    /// `HTTPClient.url` formats `?movieId=…` correctly. An earlier
+    /// draft baked the query string into `path:`, which got
+    /// percent-encoded — Radarr saw `%3FmovieId=…`, returned 404, and
+    /// the caller silently fell back to the stripped inline file. The
+    /// surface symptom was "no CF chips in movie detail" (the
+    /// architect catch).
+    func fetchMovieFile(movieId: Int) async throws -> ArrFile? {
+        if DemoMode.isActive { return nil }
+        guard config.isConfigured else { throw HTTPError.notConfigured }
+        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
+        let url = try http.url(
+            base: config.baseURL,
+            path: "\(apiBase)/moviefile",
+            query: [URLQueryItem(name: "movieId", value: String(movieId))]
+        )
+        let data = try await http.get(url, headers: apiHeaders)
+        let files = (try? JSONDecoder().decode([ArrFile].self, from: data)) ?? []
+        return files.first
+    }
+
     func fetchHealth() async throws -> [ArrHealthRecord] {
         guard config.isConfigured else { throw HTTPError.notConfigured }
         guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
         let url = try http.url(base: config.baseURL, path: "\(apiBase)/health")
         let data = try await http.get(url, headers: apiHeaders)
         return (try? JSONDecoder().decode([ArrHealthRecord].self, from: data)) ?? []
+    }
+
+    /// Force a manual indexer search for a specific movie. Mirrors the
+    /// Sonarr per-episode search pattern — same `/command` endpoint,
+    /// different name. Useful for "this movie didn't grab, try again"
+    /// or upgrade-quality kicks.
+    func searchMovie(movieId: Int) async throws {
+        if DemoMode.isActive {
+            try? await Task.sleep(nanoseconds: 600_000_000)
+            return
+        }
+        guard config.isConfigured else { throw HTTPError.notConfigured }
+        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
+        let body: [String: Any] = [
+            "name": "MoviesSearch",
+            "movieIds": [movieId],
+        ]
+        let url = try http.url(base: config.baseURL, path: "\(apiBase)/command")
+        let data = try JSONSerialization.data(withJSONObject: body)
+        _ = try await http.post(url, headers: apiHeaders.merging(["Content-Type": "application/json"]) { $1 }, body: data)
     }
 
     func fetchAllMovies() async throws -> [RadarrLibraryRecord] {
@@ -266,7 +313,8 @@ public actor RadarrClient: ArrAPIClient {
             contentSlug: r.movie?.titleSlug,
             entityId: r.movieId ?? r.movie?.id,
             posterURL: poster,
-            posterRequiresAuth: posterAuth
+            posterRequiresAuth: posterAuth,
+            statusMessages: r.statusMessages.flattenToLines()
         )
     }
 }

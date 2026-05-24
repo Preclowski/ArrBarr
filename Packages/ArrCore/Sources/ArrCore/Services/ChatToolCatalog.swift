@@ -80,7 +80,7 @@ public enum ChatToolCatalog {
         ),
         MCPTool(
             name: "sonarr_get_series",
-            description: "List TV series currently in the Sonarr library by TITLE. Use ONLY when the user names a specific show title. DO NOT use this to find shows by actor, director, genre, or year — the library record has no cast / crew / genre metadata. For those queries use tmdb_search_person + tmdb_person_tv_credits (or tmdb_discover_series). For 'is Sonarr healthy / what's the state of my arrs' use `arr_health` instead — listing the library tells you nothing about service health.",
+            description: "List TV series in the Sonarr library by TITLE — also returns each series' `seriesId` plus per-season monitor state and have/total episode counts (`S1 ✓ 10/10, S2 ✗ 0/10`). USE this to answer 'do I have season N monitored?', 'which seasons of X am I tracking?', 'find seriesId for X'. The seriesId returned here is what `sonarr_monitor_season` and `sonarr_search_episodes` expect. With `seasonNumber` argument the output zooms in on one season so you don't pay for the whole list. DO NOT use this for person / genre queries — that's tmdb_*. DO NOT use this for service health — that's `arr_health`.",
             inputSchema: .object([
                 "type": .string("object"),
                 "properties": .object([
@@ -88,7 +88,48 @@ public enum ChatToolCatalog {
                         "type": .string("string"),
                         "description": .string("Optional title substring (case-insensitive). Omit to list all series — produces a large dump, prefer a query."),
                     ]),
+                    "seasonNumber": .object([
+                        "type": .string("integer"),
+                        "description": .string("Optional. When set, the per-season strip is filtered to just this season (e.g. 3 → 'S3 ✓ 5/10'). Lets you answer 'is S3 of X monitored?' in one call."),
+                    ]),
                 ]),
+            ])
+        ),
+        MCPTool(
+            name: "sonarr_monitor_season",
+            description: "Flip monitoring on a single season. When state=true, ALSO fires a SeasonSearch automatically — there is no opt-out, because chat requests like 'pobierz mi 3 sezon' / 'monitor S3' always mean 'and grab it'. When state=false, no search runs. The result text REPORTS THE ACTUAL OUTCOME ('OK', 'PARTIAL', or 'FAILED'); relay that to the user faithfully — do not claim success if the result says PARTIAL or FAILED.",
+            inputSchema: .object([
+                "type": .string("object"),
+                "properties": .object([
+                    "seriesId": .object([
+                        "type": .string("integer"),
+                        "description": .string("Sonarr series id. Get via sonarr_get_series."),
+                    ]),
+                    "seasonNumber": .object([
+                        "type": .string("integer"),
+                        "description": .string("Season number (1-based, ignore season 0 specials)."),
+                    ]),
+                    "state": .object([
+                        "type": .string("boolean"),
+                        "description": .string("true = monitor + search, false = unmonitor (no search). Defaults to true."),
+                    ]),
+                ]),
+                "required": .array([.string("seriesId"), .string("seasonNumber")]),
+            ])
+        ),
+        MCPTool(
+            name: "sonarr_search_episodes",
+            description: "Manual indexer search for one or more specific episodes by id. USE for 'search S3E5 of X', 'try again to grab this episode', 'retry the missing finale'. For whole-season grabs use sonarr_monitor_season with alsoSearch=true. The user sees results in the queue when indexers report back.",
+            inputSchema: .object([
+                "type": .string("object"),
+                "properties": .object([
+                    "episodeIds": .object([
+                        "type": .string("array"),
+                        "description": .string("Array of Sonarr episode ids. The chat doesn't always have these — usually used after a missing-episodes flow or after the user pasted them. For 'season X' use sonarr_monitor_season(state:true, alsoSearch:true)."),
+                        "items": .object(["type": .string("integer")]),
+                    ]),
+                ]),
+                "required": .array([.string("episodeIds")]),
             ])
         ),
     ]
@@ -128,6 +169,20 @@ public enum ChatToolCatalog {
                 ]),
             ])
         ),
+        MCPTool(
+            name: "radarr_search_movie",
+            description: "Force an indexer search for one movie. USE for 'this didn't download, try again', 'spróbuj ściągnąć ponownie', 'try to grab a better quality of X'. Monitoring isn't changed — if you also need to flip monitor on, just add the movie via the UI card flow first. Returns confirmation text; results land in the queue when indexers respond.",
+            inputSchema: .object([
+                "type": .string("object"),
+                "properties": .object([
+                    "movieId": .object([
+                        "type": .string("integer"),
+                        "description": .string("Radarr movie id. Get via radarr_get_movies or tmdb_person_movie_credits (the cross-reference there fills it in for owned movies)."),
+                    ]),
+                ]),
+                "required": .array([.string("movieId")]),
+            ])
+        ),
     ]
 
     // MARK: - Lidarr
@@ -164,6 +219,56 @@ public enum ChatToolCatalog {
             name: "lidarr_get_calendar",
             description: "Get upcoming album releases from Lidarr (next ~30 days, items already monitored).",
             inputSchema: .object(["type": .string("object"), "properties": .object([:])])
+        ),
+        MCPTool(
+            name: "lidarr_get_artist_albums",
+            description: "List albums for one artist (resolved via lidarr_get_artists). Each entry carries `albumId`, title, type (Album / Single / EP / Live / Compilation / Soundtrack / Other), year, monitor state, and track-file progress. USE for 'which albums of X am I tracking?', 'what's new from X?', 'find albumId for Y'. Output is capped at 40 entries — pass `albumType` (e.g. 'Album') to narrow to studio LPs when an artist has dozens of live/compilation entries cluttering things.",
+            inputSchema: .object([
+                "type": .string("object"),
+                "properties": .object([
+                    "artistId": .object([
+                        "type": .string("integer"),
+                        "description": .string("Lidarr artist id. Resolve via lidarr_get_artists."),
+                    ]),
+                    "albumType": .object([
+                        "type": .string("string"),
+                        "description": .string("Optional filter: 'Album' (studio LPs), 'Single', 'EP', 'Live', 'Compilation', 'Soundtrack', 'Other'. Case-insensitive."),
+                    ]),
+                ]),
+                "required": .array([.string("artistId")]),
+            ])
+        ),
+        MCPTool(
+            name: "lidarr_monitor_album",
+            description: "Flip monitoring on a single album. When state=true, ALSO fires an AlbumSearch automatically — no opt-out (same reasoning as sonarr_monitor_season). When state=false, no search. The result text REPORTS THE ACTUAL OUTCOME ('OK', 'PARTIAL', or 'FAILED'); relay it faithfully.",
+            inputSchema: .object([
+                "type": .string("object"),
+                "properties": .object([
+                    "albumId": .object([
+                        "type": .string("integer"),
+                        "description": .string("Lidarr album id from lidarr_get_artist_albums."),
+                    ]),
+                    "state": .object([
+                        "type": .string("boolean"),
+                        "description": .string("true = monitor + search, false = unmonitor (no search). Defaults to true."),
+                    ]),
+                ]),
+                "required": .array([.string("albumId")]),
+            ])
+        ),
+        MCPTool(
+            name: "lidarr_search_album",
+            description: "Force an AlbumSearch for one album without changing monitoring. USE for 'try again to grab X', 'spróbuj jeszcze raz pobrać Y'. For the 'monitor + grab' combo use lidarr_monitor_album(state:true, alsoSearch:true) instead.",
+            inputSchema: .object([
+                "type": .string("object"),
+                "properties": .object([
+                    "albumId": .object([
+                        "type": .string("integer"),
+                        "description": .string("Lidarr album id."),
+                    ]),
+                ]),
+                "required": .array([.string("albumId")]),
+            ])
         ),
     ]
 

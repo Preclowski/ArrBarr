@@ -85,7 +85,12 @@ public final class ConfigStore: ObservableObject {
     public static let needsYouOrderKey = "needsyou"
     public static let tonightOrderKey = "tonight"
     public static let defaultArrOrder = ["tonight", "needsyou", "radarr", "sonarr", "lidarr", "whisparr"]
-    public static let tonightHoursOptions = [12, 24, 72]
+    /// Banner window — hard-locked to 7 days. Used to be configurable
+    /// via Settings (12h / 24h / 72h), but the picker was friction for
+    /// no real payoff: most users want "what's coming this week" and
+    /// the rest were rounding to 72h anyway. Kept as `@Published Int`
+    /// for source-compat with subscribers; nothing writes to it now.
+    public static let tonightHoursOptions = [168]
 
     public static let appLanguageOptions: [(code: String, label: String)] = [
         ("system", "System"),
@@ -167,8 +172,10 @@ public final class ConfigStore: ObservableObject {
         self.showNeedsYou = defaults.object(forKey: Self.showNeedsYouKey) != nil ? defaults.bool(forKey: Self.showNeedsYouKey) : true
         self.showIndexerIssues = defaults.object(forKey: Self.showIndexerIssuesKey) != nil ? defaults.bool(forKey: Self.showIndexerIssuesKey) : true
         self.collapsedArrs = Set(defaults.stringArray(forKey: Self.collapsedArrsKey) ?? [])
-        let storedTonight = defaults.object(forKey: Self.tonightHoursKey) as? Int ?? 12
-        self.tonightHours = Self.tonightHoursOptions.contains(storedTonight) ? storedTonight : 12
+        // Hard-coded to 7 days (168h). Old stored values from when the
+        // picker was UI-exposed are ignored — users get the new
+        // default regardless.
+        self.tonightHours = 168
         self.welcomeSeenVersion = defaults.string(forKey: Self.welcomeSeenVersionKey)
         self.aiEnabled = defaults.object(forKey: Self.aiEnabledKey) != nil
             ? defaults.bool(forKey: Self.aiEnabledKey) : false

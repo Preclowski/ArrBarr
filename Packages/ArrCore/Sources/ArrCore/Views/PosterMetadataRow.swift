@@ -25,6 +25,11 @@ public struct PosterMetadataRow<TrailingAccessory: View>: View {
     /// don't).
     let title: String
     let metadataSegments: [String]
+    /// Optional pill / badge rendered inline next to the title — used
+    /// by Search rows to surface an "In library" tag without burning a
+    /// metadata segment (a coloured chip reads at a glance; an extra
+    /// "· In library" string does not). `nil` keeps the title alone.
+    let titleBadge: AnyView?
     /// Right-hand accessory. Pass `EmptyView()` if you don't want one.
     let trailing: () -> TrailingAccessory
     let onTap: () -> Void
@@ -44,6 +49,7 @@ public struct PosterMetadataRow<TrailingAccessory: View>: View {
         posterFallbackSymbol: String = "",
         title: String,
         metadataSegments: [String],
+        titleBadge: AnyView? = nil,
         disabled: Bool = false,
         onTap: @escaping () -> Void,
         @ViewBuilder trailing: @escaping () -> TrailingAccessory
@@ -56,6 +62,7 @@ public struct PosterMetadataRow<TrailingAccessory: View>: View {
         self.posterFallbackSymbol = posterFallbackSymbol
         self.title = title
         self.metadataSegments = metadataSegments
+        self.titleBadge = titleBadge
         self.disabled = disabled
         self.onTap = onTap
         self.trailing = trailing
@@ -75,9 +82,14 @@ public struct PosterMetadataRow<TrailingAccessory: View>: View {
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
-                        .font(.system(size: 12, weight: .medium))
-                        .lineLimit(1)
+                    HStack(spacing: 5) {
+                        Text(title)
+                            .font(.system(size: 12, weight: .medium))
+                            .lineLimit(1)
+                        if let titleBadge {
+                            titleBadge
+                        }
+                    }
                     if !metadataSegments.isEmpty {
                         metadataLine
                             .font(.system(size: 10))
