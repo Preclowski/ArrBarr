@@ -23,9 +23,22 @@ public struct ChatView: View {
         ZStack(alignment: .bottom) {
             messages
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-            inputBar
-                .padding(.horizontal, 10)
-                .padding(.bottom, 10)
+            // Confirm card sits above the input bar when a destructive
+            // tool is gated. Disables the input while pending (the
+            // view-model also refuses new sends) so the user resolves
+            // the gate before typing anything else.
+            VStack(spacing: 8) {
+                if let pending = viewModel.pendingConfirm {
+                    ConfirmActionCard(
+                        call: pending,
+                        onConfirm: { viewModel.confirmPending() },
+                        onCancel: { viewModel.cancelPending() }
+                    )
+                }
+                inputBar
+            }
+            .padding(.horizontal, 10)
+            .padding(.bottom, 10)
         }
     }
 
@@ -100,6 +113,21 @@ public struct ChatView: View {
     /// - calendar (whats-on-this-week)
     /// - discover-style filters (tmdb_discover_*)
     /// — so a fresh user sees the breadth, not just "find a movie".
+    /// Locale-aware list of currently-visible *arr services. Empty
+    /// state falls back to the canonical trio so the hint never reads
+    /// as a placeholder.
+    private var configuredArrsLabel: String {
+        var names: [String] = []
+        if configStore.sonarr.isVisible { names.append("Sonarr") }
+        if configStore.radarr.isVisible { names.append("Radarr") }
+        if configStore.lidarr.isVisible { names.append("Lidarr") }
+        if configStore.whisparr.isVisible { names.append("Whisparr") }
+        if names.isEmpty { names = ["Sonarr", "Radarr", "Lidarr"] }
+        let formatter = ListFormatter()
+        formatter.locale = configStore.currentLocale
+        return formatter.string(from: names) ?? names.joined(separator: ", ")
+    }
+
     private static let suggestions: [String] = [
         "Suggest a series like Mr. Robot",
         "Films in the style of Wes Anderson",
@@ -113,11 +141,18 @@ public struct ChatView: View {
         VStack(spacing: 14) {
             Spacer(minLength: 0)
             Image(systemName: "sparkles")
-                .font(.system(size: 36, weight: .light))
+                .font(.system(size: 28, weight: .light))
+                .foregroundStyle(.tertiary)
+                .padding(.bottom, 2)
+            // Dynamic hint: lists only the *arrs the user actually has
+            // configured. Was a hardcoded "Sonarr, Radarr or Lidarr"
+            // which was both untranslated and lying — if the user only
+            // has Radarr configured, suggesting Sonarr was noise.
+            // ListFormatter handles locale-aware joining (PL "Sonarra,
+            // Radarra i Lidarra", EN "Sonarr, Radarr, and Lidarr").
+            Text(String(format: String(localized: "Ask about %@", bundle: .module), configuredArrsLabel))
+                .font(.system(size: 12, weight: .regular))
                 .foregroundStyle(.secondary)
-            Text("Ask about Sonarr, Radarr or Lidarr", bundle: .module)
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(.primary)
                 .multilineTextAlignment(.center)
             VStack(spacing: 6) {
                 ForEach(Self.suggestions, id: \.self) { suggestion in
@@ -355,14 +390,21 @@ private struct MessageBubble: View {
     /// Parse inline markdown (bold, italic, code, links). Block-level markdown
     /// like headings or lists falls back to inline rendering — the model
     /// usually emits paragraph + inline emphasis which renders cleanly.
+    ///
+    /// We trim trailing whitespace before parsing: `.inlineOnlyPreservingWhitespace`
+    /// keeps any newlines or spaces the model tacked on at the end, and
+    /// those render as a visible half-line of empty space inside the
+    /// bubble. The trim is leaf-only so legitimate intra-message
+    /// whitespace (mid-paragraph line breaks) stays put.
     static func attributed(_ raw: String) -> AttributedString {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         let opts = AttributedString.MarkdownParsingOptions(
             interpretedSyntax: .inlineOnlyPreservingWhitespace
         )
-        if let attr = try? AttributedString(markdown: raw, options: opts) {
+        if let attr = try? AttributedString(markdown: trimmed, options: opts) {
             return attr
         }
-        return AttributedString(raw)
+        return AttributedString(trimmed)
     }
 }
 

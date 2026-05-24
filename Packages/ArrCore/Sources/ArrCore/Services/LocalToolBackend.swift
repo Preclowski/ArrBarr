@@ -68,6 +68,12 @@ public actor LocalToolBackend: ToolBackend {
         case "tmdb_discover_series":        return try await tmdbDiscoverSeries(arguments)
         case "suggest_titles":              return try await suggestTitles(arguments)
         case "arr_health":                  return try await arrHealth()
+        case "sonarr_monitor_season":       return try await sonarrMonitorSeason(arguments)
+        case "sonarr_search_episodes":      return try await sonarrSearchEpisodesTool(arguments)
+        case "radarr_search_movie":         return try await radarrSearchMovieTool(arguments)
+        case "lidarr_get_artist_albums":    return try await lidarrGetArtistAlbums(arguments)
+        case "lidarr_monitor_album":        return try await lidarrMonitorAlbum(arguments)
+        case "lidarr_search_album":         return try await lidarrSearchAlbumTool(arguments)
         default:
             throw LocalToolError.unknownTool(name)
         }
@@ -346,6 +352,187 @@ public actor LocalToolBackend: ToolBackend {
         return ToolCallOutput(text: lines.joined(separator: "\n"))
     }
 
+    // MARK: - Lifecycle control tools (monitor + search)
+
+    /// Flip season monitoring. When enabling, ALWAYS fire a SeasonSearch
+    /// right after — chat callers say things like "pobierz mi 3 sezon"
+    /// or "monitor S3 of X" and they expect the download to start.
+    /// We don't expose an opt-out for the search part: the previous
+    /// `alsoSearch` arg let the model default it to false and tell the
+    /// user "search queued" anyway. Now there's no override, and the
+    /// result text reports the actual outcome of each step so the model
+    /// can't fabricate success.
+    private func sonarrMonitorSeason(_ args: JSONValue) async throws -> ToolCallOutput {
+        let seriesId = Self.intArg(args, key: "seriesId")
+        guard let seasonNumber = Self.optionalIntArg(args, key: "seasonNumber") else {
+            return ToolCallOutput(text: "Need seasonNumber (integer).")
+        }
+        let state = Self.optionalBoolArg(args, key: "state") ?? true
+        guard seriesId > 0 else {
+            return ToolCallOutput(text: "Need a valid seriesId — run sonarr_get_series to resolve it.")
+        }
+        guard sonarr.isConfigured else {
+            return ToolCallOutput(text: "Sonarr is not configured.")
+        }
+        let client = SonarrClient(config: sonarr)
+        do {
+            try await client.setSeasonMonitored(seriesId: seriesId, seasonNumber: seasonNumber, monitored: state)
+        } catch {
+            return ToolCallOutput(text: "FAILED to update monitoring: \(error.localizedDescription)")
+        }
+        guard state else {
+            return ToolCallOutput(text: "OK: stopped monitoring season \(seasonNumber) of seriesId=\(seriesId). No search triggered.")
+        }
+        // Monitor flipped on → kick the search. Report the outcome
+        // explicitly so the model can't paper over a failure.
+        do {
+            try await client.searchSeason(seriesId: seriesId, seasonNumber: seasonNumber)
+            return ToolCallOutput(text: "OK: season \(seasonNumber) of seriesId=\(seriesId) is now monitored, and SeasonSearch command was POST'd to Sonarr. Indexer results will land in the queue when releases match — typically within ~30 seconds, longer if indexers are slow.")
+        } catch {
+            return ToolCallOutput(text: "PARTIAL: monitoring on, but Sonarr rejected the search command (\(error.localizedDescription)). Tell the user the season is monitored but they should retry shortly or use the season's search button in DetailView. DO NOT call sonarr_search_episodes as a workaround — it grabs per-episode releases instead of a season pack.")
+        }
+    }
+
+    /// Manual indexer search for one or more episodes by id. Mirrors
+    /// the UI's per-episode magnifying-glass action.
+    private func sonarrSearchEpisodesTool(_ args: JSONValue) async throws -> ToolCallOutput {
+        let ids = Self.intArrayArg(args, key: "episodeIds")
+        guard !ids.isEmpty else {
+            return ToolCallOutput(text: "Need episodeIds (non-empty integer array).")
+        }
+        guard sonarr.isConfigured else {
+            return ToolCallOutput(text: "Sonarr is not configured.")
+        }
+        do {
+            try await SonarrClient(config: sonarr).searchEpisodes(episodeIds: ids)
+            return ToolCallOutput(text: "Queued search for \(ids.count) episode\(ids.count == 1 ? "" : "s").")
+        } catch {
+            return ToolCallOutput(text: "Couldn't queue search: \(error.localizedDescription)")
+        }
+    }
+
+    /// Force a Radarr indexer search for one movie. Useful for retry /
+    /// upgrade prompts ("this stuck, try again", "try to grab a better
+    /// quality"). Radarr's monitored flag isn't changed.
+    private func radarrSearchMovieTool(_ args: JSONValue) async throws -> ToolCallOutput {
+        let movieId = Self.intArg(args, key: "movieId")
+        guard movieId > 0 else {
+            return ToolCallOutput(text: "Need a valid movieId — run radarr_get_movies to resolve it.")
+        }
+        guard radarr.isConfigured else {
+            return ToolCallOutput(text: "Radarr is not configured.")
+        }
+        do {
+            try await RadarrClient(config: radarr).searchMovie(movieId: movieId)
+            return ToolCallOutput(text: "Search queued. Indexers will report back into the regular queue.")
+        } catch {
+            return ToolCallOutput(text: "Couldn't queue search: \(error.localizedDescription)")
+        }
+    }
+
+    /// List albums by artistId, optionally filtered by `albumType`
+    /// (Album / Single / EP / Live / Compilation / Soundtrack / Other).
+    /// Compact text per album: `id, title, type, year, monitored,
+    /// have/total tracks`. Capped to 40 to keep output bounded for
+    /// prolific artists; trailing note tells the model how many were
+    /// dropped.
+    private func lidarrGetArtistAlbums(_ args: JSONValue) async throws -> ToolCallOutput {
+        let artistId = Self.intArg(args, key: "artistId")
+        guard artistId > 0 else {
+            return ToolCallOutput(text: "Need a valid artistId — run lidarr_get_artists to resolve it.")
+        }
+        guard lidarr.isConfigured else {
+            return ToolCallOutput(text: "Lidarr is not configured.")
+        }
+        let typeFilter = Self.stringArg(args, key: "albumType").lowercased()
+        let albums: [LidarrAlbumListRecord]
+        do {
+            albums = try await LidarrClient(config: lidarr).fetchArtistAlbums(artistId: artistId)
+        } catch {
+            return ToolCallOutput(text: "Lidarr fetch failed: \(error.localizedDescription)")
+        }
+        let filtered = albums.filter { rec in
+            guard !typeFilter.isEmpty else { return true }
+            return (rec.albumType ?? "").lowercased() == typeFilter
+        }
+        guard !filtered.isEmpty else {
+            return ToolCallOutput(text: typeFilter.isEmpty
+                ? "No albums found for artistId=\(artistId)."
+                : "No \(typeFilter) albums found for artistId=\(artistId).")
+        }
+        let cap = 40
+        let shown = filtered.prefix(cap)
+        let lines = shown.map { rec -> String in
+            let year = Self.yearFromReleaseDate(rec.releaseDate)
+            let typePart = rec.albumType.map { " · \($0)" } ?? ""
+            let yearPart = year.map { " (\($0))" } ?? ""
+            let mon = (rec.monitored ?? false) ? "✓" : "✗"
+            let have = rec.statistics?.trackFileCount ?? 0
+            let total = rec.statistics?.totalTrackCount ?? rec.statistics?.trackCount ?? 0
+            return "• albumId=\(rec.id) · \(rec.title)\(yearPart)\(typePart) · \(mon) \(have)/\(total) tracks"
+        }
+        var out = "Artist \(artistId) has \(filtered.count) album\(filtered.count == 1 ? "" : "s")"
+        if !typeFilter.isEmpty { out += " (type=\(typeFilter))" }
+        out += ":\n" + lines.joined(separator: "\n")
+        if filtered.count > cap {
+            out += "\n(\(filtered.count - cap) more not shown — narrow with albumType to see them all.)"
+        }
+        return ToolCallOutput(text: out)
+    }
+
+    /// Helper: extract YYYY from an ISO-ish release date.
+    private static func yearFromReleaseDate(_ raw: String?) -> Int? {
+        guard let raw, raw.count >= 4 else { return nil }
+        return Int(raw.prefix(4))
+    }
+
+    /// Mirror of `sonarrMonitorSeason`: when state=true we ALWAYS fire
+    /// the search. No opt-out arg — same reasoning, chat 'monitor album'
+    /// requests always mean 'monitor and grab'.
+    private func lidarrMonitorAlbum(_ args: JSONValue) async throws -> ToolCallOutput {
+        let albumId = Self.intArg(args, key: "albumId")
+        guard albumId > 0 else {
+            return ToolCallOutput(text: "Need a valid albumId — run lidarr_get_artist_albums to resolve it.")
+        }
+        guard lidarr.isConfigured else {
+            return ToolCallOutput(text: "Lidarr is not configured.")
+        }
+        let state = Self.optionalBoolArg(args, key: "state") ?? true
+        let client = LidarrClient(config: lidarr)
+        do {
+            try await client.setAlbumMonitored(albumId: albumId, monitored: state)
+        } catch {
+            return ToolCallOutput(text: "FAILED to update monitoring: \(error.localizedDescription)")
+        }
+        guard state else {
+            return ToolCallOutput(text: "OK: stopped monitoring albumId=\(albumId). No search triggered.")
+        }
+        do {
+            try await client.searchAlbum(albumId: albumId)
+            return ToolCallOutput(text: "OK: albumId=\(albumId) is now monitored, and AlbumSearch command was POST'd to Lidarr. Indexer results will land in the queue when releases match.")
+        } catch {
+            return ToolCallOutput(text: "PARTIAL: monitoring on, but search FAILED: \(error.localizedDescription). Tell the user the album is monitored but they need to manually search.")
+        }
+    }
+
+    /// Standalone search trigger — same as the search component of
+    /// `lidarr_monitor_album(state: true)` but no monitoring flip.
+    private func lidarrSearchAlbumTool(_ args: JSONValue) async throws -> ToolCallOutput {
+        let albumId = Self.intArg(args, key: "albumId")
+        guard albumId > 0 else {
+            return ToolCallOutput(text: "Need a valid albumId.")
+        }
+        guard lidarr.isConfigured else {
+            return ToolCallOutput(text: "Lidarr is not configured.")
+        }
+        do {
+            try await LidarrClient(config: lidarr).searchAlbum(albumId: albumId)
+            return ToolCallOutput(text: "Search queued for album \(albumId).")
+        } catch {
+            return ToolCallOutput(text: "Couldn't queue search: \(error.localizedDescription)")
+        }
+    }
+
     /// Pull `items: [{title, year?}]` out of the JSON-RPC arguments.
     /// Permissive — drops malformed entries silently so a model that
     /// fumbles one item doesn't kill the whole call.
@@ -437,8 +624,14 @@ public actor LocalToolBackend: ToolBackend {
         return nil
     }
 
+    /// `sonarr_get_series` lists library series, optionally filtered by
+    /// title query, and (optionally) zooms into a specific season's
+    /// monitor + missing state. Adding the `seasonNumber` filter lets
+    /// the LLM answer "do I have S3 of X monitored?" in one round-trip
+    /// without paying for the per-series detail tool.
     private func listSeries(_ args: JSONValue) async throws -> ToolCallOutput {
-        try await runLibraryList(
+        let seasonFilter = Self.optionalIntArg(args, key: "seasonNumber")
+        return try await runLibraryList(
             args: args, source: .sonarr, config: sonarr,
             itemNounSingular: "series", itemNounPlural: "series",
             fetch: { try await SonarrClient(config: self.sonarr).fetchAllSeries() },
@@ -446,12 +639,44 @@ public actor LocalToolBackend: ToolBackend {
             line: { r in
                 let title = r.title ?? "(untitled)"
                 let yearPart = r.year.map { " (\($0))" } ?? ""
-                let idPart = r.tvdbId.map { " · tvdbId=\($0)" } ?? ""
+                let idParts: [String] = [
+                    r.id.map { "seriesId=\($0)" },
+                    r.tvdbId.map { "tvdbId=\($0)" },
+                ].compactMap { $0 }
+                let idPart = idParts.isEmpty ? "" : " · " + idParts.joined(separator: ", ")
                 let statusPart = r.status.map { " · \($0)" } ?? ""
-                return "• \(title)\(yearPart)\(idPart)\(statusPart)"
+                let seasonsPart = Self.seasonsSummary(for: r, filter: seasonFilter)
+                return "• \(title)\(yearPart)\(idPart)\(statusPart)\(seasonsPart)"
             },
             rich: { .librarySeries($0) }
         )
+    }
+
+    /// Render the per-season slice for `sonarr_get_series` output. With
+    /// no filter it shows a condensed strip ("S1 ✓ 10/10, S2 ✓ 8/10, S3
+    /// ✗ 0/0 upcoming") capped to keep tokens sane. With a filter it
+    /// drops to a single targeted line. Empty when the record has no
+    /// season data (shouldn't happen for live Sonarr, possible in demo).
+    private static func seasonsSummary(for rec: SonarrLibraryRecord, filter: Int?) -> String {
+        let seasons = rec.seasons?.filter { $0.seasonNumber > 0 } ?? []
+        guard !seasons.isEmpty else { return "" }
+        if let target = filter {
+            guard let s = seasons.first(where: { $0.seasonNumber == target }) else {
+                return " · S\(target): not found in record"
+            }
+            return " · " + Self.formatSeasonLine(s)
+        }
+        // Cap to first 12 to keep the output compact for long-running shows.
+        let shown = seasons.prefix(12).map(Self.formatSeasonLine).joined(separator: ", ")
+        let trailing = seasons.count > 12 ? ", …" : ""
+        return " · seasons: \(shown)\(trailing)"
+    }
+
+    private static func formatSeasonLine(_ s: SonarrLibrarySeason) -> String {
+        let mon = (s.monitored ?? false) ? "✓" : "✗"
+        let have = s.statistics?.episodeFileCount ?? 0
+        let total = s.statistics?.totalEpisodeCount ?? s.statistics?.episodeCount ?? 0
+        return "S\(s.seasonNumber) \(mon) \(have)/\(total)"
     }
 
     private func listMovies(_ args: JSONValue) async throws -> ToolCallOutput {
@@ -528,6 +753,40 @@ public actor LocalToolBackend: ToolBackend {
         case .number(let n): return Int(n)
         case .string(let s): return Int(s) ?? 0
         default: return 0
+        }
+    }
+
+    /// Like `intArg` but distinguishes "absent" from "zero". Used by
+    /// tools where 0 is a legitimate value (season number, etc.).
+    private static func optionalIntArg(_ value: JSONValue, key: String) -> Int? {
+        guard case .object(let dict) = value, let v = dict[key] else { return nil }
+        switch v {
+        case .number(let n): return Int(n)
+        case .string(let s): return Int(s)
+        default: return nil
+        }
+    }
+
+    /// Bool arg parser. Defaults to `nil` when absent so callers can
+    /// distinguish "missing" from "explicit false".
+    private static func optionalBoolArg(_ value: JSONValue, key: String) -> Bool? {
+        guard case .object(let dict) = value, let v = dict[key] else { return nil }
+        switch v {
+        case .bool(let b): return b
+        case .string(let s): return Bool(s)
+        default: return nil
+        }
+    }
+
+    /// Pull `[Int]` out of a JSON-RPC arguments object.
+    private static func intArrayArg(_ value: JSONValue, key: String) -> [Int] {
+        guard case .object(let dict) = value, case .array(let arr) = dict[key] else { return [] }
+        return arr.compactMap { entry -> Int? in
+            switch entry {
+            case .number(let n): return Int(n)
+            case .string(let s): return Int(s)
+            default: return nil
+            }
         }
     }
 
@@ -904,15 +1163,6 @@ public actor LocalToolBackend: ToolBackend {
             .joined(separator: ", ")
     }
 
-    private static func optionalIntArg(_ value: JSONValue, key: String) -> Int? {
-        guard case .object(let dict) = value, let v = dict[key] else { return nil }
-        switch v {
-        case .number(let n): return Int(n)
-        case .string(let s): return Int(s)
-        case .null: return nil
-        default: return nil
-        }
-    }
 }
 
 public enum LocalToolError: Error, Equatable, Sendable, LocalizedError {

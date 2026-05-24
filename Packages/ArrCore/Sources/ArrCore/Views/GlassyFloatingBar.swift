@@ -23,11 +23,11 @@ public extension View {
     }
 }
 
-/// Floating glass back button — same Liquid Glass capsule treatment as
-/// the tab bar / chat input. Used at the top-left of DetailView,
-/// HistoryView, SearchAddPanel and the search overlay so the navigation
-/// affordance is visually consistent with the rest of the floating
-/// chrome.
+/// Apple-native back button — bare chevron, no pill, no fill. Matches
+/// what macOS Settings.app and iOS NavigationStack ship: just the
+/// glyph in accent / secondary color, hit-target padded but not
+/// outlined. Apple's HIG explicitly doesn't put a capsule around nav
+/// back; we dropped ours to stop looking handcrafted.
 public struct FloatingBackButton: View {
     let action: () -> Void
     @State private var isHovering = false
@@ -38,19 +38,17 @@ public struct FloatingBackButton: View {
 
     public var body: some View {
         Button(action: action) {
-            HStack(spacing: 3) {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 11, weight: .semibold))
-                Text("Back", bundle: .module)
-                    .font(.system(size: 12, weight: .medium))
-            }
-            .foregroundStyle(isHovering ? .primary : .secondary)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 5)
-            .contentShape(Capsule())
+            Image(systemName: "chevron.left")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(isHovering ? Color.primary : Color.secondary)
+                // Generous hit target without a visible pill: tap goes
+                // through anywhere in the 28×28 padded area but only
+                // the glyph itself paints.
+                .frame(width: 28, height: 28)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .glassyFloatingBar()
+        .help(Text("Back", bundle: .module))
         #if os(macOS)
         .onHover { hovering in
             withAnimation(.easeInOut(duration: 0.15)) { isHovering = hovering }

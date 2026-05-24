@@ -27,16 +27,16 @@ public struct iOSAppRoot: View {
     public var body: some View {
         TabView {
             NavigationStack { QueueTab(viewModel: viewModel) }
-                .tabItem { Label("Queue", systemImage: "arrow.down.circle") }
+                .tabItem { Label { Text("Queue", bundle: .module) } icon: { Image(systemName: "arrow.down.circle") } }
 
             NavigationStack { UpcomingTab(viewModel: viewModel) }
-                .tabItem { Label("Upcoming", systemImage: "calendar") }
+                .tabItem { Label { Text("Upcoming", bundle: .module) } icon: { Image(systemName: "calendar") } }
 
             NavigationStack { SearchTab(viewModel: viewModel) }
-                .tabItem { Label("Search", systemImage: "magnifyingglass") }
+                .tabItem { Label { Text("Search", bundle: .module) } icon: { Image(systemName: "magnifyingglass") } }
 
             NavigationStack { SettingsTab(viewModel: viewModel) }
-                .tabItem { Label("Settings", systemImage: "gearshape") }
+                .tabItem { Label { Text("Settings", bundle: .module) } icon: { Image(systemName: "gearshape") } }
         }
         .environmentObject(configStore)
         .task { await viewModel.refresh() }
@@ -139,9 +139,9 @@ private struct QueueTab: View {
             Image(systemName: "gearshape.2")
                 .font(.system(size: 36, weight: .light))
                 .foregroundStyle(.secondary)
-            Text("ArrBarr is not configured")
+            Text("ArrBarr is not configured", bundle: .module)
                 .font(.headline)
-            Text("Connect Radarr, Sonarr or Lidarr in Settings to get started.")
+            Text("Connect Radarr, Sonarr or Lidarr in Settings to get started.", bundle: .module)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -262,7 +262,7 @@ private struct UpcomingTab: View {
             Image(systemName: "calendar")
                 .font(.system(size: 36, weight: .light))
                 .foregroundStyle(.tertiary)
-            Text("Nothing upcoming")
+            Text("Nothing upcoming", bundle: .module)
                 .font(.headline)
                 .foregroundStyle(.secondary)
         }

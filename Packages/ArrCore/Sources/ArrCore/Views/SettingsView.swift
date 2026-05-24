@@ -42,15 +42,15 @@ public struct SettingsView: View {
             VStack(spacing: 0) {
                 TabView {
                     generalPane
-                        .tabItem { Label("General", systemImage: "gearshape") }
+                        .tabItem { Label { Text("General", bundle: .module) } icon: { Image(systemName: "gearshape") } }
                     mediaManagersPane
-                        .tabItem { Label("Media Managers", systemImage: "server.rack") }
+                        .tabItem { Label { Text("Media Managers", bundle: .module) } icon: { Image(systemName: "server.rack") } }
                     usenetPane
-                        .tabItem { Label("Usenet", systemImage: "doc.zipper") }
+                        .tabItem { Label { Text("Usenet", bundle: .module) } icon: { Image(systemName: "doc.zipper") } }
                     torrentsPane
-                        .tabItem { Label("Torrents", systemImage: "arrow.triangle.2.circlepath") }
+                        .tabItem { Label { Text("Torrents", bundle: .module) } icon: { Image(systemName: "arrow.triangle.2.circlepath") } }
                     aiPane
-                        .tabItem { Label("AI", systemImage: "sparkles") }
+                        .tabItem { Label { Text("AI", bundle: .module) } icon: { Image(systemName: "sparkles") } }
                 }
                 bottomBar
             }
@@ -75,17 +75,17 @@ public struct SettingsView: View {
     @ViewBuilder
     private var languageSection: some View {
         Section {
-            Picker("Language", selection: $configStore.appLanguage) {
+            Picker(selection: $configStore.appLanguage) {
                 ForEach(ConfigStore.appLanguageOptions, id: \.code) { opt in
                     Text(LocalizedStringKey(opt.label)).tag(opt.code)
                 }
-            }
+            } label: { Text("Language", bundle: .module) }
         } footer: {
             if languageChanged {
                 #if os(macOS)
                 HStack(spacing: 8) {
                     Text("Restart required to apply the new language.", bundle: .module)
-                    Button("Relaunch") { relaunchApp() }
+                    Button { relaunchApp() } label: { Text("Relaunch", bundle: .module) }
                         .controlSize(.small)
                 }
                 #else
@@ -99,50 +99,48 @@ public struct SettingsView: View {
     /// feature; provider controls only appear when AI is on.
     @ViewBuilder
     private var aiSection: some View {
-        Section("AI") {
-            Toggle("Enable AI", isOn: $configStore.aiEnabled)
-        }
+        Section {
+            Toggle(isOn: $configStore.aiEnabled) { Text("Enable AI", bundle: .module) }
+        } header: { Text("AI", bundle: .module) }
         if configStore.aiEnabled {
-            Section("Model") {
-                Picker("AI provider", selection: $configStore.chatProvider) {
+            Section {
+                Picker(selection: $configStore.chatProvider) {
                     ForEach(ChatProvider.allCases) { p in
                         Text(p.displayName).tag(p)
                     }
-                }
+                } label: { Text("AI provider", bundle: .module) }
                 if configStore.chatProvider == .openai {
                     TextField("API base URL", text: $configStore.openai.baseURL,
                               prompt: Text(verbatim: "https://api.openai.com/v1"))
-                    SecureField("API key", text: $configStore.openai.apiKey)
+                    SecureField(text: $configStore.openai.apiKey) { Text("API key", bundle: .module) }
                     TextField("Model", text: $configStore.openai.model,
                               prompt: Text(verbatim: "gpt-4o-mini"))
                 }
                 if configStore.chatProvider == .foundationModels {
                     #if os(macOS)
                     if #unavailable(macOS 26.0) {
-                        Label("Apple Intelligence requires macOS 26.",
-                              systemImage: "exclamationmark.triangle")
+                        Label { Text("Apple Intelligence requires macOS 26.", bundle: .module) } icon: { Image(systemName: "exclamationmark.triangle") }
                             .foregroundStyle(.secondary)
                             .font(.caption)
                     }
                     #else
                     if #unavailable(iOS 26.0) {
-                        Label("Apple Intelligence requires iOS 26.",
-                              systemImage: "exclamationmark.triangle")
+                        Label { Text("Apple Intelligence requires iOS 26.", bundle: .module) } icon: { Image(systemName: "exclamationmark.triangle") }
                             .foregroundStyle(.secondary)
                             .font(.caption)
                     }
                     #endif
                 }
                 if configStore.whisparr.isConfigured {
-                    Toggle("AI knows about Whisparr", isOn: $configStore.aiKnowsAboutWhisparr)
+                    Toggle(isOn: $configStore.aiKnowsAboutWhisparr) { Text("AI knows about Whisparr", bundle: .module) }
                 }
-            }
+            } header: { Text("Model", bundle: .module) }
             Section {
                 SecureField("TMDB API key", text: $configStore.tmdbApiKey,
                             prompt: Text(verbatim: "v3 read key"))
                 if let url = URL(string: "https://www.themoviedb.org/settings/api") {
                     Link(destination: url) {
-                        Label("Get a free TMDB key", systemImage: "link")
+                        Label { Text("Get a free TMDB key", bundle: .module) } icon: { Image(systemName: "link") }
                             .font(.caption)
                     }
                 }
@@ -181,70 +179,66 @@ public struct SettingsView: View {
     #if os(iOS)
     private var iOSCombinedForm: some View {
         Form {
-            Section("Radarr") {
+            Section {
                 ServiceFields(config: $configStore.radarr, kind: .radarr,
                               notifyBinding: $configStore.notifyRadarr)
-            }
-            Section("Sonarr") {
+            } header: { Text("Radarr", bundle: .module) }
+            Section {
                 ServiceFields(config: $configStore.sonarr, kind: .sonarr,
                               notifyBinding: $configStore.notifySonarr)
-            }
-            Section("Lidarr") {
+            } header: { Text("Sonarr", bundle: .module) }
+            Section {
                 ServiceFields(config: $configStore.lidarr, kind: .lidarr,
                               notifyBinding: $configStore.notifyLidarr)
-            }
-            Section("Whisparr") {
+            } header: { Text("Lidarr", bundle: .module) }
+            Section {
                 ServiceFields(config: $configStore.whisparr, kind: .whisparr)
                 if configStore.whisparr.enabled {
-                    Toggle("Blur posters #nsfw", isOn: $configStore.blurWhisparrPosters)
+                    Toggle(isOn: $configStore.blurWhisparrPosters) { Text("Blur posters #nsfw", bundle: .module) }
                 }
-            }
-            Section("SABnzbd") {
+            } header: { Text("Whisparr", bundle: .module) }
+            Section {
                 ServiceFields(config: $configStore.sabnzbd, kind: .sabnzbd)
-            }
-            Section("NZBGet") {
+            } header: { Text("SABnzbd", bundle: .module) }
+            Section {
                 ServiceFields(config: $configStore.nzbget, kind: .nzbget)
-            }
-            Section("qBittorrent") {
+            } header: { Text("NZBGet", bundle: .module) }
+            Section {
                 ServiceFields(config: $configStore.qbittorrent, kind: .qbittorrent)
-            }
-            Section("Transmission") {
+            } header: { Text("qBittorrent", bundle: .module) }
+            Section {
                 ServiceFields(config: $configStore.transmission, kind: .transmission)
-            }
-            Section("rTorrent") {
+            } header: { Text("Transmission", bundle: .module) }
+            Section {
                 ServiceFields(config: $configStore.rtorrent, kind: .rtorrent)
-            }
-            Section("Deluge") {
+            } header: { Text("rTorrent", bundle: .module) }
+            Section {
                 ServiceFields(config: $configStore.deluge, kind: .deluge)
-            }
+            } header: { Text("Deluge", bundle: .module) }
             languageSection
-            Section("Section order") {
+            Section {
                 ForEach(configStore.arrOrder, id: \.self) { key in
                     arrOrderRow(key: key)
                 }
-            }
-            Section("Display") {
-                Toggle("Show indexer issues warning", isOn: $configStore.showIndexerIssues)
-                Picker("Upcoming window", selection: $configStore.tonightHours) {
-                    ForEach(ConfigStore.tonightHoursOptions, id: \.self) { hours in
-                        Text(Self.formatTonight(hours: hours)).tag(hours)
-                    }
-                }
-                .disabled(!configStore.showTonight)
-            }
-            Section("Refresh") {
+            } header: { Text("Section order", bundle: .module) }
+            Section {
+                Toggle(isOn: $configStore.showIndexerIssues) { Text("Show indexer issues warning", bundle: .module) }
+                // "Upcoming window" picker removed — banner is now
+                // hard-locked to 7 days.
+            } header: { Text("Display", bundle: .module) }
+            Section {
                 // iOS only: foreground (= "while app is open") interval.
                 // Background polling is gone here — iOS suspends apps shortly
                 // after backgrounding so a periodic timer can't survive.
-                Picker("While open", selection: $configStore.foregroundInterval) {
+                Picker(selection: $configStore.foregroundInterval) {
                     ForEach(ConfigStore.foregroundIntervalOptions, id: \.self) { interval in
                         Text(Self.formatInterval(interval)).tag(interval)
                     }
-                }
-            }
+                } label: { Text("While open", bundle: .module) }
+            } header: { Text("Refresh", bundle: .module) }
             aiSection
             if devModeRevealed {
-                Section("Developer options") {
+                Section {
                     Toggle("Demo mode", isOn: Binding(
                         get: { demoModeOn },
                         set: { newValue in
@@ -255,15 +249,15 @@ public struct SettingsView: View {
                     ))
                     if demoModeOn {
                         if let onTestNotification {
-                            Button("Send test notification") { onTestNotification() }
+                            Button { onTestNotification() } label: { Text("Send test notification", bundle: .module) }
                         }
                         if let onShowWelcome {
-                            Button("Show welcome screen") { onShowWelcome() }
+                            Button { onShowWelcome() } label: { Text("Show welcome screen", bundle: .module) }
                         }
                     }
-                }
+                } header: { Text("Developer options", bundle: .module) }
             }
-            Section("About") {
+            Section {
                 // Classic iOS Settings.app trick: tap Version 7 times to
                 // reveal Developer options. LabeledContent swallows
                 // gestures inside Form, so use a plain Button styled like
@@ -285,11 +279,11 @@ public struct SettingsView: View {
                 }
                 .buttonStyle(.plain)
                 Link(destination: URL(string: "https://github.com/Preclowski/ArrBarr")!) {
-                    Label("GitHub", systemImage: "link")
+                    Label { Text("GitHub", bundle: .module) } icon: { Image(systemName: "link") }
                 }
                 Text(verbatim: "Made with 🥨")
                     .foregroundStyle(.secondary)
-            }
+            } header: { Text("About", bundle: .module) }
         }
     }
     #endif
@@ -298,54 +292,54 @@ public struct SettingsView: View {
 
     private var mediaManagersPane: some View {
         Form {
-            Section("Radarr") {
+            Section {
                 ServiceFields(config: $configStore.radarr, kind: .radarr,
                               notifyBinding: $configStore.notifyRadarr)
-            }
-            Section("Sonarr") {
+            } header: { Text("Radarr", bundle: .module) }
+            Section {
                 ServiceFields(config: $configStore.sonarr, kind: .sonarr,
                               notifyBinding: $configStore.notifySonarr)
-            }
-            Section("Lidarr") {
+            } header: { Text("Sonarr", bundle: .module) }
+            Section {
                 ServiceFields(config: $configStore.lidarr, kind: .lidarr,
                               notifyBinding: $configStore.notifyLidarr)
-            }
-            Section("Whisparr") {
+            } header: { Text("Lidarr", bundle: .module) }
+            Section {
                 ServiceFields(config: $configStore.whisparr, kind: .whisparr)
                 if configStore.whisparr.enabled {
-                    Toggle("Blur posters #nsfw", isOn: $configStore.blurWhisparrPosters)
+                    Toggle(isOn: $configStore.blurWhisparrPosters) { Text("Blur posters #nsfw", bundle: .module) }
                 }
-            }
+            } header: { Text("Whisparr", bundle: .module) }
         }
         .formStyle(.grouped)
     }
 
     private var usenetPane: some View {
         Form {
-            Section("SABnzbd") {
+            Section {
                 ServiceFields(config: $configStore.sabnzbd, kind: .sabnzbd)
-            }
-            Section("NZBGet") {
+            } header: { Text("SABnzbd", bundle: .module) }
+            Section {
                 ServiceFields(config: $configStore.nzbget, kind: .nzbget)
-            }
+            } header: { Text("NZBGet", bundle: .module) }
         }
         .formStyle(.grouped)
     }
 
     private var torrentsPane: some View {
         Form {
-            Section("qBittorrent") {
+            Section {
                 ServiceFields(config: $configStore.qbittorrent, kind: .qbittorrent)
-            }
-            Section("Transmission") {
+            } header: { Text("qBittorrent", bundle: .module) }
+            Section {
                 ServiceFields(config: $configStore.transmission, kind: .transmission)
-            }
-            Section("rTorrent") {
+            } header: { Text("Transmission", bundle: .module) }
+            Section {
                 ServiceFields(config: $configStore.rtorrent, kind: .rtorrent)
-            }
-            Section("Deluge") {
+            } header: { Text("rTorrent", bundle: .module) }
+            Section {
                 ServiceFields(config: $configStore.deluge, kind: .deluge)
-            }
+            } header: { Text("Deluge", bundle: .module) }
         }
         .formStyle(.grouped)
     }
@@ -353,51 +347,48 @@ public struct SettingsView: View {
     private var generalPane: some View {
         Form {
             Section {
-                Toggle("Launch at login", isOn: $configStore.launchAtLogin)
-                Picker("Language", selection: $configStore.appLanguage) {
+                Toggle(isOn: $configStore.launchAtLogin) { Text("Launch at login", bundle: .module) }
+                Picker(selection: $configStore.appLanguage) {
                     ForEach(ConfigStore.appLanguageOptions, id: \.code) { opt in
                         Text(LocalizedStringKey(opt.label)).tag(opt.code)
                     }
-                }
+                } label: { Text("Language", bundle: .module) }
+                // Popover-display toggle merged in here — used to
+                // live in its own "Popover" section but with the
+                // upcoming-window picker gone there was only one
+                // toggle left, which read as orphaned. App-level
+                // toggles all sit under one heading now.
+                Toggle(isOn: $configStore.showIndexerIssues) { Text("Show indexer issues warning", bundle: .module) }
             } header: {
                 Text("Application", bundle: .module)
             } footer: {
                 if languageChanged {
                     HStack(spacing: 8) {
                         Text("Restart required to apply the new language.", bundle: .module)
-                        Button("Relaunch") { relaunchApp() }
+                        Button { relaunchApp() } label: { Text("Relaunch", bundle: .module) }
                             .controlSize(.small)
                     }
                 }
             }
-            Section("Section order") {
+            Section {
                 ForEach(configStore.arrOrder, id: \.self) { key in
                     arrOrderRow(key: key)
                 }
-            }
-            Section("Popover") {
-                Toggle("Show indexer issues warning", isOn: $configStore.showIndexerIssues)
-                Picker("Upcoming window", selection: $configStore.tonightHours) {
-                    ForEach(ConfigStore.tonightHoursOptions, id: \.self) { hours in
-                        Text(Self.formatTonight(hours: hours)).tag(hours)
-                    }
-                }
-                .disabled(!configStore.showTonight)
-            }
-            Section("Refresh Interval") {
-                Picker("Popover open", selection: $configStore.foregroundInterval) {
+            } header: { Text("Section order", bundle: .module) }
+            Section {
+                Picker(selection: $configStore.foregroundInterval) {
                     ForEach(ConfigStore.foregroundIntervalOptions, id: \.self) { interval in
                         Text(Self.formatInterval(interval)).tag(interval)
                     }
-                }
-                Picker("Background", selection: $configStore.backgroundInterval) {
+                } label: { Text("Popover open", bundle: .module) }
+                Picker(selection: $configStore.backgroundInterval) {
                     ForEach(ConfigStore.backgroundIntervalOptions, id: \.self) { interval in
                         Text(Self.formatInterval(interval)).tag(interval)
                     }
-                }
-            }
+                } label: { Text("Background", bundle: .module) }
+            } header: { Text("Refresh Interval", bundle: .module) }
             if DeveloperMode.isActive {
-                Section("Developer options") {
+                Section {
                     Toggle("Demo mode", isOn: Binding(
                         get: { demoModeOn },
                         set: { newValue in
@@ -411,13 +402,13 @@ public struct SettingsView: View {
                     ))
                     if demoModeOn {
                         if let onTestNotification {
-                            Button("Send test notification") { onTestNotification() }
+                            Button { onTestNotification() } label: { Text("Send test notification", bundle: .module) }
                         }
                         if let onShowWelcome {
-                            Button("Show welcome screen") { onShowWelcome() }
+                            Button { onShowWelcome() } label: { Text("Show welcome screen", bundle: .module) }
                         }
                     }
-                }
+                } header: { Text("Developer options", bundle: .module) }
             }
         }
         .formStyle(.grouped)
@@ -542,10 +533,10 @@ public struct SettingsView: View {
                     if hovering { NSCursor.pointingHand.push() } else { NSCursor.pop() }
                 }
                 #endif
-                .help("github.com/Preclowski/ArrBarr")
+                .help(Text("github.com/Preclowski/ArrBarr", bundle: .module))
                 Spacer()
                 #if os(macOS)
-                Button("Close") { NSApp.keyWindow?.close() }
+                Button { NSApp.keyWindow?.close() } label: { Text("Close", bundle: .module) }
                     .keyboardShortcut("w", modifiers: .command)
                     .modifier(GlassButtonStyle())
                     .controlSize(.large)
@@ -610,17 +601,17 @@ private struct ServiceFields: View {
                 .autocorrectionDisabled(true)
 
             if kind.requiresApiKey {
-                SecureField("API Key", text: $config.apiKey, prompt: Text("Paste your API key"))
+                SecureField("API Key", text: $config.apiKey, prompt: Text("Paste your API key", bundle: .module))
             }
 
             if kind.requiresLogin {
-                TextField("Username", text: $config.username, prompt: Text("admin"))
+                TextField("Username", text: $config.username, prompt: Text("admin", bundle: .module))
                     .autocorrectionDisabled(true)
-                SecureField("Password", text: $config.password, prompt: Text("Password"))
+                SecureField("Password", text: $config.password, prompt: Text("Password", bundle: .module))
             }
 
             HStack(spacing: 8) {
-                Button("Test Connection") { runTest() }
+                Button { runTest() } label: { Text("Test Connection", bundle: .module) }
                     .modifier(GlassButtonStyle())
                     .controlSize(.small)
                     .disabled(testState == .testing || !config.isConfigured)

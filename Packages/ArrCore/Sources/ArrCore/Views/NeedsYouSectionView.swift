@@ -17,7 +17,7 @@ public struct NeedsYouSectionView: View {
                     .frame(width: 10)
                 Image(systemName: "exclamationmark.bubble.fill")
                     .foregroundStyle(.orange)
-                Text("Needs you")
+                Text("Needs you", bundle: .module)
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(.secondary)
                 Text("\(items.count)")
@@ -63,7 +63,7 @@ public struct NeedsYouSectionView: View {
                             }
                             #endif
                         }
-                        .help("Open in browser")
+                        .help(Text("Open in browser", bundle: .module))
                     }
                 }
             }

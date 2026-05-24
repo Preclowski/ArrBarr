@@ -84,25 +84,10 @@ public struct QueueRowView: View {
                             .lineLimit(1)
                             .truncationMode(.tail)
 
-                        Text(item.isUpgrade ? "Upgrade" : "New")
-                            .font(.system(size: 8, weight: .semibold))
-                            .foregroundStyle(item.isUpgrade ? AnyShapeStyle(Color.indigo) : AnyShapeStyle(Color.accentColor))
-                            .padding(.horizontal, 4)
-                            .padding(.vertical, 1)
-                            .background(
-                                item.isUpgrade ? AnyShapeStyle(Color.indigo.opacity(0.15)) : AnyShapeStyle(Color.accentColor.opacity(0.15)),
-                                in: Capsule()
-                            )
-
+                        MediaBadgeCluster(isUpgrade: item.isUpgrade)
+                        Spacer(minLength: 4)
                         if let client = item.downloadClient {
-                            let color = downloadClientColor(client)
-                            Text(client)
-                                .font(.system(size: 8, weight: .semibold))
-                                .foregroundStyle(color)
-                                .padding(.horizontal, 4)
-                                .padding(.vertical, 1)
-                                .background(color.opacity(0.15), in: Capsule())
-                                .lineLimit(1)
+                            DownloadClientLabel(name: client)
                         }
                     }
 
@@ -114,41 +99,40 @@ public struct QueueRowView: View {
                     }
 
                     HStack(spacing: 3) {
-                        Image(systemName: item.status.symbol)
-                            .foregroundStyle(item.status.tint)
-                            .font(.system(size: 8))
-                        Text(LocalizedStringKey(item.status.displayName))
-                            .foregroundStyle(item.status.tint)
+                        StatusIconLabel(status: item.status)
                         if !metaLine.isEmpty {
                             Text("·")
                                 .foregroundStyle(.tertiary)
                             Text(metaLine)
                                 .foregroundStyle(.tertiary)
                         }
+                        Spacer(minLength: 4)
+                        // Right-gutter: score over client (one line up).
+                        // See QueueItemPrimitives.ScoreLabel.
+                        ScoreLabel(score: item.customFormatScore)
                     }
                     .font(.system(size: 10))
                     .lineLimit(1)
                 }
-                // Keep action buttons visible while the tooltip popover is
-                // open: the popover floats above the row and steals the
-                // mouse, dropping `isHovering` to false — without this the
-                // pause/remove icons would vanish the moment the tooltip
-                // appeared, even though the cursor is still on the row.
-                // iOS has no hover, so on touch devices the action buttons
-                // sit always-visible — there's no hover to gate them on.
-                #if os(macOS)
-                .hoverActions(visible: isHovering || showTooltip) { actionButtons }
-                #else
-                .hoverActions(visible: true) { actionButtons }
-                #endif
+                // Action cluster is delivered via the bottom-trailing
+                // hover overlay on macOS (see `inlineActionIcons`).
+                // The iOS inline `.hoverActions` modifier was removed
+                // — the app is macOS-first and the iOS path was
+                // accumulating bit-rot.
 
                 ThinProgressBar(progress: item.progress, tint: item.status.tint)
 
-                if !item.customFormats.isEmpty || item.customFormatScore != 0 {
+                if !item.customFormats.isEmpty {
+                    // Score moved to the status-line right edge, so
+                    // the chip strip carries the format tags only.
+                    // `fadeTrailing: false` when hovering — the hover
+                    // overlay paints its own dark gradient over the
+                    // right edge, and stacking two fades doubles up.
                     CustomFormatStrip(
                         formats: item.customFormats,
-                        score: item.customFormatScore,
-                        help: customFormatsTooltip
+                        score: 0,
+                        help: customFormatsTooltip,
+                        fadeTrailing: !(isHovering && canControl)
                     )
                     .padding(.top, 2)
                 }
@@ -161,6 +145,35 @@ public struct QueueRowView: View {
                 .fill(isHovering ? Color.primary.opacity(0.06) : Color.clear)
                 .padding(.horizontal, 6)
         )
+        // Bare-icon action cluster floats over the trailing edge of
+        // the row, vertically centred, on hover. A dark fade-in
+        // gradient under the cluster cuts the icons visually from
+        // whatever's underneath (title text, status line, CF chip
+        // strip) — fades from clear on the left to a soft dark on
+        // the right so the transition reads as a vignette, not a
+        // hard panel.
+        #if os(macOS)
+        .overlay(alignment: .trailing) {
+            if isHovering && canControl {
+                inlineActionIcons
+                    .padding(.leading, 60)
+                    .padding(.trailing, 16)
+                    .frame(maxHeight: .infinity)
+                    .background(
+                        LinearGradient(
+                            stops: [
+                                .init(color: .clear, location: 0),
+                                .init(color: Color.black.opacity(0.55), location: 0.55),
+                                .init(color: Color.black.opacity(0.6), location: 1),
+                            ],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .transition(.opacity)
+            }
+        }
+        #endif
         .contentShape(Rectangle())
         .onTapGesture {
             onShowDetail?()
@@ -173,8 +186,6 @@ public struct QueueRowView: View {
         #if os(macOS)
         .onHover { hovering in
             withAnimation(.easeInOut(duration: 0.15)) { isHovering = hovering }
-            // Only schedule the long-hover tooltip when the host surface
-            // doesn't already have a permanent detail pane.
             hoverTask?.cancel()
             if hovering && !suppressRowTooltip {
                 hoverTask = Task { @MainActor [self] in
@@ -182,6 +193,9 @@ public struct QueueRowView: View {
                     if !Task.isCancelled && self.isHovering { showTooltip = true }
                 }
             } else {
+                // Tooltip is now read-only (no action buttons), so we
+                // can close it immediately on row hover-out — no need
+                // to keep it alive for the user to reach controls.
                 showTooltip = false
             }
         }
@@ -191,19 +205,18 @@ public struct QueueRowView: View {
                 apiKey: item.posterRequiresAuth ? apiKeyForSource : nil,
                 locale: configStore.currentLocale
             )
-            // Default .transient eats the first click outside the popover.
-            // .applicationDefined makes the popover passive — we close it
-            // ourselves in onHover when the cursor leaves the row.
+            // .applicationDefined keeps the popover from being eaten by
+            // a stray first-click; we close it ourselves on row hover-out.
             .popoverBehavior(.applicationDefined)
         }
         #endif
-        .alert("Remove download?", isPresented: $showDeleteConfirmation) {
-            Button("Remove", role: .destructive) {
+        .alert(Text("Remove download?", bundle: .module), isPresented: $showDeleteConfirmation) {
+            Button(role: .destructive) {
                 onDelete()
-            }
-            Button("Cancel", role: .cancel) {}
+            } label: { Text("Remove", bundle: .module) }
+            Button(role: .cancel) {} label: { Text("Cancel", bundle: .module) }
         } message: {
-            Text("This will remove \"\(item.title)\" from the download client.")
+            Text(String(format: String(localized: "This will remove \"%@\" from the download client.", bundle: .module), item.title))
         }
     }
 
@@ -222,13 +235,64 @@ public struct QueueRowView: View {
 
     // MARK: - Actions
 
+    #if os(macOS)
+    /// Bare-icon action cluster used in the row's hover overlay
+    /// (bottom-right). Distinct from `actionButtons` which is the
+    /// labeled TooltipActionButton cluster used inside the tooltip
+    /// popover. Two surfaces, two affordance weights: the row gets
+    /// bare glyphs that recede until you hover; the tooltip gets
+    /// proper labeled controls because the user is actively reading
+    /// it.
+    @ViewBuilder
+    private var inlineActionIcons: some View {
+        HStack(spacing: 6) {
+            if canControl && canPauseResume {
+                if item.isPaused {
+                    IconButton(symbol: "play.fill", helpKey: "Resume",
+                               accessibilityLabel: "Resume \(item.title)") { onResume() }
+                } else {
+                    IconButton(symbol: "pause.fill", helpKey: "Pause",
+                               accessibilityLabel: "Pause \(item.title)") { onPause() }
+                }
+            }
+            if canControl {
+                IconButton(symbol: "trash", helpKey: "Remove from client",
+                           accessibilityLabel: "Remove \(item.title)", tint: .red) {
+                    showDeleteConfirmation = true
+                }
+            }
+        }
+    }
+    #endif
+
+    @ViewBuilder
     private var actionButtons: some View {
-        // Single glass capsule wrapping the whole action cluster — the
-        // cluster is the affordance, not the individual buttons. Red lives
-        // only in the trash glyph; the capsule stays neutral so it doesn't
-        // scream "destructive" at the user just because remove is one
-        // option in there. Matches the chat input bar's chrome (see
-        // `glassyFloatingBar`).
+        #if os(macOS)
+        // Tooltip-resident cluster — labeled buttons stacked vertically
+        // under the poster. Recessive styling: the poster is the focal
+        // point, these are quiet support actions until you hover.
+        VStack(spacing: 4) {
+            if canControl && canPauseResume {
+                if item.isPaused {
+                    TooltipActionButton(symbol: "play.fill", labelKey: "Resume") {
+                        onResume()
+                    }
+                } else {
+                    TooltipActionButton(symbol: "pause.fill", labelKey: "Pause") {
+                        onPause()
+                    }
+                }
+            }
+            if canControl {
+                TooltipActionButton(symbol: "trash", labelKey: "Remove", tint: .red) {
+                    showDeleteConfirmation = true
+                }
+            }
+        }
+        #else
+        // iOS still uses the inline-on-row cluster (no hover → no
+        // tooltip). Compact icons in a glass pill, matching the chat
+        // input bar's chrome.
         HStack(spacing: 4) {
             if canControl && canPauseResume {
                 if item.isPaused {
@@ -252,6 +316,7 @@ public struct QueueRowView: View {
         .padding(.horizontal, 6)
         .padding(.vertical, 4)
         .glassPill()
+        #endif
     }
 
     // MARK: - Custom format tags
@@ -326,6 +391,11 @@ public struct QueueItemTooltip: View {
         VStack(alignment: .leading, spacing: 6) {
             header
             Divider().opacity(0.5)
+            // infoGrid now interleaves the upgrade diff inline: the
+            // "↑ replaces" line sits *under* the Quality row in the
+            // same grid, so the eye reads "new quality / old quality"
+            // as a vertical comparison instead of jumping to a
+            // separate block down the tooltip.
             infoGrid
 
             if !item.customFormats.isEmpty || item.customFormatScore != 0 {
@@ -333,42 +403,39 @@ public struct QueueItemTooltip: View {
                     tags: item.customFormats,
                     score: item.customFormatScore != 0 ? item.customFormatScore : nil
                 )
-            }
-
-            if item.isUpgrade,
-               item.existingCustomFormatScore != nil
-                || item.existingQuality != nil
-                || !item.existingCustomFormats.isEmpty {
-                upgradeDivider
-                Text("Existing file", bundle: .module)
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(.secondary)
-                    .textCase(.uppercase)
-                    .tracking(0.5)
-                existingInfo
+                // Chip diff sits directly under the chip strip — same
+                // logic as Quality: parallel-comparison pairing.
+                if item.isUpgrade {
+                    cfChipDiff
+                }
             }
         }
     }
 
+    @ViewBuilder
+    private var cfChipDiff: some View {
+        CustomFormatDiff(
+            newFormats: item.customFormats,
+            existingFormats: item.existingCustomFormats
+        )
+        .padding(.top, 2)
+    }
+
     private var header: some View {
         VStack(alignment: .leading, spacing: 1) {
-            HStack(alignment: .top, spacing: 6) {
+            // Match QueueRowView's title pattern: title + Upgrade tag
+            // adjacent on the left, download client neutralised on the
+            // trailing edge. The colour-collision rationale that drove
+            // the change on the row applies to the tooltip too — the
+            // tooltip just had it independently.
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Text(item.title)
                     .font(.system(size: 13, weight: .semibold))
                     .lineLimit(2)
+                MediaBadgeCluster(isUpgrade: item.isUpgrade, size: .medium)
                 Spacer(minLength: 4)
-                HStack(spacing: 4) {
-                    if let client = item.downloadClient {
-                        let color = downloadClientColor(client)
-                        Text(client)
-                            .font(.system(size: 9, weight: .semibold))
-                            .foregroundStyle(color)
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 2)
-                            .background(color.opacity(0.15), in: Capsule())
-                            .lineLimit(1)
-                            .fixedSize()
-                    }
+                if let client = item.downloadClient {
+                    DownloadClientLabel(name: client, size: 10)
                 }
             }
             if let sub = item.subtitle {
@@ -388,51 +455,71 @@ public struct QueueItemTooltip: View {
             } else {
                 row("Size", value: sizeString)
             }
+            // "↑ replaces …" sits inside the grid as a sibling row of
+            // Quality / Size so it shares the value-column alignment
+            // and reads as a sub-line. Empty label cell on the left
+            // keeps the indent.
+            if item.isUpgrade && hasExistingFileMetadata {
+                replacesGridRow
+            }
             if let indexer = item.indexer, !indexer.isEmpty {
                 row("Indexer", value: indexer)
             }
             if let file = item.releaseName, !file.isEmpty {
                 row("File", value: file, mono: true, wraps: true)
             }
-        }
-    }
-
-    private var upgradeDivider: some View {
-        HStack(spacing: 6) {
-            Rectangle()
-                .fill(.quaternary)
-                .frame(height: 1)
-            Text("Upgrade", bundle: .module)
-                .font(.system(size: 9, weight: .semibold))
-                .foregroundStyle(.indigo)
-                .padding(.horizontal, 5)
-                .padding(.vertical, 1)
-                .background(Color.indigo.opacity(0.15), in: Capsule())
-            Rectangle()
-                .fill(.quaternary)
-                .frame(height: 1)
-        }
-        .padding(.top, 4)
-    }
-
-@ViewBuilder
-    private var existingInfo: some View {
-        Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 10, verticalSpacing: 3) {
-            if let q = item.existingQuality, !q.isEmpty {
-                if let size = item.existingSize, size > 0 {
-                    let sizeStr = ByteCountFormatter.string(fromByteCount: size, countStyle: .file)
-                    row("Quality", value: "\(q) · \(sizeStr)")
-                } else {
-                    row("Quality", value: q)
-                }
-            } else if let size = item.existingSize, size > 0 {
-                row("Size", value: ByteCountFormatter.string(fromByteCount: size, countStyle: .file))
+            // Existing file's on-disk path as a `└─` sub-row of File,
+            // same tree-branch pattern as the quality diff above. Lets
+            // the user see *which* file is being replaced, not just
+            // its metadata.
+            if item.isUpgrade,
+               let existing = item.existingFileName, !existing.isEmpty {
+                replacesFilenameGridRow(existing)
             }
         }
-        customFormatChipStrip(
-            tags: item.existingCustomFormats,
-            score: item.existingCustomFormatScore
-        )
+    }
+
+    @ViewBuilder
+    private func replacesFilenameGridRow(_ path: String) -> some View {
+        GridRow(alignment: .firstTextBaseline) {
+            Color.clear.frame(width: 0, height: 0)
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                Text(verbatim: "└─")
+                    .font(.system(size: 11, design: .monospaced))
+                    .foregroundStyle(.tertiary)
+                Text(path)
+                    .font(.system(size: 11, design: .monospaced))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                    .truncationMode(.middle)
+            }
+        }
+    }
+
+    /// True when the queue item carries at least one piece of
+    /// existing-file metadata worth surfacing in the diff. Guards the
+    /// inline "↑ replaces" row so we don't render an empty indigo
+    /// line for upgrades where the arr happens not to ship existing-
+    /// file fields.
+    private var hasExistingFileMetadata: Bool {
+        (item.existingQuality.map { !$0.isEmpty } ?? false)
+            || (item.existingSize ?? 0) > 0
+            || (item.existingCustomFormatScore ?? 0) != 0
+    }
+
+    @ViewBuilder
+    private var replacesGridRow: some View {
+        GridRow(alignment: .firstTextBaseline) {
+            // Empty leading cell aligns the value with the Quality
+            // value above it.
+            Color.clear.frame(width: 0, height: 0)
+            ExistingFileDiffRow(
+                existingQuality: item.existingQuality,
+                existingSize: item.existingSize,
+                existingScore: item.existingCustomFormatScore,
+                newScore: item.customFormatScore
+            )
+        }
     }
 
     private var sizeString: String {
@@ -469,156 +556,11 @@ func downloadClientColor(_ name: String) -> Color {
     return .gray
 }
 
-/// Custom-format chips plus an optional score chip, wrapping with
-/// `TooltipFlowLayout`. Pulled out of `QueueRowView` / `QueueGroupRowView`
-/// since both tooltips rendered byte-identical strips inline.
-@ViewBuilder
-public func customFormatChipStrip(tags: [String], score: Int?) -> some View {
-    if !tags.isEmpty || (score ?? 0) != 0 {
-        TooltipFlowLayout(spacing: 3) {
-            ForEach(tags, id: \.self) { TagChip(text: $0) }
-            if let score, score != 0 {
-                let sign = score > 0 ? "+" : ""
-                TagChip(text: "\(sign)\(score)", color: score > 0 ? .green : .red)
-            }
-        }
-        .padding(.top, 2)
-    }
-}
+// `customFormatChipStrip` + `TagChip` + `TooltipFlowLayout` are
+// now in `Chips.swift`.
 
-public struct TagChip: View {
-    let text: String
-    var color: Color = .primary
-
-    public var body: some View {
-        Text(text)
-            .font(.system(size: 9, weight: .medium))
-            .foregroundStyle(color == .primary ? AnyShapeStyle(.primary) : AnyShapeStyle(color))
-            .padding(.horizontal, 5)
-            .padding(.vertical, 1)
-            // `.quaternary` is a hierarchical material — inside a popover
-            // (which is itself a `.regularMaterial` container) it resolves
-            // to a much darker tone, so chips look like solid black pills.
-            // Explicit colour-with-opacity renders the same in both
-            // contexts.
-            .background(Color.primary.opacity(0.08), in: Capsule())
-    }
-}
-
-public struct TooltipFlowLayout: Layout {
-    var spacing: CGFloat = 4
-
-    public func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let rows = computeRows(maxWidth: proposal.width ?? .infinity, subviews: subviews)
-        guard !rows.isEmpty else { return .zero }
-        let height = rows.reduce(CGFloat(0)) { $0 + $1.height } + CGFloat(rows.count - 1) * spacing
-        return CGSize(width: proposal.width ?? 0, height: height)
-    }
-
-    public func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        let rows = computeRows(maxWidth: bounds.width, subviews: subviews)
-        var y = bounds.minY
-        for row in rows {
-            var x = bounds.minX
-            for index in row.indices {
-                let size = subviews[index].sizeThatFits(.unspecified)
-                subviews[index].place(at: CGPoint(x: x, y: y), proposal: ProposedViewSize(size))
-                x += size.width + spacing
-            }
-            y += row.height + spacing
-        }
-    }
-
-    private func computeRows(maxWidth: CGFloat, subviews: Subviews) -> [(indices: [Int], height: CGFloat)] {
-        var rows: [(indices: [Int], height: CGFloat)] = []
-        var current: (indices: [Int], height: CGFloat) = ([], 0)
-        var x: CGFloat = 0
-        for (i, subview) in subviews.enumerated() {
-            let size = subview.sizeThatFits(.unspecified)
-            if !current.indices.isEmpty && x + size.width > maxWidth {
-                rows.append(current)
-                current = ([], 0)
-                x = 0
-            }
-            current.indices.append(i)
-            current.height = max(current.height, size.height)
-            x += size.width + spacing
-        }
-        if !current.indices.isEmpty { rows.append(current) }
-        return rows
-    }
-}
-
-/// Overlays hover-only `actions` on the trailing edge of a content block.
-/// Uses `.overlay(alignment:)` rather than a ZStack so the action cluster
-/// — which is taller than the title HStack it's anchored to (~30pt vs
-/// ~17pt) — does NOT force the parent to grow on hover. A ZStack here was
-/// pushing the progress bar (and everything below the title row) down by
-/// ~13pt the moment the cluster appeared, which read as the bar's height
-/// jumping. Overlay modifier draws on top without contributing to layout
-/// size; the cluster overlaps the right edge of the title row but the row
-/// itself stays put.
-public struct HoverActionOverlay<Actions: View>: ViewModifier {
-    let visible: Bool
-    @ViewBuilder let actions: () -> Actions
-
-    public func body(content: Content) -> some View {
-        content
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .overlay(alignment: .trailing) {
-                if visible {
-                    actions()
-                        .padding(.trailing, 4)
-                        .transition(.opacity)
-                }
-            }
-    }
-}
-
-public extension View {
-    func hoverActions<Actions: View>(
-        visible: Bool,
-        @ViewBuilder actions: @escaping () -> Actions
-    ) -> some View {
-        modifier(HoverActionOverlay(visible: visible, actions: actions))
-    }
-}
-
-public struct IconButton: View {
-    @EnvironmentObject var configStore: ConfigStore
-    let symbol: String
-    let helpKey: String
-    var accessibilityLabel: String = ""
-    /// Color used for the symbol on hover. nil → primary (neutral).
-    /// Destructive actions pass `.red` so the trash glows red when the user
-    /// is about to remove something.
-    var tint: Color? = nil
-    let action: () -> Void
-
-    @State private var isHovering = false
-
-    public var body: some View {
-        Button(action: action) {
-            Image(systemName: symbol)
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(isHovering ? (tint ?? .primary) : .secondary)
-                .frame(width: 22, height: 22)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        #if os(macOS)
-        .onHover { hovering in
-            withAnimation(.easeInOut(duration: 0.12)) { isHovering = hovering }
-        }
-        #endif
-        .help(Text(LocalizedStringKey(helpKey), bundle: .module))
-        .accessibilityLabel(
-            accessibilityLabel.isEmpty
-                ? Text(LocalizedStringKey(helpKey), bundle: .module)
-                : Text(verbatim: accessibilityLabel)
-        )
-    }
-}
+// `TooltipActionButton` + `IconButton` are now in
+// `ActionPrimitives.swift`.
 
 // MARK: - Shared row chrome
 //
@@ -630,13 +572,26 @@ public struct IconButton: View {
 // pixel-identical regardless of context.
 public struct ThinProgressBar: View {
     let progress: Double
-    let tint: Color
+    /// Filled-portion tint — typically `status.tint` (blue for
+    /// Downloading, orange for Paused, red for Warning). Restored
+    /// after an earlier neutral-white iteration: with multiple
+    /// download protocols / states on screen at once, the colour
+    /// is what makes a paused row jump out from a downloading one
+    /// at a glance. The status icon alone wasn't enough.
+    var tint: Color = .primary
     var height: CGFloat = 3
+
+    public init(progress: Double, tint: Color = .primary, height: CGFloat = 3) {
+        self.progress = progress
+        self.tint = tint
+        self.height = height
+    }
+
     public var body: some View {
         GeometryReader { geo in
             ZStack(alignment: .leading) {
                 RoundedRectangle(cornerRadius: height / 2)
-                    .fill(Color.primary.opacity(0.10))
+                    .fill(Color.primary.opacity(0.12))
                 RoundedRectangle(cornerRadius: height / 2)
                     .fill(tint)
                     .frame(width: geo.size.width * max(0, min(1, progress)))
@@ -646,57 +601,4 @@ public struct ThinProgressBar: View {
     }
 }
 
-/// The single-line custom-format chip strip with a fade-out gradient when
-/// the chips overflow the available width. Used by listing rows so the
-/// row never wraps; detail views use the wrapping `CustomFormatChips`
-/// variant instead.
-public struct CustomFormatStrip: View {
-    let formats: [String]
-    let score: Int
-    var help: String? = nil
-
-    public var body: some View {
-        let view = Color.clear
-            .frame(height: 14)
-            .frame(maxWidth: .infinity)
-            .overlay(alignment: .leading) {
-                HStack(spacing: 4) {
-                    ForEach(formats, id: \.self) { cf in
-                        Text(cf)
-                            .font(.system(size: 9, weight: .medium))
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 1)
-                            .background(Color.primary.opacity(0.08), in: Capsule())
-                    }
-                    if score != 0 {
-                        let sign = score > 0 ? "+" : ""
-                        Text("\(sign)\(score)")
-                            .font(.system(size: 9, weight: .semibold))
-                            .foregroundStyle(score > 0 ? Color.green : Color.red)
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 1)
-                            .background(Color.primary.opacity(0.08), in: Capsule())
-                    }
-                }
-                .fixedSize()
-            }
-            .clipped()
-            .mask(
-                LinearGradient(
-                    stops: [
-                        .init(color: .black, location: 0),
-                        .init(color: .black, location: 0.85),
-                        .init(color: .clear, location: 1.0),
-                    ],
-                    startPoint: .leading,
-                    endPoint: .trailing
-                )
-            )
-
-        if let help {
-            view.help(Text(verbatim: help))
-        } else {
-            view
-        }
-    }
-}
+// `CustomFormatStrip` lives in `Chips.swift` now.

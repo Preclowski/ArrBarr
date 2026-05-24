@@ -80,6 +80,14 @@ public struct QueueItem: Identifiable, Equatable, Hashable {
     public let posterURL: URL?
     public let posterRequiresAuth: Bool
 
+    /// Flattened user-facing warning lines from the arr's
+    /// `statusMessages` payload. Populated only when status is
+    /// `warning` / `failed` — those are the only times the arr
+    /// attaches a message. Empty for healthy rows. Each string is one
+    /// already-merged "Title — Message" line so the consuming view
+    /// can just iterate and render.
+    public let statusMessages: [String]
+
     public init(
         id: String, source: Source, arrQueueId: Int,
         downloadId: String?, downloadProtocol: DownloadProtocol,
@@ -95,7 +103,8 @@ public struct QueueItem: Identifiable, Equatable, Hashable {
         existingSize: Int64? = nil, existingFileName: String? = nil,
         contentSlug: String?,
         entityId: Int? = nil,
-        posterURL: URL? = nil, posterRequiresAuth: Bool = false
+        posterURL: URL? = nil, posterRequiresAuth: Bool = false,
+        statusMessages: [String] = []
     ) {
         self.id = id; self.source = source; self.arrQueueId = arrQueueId
         self.downloadId = downloadId; self.downloadProtocol = downloadProtocol
@@ -113,6 +122,7 @@ public struct QueueItem: Identifiable, Equatable, Hashable {
         self.existingSize = existingSize
         self.existingFileName = existingFileName
         self.posterURL = posterURL; self.posterRequiresAuth = posterRequiresAuth
+        self.statusMessages = statusMessages
     }
 
     public var isPaused: Bool { status == .paused }

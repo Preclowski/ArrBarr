@@ -59,7 +59,7 @@ public struct QueueSectionView: View {
                 } else if let onShowHistory {
                     Button(action: onShowHistory) {
                         HStack(spacing: 2) {
-                            Text("Show history")
+                            Text("Show history", bundle: .module)
                             Image(systemName: "chevron.right")
                                 .font(.system(size: 8, weight: .semibold))
                         }
@@ -77,7 +77,7 @@ public struct QueueSectionView: View {
 
             if !isCollapsed && error == nil {
                 if entries.isEmpty {
-                    Text("Queue empty")
+                    Text("Queue empty", bundle: .module)
                         .font(.system(size: 12))
                         .foregroundStyle(.tertiary)
                         .padding(.horizontal, 12)

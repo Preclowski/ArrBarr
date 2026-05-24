@@ -212,7 +212,8 @@ public actor WhisparrClient: ArrAPIClient {
             contentSlug: r.movie?.titleSlug,
             entityId: r.movieId ?? r.movie?.id,
             posterURL: poster,
-            posterRequiresAuth: posterAuth
+            posterRequiresAuth: posterAuth,
+            statusMessages: r.statusMessages.flattenToLines()
         )
     }
 }

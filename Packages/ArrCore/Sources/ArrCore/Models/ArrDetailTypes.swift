@@ -78,6 +78,10 @@ public struct SonarrEpisodeDetail: Decodable, Identifiable {
     let hasFile: Bool?
     let monitored: Bool?
     let runtime: Int?
+    /// Sonarr's link to the episode-file record; non-nil exactly when
+    /// `hasFile == true`. Lets the detail view fetch the full file
+    /// payload (quality / size / customFormats) on demand.
+    let episodeFileId: Int?
 }
 
 // MARK: - Lidarr album detail
@@ -102,11 +106,23 @@ public struct LidarrDetailRatings: Decodable {
     let votes: Int?
 }
 
-public struct LidarrAlbumStats: Decodable {
+public struct LidarrAlbumStats: Decodable, Sendable {
     let trackCount: Int?
     let trackFileCount: Int?
     let totalTrackCount: Int?
     let sizeOnDisk: Int64?
+}
+
+/// Slim album record returned by `/api/v1/album?artistId=N`. Used by the
+/// chat `lidarr_get_artist_albums` tool — keeps the response compact
+/// when an artist has dozens of releases.
+public struct LidarrAlbumListRecord: Decodable, Identifiable, Sendable {
+    public let id: Int
+    let title: String
+    let albumType: String?
+    let releaseDate: String?
+    let monitored: Bool?
+    let statistics: LidarrAlbumStats?
 }
 
 public struct LidarrTrackDetail: Decodable, Identifiable {

@@ -73,6 +73,14 @@ public struct HTTPClient {
         return try await perform(req)
     }
 
+    func put(_ url: URL, headers: [String: String] = [:], body: Data) async throws -> Data {
+        var req = URLRequest(url: url)
+        req.httpMethod = "PUT"
+        for (k, v) in headers { req.setValue(v, forHTTPHeaderField: k) }
+        req.httpBody = body
+        return try await perform(req)
+    }
+
     private func perform(_ req: URLRequest) async throws -> Data {
         let (data, response): (Data, URLResponse)
         do {

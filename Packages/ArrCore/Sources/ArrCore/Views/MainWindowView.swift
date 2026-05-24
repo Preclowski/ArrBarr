@@ -118,21 +118,21 @@ public struct MainWindowView: View {
                                    : .default,
                                    value: viewModel.isRefreshing)
                 }
-                .help(Text("Refresh"))
+                .help(Text("Refresh", bundle: .module))
                 .disabled(viewModel.isRefreshing)
             }
             ToolbarItem(placement: .primaryAction) {
                 Button(action: { searchViewModel.reset(); showSearch = true }) {
                     Image(systemName: "plus")
                 }
-                .help(Text("Add new"))
+                .help(Text("Add new", bundle: .module))
                 .disabled(!searchConfigured)
             }
             ToolbarItem(placement: .primaryAction) {
                 Button(action: onOpenSettings) {
                     Image(systemName: "gearshape")
                 }
-                .help(Text("Settings…"))
+                .help(Text("Settings…", bundle: .module))
                 .keyboardShortcut(",", modifiers: .command)
             }
         }
@@ -153,11 +153,11 @@ public struct MainWindowView: View {
             .frame(minWidth: 480, minHeight: 560)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
+                    Button {
                         showSearch = false
                         searchResult = nil
                         searchViewModel.reset()
-                    }
+                    } label: { Text("Cancel", bundle: .module) }
                 }
             }
         }
@@ -183,17 +183,17 @@ public struct MainWindowView: View {
         List(selection: $selection) {
             Section {
                 if anyArrConfigured {
-                    Label("Queue", systemImage: "arrow.down.circle")
+                    Label { Text("Queue", bundle: .module) } icon: { Image(systemName: "arrow.down.circle") }
                         .tag(Destination.allQueue)
-                    Label("Upcoming", systemImage: "calendar")
+                    Label { Text("Upcoming", bundle: .module) } icon: { Image(systemName: "calendar") }
                         .tag(Destination.upcoming)
                 }
                 if chatAvailable {
-                    Label("Chat", systemImage: "sparkles")
+                    Label { Text("Chat", bundle: .module) } icon: { Image(systemName: "sparkles") }
                         .tag(Destination.chat)
                 }
             } header: {
-                Text("Library")
+                Text("Library", bundle: .module)
             }
 
             if anyArrConfigured {
@@ -203,7 +203,7 @@ public struct MainWindowView: View {
                     if lidarrConfigured { sourceRow(.lidarr) }
                     if whisparrConfigured { sourceRow(.whisparr) }
                 } header: {
-                    Text("Sources")
+                    Text("Sources", bundle: .module)
                 }
             }
         }
@@ -282,7 +282,7 @@ public struct MainWindowView: View {
             if viewModel.isLoading {
                 VStack(spacing: 10) {
                     ProgressView().controlSize(.small)
-                    Text("Loading…").font(.subheadline).foregroundStyle(.secondary)
+                    Text("Loading…", bundle: .module).font(.subheadline).foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 48)
@@ -333,7 +333,7 @@ public struct MainWindowView: View {
                     Image(systemName: "calendar")
                         .font(.system(size: 24, weight: .light))
                         .foregroundStyle(.tertiary)
-                    Text("Nothing upcoming")
+                    Text("Nothing upcoming", bundle: .module)
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
@@ -373,10 +373,10 @@ public struct MainWindowView: View {
             Image(systemName: "rectangle.on.rectangle.angled")
                 .font(.system(size: 28, weight: .light))
                 .foregroundStyle(.tertiary)
-            Text("Select an item")
+            Text("Select an item", bundle: .module)
                 .font(.system(size: 13))
                 .foregroundStyle(.secondary)
-            Text("Click a row in the queue to see its details, episodes, and existing files.")
+            Text("Click a row in the queue to see its details, episodes, and existing files.", bundle: .module)
                 .font(.system(size: 11))
                 .foregroundStyle(.tertiary)
                 .multilineTextAlignment(.center)
@@ -392,13 +392,13 @@ public struct MainWindowView: View {
                 .font(.system(size: 28, weight: .light))
                 .foregroundStyle(.secondary)
                 .symbolRenderingMode(.hierarchical)
-            Text("ArrBarr is not configured")
+            Text("ArrBarr is not configured", bundle: .module)
                 .font(.headline)
-            Text("Connect Radarr, Sonarr or Lidarr in Settings to get started.")
+            Text("Connect Radarr, Sonarr or Lidarr in Settings to get started.", bundle: .module)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
-            Button("Open Settings…", action: onOpenSettings)
+            Button { onOpenSettings() } label: { Text("Open Settings…", bundle: .module) }
                 .buttonStyle(.borderedProminent)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

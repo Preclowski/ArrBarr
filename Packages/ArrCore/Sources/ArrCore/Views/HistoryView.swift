@@ -20,16 +20,22 @@ public struct HistoryView: View {
     }
 
     private var header: some View {
+        // Variant A header: back chevron + prominent page title on the
+        // leading edge, source pill pushed right as a context tag.
+        // Same pattern in DetailView + SearchAddPanel. The old layout
+        // (`Spacer` between back and a three-token tertiary string on
+        // the right — `🎬 Radarr Historia`) had no actual page title,
+        // just scattered metadata.
         HStack(spacing: 6) {
             FloatingBackButton(action: onClose)
+            Text("History", bundle: .module)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(.primary)
             Spacer()
             Image(systemName: sourceSymbol)
                 .font(.system(size: 11))
                 .foregroundStyle(.tertiary)
             Text(LocalizedStringKey(sourceTitle))
-                .font(.system(size: 11))
-                .foregroundStyle(.tertiary)
-            Text("History", bundle: .module)
                 .font(.system(size: 11))
                 .foregroundStyle(.tertiary)
         }
@@ -41,24 +47,31 @@ public struct HistoryView: View {
     @ViewBuilder
     private var content: some View {
         if isLoading && items.isEmpty {
+            // Center vertically in the remaining popover area instead
+            // of pinning a 28pt top margin under the header — that read
+            // as a "dead zone" when the back button was the only thing
+            // anchoring the eye to the top.
             VStack(spacing: 8) {
                 ProgressView().controlSize(.small)
-                Text("Loading…").font(.subheadline).foregroundStyle(.secondary)
+                Text("Loading…", bundle: .module).font(.subheadline).foregroundStyle(.secondary)
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 28)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if let error {
             Label(error, systemImage: "exclamationmark.triangle.fill")
                 .font(.system(size: 11))
                 .foregroundStyle(.orange)
                 .padding(12)
         } else if items.isEmpty {
-            Text("No history")
+            Text("No history", bundle: .module)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 28)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
+            // LazyVStack used to add 4pt vertical padding around the
+            // first/last rows; the row itself already carries
+            // padding(.vertical, 6) so 4+6=10pt above the first row
+            // read as an unnecessary gap. Let the rows own their
+            // spacing for a flush header→content transition.
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
                     ForEach(items) { item in
@@ -66,10 +79,9 @@ public struct HistoryView: View {
                         Divider().padding(.horizontal, 12).opacity(0.5)
                     }
                 }
-                .padding(.vertical, 4)
             }
             .scrollBounceBehavior(.basedOnSize)
-            .frame(height: 480)
+            .frame(maxHeight: .infinity)
         }
     }
 

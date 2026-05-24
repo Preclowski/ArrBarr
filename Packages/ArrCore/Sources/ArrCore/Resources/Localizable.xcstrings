@@ -30,6 +30,35 @@
         }
       }
     },
+    "%lld downloads": {
+      "extractionState": "manual",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld pobrań"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Downloads"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld descargas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld téléchargements"
+          }
+        }
+      }
+    },
     "%lld episodes": {
       "extractionState": "manual",
       "localizations": {
@@ -375,6 +404,35 @@
         }
       }
     },
+    "About": {
+      "extractionState": "manual",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O aplikacji"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Über"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Acerca de"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "À propos"
+          }
+        }
+      }
+    },
     "Add": {
       "extractionState": "manual",
       "localizations": {
@@ -664,6 +722,35 @@
         }
       }
     },
+    "Apple Intelligence requires iOS 26.": {
+      "extractionState": "manual",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence wymaga iOS 26."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence erfordert iOS 26."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence requiere iOS 26."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence nécessite iOS 26."
+          }
+        }
+      }
+    },
     "Apple Intelligence requires macOS 26.": {
       "extractionState": "manual",
       "localizations": {
@@ -890,6 +977,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "ArrBarr zostanie teraz uruchomiony ponownie, aby wczytać zawartość demo."
+          }
+        }
+      }
+    },
+    "Ask about %@": {
+      "comment": "Chat empty-state hint. %@ is a locale-aware list of configured arrs (e.g. 'Sonarr, Radarr i Lidarr').",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ask about %@"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zapytaj o %@"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Frage zu %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pregunta sobre %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Demandez à propos de %@"
           }
         }
       }
@@ -1355,6 +1478,35 @@
         }
       }
     },
+    "Click a row in the queue to see its details, episodes, and existing files.": {
+      "extractionState": "manual",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kliknij wiersz w kolejce, aby zobaczyć szczegóły, odcinki i istniejące pliki."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klicke eine Zeile in der Warteschlange an, um Details, Folgen und vorhandene Dateien zu sehen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Haz clic en una fila de la cola para ver detalles, episodios y archivos existentes."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cliquez sur une ligne dans la file pour voir les détails, les épisodes et les fichiers existants."
+          }
+        }
+      }
+    },
     "Client": {
       "localizations": {
         "de": {
@@ -1524,6 +1676,35 @@
         }
       }
     },
+    "Confirm action": {
+      "extractionState": "manual",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Potwierdź akcję"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktion bestätigen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Confirmar acción"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Confirmer l'action"
+          }
+        }
+      }
+    },
     "Connect Radarr, Sonarr & Lidarr": {
       "extractionState": "manual",
       "localizations": {
@@ -1549,6 +1730,35 @@
           "stringUnit": {
             "state": "translated",
             "value": "Połącz Radarr, Sonarr i Lidarr"
+          }
+        }
+      }
+    },
+    "Connect Radarr, Sonarr or Lidarr in Settings to get started.": {
+      "extractionState": "manual",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Połącz Radarra, Sonarra lub Lidarra w Ustawieniach, aby zacząć."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verbinde Radarr, Sonarr oder Lidarr in den Einstellungen, um loszulegen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conecta Radarr, Sonarr o Lidarr en Ajustes para empezar."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connectez Radarr, Sonarr ou Lidarr dans Réglages pour commencer."
           }
         }
       }
@@ -1724,6 +1934,64 @@
         }
       }
     },
+    "Deluge": {
+      "extractionState": "manual",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deluge"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deluge"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deluge"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deluge"
+          }
+        }
+      }
+    },
+    "Demo mode": {
+      "extractionState": "manual",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tryb demo"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Demo-Modus"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modo demo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mode démo"
+          }
+        }
+      }
+    },
     "Demo mode enabled": {
       "extractionState": "manual",
       "localizations": {
@@ -1749,6 +2017,35 @@
           "stringUnit": {
             "state": "translated",
             "value": "Tryb demo włączony"
+          }
+        }
+      }
+    },
+    "Developer options": {
+      "extractionState": "manual",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opcje deweloperskie"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entwickleroptionen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opciones de desarrollador"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Options développeur"
           }
         }
       }
@@ -1807,6 +2104,35 @@
           "stringUnit": {
             "state": "translated",
             "value": "Découverte"
+          }
+        }
+      }
+    },
+    "Display": {
+      "extractionState": "manual",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wyświetlanie"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anzeige"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Visualización"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Affichage"
           }
         }
       }
@@ -2154,6 +2480,35 @@
         }
       }
     },
+    "Existing": {
+      "extractionState": "manual",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Istniejący"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorhanden"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Existente"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Existant"
+          }
+        }
+      }
+    },
     "Existing file": {
       "localizations": {
         "de": {
@@ -2408,6 +2763,35 @@
         }
       }
     },
+    "Get a free TMDB key": {
+      "extractionState": "manual",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pobierz darmowy klucz TMDB"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kostenlosen TMDB-Schlüssel holen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Consigue una clave TMDB gratuita"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Obtenir une clé TMDB gratuite"
+          }
+        }
+      }
+    },
     "Get started": {
       "extractionState": "manual",
       "localizations": {
@@ -2433,6 +2817,35 @@
           "stringUnit": {
             "state": "translated",
             "value": "Zacznij"
+          }
+        }
+      }
+    },
+    "GitHub": {
+      "extractionState": "manual",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GitHub"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GitHub"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GitHub"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GitHub"
           }
         }
       }
@@ -2578,6 +2991,35 @@
         }
       }
     },
+    "In queue": {
+      "extractionState": "manual",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "W kolejce"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In Warteschlange"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En cola"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dans la file"
+          }
+        }
+      }
+    },
     "Indexer": {
       "localizations": {
         "de": {
@@ -2687,6 +3129,64 @@
           "stringUnit": {
             "state": "translated",
             "value": "Uruchamiaj przy logowaniu"
+          }
+        }
+      }
+    },
+    "Library": {
+      "extractionState": "manual",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Biblioteka"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bibliothek"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Biblioteca"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bibliothèque"
+          }
+        }
+      }
+    },
+    "Lidarr": {
+      "extractionState": "manual",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lidarr"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lidarr"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lidarr"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lidarr"
           }
         }
       }
@@ -3007,6 +3507,93 @@
         }
       }
     },
+    "Monitor season %lld and start search.": {
+      "extractionState": "manual",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Monitoruj sezon %lld i rozpocznij wyszukiwanie."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Staffel %lld überwachen und Suche starten."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vigilar la temporada %lld y empezar a buscar."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suivre la saison %lld et lancer la recherche."
+          }
+        }
+      }
+    },
+    "Monitor this album and start search.": {
+      "extractionState": "manual",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Monitoruj ten album i rozpocznij wyszukiwanie."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dieses Album überwachen und Suche starten."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vigilar este álbum y empezar a buscar."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suivre cet album et lancer la recherche."
+          }
+        }
+      }
+    },
+    "Monitor this season": {
+      "extractionState": "manual",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Monitoruj ten sezon"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese Staffel überwachen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vigilar esta temporada"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suivre cette saison"
+          }
+        }
+      }
+    },
     "More options": {
       "localizations": {
         "de": {
@@ -3089,6 +3676,35 @@
           "stringUnit": {
             "state": "translated",
             "value": "Wiele sezonów"
+          }
+        }
+      }
+    },
+    "NZBGet": {
+      "extractionState": "manual",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NZBGet"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NZBGet"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NZBGet"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NZBGet"
           }
         }
       }
@@ -3379,6 +3995,35 @@
         }
       }
     },
+    "Not aired yet": {
+      "extractionState": "manual",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jeszcze nie wyemitowany"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch nicht ausgestrahlt"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aún no emitido"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pas encore diffusé"
+          }
+        }
+      }
+    },
     "Nothing upcoming": {
       "localizations": {
         "de": {
@@ -3516,6 +4161,35 @@
           "stringUnit": {
             "state": "translated",
             "value": "Otwórz ustawienia…"
+          }
+        }
+      }
+    },
+    "Open Window…": {
+      "extractionState": "manual",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Otwórz okno…"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fenster öffnen…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abrir ventana…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ouvrir la fenêtre…"
           }
         }
       }
@@ -4000,6 +4674,35 @@
         }
       }
     },
+    "Radarr": {
+      "extractionState": "manual",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Radarr"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Radarr"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Radarr"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Radarr"
+          }
+        }
+      }
+    },
     "Radarr — notify on new grabs": {
       "localizations": {
         "de": {
@@ -4454,6 +5157,64 @@
         }
       }
     },
+    "Run %@.": {
+      "extractionState": "manual",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uruchom %@."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ ausführen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ejecutar %@."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exécuter %@."
+          }
+        }
+      }
+    },
+    "SABnzbd": {
+      "extractionState": "manual",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SABnzbd"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SABnzbd"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SABnzbd"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SABnzbd"
+          }
+        }
+      }
+    },
     "Save": {
       "localizations": {
         "de": {
@@ -4539,6 +5300,93 @@
         }
       }
     },
+    "In library": {
+      "extractionState": "manual",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "W bibliotece"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In Bibliothek"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En biblioteca"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dans la bibliothèque"
+          }
+        }
+      }
+    },
+    "No matches.": {
+      "extractionState": "manual",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Brak wyników."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Treffer."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sin resultados."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun résultat."
+          }
+        }
+      }
+    },
+    "Search": {
+      "extractionState": "manual",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Szukaj"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suchen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buscar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rechercher"
+          }
+        }
+      }
+    },
     "Search %lld": {
       "extractionState": "manual",
       "localizations": {
@@ -4568,6 +5416,35 @@
         }
       }
     },
+    "Search %lld episode(s).": {
+      "extractionState": "manual",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Szukaj %lld odcinka/odcinków."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Folge(n) suchen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buscar %lld episodio(s)."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rechercher %lld épisode(s)."
+          }
+        }
+      }
+    },
     "Search all %lld missing": {
       "extractionState": "manual",
       "localizations": {
@@ -4593,6 +5470,35 @@
           "stringUnit": {
             "state": "translated",
             "value": "Rechercher les %lld manquants"
+          }
+        }
+      }
+    },
+    "Search all missing episodes?": {
+      "extractionState": "manual",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Szukać wszystkich brakujących odcinków?"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle fehlenden Folgen suchen?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Buscar todos los episodios que faltan?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rechercher tous les épisodes manquants ?"
           }
         }
       }
@@ -4655,6 +5561,35 @@
         }
       }
     },
+    "Search for this album.": {
+      "extractionState": "manual",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Szukaj tego albumu."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dieses Album suchen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buscar este álbum."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rechercher cet album."
+          }
+        }
+      }
+    },
     "Search for this episode": {
       "extractionState": "manual",
       "localizations": {
@@ -4680,6 +5615,35 @@
           "stringUnit": {
             "state": "translated",
             "value": "Rechercher cet épisode"
+          }
+        }
+      }
+    },
+    "Search for this movie.": {
+      "extractionState": "manual",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Szukaj tego filmu."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diesen Film suchen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buscar esta película."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rechercher ce film."
           }
         }
       }
@@ -4713,6 +5677,64 @@
         }
       }
     },
+    "Search this episode?": {
+      "extractionState": "manual",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Szukać tego odcinka?"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese Folge suchen?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Buscar este episodio?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rechercher cet épisode ?"
+          }
+        }
+      }
+    },
+    "Search this season?": {
+      "extractionState": "manual",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Szukać tego sezonu?"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese Staffel suchen?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Buscar esta temporada?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rechercher cette saison ?"
+          }
+        }
+      }
+    },
     "Season": {
       "extractionState": "manual",
       "localizations": {
@@ -4738,6 +5760,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Sezon"
+          }
+        }
+      }
+    },
+    "Season pill %lld": {
+      "comment": "Season label used in the pill bar — e.g. 'Sezon 1'. Distinct key from 'Season %02lld' to avoid xcstring symbol-generation collision.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Season %lld"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Staffel %lld"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Temporada %lld"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saison %lld"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sezon %lld"
           }
         }
       }
@@ -4882,6 +5940,35 @@
           "stringUnit": {
             "state": "translated",
             "value": "Zobacz, co leci dziś wieczorem, otrzymuj powiadomienia o nowych pobraniach i wykrywaj problemy z indeksami zanim staną się kłopotem."
+          }
+        }
+      }
+    },
+    "Select an item": {
+      "extractionState": "manual",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wybierz pozycję"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Element auswählen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Selecciona un elemento"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sélectionne un élément"
           }
         }
       }
@@ -5142,6 +6229,65 @@
         }
       }
     },
+    "Next week": {
+      "extractionState": "manual",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "W tym tygodniu"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese Woche"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esta semana"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cette semaine"
+          }
+        }
+      }
+    },
+    "Resume episode download": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Resume episode download" } },
+        "pl": { "stringUnit": { "state": "translated", "value": "Wznów pobieranie odcinka" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Episode-Download fortsetzen" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Reanudar descarga del episodio" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Reprendre le téléchargement de l'épisode" } }
+      }
+    },
+    "Pause episode download": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Pause episode download" } },
+        "pl": { "stringUnit": { "state": "translated", "value": "Wstrzymaj pobieranie odcinka" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Episode-Download pausieren" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Pausar descarga del episodio" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Mettre en pause le téléchargement" } }
+      }
+    },
+    "Remove episode download": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Remove episode download" } },
+        "pl": { "stringUnit": { "state": "translated", "value": "Usuń pobieranie odcinka" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Episode-Download entfernen" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Eliminar descarga del episodio" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Supprimer le téléchargement" } }
+      }
+    },
     "Show more": {
       "extractionState": "manual",
       "localizations": {
@@ -5228,6 +6374,35 @@
         }
       }
     },
+    "Sonarr": {
+      "extractionState": "manual",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sonarr"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sonarr"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sonarr"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sonarr"
+          }
+        }
+      }
+    },
     "Sonarr — notify on new grabs": {
       "localizations": {
         "de": {
@@ -5252,6 +6427,35 @@
           "stringUnit": {
             "state": "translated",
             "value": "Sonarr — powiadamiaj o nowych pobraniach"
+          }
+        }
+      }
+    },
+    "Sources": {
+      "extractionState": "manual",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Źródła"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quellen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fuentes"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sources"
           }
         }
       }
@@ -5428,6 +6632,93 @@
         }
       }
     },
+    "Stop monitoring season %lld.": {
+      "extractionState": "manual",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Przestań monitorować sezon %lld."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Staffel %lld nicht mehr überwachen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dejar de vigilar la temporada %lld."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ne plus suivre la saison %lld."
+          }
+        }
+      }
+    },
+    "Stop monitoring this album.": {
+      "extractionState": "manual",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Przestań monitorować ten album."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dieses Album nicht mehr überwachen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dejar de vigilar este álbum."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ne plus suivre cet album."
+          }
+        }
+      }
+    },
+    "Stop monitoring this season": {
+      "extractionState": "manual",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Przestań monitorować ten sezon"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese Staffel nicht mehr überwachen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dejar de vigilar esta temporada"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ne plus suivre cette saison"
+          }
+        }
+      }
+    },
     "System": {
       "localizations": {
         "de": {
@@ -5452,6 +6743,35 @@
           "stringUnit": {
             "state": "translated",
             "value": "Systemowy"
+          }
+        }
+      }
+    },
+    "TMDB API key": {
+      "extractionState": "manual",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klucz API TMDB"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TMDB-API-Schlüssel"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clave API de TMDB"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clé API TMDB"
           }
         }
       }
@@ -5509,6 +6829,35 @@
           "stringUnit": {
             "state": "translated",
             "value": "Le pied de page a disparu. Ajoutez du contenu via le bouton **Add** à côté des onglets, ou appuyez sur **⌘N** n'importe où dans le popover. Le menu **⋯** à côté contient Réglages, Quitter et Ouvrir la fenêtre — tout est aussi dans le menu contextuel de l'icône de la barre de menus."
+          }
+        }
+      }
+    },
+    "This will remove \"%@\" (%lld episodes) from the download client.": {
+      "extractionState": "manual",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spowoduje to usunięcie „%@\" (%lld odcinków) z klienta pobierań."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Damit werden „%@\" (%lld Folgen) aus dem Download-Client entfernt."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esto eliminará «%@» (%lld episodios) del cliente de descargas."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cela supprimera « %@ » (%lld épisodes) du client de téléchargement."
           }
         }
       }
@@ -5769,6 +7118,35 @@
         }
       }
     },
+    "Transmission": {
+      "extractionState": "manual",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transmission"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transmission"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transmission"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transmission"
+          }
+        }
+      }
+    },
     "Try demo mode": {
       "extractionState": "manual",
       "localizations": {
@@ -5934,6 +7312,35 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nadchodzące"
+          }
+        }
+      }
+    },
+    "Upcoming window": {
+      "extractionState": "manual",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Okno nadchodzących"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorschau-Zeitraum"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ventana de próximas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fenêtre à venir"
           }
         }
       }
@@ -6195,6 +7602,35 @@
         }
       }
     },
+    "While open": {
+      "extractionState": "manual",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gdy otwarte"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wenn geöffnet"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mientras está abierto"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quand ouvert"
+          }
+        }
+      }
+    },
     "Whisparr": {
       "extractionState": "manual",
       "localizations": {
@@ -6253,6 +7689,122 @@
         }
       }
     },
+    "Will query your indexers and start a download if a release matches.": {
+      "extractionState": "manual",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wykona zapytanie do indekserów i rozpocznie pobieranie, jeśli znajdzie pasującą wersję."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fragt deine Indexer ab und startet einen Download, sobald ein Release passt."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Consultará tus indexers y comenzará la descarga si encuentra un release compatible."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Interrogera vos indexers et démarrera un téléchargement si une release correspond."
+          }
+        }
+      }
+    },
+    "Will query your indexers for every missing episode across the entire series.": {
+      "extractionState": "manual",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wykona zapytanie do indekserów dla każdego brakującego odcinka w całym serialu."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fragt deine Indexer für jede fehlende Folge in der gesamten Serie ab."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Consultará tus indexers para cada episodio que falta en toda la serie."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Interrogera vos indexers pour chaque épisode manquant dans toute la série."
+          }
+        }
+      }
+    },
+    "Will query your indexers for every missing episode in this season.": {
+      "extractionState": "manual",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wykona zapytanie do indekserów dla każdego brakującego odcinka w tym sezonie."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fragt deine Indexer für jede fehlende Folge dieser Staffel ab."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Consultará tus indexers para cada episodio que falta en esta temporada."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Interrogera vos indexers pour chaque épisode manquant de cette saison."
+          }
+        }
+      }
+    },
+    "Will replace existing file": {
+      "extractionState": "manual",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zastąpi istniejący plik"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorhandene Datei wird ersetzt"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sustituirá el archivo existente"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remplacera le fichier existant"
+          }
+        }
+      }
+    },
     "Your menu-bar companion for Radarr, Sonarr, and Lidarr.": {
       "extractionState": "manual",
       "localizations": {
@@ -6278,6 +7830,93 @@
           "stringUnit": {
             "state": "translated",
             "value": "Twój towarzysz w pasku menu dla Radarra, Sonarra i Lidarra."
+          }
+        }
+      }
+    },
+    "admin": {
+      "extractionState": "manual",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "admin"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "admin"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "admin"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "admin"
+          }
+        }
+      }
+    },
+    "qBittorrent": {
+      "extractionState": "manual",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "qBittorrent"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "qBittorrent"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "qBittorrent"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "qBittorrent"
+          }
+        }
+      }
+    },
+    "rTorrent": {
+      "extractionState": "manual",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "rTorrent"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "rTorrent"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "rTorrent"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "rTorrent"
           }
         }
       }

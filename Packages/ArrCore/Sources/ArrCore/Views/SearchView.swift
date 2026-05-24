@@ -142,15 +142,12 @@ public struct SearchView: View {
 
             if !isCollapsed {
                 if results.isEmpty {
-                    let noMatchKey: LocalizedStringKey = {
-                        switch source {
-                        case .radarr: return "No movies match this query."
-                        case .sonarr: return "No series match this query."
-                        case .lidarr: return "No artists match this query."
-                        case .whisparr: return "No scenes match this query."
-                        }
-                    }()
-                    Text(noMatchKey, bundle: .module)
+                    // Single "No matches." line — per UX review,
+                    // differentiating "nothing to add" vs "nothing in
+                    // library" is a distinction users don't think in.
+                    // Per-source copy ("No movies / series / artists")
+                    // was clutter in a 340pt-wide popover.
+                    Text("No matches.", bundle: .module)
                         .font(.caption)
                         .foregroundStyle(.tertiary)
                         .padding(.horizontal, 12)
@@ -189,9 +186,13 @@ public struct SearchView: View {
         }
     }
 
-    /// The result area underneath the floating search bar. The conditional
-    /// branches all reserve ~58pt at the bottom so nothing sits under the
-    /// glass pill.
+    /// The result area underneath the floating search bar. Three states:
+    ///   - empty query → onboarding hint
+    ///   - searching → full-screen loader (sticky from first keystroke
+    ///     through every subsequent fetch until the final results land,
+    ///     so the user never sees a flicker between partial results and
+    ///     spinner while typing)
+    ///   - settled → per-arr sections
     @ViewBuilder
     private var content: some View {
         if viewModel.query.isEmpty && !viewModel.isSearching {
