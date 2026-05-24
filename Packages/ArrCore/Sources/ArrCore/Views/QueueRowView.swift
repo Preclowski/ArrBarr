@@ -80,62 +80,39 @@ public struct QueueRowView: View {
                 VStack(alignment: .leading, spacing: 1) {
                     HStack(spacing: 4) {
                         Text(item.title)
-                            .font(.system(size: 12, weight: .medium))
+                            .scaledFont(size: 12)
                             .lineLimit(1)
                             .truncationMode(.tail)
 
                         MediaBadgeCluster(isUpgrade: item.isUpgrade)
                         Spacer(minLength: 4)
-                        if let client = item.downloadClient {
-                            DownloadClientLabel(name: client)
-                        }
+                        // Download client moved into the
+                        // `DownloadProgressCard` header below, next
+                        // to the status pill — keeps the title row
+                        // focused on title + upgrade badge.
                     }
 
                     if let sub = item.subtitle {
                         Text(sub)
-                            .font(.system(size: 11))
+                            .scaledFont(size: 11)
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
                     }
 
-                    HStack(spacing: 3) {
-                        StatusIconLabel(status: item.status)
-                        if !metaLine.isEmpty {
-                            Text("·")
-                                .foregroundStyle(.tertiary)
-                            Text(metaLine)
-                                .foregroundStyle(.tertiary)
-                        }
-                        Spacer(minLength: 4)
-                        // Right-gutter: score over client (one line up).
-                        // See QueueItemPrimitives.ScoreLabel.
-                        ScoreLabel(score: item.customFormatScore)
-                    }
-                    .font(.system(size: 10))
-                    .lineLimit(1)
+                    // Status + meta + score row dropped — same info
+                    // now lives inside `DownloadProgressCard`'s
+                    // header below. Quality / size / client all live
+                    // in the long-hover tooltip so the row stays
+                    // glanceable: title + status card, period.
                 }
-                // Action cluster is delivered via the bottom-trailing
-                // hover overlay on macOS (see `inlineActionIcons`).
-                // The iOS inline `.hoverActions` modifier was removed
-                // — the app is macOS-first and the iOS path was
-                // accumulating bit-rot.
 
-                ThinProgressBar(progress: item.progress, tint: item.status.tint)
-
-                if !item.customFormats.isEmpty {
-                    // Score moved to the status-line right edge, so
-                    // the chip strip carries the format tags only.
-                    // `fadeTrailing: false` when hovering — the hover
-                    // overlay paints its own dark gradient over the
-                    // right edge, and stacking two fades doubles up.
-                    CustomFormatStrip(
-                        formats: item.customFormats,
-                        score: 0,
-                        help: customFormatsTooltip,
-                        fadeTrailing: !(isHovering && canControl)
-                    )
-                    .padding(.top, 2)
-                }
+                DownloadProgressCard(
+                    item: item,
+                    fadeTrailing: !(isHovering && canControl),
+                    showUpgradeDiff: false,
+                    showHeader: true,
+                    compactSpec: true
+                )
             }
         }
         .padding(.horizontal, 12)
@@ -146,30 +123,15 @@ public struct QueueRowView: View {
                 .padding(.horizontal, 6)
         )
         // Bare-icon action cluster floats over the trailing edge of
-        // the row, vertically centred, on hover. A dark fade-in
-        // gradient under the cluster cuts the icons visually from
-        // whatever's underneath (title text, status line, CF chip
-        // strip) — fades from clear on the left to a soft dark on
-        // the right so the transition reads as a vignette, not a
-        // hard panel.
+        // the row, vertically centred, on hover. No gradient backdrop
+        // — bare icons sit over the row's hover tint, matching
+        // Mail / Music row treatment.
         #if os(macOS)
         .overlay(alignment: .trailing) {
             if isHovering && canControl {
                 inlineActionIcons
-                    .padding(.leading, 60)
-                    .padding(.trailing, 16)
-                    .frame(maxHeight: .infinity)
-                    .background(
-                        LinearGradient(
-                            stops: [
-                                .init(color: .clear, location: 0),
-                                .init(color: Color.black.opacity(0.55), location: 0.55),
-                                .init(color: Color.black.opacity(0.6), location: 1),
-                            ],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
+                    .rowActionBackdrop()
+                    .padding(.trailing, 10)
                     .transition(.opacity)
             }
         }
@@ -210,11 +172,15 @@ public struct QueueRowView: View {
             .popoverBehavior(.applicationDefined)
         }
         #endif
-        .alert(Text("Remove download?", bundle: .module), isPresented: $showDeleteConfirmation) {
-            Button(role: .destructive) {
-                onDelete()
-            } label: { Text("Remove", bundle: .module) }
-            Button(role: .cancel) {} label: { Text("Cancel", bundle: .module) }
+        .confirmationDialog(
+            Text("Cancel this download?", bundle: .module),
+            isPresented: $showDeleteConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button(role: .destructive) { onDelete() } label: {
+                Text("Cancel download", bundle: .module)
+            }
+            Button(role: .cancel) {} label: { Text("Keep download", bundle: .module) }
         } message: {
             Text(String(format: String(localized: "This will remove \"%@\" from the download client.", bundle: .module), item.title))
         }
@@ -245,7 +211,10 @@ public struct QueueRowView: View {
     /// it.
     @ViewBuilder
     private var inlineActionIcons: some View {
-        HStack(spacing: 6) {
+        // Primary action (pause/resume — most-clicked toggle) + `⋯`
+        // menu carrying secondaries. Same row grammar as EpisodeRow
+        // and DownloadSection — see ActionPrimitives.
+        HStack(spacing: 2) {
             if canControl && canPauseResume {
                 if item.isPaused {
                     IconButton(symbol: "play.fill", helpKey: "Resume",
@@ -256,9 +225,13 @@ public struct QueueRowView: View {
                 }
             }
             if canControl {
-                IconButton(symbol: "trash", helpKey: "Remove from client",
-                           accessibilityLabel: "Remove \(item.title)", tint: .red) {
-                    showDeleteConfirmation = true
+                IconOverflowMenu(accessibilityLabel: "More actions") {
+                    Button(role: .destructive) {
+                        showDeleteConfirmation = true
+                    } label: {
+                        Label(String(localized: "Cancel download", bundle: .module),
+                              systemImage: "trash")
+                    }
                 }
             }
         }
@@ -430,7 +403,7 @@ public struct QueueItemTooltip: View {
             // tooltip just had it independently.
             HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Text(item.title)
-                    .font(.system(size: 13, weight: .semibold))
+                    .scaledFont(size: 13, weight: .semibold)
                     .lineLimit(2)
                 MediaBadgeCluster(isUpgrade: item.isUpgrade, size: .medium)
                 Spacer(minLength: 4)
@@ -440,7 +413,7 @@ public struct QueueItemTooltip: View {
             }
             if let sub = item.subtitle {
                 Text(sub)
-                    .font(.system(size: 11))
+                    .scaledFont(size: 11)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
@@ -484,11 +457,11 @@ public struct QueueItemTooltip: View {
         GridRow(alignment: .firstTextBaseline) {
             Color.clear.frame(width: 0, height: 0)
             HStack(alignment: .firstTextBaseline, spacing: 4) {
-                Text(verbatim: "└─")
-                    .font(.system(size: 11, design: .monospaced))
+                Image(systemName: "arrow.up")
+                    .scaledFont(size: 9, weight: .semibold)
                     .foregroundStyle(.tertiary)
                 Text(path)
-                    .font(.system(size: 11, design: .monospaced))
+                    .scaledFont(size: 11, design: .monospaced)
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
                     .truncationMode(.middle)
@@ -517,7 +490,10 @@ public struct QueueItemTooltip: View {
                 existingQuality: item.existingQuality,
                 existingSize: item.existingSize,
                 existingScore: item.existingCustomFormatScore,
-                newScore: item.customFormatScore
+                newScore: item.customFormatScore,
+                newQuality: item.quality,
+                newSize: item.sizeTotal > 0 ? item.sizeTotal : nil,
+                tagsDiffer: Set(item.customFormats) != Set(item.existingCustomFormats)
             )
         }
     }
@@ -530,7 +506,7 @@ public struct QueueItemTooltip: View {
     private func row(_ label: String, value: String, valueColor: Color? = nil, mono: Bool = false, wraps: Bool = false) -> some View {
         GridRow(alignment: .firstTextBaseline) {
             Text(LocalizedStringKey(label), bundle: .module)
-                .font(.system(size: 11))
+                .scaledFont(size: 11)
                 .foregroundStyle(.secondary)
                 .gridColumnAlignment(.leading)
             Text(value)

@@ -13,7 +13,7 @@ public struct ChatUnavailableView: View {
     public var body: some View {
         VStack(spacing: 12) {
             Image(systemName: symbol)
-                .font(.system(size: 28, weight: .light))
+                .scaledFont(size: 28, weight: .light)
                 .foregroundStyle(.tertiary)
             Text(title, bundle: .module)
                 .font(.subheadline)

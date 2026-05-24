@@ -23,38 +23,11 @@ public struct ConfirmActionCard: View {
     }
 
     public var body: some View {
-        HStack(alignment: .top, spacing: 10) {
-            Image(systemName: "exclamationmark.shield.fill")
-                .font(.system(size: 14))
-                .foregroundStyle(.orange)
-                .padding(.top, 1)
-            VStack(alignment: .leading, spacing: 6) {
-                Text(humanDescription)
-                    .font(.system(size: 12))
-                    .foregroundStyle(.primary)
-                    .fixedSize(horizontal: false, vertical: true)
-                HStack(spacing: 8) {
-                    Spacer()
-                    Button(role: .cancel, action: onCancel) {
-                        Text("Cancel", bundle: .module)
-                    }
-                    .keyboardShortcut(.escape, modifiers: [])
-                    Button(action: onConfirm) {
-                        Text("Confirm", bundle: .module)
-                    }
-                    .keyboardShortcut(.return, modifiers: [])
-                    .modifier(GlassProminentButtonStyle())
-                }
-            }
-        }
-        .padding(10)
-        .background(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(Color.orange.opacity(0.08))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .stroke(Color.orange.opacity(0.35), lineWidth: 0.75)
+        InlineConfirmCard(
+            message: humanDescription,
+            confirmLabelKey: "Confirm",
+            onConfirm: onConfirm,
+            onCancel: onCancel
         )
     }
 
@@ -110,5 +83,74 @@ public struct ConfirmActionCard: View {
     private func arrayArgCount(_ key: String) -> Int {
         guard case .object(let dict) = call.arguments, case .array(let arr) = dict[key] else { return 0 }
         return arr.count
+    }
+}
+
+/// Common destructive-action warning card. Same orange-shielded chrome
+/// the chat uses to gate tool calls — reused inline / in popovers on
+/// detail surfaces so the user always sees the same shape when they're
+/// about to do something irreversible (search consumes indexer quota,
+/// remove deletes the download client entry).
+///
+/// `message` is a fully-formed sentence (already localized by the
+/// caller). `confirmLabelKey` is a localization key from the module's
+/// strings catalogue — defaults to "Confirm", but the destructive flows
+/// in season/episode rows pass "Search" / "Remove" to mirror the verb in
+/// their alert message.
+public struct InlineConfirmCard: View {
+    let message: String
+    let confirmLabelKey: LocalizedStringKey
+    let destructive: Bool
+    let onConfirm: () -> Void
+    let onCancel: () -> Void
+
+    public init(
+        message: String,
+        confirmLabelKey: LocalizedStringKey = "Confirm",
+        destructive: Bool = true,
+        onConfirm: @escaping () -> Void,
+        onCancel: @escaping () -> Void
+    ) {
+        self.message = message
+        self.confirmLabelKey = confirmLabelKey
+        self.destructive = destructive
+        self.onConfirm = onConfirm
+        self.onCancel = onCancel
+    }
+
+    public var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "exclamationmark.shield.fill")
+                .scaledFont(size: 14)
+                .foregroundStyle(.orange)
+                .padding(.top, 1)
+            VStack(alignment: .leading, spacing: 6) {
+                Text(message)
+                    .scaledFont(size: 12)
+                    .foregroundStyle(.primary)
+                    .fixedSize(horizontal: false, vertical: true)
+                HStack(spacing: 8) {
+                    Spacer()
+                    Button(role: .cancel, action: onCancel) {
+                        Text("Cancel", bundle: .module)
+                    }
+                    .keyboardShortcut(.escape, modifiers: [])
+                    Button(role: destructive ? .destructive : nil, action: onConfirm) {
+                        Text(confirmLabelKey, bundle: .module)
+                    }
+                    .keyboardShortcut(.return, modifiers: [])
+                    .modifier(GlassProminentButtonStyle())
+                }
+            }
+        }
+        .padding(10)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(Color.orange.opacity(0.08))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .stroke(Color.orange.opacity(0.35), lineWidth: 0.75)
+        )
     }
 }

@@ -23,6 +23,43 @@ public func customFormatChipStrip(tags: [String], score: Int?) -> some View {
     }
 }
 
+/// "New" pill — complement to `InLibraryBadge`. Surfaces fresh search
+/// candidates (no `inLibraryArrId`) so the user sees at a glance
+/// whether a hit is something to drill into or something to add.
+/// Green tint (same vocabulary as score gains) reads as "actionable
+/// addition" rather than the accent-tinted "already exists" library
+/// chip.
+public struct NewBadge: View {
+    public init() {}
+
+    public var body: some View {
+        Text("New", bundle: .module)
+            .font(.system(size: 9, weight: .semibold))
+            .foregroundStyle(Color.green)
+            .padding(.horizontal, 5)
+            .padding(.vertical, 1)
+            .background(Color.green.opacity(0.18), in: Capsule())
+    }
+}
+
+/// "In library" pill rendered next to titles whenever the item is
+/// already on the user's arr. Same shape language as the genre /
+/// rating chips (semibold accent-tinted capsule). Lifted out of
+/// SearchResultRow so search rows, upcoming rows, and any future
+/// detail surface share the exact same visual.
+public struct InLibraryBadge: View {
+    public init() {}
+
+    public var body: some View {
+        Text("In library", bundle: .module)
+            .scaledFont(size: 9, weight: .semibold)
+            .foregroundStyle(Color.accentColor)
+            .padding(.horizontal, 5)
+            .padding(.vertical, 1)
+            .background(Color.accentColor.opacity(0.18), in: Capsule())
+    }
+}
+
 /// A tag-style capsule with explicit colour-with-opacity background.
 /// We avoid `.quaternary` (hierarchical material) because inside a
 /// popover that container resolves to a much darker tone and the
@@ -38,7 +75,7 @@ public struct TagChip: View {
 
     public var body: some View {
         Text(text)
-            .font(.system(size: 9, weight: .medium))
+            .scaledFont(size: 9, weight: .medium)
             .foregroundStyle(color == .primary ? AnyShapeStyle(.primary) : AnyShapeStyle(color))
             .padding(.horizontal, 5)
             .padding(.vertical, 1)
@@ -127,7 +164,7 @@ public struct CustomFormatStrip: View {
                 HStack(spacing: 4) {
                     ForEach(formats, id: \.self) { cf in
                         Text(cf)
-                            .font(.system(size: 9, weight: .medium))
+                            .scaledFont(size: 9, weight: .medium)
                             .padding(.horizontal, 5)
                             .padding(.vertical, 1)
                             .background(Color.primary.opacity(0.08), in: Capsule())
@@ -135,7 +172,7 @@ public struct CustomFormatStrip: View {
                     if score != 0 {
                         let sign = score > 0 ? "+" : ""
                         Text("\(sign)\(score)")
-                            .font(.system(size: 9, weight: .semibold))
+                            .scaledFont(size: 9, weight: .semibold)
                             .foregroundStyle(score > 0 ? Color.green : Color.red)
                             .padding(.horizontal, 5)
                             .padding(.vertical, 1)

@@ -11,17 +11,17 @@ public struct NeedsYouSectionView: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 9, weight: .semibold))
+                    .scaledFont(size: 9, weight: .semibold)
                     .foregroundStyle(.tertiary)
                     .rotationEffect(.degrees(isCollapsed ? 0 : 90))
                     .frame(width: 10)
                 Image(systemName: "exclamationmark.bubble.fill")
                     .foregroundStyle(.orange)
                 Text("Needs you", bundle: .module)
-                    .font(.system(size: 12, weight: .semibold))
+                    .scaledFont(size: 12, weight: .semibold)
                     .foregroundStyle(.secondary)
                 Text("\(items.count)")
-                    .font(.system(size: 11))
+                    .scaledFont(size: 11)
                     .foregroundStyle(.tertiary)
                 Spacer()
             }
@@ -35,13 +35,13 @@ public struct NeedsYouSectionView: View {
                         VStack(alignment: .leading, spacing: 1) {
                             HStack(spacing: 6) {
                                 Text(needs.title)
-                                    .font(.system(size: 12, weight: .medium))
+                                    .scaledFont(size: 12, weight: .medium)
                                     .lineLimit(2)
                                 Spacer(minLength: 4)
                                 sourceChip(needs.source)
                             }
                             Text(needs.subtitle)
-                                .font(.system(size: 11))
+                                .scaledFont(size: 11)
                                 .foregroundStyle(.secondary)
                                 .lineLimit(1)
                         }
@@ -73,9 +73,9 @@ public struct NeedsYouSectionView: View {
     private func sourceChip(_ source: QueueItem.Source) -> some View {
         HStack(spacing: 3) {
             Image(systemName: source.symbol)
-                .font(.system(size: 9, weight: .semibold))
+                .scaledFont(size: 9, weight: .semibold)
             Text(source.displayName)
-                .font(.system(size: 10, weight: .medium))
+                .scaledFont(size: 10, weight: .medium)
         }
         .foregroundStyle(.secondary)
         .padding(.horizontal, 5)

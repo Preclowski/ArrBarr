@@ -39,7 +39,7 @@ public struct FloatingBackButton: View {
     public var body: some View {
         Button(action: action) {
             Image(systemName: "chevron.left")
-                .font(.system(size: 15, weight: .semibold))
+                .scaledFont(size: 15, weight: .semibold)
                 .foregroundStyle(isHovering ? Color.primary : Color.secondary)
                 // Generous hit target without a visible pill: tap goes
                 // through anywhere in the 28×28 padded area but only

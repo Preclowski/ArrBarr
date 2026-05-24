@@ -60,6 +60,20 @@ public actor SonarrClient: ArrAPIClient {
         return page.records.map { Self.unify($0, baseURL: baseURL, fileMap: fileMap) }
     }
 
+    /// Public wrapper for the cached `fetchEpisodeFiles` — returns the
+    /// files keyed by `episodeFileId` so the detail view can render
+    /// custom-format scores next to downloaded episode rows without
+    /// firing one `/episodefile/{id}` call per episode.
+    func fetchEpisodeFileMap(seriesId: Int) async throws -> [Int: SonarrEpisodeFile] {
+        if DemoMode.isActive {
+            return DemoMocks.sonarrEpisodeFileMap(seriesId: seriesId)
+        }
+        let files = try await fetchEpisodeFiles(seriesId: seriesId)
+        var map: [Int: SonarrEpisodeFile] = [:]
+        for f in files { map[f.id] = f }
+        return map
+    }
+
     private func fetchEpisodeFiles(seriesId: Int) async throws -> [SonarrEpisodeFile] {
         if let cached = episodeFileCache[seriesId], cached.expiry > Date() {
             return cached.files

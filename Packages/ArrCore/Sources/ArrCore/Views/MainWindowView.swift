@@ -219,7 +219,7 @@ public struct MainWindowView: View {
                 Spacer()
                 if count > 0 {
                     Text("\(count)")
-                        .font(.system(size: 10, weight: .semibold).monospacedDigit())
+                        .scaledFont(size: 10, weight: .semibold, monospacedDigit: true)
                         .foregroundStyle(.secondary)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 1)
@@ -331,7 +331,7 @@ public struct MainWindowView: View {
             if viewModel.upcoming.isEmpty {
                 VStack(spacing: 8) {
                     Image(systemName: "calendar")
-                        .font(.system(size: 24, weight: .light))
+                        .scaledFont(size: 24, weight: .light)
                         .foregroundStyle(.tertiary)
                     Text("Nothing upcoming", bundle: .module)
                         .font(.subheadline)
@@ -371,13 +371,13 @@ public struct MainWindowView: View {
     private var detailPlaceholder: some View {
         VStack(spacing: 8) {
             Image(systemName: "rectangle.on.rectangle.angled")
-                .font(.system(size: 28, weight: .light))
+                .scaledFont(size: 28, weight: .light)
                 .foregroundStyle(.tertiary)
             Text("Select an item", bundle: .module)
-                .font(.system(size: 13))
+                .scaledFont(size: 13)
                 .foregroundStyle(.secondary)
             Text("Click a row in the queue to see its details, episodes, and existing files.", bundle: .module)
-                .font(.system(size: 11))
+                .scaledFont(size: 11)
                 .foregroundStyle(.tertiary)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 280)
@@ -389,7 +389,7 @@ public struct MainWindowView: View {
     private var emptyState: some View {
         VStack(spacing: 12) {
             Image(systemName: "gearshape.2")
-                .font(.system(size: 28, weight: .light))
+                .scaledFont(size: 28, weight: .light)
                 .foregroundStyle(.secondary)
                 .symbolRenderingMode(.hierarchical)
             Text("ArrBarr is not configured", bundle: .module)

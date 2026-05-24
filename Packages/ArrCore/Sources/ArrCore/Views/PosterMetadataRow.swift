@@ -84,7 +84,7 @@ public struct PosterMetadataRow<TrailingAccessory: View>: View {
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 5) {
                         Text(title)
-                            .font(.system(size: 12, weight: .medium))
+                            .scaledFont(size: 12, weight: .medium)
                             .lineLimit(1)
                         if let titleBadge {
                             titleBadge
@@ -92,7 +92,7 @@ public struct PosterMetadataRow<TrailingAccessory: View>: View {
                     }
                     if !metadataSegments.isEmpty {
                         metadataLine
-                            .font(.system(size: 10))
+                            .scaledFont(size: 10)
                     }
                 }
 

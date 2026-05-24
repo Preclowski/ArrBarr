@@ -98,12 +98,12 @@ public struct WelcomeView: View {
             }
 
             Text(LocalizedStringKey(current.titleKey))
-                .font(.system(size: 18, weight: .semibold))
+                .scaledFont(size: 18, weight: .semibold)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
 
             Text(LocalizedStringKey(current.bodyKey))
-                .font(.system(size: 12))
+                .scaledFont(size: 12)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
@@ -195,7 +195,7 @@ public struct WelcomeView: View {
             onDismiss()
         } label: {
             Image(systemName: "xmark.circle.fill")
-                .font(.system(size: 17, weight: .regular))
+                .scaledFont(size: 17, weight: .regular)
                 .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(.secondary)
         }
@@ -299,7 +299,7 @@ private struct EdgeArrowButton: View {
     public var body: some View {
         Button(action: action) {
             Image(systemName: direction == .previous ? "chevron.left" : "chevron.right")
-                .font(.system(size: 18, weight: .medium))
+                .scaledFont(size: 18, weight: .medium)
                 .foregroundStyle(hovering ? .primary : .tertiary)
                 .frame(width: 28, height: 80)
                 .contentShape(Rectangle())
@@ -359,25 +359,25 @@ private struct MenuBarIllustration: View {
     private var menuBarStrip: some View {
         HStack(spacing: 7) {
             Image(systemName: "applelogo")
-                .font(.system(size: 9, weight: .semibold))
+                .scaledFont(size: 9, weight: .semibold)
                 .foregroundStyle(.primary)
-            Text("ArrBarr").font(.system(size: 9, weight: .semibold))
-            Text("File", bundle: .module).font(.system(size: 9)).foregroundStyle(.primary.opacity(0.85))
-            Text("View", bundle: .module).font(.system(size: 9)).foregroundStyle(.primary.opacity(0.85))
+            Text("ArrBarr").scaledFont(size: 9, weight: .semibold)
+            Text("File", bundle: .module).scaledFont(size: 9).foregroundStyle(.primary.opacity(0.85))
+            Text("View", bundle: .module).scaledFont(size: 9).foregroundStyle(.primary.opacity(0.85))
             Spacer()
-            Image(systemName: "wifi").font(.system(size: 9)).foregroundStyle(.secondary)
-            Image(systemName: "battery.100percent").font(.system(size: 9)).foregroundStyle(.secondary)
+            Image(systemName: "wifi").scaledFont(size: 9).foregroundStyle(.secondary)
+            Image(systemName: "battery.100percent").scaledFont(size: 9).foregroundStyle(.secondary)
             statusItemBadge
-            Text("9:41").font(.system(size: 9, weight: .medium)).foregroundStyle(.secondary)
+            Text("9:41").scaledFont(size: 9, weight: .medium).foregroundStyle(.secondary)
         }
     }
 
     private var statusItemBadge: some View {
         HStack(spacing: 2) {
             Image(systemName: "arrow.down.circle.fill")
-                .font(.system(size: 10, weight: .semibold))
+                .scaledFont(size: 10, weight: .semibold)
                 .foregroundStyle(.tint)
-            Text("3").font(.system(size: 9, weight: .semibold))
+            Text("3").scaledFont(size: 9, weight: .semibold)
         }
         .padding(.horizontal, 4)
         .padding(.vertical, 2)
@@ -484,14 +484,14 @@ private struct TonightIllustration: View {
     private var tonightHeader: some View {
         HStack(spacing: 6) {
             Image(systemName: "moon.stars.fill")
-                .font(.system(size: 12, weight: .semibold))
+                .scaledFont(size: 12, weight: .semibold)
                 .foregroundStyle(.tint)
                 .symbolRenderingMode(.hierarchical)
             Text("Tonight", bundle: .module)
-                .font(.system(size: 11, weight: .semibold))
+                .scaledFont(size: 11, weight: .semibold)
                 .foregroundStyle(.primary)
             Text("2")
-                .font(.system(size: 9, weight: .semibold))
+                .scaledFont(size: 9, weight: .semibold)
                 .foregroundStyle(.secondary)
                 .padding(.horizontal, 5)
                 .padding(.vertical, 1)
@@ -521,11 +521,11 @@ private struct TonightIllustration: View {
 
             VStack(alignment: .leading, spacing: 1) {
                 Text(title)
-                    .font(.system(size: 11, weight: .medium))
+                    .scaledFont(size: 11, weight: .medium)
                     .foregroundStyle(.primary)
                 if let subtitle {
                     Text(subtitle)
-                        .font(.system(size: 9))
+                        .scaledFont(size: 9)
                         .foregroundStyle(.secondary)
                 }
             }
@@ -534,10 +534,10 @@ private struct TonightIllustration: View {
 
             VStack(alignment: .trailing, spacing: 1) {
                 Text(timeLabel)
-                    .font(.system(size: 9, weight: .medium))
+                    .scaledFont(size: 9, weight: .medium)
                     .foregroundStyle(.secondary)
                 Text(releaseType)
-                    .font(.system(size: 8, weight: .medium))
+                    .scaledFont(size: 8, weight: .medium)
                     .foregroundStyle(.tertiary)
             }
         }
@@ -565,11 +565,11 @@ private struct CustomizeIllustration: View {
             ForEach(rows) { row in
                 HStack(spacing: 8) {
                     Image(systemName: row.symbol)
-                        .font(.system(size: 11, weight: .regular))
+                        .scaledFont(size: 11, weight: .regular)
                         .foregroundStyle(.secondary)
                         .frame(width: 14)
                     Text(row.label)
-                        .font(.system(size: 11))
+                        .scaledFont(size: 11)
                         .foregroundStyle(.primary)
                     Spacer()
                     miniToggle(on: row.on)

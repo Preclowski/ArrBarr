@@ -12,7 +12,7 @@ struct GenreChips: View {
         TooltipFlowLayout(spacing: 4) {
             ForEach(genres, id: \.self) { g in
                 Text(g)
-                    .font(.system(size: 9, weight: .medium))
+                    .scaledFont(size: 9, weight: .medium)
                     .padding(.horizontal, 5)
                     .padding(.vertical, 1)
                     .background(Color.primary.opacity(0.08), in: Capsule())
@@ -45,7 +45,7 @@ public struct ExpandableOverview: View {
     public var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(text)
-                .font(.system(size: 12))
+                .scaledFont(size: 12)
                 .foregroundStyle(.secondary)
                 .lineLimit(expanded ? nil : 4)
                 .fixedSize(horizontal: false, vertical: true)
@@ -59,9 +59,9 @@ public struct ExpandableOverview: View {
                     // under. .secondary was too tonally similar.
                     HStack(spacing: 3) {
                         Text("Show more", bundle: .module)
-                            .font(.system(size: 11, weight: .medium))
+                            .scaledFont(size: 11, weight: .medium)
                         Image(systemName: "chevron.down")
-                            .font(.system(size: 9, weight: .semibold))
+                            .scaledFont(size: 9, weight: .semibold)
                     }
                     .foregroundStyle(Color.accentColor)
                 }
@@ -79,6 +79,11 @@ struct SeasonRow: View {
     /// surface a "downloading" indicator + hover action buttons
     /// without the parent needing a separate queue-list section.
     var queueByEpisodeId: [Int: QueueItem] = [:]
+    /// Map of episode-file id → file payload (quality / size /
+    /// customFormatScore) for every downloaded episode in this series.
+    /// Lets each `EpisodeRow` show the score in its right gutter for
+    /// downloaded-but-not-in-queue rows.
+    var fileByEpisodeFileId: [Int: SonarrEpisodeFile] = [:]
     /// Per-season search trigger. DetailView passes the closure (which
     /// wraps `SonarrClient.searchSeason`); nil disables the affordance.
     var onSearchSeason: (() async -> Void)? = nil
@@ -116,6 +121,7 @@ struct SeasonRow: View {
     init(season: SonarrSeasonInfo,
          episodes: [SonarrEpisodeDetail],
          queueByEpisodeId: [Int: QueueItem] = [:],
+         fileByEpisodeFileId: [Int: SonarrEpisodeFile] = [:],
          onSearchSeason: (() async -> Void)? = nil,
          onSearchEpisode: ((Int) async -> Void)? = nil,
          onTapEpisode: ((SonarrEpisodeDetail) -> Void)? = nil,
@@ -128,6 +134,7 @@ struct SeasonRow: View {
         self.season = season
         self.episodes = episodes
         self.queueByEpisodeId = queueByEpisodeId
+        self.fileByEpisodeFileId = fileByEpisodeFileId
         self.onSearchSeason = onSearchSeason
         self.onSearchEpisode = onSearchEpisode
         self.onTapEpisode = onTapEpisode
@@ -182,12 +189,12 @@ struct SeasonRow: View {
                     HStack(spacing: 8) {
                         if !hideExpandChevron {
                             Image(systemName: "chevron.right")
-                                .font(.system(size: 9, weight: .semibold))
+                                .scaledFont(size: 9, weight: .semibold)
                                 .foregroundStyle(.tertiary)
                                 .rotationEffect(.degrees(expanded ? 90 : 0))
                         }
                         Text(String(format: "Season %02d", season.seasonNumber))
-                            .font(.system(size: 12, weight: .medium))
+                            .scaledFont(size: 12, weight: .medium)
                         Spacer()
                         GeometryReader { geo in
                             ZStack(alignment: .leading) {
@@ -200,7 +207,7 @@ struct SeasonRow: View {
                         }
                         .frame(width: 60, height: 3)
                         Text("\(have)/\(total)")
-                            .font(.system(size: 10).monospacedDigit())
+                            .scaledFont(size: 10, monospacedDigit: true)
                             .foregroundStyle(.secondary)
                             .frame(width: 42, alignment: .trailing)
                     }
@@ -239,6 +246,7 @@ struct SeasonRow: View {
                         EpisodeRow(
                             episode: ep,
                             queueItem: queueByEpisodeId[ep.id],
+                            episodeFile: ep.episodeFileId.flatMap { fileByEpisodeFileId[$0] },
                             onSearch: onSearchEpisode,
                             onTap: onTapEpisode,
                             onPauseQueueItem: onPauseEpisode,
@@ -253,18 +261,6 @@ struct SeasonRow: View {
             }
         }
         .padding(.vertical, 3)
-        // Destructive confirmation — searching a season hits every
-        // indexer with however many episode searches, and on
-        // already-complete seasons it can grab upgrades that replace
-        // existing files. Red button signals "this triggers real
-        // work" rather than reading like a no-op preview.
-        .alert(Text("Search this season?", bundle: .module),
-               isPresented: $showSearchConfirm) {
-            Button(role: .destructive) { performSeasonSearch() } label: { Text("Search", bundle: .module) }
-            Button(role: .cancel) {} label: { Text("Cancel", bundle: .module) }
-        } message: {
-            Text("Will query your indexers for every episode in this season — including upgrades for episodes already on disk.", bundle: .module)
-        }
     }
 
     /// Single-line legend rendered beneath the expanded episode list.
@@ -289,7 +285,7 @@ struct SeasonRow: View {
                         // pairs them as one unit — Apple's standard
                         // legend treatment (Stocks, Health, Fitness).
                         Text(entry.1, bundle: .module)
-                            .font(.system(size: 10))
+                            .scaledFont(size: 10)
                             .foregroundStyle(entry.0)
                     }
                 }
@@ -359,35 +355,45 @@ struct SeasonRow: View {
     }
 
     private var searchSeasonButton: some View {
+        // macOS bordered button — same toolbar idiom as Mail's "Reply"
+        // or Music's "Add to Playlist". Label has meaning (the count
+        // of missing episodes), so this stays labeled rather than
+        // collapsing to a bare icon.
         Button(action: fireSeasonSearch) {
-            HStack(spacing: 3) {
+            HStack(spacing: 4) {
                 if isSearchingSeason {
                     ProgressView().controlSize(.mini)
                 } else if didSearchSeason {
                     Image(systemName: "checkmark")
-                        .font(.system(size: 10, weight: .semibold))
+                        .scaledFont(size: 10, weight: .semibold)
                         .foregroundStyle(.green)
                 } else {
                     Image(systemName: "magnifyingglass")
-                        .font(.system(size: 10, weight: .medium))
+                        .scaledFont(size: 10, weight: .medium)
                     if missing > 0 {
                         Text("Search \(missing)", bundle: .module)
-                            .font(.system(size: 10, weight: .medium))
+                            .scaledFont(size: 11, weight: .medium)
                     } else {
                         Text("Search", bundle: .module)
-                            .font(.system(size: 10, weight: .medium))
+                            .scaledFont(size: 11, weight: .medium)
                     }
                 }
             }
-            .foregroundStyle(.primary)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 3)
-            .contentShape(Capsule())
         }
-        .buttonStyle(.plain)
-        .glassPill()
+        .buttonStyle(.bordered)
+        .controlSize(.small)
         .disabled(isSearchingSeason)
         .help(Text("Search", bundle: .module))
+        .confirmationDialog(
+            Text("Search this season?", bundle: .module),
+            isPresented: $showSearchConfirm,
+            titleVisibility: .visible
+        ) {
+            Button { performSeasonSearch() } label: { Text("Search", bundle: .module) }
+            Button(role: .cancel) {} label: { Text("Cancel", bundle: .module) }
+        } message: {
+            Text("Will query your indexers for every episode in this season — including upgrades for episodes already on disk.", bundle: .module)
+        }
     }
 
     private func fireSeasonSearch() {
@@ -429,7 +435,12 @@ public struct EpisodeDetailOverlay: View {
     /// Lazy-loaded file payload — `nil` until the parent fetches
     /// `/episodefile/{id}` for an on-disk episode. Drives the
     /// quality / size / customFormats chip strip.
-    let episodeFile: ArrFile?
+    /// Existing-file payload for upgrade-context rendering. Same shape
+    /// the season list already passes to `EpisodeRow` — taken straight
+    /// from `DetailView.sonarrEpisodeFiles` (works in demo too) instead
+    /// of the per-episode async `/episodefile/{id}` fetch we used to
+    /// fire, which returned nil in demo and broke the diff view.
+    let episodeFile: SonarrEpisodeFile?
     /// Active queue item for this episode (when one's downloading).
     /// Powers the "new file" section that sits alongside the existing
     /// file — both can be present (upgrade in progress).
@@ -440,8 +451,21 @@ public struct EpisodeDetailOverlay: View {
     let onPosterTap: ((URL?) -> Void)?
     let onClose: () -> Void
     let onSearch: ((Int) async -> Void)?
+    /// Pause/Resume/Cancel closures for the active queueItem — wired
+    /// by DetailView from the same `viewModel.pause/resume/delete`
+    /// pipeline the season list uses. Drives the sticky bottom CTA
+    /// strip on download/paused episodes.
+    let onPauseEpisode: ((QueueItem) -> Void)?
+    let onResumeEpisode: ((QueueItem) -> Void)?
+    let onDeleteEpisode: ((QueueItem) -> Void)?
+    /// URL of the arr's web UI for the active queue item — surfaced
+    /// as a CTA on the warning banner. Most `statusMessages` are only
+    /// actionable inside the arr's own UI (manual import, blocklist,
+    /// edit grab), so a one-click jump there is the actionable bit.
+    let warningActionURL: URL?
 
     @State private var isSearching = false
+    @State private var ctaPendingDelete = false
     @State private var didSearch = false
     @State private var showSearchConfirm = false
 
@@ -463,11 +487,15 @@ public struct EpisodeDetailOverlay: View {
         posterURL: URL?,
         posterRequiresAuth: Bool,
         apiKey: String?,
-        episodeFile: ArrFile? = nil,
+        episodeFile: SonarrEpisodeFile? = nil,
         queueItem: QueueItem? = nil,
         onPosterTap: ((URL?) -> Void)? = nil,
         onClose: @escaping () -> Void,
-        onSearch: ((Int) async -> Void)?
+        onSearch: ((Int) async -> Void)?,
+        warningActionURL: URL? = nil,
+        onPauseEpisode: ((QueueItem) -> Void)? = nil,
+        onResumeEpisode: ((QueueItem) -> Void)? = nil,
+        onDeleteEpisode: ((QueueItem) -> Void)? = nil
     ) {
         self.episode = episode
         self.seriesTitle = seriesTitle
@@ -480,6 +508,10 @@ public struct EpisodeDetailOverlay: View {
         self.onPosterTap = onPosterTap
         self.onClose = onClose
         self.onSearch = onSearch
+        self.warningActionURL = warningActionURL
+        self.onPauseEpisode = onPauseEpisode
+        self.onResumeEpisode = onResumeEpisode
+        self.onDeleteEpisode = onDeleteEpisode
     }
 
     public var body: some View {
@@ -497,15 +529,187 @@ public struct EpisodeDetailOverlay: View {
             }
             .scrollBounceBehavior(.basedOnSize)
             .frame(maxHeight: .infinity)
+            // Sticky bottom CTA — same shape as `DetailView`'s
+            // `downloadCTAStrip`. Pause/Resume when downloading,
+            // Search when missing+aired, Safari as fallback / secondary.
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                if shouldShowCTAStrip {
+                    episodeCTAStrip
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 10)
+                        .frame(maxWidth: .infinity)
+                        .background(
+                            Rectangle()
+                                .fill(.thinMaterial)
+                                .overlay(alignment: .top) {
+                                    Divider().opacity(0.4)
+                                }
+                                .ignoresSafeArea(edges: .bottom)
+                        )
+                }
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .alert(Text("Search this episode?", bundle: .module),
-               isPresented: $showSearchConfirm) {
-            Button(role: .destructive) { performSearch() } label: { Text("Search", bundle: .module) }
+        .confirmationDialog(
+            Text("Search this episode?", bundle: .module),
+            isPresented: $showSearchConfirm,
+            titleVisibility: .visible
+        ) {
+            Button { performSearch() } label: { Text("Search", bundle: .module) }
             Button(role: .cancel) {} label: { Text("Cancel", bundle: .module) }
         } message: {
             Text("Will query your indexers and start a download if a release matches.", bundle: .module)
         }
+        .confirmationDialog(
+            Text("Cancel this download?", bundle: .module),
+            isPresented: $ctaPendingDelete,
+            titleVisibility: .visible
+        ) {
+            Button(role: .destructive) {
+                if let q = queueItem { onDeleteEpisode?(q); onClose() }
+            } label: { Text("Cancel download", bundle: .module) }
+            Button(role: .cancel) {} label: { Text("Keep download", bundle: .module) }
+        } message: {
+            Text(String(format: String(localized: "This will remove \"%@\" from the download client.", bundle: .module), queueItem?.title ?? episode.title ?? ""))
+        }
+    }
+
+    private var shouldShowCTAStrip: Bool {
+        let canPauseResume = (queueItem?.status == .downloading || queueItem?.status == .paused)
+            && ((queueItem?.isPaused == true && onResumeEpisode != nil)
+                || (queueItem?.isPaused == false && onPauseEpisode != nil))
+        let canDelete = queueItem != nil && onDeleteEpisode != nil
+        let canSearch = onSearch != nil && episode.hasFile != true && hasAired
+        return canPauseResume || canDelete || canSearch || warningActionURL != nil
+    }
+
+    @ViewBuilder
+    private var episodeCTAStrip: some View {
+        let canPauseResume = (queueItem?.status == .downloading || queueItem?.status == .paused)
+            && ((queueItem?.isPaused == true && onResumeEpisode != nil)
+                || (queueItem?.isPaused == false && onPauseEpisode != nil))
+        let canDelete = queueItem != nil && onDeleteEpisode != nil
+        let canSearch = onSearch != nil && episode.hasFile != true && hasAired
+        HStack(spacing: 8) {
+            if canPauseResume, let q = queueItem {
+                ctaPauseResume(q: q)
+                if canDelete { ctaTrash }
+                if let url = warningActionURL { ctaSafariSecondary(url: url) }
+            } else if canSearch {
+                ctaSearch
+                if let url = warningActionURL { ctaSafariSecondary(url: url) }
+            } else if canDelete {
+                ctaCancelProminent
+                if let url = warningActionURL { ctaSafariSecondary(url: url) }
+            } else if let url = warningActionURL {
+                ctaSafariProminent(url: url)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func ctaPauseResume(q: QueueItem) -> some View {
+        Button {
+            if q.isPaused { onResumeEpisode?(q) } else { onPauseEpisode?(q) }
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: q.isPaused ? "play.fill" : "pause.fill")
+                    .scaledFont(size: 11, weight: .semibold)
+                Text(q.isPaused
+                        ? String(localized: "Resume download", bundle: .module)
+                        : String(localized: "Pause download", bundle: .module))
+                    .scaledFont(size: 12, weight: .semibold)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 7)
+        }
+        .tint(q.status.tint)
+        .modifier(GlassProminentButtonStyle())
+        .progressFillCTA(progress: q.progress, tint: q.status.tint)
+    }
+
+    @ViewBuilder
+    private var ctaTrash: some View {
+        Button {
+            ctaPendingDelete = true
+        } label: {
+            Image(systemName: "trash")
+                .scaledFont(size: 13, weight: .medium)
+                .foregroundStyle(.red)
+                .padding(.horizontal, 4)
+                .padding(.vertical, 7)
+        }
+        .buttonStyle(.bordered)
+        .help(Text("Cancel download", bundle: .module))
+    }
+
+    @ViewBuilder
+    private var ctaCancelProminent: some View {
+        Button { ctaPendingDelete = true } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "trash")
+                    .scaledFont(size: 11, weight: .semibold)
+                Text("Cancel download", bundle: .module)
+                    .scaledFont(size: 12, weight: .semibold)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 7)
+        }
+        .modifier(GlassProminentButtonStyle())
+        .tint(.red)
+    }
+
+    @ViewBuilder
+    private var ctaSearch: some View {
+        Button { showSearchConfirm = true } label: {
+            HStack(spacing: 6) {
+                if isSearching {
+                    ProgressView().controlSize(.small)
+                } else if didSearch {
+                    Image(systemName: "checkmark")
+                        .scaledFont(size: 11, weight: .semibold)
+                    Text("Search queued", bundle: .module)
+                        .scaledFont(size: 12, weight: .semibold)
+                } else {
+                    Image(systemName: "magnifyingglass")
+                        .scaledFont(size: 11, weight: .semibold)
+                    Text("Search this episode", bundle: .module)
+                        .scaledFont(size: 12, weight: .semibold)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 7)
+        }
+        .modifier(GlassProminentButtonStyle())
+        .disabled(isSearching)
+    }
+
+    @ViewBuilder
+    private func ctaSafariProminent(url: URL) -> some View {
+        Button { PlatformURLOpener.open(url) } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "safari")
+                    .scaledFont(size: 11, weight: .semibold)
+                Text("Open in browser", bundle: .module)
+                    .scaledFont(size: 12, weight: .semibold)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 7)
+        }
+        .modifier(GlassProminentButtonStyle())
+        .help(Text("Open in browser", bundle: .module))
+    }
+
+    @ViewBuilder
+    private func ctaSafariSecondary(url: URL) -> some View {
+        Button { PlatformURLOpener.open(url) } label: {
+            Image(systemName: "safari")
+                .scaledFont(size: 13, weight: .medium)
+                .padding(.horizontal, 4)
+                .padding(.vertical, 7)
+        }
+        .buttonStyle(.bordered)
+        .help(Text("Open in browser", bundle: .module))
     }
 
     private var header: some View {
@@ -517,15 +721,15 @@ public struct EpisodeDetailOverlay: View {
             FloatingBackButton(action: onClose)
                 .keyboardShortcut(.cancelAction)
             Text(originLabel, bundle: .module)
-                .font(.system(size: 15, weight: .semibold))
+                .scaledFont(size: 15, weight: .semibold)
                 .foregroundStyle(.primary)
                 .lineLimit(1)
             Spacer()
             Image(systemName: "tv")
-                .font(.system(size: 11))
+                .scaledFont(size: 11)
                 .foregroundStyle(.tertiary)
             Text("Sonarr")
-                .font(.system(size: 11))
+                .scaledFont(size: 11)
                 .foregroundStyle(.tertiary)
         }
         .padding(.horizontal, 12)
@@ -564,12 +768,12 @@ public struct EpisodeDetailOverlay: View {
                     // but stays under the 17pt episode title in
                     // hierarchy.
                     Text(seriesTitle)
-                        .font(.system(size: 12, weight: .medium))
+                        .scaledFont(size: 12, weight: .medium)
                         .foregroundStyle(.secondary)
                         .lineLimit(2)
                     HStack(spacing: 6) {
                         Text(episodeCode)
-                            .font(.system(size: 12, weight: .semibold).monospacedDigit())
+                            .scaledFont(size: 12, weight: .semibold, monospacedDigit: true)
                             .foregroundStyle(.secondary)
                         // "On disk" badge dropped — was a custom
                         // status invented only for this surface. The
@@ -580,7 +784,7 @@ public struct EpisodeDetailOverlay: View {
                         // schedule state not implied by other UI.
                         if !hasAired {
                             Text("Unaired", bundle: .module)
-                                .font(.system(size: 9, weight: .semibold))
+                                .scaledFont(size: 9, weight: .semibold)
                                 .foregroundStyle(Color.orange)
                                 .padding(.horizontal, 5)
                                 .padding(.vertical, 1)
@@ -588,16 +792,16 @@ public struct EpisodeDetailOverlay: View {
                         }
                     }
                     Text(episode.title ?? "—")
-                        .font(.system(size: 17, weight: .semibold))
+                        .scaledFont(size: 17, weight: .semibold)
                         .lineLimit(3)
                     if let air = episode.airDateUtc.flatMap(parseArrDate) {
                         Text(EpisodeDetailOverlay.airFormatter.string(from: air))
-                            .font(.system(size: 11))
+                            .scaledFont(size: 11)
                             .foregroundStyle(.secondary)
                     }
                     if let runtime = episode.runtime, runtime > 0 {
                         Text(verbatim: "\(runtime) min")
-                            .font(.system(size: 11))
+                            .scaledFont(size: 11)
                             .foregroundStyle(.secondary)
                     }
                 }
@@ -617,41 +821,16 @@ public struct EpisodeDetailOverlay: View {
             // Replaces the two stacked sections that hid the user's
             // upgrade-vs-current comparison behind a `Divider`.
             if queueItem != nil || (episode.hasFile == true && episodeFile != nil) {
-                Divider().opacity(0.4)
+                // No explicit Divider — the progress bar at the top
+                // of `DownloadProgressCard` reads as a natural
+                // horizontal rule between description and file
+                // section.
                 fileSection
             }
 
-            // Search action — only meaningful when the episode is
-            // missing AND has aired. For unaired episodes the indexer
-            // round-trip is wasted; for already-on-disk episodes the
-            // search would just clutter history.
-            if onSearch != nil, episode.hasFile != true, hasAired {
-                Button(action: { showSearchConfirm = true }) {
-                    HStack(spacing: 5) {
-                        if isSearching {
-                            ProgressView().controlSize(.small)
-                        } else if didSearch {
-                            Image(systemName: "checkmark")
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundStyle(.green)
-                            Text("Search queued", bundle: .module)
-                                .font(.system(size: 12, weight: .medium))
-                        } else {
-                            Image(systemName: "magnifyingglass")
-                                .font(.system(size: 12, weight: .medium))
-                            Text("Search this episode", bundle: .module)
-                                .font(.system(size: 12, weight: .medium))
-                        }
-                    }
-                    .foregroundStyle(.primary)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 6)
-                    .contentShape(Capsule())
-                }
-                .buttonStyle(.plain)
-                .glassPill()
-                .disabled(isSearching)
-            }
+            // Search / pause / cancel / safari all surfaced as the
+            // sticky bottom CTA strip (`episodeCTAStrip`) — body stays
+            // pure content (poster, metadata, file section).
         }
     }
 
@@ -668,7 +847,7 @@ public struct EpisodeDetailOverlay: View {
         } else if let q = queueItem {
             queueFileSection(q)
         } else if let existing = episodeFile {
-            ExistingFileBanner(movieFile: existing)
+            ExistingFileBanner(episodeFile: existing)
         }
     }
 
@@ -677,70 +856,66 @@ public struct EpisodeDetailOverlay: View {
     /// carries quality/size/score + delta. CF chip diff (added /
     /// removed) follows the new chip strip if the sets differ.
     @ViewBuilder
-    private func queueFileWithDiff(new q: QueueItem, existing: ArrFile) -> some View {
-        VStack(alignment: .leading, spacing: 5) {
-            HStack(spacing: 6) {
-                Text("Downloading", bundle: .module)
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(.primary)
-                    .textCase(.uppercase)
-                    .tracking(0.5)
-                Spacer()
-                if let qn = q.quality, !qn.isEmpty {
-                    Text(qn)
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.primary)
-                }
-                if q.sizeTotal > 0 {
-                    Text("·").foregroundStyle(.tertiary)
-                    Text(ByteCountFormatter.string(fromByteCount: q.sizeTotal, countStyle: .file))
-                        .font(.system(size: 11))
-                        .foregroundStyle(.secondary)
-                }
-                if q.customFormatScore != 0 {
-                    Text("·").foregroundStyle(.tertiary)
-                    ScoreLabel(score: q.customFormatScore, size: 11)
-                }
-            }
-            // `└─ <existing metadata> (delta)` — same tree-branch
-            // pattern the movie/queue tooltip uses.
-            ExistingFileDiffRow(
-                existingQuality: existing.quality?.name,
-                existingSize: existing.size,
-                existingScore: existing.customFormatScore,
-                newScore: q.customFormatScore
+    private func queueFileWithDiff(new q: QueueItem, existing: SonarrEpisodeFile) -> some View {
+        // Sonarr ships existing-file metadata in a separate
+        // `/episodefile/{id}` payload (not on the QueueItem), so we
+        // tunnel it into the card via `existingOverride`. The card
+        // then renders the same in-header diff line every other
+        // surface uses — movie detail and episode detail wear
+        // identical chrome.
+        let existingTags = (existing.customFormats ?? []).map(\.name)
+        VStack(alignment: .leading, spacing: 6) {
+            DownloadProgressCard(
+                item: q,
+                showHeader: true,
+                showProgressFill: false,
+                existingOverride: DownloadProgressCard.ExistingFileSnapshot(
+                    quality: existing.quality?.name,
+                    size: existing.size,
+                    score: existing.customFormatScore,
+                    formats: existingTags
+                )
             )
-            // Status icon + progress + client (same shape as
-            // ProgressLine but inline).
-            HStack(spacing: 6) {
-                StatusIconLabel(status: q.status, iconSize: 10, labelSize: 11, labelWeight: .semibold)
-                Text(verbatim: "\(Int((q.progress * 100).rounded()))%")
-                    .font(.system(size: 11, weight: .semibold).monospacedDigit())
-                    .foregroundStyle(.secondary)
-                Spacer()
-                if let client = q.downloadClient {
-                    DownloadClientLabel(name: client, size: 10)
-                }
-            }
-            ThinProgressBar(progress: q.progress)
-            if let release = q.releaseName, !release.isEmpty {
-                Text(release)
-                    .font(.system(size: 11, design: .monospaced))
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
-                    .truncationMode(.middle)
+            if !q.statusMessages.isEmpty {
+                QueueStatusMessagesBanner(
+                    messages: q.statusMessages,
+                    tint: q.status.tint,
+                    actionURL: warningActionURL
+                )
             }
             if !q.customFormats.isEmpty {
-                TooltipFlowLayout(spacing: 4) {
-                    ForEach(q.customFormats, id: \.self) { TagChip(text: $0) }
+                CustomFormatChips(formats: q.customFormats, score: 0)
+                CustomFormatDiff(
+                    newFormats: q.customFormats,
+                    existingFormats: existingTags
+                )
+            }
+            releaseNameBlock(release: q.releaseName, existing: existing.relativePath)
+        }
+    }
+
+    @ViewBuilder
+    private func releaseNameBlock(release: String?, existing: String?) -> some View {
+        if let release, !release.isEmpty {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(release)
+                    .scaledFont(size: 11, design: .monospaced)
+                    .foregroundStyle(.primary)
+                    .lineLimit(2)
+                    .truncationMode(.middle)
+                if let existing, !existing.isEmpty, existing != release {
+                    HStack(alignment: .firstTextBaseline, spacing: 4) {
+                        Image(systemName: "arrow.up")
+                            .scaledFont(size: 9, weight: .semibold)
+                            .foregroundStyle(.tertiary)
+                        Text(existing)
+                            .scaledFont(size: 11, design: .monospaced)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(2)
+                            .truncationMode(.middle)
+                    }
                 }
             }
-            // Chip diff under the strip — only renders when the sets
-            // differ (same component the queue/tooltip diff uses).
-            CustomFormatDiff(
-                newFormats: q.customFormats,
-                existingFormats: (existing.customFormats ?? []).map(\.name)
-            )
         }
     }
 
@@ -751,55 +926,19 @@ public struct EpisodeDetailOverlay: View {
     /// glance.
     @ViewBuilder
     private func queueFileSection(_ q: QueueItem) -> some View {
-        VStack(alignment: .leading, spacing: 5) {
-            HStack(spacing: 6) {
-                Text("Downloading", bundle: .module)
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(.primary)
-                    .textCase(.uppercase)
-                    .tracking(0.5)
-                Spacer()
-                if let q = q.quality, !q.isEmpty {
-                    Text(q)
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.primary)
-                }
-                if q.sizeTotal > 0 {
-                    Text("·").foregroundStyle(.tertiary)
-                    Text(ByteCountFormatter.string(fromByteCount: q.sizeTotal, countStyle: .file))
-                        .font(.system(size: 11))
-                        .foregroundStyle(.secondary)
-                }
-                if q.customFormatScore != 0 {
-                    Text("·").foregroundStyle(.tertiary)
-                    ScoreLabel(score: q.customFormatScore, size: 11)
-                }
-            }
-            // Status icon + progress bar — same pattern as
-            // ProgressLine but inline here, no parent wrapper.
-            HStack(spacing: 6) {
-                StatusIconLabel(status: q.status, iconSize: 10, labelSize: 11, labelWeight: .semibold)
-                Text(verbatim: "\(Int((q.progress * 100).rounded()))%")
-                    .font(.system(size: 11, weight: .semibold).monospacedDigit())
-                    .foregroundStyle(.secondary)
-                Spacer()
-                if let client = q.downloadClient {
-                    DownloadClientLabel(name: client, size: 10)
-                }
-            }
-            ThinProgressBar(progress: q.progress)
-            if let release = q.releaseName, !release.isEmpty {
-                Text(release)
-                    .font(.system(size: 11, design: .monospaced))
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
-                    .truncationMode(.middle)
+        VStack(alignment: .leading, spacing: 6) {
+            DownloadProgressCard(item: q, showUpgradeDiff: false, showHeader: true, showProgressFill: false)
+            if !q.statusMessages.isEmpty {
+                QueueStatusMessagesBanner(
+                    messages: q.statusMessages,
+                    tint: q.status.tint,
+                    actionURL: warningActionURL
+                )
             }
             if !q.customFormats.isEmpty {
-                TooltipFlowLayout(spacing: 4) {
-                    ForEach(q.customFormats, id: \.self) { TagChip(text: $0) }
-                }
+                CustomFormatChips(formats: q.customFormats, score: 0)
             }
+            releaseNameBlock(release: q.releaseName, existing: nil)
         }
     }
 
@@ -831,6 +970,12 @@ struct EpisodeRow: View {
     /// "downloading" indicator + swaps hover-overlay icons from
     /// magnifyingglass (search) to pause/resume/trash.
     var queueItem: QueueItem? = nil
+    /// Episode-file payload when this episode is on disk. Used to render
+    /// the file's custom-format score in the right gutter — same
+    /// `ScoreLabel` treatment as an in-progress download — so the
+    /// "available" rows surface their points instead of the air date the
+    /// user already knows.
+    var episodeFile: SonarrEpisodeFile? = nil
     /// Optional search trigger. Provided by DetailView (Sonarr), wired
     /// to `SonarrClient.searchEpisodes`. Only meaningful when the episode
     /// is missing — otherwise the indicator falls through to the file
@@ -857,8 +1002,31 @@ struct EpisodeRow: View {
     /// always confirm before firing, matching the season/series flows.
     @State private var showSearchConfirm = false
     @State private var showDeleteConfirm = false
+    /// Long-hover popover (same 600 ms gate as queue rows). Shows
+    /// quality / size / score + upgrade diff when there's something
+    /// useful to surface; suppressed for missing-aired rows where
+    /// the tooltip would just repeat the row text.
+    @State private var showTooltip = false
+    @State private var hoverTask: Task<Void, Never>?
 
     private var isMissing: Bool { episode.hasFile != true }
+
+    /// Gate for the long-hover popover. We only surface a tooltip
+    /// when there's actually something to show — either an active
+    /// download (with optional upgrade diff context) or an on-disk
+    /// file (quality / score / size). Missing-aired or not-aired
+    /// rows have nothing the row text doesn't already say.
+    private var hasTooltipContent: Bool {
+        queueItem != nil || episodeFile != nil
+    }
+
+    /// `S02E04`-style episode identifier rendered on the trailing
+    /// edge. Same format the tooltip header uses.
+    private var episodeCode: String {
+        String(format: "S%02dE%02d",
+               episode.seasonNumber ?? 0,
+               episode.episodeNumber ?? 0)
+    }
     /// Air date treated as past → episode has actually aired. nil airDate
     /// (extremely rare — usually a Sonarr metadata gap) is treated as
     /// "aired" so we don't accidentally hide search affordances for shows
@@ -888,17 +1056,15 @@ struct EpisodeRow: View {
             onTap?(episode)
         } label: {
             HStack(spacing: 6) {
-                Text(String(format: "%02d", episode.episodeNumber ?? 0))
-                    .font(.system(size: 10, weight: .semibold).monospacedDigit())
-                    .foregroundStyle(.tertiary)
-                    .frame(width: 18, alignment: .leading)
-                // Text-colour signals state — see `episodeTitleStyle`
-                // for the rule table. Combined with `rowBackground`
-                // (status-tint wash for active downloads), the user
-                // reads "what's here / what's coming / what's done"
-                // in a single glance.
+                // Title leads, full-width. Episode code moved to the
+                // right gutter — used to sit in a fixed 18pt slot
+                // ahead of the title which crammed against long
+                // titles and broke awkwardly when font-scale bumped
+                // wrapped them to a second line. Right-gutter
+                // placement matches Mail/Music idiom: identifier on
+                // the trailing edge, content fills the row.
                 Text(episode.title ?? "—")
-                    .font(.system(size: 11))
+                    .scaledFont(size: 11)
                     .foregroundStyle(episodeTitleStyle)
                     .lineLimit(1)
                 // Per-row Upgrade / New tag — same component the
@@ -922,12 +1088,29 @@ struct EpisodeRow: View {
                 // not-aired rows keep the date since there's no diff
                 // to compute.
                 if let q = queueItem {
-                    ScoreLabel(score: q.customFormatScore, size: 10)
+                    // Diff against the existing file when this download
+                    // is an upgrade — "are we gaining or losing points?"
+                    // is the actionable bit. Plain raw score for fresh
+                    // downloads with no replacement target.
+                    ScoreLabel(delta: q.customFormatScore, from: q.existingCustomFormatScore, size: 10)
+                } else if let file = episodeFile, let score = file.customFormatScore {
+                    // On-disk episode — show its custom-format score
+                    // (more useful than the air date the user already
+                    // knows). Falls back to the date below when the file
+                    // didn't carry a score.
+                    ScoreLabel(score: score, size: 10)
                 } else if let air = episode.airDateUtc.flatMap(parseArrDate) {
                     Text(Self.formatter.string(from: air))
-                        .font(.system(size: 10))
+                        .scaledFont(size: 10)
                         .foregroundStyle(.tertiary)
                 }
+                // Episode code on the trailing edge — `S02E04`
+                // (full season + episode for unambiguous reference,
+                // matches the tooltip header and other rows that
+                // surface episode identity).
+                Text(episodeCode)
+                    .scaledFont(size: 9, weight: .semibold, monospacedDigit: true)
+                    .foregroundStyle(.tertiary)
                 stateIndicator
                     .frame(width: 14, height: 14, alignment: .center)
             }
@@ -963,7 +1146,10 @@ struct EpisodeRow: View {
         // edge state indicator.
         #if os(macOS)
         // Hover overlay: queue-item actions when there's an active
-        // download, otherwise a search icon for aired episodes.
+        // download, otherwise a search icon for aired episodes. No
+        // gradient backdrop — bare icons sit over the row's natural
+        // tint (status fill for in-progress, transparent otherwise),
+        // matching Mail / Music row-hover treatment.
         .overlay(alignment: .trailing) {
             let hasOverlay = (queueItem != nil) || (onSearch != nil && hasAired)
             if isHovering, hasOverlay {
@@ -973,20 +1159,45 @@ struct EpisodeRow: View {
         }
         .onHover { hovering in
             withAnimation(.easeInOut(duration: 0.12)) { isHovering = hovering }
+            hoverTask?.cancel()
+            if hovering, hasTooltipContent {
+                hoverTask = Task { @MainActor [self] in
+                    try? await Task.sleep(nanoseconds: 600_000_000)
+                    if !Task.isCancelled, self.isHovering { showTooltip = true }
+                }
+            } else {
+                showTooltip = false
+            }
+        }
+        .popover(isPresented: $showTooltip, arrowEdge: .leading) {
+            EpisodeRowTooltip(episode: episode,
+                              queueItem: queueItem,
+                              episodeFile: episodeFile)
+                .popoverBehavior(.applicationDefined)
         }
         #endif
-        .alert(Text("Search this episode?", bundle: .module),
-               isPresented: $showSearchConfirm) {
-            Button(role: .destructive) { performSearch() } label: { Text("Search", bundle: .module) }
+        // Native macOS confirm sheet for destructive actions — same
+        // pattern Apple uses across Finder / Mail / Photos. Replaces
+        // the bespoke `InlineConfirmCard` popovers we had on the row.
+        .confirmationDialog(
+            Text("Search this episode?", bundle: .module),
+            isPresented: $showSearchConfirm,
+            titleVisibility: .visible
+        ) {
+            Button { performSearch() } label: { Text("Search", bundle: .module) }
             Button(role: .cancel) {} label: { Text("Cancel", bundle: .module) }
         } message: {
             Text("Will query your indexers and start a download if a release matches.", bundle: .module)
         }
-        .alert(Text("Remove download?", bundle: .module), isPresented: $showDeleteConfirm) {
+        .confirmationDialog(
+            Text("Cancel this download?", bundle: .module),
+            isPresented: $showDeleteConfirm,
+            titleVisibility: .visible
+        ) {
             Button(role: .destructive) {
                 if let q = queueItem { onDeleteQueueItem?(q) }
-            } label: { Text("Remove", bundle: .module) }
-            Button(role: .cancel) {} label: { Text("Cancel", bundle: .module) }
+            } label: { Text("Cancel download", bundle: .module) }
+            Button(role: .cancel) {} label: { Text("Keep download", bundle: .module) }
         } message: {
             Text(String(format: String(localized: "This will remove \"%@\" from the download client.", bundle: .module), queueItem?.title ?? episode.title ?? ""))
         }
@@ -997,47 +1208,36 @@ struct EpisodeRow: View {
     /// active queue item is present, surface pause/resume/trash;
     /// otherwise (no queue), surface a search icon.
     #if os(macOS)
+    /// Unified action cluster: primary icon (state-dependent) +
+    /// optional ⋯ menu for secondary actions. No gradient, no pill, no
+    /// inline label — same shape across queue rows, episode rows, and
+    /// the detail surface. Destructive confirms use the native
+    /// `.confirmationDialog` attached at the row level (see body).
     @ViewBuilder
     private var searchActionOverlay: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 2) {
             if let q = queueItem {
                 queueActionIcons(for: q)
+            } else if isSearching {
+                ProgressView()
+                    .controlSize(.mini)
+                    .frame(width: 22, height: 22)
             } else {
-                Button {
+                IconButton(symbol: "magnifyingglass", helpKey: "Search episode") {
                     showSearchConfirm = true
-                } label: {
-                    Image(systemName: isSearching ? "ellipsis" : "magnifyingglass")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(.primary)
-                        .frame(width: 22, height: 22)
-                        .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
-                .help(Text("Search this episode", bundle: .module))
-                .disabled(isSearching)
             }
         }
-        .padding(.leading, 60)
-        .padding(.trailing, 12)
-        .frame(maxHeight: .infinity)
-        .background(
-            LinearGradient(
-                stops: [
-                    .init(color: .clear, location: 0),
-                    .init(color: Color.black.opacity(0.55), location: 0.55),
-                    .init(color: Color.black.opacity(0.6), location: 1),
-                ],
-                startPoint: .leading,
-                endPoint: .trailing
-            )
-        )
+        .rowActionBackdrop()
+        .padding(.trailing, 6)
     }
 
     @ViewBuilder
     private func queueActionIcons(for q: QueueItem) -> some View {
-        // Descriptive help keys (vs short verbs used on the queue
-        // list) — in the season/episode list context the user needs
-        // to know what the action targets, not just "Pause".
+        // Music/Podcasts pattern: primary action visible (pause/resume
+        // — the toggle most-clicked), Remove tucked into `⋯` menu.
+        // Single secondary action still gets the menu shell so the row
+        // grammar stays consistent across surfaces.
         if q.status == .downloading || q.status == .paused {
             if q.isPaused, let onResume = onResumeQueueItem {
                 IconButton(symbol: "play.fill", helpKey: "Resume episode download",
@@ -1048,9 +1248,13 @@ struct EpisodeRow: View {
             }
         }
         if onDeleteQueueItem != nil {
-            IconButton(symbol: "trash", helpKey: "Remove episode download",
-                       accessibilityLabel: "Remove episode", tint: .red) {
-                showDeleteConfirm = true
+            IconOverflowMenu(accessibilityLabel: "More actions") {
+                Button(role: .destructive) {
+                    showDeleteConfirm = true
+                } label: {
+                    Label(String(localized: "Cancel download", bundle: .module),
+                          systemImage: "trash")
+                }
             }
         }
     }
@@ -1062,11 +1266,11 @@ struct EpisodeRow: View {
             ProgressView().controlSize(.mini)
         } else if didSearch {
             Image(systemName: "checkmark")
-                .font(.system(size: 10, weight: .semibold))
+                .scaledFont(size: 10, weight: .semibold)
                 .foregroundStyle(.green)
         } else if !hasAired {
             Image(systemName: "calendar")
-                .font(.system(size: 10))
+                .scaledFont(size: 10)
                 .foregroundStyle(.tertiary)
                 .help(Text("Not aired yet", bundle: .module))
         } else if episode.hasFile != true && queueItem == nil {
@@ -1075,7 +1279,7 @@ struct EpisodeRow: View {
             // episodes are now signalled by the row's background
             // tint (see `rowBackground`), not an icon.
             Image(systemName: "circle")
-                .font(.system(size: 10))
+                .scaledFont(size: 10)
                 .foregroundStyle(Color.secondary.opacity(0.5))
         }
     }
@@ -1109,6 +1313,145 @@ struct EpisodeRow: View {
     }()
 }
 
+/// Long-hover popover for episode rows. Surfaces the *quality
+/// context* the row can't fit inline — full quality string, size,
+/// custom-format score, and the `└─ OLD` line for upgrade-in-flight
+/// rows where the user wants to see what's getting replaced.
+struct EpisodeRowTooltip: View {
+    let episode: SonarrEpisodeDetail
+    let queueItem: QueueItem?
+    let episodeFile: SonarrEpisodeFile?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            // Episode breadcrumb header — code as a small tinted
+            // capsule on the leading edge so it reads as an
+            // identifier "tag", visually decoupled from the title.
+            // Before this the code sat as plain text right next to
+            // the title and the eye merged "S02E04Pilot" into one
+            // smear.
+            VStack(alignment: .leading, spacing: 4) {
+                Text(episodeCode)
+                    .scaledFont(size: 9, weight: .semibold, monospacedDigit: true)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 1)
+                    .background(Color.primary.opacity(0.08), in: Capsule())
+                if let title = episode.title, !title.isEmpty {
+                    Text(title)
+                        .scaledFont(size: 12, weight: .semibold)
+                        .foregroundStyle(.primary)
+                        .lineLimit(2)
+                }
+            }
+            Divider().opacity(0.4)
+            if let q = queueItem {
+                queueBlock(q: q)
+            } else if let file = episodeFile {
+                fileBlock(file: file)
+            }
+        }
+        .padding(10)
+        .frame(width: 340, alignment: .leading)
+    }
+
+    private var episodeCode: String {
+        String(format: "S%02dE%02d",
+               episode.seasonNumber ?? 0,
+               episode.episodeNumber ?? 0)
+    }
+
+    @ViewBuilder
+    private func queueBlock(q: QueueItem) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            // Header row — status pill + quality + size + score
+            HStack(spacing: 6) {
+                StatusIconLabel(status: q.status, iconSize: 10, labelSize: 11, labelWeight: .semibold)
+                Spacer(minLength: 4)
+                ScoreLabel(
+                    delta: q.customFormatScore,
+                    from: q.existingCustomFormatScore,
+                    size: 11
+                )
+            }
+            HStack(spacing: 4) {
+                if let qq = q.quality, !qq.isEmpty {
+                    Text(qq)
+                        .scaledFont(size: 11, weight: .medium)
+                        .foregroundStyle(.primary)
+                }
+                if q.sizeTotal > 0 {
+                    Text("·").foregroundStyle(.tertiary)
+                    Text(ByteCountFormatter.string(fromByteCount: q.sizeTotal, countStyle: .file))
+                        .scaledFont(size: 11)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            // Upgrade diff sub-line — same `└─ OLD` rendering as the
+            // queue-row tooltip and movie detail file section.
+            if q.isUpgrade, hasExistingMetadata(q) {
+                ExistingFileDiffRow(
+                    existingQuality: q.existingQuality,
+                    existingSize: q.existingSize,
+                    existingScore: q.existingCustomFormatScore,
+                    newScore: q.customFormatScore,
+                    newQuality: q.quality,
+                    newSize: q.sizeTotal > 0 ? q.sizeTotal : nil,
+                    tagsDiffer: Set(q.customFormats) != Set(q.existingCustomFormats)
+                )
+            }
+            if !q.customFormats.isEmpty {
+                TooltipFlowLayout(spacing: 3) {
+                    ForEach(q.customFormats, id: \.self) { TagChip(text: $0) }
+                }
+                .padding(.top, 2)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func fileBlock(file: SonarrEpisodeFile) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 6) {
+                Text("On disk", bundle: .module)
+                    .scaledFont(size: 10, weight: .semibold)
+                    .foregroundStyle(.secondary)
+                    .textCase(.uppercase)
+                    .tracking(0.5)
+                Spacer(minLength: 4)
+                if let score = file.customFormatScore {
+                    ScoreLabel(score: score, size: 11)
+                }
+            }
+            HStack(spacing: 4) {
+                if let qq = file.quality?.name, !qq.isEmpty {
+                    Text(qq)
+                        .scaledFont(size: 11, weight: .medium)
+                        .foregroundStyle(.primary)
+                }
+                if let size = file.size, size > 0 {
+                    Text("·").foregroundStyle(.tertiary)
+                    Text(ByteCountFormatter.string(fromByteCount: size, countStyle: .file))
+                        .scaledFont(size: 11)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            if let formats = file.customFormats, !formats.isEmpty {
+                TooltipFlowLayout(spacing: 3) {
+                    ForEach(formats, id: \.name) { f in TagChip(text: f.name) }
+                }
+                .padding(.top, 2)
+            }
+        }
+    }
+
+    private func hasExistingMetadata(_ item: QueueItem) -> Bool {
+        (item.existingQuality.map { !$0.isEmpty } ?? false)
+            || (item.existingSize ?? 0) > 0
+            || (item.existingCustomFormatScore ?? 0) != 0
+    }
+}
+
 struct TrackRow: View {
     let track: LidarrTrackDetail
 
@@ -1132,7 +1475,7 @@ struct TrackRow: View {
     public var body: some View {
         HStack(spacing: 6) {
             Text(track.trackNumber ?? String(track.absoluteTrackNumber ?? 0))
-                .font(.system(size: 10, weight: .semibold).monospacedDigit())
+                .scaledFont(size: 10, weight: .semibold, monospacedDigit: true)
                 .foregroundStyle(.tertiary)
                 .frame(width: 24, alignment: .leading)
             // Text-colour signals state (matches EpisodeRow). No
@@ -1140,13 +1483,13 @@ struct TrackRow: View {
             // they don't, the trailing duration + dim title carry
             // that bit without a green check / empty circle pair.
             Text(track.title ?? "—")
-                .font(.system(size: 11))
+                .scaledFont(size: 11)
                 .foregroundStyle(trackTitleStyle)
                 .lineLimit(1)
             Spacer()
             if let dur = track.duration, dur > 0 {
                 Text(formatDuration(ms: dur))
-                    .font(.system(size: 10).monospacedDigit())
+                    .scaledFont(size: 10, monospacedDigit: true)
                     .foregroundStyle(.tertiary)
             }
         }
@@ -1195,6 +1538,12 @@ struct DownloadSection: View {
     var onPauseItem: ((QueueItem) -> Void)? = nil
     var onResumeItem: ((QueueItem) -> Void)? = nil
     var onDeleteItem: ((QueueItem) -> Void)? = nil
+    /// Optional URL resolver — when present, the warning banner on
+    /// each row turns its messages into an "Open in browser" CTA
+    /// pointed at the arr's own UI. Closure form (instead of a
+    /// pre-baked URL) so the multi-row variant can compute per-row
+    /// URLs without recomputing for the single-item case.
+    var arrWebURLForItem: ((QueueItem) -> URL?)? = nil
 
     @State private var listExpanded: Bool
 
@@ -1210,7 +1559,8 @@ struct DownloadSection: View {
         onTapItem: ((QueueItem) -> Void)? = nil,
         onPauseItem: ((QueueItem) -> Void)? = nil,
         onResumeItem: ((QueueItem) -> Void)? = nil,
-        onDeleteItem: ((QueueItem) -> Void)? = nil
+        onDeleteItem: ((QueueItem) -> Void)? = nil,
+        arrWebURLForItem: ((QueueItem) -> URL?)? = nil
     ) {
         self.items = items
         self.focused = focused
@@ -1224,6 +1574,7 @@ struct DownloadSection: View {
         self.onPauseItem = onPauseItem
         self.onResumeItem = onResumeItem
         self.onDeleteItem = onDeleteItem
+        self.arrWebURLForItem = arrWebURLForItem
         self._listExpanded = State(initialValue: listExpandedDefault)
     }
 
@@ -1252,39 +1603,77 @@ struct DownloadSection: View {
 
     @ViewBuilder
     private func singleItemBlock(_ item: QueueItem) -> some View {
+        // Inline action cluster moved out — sticky pause/⋯ now lives
+        // in `DetailView`'s header (Apple toolbar idiom, see
+        // `headerActions`). Single-item block reverts to plain content.
+        singleItemContent(item)
+    }
+
+    /// Quality · time-left · size · download-client meta line —
+    /// rendered as plain text under the progress card. Same content
+    /// as the old `ProgressLine.detailsRow` but extracted so the
+    /// card can stay focused on the bar itself.
+    @ViewBuilder
+    private func detailsLine(item: QueueItem) -> some View {
+        let segments: [String] = [
+            item.quality.flatMap { $0.isEmpty ? nil : $0 },
+            formattedTimeLeft(item),
+            item.sizeTotal > 0 ? sizeText(item) : nil,
+        ].compactMap { $0 }
+        if !segments.isEmpty || (!showListingBadges && item.downloadClient != nil) {
+            HStack(spacing: 4) {
+                ForEach(Array(segments.enumerated()), id: \.offset) { idx, seg in
+                    if idx > 0 { Text("·").foregroundStyle(.tertiary) }
+                    Text(verbatim: seg)
+                        .scaledFont(size: 11)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 6)
+                // Client moved into the card header.
+            }
+        }
+    }
+
+    private func sizeText(_ item: QueueItem) -> String {
+        let done = max(0, item.sizeTotal - item.sizeLeft)
+        return "\(ByteCountFormatter.string(fromByteCount: done, countStyle: .file)) / \(ByteCountFormatter.string(fromByteCount: item.sizeTotal, countStyle: .file))"
+    }
+
+    private func formattedTimeLeft(_ item: QueueItem) -> String? {
+        guard let raw = item.timeLeft, !raw.isEmpty else { return nil }
+        let trimmed = String(raw.prefix { $0 != "." })
+        return trimmed == "00:00:00" ? nil : trimmed
+    }
+
+    @ViewBuilder
+    private func singleItemContent(_ item: QueueItem) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             if showListingBadges {
                 listingBadges(item)
             }
-            ProgressLine(item: item, hideDownloadClient: showListingBadges)
-            // Surface the arr's own statusMessages when it has flagged
-            // a problem with the download. Up until now warnings were
-            // invisible — the user saw a red status pill and had to
-            // bounce to Sonarr/Radarr's UI to find out why. Sitting
-            // right under ProgressLine ties the explanation to the
-            // status that asked for it.
+            // Status + progress + `└─ OLD` upgrade sub-line all in
+            // one card. Replaces the previous NEW/OLD grid render
+            // that sat outside the card — the `└─` pattern matches
+            // every other surface (queue tooltip, episode tooltip)
+            // and the user only needs to read one diff format.
+            DownloadProgressCard(item: item, showUpgradeDiff: true, showHeader: true, showProgressFill: false)
+            // `detailsLine` (quality · time · size · client) dropped
+            // — the card now carries quality / size / score and
+            // client in its header. Repeating those tokens below
+            // was the duplicate the user spotted.
             if !item.statusMessages.isEmpty {
-                QueueStatusMessagesBanner(messages: item.statusMessages, tint: item.status.tint)
-            }
-            // Inline upgrade diff — same `└─ <old metadata> (delta)`
-            // pattern the tooltip uses. Sits directly under
-            // ProgressLine so the eye reads "new file → old file" as
-            // a vertical comparison.
-            if item.isUpgrade, hasExistingFileMetadata(item) {
-                ExistingFileDiffRow(
-                    existingQuality: item.existingQuality,
-                    existingSize: item.existingSize,
-                    existingScore: item.existingCustomFormatScore,
-                    newScore: item.customFormatScore
+                QueueStatusMessagesBanner(
+                    messages: item.statusMessages,
+                    tint: item.status.tint,
+                    actionURL: arrWebURLForItem?(item)
                 )
             }
-            ThinProgressBar(progress: item.progress, tint: item.status.tint)
 
-            if showInlineUpgrade && item.isUpgrade {
-                upgradeDiff(item)
-                    .padding(.top, 4)
-            }
-
+            // External NEW/OLD upgradeDiff grid dropped — the `└─ OLD`
+            // sub-line rendered inside `DownloadProgressCard` (via
+            // `showUpgradeDiff: true`) handles the upgrade context
+            // with the same tree-branch pattern every other surface
+            // uses. One diff format, one source of truth.
             if showCustomFormats, !item.customFormats.isEmpty {
                 // Score moved to `ProgressLine`'s status-row trailing
                 // edge — same right gutter as the queue list row uses.
@@ -1308,18 +1697,23 @@ struct DownloadSection: View {
             if let release = item.releaseName, !release.isEmpty {
                 VStack(alignment: .leading, spacing: 3) {
                     Text(release)
-                        .font(.system(size: 11, design: .monospaced))
-                        .foregroundStyle(.secondary)
+                        .scaledFont(size: 11, design: .monospaced)
+                        .foregroundStyle(.primary)
                         .lineLimit(2)
                         .truncationMode(.middle)
                     if item.isUpgrade,
-                       let existing = item.existingFileName, !existing.isEmpty {
+                       let existing = item.existingFileName, !existing.isEmpty,
+                       existing != release {
+                        // `↑` arrow — same vocabulary as the spec
+                        // diff row above. Skip when existing matches
+                        // the new release name (re-grab, nothing to
+                        // diff).
                         HStack(alignment: .firstTextBaseline, spacing: 4) {
-                            Text(verbatim: "└─")
-                                .font(.system(size: 11, design: .monospaced))
+                            Image(systemName: "arrow.up")
+                                .scaledFont(size: 9, weight: .semibold)
                                 .foregroundStyle(.tertiary)
                             Text(existing)
-                                .font(.system(size: 11, design: .monospaced))
+                                .scaledFont(size: 11, design: .monospaced)
                                 .foregroundStyle(.secondary)
                                 .lineLimit(2)
                                 .truncationMode(.middle)
@@ -1340,8 +1734,14 @@ struct DownloadSection: View {
 
     @ViewBuilder
     private func upgradeDiff(_ item: QueueItem) -> some View {
-        Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 8, verticalSpacing: 2) {
-            GridRow {
+        // VStack of two HStack rows — earlier `Grid + GridRow`
+        // implementation flattened the nested `qualityCells` HStack
+        // into per-Text columns, which made every quality / size /
+        // score / tag stack vertically across the two rows. VStack
+        // keeps each side of the NEW/OLD diff as a single horizontal
+        // run.
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
                 DiffTag(text: "NEW", style: .new)
                 qualityCells(
                     quality: item.quality,
@@ -1350,7 +1750,7 @@ struct DownloadSection: View {
                     tags: item.customFormats
                 )
             }
-            GridRow {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
                 DiffTag(text: "OLD", style: .old)
                 qualityCells(
                     quality: item.existingQuality,
@@ -1364,6 +1764,11 @@ struct DownloadSection: View {
 
     @ViewBuilder
     private func qualityCells(quality: String?, size: Int64, score: Int, tags: [String]) -> some View {
+        // Tag chips dropped from the per-row inline — they wrap
+        // unpredictably and at >4 tags overflow the diff row.
+        // CustomFormatChips + CustomFormatDiff strip rendered below
+        // the diff already shows the tag delta in a wrapping flow
+        // layout. Diff row stays compact: quality · size · score.
         HStack(spacing: 4) {
             if let q = quality, !q.isEmpty {
                 Text(q)
@@ -1379,11 +1784,10 @@ struct DownloadSection: View {
                 let sign = score > 0 ? "+" : ""
                 Text("\(sign)\(score)")
                     .foregroundStyle(score > 0 ? Color.green : Color.red)
-                    .font(.system(size: 11, weight: .semibold))
+                    .scaledFont(size: 11, weight: .semibold)
             }
-            ForEach(tags, id: \.self) { TagChip(text: $0) }
         }
-        .font(.system(size: 11))
+        .scaledFont(size: 11)
         .foregroundStyle(.secondary)
     }
 
@@ -1399,20 +1803,20 @@ struct DownloadSection: View {
                 HStack(spacing: 6) {
                     if listCollapsible {
                         Image(systemName: "chevron.right")
-                            .font(.system(size: 9, weight: .semibold))
+                            .scaledFont(size: 9, weight: .semibold)
                             .foregroundStyle(.tertiary)
                             .rotationEffect(.degrees(listExpanded ? 90 : 0))
                     }
                     Text("In queue", bundle: .module)
-                        .font(.system(size: 11, weight: .semibold))
+                        .scaledFont(size: 11, weight: .semibold)
                         .foregroundStyle(.secondary)
                     Text("·").foregroundStyle(.tertiary)
                     Text(String(format: String(localized: "%lld downloads", bundle: .module), items.count))
-                        .font(.system(size: 11))
+                        .scaledFont(size: 11)
                         .foregroundStyle(.secondary)
                     Spacer()
                     Text(verbatim: aggregateSizeText)
-                        .font(.system(size: 11).monospacedDigit())
+                        .scaledFont(size: 11, monospacedDigit: true)
                         .foregroundStyle(.secondary)
                 }
                 .contentShape(Rectangle())
@@ -1482,7 +1886,7 @@ struct ProgressLine: View {
                             labelWeight: .semibold)
             Text("·").foregroundStyle(.tertiary)
             Text(verbatim: "\(Int((item.progress * 100).rounded()))%")
-                .font(.system(size: 11, weight: .semibold).monospacedDigit())
+                .scaledFont(size: 11, weight: .semibold, monospacedDigit: true)
                 .foregroundStyle(.secondary)
             Spacer(minLength: 6)
             ScoreLabel(score: item.customFormatScore, size: 11)
@@ -1500,7 +1904,7 @@ struct ProgressLine: View {
             ForEach(Array(segments.enumerated()), id: \.offset) { idx, segment in
                 if idx > 0 { Text("·").foregroundStyle(.tertiary) }
                 Text(verbatim: segment)
-                    .font(.system(size: 11))
+                    .scaledFont(size: 11)
                     .foregroundStyle(.secondary)
             }
             Spacer(minLength: 6)
@@ -1539,7 +1943,7 @@ struct DiffTag: View {
 
     public var body: some View {
         Text(text)
-            .font(.system(size: 9, weight: .bold).monospacedDigit())
+            .scaledFont(size: 9, weight: .bold, monospacedDigit: true)
             .tracking(0.5)
             .foregroundStyle(style == .new ? Color.accentColor : Color.secondary)
             .frame(width: 30, height: 14)
@@ -1619,32 +2023,26 @@ struct MultiRow: View {
             QueueItemTooltip(item: item)
                 .popoverBehavior(.applicationDefined)
         }
-        // Bare-icon action cluster — same gradient + glyph language
-        // as QueueRowView's hover overlay.
+        // Bare-icon action cluster — unified across surfaces, see
+        // `rowActionBackdrop` for the chip styling.
         .overlay(alignment: .trailing) {
             if isHovering, hasAnyAction {
                 inlineActionIcons
-                    .padding(.leading, 60)
-                    .padding(.trailing, 12)
-                    .frame(maxHeight: .infinity)
-                    .background(
-                        LinearGradient(
-                            stops: [
-                                .init(color: .clear, location: 0),
-                                .init(color: Color.black.opacity(0.55), location: 0.55),
-                                .init(color: Color.black.opacity(0.6), location: 1),
-                            ],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
+                    .rowActionBackdrop()
+                    .padding(.trailing, 8)
                     .transition(.opacity)
             }
         }
         #endif
-        .alert(Text("Remove download?", bundle: .module), isPresented: $showDeleteConfirmation) {
-            Button(role: .destructive) { onDelete?() } label: { Text("Remove", bundle: .module) }
-            Button(role: .cancel) {} label: { Text("Cancel", bundle: .module) }
+        .confirmationDialog(
+            Text("Cancel this download?", bundle: .module),
+            isPresented: $showDeleteConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button(role: .destructive) { onDelete?() } label: {
+                Text("Cancel download", bundle: .module)
+            }
+            Button(role: .cancel) {} label: { Text("Keep download", bundle: .module) }
         } message: {
             Text(String(format: String(localized: "This will remove \"%@\" from the download client.", bundle: .module), item.title))
         }
@@ -1655,26 +2053,26 @@ struct MultiRow: View {
         VStack(alignment: .leading, spacing: 3) {
             HStack(spacing: 6) {
                 Image(systemName: item.status.symbol)
-                    .font(.system(size: 9))
+                    .scaledFont(size: 9)
                     .foregroundStyle(item.status.tint)
                 if let code = episodeCode {
                     Text(code)
-                        .font(.system(size: 11, weight: .semibold).monospacedDigit())
+                        .scaledFont(size: 11, weight: .semibold, monospacedDigit: true)
                         .foregroundStyle(.primary)
                 }
                 Text(headlineText)
-                    .font(.system(size: 11))
+                    .scaledFont(size: 11)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
                     .truncationMode(.tail)
                 if item.isUpgrade {
                     Image(systemName: "arrow.up.circle.fill")
-                        .font(.system(size: 9))
+                        .scaledFont(size: 9)
                         .foregroundStyle(.indigo)
                 }
                 Spacer(minLength: 4)
                 Text(trailingText)
-                    .font(.system(size: 10).monospacedDigit())
+                    .scaledFont(size: 10, monospacedDigit: true)
                     .foregroundStyle(.tertiary)
                 ScoreLabel(score: item.customFormatScore)
             }
@@ -1685,7 +2083,7 @@ struct MultiRow: View {
             }
             if !hoverDetail, showInlineUpgrade, isFocused, item.isUpgrade {
                 Text(verbatim: upgradeHint)
-                    .font(.system(size: 10))
+                    .scaledFont(size: 10)
                     .foregroundStyle(.indigo)
             }
         }
@@ -1701,7 +2099,7 @@ struct MultiRow: View {
     #if os(macOS)
     @ViewBuilder
     private var inlineActionIcons: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 2) {
             if canPauseResume {
                 if item.isPaused, let onResume {
                     IconButton(symbol: "play.fill", helpKey: "Resume",
@@ -1712,9 +2110,13 @@ struct MultiRow: View {
                 }
             }
             if onDelete != nil {
-                IconButton(symbol: "trash", helpKey: "Remove from client",
-                           accessibilityLabel: "Remove \(item.title)", tint: .red) {
-                    showDeleteConfirmation = true
+                IconOverflowMenu(accessibilityLabel: "More actions") {
+                    Button(role: .destructive) {
+                        showDeleteConfirmation = true
+                    } label: {
+                        Label(String(localized: "Cancel download", bundle: .module),
+                              systemImage: "trash")
+                    }
                 }
             }
         }
@@ -1774,7 +2176,7 @@ public struct ListingBadgesView: View {
         if item.isUpgrade {
             HStack(spacing: 4) {
                 Text("Upgrade", bundle: .module)
-                    .font(.system(size: 9, weight: .semibold))
+                    .scaledFont(size: 9, weight: .semibold)
                     .foregroundStyle(Color.indigo)
                     .padding(.horizontal, 5)
                     .padding(.vertical, 1)
@@ -1831,6 +2233,20 @@ struct ExistingFileBanner: View {
         )
     }
 
+    /// Sonarr `episodefile` variant — same payload as `ArrFile` plus
+    /// an `id` we don't need here. Lets `EpisodeDetailOverlay` build
+    /// the banner from the already-loaded `sonarrEpisodeFiles` map
+    /// instead of a separate per-episode fetch.
+    init(episodeFile: SonarrEpisodeFile) {
+        self.init(
+            quality: episodeFile.quality?.name,
+            size: episodeFile.size,
+            customFormatScore: episodeFile.customFormatScore,
+            customFormats: (episodeFile.customFormats ?? []).map(\.name),
+            fileName: episodeFile.relativePath
+        )
+    }
+
     public var body: some View {
         VStack(alignment: .leading, spacing: 5) {
             // Label leading, neutral secondary — matches the tooltip's
@@ -1838,20 +2254,20 @@ struct ExistingFileBanner: View {
             // right edge.
             HStack(spacing: 6) {
                 Text("Existing file", bundle: .module)
-                    .font(.system(size: 10, weight: .semibold))
+                    .scaledFont(size: 10, weight: .semibold)
                     .foregroundStyle(.secondary)
                     .textCase(.uppercase)
                     .tracking(0.5)
                 Spacer()
                 if let q = quality, !q.isEmpty {
                     Text(q)
-                        .font(.system(size: 11, weight: .medium))
+                        .scaledFont(size: 11, weight: .medium)
                         .foregroundStyle(.primary)
                 }
                 if let size, size > 0 {
                     Text("·").foregroundStyle(.tertiary)
                     Text(ByteCountFormatter.string(fromByteCount: size, countStyle: .file))
-                        .font(.system(size: 11))
+                        .scaledFont(size: 11)
                         .foregroundStyle(.secondary)
                 }
                 if let s = customFormatScore, s != 0 {
@@ -1867,7 +2283,7 @@ struct ExistingFileBanner: View {
             // footnote.
             if let name = fileName, !name.isEmpty {
                 Text(name)
-                    .font(.system(size: 11, design: .monospaced))
+                    .scaledFont(size: 11, design: .monospaced)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
                     .truncationMode(.middle)
@@ -1896,27 +2312,27 @@ struct ExistingFileLine: View {
         VStack(alignment: .leading, spacing: 2) {
             HStack(spacing: 4) {
                 Image(systemName: "arrow.up.doc")
-                    .font(.system(size: 9))
+                    .scaledFont(size: 9)
                     .foregroundStyle(.indigo)
                 Text("Existing", bundle: .module)
-                    .font(.system(size: 10, weight: .semibold))
+                    .scaledFont(size: 10, weight: .semibold)
                     .foregroundStyle(.indigo)
                 if let q = item.existingQuality, !q.isEmpty {
                     Text(q)
-                        .font(.system(size: 11))
+                        .scaledFont(size: 11)
                         .foregroundStyle(.secondary)
                 }
                 if let size = item.existingSize, size > 0 {
                     Text("·").foregroundStyle(.tertiary)
                     Text(ByteCountFormatter.string(fromByteCount: size, countStyle: .file))
-                        .font(.system(size: 11))
+                        .scaledFont(size: 11)
                         .foregroundStyle(.secondary)
                 }
                 if let s = item.existingCustomFormatScore, s != 0 {
                     Text("·").foregroundStyle(.tertiary)
                     let sign = s > 0 ? "+" : ""
                     Text("\(sign)\(s)")
-                        .font(.system(size: 11, weight: .semibold))
+                        .scaledFont(size: 11, weight: .semibold)
                         .foregroundStyle(s > 0 ? Color.green : Color.red)
                 }
             }

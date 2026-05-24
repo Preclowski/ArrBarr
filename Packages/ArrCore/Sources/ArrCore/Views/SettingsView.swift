@@ -72,6 +72,22 @@ public struct SettingsView: View {
     /// Section content for the language picker. Shared between the macOS
     /// General pane and the iOS combined form so the "restart required"
     /// affordance behaves identically on both platforms.
+    /// Text-size preset picker — three discrete steps (Default / Larger /
+    /// Largest = 1.0 / 1.10 / 1.20). Affects every `.scaledFont(size:)`
+    /// site in the app via the `\.fontScale` env value injected at root.
+    @ViewBuilder
+    private var textSizePicker: some View {
+        // Explicit `as Double` on every tag — without it, SwiftUI
+        // infers some literals as Int, the Picker selection never
+        // matches, and the scale silently sticks at whatever it was
+        // (no compile error, no runtime warning, just nothing changes).
+        Picker(selection: $configStore.fontScale) {
+            Text("Default", bundle: .module).tag(1.0 as Double)
+            Text("Larger", bundle: .module).tag(1.20 as Double)
+            Text("Largest", bundle: .module).tag(1.45 as Double)
+        } label: { Text("Text size", bundle: .module) }
+    }
+
     @ViewBuilder
     private var languageSection: some View {
         Section {
@@ -222,6 +238,7 @@ public struct SettingsView: View {
                 }
             } header: { Text("Section order", bundle: .module) }
             Section {
+                textSizePicker
                 Toggle(isOn: $configStore.showIndexerIssues) { Text("Show indexer issues warning", bundle: .module) }
                 // "Upcoming window" picker removed — banner is now
                 // hard-locked to 7 days.
@@ -353,6 +370,7 @@ public struct SettingsView: View {
                         Text(LocalizedStringKey(opt.label)).tag(opt.code)
                     }
                 } label: { Text("Language", bundle: .module) }
+                textSizePicker
                 // Popover-display toggle merged in here — used to
                 // live in its own "Popover" section but with the
                 // upcoming-window picker gone there was only one
@@ -423,7 +441,7 @@ public struct SettingsView: View {
             HStack(spacing: 8) {
                 Image(systemName: "line.3.horizontal")
                     .foregroundStyle(.tertiary)
-                    .font(.system(size: 11))
+                    .scaledFont(size: 11)
                 Image(systemName: spec.symbol)
                     .foregroundStyle(.secondary)
                     .frame(width: 16)
@@ -505,25 +523,25 @@ public struct SettingsView: View {
         VStack(spacing: 0) {
             HStack {
                 Text(Self.versionString)
-                    .font(.system(size: 11))
+                    .scaledFont(size: 11)
                     .foregroundStyle(.secondary)
                     .textSelection(.enabled)
                     .help("ArrBarr \(Self.versionString)")
                 Text("·")
-                    .font(.system(size: 11))
+                    .scaledFont(size: 11)
                     .foregroundStyle(.tertiary)
                 Text(verbatim: "Made with 🥨")
-                    .font(.system(size: 11))
+                    .scaledFont(size: 11)
                     .foregroundStyle(.secondary)
                 Text("·")
-                    .font(.system(size: 11))
+                    .scaledFont(size: 11)
                     .foregroundStyle(.tertiary)
                 Link(destination: URL(string: "https://github.com/Preclowski/ArrBarr")!) {
                     HStack(spacing: 3) {
                         Image(systemName: "link")
-                            .font(.system(size: 10, weight: .semibold))
+                            .scaledFont(size: 10, weight: .semibold)
                         Text(verbatim: "GitHub")
-                            .font(.system(size: 11))
+                            .scaledFont(size: 11)
                     }
                     .foregroundStyle(.secondary)
                 }

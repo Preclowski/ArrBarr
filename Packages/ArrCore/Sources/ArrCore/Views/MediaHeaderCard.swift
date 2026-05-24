@@ -95,7 +95,7 @@ public struct MediaHeaderCard: View {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
                     titleWithYear
-                        .font(.system(size: 15, weight: .semibold))
+                        .scaledFont(size: 15, weight: .semibold)
                         .lineLimit(3)
                     if let titleBadge {
                         titleBadge
@@ -103,12 +103,12 @@ public struct MediaHeaderCard: View {
                 }
                 if let subtitle, !subtitle.isEmpty {
                     Text(subtitle)
-                        .font(.system(size: 11))
+                        .scaledFont(size: 11)
                         .foregroundStyle(.secondary)
                 }
                 if hasMetadataStrip {
                     metadataStrip
-                        .font(.system(size: 11))
+                        .scaledFont(size: 11)
                 }
                 if !genres.isEmpty {
                     GenreChips(genres: genres)
@@ -250,7 +250,7 @@ public struct PosterLightbox: View {
                 onDismiss()
             } label: {
                 Image(systemName: "xmark")
-                    .font(.system(size: 14, weight: .semibold))
+                    .scaledFont(size: 14, weight: .semibold)
                     .foregroundStyle(Color.white)
                     .shadow(color: .black.opacity(0.6), radius: 2, y: 1)
                     .frame(width: 28, height: 28)
@@ -271,10 +271,10 @@ struct RatingPill: View {
     public var body: some View {
         HStack(spacing: 3) {
             Text(chip.label)
-                .font(.system(size: 9, weight: .semibold))
+                .scaledFont(size: 9, weight: .semibold)
                 .foregroundStyle(chip.color)
             Text(chip.value)
-                .font(.system(size: 10, weight: .semibold).monospacedDigit())
+                .scaledFont(size: 10, weight: .semibold, monospacedDigit: true)
         }
         .padding(.horizontal, 6)
         .padding(.vertical, 2)

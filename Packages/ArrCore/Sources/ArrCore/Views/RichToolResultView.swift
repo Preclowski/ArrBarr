@@ -212,21 +212,21 @@ private struct SearchResultCard: View {
                 }
             }
             Text(result.title)
-                .font(.system(size: 12, weight: .semibold))
+                .scaledFont(size: 12, weight: .semibold)
                 .lineLimit(2)
                 .multilineTextAlignment(.leading)
             HStack(spacing: 6) {
                 if let year = result.year {
                     Text(String(year))
-                        .font(.system(size: 11))
+                        .scaledFont(size: 11)
                         .foregroundStyle(.secondary)
                 }
                 if let rating = result.rating {
                     HStack(spacing: 2) {
                         Image(systemName: "star.fill")
-                            .font(.system(size: 9))
+                            .scaledFont(size: 9)
                         Text(String(format: "%.1f", rating))
-                            .font(.system(size: 10))
+                            .scaledFont(size: 10)
                     }
                     .foregroundStyle(.secondary)
                 }
@@ -311,12 +311,12 @@ private struct LibraryRecordCard: View {
                 }
             }
             Text(title)
-                .font(.system(size: 12, weight: .semibold))
+                .scaledFont(size: 12, weight: .semibold)
                 .lineLimit(2)
                 .multilineTextAlignment(.leading)
             if let year {
                 Text(String(year))
-                    .font(.system(size: 11))
+                    .scaledFont(size: 11)
                     .foregroundStyle(.secondary)
             }
         }
@@ -378,14 +378,14 @@ private struct CalendarRowView: View {
             }
             VStack(alignment: .leading, spacing: 2) {
                 Text(Self.dateLabel(item.airDate))
-                    .font(.system(size: 10, weight: .semibold))
+                    .scaledFont(size: 10, weight: .semibold)
                     .foregroundStyle(.secondary)
                 Text(item.title)
-                    .font(.system(size: 12, weight: .semibold))
+                    .scaledFont(size: 12, weight: .semibold)
                     .lineLimit(2)
                 if let subtitle = item.subtitle, !subtitle.isEmpty {
                     Text(subtitle)
-                        .font(.system(size: 11))
+                        .scaledFont(size: 11)
                         .foregroundStyle(.tertiary)
                         .lineLimit(1)
                 }

@@ -37,6 +37,20 @@ public struct DetailView: View {
         return matched.isEmpty ? [item] : matched
     }
 
+    /// Fresh snapshot of `item` pulled from the live `viewModel.items`
+    /// pool. The `item` passed into init is captured at open-time and
+    /// stays static; `focused` re-reads on every view refresh so that
+    /// status / progress / isPaused reflect the latest poll (and
+    /// immediately after a Pause/Resume tap, the optimistic mutation
+    /// the view model performs). CTA rendering must use this, not
+    /// `item`, or the button label keeps saying "Pause download"
+    /// after the user already paused.
+    private var focused: QueueItem {
+        viewModel.items(for: item.source)
+            .first { $0.id == item.id || $0.arrQueueId == item.arrQueueId }
+            ?? item
+    }
+
     /// True when at least one sibling is a real queue row (non-zero arrQueueId).
     /// `false` means this view was opened from a synthetic lookup item (chat
     /// card / upcoming row tap) and there's nothing to download right now —
@@ -53,21 +67,17 @@ public struct DetailView: View {
     @State private var radarrMovieFile: ArrFile?
     @State private var sonarrDetail: SonarrSeriesDetail?
     @State private var sonarrEpisodes: [SonarrEpisodeDetail] = []
+    /// `episodeFileId → file` map for the whole series. Fetched alongside
+    /// `sonarrEpisodes` so downloaded `EpisodeRow`s can render their
+    /// custom-format score in the right gutter instead of falling back to
+    /// the air date — the score is the actionable info once an episode is
+    /// on disk.
+    @State private var sonarrEpisodeFiles: [Int: SonarrEpisodeFile] = [:]
     @State private var lidarrAlbum: LidarrAlbumDetail?
     @State private var lidarrTracks: [LidarrTrackDetail] = []
     @State private var loading = true
     @State private var loadError: String?
 
-    /// Series-level "Search all missing" state. Lives in DetailView (not
-    /// in a sub-view) because the affordance sits in the seasons-section
-    /// header alongside the title — same level as the season+episode
-    /// rows that own their own spinners independently.
-    @State private var isSearchingAllMissing = false
-    @State private var didSearchAllMissing = false
-    @State private var showAllMissingConfirm = false
-    /// Confirmation alert for the Remove action — mirrors the QueueRowView
-    /// flow. Same destructive-action contract everywhere in the app.
-    @State private var showDeleteConfirmation = false
     /// Poster lightbox — set to a URL when the user taps the header
     /// card's poster, cleared by the xmark button. Renders as an
     /// overlay on top of the detail surface so it dismisses without
@@ -78,10 +88,6 @@ public struct DetailView: View {
     /// series detail.
     @State private var selectedEpisode: SonarrEpisodeDetail?
     /// Lazily-fetched episode-file payload. Driven off
-    /// `selectedEpisode.episodeFileId` — fetched on selection, cleared
-    /// when the episode overlay closes. Powers the quality / size /
-    /// custom-format chips in `EpisodeDetailOverlay`.
-    @State private var selectedEpisodeFile: ArrFile?
     /// Currently-shown season number for Sonarr detail. Drives the
     /// pill bar — only one season's episode list is rendered at a
     /// time. `nil` means "no explicit pick yet", which the view
@@ -120,7 +126,8 @@ public struct DetailView: View {
     }
 
     private var canPauseResume: Bool {
-        item.status == .downloading || item.status == .paused
+        let s = focused.status
+        return s == .downloading || s == .paused
     }
 
     public var body: some View {
@@ -134,6 +141,30 @@ public struct DetailView: View {
                 }
                 .scrollBounceBehavior(.basedOnSize)
                 .frame(maxHeight: .infinity)
+                // Sticky CTA strip pinned at the bottom of the detail
+                // surface. `safeAreaInset` is Apple's canonical pattern
+                // for "bar that doesn't overlap scroll content" — the
+                // ScrollView gets padded automatically so nothing's
+                // hidden behind. Only renders when there's a
+                // controllable active download (see `downloadCTAStrip`).
+                .safeAreaInset(edge: .bottom, spacing: 0) {
+                    let hasCTA = (hasActiveDownloads && canControl)
+                        || arrWebURL(for: item, in: configStore) != nil
+                    if hasCTA {
+                        downloadCTAStrip
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 10)
+                            .frame(maxWidth: .infinity)
+                            .background(
+                                Rectangle()
+                                    .fill(.thinMaterial)
+                                    .overlay(alignment: .top) {
+                                        Divider().opacity(0.4)
+                                    }
+                                    .ignoresSafeArea(edges: .bottom)
+                            )
+                    }
+                }
             }
             // Hide the series detail when an overlay is active so we
             // don't need a solid scrim on top — the popover's
@@ -157,6 +188,11 @@ public struct DetailView: View {
             // the user sees a focused episode surface, dismisses with
             // its own back button to return to the series.
             if let ep = selectedEpisode {
+                let activeQueueItem = siblings.first {
+                    $0.seasonNumber == ep.seasonNumber
+                        && $0.episodeNumber == ep.episodeNumber
+                        && $0.arrQueueId != 0
+                }
                 EpisodeDetailOverlay(
                     episode: ep,
                     seriesTitle: sonarrDetail?.title ?? item.title,
@@ -164,12 +200,8 @@ public struct DetailView: View {
                     posterURL: arrPosterURL(images: sonarrDetail?.images, for: item, in: configStore) ?? item.posterURL,
                     posterRequiresAuth: item.posterRequiresAuth,
                     apiKey: configStore.sonarr.apiKey,
-                    episodeFile: selectedEpisodeFile,
-                    queueItem: siblings.first {
-                        $0.seasonNumber == ep.seasonNumber
-                            && $0.episodeNumber == ep.episodeNumber
-                            && $0.arrQueueId != 0
-                    },
+                    episodeFile: ep.episodeFileId.flatMap { sonarrEpisodeFiles[$0] },
+                    queueItem: activeQueueItem,
                     onPosterTap: { url in
                         withAnimation(.smooth(duration: 0.22)) {
                             enlargedPoster = url ?? item.posterURL
@@ -178,23 +210,15 @@ public struct DetailView: View {
                     onClose: {
                         withAnimation(.smooth(duration: 0.22)) {
                             selectedEpisode = nil
-                            selectedEpisodeFile = nil
                         }
                     },
-                    onSearch: searchEpisodeClosure
+                    onSearch: searchEpisodeClosure,
+                    warningActionURL: activeQueueItem.flatMap { arrWebURL(for: $0, in: configStore) },
+                    onPauseEpisode: { q in Task { await viewModel.pause(q) } },
+                    onResumeEpisode: { q in Task { await viewModel.resume(q) } },
+                    onDeleteEpisode: { q in Task { await viewModel.delete(q) } }
                 )
                 .transition(.opacity)
-                .task(id: ep.id) {
-                    // Fetch the episodefile lazily so the overlay can
-                    // show quality / size / CF chips without bloating
-                    // the initial series-detail load.
-                    selectedEpisodeFile = nil
-                    guard let fid = ep.episodeFileId, fid > 0 else { return }
-                    let client = SonarrClient(config: configStore.sonarr)
-                    if let f = try? await client.fetchEpisodeFile(id: fid) {
-                        await MainActor.run { selectedEpisodeFile = f }
-                    }
-                }
             }
 
             // Poster lightbox — rendered LAST in the ZStack so it
@@ -209,110 +233,242 @@ public struct DetailView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .task(id: item.id) { await load() }
-        .alert(Text("Search all missing episodes?", bundle: .module),
-               isPresented: $showAllMissingConfirm) {
-            Button { performAllMissingSearch() } label: { Text("Search", bundle: .module) }
-            Button(role: .cancel) {} label: { Text("Cancel", bundle: .module) }
-        } message: {
-            Text("Will query your indexers for every missing episode across the entire series.", bundle: .module)
-        }
-        .alert(Text("Remove download?", bundle: .module), isPresented: $showDeleteConfirmation) {
-            Button(role: .destructive) {
-                Task {
-                    await viewModel.delete(item)
-                    // Detail view is no longer meaningful once the
-                    // download it was opened for is gone — fall back to
-                    // the queue/list rather than stare at a stale row.
-                    await MainActor.run { onBack() }
-                }
-            } label: { Text("Remove", bundle: .module) }
-            Button(role: .cancel) {} label: { Text("Cancel", bundle: .module) }
-        } message: {
-            Text(String(format: String(localized: "This will remove \"%@\" from the download client.", bundle: .module), item.title))
-        }
     }
 
-    // MARK: - Download actions cluster
-    //
-    // Renders below the DownloadSection on every detail surface (movie,
-    // series, album). Same `TooltipActionButton` chrome the tooltip
-    // uses, so a row's hover-actions and its detail-screen actions feel
-    // like the same control surfaced twice. Horizontal layout — we have
-    // ~370pt of width here, no need to stack vertically like the
-    // tooltip's narrow poster-column does.
-    @ViewBuilder
-    private var downloadActions: some View {
-        if hasActiveDownloads && canControl {
-            // Earlier draft used two full-width labeled buttons here —
-            // visually the loudest thing on the detail surface, ahead
-            // of the poster. Downtuned per designer pass: hug-content
-            // sizing, leading alignment, destructive "Remove" sits
-            // separately on the trailing edge so primary "Pause/
-            // Resume" still leads but the page no longer reads as
-            // "delete CTA".
-            HStack(spacing: 8) {
-                if canPauseResume {
-                    if item.isPaused {
-                        TooltipActionButton(symbol: "play.fill", labelKey: "Resume", fillsWidth: false) {
-                            Task { await viewModel.resume(item) }
-                        }
-                    } else {
-                        TooltipActionButton(symbol: "pause.fill", labelKey: "Pause", fillsWidth: false) {
-                            Task { await viewModel.pause(item) }
-                        }
-                    }
-                }
-                Spacer()
-                TooltipActionButton(symbol: "trash", labelKey: "Remove", tint: .red, fillsWidth: false) {
-                    showDeleteConfirmation = true
-                }
-            }
+    /// Content-type title — "Movie details" / "Series details" /
+    /// "Album details". Replaces the prior origin-tab label because
+    /// the user already knows which tab they came from; the question
+    /// answered here is "what *is* this surface". Whisparr piggybacks
+    /// on the Radarr layout so it shares the movie copy. Pause /
+    /// Resume / Remove are NOT folded into this title anymore —
+    /// post-review they live inline next to `ProgressLine` (Music
+    /// "now playing" pattern, see `DownloadSection.inlineActions`).
+    private var detailTitleKey: LocalizedStringKey {
+        switch item.source {
+        case .radarr, .whisparr: return "Movie details"
+        case .sonarr:            return "Series details"
+        case .lidarr:            return "Album details"
         }
     }
 
     // MARK: - Header (floating glass back + source info)
 
     private var header: some View {
-        // Variant A: back chevron + page title leading, source meta
-        // and external-link button trailing. Title uses the *origin*
-        // tab name (Kolejka / Nadchodzące / Czat / Dodaj) — not the
-        // item title, which already lives big in the hero card below.
-        // Showing the item title twice (header + hero) read as visual
-        // stutter; an origin breadcrumb tells the user "you came from
-        // here" without duplication.
+        // Title is now the *content type* (Movie / Series / Album
+        // details) rather than the origin tab — the user already knows
+        // which tab they came from, what they don't yet know is what
+        // this surface *is*. When there's an actionable download, the
+        // title doubles as the overflow menu (▾ indicator + Apple
+        // dropdown-title pattern from Finder / Safari): one tap opens
+        // Pause/Resume/Remove. No actionable download → plain text.
         HStack(spacing: 6) {
             FloatingBackButton(action: onBack)
 
-            Text(originLabel, bundle: .module)
-                .font(.system(size: 15, weight: .semibold))
+            Text(detailTitleKey, bundle: .module)
+                .scaledFont(size: 15, weight: .semibold)
                 .foregroundStyle(.primary)
                 .lineLimit(1)
 
             Spacer()
 
             Image(systemName: item.source.symbol)
-                .font(.system(size: 11))
+                .scaledFont(size: 11)
                 .foregroundStyle(.tertiary)
             Text(item.source.displayName)
-                .font(.system(size: 11))
+                .scaledFont(size: 11)
                 .foregroundStyle(.tertiary)
 
-            if let url = arrWebURL(for: item, in: configStore) {
-                Button {
-                    PlatformURLOpener.open(url)
-                } label: {
-                    Image(systemName: "safari")
-                        .font(.system(size: 12))
-                        .foregroundStyle(.secondary)
-                }
-                .buttonStyle(.plain)
-                .help(Text("Open in browser", bundle: .module))
-                .padding(.leading, 4)
-            }
+            // Header is plain — back + title + source tag. Every
+            // action (Safari, Pause/Resume, Cancel) lives in the
+            // sticky bottom CTA strip (`downloadCTAStrip`), so the
+            // toolbar reads as one coherent surface instead of
+            // splitting affordances across two ends of the popover.
         }
         .padding(.horizontal, 12)
         .padding(.top, 10)
         .padding(.bottom, 8)
+    }
+
+    // MARK: - Download CTA strip
+    //
+    // Prominent action row rendered under `DownloadSection` for the
+    // focused queue item. Music/App-Store album-detail pattern: one
+    // big primary CTA (Pause/Resume — the toggle 90% of clicks hit),
+    // a small destructive secondary (Cancel — bordered, red-tinted
+    // glyph, native `.confirmationDialog`), and an external link
+    // (Open in browser) for the long-tail "let me deal with this in
+    // the arr's own UI" case. Only renders when there's something to
+    // control AND a configured download client.
+    @State private var ctaPendingDelete = false
+    /// Flips on while a Pause/Resume tap is in flight. The button
+    /// shows a spinner + disables itself until the request returns
+    /// AND `viewModel.refresh()` pulls the fresh status — only then
+    /// does the CTA flip colour/label, so users don't see a stale
+    /// "Pause" sitting on a paused item.
+    @State private var ctaInFlight = false
+
+    @ViewBuilder
+    private var downloadCTAStrip: some View {
+        let hasDownloadControls = hasActiveDownloads && canControl
+        let url = arrWebURL(for: item, in: configStore)
+        if hasDownloadControls || url != nil {
+            // Strip always promotes exactly one action to the prominent
+            // full-width slot. Destructive actions never lead — Cancel
+            // is always a secondary, since promoting "remove" to the
+            // primary CTA reads as "the page wants you to delete this".
+            // Priority: pause/resume → safari → cancel (last resort,
+            // only when no pause/resume AND no URL, otherwise the
+            // strip would have no leader at all).
+            HStack(spacing: 8) {
+                if hasDownloadControls, canPauseResume {
+                    pauseResumeProminent
+                    cancelSecondary
+                    if let url { safariSecondary(url: url) }
+                } else if let url {
+                    safariProminent(url: url)
+                    if hasDownloadControls { cancelSecondary }
+                } else if hasDownloadControls {
+                    // No URL AND no pause/resume — Cancel is the only
+                    // affordance left, so it has to lead. Edge case.
+                    cancelProminent
+                }
+            }
+            .confirmationDialog(
+                Text("Cancel this download?", bundle: .module),
+                isPresented: $ctaPendingDelete,
+                titleVisibility: .visible
+            ) {
+                Button(role: .destructive) {
+                    Task {
+                        await viewModel.delete(item)
+                        await MainActor.run { onBack() }
+                    }
+                } label: { Text("Cancel download", bundle: .module) }
+                Button(role: .cancel) {} label: { Text("Keep download", bundle: .module) }
+            } message: {
+                Text(String(format: String(localized: "This will remove \"%@\" from the download client.", bundle: .module), item.title))
+            }
+        }
+    }
+
+    // MARK: - CTA strip sub-views
+    //
+    // Two flavours per action: `*Prominent` for the leading full-width
+    // CTA, `*Secondary` for the small bordered square that sits next
+    // to a prominent sibling. Same chat-add shape (GlassProminent,
+    // .padding(.vertical, 7), maxWidth infinity) for every prominent
+    // variant — the strip stays visually consistent no matter which
+    // action got promoted.
+
+    @ViewBuilder
+    private var pauseResumeProminent: some View {
+        let f = focused
+        Button {
+            guard !ctaInFlight else { return }
+            Task {
+                ctaInFlight = true
+                if f.isPaused {
+                    await viewModel.resume(f)
+                } else {
+                    await viewModel.pause(f)
+                }
+                // Force a queue poll so the status flip lands in
+                // `viewModel.items` before we release the spinner —
+                // otherwise the button reverts to the old label for
+                // a couple seconds until the next scheduled refresh.
+                await viewModel.refresh()
+                ctaInFlight = false
+            }
+        } label: {
+            HStack(spacing: 6) {
+                if ctaInFlight {
+                    ProgressView()
+                        .controlSize(.small)
+                        .tint(.white)
+                } else {
+                    Image(systemName: f.isPaused ? "play.fill" : "pause.fill")
+                        .scaledFont(size: 11, weight: .semibold)
+                    Text(f.isPaused
+                            ? String(localized: "Resume download", bundle: .module)
+                            : String(localized: "Pause download", bundle: .module))
+                        .scaledFont(size: 12, weight: .semibold)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 7)
+        }
+        .disabled(ctaInFlight)
+        .tint(f.status.tint)
+        .modifier(GlassProminentButtonStyle())
+        .progressFillCTA(
+            progress: f.source == .sonarr ? 1 : f.progress,
+            tint: f.status.tint
+        )
+    }
+
+    @ViewBuilder
+    private var cancelProminent: some View {
+        Button {
+            ctaPendingDelete = true
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "trash")
+                    .scaledFont(size: 11, weight: .semibold)
+                Text("Cancel download", bundle: .module)
+                    .scaledFont(size: 12, weight: .semibold)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 7)
+        }
+        .modifier(GlassProminentButtonStyle())
+        .tint(.red)
+    }
+
+    @ViewBuilder
+    private var cancelSecondary: some View {
+        Button {
+            ctaPendingDelete = true
+        } label: {
+            Image(systemName: "trash")
+                .scaledFont(size: 13, weight: .medium)
+                .foregroundStyle(.red)
+                .padding(.horizontal, 4)
+                .padding(.vertical, 7)
+        }
+        .buttonStyle(.bordered)
+        .help(Text("Cancel download", bundle: .module))
+    }
+
+    @ViewBuilder
+    private func safariProminent(url: URL) -> some View {
+        Button {
+            PlatformURLOpener.open(url)
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "safari")
+                    .scaledFont(size: 11, weight: .semibold)
+                Text("Open in browser", bundle: .module)
+                    .scaledFont(size: 12, weight: .semibold)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 7)
+        }
+        .modifier(GlassProminentButtonStyle())
+        .help(Text("Open in browser", bundle: .module))
+    }
+
+    @ViewBuilder
+    private func safariSecondary(url: URL) -> some View {
+        Button {
+            PlatformURLOpener.open(url)
+        } label: {
+            Image(systemName: "safari")
+                .scaledFont(size: 13, weight: .medium)
+                .padding(.horizontal, 4)
+                .padding(.vertical, 7)
+        }
+        .buttonStyle(.bordered)
+        .help(Text("Open in browser", bundle: .module))
     }
 
     // MARK: - Content switch
@@ -366,12 +522,16 @@ public struct DetailView: View {
                 DownloadSection(
                     items: siblings,
                     focused: item,
-                    showInlineUpgrade: false,
+                    showInlineUpgrade: true,
                     showCustomFormats: true,
                     // Badges moved to the header card above.
-                    showListingBadges: false
+                    showListingBadges: false,
+                    // Per-item closures (used by MultiRow when this
+                    // section renders a list) are only needed for the
+                    // multi-item case; for single-item, sticky header
+                    // controls (`headerActions`) own the actions.
+                    arrWebURLForItem: { q in arrWebURL(for: q, in: configStore) }
                 )
-                downloadActions
             }
 
             // Standalone "already in library" banner — only when
@@ -389,7 +549,7 @@ public struct DetailView: View {
 
             if let err = loadError {
                 Text(err)
-                    .font(.system(size: 11))
+                    .scaledFont(size: 11)
                     .foregroundStyle(.tertiary)
             }
         }
@@ -437,6 +597,7 @@ public struct DetailView: View {
                             season: active,
                             episodes: sonarrEpisodes.filter { $0.seasonNumber == active.seasonNumber },
                             queueByEpisodeId: queueByEpisodeId,
+                            fileByEpisodeFileId: sonarrEpisodeFiles,
                             onSearchSeason: searchSeasonClosure(seasonNumber: active.seasonNumber),
                             onSearchEpisode: searchEpisodeClosure,
                             onTapEpisode: { ep in
@@ -470,7 +631,7 @@ public struct DetailView: View {
 
             if let err = loadError {
                 Text(err)
-                    .font(.system(size: 11))
+                    .scaledFont(size: 11)
                     .foregroundStyle(.tertiary)
             }
         }
@@ -549,7 +710,7 @@ public struct DetailView: View {
         } label: {
             HStack(spacing: 4) {
                 Text(String(format: String(localized: "Season pill %lld", bundle: .module), season.seasonNumber))
-                    .font(.system(size: 10, weight: isActive ? .semibold : .medium))
+                    .scaledFont(size: 10, weight: isActive ? .semibold : .medium)
                     .foregroundStyle(isActive ? .primary : .secondary)
                 // Dot colour reflects what the user will see when
                 // they open the season: blue if anything's actively
@@ -613,61 +774,19 @@ public struct DetailView: View {
 
     /// Total *aired* missing episodes across non-special seasons. Drives
     /// the "Search all N missing" pill visibility. We use episode-level
-    /// data instead of season.statistics so unaired episodes don't pad
-    /// the count — searching for them would no-op against indexers and
-    /// the number would mislead the user.
-    private func totalMissing(across seasons: [SonarrSeasonInfo]) -> Int {
-        let now = Date()
-        return sonarrEpisodes.filter { ep in
-            // Skip specials and episodes outside the non-special set we
-            // surface in the UI.
-            guard let sn = ep.seasonNumber, sn > 0 else { return false }
-            guard seasons.contains(where: { $0.seasonNumber == sn }) else { return false }
-            let aired = ep.airDateUtc.flatMap(parseArrDate).map { $0 <= now } ?? true
-            return aired && ep.hasFile != true
-        }.count
-    }
-
-    /// Section header for the seasons list with a glass pill on the right
-    /// that fires a full `SeriesSearch` against Sonarr. Same chrome
-    /// language as the per-season pill — but lives one level up so the
-    /// user can grab everything missing across the whole show in a tap.
+    /// Section header for the seasons list. Series-wide "search whole
+    /// series" affordance lived here briefly; pulled per UX feedback
+    /// because per-season searches already let the user pick exactly
+    /// which season to grab and the rollup added an ambiguous count.
     @ViewBuilder
     private func seasonsHeader(seasons: [SonarrSeasonInfo]) -> some View {
-        let missing = totalMissing(across: seasons)
         HStack(spacing: 8) {
             Text("Seasons", bundle: .module)
-                .font(.system(size: 11, weight: .semibold))
+                .scaledFont(size: 11, weight: .semibold)
                 .foregroundStyle(.secondary)
                 .textCase(.uppercase)
                 .tracking(0.5)
             Spacer()
-            if missing > 0, item.entityId != nil {
-                Button(action: fireAllMissingSearch) {
-                    HStack(spacing: 3) {
-                        if isSearchingAllMissing {
-                            ProgressView().controlSize(.mini)
-                        } else if didSearchAllMissing {
-                            Image(systemName: "checkmark")
-                                .font(.system(size: 10, weight: .semibold))
-                                .foregroundStyle(.green)
-                        } else {
-                            Image(systemName: "magnifyingglass")
-                                .font(.system(size: 10, weight: .medium))
-                            Text("Search all \(missing) missing", bundle: .module)
-                                .font(.system(size: 10, weight: .medium))
-                        }
-                    }
-                    .foregroundStyle(.primary)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .contentShape(Capsule())
-                }
-                .buttonStyle(.plain)
-                .glassPill()
-                .disabled(isSearchingAllMissing)
-                .help(Text("Search", bundle: .module))
-            }
         }
     }
 
@@ -710,26 +829,6 @@ public struct DetailView: View {
         }
     }
 
-    private func fireAllMissingSearch() {
-        guard !isSearchingAllMissing else { return }
-        showAllMissingConfirm = true
-    }
-
-    private func performAllMissingSearch() {
-        guard let seriesId = item.entityId, !isSearchingAllMissing else { return }
-        isSearchingAllMissing = true
-        Task {
-            let client = SonarrClient(config: configStore.sonarr)
-            try? await client.searchSeries(seriesId: seriesId)
-            await MainActor.run {
-                isSearchingAllMissing = false
-                didSearchAllMissing = true
-            }
-            try? await Task.sleep(nanoseconds: 1_400_000_000)
-            await MainActor.run { didSearchAllMissing = false }
-        }
-    }
-
     private var sonarrRatingChips: [RatingChip] {
         guard let r = sonarrDetail?.ratings, let v = r.value else { return [] }
         return [RatingChip(label: "Rating", value: String(format: "%.1f", v), color: .yellow)]
@@ -746,14 +845,17 @@ public struct DetailView: View {
             }
 
             if hasActiveDownloads {
-                DownloadSection(items: siblings, focused: item)
-                downloadActions
+                DownloadSection(
+                    items: siblings,
+                    focused: item,
+                    arrWebURLForItem: { q in arrWebURL(for: q, in: configStore) }
+                )
             }
 
             if !lidarrTracks.isEmpty {
                 Divider().padding(.vertical, 2)
                 Text("Tracks", bundle: .module)
-                    .font(.system(size: 11, weight: .semibold))
+                    .scaledFont(size: 11, weight: .semibold)
                     .foregroundStyle(.secondary)
                     .textCase(.uppercase)
                     .tracking(0.5)
@@ -788,7 +890,7 @@ public struct DetailView: View {
             }
             if let err = loadError {
                 Text(err)
-                    .font(.system(size: 11))
+                    .scaledFont(size: 11)
                     .foregroundStyle(.tertiary)
             }
         }
@@ -820,7 +922,7 @@ public struct DetailView: View {
                 .help(Text("Show poster", bundle: .module))
             VStack(alignment: .leading, spacing: 4) {
                 Text(album?.title ?? item.title)
-                    .font(.system(size: 15, weight: .semibold))
+                    .scaledFont(size: 15, weight: .semibold)
                     .lineLimit(2)
                 if let artist = album?.artist?.artistName {
                     // Artist as subtitle — 12pt medium .secondary.
@@ -830,7 +932,7 @@ public struct DetailView: View {
                     // series-title treatment so the two detail
                     // surfaces share the same hierarchy language.
                     Text(artist)
-                        .font(.system(size: 12, weight: .medium))
+                        .scaledFont(size: 12, weight: .medium)
                         .foregroundStyle(.secondary)
                         .lineLimit(2)
                 }
@@ -851,7 +953,7 @@ public struct DetailView: View {
                         Text(formatDuration(ms: dur)).foregroundStyle(.secondary)
                     }
                 }
-                .font(.system(size: 11))
+                .scaledFont(size: 11)
                 if !lidarrGenres.isEmpty {
                     GenreChips(genres: lidarrGenres)
                 }
@@ -895,7 +997,7 @@ public struct DetailView: View {
         } label: {
             HStack(spacing: 4) {
                 Text(String(format: String(localized: "Disc %lld", bundle: .module), disc))
-                    .font(.system(size: 10, weight: isActive ? .semibold : .medium))
+                    .scaledFont(size: 10, weight: isActive ? .semibold : .medium)
                     .foregroundStyle(isActive ? .primary : .secondary)
                 if complete {
                     Circle()
@@ -1041,8 +1143,23 @@ public struct DetailView: View {
                 let client = SonarrClient(config: configStore.sonarr)
                 async let d = client.fetchSeriesDetails(id: entityId)
                 async let eps = client.fetchEpisodes(seriesId: entityId)
+                async let files = (try? client.fetchEpisodeFileMap(seriesId: entityId)) ?? [:]
                 sonarrDetail = try await d
                 sonarrEpisodes = try await eps
+                sonarrEpisodeFiles = await files
+                // Auto-drill straight to the episode overlay when
+                // the incoming queue item identifies a specific
+                // episode. Clicking "Foo S02E04" in queue should
+                // land on that episode's detail, not the series
+                // splash — the user already picked a specific row.
+                if selectedEpisode == nil,
+                   let sn = item.seasonNumber, sn > 0,
+                   let en = item.episodeNumber,
+                   let ep = sonarrEpisodes.first(where: {
+                       $0.seasonNumber == sn && $0.episodeNumber == en
+                   }) {
+                    selectedEpisode = ep
+                }
             case .lidarr:
                 let client = LidarrClient(config: configStore.lidarr)
                 async let a = client.fetchAlbumDetails(id: entityId)

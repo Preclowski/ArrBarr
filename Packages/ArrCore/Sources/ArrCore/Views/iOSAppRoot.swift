@@ -137,7 +137,7 @@ private struct QueueTab: View {
     private var emptyState: some View {
         VStack(spacing: 14) {
             Image(systemName: "gearshape.2")
-                .font(.system(size: 36, weight: .light))
+                .scaledFont(size: 36, weight: .light)
                 .foregroundStyle(.secondary)
             Text("ArrBarr is not configured", bundle: .module)
                 .font(.headline)
@@ -260,7 +260,7 @@ private struct UpcomingTab: View {
     private var emptyState: some View {
         VStack(spacing: 8) {
             Image(systemName: "calendar")
-                .font(.system(size: 36, weight: .light))
+                .scaledFont(size: 36, weight: .light)
                 .foregroundStyle(.tertiary)
             Text("Nothing upcoming", bundle: .module)
                 .font(.headline)

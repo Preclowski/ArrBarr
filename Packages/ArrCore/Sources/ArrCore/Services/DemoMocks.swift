@@ -199,7 +199,11 @@ public enum DemoMocks {
                 quality: "WEB-DL 2160p", formats: ["AMZN", "DV", "HDR10", "Atmos", "x265", "10bit"], score: 1240,
                 client: "Deluge", indexer: "DemoTracker",
                 upgrade: false, posterSeed: "northerncascade", aspect: .portrait,
-                entityId: 105
+                entityId: 105,
+                statusMessages: [
+                    "Import failed: No matching episode found in series.",
+                    "The release group conflicts with the configured preferred-words list."
+                ]
             ),
         ])
         return items
@@ -630,7 +634,8 @@ public enum DemoMocks {
         posterSeed: String, aspect: Aspect,
         downloadId: String? = nil,
         releaseGroup: String? = nil,
-        entityId: Int? = nil
+        entityId: Int? = nil,
+        statusMessages: [String] = []
     ) -> QueueItem {
         let total: Int64 = 4_500_000_000
         let left = Int64(Double(total) * (1 - progress))
@@ -665,7 +670,8 @@ public enum DemoMocks {
             contentSlug: posterSeed,
             entityId: entityId,
             posterURL: poster(label: posterLabel(title: title, subtitle: subtitle), seed: posterSeed, w: w, h: h),
-            posterRequiresAuth: false
+            posterRequiresAuth: false,
+            statusMessages: statusMessages
         )
     }
 
@@ -754,6 +760,31 @@ public enum DemoMocks {
 
     public static func sonarrEpisodes(seriesId: Int) -> [SonarrEpisodeDetail] {
         sonarrEpisodeData[seriesId] ?? []
+    }
+
+    /// Synthesises a `SonarrEpisodeFile` for every downloaded episode in
+    /// the demo series, so detail-view EpisodeRow can render its
+    /// custom-format score in the right gutter (instead of falling back
+    /// to the air date). Score is seeded from episodeFileId so it stays
+    /// stable across reloads and varies row-to-row — same hash trick
+    /// the queue-row mocks already use.
+    public static func sonarrEpisodeFileMap(seriesId: Int) -> [Int: SonarrEpisodeFile] {
+        var map: [Int: SonarrEpisodeFile] = [:]
+        for ep in sonarrEpisodes(seriesId: seriesId) where ep.hasFile == true {
+            guard let fid = ep.episodeFileId else { continue }
+            let score = 200 + (fid * 37) % 400      // deterministic spread 200…600
+            let size = Int64(1_500_000_000 + (fid * 53) % 1_500_000_000)
+            map[fid] = SonarrEpisodeFile(
+                id: fid,
+                seriesId: seriesId,
+                customFormats: nil,
+                customFormatScore: score,
+                quality: nil,
+                size: size,
+                relativePath: "S\(String(format: "%02d", ep.seasonNumber ?? 0))/episode.\(fid).mkv"
+            )
+        }
+        return map
     }
 
     public static func lidarrAlbumDetail(id: Int) -> LidarrAlbumDetail? {

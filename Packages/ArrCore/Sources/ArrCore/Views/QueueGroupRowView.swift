@@ -62,49 +62,34 @@ public struct QueueGroupRowView: View {
                 VStack(alignment: .leading, spacing: 1) {
                     HStack(spacing: 4) {
                         Text(rep.title)
-                            .font(.system(size: 12, weight: .medium))
+                            .scaledFont(size: 12)
                             .lineLimit(1)
                             .truncationMode(.tail)
 
                         MediaBadgeCluster(isUpgrade: rep.isUpgrade)
                         Spacer(minLength: 4)
-                        if let client = rep.downloadClient {
-                            DownloadClientLabel(name: client)
-                        }
+                        // Client now lives in the card header.
                     }
 
                     if let label = seasonLabel {
                         Text(label)
-                            .font(.system(size: 11))
+                            .scaledFont(size: 11)
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
                     }
 
-                    HStack(spacing: 3) {
-                        StatusIconLabel(status: rep.status)
-                        if let q = rep.quality, !q.isEmpty {
-                            Text("·").foregroundStyle(.tertiary)
-                            Text(q).foregroundStyle(.tertiary)
-                        }
-                        Spacer(minLength: 4)
-                        ScoreLabel(score: rep.customFormatScore)
-                    }
-                    .font(.system(size: 10))
-                    .lineLimit(1)
+                    // Quality dropped from the row — surfaced in the
+                    // long-hover tooltip + detail view instead.
                 }
-                // Action cluster lives in the hover overlay — see
-                // QueueRowView. iOS inline path dropped (dead code).
 
-                ThinProgressBar(progress: aggregateProgress, tint: rep.status.tint)
-
-                if !rep.customFormats.isEmpty {
-                    CustomFormatStrip(
-                        formats: rep.customFormats,
-                        score: 0,
-                        fadeTrailing: !(isHovering && canControl)
-                    )
-                    .padding(.top, 2)
-                }
+                DownloadProgressCard(
+                    item: rep,
+                    progressOverride: aggregateProgress,
+                    fadeTrailing: !(isHovering && canControl),
+                    showUpgradeDiff: false,
+                    showHeader: true,
+                    compactSpec: true
+                )
             }
         }
         .padding(.horizontal, 12)
@@ -114,27 +99,14 @@ public struct QueueGroupRowView: View {
                 .fill(isHovering ? Color.primary.opacity(0.06) : Color.clear)
                 .padding(.horizontal, 6)
         )
-        // Bare-icon hover overlay — mirrors QueueRowView. Fade-in
-        // dark gradient backdrop cuts the icons visually from any
-        // content beneath.
+        // Bare-icon hover overlay — same as QueueRowView. No
+        // gradient backdrop; icons read over the row's hover tint.
         #if os(macOS)
         .overlay(alignment: .trailing) {
             if isHovering && canControl {
                 inlineActionIcons
-                    .padding(.leading, 60)
-                    .padding(.trailing, 16)
-                    .frame(maxHeight: .infinity)
-                    .background(
-                        LinearGradient(
-                            stops: [
-                                .init(color: .clear, location: 0),
-                                .init(color: Color.black.opacity(0.55), location: 0.55),
-                                .init(color: Color.black.opacity(0.6), location: 1),
-                            ],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
+                    .rowActionBackdrop()
+                    .padding(.trailing, 10)
                     .transition(.opacity)
             }
         }
@@ -168,9 +140,15 @@ public struct QueueGroupRowView: View {
             .popoverBehavior(.applicationDefined)
         }
         #endif
-        .alert(Text("Remove download?", bundle: .module), isPresented: $showDeleteConfirmation) {
-            Button(role: .destructive) { onDelete() } label: { Text("Remove", bundle: .module) }
-            Button(role: .cancel) {} label: { Text("Cancel", bundle: .module) }
+        .confirmationDialog(
+            Text("Cancel this download?", bundle: .module),
+            isPresented: $showDeleteConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button(role: .destructive) { onDelete() } label: {
+                Text("Cancel download", bundle: .module)
+            }
+            Button(role: .cancel) {} label: { Text("Keep download", bundle: .module) }
         } message: {
             Text(String(format: String(localized: "This will remove \"%@\" (%lld episodes) from the download client.", bundle: .module), headerLabel, group.memberCount))
         }
@@ -234,7 +212,7 @@ public struct QueueGroupRowView: View {
     /// QueueRowView.inlineActionIcons for rationale.
     @ViewBuilder
     private var inlineActionIcons: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 2) {
             if canControl && canPauseResume {
                 if rep.isPaused {
                     IconButton(symbol: "play.fill", helpKey: "Resume",
@@ -245,9 +223,13 @@ public struct QueueGroupRowView: View {
                 }
             }
             if canControl {
-                IconButton(symbol: "trash", helpKey: "Remove from client",
-                           accessibilityLabel: "Remove \(headerLabel)", tint: .red) {
-                    showDeleteConfirmation = true
+                IconOverflowMenu(accessibilityLabel: "More actions") {
+                    Button(role: .destructive) {
+                        showDeleteConfirmation = true
+                    } label: {
+                        Label(String(localized: "Cancel download", bundle: .module),
+                              systemImage: "trash")
+                    }
                 }
             }
         }
@@ -380,7 +362,7 @@ public struct QueueGroupTooltip: View {
                     return Text("Episodes", bundle: .module)
                 }()
                 seasonHeader
-                    .font(.system(size: 10, weight: .semibold))
+                    .scaledFont(size: 10, weight: .semibold)
                     .foregroundStyle(.secondary)
                     .textCase(.uppercase)
                     .tracking(0.5)
@@ -437,10 +419,10 @@ public struct QueueGroupTooltip: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 4) {
                 Image(systemName: "arrow.up.doc.fill")
-                    .font(.system(size: 9))
+                    .scaledFont(size: 9)
                     .foregroundStyle(.indigo)
                 Text("Replacing all \(upgradeCount) episodes", bundle: .module)
-                    .font(.system(size: 9, weight: .semibold))
+                    .scaledFont(size: 9, weight: .semibold)
                     .textCase(.uppercase)
                     .tracking(0.5)
                     .foregroundStyle(.indigo)
@@ -451,12 +433,12 @@ public struct QueueGroupTooltip: View {
                     Text("·").foregroundStyle(.tertiary)
                     let sign = uniform.score > 0 ? "+" : ""
                     Text("\(sign)\(uniform.score)")
-                        .font(.system(size: 11, weight: .semibold))
+                        .scaledFont(size: 11, weight: .semibold)
                         .foregroundStyle(uniform.score > 0 ? Color.green : Color.red)
                 }
                 ForEach(uniform.formats, id: \.self) { TagChip(text: $0) }
             }
-            .font(.system(size: 11))
+            .scaledFont(size: 11)
         }
         .padding(8)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -490,13 +472,13 @@ public struct QueueGroupTooltip: View {
         VStack(alignment: .leading, spacing: 1) {
             HStack(alignment: .top, spacing: 6) {
                 Text(rep.title)
-                    .font(.system(size: 13, weight: .semibold))
+                    .scaledFont(size: 13, weight: .semibold)
                     .lineLimit(2)
                 Spacer(minLength: 4)
                 if let client = rep.downloadClient {
                     let color = downloadClientColor(client)
                     Text(client)
-                        .font(.system(size: 9, weight: .semibold))
+                        .scaledFont(size: 9, weight: .semibold)
                         .foregroundStyle(color)
                         .padding(.horizontal, 5)
                         .padding(.vertical, 2)
@@ -512,7 +494,7 @@ public struct QueueGroupTooltip: View {
                 }
                 Text("\(group.memberCount) episodes", bundle: .module)
             }
-            .font(.system(size: 11))
+            .scaledFont(size: 11)
             .foregroundStyle(.secondary)
         }
     }
@@ -557,7 +539,7 @@ public struct QueueGroupTooltip: View {
     private func row(_ label: String, value: String, mono: Bool = false, wraps: Bool = false) -> some View {
         GridRow(alignment: .firstTextBaseline) {
             Text(LocalizedStringKey(label), bundle: .module)
-                .font(.system(size: 11))
+                .scaledFont(size: 11)
                 .foregroundStyle(.secondary)
                 .gridColumnAlignment(.leading)
             Text(value)
@@ -609,7 +591,7 @@ public struct TooltipQueueRow: View {
             HStack(spacing: 6) {
                 if let code = episodeCode {
                     Text(code)
-                        .font(.system(size: 11, weight: .semibold).monospacedDigit())
+                        .scaledFont(size: 11, weight: .semibold, monospacedDigit: true)
                         .foregroundStyle(.tertiary)
                 }
                 // Per-row Upgrade / New badge dropped — this tooltip
@@ -617,7 +599,7 @@ public struct TooltipQueueRow: View {
                 // shares the same upgrade state, so the pack header's
                 // badge covers it. Per-row was visual repetition.
                 Text(headline)
-                    .font(.system(size: 11))
+                    .scaledFont(size: 11)
                     .foregroundStyle(item.status.tint)
                     .lineLimit(1)
                     .truncationMode(.tail)
@@ -659,12 +641,12 @@ public struct TooltipQueueRow: View {
             let delta = item.customFormatScore - existing
             let sign = delta > 0 ? "+" : (delta == 0 ? "±" : "")
             Text("\(sign)\(delta)")
-                .font(.system(size: 10, weight: .semibold).monospacedDigit())
+                .scaledFont(size: 10, weight: .semibold, monospacedDigit: true)
                 .foregroundStyle(delta > 0 ? Color.green : (delta < 0 ? Color.red : .secondary))
         } else if item.customFormatScore != 0 {
             let sign = item.customFormatScore > 0 ? "+" : ""
             Text("\(sign)\(item.customFormatScore)")
-                .font(.system(size: 10, weight: .semibold).monospacedDigit())
+                .scaledFont(size: 10, weight: .semibold, monospacedDigit: true)
                 .foregroundStyle(item.customFormatScore > 0 ? Color.green : Color.red)
         }
     }

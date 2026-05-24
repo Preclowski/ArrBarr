@@ -43,51 +43,22 @@ public struct MediaBadgeCluster: View {
     }
 
     public var body: some View {
-        badge(
-            labelKey: isUpgrade ? "Upgrade" : "New",
-            color: isUpgrade ? .indigo : .accentColor
+        // Delegates to the shared `OutlineLabel` so every compact
+        // chip in the app wears identical chrome (border + tinted
+        // text, no fill). Upgrade → indigo, New → accent.
+        OutlineLabel(
+            text: NSLocalizedString(isUpgrade ? "Upgrade" : "New",
+                                    bundle: .module, comment: ""),
+            tint: isUpgrade ? .indigo : .accentColor
         )
     }
-
-    @ViewBuilder
-    private func badge(labelKey: String, color: Color) -> some View {
-        if size == .subtle {
-            // Background-free, uppercase + tracked, neutral `.secondary`
-            // foreground — same vocabulary as the section headers
-            // (`EPISODES`, `SEASON 0X`) in the tooltip. The row this
-            // sits on already paints the status tint behind everything,
-            // so a coloured label here was a second voice fighting for
-            // attention. The literal text ("Upgrade" vs "New") carries
-            // the semantic distinction; the chip styling is just the
-            // genre of the label.
-            Text(LocalizedStringKey(labelKey), bundle: .module)
-                .font(.system(size: 8, weight: .semibold))
-                .tracking(0.5)
-                .textCase(.uppercase)
-                .foregroundStyle(.secondary)
-        } else {
-            Text(LocalizedStringKey(labelKey), bundle: .module)
-                .font(.system(size: fontSize, weight: .semibold))
-                .foregroundStyle(color)
-                .padding(.horizontal, hPad)
-                .padding(.vertical, vPad)
-                .background(color.opacity(0.15), in: Capsule())
-        }
-    }
-
-    private var fontSize: CGFloat { size == .compact ? 8 : 9 }
-    private var hPad: CGFloat { size == .compact ? 4 : 5 }
-    private var vPad: CGFloat { size == .compact ? 1 : 1 }
 }
 
 // MARK: -
 
-/// Neutral download-client label — `.tertiary` text on the trailing
-/// edge of the title / details row. Used to be a bright per-client
-/// coloured capsule (orange for SABnzbd, blue for qBit…) which
-/// collided with the status tint (Paused is orange too) — the
-/// neutralised treatment lives here so every surface picks up the
-/// fix.
+/// Download-client label — outline capsule matching `MediaBadgeCluster`
+/// and any other compact label across the app. Neutral secondary tint
+/// so it reads as metadata, not as a status indicator.
 public struct DownloadClientLabel: View {
     let name: String
     var size: CGFloat
@@ -98,10 +69,34 @@ public struct DownloadClientLabel: View {
     }
 
     public var body: some View {
-        Text(name)
-            .font(.system(size: size, weight: .medium))
-            .foregroundStyle(.tertiary)
-            .lineLimit(1)
+        OutlineLabel(text: name, tint: .secondary, fontSize: 8)
+    }
+}
+
+/// Shared outline-capsule label primitive — tinted border, no fill,
+/// tinted text. Used by `MediaBadgeCluster`, `DownloadClientLabel`,
+/// and any other compact metadata chip. One look across every
+/// surface; per-callsite tint conveys semantic distinction.
+public struct OutlineLabel: View {
+    let text: String
+    let tint: Color
+    var fontSize: CGFloat
+
+    public init(text: String, tint: Color, fontSize: CGFloat = 8) {
+        self.text = text
+        self.tint = tint
+        self.fontSize = fontSize
+    }
+
+    public var body: some View {
+        Text(text)
+            .scaledFont(size: fontSize, weight: .semibold)
+            .foregroundStyle(tint)
+            .padding(.horizontal, 4)
+            .padding(.vertical, 1)
+            .overlay(
+                Capsule().stroke(tint.opacity(0.6), lineWidth: 0.75)
+            )
             .fixedSize()
     }
 }
@@ -114,20 +109,62 @@ public struct DownloadClientLabel: View {
 /// existing file's) through this view.
 public struct ScoreLabel: View {
     let score: Int
+    /// When non-nil, the view renders `score − existing` as a signed
+    /// delta (green for gains, red for losses, neutral `±0` for a wash).
+    /// `nil` keeps the legacy raw-score rendering used by surfaces that
+    /// just want to show the file's own score with no upgrade context.
+    let existing: Int?
     var size: CGFloat
     var weight: Font.Weight
 
     public init(score: Int, size: CGFloat = 10, weight: Font.Weight = .semibold) {
         self.score = score
+        self.existing = nil
+        self.size = size
+        self.weight = weight
+    }
+
+    /// Diff-mode initializer — `new` is the incoming file's score,
+    /// `from` the existing file's score it's replacing. Used for queue /
+    /// upgrade rows where the actionable info is "are we gaining or
+    /// losing points?" rather than the absolute number. Falls back to a
+    /// raw `new` render when `from == nil` (fresh download — no
+    /// replacement target to diff against).
+    public init(delta new: Int, from existing: Int?, size: CGFloat = 10, weight: Font.Weight = .semibold) {
+        self.score = new
+        self.existing = existing
         self.size = size
         self.weight = weight
     }
 
     public var body: some View {
-        if score != 0 {
+        if let existing {
+            // Diff mode renders absolute + delta — "+465 (+125)" reads as
+            // "score is 465, up by 125" in one glance. The delta is
+            // what's tinted (green / red / neutral) since gain-or-loss
+            // is the actionable signal; the absolute score sits in
+            // primary so it's still legible at a distance.
+            // Absolute score takes the gain/loss tint (it's the headline
+            // number — green for "this download has positive score",
+            // red for negative). The delta sits in a desaturated mint
+            // alongside — present but secondary, since the absolute
+            // already encodes the direction via the sign on the number
+            // itself.
+            let delta = score - existing
+            let scoreSign = score > 0 ? "+" : ""
+            let deltaSign = delta > 0 ? "+" : (delta == 0 ? "±" : "")
+            let scoreColor: Color = score > 0 ? .green : (score < 0 ? .red : .secondary)
+            HStack(spacing: 3) {
+                Text("\(scoreSign)\(score)")
+                    .foregroundStyle(scoreColor)
+                Text("(\(deltaSign)\(delta))")
+                    .foregroundStyle(Color.green.opacity(0.55))
+            }
+            .scaledFont(size: size, weight: weight, monospacedDigit: true)
+        } else if score != 0 {
             let sign = score > 0 ? "+" : ""
             Text("\(sign)\(score)")
-                .font(.system(size: size, weight: weight))
+                .scaledFont(size: size, weight: weight)
                 .foregroundStyle(score > 0 ? Color.green : Color.red)
         }
     }
@@ -152,28 +189,51 @@ public struct ScoreLabel: View {
 public struct QueueStatusMessagesBanner: View {
     let messages: [String]
     let tint: Color
+    /// Optional arr-side URL to surface as a trailing CTA. When set,
+    /// the banner adds an "Open in browser" link/button — these
+    /// messages are usually actionable only inside Sonarr/Radarr's
+    /// own UI (manual import, blocklist, edit grab), so the CTA gets
+    /// the user there in one click instead of forcing them to
+    /// re-navigate from the popover's header.
+    let actionURL: URL?
 
-    public init(messages: [String], tint: Color) {
+    public init(messages: [String], tint: Color, actionURL: URL? = nil) {
         self.messages = messages
         self.tint = tint
+        self.actionURL = actionURL
     }
 
     public var body: some View {
-        HStack(alignment: .top, spacing: 6) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .font(.system(size: 10))
-                .foregroundStyle(tint)
-                .padding(.top, 1)
+        // Warning icon dropped: the status pill rendered immediately
+        // above already carries the triangle — repeating it here was
+        // visual stutter. The tinted backdrop alone carries the
+        // "this is the warning explanation" signal.
+        VStack(alignment: .leading, spacing: 6) {
             VStack(alignment: .leading, spacing: 2) {
                 ForEach(messages, id: \.self) { line in
                     Text(line)
-                        .font(.system(size: 11))
+                        .scaledFont(size: 11)
                         .foregroundStyle(.primary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
-            Spacer(minLength: 0)
+            if let actionURL {
+                Button {
+                    PlatformURLOpener.open(actionURL)
+                } label: {
+                    HStack(spacing: 4) {
+                        Text("Open in browser", bundle: .module)
+                        Image(systemName: "arrow.up.right.square")
+                            .scaledFont(size: 10, weight: .medium)
+                    }
+                    .scaledFont(size: 11, weight: .medium)
+                    .foregroundStyle(tint)
+                }
+                .buttonStyle(.plain)
+                .help(Text("Open in browser", bundle: .module))
+            }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 8)
         .padding(.vertical, 6)
         .background(tint.opacity(0.12), in: RoundedRectangle(cornerRadius: 6))
@@ -184,56 +244,122 @@ public struct QueueStatusMessagesBanner: View {
     }
 }
 
+/// "Replacing <existing spec>" line — Apple Software Update pattern.
+/// Per-dimension suppression: only renders tokens that *differ* from
+/// the incoming file. Identical quality/size/score collapse to
+/// silence; if everything's identical, the whole line falls back to
+/// a single muted "Same spec, retagged" / "Re-downloading identical
+/// release" message. The principle: equality is silence.
 public struct ExistingFileDiffRow: View {
     let existingQuality: String?
     let existingSize: Int64?
     let existingScore: Int?
-    /// Current/new score — used to compute the delta. Pass the
-    /// incoming file's `customFormatScore`. The view shows `(±N)` only
-    /// when both scores are present AND differ.
+    /// Incoming file's score — used to compute the delta and to
+    /// decide whether existing score is worth showing.
     let newScore: Int
+    /// Optional incoming-side dimensions for equality comparison.
+    /// When nil, suppression isn't applied — caller is treating the
+    /// row as a plain "OLD info" line without comparing to NEW.
+    let newQuality: String?
+    let newSize: Int64?
+    /// True when tag sets differ between new and existing — flips
+    /// the "all-identical" fallback from "re-downloading identical"
+    /// to "same spec, retagged".
+    let tagsDiffer: Bool
 
     public init(existingQuality: String?,
                 existingSize: Int64?,
                 existingScore: Int?,
-                newScore: Int) {
+                newScore: Int,
+                newQuality: String? = nil,
+                newSize: Int64? = nil,
+                tagsDiffer: Bool = false) {
         self.existingQuality = existingQuality
         self.existingSize = existingSize
         self.existingScore = existingScore
         self.newScore = newScore
+        self.newQuality = newQuality
+        self.newSize = newSize
+        self.tagsDiffer = tagsDiffer
     }
 
     public var body: some View {
         HStack(spacing: 4) {
-            // `└─` reads as a tree-branch child of the row above —
-            // visual nesting without an indigo "replaces" arrow that
-            // was over-stating the importance of this line.
-            Text(verbatim: "└─")
-                .font(.system(size: 11, design: .monospaced))
+            // Left-aligned now — sits directly under the NEW spec
+            // line in the card, reading as a vertical NEW→OLD column.
+            // `arrow.turn.down.right` reads as "branching down from
+            // the line above" → the OLD info is the source the NEW
+            // line came from.
+            Image(systemName: "arrow.turn.down.right")
+                .scaledFont(size: 9, weight: .semibold)
                 .foregroundStyle(.tertiary)
-            if let q = existingQuality, !q.isEmpty {
-                Text(q)
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
-            }
-            if let size = existingSize, size > 0 {
-                Text("·").foregroundStyle(.tertiary)
-                Text(ByteCountFormatter.string(fromByteCount: size, countStyle: .file))
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
-            }
-            if let s = existingScore, s != 0 {
-                Text("·").foregroundStyle(.tertiary)
-                ScoreLabel(score: s, size: 11, weight: .regular)
-            }
-            if let existing = existingScore, existing != newScore {
-                let delta = newScore - existing
-                let sign = delta > 0 ? "+" : ""
-                Text("(\(sign)\(delta))")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(delta > 0 ? Color.green : Color.red)
+            content
+            Spacer(minLength: 0)
+        }
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        let showQuality = shouldShow(existingQuality, newQuality)
+        let showSize = shouldShowSize
+        let showScore = shouldShowScore
+        if !showQuality && !showSize && !showScore {
+            // Everything matches — fall back to one muted phrase
+            // instead of repeating identical values on both sides.
+            Text(tagsDiffer
+                    ? String(localized: "Same spec, retagged", bundle: .module)
+                    : String(localized: "Re-downloading identical release", bundle: .module))
+                .scaledFont(size: 11)
+                .foregroundStyle(.secondary)
+        } else {
+            HStack(spacing: 4) {
+                if showQuality, let q = existingQuality, !q.isEmpty {
+                    Text(q)
+                        .scaledFont(size: 11)
+                        .foregroundStyle(.secondary)
+                }
+                if showSize, let size = existingSize, size > 0 {
+                    if showQuality { Text("·").foregroundStyle(.tertiary) }
+                    Text(ByteCountFormatter.string(fromByteCount: size, countStyle: .file))
+                        .scaledFont(size: 11)
+                        .foregroundStyle(.secondary)
+                }
+                if showScore {
+                    if showQuality || showSize { Text("·").foregroundStyle(.tertiary) }
+                    if let s = existingScore, s != 0 {
+                        ScoreLabel(score: s, size: 11, weight: .regular)
+                    }
+                    if let existing = existingScore, existing != newScore {
+                        let delta = newScore - existing
+                        let sign = delta > 0 ? "+" : ""
+                        Text("(\(sign)\(delta))")
+                            .scaledFont(size: 10, weight: .semibold)
+                            .foregroundStyle(delta > 0 ? Color.green : Color.red)
+                    }
+                }
             }
         }
+    }
+
+    private func shouldShow(_ existing: String?, _ new: String?) -> Bool {
+        guard let existing, !existing.isEmpty else { return false }
+        guard let new else { return true }   // no comparator → assume divergent
+        return existing != new
+    }
+
+    /// 5% tolerance — torrent re-encodes often differ by <1% in size
+    /// while being meaningfully different files. Same-quality re-grabs
+    /// (the case this rule targets) cluster much tighter than 5%.
+    private var shouldShowSize: Bool {
+        guard let existing = existingSize, existing > 0 else { return false }
+        guard let new = newSize, new > 0 else { return true }
+        let ratio = Double(abs(existing - new)) / Double(max(existing, new))
+        return ratio > 0.05
+    }
+
+    private var shouldShowScore: Bool {
+        guard let existing = existingScore else { return false }
+        return existing != newScore
     }
 }
 
@@ -265,7 +391,7 @@ public struct CustomFormatDiff: View {
                 if !added.isEmpty {
                     HStack(spacing: 4) {
                         Text(verbatim: "+")
-                            .font(.system(size: 10, weight: .semibold))
+                            .scaledFont(size: 10, weight: .semibold)
                             .foregroundStyle(.green)
                         TooltipFlowLayout(spacing: 3) {
                             ForEach(added, id: \.self) { TagChip(text: $0, color: .green) }
@@ -275,7 +401,7 @@ public struct CustomFormatDiff: View {
                 if !removed.isEmpty {
                     HStack(spacing: 4) {
                         Text(verbatim: "−")
-                            .font(.system(size: 10, weight: .semibold))
+                            .scaledFont(size: 10, weight: .semibold)
                             .foregroundStyle(.red)
                         TooltipFlowLayout(spacing: 3) {
                             ForEach(removed, id: \.self) { TagChip(text: $0, color: .red) }
@@ -317,7 +443,7 @@ public struct ActionHoverTip: ViewModifier {
             }
             .popover(isPresented: $show, arrowEdge: .bottom) {
                 Text(text, bundle: .module)
-                    .font(.system(size: 11, weight: .medium))
+                    .scaledFont(size: 11, weight: .medium)
                     .padding(.horizontal, 9)
                     .padding(.vertical, 5)
                     .fixedSize()
@@ -407,11 +533,11 @@ public struct MediaTooltipChrome<Content: View>: View {
             VStack(alignment: .leading, spacing: 6) {
                 VStack(alignment: .leading, spacing: 1) {
                     Text(titleWithYear)
-                        .font(.system(size: 13, weight: .semibold))
+                        .scaledFont(size: 13, weight: .semibold)
                         .lineLimit(2)
                     if let sub = subtitle, !sub.isEmpty {
                         Text(sub)
-                            .font(.system(size: 11))
+                            .scaledFont(size: 11)
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
                     }
@@ -423,7 +549,7 @@ public struct MediaTooltipChrome<Content: View>: View {
                 custom
                 if let overview, !overview.isEmpty {
                     Text(overview)
-                        .font(.system(size: 11))
+                        .scaledFont(size: 11)
                         .foregroundStyle(.secondary)
                         .lineLimit(8)
                         .padding(.top, 2)
@@ -472,10 +598,10 @@ public struct StatusIconLabel: View {
     public var body: some View {
         HStack(spacing: 3) {
             Image(systemName: status.symbol)
-                .font(.system(size: iconSize))
+                .scaledFont(size: iconSize)
                 .foregroundStyle(status.tint)
             Text(LocalizedStringKey(status.displayName))
-                .font(.system(size: labelSize, weight: labelWeight))
+                .scaledFont(size: labelSize, weight: labelWeight)
                 .foregroundStyle(status.tint)
         }
     }

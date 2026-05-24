@@ -60,6 +60,13 @@ public final class ConfigStore: ObservableObject {
     @Published public var notifySonarr: Bool
     @Published public var notifyLidarr: Bool
     @Published public var blurWhisparrPosters: Bool
+    /// Multiplier applied to every `.scaledFont(size:)` site in the UI.
+    /// `1.0` is the native sizing the views were designed against;
+    /// `1.10` / `1.20` give bigger-text accessibility presets without
+    /// touching every font definition. Plumbed through environment so
+    /// any view can opt in just by switching `.font(.system(size:))`
+    /// → `.scaledFont(size:)`.
+    @Published public var fontScale: Double
     @Published public var aiKnowsAboutWhisparr: Bool
     @Published public var launchAtLogin: Bool
     @Published public var appLanguage: String
@@ -106,6 +113,11 @@ public final class ConfigStore: ObservableObject {
         return Locale(identifier: appLanguage)
     }
 
+    /// Picker options for the "text size" preset. Three steps is enough
+    /// to cover "fine / a bit bigger / clearly bigger" without paging a
+    /// continuous slider that nobody actually fine-tunes.
+    public static let fontScaleOptions: [Double] = [1.0, 1.20, 1.45]
+
     public static let foregroundIntervalOptions: [TimeInterval] = [0, 2, 5, 10, 15, 30]
     public static let backgroundIntervalOptions: [TimeInterval] = [0, 10, 30, 60, 120, 300]
 
@@ -118,6 +130,7 @@ public final class ConfigStore: ObservableObject {
     private static let notifySonarrKey = "ArrBarr.notifySonarr"
     private static let notifyLidarrKey = "ArrBarr.notifyLidarr"
     private static let blurWhisparrPostersKey = "ArrBarr.blurWhisparrPosters"
+    private static let fontScaleKey = "ArrBarr.fontScale"
     private static let aiKnowsAboutWhisparrKey = "ArrBarr.aiKnowsAboutWhisparr"
     private static let launchAtLoginKey = "ArrBarr.launchAtLogin"
     private static let appLanguageKey = "ArrBarr.appLanguage"
@@ -164,6 +177,13 @@ public final class ConfigStore: ObservableObject {
         self.notifySonarr = defaults.object(forKey: Self.notifySonarrKey) != nil ? defaults.bool(forKey: Self.notifySonarrKey) : false
         self.notifyLidarr = defaults.object(forKey: Self.notifyLidarrKey) != nil ? defaults.bool(forKey: Self.notifyLidarrKey) : false
         self.blurWhisparrPosters = defaults.object(forKey: Self.blurWhisparrPostersKey) != nil ? defaults.bool(forKey: Self.blurWhisparrPostersKey) : true
+        // `defaults.double(forKey:)` returns 0.0 when the key isn't set,
+        // which we treat as "use the default 1.0". Validating against
+        // `fontScaleOptions` would silently reset old saved values when
+        // the option list changes — we accept any positive double so
+        // upgrades don't kick the user back to Default.
+        let storedScale = defaults.double(forKey: Self.fontScaleKey)
+        self.fontScale = storedScale > 0 ? storedScale : 1.0
         self.aiKnowsAboutWhisparr = defaults.object(forKey: Self.aiKnowsAboutWhisparrKey) != nil ? defaults.bool(forKey: Self.aiKnowsAboutWhisparrKey) : false
         self.launchAtLogin = defaults.object(forKey: Self.launchAtLoginKey) != nil ? defaults.bool(forKey: Self.launchAtLoginKey) : false
         self.appLanguage = defaults.string(forKey: Self.appLanguageKey) ?? "system"
@@ -210,6 +230,9 @@ public final class ConfigStore: ObservableObject {
         }.store(in: &cancellables)
         $blurWhisparrPosters.dropFirst().sink { [weak self] val in
             self?.defaults.set(val, forKey: Self.blurWhisparrPostersKey)
+        }.store(in: &cancellables)
+        $fontScale.dropFirst().sink { [weak self] val in
+            self?.defaults.set(val, forKey: Self.fontScaleKey)
         }.store(in: &cancellables)
         $aiKnowsAboutWhisparr.dropFirst().sink { [weak self] val in
             self?.defaults.set(val, forKey: Self.aiKnowsAboutWhisparrKey)

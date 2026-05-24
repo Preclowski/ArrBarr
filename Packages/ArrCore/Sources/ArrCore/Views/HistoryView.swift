@@ -29,14 +29,14 @@ public struct HistoryView: View {
         HStack(spacing: 6) {
             FloatingBackButton(action: onClose)
             Text("History", bundle: .module)
-                .font(.system(size: 15, weight: .semibold))
+                .scaledFont(size: 15, weight: .semibold)
                 .foregroundStyle(.primary)
             Spacer()
             Image(systemName: sourceSymbol)
-                .font(.system(size: 11))
+                .scaledFont(size: 11)
                 .foregroundStyle(.tertiary)
             Text(LocalizedStringKey(sourceTitle))
-                .font(.system(size: 11))
+                .scaledFont(size: 11)
                 .foregroundStyle(.tertiary)
         }
         .padding(.horizontal, 12)
@@ -58,7 +58,7 @@ public struct HistoryView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if let error {
             Label(error, systemImage: "exclamationmark.triangle.fill")
-                .font(.system(size: 11))
+                .scaledFont(size: 11)
                 .foregroundStyle(.orange)
                 .padding(12)
         } else if items.isEmpty {
@@ -133,24 +133,24 @@ public struct HistoryRowView: View {
     public var body: some View {
         HStack(alignment: .top, spacing: 8) {
             Image(systemName: item.eventType.symbol)
-                .font(.system(size: 11))
+                .scaledFont(size: 11)
                 .foregroundStyle(eventTint)
                 .frame(width: 14)
                 .padding(.top, 2)
 
             VStack(alignment: .leading, spacing: 1) {
                 Text(item.title)
-                    .font(.system(size: 12, weight: .medium))
+                    .scaledFont(size: 12, weight: .medium)
                     .lineLimit(1)
                 if let sub = item.subtitle {
                     Text(sub)
-                        .font(.system(size: 11))
+                        .scaledFont(size: 11)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
                 if let src = item.sourceTitle, !src.isEmpty {
                     Text(src)
-                        .font(.system(size: 10))
+                        .scaledFont(size: 10)
                         .foregroundStyle(.tertiary)
                         .lineLimit(1)
                         .truncationMode(.middle)
@@ -165,7 +165,7 @@ public struct HistoryRowView: View {
                     Text("·").foregroundStyle(.tertiary)
                     Text(relativeDate).foregroundStyle(.tertiary)
                 }
-                .font(.system(size: 10))
+                .scaledFont(size: 10)
                 .lineLimit(1)
             }
             Spacer(minLength: 4)

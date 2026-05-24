@@ -161,16 +161,16 @@ public struct SearchAddPanel: View {
             FloatingBackButton(action: onBack)
 
             Text("Add", bundle: .module)
-                .font(.system(size: 15, weight: .semibold))
+                .scaledFont(size: 15, weight: .semibold)
                 .foregroundStyle(.primary)
 
             Spacer()
 
             Image(systemName: result.source.symbol)
-                .font(.system(size: 11))
+                .scaledFont(size: 11)
                 .foregroundStyle(.tertiary)
             Text(result.source.displayName)
-                .font(.system(size: 11))
+                .scaledFont(size: 11)
                 .foregroundStyle(.tertiary)
         }
         .padding(.horizontal, 12)
@@ -342,7 +342,7 @@ public struct SearchAddPanel: View {
                         sonarrMonitor = mode
                     } label: {
                         Text(mode.displayName)
-                            .font(.system(size: 10, weight: .medium))
+                            .scaledFont(size: 10, weight: .medium)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 3)
                             .background(sonarrMonitor == mode
@@ -405,9 +405,17 @@ public struct SearchAddPanel: View {
                         case .whisparr: return "Add to Whisparr"
                         }
                     }()
-                    Text(addLabel)
-                        .font(.system(size: 12, weight: .semibold))
-                        .frame(maxWidth: .infinity)
+                    // Source glyph (film / tv / music.note / flame) leads
+                    // the label — same visual that titles section headers
+                    // and queue rows for this arr. Makes the CTA read at
+                    // a glance which service it'll hit.
+                    HStack(spacing: 6) {
+                        Image(systemName: result.source.symbol)
+                            .scaledFont(size: 11, weight: .semibold)
+                        Text(addLabel)
+                            .scaledFont(size: 12, weight: .semibold)
+                    }
+                    .frame(maxWidth: .infinity)
                 }
             }
             .frame(maxWidth: .infinity)
@@ -423,7 +431,7 @@ public struct SearchAddPanel: View {
 
     private func sectionLabel(_ text: String) -> some View {
         Text(text)
-            .font(.system(size: 10, weight: .semibold))
+            .scaledFont(size: 10, weight: .semibold)
             .foregroundStyle(.tertiary)
             .textCase(.uppercase)
             .tracking(0.5)
@@ -436,7 +444,7 @@ public struct SearchAddPanel: View {
                                          options: [(T, String)]) -> some View {
         HStack {
             Text(label)
-                .font(.system(size: 11))
+                .scaledFont(size: 11)
                 .foregroundStyle(.secondary)
             Spacer()
             Menu {
@@ -447,9 +455,9 @@ public struct SearchAddPanel: View {
                 HStack(spacing: 3) {
                     Text(options.first(where: { $0.0 == selection.wrappedValue })?.1
                          ?? options.first?.1 ?? "—")
-                        .font(.system(size: 11))
+                        .scaledFont(size: 11)
                     Image(systemName: "chevron.up.chevron.down")
-                        .font(.system(size: 9))
+                        .scaledFont(size: 9)
                         .foregroundStyle(.tertiary)
                 }
             }

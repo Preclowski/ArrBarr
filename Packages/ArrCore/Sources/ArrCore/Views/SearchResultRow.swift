@@ -31,18 +31,23 @@ public struct SearchResultRow: View {
             posterBlurred: configStore.shouldBlurPoster(for: result.source),
             title: titleWithYear,
             metadataSegments: metadataSegments,
-            titleBadge: isInLibrary ? AnyView(inLibraryBadge) : nil,
+            // Every search result now carries a typed badge — library
+            // hits show the existing `InLibraryBadge`, fresh
+            // candidates a green `New` chip. Gives the user a quick
+            // "do I already own this?" read without scanning the
+            // trailing chevron column.
+            titleBadge: AnyView(isInLibrary ? AnyView(InLibraryBadge()) : AnyView(NewBadge())),
             onTap: onTap
         ) {
             if isInLibrary {
                 // Apple-standard "drill in" affordance — same chevron
                 // the system uses in Settings, Music, App Store.
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 10, weight: .semibold))
+                    .scaledFont(size: 10, weight: .semibold)
                     .foregroundStyle(.tertiary)
             } else {
                 Image(systemName: "plus")
-                    .font(.system(size: 11, weight: .medium))
+                    .scaledFont(size: 11, weight: .medium)
                     .foregroundStyle(.secondary)
             }
         }
@@ -71,17 +76,10 @@ public struct SearchResultRow: View {
         #endif
     }
 
-    /// Small accent-tinted capsule rendered next to the title for
-    /// library hits. Matches the visual vocabulary of the existing
-    /// genre / rating chips (low-alpha background, semibold mono
-    /// label) so it doesn't introduce a new shape language.
+    /// See `InLibraryBadge` for the shared visual — this row just
+    /// hands it through so the trailing affordance has a stable name.
     private var inLibraryBadge: some View {
-        Text("In library", bundle: .module)
-            .font(.system(size: 9, weight: .semibold))
-            .foregroundStyle(Color.accentColor)
-            .padding(.horizontal, 5)
-            .padding(.vertical, 1)
-            .background(Color.accentColor.opacity(0.18), in: Capsule())
+        InLibraryBadge()
     }
 
     /// "Title (1994)" — same idea as MediaHeaderCard. The year is just a
@@ -152,7 +150,7 @@ public struct SearchResultTooltip: View {
                 }
                 if let n = result.network, !n.isEmpty {
                     Text(n)
-                        .font(.system(size: 11))
+                        .scaledFont(size: 11)
                         .foregroundStyle(.secondary)
                 }
             }
@@ -175,10 +173,10 @@ public struct SearchResultTooltip: View {
     private func ratingChip(label: String, value: String, color: Color) -> some View {
         HStack(spacing: 3) {
             Text(label)
-                .font(.system(size: 10, weight: .medium))
+                .scaledFont(size: 10, weight: .medium)
                 .foregroundStyle(color)
             Text(value)
-                .font(.system(size: 10, weight: .semibold))
+                .scaledFont(size: 10, weight: .semibold)
                 .foregroundStyle(.primary)
         }
         .padding(.horizontal, 6)

@@ -86,9 +86,9 @@ public struct ChatView: View {
                     Button(action: { viewModel.clear() }) {
                         HStack(spacing: 4) {
                             Image(systemName: "arrow.counterclockwise")
-                                .font(.system(size: 11, weight: .medium))
+                                .scaledFont(size: 11, weight: .medium)
                             Text("New chat", bundle: .module)
-                                .font(.system(size: 11, weight: .medium))
+                                .scaledFont(size: 11, weight: .medium)
                         }
                         .foregroundStyle(clearHovered ? .primary : .secondary)
                         .padding(.horizontal, 10)
@@ -141,7 +141,7 @@ public struct ChatView: View {
         VStack(spacing: 14) {
             Spacer(minLength: 0)
             Image(systemName: "sparkles")
-                .font(.system(size: 28, weight: .light))
+                .scaledFont(size: 28, weight: .light)
                 .foregroundStyle(.tertiary)
                 .padding(.bottom, 2)
             // Dynamic hint: lists only the *arrs the user actually has
@@ -151,7 +151,7 @@ public struct ChatView: View {
             // ListFormatter handles locale-aware joining (PL "Sonarra,
             // Radarra i Lidarra", EN "Sonarr, Radarr, and Lidarr").
             Text(String(format: String(localized: "Ask about %@", bundle: .module), configuredArrsLabel))
-                .font(.system(size: 12, weight: .regular))
+                .scaledFont(size: 12, weight: .regular)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
             VStack(spacing: 6) {
@@ -161,7 +161,7 @@ public struct ChatView: View {
                         Task { await viewModel.send(suggestion) }
                     } label: {
                         Text(suggestion)
-                            .font(.system(size: 12))
+                            .scaledFont(size: 12)
                             .foregroundStyle(.primary)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 6)
@@ -186,7 +186,7 @@ public struct ChatView: View {
                 .lineLimit(1...4)
             Button(action: send) {
                 Image(systemName: "arrow.up.circle.fill")
-                    .font(.system(size: 22))
+                    .scaledFont(size: 22)
             }
             .buttonStyle(.plain)
             .disabled(draft.trimmingCharacters(in: .whitespaces).isEmpty || viewModel.isThinking)
@@ -262,7 +262,7 @@ private struct MessageBubble: View {
 
     private func userBubble(_ text: String) -> some View {
         Text(Self.attributed(text))
-            .font(.system(size: 13))
+            .scaledFont(size: 13)
             .foregroundStyle(.white)
             .textSelection(.enabled)
             .fixedSize(horizontal: false, vertical: true)
@@ -273,7 +273,7 @@ private struct MessageBubble: View {
 
     private func assistantBubble(_ text: String) -> some View {
         Text(Self.attributed(text))
-            .font(.system(size: 13))
+            .scaledFont(size: 13)
             .foregroundStyle(.primary)
             .textSelection(.enabled)
             .fixedSize(horizontal: false, vertical: true)
@@ -295,13 +295,13 @@ private struct MessageBubble: View {
             } label: {
                 HStack(spacing: 6) {
                     Image(systemName: "wrench.and.screwdriver")
-                        .font(.system(size: 10))
+                        .scaledFont(size: 10)
                         .foregroundStyle(.blue)
                     Text(verbatim: "Tool call: \(message.content)")
-                        .font(.system(size: 11, weight: .semibold))
+                        .scaledFont(size: 11, weight: .semibold)
                         .foregroundStyle(.secondary)
                     Image(systemName: expanded ? "chevron.down" : "chevron.right")
-                        .font(.system(size: 9, weight: .semibold))
+                        .scaledFont(size: 9, weight: .semibold)
                         .foregroundStyle(.tertiary)
                 }
                 .contentShape(Rectangle())
@@ -329,10 +329,10 @@ private struct MessageBubble: View {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 6) {
                     Image(systemName: "wrench.and.screwdriver")
-                        .font(.system(size: 10))
+                        .scaledFont(size: 10)
                         .foregroundStyle(.blue)
                     Text(verbatim: headerKey)
-                        .font(.system(size: 11, weight: .semibold))
+                        .scaledFont(size: 11, weight: .semibold)
                         .foregroundStyle(.secondary)
                 }
                 RichToolResultView(
@@ -354,10 +354,10 @@ private struct MessageBubble: View {
         } label: {
             HStack(spacing: 4) {
                 Image(systemName: expanded ? "chevron.down" : "chevron.right")
-                    .font(.system(size: 9, weight: .semibold))
+                    .scaledFont(size: 9, weight: .semibold)
                     .foregroundStyle(.secondary)
                 Text(verbatim: label)
-                    .font(.system(size: 11, weight: .semibold))
+                    .scaledFont(size: 11, weight: .semibold)
                     .foregroundStyle(.secondary)
             }
             .contentShape(Rectangle())
@@ -418,7 +418,7 @@ private struct ThinkingRow: View {
                 .controlSize(.small)
                 .frame(width: 18, alignment: .center)
             Text("Thinking…", bundle: .module)
-                .font(.system(size: 13))
+                .scaledFont(size: 13)
                 .foregroundStyle(.secondary)
             Spacer(minLength: 0)
         }

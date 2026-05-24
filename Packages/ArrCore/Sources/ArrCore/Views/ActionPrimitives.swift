@@ -40,9 +40,9 @@ public struct TooltipActionButton: View {
         Button(action: action) {
             HStack(spacing: 5) {
                 Image(systemName: symbol)
-                    .font(.system(size: 11, weight: .medium))
+                    .scaledFont(size: 11, weight: .medium)
                 Text(LocalizedStringKey(labelKey), bundle: .module)
-                    .font(.system(size: 11, weight: .medium))
+                    .scaledFont(size: 11, weight: .medium)
             }
             .foregroundStyle(tint.opacity(isHovering ? 1.0 : 0.65))
             .padding(.horizontal, fillsWidth ? 0 : 10)
@@ -64,9 +64,13 @@ public struct TooltipActionButton: View {
     }
 }
 
-/// Bare-icon button used in row-level hover overlays (queue rows,
-/// episode rows). 22pt hit area, no chrome — the glyph fades from
-/// `.secondary` to `tint` (default `.primary`) on hover.
+/// Bare-icon button used in every action surface — queue rows,
+/// episode rows, detail clusters, header actions. 22pt hit area, no
+/// chrome (no pill, no gradient, no inline label). Glyph fades from
+/// `.secondary` to `tint` (default `.primary`) on hover. Tooltip via
+/// the OS `.help()` modifier, matching Mail / Music / Finder toolbar
+/// idiom. Inline-label / hover-expand variants were tried and pulled
+/// — they shifted hit areas, trapped hover, and were not Apple-native.
 public struct IconButton: View {
     @EnvironmentObject var configStore: ConfigStore
     let symbol: String
@@ -78,7 +82,8 @@ public struct IconButton: View {
     @State private var isHovering = false
 
     public init(symbol: String, helpKey: String, accessibilityLabel: String = "",
-                tint: Color? = nil, action: @escaping () -> Void) {
+                tint: Color? = nil,
+                action: @escaping () -> Void) {
         self.symbol = symbol
         self.helpKey = helpKey
         self.accessibilityLabel = accessibilityLabel
@@ -89,12 +94,124 @@ public struct IconButton: View {
     public var body: some View {
         Button(action: action) {
             Image(systemName: symbol)
-                .font(.system(size: 13, weight: .medium))
+                .scaledFont(size: 13, weight: .medium)
                 .foregroundStyle(isHovering ? (tint ?? .primary) : .secondary)
                 .frame(width: 22, height: 22)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        #if os(macOS)
+        .onHover { hovering in
+            withAnimation(.easeInOut(duration: 0.12)) { isHovering = hovering }
+        }
+        #endif
+        .help(Text(LocalizedStringKey(helpKey), bundle: .module))
+        .accessibilityLabel(
+            accessibilityLabel.isEmpty
+                ? Text(LocalizedStringKey(helpKey), bundle: .module)
+                : Text(verbatim: accessibilityLabel)
+        )
+    }
+}
+
+// MARK: - Progress-fill CTA
+
+/// Adds a progress indicator to a `GlassProminentButtonStyle` CTA
+/// using a *multiply* blend mode overlay — instead of stacking a
+/// separate dark "pill" on top (which read as a second capsule
+/// inside the button), this darkens the rendered glass output on
+/// the trailing portion. The glass sheen / refraction / chrome paint
+/// through unchanged on the active side and get a uniform darkening
+/// past the progress mark, so the user sees ONE button gradually
+/// losing brightness on the right, not two stacked shapes.
+public extension View {
+    func progressFillCTA(progress: Double, tint: Color = .accentColor) -> some View {
+        overlay(
+            LinearGradient(
+                stops: {
+                    let p = max(0, min(1, progress))
+                    return [
+                        // white = identity under multiply (no change)
+                        .init(color: .white, location: 0),
+                        .init(color: .white, location: p),
+                        // gray darkens uniformly past progress —
+                        // lighter than the previous 0.45 so the
+                        // white label stays readable over the dim
+                        // portion (multiply darkens every pixel,
+                        // including the text rendered by the button
+                        // style underneath).
+                        .init(color: Color(white: 0.65), location: p),
+                        .init(color: Color(white: 0.65), location: 1),
+                    ]
+                }(),
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+            .blendMode(.multiply)
+            .allowsHitTesting(false)
+        )
+    }
+}
+
+// MARK: - Cluster backdrop
+
+/// Subtle backdrop chip behind a row action cluster. Apple uses the
+/// same idiom in Photos hover-cornerach, Quick Look thumbnails: a
+/// material-tinted rounded rectangle that hugs the icons and gives
+/// them stable contrast no matter what the row underneath is tinted
+/// (status fill, hover wash, alternating bg). Replaces the previous
+/// full-width gradient — same job, far smaller footprint.
+public extension View {
+    func rowActionBackdrop() -> some View {
+        self
+            .padding(.horizontal, 6)
+            .padding(.vertical, 3)
+            .background(
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    .fill(.regularMaterial)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    .stroke(Color.primary.opacity(0.08), lineWidth: 0.5)
+            )
+    }
+}
+
+// MARK: - Action overflow menu
+
+/// Apple `ellipsis.circle` overflow — quiet glyph that opens a menu
+/// of secondary actions. Same visual weight as `IconButton` so a
+/// cluster like `[pause, ⋯]` reads as one row of bare icons. Tooltip
+/// via `.help()`, menu indicator hidden (the glyph itself is the
+/// indicator). Pattern lifted from Mail / Music / Podcasts — when a
+/// row has more than one secondary action the standard treatment is
+/// "primary direct + ⋯ for the rest".
+public struct IconOverflowMenu<Content: View>: View {
+    let helpKey: String
+    let accessibilityLabel: String
+    @ViewBuilder var menu: () -> Content
+
+    @State private var isHovering = false
+
+    public init(helpKey: String = "More",
+                accessibilityLabel: String = "",
+                @ViewBuilder menu: @escaping () -> Content) {
+        self.helpKey = helpKey
+        self.accessibilityLabel = accessibilityLabel
+        self.menu = menu
+    }
+
+    public var body: some View {
+        Menu(content: menu) {
+            Image(systemName: "ellipsis")
+                .scaledFont(size: 13, weight: .medium)
+                .foregroundStyle(isHovering ? .primary : .secondary)
+                .frame(width: 22, height: 22)
+                .contentShape(Rectangle())
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
         #if os(macOS)
         .onHover { hovering in
             withAnimation(.easeInOut(duration: 0.12)) { isHovering = hovering }

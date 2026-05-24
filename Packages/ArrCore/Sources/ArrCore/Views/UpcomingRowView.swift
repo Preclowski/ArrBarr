@@ -20,9 +20,10 @@ public struct UpcomingRowView: View {
             onTap: openDetail
         ) {
             if item.hasFile {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 10))
-                    .foregroundStyle(.green)
+                // Same accent-tinted pill as the search view's library
+                // hits — one visual for "you already own this" across
+                // every surface (see `InLibraryBadge`).
+                InLibraryBadge()
             }
         }
         #if os(macOS)
@@ -139,11 +140,11 @@ public struct UpcomingItemTooltip: View {
     private func row(_ label: String, value: String) -> some View {
         GridRow(alignment: .firstTextBaseline) {
             Text(LocalizedStringKey(label), bundle: .module)
-                .font(.system(size: 11))
+                .scaledFont(size: 11)
                 .foregroundStyle(.secondary)
                 .gridColumnAlignment(.leading)
             Text(value)
-                .font(.system(size: 11))
+                .scaledFont(size: 11)
                 .foregroundStyle(.primary)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }

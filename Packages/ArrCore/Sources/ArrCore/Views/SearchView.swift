@@ -124,13 +124,19 @@ public struct SearchView: View {
             } label: {
                 HStack(spacing: 6) {
                     Image(systemName: isCollapsed ? "chevron.right" : "chevron.down")
-                        .font(.system(size: 9, weight: .semibold))
+                        .scaledFont(size: 9, weight: .semibold)
                         .foregroundStyle(.tertiary)
+                    // Source glyph (tv / film / music.note / etc) —
+                    // matches the queue-section header so users see the
+                    // same arr-source visual on both surfaces.
+                    Image(systemName: source.symbol)
+                        .scaledFont(size: 11)
+                        .foregroundStyle(.secondary)
                     Text(title, bundle: .module)
-                        .font(.system(size: 12, weight: .semibold))
+                        .scaledFont(size: 12, weight: .semibold)
                         .foregroundStyle(.secondary)
                     Text("\(results.count)")
-                        .font(.system(size: 11))
+                        .scaledFont(size: 11)
                         .foregroundStyle(.tertiary)
                     Spacer()
                 }
@@ -169,9 +175,9 @@ public struct SearchView: View {
                         } label: {
                             HStack(spacing: 4) {
                                 Image(systemName: "chevron.down")
-                                    .font(.system(size: 9, weight: .semibold))
+                                    .scaledFont(size: 9, weight: .semibold)
                                 Text("Show \(hiddenCount) more", bundle: .module)
-                                    .font(.system(size: 11, weight: .medium))
+                                    .scaledFont(size: 11, weight: .medium)
                             }
                             .foregroundStyle(.secondary)
                             .padding(.horizontal, 12)
@@ -225,19 +231,19 @@ public struct SearchView: View {
         // with the chat input. Same `.glassyFloatingBar()` chrome.
         HStack(spacing: 8) {
             Image(systemName: "magnifyingglass")
-                .font(.system(size: 15, weight: .medium))
+                .scaledFont(size: 15, weight: .medium)
                 .foregroundStyle(.tertiary)
             TextField(
                 String(localized: "Search movies and TV series", bundle: .module),
                 text: $viewModel.query
             )
-            .font(.system(size: 14))
+            .scaledFont(size: 14)
             .textFieldStyle(.plain)
             .focused($queryFocused)
             if !viewModel.query.isEmpty {
                 Button { viewModel.query = "" } label: {
                     Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 14))
+                        .scaledFont(size: 14)
                         .foregroundStyle(.tertiary)
                 }
                 .buttonStyle(.plain)
@@ -251,7 +257,7 @@ public struct SearchView: View {
     private var emptyHint: some View {
         VStack(spacing: 10) {
             Image(systemName: "magnifyingglass")
-                .font(.system(size: 26, weight: .light))
+                .scaledFont(size: 26, weight: .light)
                 .foregroundStyle(.tertiary)
             Text("Start typing to search across Radarr and Sonarr.", bundle: .module)
                 .font(.subheadline)
