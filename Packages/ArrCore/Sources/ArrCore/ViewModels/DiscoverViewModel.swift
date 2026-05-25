@@ -181,16 +181,35 @@ public final class DiscoverViewModel: ObservableObject {
               !moodText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         llmDormant = false
         llmPoolExhausted = false
-        await drain(source: .llm)
+        let items = await fetchItems(source: .llm)
+        appendInterleaved([items])
         advanceIfNeeded()
     }
 
     // MARK: - Round-robin fill
 
     private func fillBucket() async {
-        for src in availableSources() {
-            await drain(source: src)
+        let sources = availableSources()
+        // Fetch each source's items concurrently. Concurrency speeds up
+        // first-card render and bucket top-up — the dominant cost is the
+        // HTTP round-trip, and the three sources can run in parallel.
+        var perSource: [[DiscoverItem]] = Array(repeating: [], count: sources.count)
+        await withTaskGroup(of: (Int, [DiscoverItem]).self) { group in
+            for (i, src) in sources.enumerated() {
+                group.addTask { [weak self] in
+                    guard let self else { return (i, []) }
+                    let items = await self.fetchItems(source: src)
+                    return (i, items)
+                }
+            }
+            for await (i, items) in group {
+                perSource[i] = items
+            }
         }
+        // Round-robin merge: round 0 takes first item from each source,
+        // round 1 the second from each, etc. Sources that ran out earlier
+        // simply get skipped in later rounds.
+        appendInterleaved(perSource)
     }
 
     private func availableSources() -> [Source] {
@@ -206,33 +225,51 @@ public final class DiscoverViewModel: ObservableObject {
         return out
     }
 
-    private func drain(source: Source) async {
+    /// Fetches items from a single source. Returns the items WITHOUT
+    /// touching the queue — caller is responsible for merging.
+    /// Same side effects as before: marks failure, advances tmdbPage,
+    /// flips libraryDrained / llmDormant / llmPoolExhausted / llmShownTitles.
+    private func fetchItems(source: Source) async -> [DiscoverItem] {
         do {
-            let items: [DiscoverItem]
             switch source {
             case .tmdb:
                 tmdbPage += 1
-                items = try await tmdb!(filter, tmdbPage)
+                return try await tmdb!(filter, tmdbPage)
             case .library:
-                items = try await library!(filter)
+                let items = try await library!(filter)
                 libraryDrained = true
+                return items
             case .llm:
                 let result = try await llm!(llmShownTitles, moodText)
-                items = result.items
-                if items.isEmpty {
+                if result.items.isEmpty {
                     llmDormant = true
                     llmPoolExhausted = true
                 } else {
-                    llmShownTitles.append(contentsOf: items.map(titleYearKey))
+                    llmShownTitles.append(contentsOf: result.items.map(titleYearKey))
                 }
-                if let suggested = result.suggestedFilters {
-                    applySuggestedFilters(suggested, personIds: result.resolvedPersonIds)
+                if let filters = result.suggestedFilters {
+                    applySuggestedFilters(filters, personIds: result.resolvedPersonIds)
                 }
+                return result.items
             }
-            append(items)
         } catch {
             failedSources.insert(source)
             errorMessage = "Discover source failed: \(source) (\(error))"
+            return []
+        }
+    }
+
+    private func appendInterleaved(_ lists: [[DiscoverItem]]) {
+        let maxLen = lists.map(\.count).max() ?? 0
+        for round in 0..<maxLen {
+            for list in lists {
+                if round < list.count {
+                    let it = list[round]
+                    if seenKeys.insert(it.dedupKey).inserted {
+                        queue.append(it)
+                    }
+                }
+            }
         }
     }
 
@@ -262,14 +299,6 @@ public final class DiscoverViewModel: ObservableObject {
         filter = f
     }
 
-    private func append(_ items: [DiscoverItem]) {
-        for it in items {
-            if seenKeys.insert(it.dedupKey).inserted {
-                queue.append(it)
-            }
-        }
-    }
-
     private func advanceIfNeeded() {
         if current == nil, !queue.isEmpty {
             current = queue.removeFirst()
@@ -281,10 +310,21 @@ public final class DiscoverViewModel: ObservableObject {
         topUpTask = Task { @MainActor [weak self] in
             guard let self else { return }
             defer { self.topUpTask = nil }
-            for src in self.availableSources() {
-                if self.queue.count >= self.topUpThreshold { break }
-                await self.drain(source: src)
+            let sources = self.availableSources()
+            var perSource: [[DiscoverItem]] = Array(repeating: [], count: sources.count)
+            await withTaskGroup(of: (Int, [DiscoverItem]).self) { group in
+                for (i, src) in sources.enumerated() {
+                    group.addTask { [weak self] in
+                        guard let self else { return (i, []) }
+                        let items = await self.fetchItems(source: src)
+                        return (i, items)
+                    }
+                }
+                for await (i, items) in group {
+                    perSource[i] = items
+                }
             }
+            self.appendInterleaved(perSource)
             self.advanceIfNeeded()
         }
     }

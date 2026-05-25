@@ -156,6 +156,20 @@ final class DiscoverViewModelTests: XCTestCase {
         XCTAssertEqual(receivedExcludes[1].count, 2, "second call should exclude the 2 already-shown")
     }
 
+    func test_fillBucket_interleavesSources() async {
+        let vm = freshVM()
+        vm.configure(
+            tmdb: { _, _ in [self.makeItem(100, .tmdb), self.makeItem(101, .tmdb), self.makeItem(102, .tmdb)] },
+            library: { _ in [self.makeItem(200, .library), self.makeItem(201, .library), self.makeItem(202, .library)] },
+            llm: nil
+        )
+        await vm.start()
+        let order = ([vm.current?.dedupKey] + vm.queue.map(\.dedupKey)).compactMap { $0 }
+        // Round 0 visits source[0]=tmdb, source[1]=library; round 1 same; round 2 same.
+        // Expected: [tmdb:100, tmdb:200, tmdb:101, tmdb:201, tmdb:102, tmdb:202]
+        XCTAssertEqual(order, ["tmdb:100", "tmdb:200", "tmdb:101", "tmdb:201", "tmdb:102", "tmdb:202"])
+    }
+
     func test_llmDrain_appliesSuggestedFilters() async {
         let suggested = DiscoverLLMPrompt.SuggestedFilters(
             genres: [.comedy, .drama], decade: .nineties, status: .owned)
