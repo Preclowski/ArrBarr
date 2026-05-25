@@ -230,7 +230,9 @@ public struct PopoverContentView: View {
                         onClose: { self.historySource = nil }
                     )
                 } else if anyArrConfigured {
-                    tabBar
+                    if !hideTabBarDeepInDiscover {
+                        tabBar
+                    }
                     Group {
                         switch selectedTab {
                         case .queue: queueContent
@@ -487,6 +489,23 @@ public struct PopoverContentView: View {
         f.timeStyle = .short
         return f
     }()
+
+    // MARK: - Tab bar visibility
+
+    /// Hide the tab bar when the user is deep in Discover — either in tinder
+    /// mode (full-screen swipe) or in the picker's .filters stage while an
+    /// active tinder session exists (chip-tap path). Both cases have a "<"
+    /// back arrow the user can use to exit. The .kind stage and fresh
+    /// .filters (no active tinder session) keep the tab bar visible so the
+    /// user can bail to another tab without being stranded.
+    private var hideTabBarDeepInDiscover: Bool {
+        guard selectedTab == .discover else { return false }
+        if discoverViewModel.stage == .tinder { return true }
+        // .picker stage: only hide if we're editing filters from an
+        // active tinder session (chip-tap path) — fromTinderBackBar shows "<".
+        if discoverViewModel.current != nil { return true }
+        return false
+    }
 
     // MARK: - Tab bar
 

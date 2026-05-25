@@ -245,13 +245,26 @@ public final class DiscoverViewModel: ObservableObject {
     /// Apply LLM-suggested filters to the current filter without triggering
     /// userActionTick — so the View's task(id: userActionTick) does NOT fire
     /// a new reshuffle, breaking the potential infinite loop.
+    ///
+    /// Only fills empty/default slots — user-set filters are sticky. This
+    /// means LLM populates filters on first mood entry (when everything is
+    /// default) but on subsequent mood/filter edits the user's choices win.
     private func applySuggestedFilters(_ s: DiscoverLLMPrompt.SuggestedFilters,
                                        personIds: [Int] = []) {
         var f = filter
-        if !s.genres.isEmpty { f.genres = Set(s.genres) }
-        if let d = s.decade { f.decade = d }
-        if let st = s.status { f.status = st }
-        if !personIds.isEmpty { f.personIds = personIds }
+        // Only fill empty/default slots. User-set filters are sticky.
+        if f.genres.isEmpty && !s.genres.isEmpty {
+            f.genres = Set(s.genres)
+        }
+        if f.decade == .any, let d = s.decade {
+            f.decade = d
+        }
+        if f.status == .any, let st = s.status {
+            f.status = st
+        }
+        if f.personIds.isEmpty && !personIds.isEmpty {
+            f.personIds = personIds
+        }
         filter = f
     }
 

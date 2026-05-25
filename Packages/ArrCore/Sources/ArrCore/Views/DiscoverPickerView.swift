@@ -213,9 +213,9 @@ public struct DiscoverPickerView: View {
         case .kind:
             return []
         case .filters:
-            let kind = Self.kindTags.first(where: { isPicked($0) })
-            let filters = filterTags().filter { isPicked($0) }
-            return (kind.map { [$0] } ?? []) + filters
+            // Kind is shown via the kindIndicator pill at the top; don't
+            // duplicate it in the selected-filters row.
+            return filterTags().filter { isPicked($0) }
         }
     }
 
@@ -308,11 +308,52 @@ public struct DiscoverPickerView: View {
         .buttonStyle(.plain)
     }
 
+    // MARK: - Kind indicator
+
+    /// Small colored pill near the top of the filters stage. Tells the user
+    /// which media kind is selected; the chevron-down affords tapping back
+    /// to the .kind stage to change it.
+    @ViewBuilder
+    private var kindIndicator: some View {
+        let kind = viewModel.mediaSelection
+        let (label, color, icon): (LocalizedStringKey, Color, String) = {
+            switch kind {
+            case .movie: return ("Movies", .blue, "film")
+            case .show:  return ("Shows", .orange, "tv")
+            case .auto:  return ("AI decides", .purple, "sparkles")
+            }
+        }()
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .scaledFont(size: 10, weight: .semibold)
+            Text(label, bundle: .module)
+                .scaledFont(size: 11, weight: .semibold)
+            Button {
+                withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
+                    stage = .kind
+                }
+            } label: {
+                Image(systemName: "chevron.down")
+                    .scaledFont(size: 9, weight: .semibold)
+                    .foregroundStyle(.tertiary)
+            }
+            .buttonStyle(.plain)
+            .help(Text("Change media kind", bundle: .module))
+        }
+        .foregroundStyle(color)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5)
+        .background(Capsule().fill(color.opacity(0.15)))
+        .overlay(Capsule().stroke(color.opacity(0.45), lineWidth: 0.75))
+    }
+
     // MARK: - Main picker scroll
 
     private var mainPickerScroll: some View {
         ScrollView {
             VStack(spacing: 12) {
+                kindIndicator
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 if !selectedTagsForCurrentStage.isEmpty {
                     selectedRow
                     Divider().padding(.horizontal, 12)
@@ -448,28 +489,47 @@ public struct DiscoverPickerView: View {
     @ViewBuilder
     private func pillView(_ tag: PickerTag, picked: Bool) -> some View {
         let color = tint(for: tag)
-        Button { toggle(tag) } label: {
-            HStack(spacing: 3) {
-                if let icon = tag.icon {
-                    Image(systemName: icon)
-                        .scaledFont(size: 8, weight: .semibold)
+        PillButtonView(tag: tag, color: color, picked: picked, toggle: { toggle(tag) })
+    }
+
+    /// Pill button with per-instance hover state.
+    /// Requires a separate struct because @State for hover can't live inline
+    /// in a @ViewBuilder function — each pill needs independent hover tracking.
+    private struct PillButtonView: View {
+        let tag: PickerTag
+        let color: Color
+        let picked: Bool
+        let toggle: () -> Void
+        @State private var isHovering = false
+
+        var body: some View {
+            let activeColor: Color = (isHovering || picked) ? color : .secondary
+            let strokeOpacity: Double = (isHovering || picked) ? 0.85 : 0.4
+            let strokeWidth: CGFloat = (isHovering || picked) ? 1.2 : 1.0
+            Button(action: toggle) {
+                HStack(spacing: 3) {
+                    if let icon = tag.icon {
+                        Image(systemName: icon)
+                            .scaledFont(size: 8, weight: .semibold)
+                    }
+                    Text(LocalizedStringKey(tag.label), bundle: .module)
+                        .scaledFont(size: 10, weight: .semibold)
                 }
-                Text(LocalizedStringKey(tag.label), bundle: .module)
-                    .scaledFont(size: 10, weight: .semibold)
+                .foregroundStyle(activeColor)
+                .padding(.horizontal, 7).padding(.vertical, 4)
+                .background(
+                    RoundedRectangle(cornerRadius: 5)
+                        .fill(.clear)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 5)
+                        .stroke(activeColor.opacity(strokeOpacity),
+                                lineWidth: strokeWidth)
+                )
             }
-            .foregroundStyle(picked ? color : Color.secondary)
-            .padding(.horizontal, 7).padding(.vertical, 4)
-            .background(
-                RoundedRectangle(cornerRadius: 5)
-                    .fill(.clear)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 5)
-                    .stroke(picked ? color : Color.secondary.opacity(0.4),
-                            lineWidth: picked ? 1.2 : 1.0)
-            )
+            .buttonStyle(.plain)
+            .onHover { hovering in isHovering = hovering }
         }
-        .buttonStyle(.plain)
     }
 
     // MARK: - Composer

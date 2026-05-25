@@ -1246,6 +1246,35 @@
         }
       }
     },
+    "Change media kind": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Medienart ändern"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cambiar tipo de medio"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Changer le type de média"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zmień typ mediów"
+          }
+        }
+      }
+    },
     "Chat": {
       "extractionState": "manual",
       "localizations": {
