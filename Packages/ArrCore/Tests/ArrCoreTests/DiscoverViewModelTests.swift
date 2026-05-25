@@ -82,16 +82,39 @@ final class DiscoverViewModelTests: XCTestCase {
         XCTAssertEqual(vm.matched.map(\.dedupKey), ["tmdb:2"])
     }
 
-    func test_reset_clearsMatched() async {
+    func test_reshuffle_preservesMatched_andDedupesAgainstThem() async {
+        // Matched is sticky across mood changes — reshuffle must NOT
+        // clear it. seenKeys gets re-seeded with picked items so the
+        // next fetch doesn't surface the same titles.
         let vm = freshVM()
+        var call = 0
         vm.configure(
-            tmdb: { _, _ in [self.makeItem(1, .tmdb)] },
+            tmdb: { _, _ in
+                call += 1
+                return [self.makeItem(1, .tmdb)]
+            },
             library: { _ in [] }, llm: nil
         )
         await vm.start()
         await vm.swipe(right: true)
         XCTAssertEqual(vm.matched.count, 1)
         await vm.reshuffle()
+        XCTAssertEqual(vm.matched.count, 1, "picks survive reshuffle")
+        // Same item from the next fetch is filtered out as already picked.
+        XCTAssertNil(vm.current, "picked item shouldn't resurface")
+    }
+
+    func test_clearMatched_emptiesPicks() async {
+        let vm = freshVM()
+        vm.configure(
+            tmdb: { _, _ in [self.makeItem(1, .tmdb), self.makeItem(2, .tmdb)] },
+            library: { _ in [] }, llm: nil
+        )
+        await vm.start()
+        await vm.swipe(right: true)
+        await vm.swipe(right: true)
+        XCTAssertEqual(vm.matched.count, 2)
+        vm.clearMatched()
         XCTAssertTrue(vm.matched.isEmpty)
     }
 
@@ -190,6 +213,35 @@ final class DiscoverViewModelTests: XCTestCase {
         XCTAssertEqual(vm.picksMilestoneTick, initialTick + 2, "20th pick trips it again")
     }
 
+    func test_autoJumpDisabled_suppressesMilestoneTick() async {
+        let vm = freshVM()
+        vm.autoJumpEnabled = false
+        vm.configure(
+            tmdb: { _, _ in (1...20).map { self.makeItem($0, .tmdb) } },
+            library: { _ in [] }, llm: nil
+        )
+        await vm.start()
+        let initial = vm.picksMilestoneTick
+        for _ in 0..<10 { await vm.swipe(right: true) }
+        XCTAssertEqual(vm.picksMilestoneTick, initial,
+                       "10 picks with auto-jump disabled shouldn't fire the tick")
+    }
+
+    func test_sourceError_capturesMessageAndZeroCount() async {
+        struct Boom: Error, CustomStringConvertible { var description: String { "boom" } }
+        let vm = freshVM()
+        vm.configure(
+            tmdb: { _, _ in throw Boom() },
+            library: { _ in [self.makeItem(1, .library)] },
+            llm: nil
+        )
+        await vm.start()
+        XCTAssertTrue(vm.failedSources.contains(.tmdb))
+        XCTAssertEqual(vm.lastFetchedCounts[.tmdb], 0)
+        XCTAssertNotNil(vm.sourceErrors[.tmdb])
+        XCTAssertTrue(vm.sourceErrors[.tmdb]?.contains("boom") ?? false)
+    }
+
     func test_llmDrain_appliesSuggestedFilters() async {
         let suggested = DiscoverLLMPrompt.SuggestedFilters(
             genres: [.comedy, .drama], decade: .nineties, status: .owned)
@@ -207,5 +259,38 @@ final class DiscoverViewModelTests: XCTestCase {
         XCTAssertEqual(vm.filter.genres, [.comedy, .drama])
         XCTAssertEqual(vm.filter.decade, .nineties)
         XCTAssertEqual(vm.filter.status, .owned)
+    }
+
+    func test_suggestedFilters_sortsByUsageDescending() {
+        let vm = freshVM()
+        vm.bumpPersonUsage("Quentin Tarantino")
+        vm.bumpPersonUsage("Quentin Tarantino")
+        vm.bumpPersonUsage("Christopher Nolan")
+        let ids = vm.suggestedFilters.map(\.id)
+        let tarantinoIdx = ids.firstIndex(of: "person.Quentin Tarantino")
+        let nolanIdx = ids.firstIndex(of: "person.Christopher Nolan")
+        XCTAssertNotNil(tarantinoIdx)
+        XCTAssertNotNil(nolanIdx)
+        XCTAssertLessThan(tarantinoIdx!, nolanIdx!,
+                          "More-used Tarantino should come before less-used Nolan")
+    }
+
+    func test_suggestedFilters_excludesActiveFilters() {
+        let vm = freshVM()
+        vm.filter.genres = [.comedy]
+        let ids = vm.suggestedFilters.map(\.id)
+        XCTAssertFalse(ids.contains("genre.\(DiscoverGenre.comedy.rawValue)"),
+                       "Comedy is active, should not appear in suggestions")
+        XCTAssertTrue(ids.contains("genre.\(DiscoverGenre.drama.rawValue)"),
+                      "Inactive Drama should still appear")
+    }
+
+    func test_suggestedFilters_coldStartReturnsCuratedTen() {
+        let vm = freshVM()
+        let filters = vm.suggestedFilters
+        XCTAssertEqual(filters.count, 10,
+                       "Fresh VM should show 10 curated discovery suggestions")
+        // First entry should be the top-of-curation Tarantino.
+        XCTAssertEqual(filters.first?.id, "person.Quentin Tarantino")
     }
 }
