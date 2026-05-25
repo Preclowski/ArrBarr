@@ -371,71 +371,23 @@ public struct DiscoverPickerView: View {
     // MARK: - Body
 
     public var body: some View {
-        // Picker is the root of Discover — no back button here. Earlier
-        // draft had a back-to-tinder chevron whenever an active session
-        // existed; combined with tinder's own back button it formed a
-        // tinder ↔ picker loop the user couldn't escape. Now: tinder's
-        // back goes to picker (root); to re-enter the swipe deck the
-        // user commits via composer Enter / Discover button.
         VStack(spacing: 0) {
             mainPickerScroll
-            if llmAvailable {
-                composer.padding(.horizontal, 10).padding(.bottom, 10)
-            } else {
-                discoverButtonFallback
+            chipComposer
+                .padding(.horizontal, 10)
+                .padding(.bottom, 10)
+        }
+        .task {
+            // Drives `placeholderTick` so the placeholder rotates every 3s.
+            // Pauses while focused / non-empty / chips present (currentPlaceholder
+            // returns "Or describe…" in those cases anyway).
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 3_000_000_000)
+                if !freeTextFocused && freeText.isEmpty && activeChips.isEmpty {
+                    placeholderTick &+= 1
+                }
             }
         }
-    }
-
-    // MARK: - Kind selector bar
-
-    private var kindSelectorBar: some View {
-        HStack(spacing: 8) {
-            kindButton(.movie, label: "Movies", color: .blue, icon: "film")
-            kindButton(.show,  label: "Shows",  color: .orange, icon: "tv")
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    @ViewBuilder
-    private func kindButton(_ kind: DiscoverMediaSelection,
-                            label: LocalizedStringKey,
-                            color: Color,
-                            icon: String) -> some View {
-        let active = viewModel.mediaSelection == kind
-        // Inactive ⇒ neutral grey (so the active one stands out cleanly).
-        // Active ⇒ colored outline + colored text (NOT solid fill).
-        // Previous variant had inactive in the category color too, which
-        // made it ambiguous which one was selected.
-        let fg: Color = active ? color : .secondary
-        let stroke: Color = active ? color : .secondary.opacity(0.4)
-        let strokeWidth: CGFloat = active ? 1.5 : 1
-        Button {
-            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                viewModel.mediaSelection = kind
-                viewModel.hasPickedKind = true
-                viewModel.mediaSelectionChanged()
-            }
-        } label: {
-            HStack(spacing: 5) {
-                Image(systemName: icon)
-                    .scaledFont(size: 11, weight: .semibold)
-                Text(label, bundle: .module)
-                    .scaledFont(size: 12, weight: .semibold)
-            }
-            .foregroundStyle(fg)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .background(
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(Color.clear)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 8)
-                    .stroke(stroke, lineWidth: strokeWidth)
-            )
-        }
-        .buttonStyle(.plain)
     }
 
     // MARK: - TMDB missing banner
@@ -576,134 +528,21 @@ public struct DiscoverPickerView: View {
 
     private var mainPickerScroll: some View {
         ScrollView {
-            VStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 14) {
                 tmdbMissingBanner
-                kindSelectorBar
-                // Picked pills stay inline within their category — color
-                // is the only signal. The earlier two-row split (Selected
-                // up top + Available below) caused tags to jump rows on
-                // every tap, which made scanning hard and broke spatial
-                // memory ("where did I just see Comedy?").
-                pillRows
-                moodStarters
+                suggestionsRow
+                moreFiltersChevron
+                if moreFiltersExpanded {
+                    pillRows
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+                }
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 14)
             .frame(maxWidth: .infinity, alignment: .leading)
+            .animation(.smooth(duration: 0.22), value: moreFiltersExpanded)
         }
     }
-
-    // MARK: - Mood starters
-
-    /// Themed groups of starter prompts. Each theme has a header and a
-    /// few example moods that fill the composer on tap. Better than the
-    /// old flat 3-item list — gives the user shape ("there are evening
-    /// moods, travel moods, weekend moods") and a fuller sense of what
-    /// the LLM can do, without dumping a huge wall of prompts.
-    @ViewBuilder
-    private var moodStarters: some View {
-        if llmAvailable
-           && freeText.trimmingCharacters(in: .whitespaces).isEmpty {
-            // No extra horizontal padding here — the parent VStack
-            // already applies `.padding(.horizontal, 12)`, so starters
-            // align flush with the pill rows above. Earlier we double-
-            // padded, leaving starters indented 24pt while pills sat at
-            // 12pt — looked broken and was the "z dupy" alignment.
-            VStack(alignment: .leading, spacing: 12) {
-                // STARTERS is the parent of the theme groups (Cozy
-                // night in / Saturday night / Long haul) — bumped to
-                // 11pt secondary so it visibly outranks the per-theme
-                // labels below, which use the standard 9pt tertiary
-                // category-header treatment.
-                Text("STARTERS (AI)", bundle: .module)
-                    .scaledFont(size: 11, weight: .semibold)
-                    .tracking(0.8)
-                    .textCase(.uppercase)
-                    .foregroundStyle(.secondary)
-                ForEach(Self.starterThemes, id: \.title) { theme in
-                    VStack(alignment: .leading, spacing: 6) {
-                        // Same chrome as category headers (Genre, Decade,
-                        // Vibe, Length) — 9pt all-caps tertiary. Starters
-                        // are a peer section, not a louder one.
-                        Text(LocalizedStringKey(theme.title), bundle: .module)
-                            .scaledFont(size: 9, weight: .semibold)
-                            .tracking(0.6)
-                            .textCase(.uppercase)
-                            .foregroundStyle(.tertiary)
-                        FlowLayout(spacing: 5) {
-                            ForEach(theme.prompts, id: \.self) { prompt in
-                                starterPill(prompt)
-                            }
-                        }
-                    }
-                }
-            }
-            .padding(.top, 4)
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-    }
-
-    @ViewBuilder
-    private func starterPill(_ prompt: String) -> some View {
-        // Hover state matches unpicked `PillButtonView` (text brightens
-        // secondary → primary, stroke thickens 0.4 → 0.85). Per-pill
-        // hover requires its own @State, so the pill is a small nested
-        // struct.
-        StarterPillButton(prompt: prompt) {
-            freeText = String(localized: String.LocalizationValue(prompt),
-                              bundle: .module)
-            freeTextFocused = true
-        }
-    }
-
-    private struct StarterPillButton: View {
-        let prompt: String
-        let action: () -> Void
-        @State private var isHovering = false
-
-        var body: some View {
-            let textColor: Color = isHovering ? .primary : .secondary
-            let strokeOpacity: Double = isHovering ? 0.85 : 0.4
-            let strokeWidth: CGFloat = isHovering ? 1.2 : 1.0
-            Button(action: action) {
-                HStack(spacing: 3) {
-                    Image(systemName: "sparkles")
-                        .scaledFont(size: 8, weight: .semibold)
-                    Text(LocalizedStringKey(prompt), bundle: .module)
-                        .scaledFont(size: 10, weight: .medium)
-                }
-                .foregroundStyle(textColor)
-                .padding(.horizontal, 7).padding(.vertical, 4)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 5)
-                        .stroke(textColor.opacity(strokeOpacity),
-                                lineWidth: strokeWidth)
-                )
-            }
-            .buttonStyle(.plain)
-            .onHover { hovering in isHovering = hovering }
-        }
-    }
-
-    private struct StarterTheme { let title: String; let prompts: [String] }
-
-    private static let starterThemes: [StarterTheme] = [
-        StarterTheme(title: "Cozy night in", prompts: [
-            "Cozy Sunday afternoon",
-            "Background while cooking",
-            "Easy comfort watch",
-        ]),
-        StarterTheme(title: "Saturday night", prompts: [
-            "Friends over with pizza",
-            "Date night",
-            "Crowd-pleaser",
-        ]),
-        StarterTheme(title: "Long haul", prompts: [
-            "Long solo flight",
-            "Marathon binge",
-            "Hangover Sunday",
-        ]),
-    ]
 
     // MARK: - More filters disclosure
 
@@ -1145,69 +984,12 @@ public struct DiscoverPickerView: View {
         .keyboardShortcut(.return, modifiers: [.command])
     }
 
-    // MARK: - Composer
-
-    private var composerPlaceholder: LocalizedStringKey {
-        let pickedFilters = selectedTagsForCurrentStage.count
-        if pickedFilters == 0 {
-            return "What are you in the mood for?"
-        } else {
-            return "Optional vibe — or hit ↵ to discover"
-        }
-    }
-
-    private var composer: some View {
-        HStack(spacing: 8) {
-            TextField("",
-                      text: $freeText,
-                      prompt: Text(composerPlaceholder, bundle: .module),
-                      axis: .vertical)
-                .textFieldStyle(.plain)
-                .focused($freeTextFocused)
-                .lineLimit(1...4)
-                .scaledFont(size: 13)
-                .onSubmit {
-                    if canCommit { commit() }
-                }
-            Button {
-                commit()
-            } label: {
-                Image(systemName: "arrow.up.circle.fill")
-                    .scaledFont(size: 22)
-            }
-            .buttonStyle(.plain)
-            .disabled(!canCommit)
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 8)
-        .glassyFloatingBar()
-    }
-
-    // MARK: - Fallback Discover button (no LLM)
-
-    private var discoverButtonFallback: some View {
-        Button {
-            commit()
-        } label: {
-            HStack(spacing: 6) {
-                Image(systemName: "sparkles")
-                    .scaledFont(size: 12, weight: .semibold)
-                Text("Discover", bundle: .module)
-                    .scaledFont(size: 13, weight: .semibold)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 9)
-        }
-        .modifier(GlassProminentButtonStyle())
-        .disabled(!canCommit)
-        .padding(.horizontal, 14)
-        .padding(.bottom, 12)
-    }
-
     // MARK: - Commit logic
 
     private var canCommit: Bool {
-        viewModel.hasPickedKind || !freeText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        viewModel.hasPickedKind
+            || !freeText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            || !activeChips.isEmpty
     }
 
     private func commit() {
