@@ -11,6 +11,7 @@ public struct DiscoverTabView: View {
     @State private var showMatched: Bool = false
     @State private var dragOffset: CGSize = .zero
     @State private var isCardHovered: Bool = false
+    @State private var isDragging: Bool = false
 
     public init(viewModel: DiscoverViewModel,
                 llmAvailable: Bool,
@@ -164,7 +165,7 @@ public struct DiscoverTabView: View {
                         .opacity(idx == 0 ? 1.0 : 1.0 - Double(idx) * 0.28)
                         .allowsHitTesting(isTop)
                         .zIndex(Double(stack.count - idx))
-                        .gesture(isTop && !isCardHovered ? dragGesture : nil)
+                        .gesture(isTop ? dragGesture : nil)
                         .animation(.spring(response: 0.32, dampingFraction: 0.85),
                                    value: viewModel.current?.dedupKey)
                 }
@@ -177,6 +178,11 @@ public struct DiscoverTabView: View {
     private var dragGesture: some Gesture {
         DragGesture()
             .onChanged { value in
+                // Suppress hover/drawer the moment a drag starts so the
+                // card actually moves under the cursor instead of being
+                // gated off by isCardHovered.
+                if !isDragging { isDragging = true }
+                if isCardHovered { isCardHovered = false }
                 dragOffset = value.translation
             }
             .onEnded { value in
@@ -190,6 +196,7 @@ public struct DiscoverTabView: View {
                         dragOffset = .zero
                     }
                 }
+                isDragging = false
             }
     }
 
@@ -203,6 +210,7 @@ public struct DiscoverTabView: View {
             try? await Task.sleep(nanoseconds: 280_000_000)
             await viewModel.swipe(right: right)
             dragOffset = .zero
+            isDragging = false
         }
     }
 

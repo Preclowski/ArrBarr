@@ -54,7 +54,7 @@ public struct DiscoverCardView: View {
                 // 2) The drawer — slides in from the left edge of the
                 //    card, covers ~65% of the card width. Hidden by
                 //    default (offset off-screen left).
-                if isHovered {
+                if isHovered && abs(dragOffset.width) < 10 {
                     infoDrawer(w: w * 0.80, h: h)
                         .transition(.move(edge: .leading).combined(with: .opacity))
                 }
@@ -166,28 +166,30 @@ public struct DiscoverCardView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity,
                        alignment: .topLeading)
 
-            // Bottom dark gradient — covers ~38% of card height for
+            // Bottom dark gradient — covers ~50% of card height for
             // the info block below to read clearly.
             LinearGradient(
-                colors: [.black.opacity(0.85), .black.opacity(0.0)],
+                colors: [.black.opacity(0.95), .black.opacity(0.0)],
                 startPoint: .bottom, endPoint: .top
             )
-            .frame(height: h * 0.38)
+            .frame(height: h * 0.50)
             .frame(maxHeight: .infinity, alignment: .bottom)
             .allowsHitTesting(false)
 
             // Bottom info block — title(year) / runtime·cert / ratings / genres
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 5) {
                 Text(titleWithYear)
-                    .scaledFont(size: 15, weight: .semibold)
+                    .scaledFont(size: 17, weight: .bold)
                     .foregroundStyle(.white)
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
+                    .shadow(color: .black.opacity(0.55), radius: 3, x: 0, y: 1)
 
                 if !frontMetadataLine.isEmpty {
                     Text(frontMetadataLine)
-                        .scaledFont(size: 11, weight: .medium)
-                        .foregroundStyle(.white.opacity(0.85))
+                        .scaledFont(size: 12, weight: .semibold)
+                        .foregroundStyle(.white.opacity(0.95))
+                        .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 1)
                 }
 
                 let chips = discoverRatingChips(for: item.result)
@@ -195,13 +197,14 @@ public struct DiscoverCardView: View {
                     HStack(spacing: 5) {
                         ForEach(chips, id: \.label) { RatingPill(chip: $0) }
                     }
-                    .padding(.top, 1)
+                    .padding(.top, 2)
                 }
 
                 if !item.result.genres.isEmpty {
                     Text(item.result.genres.prefix(3).joined(separator: " · "))
-                        .scaledFont(size: 10, weight: .medium)
-                        .foregroundStyle(.white.opacity(0.75))
+                        .scaledFont(size: 11, weight: .medium)
+                        .foregroundStyle(.white.opacity(0.85))
+                        .shadow(color: .black.opacity(0.4), radius: 2, x: 0, y: 1)
                         .lineLimit(1)
                 }
             }
@@ -232,12 +235,12 @@ public struct DiscoverCardView: View {
             VStack(alignment: .leading, spacing: 3) {
                 Text(titleWithYear)
                     .scaledFont(size: 15, weight: .semibold)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                     .lineLimit(2)
                 if !runtimeCertSegments.isEmpty {
                     Text(runtimeCertSegments.joined(separator: " · "))
                         .scaledFont(size: 11, weight: .medium)
-                        .foregroundStyle(.white.opacity(0.85))
+                        .foregroundStyle(.secondary)
                 }
             }
 
@@ -251,7 +254,7 @@ public struct DiscoverCardView: View {
             if !item.result.genres.isEmpty {
                 Text(item.result.genres.prefix(4).joined(separator: " · "))
                     .scaledFont(size: 11, weight: .medium)
-                    .foregroundStyle(.white.opacity(0.75))
+                    .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
 
@@ -261,7 +264,7 @@ public struct DiscoverCardView: View {
                 ScrollView {
                     Text(overview)
                         .scaledFont(size: 12)
-                        .foregroundStyle(.white.opacity(0.92))
+                        .foregroundStyle(.primary)
                         .lineSpacing(3)
                         .multilineTextAlignment(.leading)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -269,55 +272,38 @@ public struct DiscoverCardView: View {
             } else {
                 Text("No overview available", bundle: .module)
                     .scaledFont(size: 12)
-                    .foregroundStyle(.white.opacity(0.55))
+                    .foregroundStyle(.secondary)
             }
         }
         .padding(12)
         .frame(width: w, height: h, alignment: .topLeading)
-        // Layered glass drawer — strong material for visible blur, subtle dark
-        // wash for text legibility, top highlight to sell the glass pane.
+        // Single-layer glass — just the material. No dark wash, no gradient
+        // overlay. The material's natural translucency IS the glass effect.
         .background(
-            ZStack {
-                // 1) Strongly visible material — gives the actual blur.
-                UnevenRoundedRectangle(
-                    topLeadingRadius: 16,
-                    bottomLeadingRadius: 16,
-                    bottomTrailingRadius: 0,
-                    topTrailingRadius: 0
-                )
-                .fill(.regularMaterial)
-
-                // 2) Subtle dark wash for legible white text on bright posters.
-                //    Keep it light so the glass still reads as translucent.
-                UnevenRoundedRectangle(
-                    topLeadingRadius: 16,
-                    bottomLeadingRadius: 16,
-                    bottomTrailingRadius: 0,
-                    topTrailingRadius: 0
-                )
-                .fill(Color.black.opacity(0.15))
-
-                // 3) Top highlight — thin white gradient at the very top edge
-                //    suggests light catching a glass pane.
-                LinearGradient(
-                    colors: [.white.opacity(0.18), .white.opacity(0.0)],
-                    startPoint: .top, endPoint: .center
-                )
-                .frame(maxHeight: .infinity, alignment: .top)
-                .allowsHitTesting(false)
-            }
-        )
-        .overlay(
-            // 4) Inner edge highlight (1pt white border at low opacity) gives
-            //    the glass panel a crisp boundary.
             UnevenRoundedRectangle(
                 topLeadingRadius: 16,
                 bottomLeadingRadius: 16,
                 bottomTrailingRadius: 0,
                 topTrailingRadius: 0
             )
-            .stroke(.white.opacity(0.18), lineWidth: 0.75)
+            .fill(.regularMaterial)
         )
-        .shadow(color: .black.opacity(0.25), radius: 6, x: 2, y: 0)
+        .overlay(
+            // Sharp edge highlight — light catching the top of a glass pane.
+            UnevenRoundedRectangle(
+                topLeadingRadius: 16,
+                bottomLeadingRadius: 16,
+                bottomTrailingRadius: 0,
+                topTrailingRadius: 0
+            )
+            .stroke(
+                LinearGradient(
+                    colors: [.white.opacity(0.40), .white.opacity(0.10), .white.opacity(0.05)],
+                    startPoint: .top, endPoint: .bottom
+                ),
+                lineWidth: 1
+            )
+        )
+        .shadow(color: .black.opacity(0.18), radius: 4, x: 1, y: 0)
     }
 }
