@@ -1,5 +1,28 @@
 import SwiftUI
 
+/// Build the colored rating chips for a SearchResult — same vocabulary
+/// as queue/search rows (IMDb yellow, RT red, MC green, ★ TMDB fallback).
+func discoverRatingChips(for result: SearchResult) -> [RatingChip] {
+    var out: [RatingChip] = []
+    if let imdb = result.imdb {
+        out.append(RatingChip(label: "IMDb",
+                              value: String(format: "%.1f", imdb),
+                              color: .yellow))
+    }
+    if let rt = result.rottenTomatoes {
+        out.append(RatingChip(label: "RT", value: "\(Int(rt))%", color: .red))
+    }
+    if let mc = result.metacritic {
+        out.append(RatingChip(label: "MC", value: "\(Int(mc))", color: .green))
+    }
+    if result.imdb == nil, let r = result.rating {
+        out.append(RatingChip(label: "★",
+                              value: String(format: "%.1f", r),
+                              color: .yellow))
+    }
+    return out
+}
+
 public struct DiscoverCardView: View {
     let item: DiscoverItem
     @Binding var isFlipped: Bool
@@ -36,6 +59,32 @@ public struct DiscoverCardView: View {
         }
     }
 
+    // MARK: - Shared helpers
+
+    private var titleWithYear: String {
+        if let y = item.result.year { return "\(item.result.title) (\(y))" }
+        return item.result.title
+    }
+
+    private var runtimeCertSegments: [String] {
+        [
+            item.result.runtime.flatMap { $0 > 0 ? "\($0) min" : nil },
+            item.result.certification.flatMap { $0.isEmpty ? nil : $0 },
+        ].compactMap { $0 }
+    }
+
+    @ViewBuilder
+    private var originChip: some View {
+        switch item.originLabel {
+        case .library:
+            InLibraryBadge()
+        case .tmdb:
+            TagChip(text: "Discover", color: .blue)
+        case .llm:
+            TagChip(text: "AI", color: .purple)
+        }
+    }
+
     // MARK: - Front face
 
     @ViewBuilder
@@ -66,50 +115,37 @@ public struct DiscoverCardView: View {
             .frame(maxHeight: .infinity, alignment: .bottom)
             .allowsHitTesting(false)
 
-            // Bottom info block — title + year + metadata strip + genres.
+            // Bottom info block — title(year) / runtime·cert / ratings / genres
             VStack(alignment: .leading, spacing: 4) {
-                Text(item.result.title)
-                    .scaledFont(size: 18, weight: .bold)
+                Text(titleWithYear)
+                    .scaledFont(size: 15, weight: .semibold)
                     .foregroundStyle(.white)
                     .lineLimit(2)
-                    .shadow(color: .black.opacity(0.6), radius: 4, x: 0, y: 1)
+                    .multilineTextAlignment(.leading)
 
-                HStack(spacing: 6) {
-                    if let y = item.result.year {
-                        Text(verbatim: "\(y)")
-                            .scaledFont(size: 11, weight: .semibold)
-                            .foregroundStyle(.white.opacity(0.92))
-                    }
-                    if let runtime = item.result.runtime, runtime > 0 {
-                        Text("•").foregroundStyle(.white.opacity(0.5))
-                        Text(verbatim: "\(runtime) min")
-                            .scaledFont(size: 11, weight: .medium)
-                            .foregroundStyle(.white.opacity(0.85))
-                    }
-                    if let cert = item.result.certification, !cert.isEmpty {
-                        Text("•").foregroundStyle(.white.opacity(0.5))
-                        Text(cert)
-                            .scaledFont(size: 10, weight: .semibold)
-                            .foregroundStyle(.white.opacity(0.85))
-                            .padding(.horizontal, 4).padding(.vertical, 1)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 3)
-                                    .stroke(.white.opacity(0.6), lineWidth: 0.5)
-                            )
-                    }
+                if !runtimeCertSegments.isEmpty {
+                    Text(runtimeCertSegments.joined(separator: " · "))
+                        .scaledFont(size: 11, weight: .medium)
+                        .foregroundStyle(.white.opacity(0.85))
                 }
-                .scaledFont(size: 11)
+
+                let chips = discoverRatingChips(for: item.result)
+                if !chips.isEmpty {
+                    HStack(spacing: 5) {
+                        ForEach(chips, id: \.label) { RatingPill(chip: $0) }
+                    }
+                    .padding(.top, 1)
+                }
 
                 if !item.result.genres.isEmpty {
                     Text(item.result.genres.prefix(3).joined(separator: " · "))
-                        .scaledFont(size: 11, weight: .medium)
-                        .foregroundStyle(.white.opacity(0.85))
+                        .scaledFont(size: 10, weight: .medium)
+                        .foregroundStyle(.white.opacity(0.75))
                         .lineLimit(1)
                 }
             }
             .padding(14)
-            .frame(maxWidth: .infinity, maxHeight: .infinity,
-                   alignment: .bottomLeading)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
         }
         .frame(width: w, height: h)
         .clipShape(RoundedRectangle(cornerRadius: 16))
@@ -124,76 +160,39 @@ public struct DiscoverCardView: View {
 
     @ViewBuilder
     private func backFace(w: CGFloat, h: CGFloat) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            // Header row: title + year + origin chip
+        VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .top, spacing: 8) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(item.result.title)
-                        .scaledFont(size: 16, weight: .bold)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(titleWithYear)
+                        .scaledFont(size: 15, weight: .semibold)
                         .foregroundStyle(.white)
                         .lineLimit(2)
-                    if let y = item.result.year {
-                        Text(verbatim: "\(y)")
+                    if !runtimeCertSegments.isEmpty {
+                        Text(runtimeCertSegments.joined(separator: " · "))
                             .scaledFont(size: 11, weight: .medium)
-                            .foregroundStyle(.white.opacity(0.7))
+                            .foregroundStyle(.white.opacity(0.85))
                     }
                 }
                 Spacer()
                 originChip
             }
 
-            // Metadata strip: runtime · cert · network
-            if !metadataStripSegments.isEmpty {
-                HStack(spacing: 6) {
-                    ForEach(Array(metadataStripSegments.enumerated()), id: \.offset) { idx, seg in
-                        if idx > 0 {
-                            Text("•").scaledFont(size: 10).foregroundStyle(.white.opacity(0.4))
-                        }
-                        Text(seg)
-                            .scaledFont(size: 11, weight: .medium)
-                            .foregroundStyle(.white.opacity(0.85))
-                    }
+            let chips = discoverRatingChips(for: item.result)
+            if !chips.isEmpty {
+                HStack(spacing: 5) {
+                    ForEach(chips, id: \.label) { RatingPill(chip: $0) }
                 }
             }
 
-            // Genres row — small chips, max 4
             if !item.result.genres.isEmpty {
-                HStack(spacing: 4) {
-                    ForEach(item.result.genres.prefix(4), id: \.self) { g in
-                        Text(g)
-                            .scaledFont(size: 10, weight: .semibold)
-                            .foregroundStyle(.white.opacity(0.92))
-                            .padding(.horizontal, 6).padding(.vertical, 2)
-                            .background(Capsule().fill(.white.opacity(0.12)))
-                    }
-                    Spacer(minLength: 0)
-                }
-            }
-
-            // Ratings row — IMDb / RT / MC / TMDB ★
-            if !ratingChips.isEmpty {
-                HStack(spacing: 6) {
-                    ForEach(ratingChips, id: \.label) { chip in
-                        HStack(spacing: 3) {
-                            Text(chip.label)
-                                .scaledFont(size: 9, weight: .bold)
-                                .foregroundStyle(chip.color)
-                            Text(chip.value)
-                                .scaledFont(size: 10, weight: .semibold)
-                                .foregroundStyle(.white.opacity(0.92))
-                        }
-                        .padding(.horizontal, 6).padding(.vertical, 3)
-                        .background(Capsule().fill(.white.opacity(0.1)))
-                    }
-                    Spacer(minLength: 0)
-                }
+                Text(item.result.genres.prefix(4).joined(separator: " · "))
+                    .scaledFont(size: 11, weight: .medium)
+                    .foregroundStyle(.white.opacity(0.75))
+                    .lineLimit(1)
             }
 
             Divider().opacity(0.25)
 
-            // Scrollable overview. allowsHitTesting(true) by default so
-            // the user can actually scroll. The card-swipe drag gesture
-            // lives on the parent and is disabled while the card is flipped.
             if let overview = item.result.overview, !overview.isEmpty {
                 ScrollView {
                     Text(overview)
@@ -220,48 +219,5 @@ public struct DiscoverCardView: View {
                 .stroke(.white.opacity(0.28), lineWidth: 1)
         )
         .shadow(color: .black.opacity(0.35), radius: 14, x: 0, y: 6)
-    }
-
-    // MARK: - Shared helpers
-
-    @ViewBuilder
-    private var originChip: some View {
-        switch item.originLabel {
-        case .library:
-            InLibraryBadge()
-        case .tmdb:
-            TagChip(text: "Discover", color: .blue)
-        case .llm:
-            TagChip(text: "AI", color: .purple)
-        }
-    }
-
-    /// Metadata segments shown as " · "-joined strip below the title.
-    private var metadataStripSegments: [String] {
-        [
-            item.result.runtime.flatMap { $0 > 0 ? "\($0) min" : nil },
-            item.result.certification.flatMap { $0.isEmpty ? nil : $0 },
-            item.result.network.flatMap { $0.isEmpty ? nil : $0 },
-        ].compactMap { $0 }
-    }
-
-    /// Rating chips — each with a label, value, and color.
-    private struct CardRatingChip { let label: String; let value: String; let color: Color }
-
-    private var ratingChips: [CardRatingChip] {
-        var out: [CardRatingChip] = []
-        if let imdb = item.result.imdb {
-            out.append(.init(label: "IMDb", value: String(format: "%.1f", imdb), color: .yellow))
-        }
-        if let rt = item.result.rottenTomatoes {
-            out.append(.init(label: "RT", value: "\(Int(rt))%", color: .red))
-        }
-        if let mc = item.result.metacritic {
-            out.append(.init(label: "MC", value: "\(Int(mc))", color: .green))
-        }
-        if item.result.imdb == nil, let rating = item.result.rating {
-            out.append(.init(label: "★", value: String(format: "%.1f", rating), color: .yellow))
-        }
-        return out
     }
 }

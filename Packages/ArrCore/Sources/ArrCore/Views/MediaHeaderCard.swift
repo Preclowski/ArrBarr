@@ -266,8 +266,9 @@ public struct PosterLightbox: View {
 }
 
 /// Coloured capsule for a rating value (IMDb, RT, MC, …).
-struct RatingPill: View {
-    let chip: RatingChip
+public struct RatingPill: View {
+    public let chip: RatingChip
+    public init(chip: RatingChip) { self.chip = chip }
     public var body: some View {
         HStack(spacing: 3) {
             Text(chip.label)
