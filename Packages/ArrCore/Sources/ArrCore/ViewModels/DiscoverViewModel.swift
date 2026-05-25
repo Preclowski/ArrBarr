@@ -43,6 +43,10 @@ public final class DiscoverViewModel: ObservableObject {
     @Published public var filter = DiscoverFilter()
     @Published public var moodText: String = ""
     @Published public private(set) var failedSources: Set<Source> = []
+    /// Per-source item counts from the most recent fetch batch.
+    /// Visible in the empty-stack state so the user can diagnose why
+    /// no cards appeared, without needing the console.
+    @Published public private(set) var lastFetchedCounts: [Source: Int] = [:]
     /// tmdbId → fetched credits. Populated lazily when the view requests
     /// a card's credits via `fetchCreditsIfNeeded`. Used by the card's
     /// back face for cast headshots + director.
@@ -57,6 +61,10 @@ public final class DiscoverViewModel: ObservableObject {
     @Published public private(set) var isLoading: Bool = false
     @Published public private(set) var errorMessage: String?
     @Published public private(set) var matched: [DiscoverItem] = []
+    /// Increments every time the matched list crosses a 10-pick boundary
+    /// (10, 20, 30, …). View observes via .onChange to trigger an
+    /// auto-jump to the picks list.
+    @Published public private(set) var picksMilestoneTick: Int = 0
     /// Incremented only by user-driven actions (mood submit, filter chip
     /// taps, explicit reshuffle). The View's `task(id:)` keys on this so
     /// LLM-applied filter changes don't trigger an infinite reshuffle loop.
@@ -163,13 +171,16 @@ public final class DiscoverViewModel: ObservableObject {
         await start()
     }
 
-    /// Right swipe appends the current card to `matched` (no overlay
-    /// interrupts the swiping). Left swipe discards. Either way the next
-    /// card advances and a top-up may fire.
+    /// Right swipe inserts the current card at index 0 of `matched` (newest
+    /// first) and fires a milestone tick every 10 picks. Left swipe discards.
+    /// Either way the next card advances and a top-up may fire.
     public func swipe(right: Bool) async {
         guard let item = current else { return }
         if right {
-            matched.append(item)
+            matched.insert(item, at: 0)
+            if matched.count > 0 && matched.count % 10 == 0 {
+                picksMilestoneTick &+= 1
+            }
         }
         current = nil
         advanceIfNeeded()
@@ -242,10 +253,12 @@ public final class DiscoverViewModel: ObservableObject {
                 tmdbPage += 1
                 let items = try await tmdb!(filter, tmdbPage)
                 tmdbReturnedEmpty = items.isEmpty
+                lastFetchedCounts[.tmdb] = items.count
                 return items
             case .library:
                 let items = try await library!(filter)
                 libraryDrained = true
+                lastFetchedCounts[.library] = items.count
                 return items
             case .llm:
                 let result = try await llm!(llmShownTitles, moodText)
@@ -258,6 +271,7 @@ public final class DiscoverViewModel: ObservableObject {
                 if let filters = result.suggestedFilters {
                     applySuggestedFilters(filters, personIds: result.resolvedPersonIds)
                 }
+                lastFetchedCounts[.llm] = result.items.count
                 return result.items
             }
         } catch {
@@ -351,6 +365,7 @@ public final class DiscoverViewModel: ObservableObject {
         failedSources.removeAll()
         errorMessage = nil
         matched.removeAll()
+        lastFetchedCounts.removeAll()
         creditsCache.removeAll()
         creditsFetchingIds.removeAll()
         // Note: mediaSelection is intentionally NOT reset here — it's a

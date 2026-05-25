@@ -70,6 +70,9 @@ public struct DiscoverTabView: View {
                 }
             }
         }
+        .onChange(of: viewModel.picksMilestoneTick) { _, _ in
+            withAnimation(.smooth(duration: 0.4)) { showMatched = true }
+        }
     }
 
     /// Sticky bottom CTA "island" — same shape as DetailView's
@@ -491,9 +494,24 @@ public struct DiscoverTabView: View {
                     .scaledFont(size: 10)
                     .foregroundStyle(.tertiary)
             }
+            let counts = viewModel.lastFetchedCounts
+            if !counts.isEmpty {
+                Text(verbatim: countsLabel(counts))
+                    .scaledFont(size: 10)
+                    .foregroundStyle(.tertiary)
+                    .padding(.top, 4)
+            }
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private func countsLabel(_ counts: [DiscoverViewModel.Source: Int]) -> String {
+        var parts: [String] = []
+        if let n = counts[.tmdb] { parts.append("TMDB: \(n)") }
+        if let n = counts[.library] { parts.append("Library: \(n)") }
+        if let n = counts[.llm] { parts.append("AI: \(n)") }
+        return parts.joined(separator: " \u{00B7} ")
     }
 
     private var failureBadgeText: String {

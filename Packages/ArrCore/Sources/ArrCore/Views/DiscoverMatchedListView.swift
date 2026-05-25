@@ -18,13 +18,17 @@ public struct DiscoverMatchedListView: View {
             emptyState
         } else {
             ScrollView {
-                LazyVStack(spacing: 8) {
+                LazyVGrid(columns: [
+                    GridItem(.flexible(), spacing: 8),
+                    GridItem(.flexible(), spacing: 8),
+                    GridItem(.flexible(), spacing: 8),
+                ], spacing: 8) {
                     ForEach(items) { item in
-                        MatchedRow(item: item, onAct: onAct, onRemove: onRemove)
+                        PickCell(item: item, onAct: onAct, onRemove: onRemove)
                     }
                 }
-                .padding(.vertical, 8)
                 .padding(.horizontal, 12)
+                .padding(.vertical, 12)
             }
         }
     }
@@ -44,9 +48,9 @@ public struct DiscoverMatchedListView: View {
     }
 }
 
-// MARK: - MatchedRow
+// MARK: - PickCell
 
-private struct MatchedRow: View {
+private struct PickCell: View {
     let item: DiscoverItem
     let onAct: (DiscoverItem) -> Void
     let onRemove: (DiscoverItem) -> Void
@@ -54,66 +58,82 @@ private struct MatchedRow: View {
     @State private var isHovering = false
 
     var body: some View {
-        Button {
-            onAct(item)
-        } label: {
-            HStack(spacing: 10) {
-                RemotePoster(
-                    url: item.result.posterURL,
-                    apiKey: nil,
-                    size: CGSize(width: 36, height: 54),
-                    cornerRadius: 4
-                )
-                VStack(alignment: .leading, spacing: 3) {
-                    HStack(spacing: 6) {
-                        Text(item.result.title)
-                            .scaledFont(size: 13, weight: .semibold)
-                            .foregroundStyle(.primary)
-                            .lineLimit(1)
-                        if let y = item.result.year {
-                            Text(verbatim: "(\(y))")
-                                .scaledFont(size: 12)
-                                .foregroundStyle(.secondary)
-                        }
-                        sourceBadge(for: item)
-                    }
-                    if !metadataLine(for: item).isEmpty {
-                        Text(metadataLine(for: item))
-                            .scaledFont(size: 11)
-                            .foregroundStyle(.tertiary)
-                            .lineLimit(1)
-                    }
-                }
-                Spacer(minLength: 0)
-                Button {
-                    onRemove(item)
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .scaledFont(size: 14)
-                        .foregroundStyle(.tertiary)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 8)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .help(Text("Remove", bundle: .module))
+        ZStack {
+            RemotePoster(
+                url: item.result.posterURL,
+                apiKey: nil,
+                size: CGSize(width: 110, height: 165),
+                cornerRadius: 6
+            )
+            .aspectRatio(2.0/3.0, contentMode: .fit)
+
+            if isHovering {
+                hoverOverlay
+                    .transition(.opacity)
             }
-            .padding(.vertical, 4)
-            .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
-        .background(
-            RoundedRectangle(cornerRadius: 6)
-                .fill(isHovering ? Color.primary.opacity(0.06) : Color.clear)
-                .padding(.horizontal, -6)
-        )
+        .overlay(alignment: .topLeading) {
+            // Source badge always visible top-left.
+            sourceBadge
+                .padding(6)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 6))
         .onHover { hovering in
             withAnimation(.easeInOut(duration: 0.15)) { isHovering = hovering }
         }
     }
 
     @ViewBuilder
-    private func sourceBadge(for item: DiscoverItem) -> some View {
+    private var hoverOverlay: some View {
+        ZStack {
+            // Dark scrim so action icons are legible on any poster.
+            Color.black.opacity(0.55)
+
+            VStack(spacing: 4) {
+                Text(item.result.title)
+                    .scaledFont(size: 11, weight: .semibold)
+                    .foregroundStyle(.white)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 6)
+                if let y = item.result.year {
+                    Text(verbatim: "\(y)")
+                        .scaledFont(size: 10)
+                        .foregroundStyle(.white.opacity(0.8))
+                }
+                Spacer().frame(height: 4)
+                HStack(spacing: 14) {
+                    Button {
+                        onAct(item)
+                    } label: {
+                        Image(systemName: actionIcon)
+                            .scaledFont(size: 16, weight: .semibold)
+                            .foregroundStyle(.white)
+                            .frame(width: 28, height: 28)
+                            .background(Circle().fill(Color.accentColor))
+                    }
+                    .buttonStyle(.plain)
+                    .help(Text(actionHelp, bundle: .module))
+
+                    Button {
+                        onRemove(item)
+                    } label: {
+                        Image(systemName: "xmark")
+                            .scaledFont(size: 14, weight: .semibold)
+                            .foregroundStyle(.white)
+                            .frame(width: 28, height: 28)
+                            .background(Circle().fill(Color.red.opacity(0.85)))
+                    }
+                    .buttonStyle(.plain)
+                    .help(Text("Remove", bundle: .module))
+                }
+            }
+            .padding(6)
+        }
+    }
+
+    @ViewBuilder
+    private var sourceBadge: some View {
         switch item.originLabel {
         case .library:
             InLibraryBadge()
@@ -127,21 +147,25 @@ private struct MatchedRow: View {
     @ViewBuilder
     private func outlineBadge(text: String, color: Color) -> some View {
         Text(LocalizedStringKey(text), bundle: .module)
-            .scaledFont(size: 9, weight: .semibold)
+            .scaledFont(size: 8, weight: .semibold)
             .foregroundStyle(color)
-            .padding(.horizontal, 5)
-            .padding(.vertical, 1)
-            .overlay(
-                Capsule().stroke(color.opacity(0.6), lineWidth: 0.75)
-            )
+            .padding(.horizontal, 4).padding(.vertical, 1)
+            .background(Capsule().fill(.regularMaterial))
+            .overlay(Capsule().stroke(color.opacity(0.6), lineWidth: 0.75))
     }
 
-    private func metadataLine(for item: DiscoverItem) -> String {
-        let segments: [String] = [
-            item.result.runtime.flatMap { $0 > 0 ? "\($0) min" : nil },
-            item.result.imdb.map { String(format: "IMDb %.1f", $0) },
-            item.result.genres.first,
-        ].compactMap { $0 }
-        return segments.joined(separator: " · ")
+    private var actionIcon: String {
+        switch item.action {
+        case .addToRadarr, .addToSonarr: return "plus"
+        case .openDetail: return "play.fill"
+        }
+    }
+
+    private var actionHelp: LocalizedStringKey {
+        switch item.action {
+        case .addToRadarr: return "Add to Radarr"
+        case .addToSonarr: return "Add to Sonarr"
+        case .openDetail:  return "Watch"
+        }
     }
 }

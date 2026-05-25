@@ -51,7 +51,7 @@ final class DiscoverViewModelTests: XCTestCase {
     func test_swipeRight_appendsToMatched_andAdvances() async {
         let vm = freshVM()
         vm.configure(
-            tmdb: { _, _ in [self.makeItem(1, .tmdb), self.makeItem(2, .tmdb)] },
+            tmdb: { _, _ in [self.makeItem(1, .tmdb), self.makeItem(2, .tmdb), self.makeItem(3, .tmdb)] },
             library: { _ in [] }, llm: nil
         )
         await vm.start()
@@ -60,8 +60,11 @@ final class DiscoverViewModelTests: XCTestCase {
         await vm.swipe(right: true)
         XCTAssertEqual(vm.matched.map(\.dedupKey), ["tmdb:1"])
         XCTAssertEqual(vm.current?.dedupKey, "tmdb:2")
+        await vm.swipe(right: true)
+        // Newest first: item 2 lands at index 0.
+        XCTAssertEqual(vm.matched.map(\.dedupKey), ["tmdb:2", "tmdb:1"], "newest pick must be at index 0")
         await vm.swipe(right: false)
-        XCTAssertEqual(vm.matched.map(\.dedupKey), ["tmdb:1"], "left swipe must not append")
+        XCTAssertEqual(vm.matched.map(\.dedupKey), ["tmdb:2", "tmdb:1"], "left swipe must not append")
     }
 
     func test_removeMatch_dropsByDedupKey() async {
@@ -74,6 +77,7 @@ final class DiscoverViewModelTests: XCTestCase {
         await vm.swipe(right: true)
         await vm.swipe(right: true)
         XCTAssertEqual(vm.matched.count, 2)
+        // Newest-first: matched = ["tmdb:2", "tmdb:1"]. Remove item 1.
         vm.removeMatch(id: "tmdb:1")
         XCTAssertEqual(vm.matched.map(\.dedupKey), ["tmdb:2"])
     }
@@ -168,6 +172,22 @@ final class DiscoverViewModelTests: XCTestCase {
         // Round 0 visits source[0]=tmdb, source[1]=library; round 1 same; round 2 same.
         // Expected: [tmdb:100, tmdb:200, tmdb:101, tmdb:201, tmdb:102, tmdb:202]
         XCTAssertEqual(order, ["tmdb:100", "tmdb:200", "tmdb:101", "tmdb:201", "tmdb:102", "tmdb:202"])
+    }
+
+    func test_swipeRight_milestoneTickBumps_everyTenPicks() async {
+        let vm = freshVM()
+        vm.configure(
+            tmdb: { _, _ in (1...30).map { self.makeItem($0, .tmdb) } },
+            library: { _ in [] }, llm: nil
+        )
+        await vm.start()
+        let initialTick = vm.picksMilestoneTick
+        for _ in 0..<9 { await vm.swipe(right: true) }
+        XCTAssertEqual(vm.picksMilestoneTick, initialTick, "9 picks shouldn't trip the tick")
+        await vm.swipe(right: true)
+        XCTAssertEqual(vm.picksMilestoneTick, initialTick + 1, "10th pick trips the tick")
+        for _ in 0..<10 { await vm.swipe(right: true) }
+        XCTAssertEqual(vm.picksMilestoneTick, initialTick + 2, "20th pick trips it again")
     }
 
     func test_llmDrain_appliesSuggestedFilters() async {
