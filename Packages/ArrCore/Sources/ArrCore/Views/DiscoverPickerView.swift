@@ -462,6 +462,112 @@ public struct DiscoverPickerView: View {
         }
     }
 
+    // MARK: - Suggestions row
+
+    /// Compact row of pills sourced from `viewModel.suggestedFilters`. Tap
+    /// behaviour mirrors the in-catalog pill taps — flips the same filter
+    /// state, so picked items move to the composer as a chip and disappear
+    /// from this row in the same frame (the VM dedupes).
+    @ViewBuilder
+    private var suggestionsRow: some View {
+        let suggestions = viewModel.suggestedFilters
+        if !suggestions.isEmpty {
+            FlowLayout(spacing: 5) {
+                ForEach(suggestions) { s in
+                    suggestionPill(s)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func suggestionPill(_ s: SuggestedFilter) -> some View {
+        SuggestionPillButton(
+            label: s.label,
+            icon: s.icon,
+            color: Self.color(for: s.category),
+            action: { applySuggestion(s) }
+        )
+    }
+
+    private func applySuggestion(_ s: SuggestedFilter) {
+        switch s.category {
+        case .people:
+            let name = String(s.id.dropFirst("person.".count))
+            viewModel.bumpPersonUsage(name)
+            Task { await viewModel.togglePerson(name: name) }
+        case .genre:
+            if let g = DiscoverGenre.allCases.first(where: {
+                "genre.\($0.rawValue)" == s.id
+            }) {
+                if viewModel.filter.genres.contains(g) {
+                    viewModel.filter.genres.remove(g)
+                } else {
+                    viewModel.filter.genres.insert(g)
+                }
+                viewModel.userChangedFilter()
+            }
+        case .decade:
+            if let d = DiscoverDecade.allCases.first(where: {
+                "decade.\($0.rawValue)" == s.id
+            }) {
+                viewModel.filter.decade =
+                    (viewModel.filter.decade == d) ? .any : d
+                viewModel.userChangedFilter()
+            }
+        case .rating:
+            if let r = DiscoverRatingTier.allCases.first(where: {
+                "rating.\($0.rawValue)" == s.id
+            }) {
+                viewModel.filter.rating =
+                    (viewModel.filter.rating == r) ? .any : r
+                viewModel.userChangedFilter()
+            }
+        case .runtime:
+            if let rt = DiscoverRuntime.allCases.first(where: {
+                "runtime.\($0.rawValue)" == s.id
+            }) {
+                viewModel.filter.runtime =
+                    (viewModel.filter.runtime == rt) ? .any : rt
+                viewModel.userChangedFilter()
+            }
+        }
+    }
+
+    /// Bare colored pill with hover state. Same idiom as the catalog
+    /// `PillButtonView` but always-colored (no "secondary when unpicked"
+    /// state, because the row never shows already-picked items).
+    private struct SuggestionPillButton: View {
+        let label: String
+        let icon: String?
+        let color: Color
+        let action: () -> Void
+        @State private var isHovering = false
+
+        var body: some View {
+            let strokeOpacity: Double = isHovering ? 0.95 : 0.55
+            let strokeWidth: CGFloat = isHovering ? 1.2 : 1.0
+            Button(action: action) {
+                HStack(spacing: 3) {
+                    if let icon {
+                        Image(systemName: icon)
+                            .scaledFont(size: 8, weight: .semibold)
+                    }
+                    Text(label)
+                        .scaledFont(size: 10, weight: .semibold)
+                }
+                .foregroundStyle(color)
+                .padding(.horizontal, 7).padding(.vertical, 4)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 5)
+                        .stroke(color.opacity(strokeOpacity), lineWidth: strokeWidth)
+                )
+            }
+            .buttonStyle(.plain)
+            .onHover { hovering in isHovering = hovering }
+        }
+    }
+
     // MARK: - Main picker scroll
 
     private var mainPickerScroll: some View {
