@@ -6,6 +6,8 @@ public struct DiscoverTabView: View {
     let onAddToRadarr: (SearchResult) -> Void
     let onOpenDetail: (DiscoverItem, Int) -> Void
 
+    @State private var showMatched: Bool = false
+
     public init(viewModel: DiscoverViewModel,
                 llmAvailable: Bool,
                 onAddToRadarr: @escaping (SearchResult) -> Void,
@@ -18,6 +20,31 @@ public struct DiscoverTabView: View {
 
     public var body: some View {
         VStack(spacing: 0) {
+            filterRow
+            Divider()
+            if showMatched {
+                DiscoverMatchedListView(
+                    items: viewModel.matched,
+                    onAct: { item in dispatch(item) },
+                    onRemove: { item in viewModel.removeMatch(id: item.dedupKey) },
+                    onKeepPlaying: { withAnimation(.smooth) { showMatched = false } }
+                )
+            } else {
+                ScrollView {
+                    swipingContent.padding(.vertical, 12)
+                }
+            }
+        }
+        .task(id: filterFingerprint) {
+            await viewModel.reshuffle()
+            // Reshuffle clears matched too — close the panel if we were in it.
+            if showMatched { showMatched = false }
+        }
+    }
+
+    /// Filter bar row + the Matches(N) pill on the right when there are picks.
+    private var filterRow: some View {
+        HStack(spacing: 8) {
             DiscoverFilterBar(
                 filter: Binding(get: { viewModel.filter },
                                 set: { viewModel.filter = $0 }),
@@ -26,30 +53,29 @@ public struct DiscoverTabView: View {
                 llmAvailable: llmAvailable,
                 onReshuffle: { Task { await viewModel.reshuffle() } }
             )
-            Divider()
-
-            ScrollView {
-                content
-                    .padding(.vertical, 12)
+            if viewModel.matched.count > 0 {
+                Button {
+                    withAnimation(.smooth) { showMatched.toggle() }
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "rectangle.stack.fill")
+                            .scaledFont(size: 11, weight: .semibold)
+                        Text(verbatim: "\(viewModel.matched.count)")
+                            .scaledFont(size: 11, weight: .semibold)
+                    }
+                    .foregroundStyle(showMatched ? .white : Color.accentColor)
+                    .padding(.horizontal, 10).padding(.vertical, 5)
+                    .background(Capsule().fill(showMatched
+                                               ? Color.accentColor
+                                               : Color.accentColor.opacity(0.15)))
+                }
+                .buttonStyle(.plain)
+                .padding(.trailing, 12)
+                .help(Text("Your picks", bundle: .module))
             }
-        }
-        .task(id: filterFingerprint) {
-            await viewModel.reshuffle()
-        }
-        .onChange(of: viewModel.pendingAction) { _, action in
-            guard let action, let item = viewModel.pendingActionItem else { return }
-            switch action {
-            case .addToRadarr:
-                onAddToRadarr(item.result)
-            case .openDetail(let arrId):
-                onOpenDetail(item, arrId)
-            }
-            viewModel.clearPendingAction()
         }
     }
 
-    /// Hash of inputs that should trigger a reshuffle. Used as `task(id:)`
-    /// so SwiftUI re-runs the fetch when filter or mood change.
     private var filterFingerprint: Int {
         var hasher = Hasher()
         hasher.combine(viewModel.filter.decade)
@@ -58,8 +84,17 @@ public struct DiscoverTabView: View {
         return hasher.finalize()
     }
 
+    private func dispatch(_ item: DiscoverItem) {
+        switch item.action {
+        case .addToRadarr:
+            onAddToRadarr(item.result)
+        case .openDetail(let arrId):
+            onOpenDetail(item, arrId)
+        }
+    }
+
     @ViewBuilder
-    private var content: some View {
+    private var swipingContent: some View {
         if viewModel.isLoading && viewModel.current == nil {
             ProgressView().controlSize(.small).padding(.top, 40)
         } else if let item = viewModel.current {
@@ -93,6 +128,8 @@ public struct DiscoverTabView: View {
                     .padding(.top, 6)
             }
         } else {
+            // When swiping is exhausted but matches exist, nudge user
+            // toward their picks list.
             VStack(spacing: 6) {
                 Image(systemName: "rectangle.stack.fill")
                     .scaledFont(size: 22, weight: .light)
@@ -100,6 +137,16 @@ public struct DiscoverTabView: View {
                 Text("No more cards", bundle: .module)
                     .scaledFont(size: 12)
                     .foregroundStyle(.secondary)
+                if viewModel.matched.count > 0 {
+                    Button {
+                        withAnimation(.smooth) { showMatched = true }
+                    } label: {
+                        Text("Show your picks", bundle: .module)
+                            .scaledFont(size: 11, weight: .semibold)
+                            .foregroundStyle(Color.accentColor)
+                    }
+                    .buttonStyle(.plain)
+                }
             }
             .padding(.top, 60)
         }
