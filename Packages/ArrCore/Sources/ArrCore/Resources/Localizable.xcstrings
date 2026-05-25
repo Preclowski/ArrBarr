@@ -2908,29 +2908,30 @@
       }
     },
     "History": {
+      "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Verlauf"
+            "value": "Geschichte"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Historial"
+            "value": "Historia"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Historique"
+            "value": "Histoire"
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Historia"
+            "value": "Historyczny"
           }
         }
       }
@@ -6709,6 +6710,7 @@
       }
     },
     "Status": {
+      "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
@@ -9135,226 +9137,1161 @@
     "Genres": {
       "extractionState": "manual",
       "localizations": {
-        "de": { "stringUnit": { "state": "translated", "value": "Genres" } },
-        "es": { "stringUnit": { "state": "translated", "value": "Géneros" } },
-        "fr": { "stringUnit": { "state": "translated", "value": "Genres" } },
-        "pl": { "stringUnit": { "state": "translated", "value": "Gatunki" } }
-      }
-    },
-    "Status": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": { "stringUnit": { "state": "translated", "value": "Status" } },
-        "es": { "stringUnit": { "state": "translated", "value": "Estado" } },
-        "fr": { "stringUnit": { "state": "translated", "value": "Statut" } },
-        "pl": { "stringUnit": { "state": "translated", "value": "Status" } }
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Genres"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Géneros"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Genres"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gatunki"
+          }
+        }
       }
     },
     "Any status": {
       "extractionState": "manual",
       "localizations": {
-        "de": { "stringUnit": { "state": "translated", "value": "Jeder Status" } },
-        "es": { "stringUnit": { "state": "translated", "value": "Cualquier estado" } },
-        "fr": { "stringUnit": { "state": "translated", "value": "Tout statut" } },
-        "pl": { "stringUnit": { "state": "translated", "value": "Każdy status" } }
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jeder Status"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cualquier estado"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tout statut"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Każdy status"
+          }
+        }
       }
     },
     "Owned": {
       "extractionState": "manual",
       "localizations": {
-        "de": { "stringUnit": { "state": "translated", "value": "Im Besitz" } },
-        "es": { "stringUnit": { "state": "translated", "value": "En posesión" } },
-        "fr": { "stringUnit": { "state": "translated", "value": "Possédé" } },
-        "pl": { "stringUnit": { "state": "translated", "value": "Posiadane" } }
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Im Besitz"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En posesión"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Possédé"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Posiadane"
+          }
+        }
       }
     },
     "To download": {
       "extractionState": "manual",
       "localizations": {
-        "de": { "stringUnit": { "state": "translated", "value": "Zum Download" } },
-        "es": { "stringUnit": { "state": "translated", "value": "Para descargar" } },
-        "fr": { "stringUnit": { "state": "translated", "value": "À télécharger" } },
-        "pl": { "stringUnit": { "state": "translated", "value": "Do pobrania" } }
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zum Download"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Para descargar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "À télécharger"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Do pobrania"
+          }
+        }
       }
     },
     "Clear genres": {
       "extractionState": "manual",
       "localizations": {
-        "de": { "stringUnit": { "state": "translated", "value": "Genres zurücksetzen" } },
-        "es": { "stringUnit": { "state": "translated", "value": "Borrar géneros" } },
-        "fr": { "stringUnit": { "state": "translated", "value": "Effacer genres" } },
-        "pl": { "stringUnit": { "state": "translated", "value": "Wyczyść gatunki" } }
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Genres zurücksetzen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Borrar géneros"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Effacer genres"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wyczyść gatunki"
+          }
+        }
       }
     },
     "Action": {
       "extractionState": "manual",
       "localizations": {
-        "de": { "stringUnit": { "state": "translated", "value": "Action" } },
-        "es": { "stringUnit": { "state": "translated", "value": "Acción" } },
-        "fr": { "stringUnit": { "state": "translated", "value": "Action" } },
-        "pl": { "stringUnit": { "state": "translated", "value": "Akcja" } }
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Action"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Acción"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Action"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Akcja"
+          }
+        }
       }
     },
     "Adventure": {
       "extractionState": "manual",
       "localizations": {
-        "de": { "stringUnit": { "state": "translated", "value": "Abenteuer" } },
-        "es": { "stringUnit": { "state": "translated", "value": "Aventura" } },
-        "fr": { "stringUnit": { "state": "translated", "value": "Aventure" } },
-        "pl": { "stringUnit": { "state": "translated", "value": "Przygodowy" } }
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abenteuer"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aventura"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aventure"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Przygodowy"
+          }
+        }
       }
     },
     "Animation": {
       "extractionState": "manual",
       "localizations": {
-        "de": { "stringUnit": { "state": "translated", "value": "Animation" } },
-        "es": { "stringUnit": { "state": "translated", "value": "Animación" } },
-        "fr": { "stringUnit": { "state": "translated", "value": "Animation" } },
-        "pl": { "stringUnit": { "state": "translated", "value": "Animacja" } }
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Animation"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Animación"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Animation"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Animacja"
+          }
+        }
       }
     },
     "Comedy": {
       "extractionState": "manual",
       "localizations": {
-        "de": { "stringUnit": { "state": "translated", "value": "Komödie" } },
-        "es": { "stringUnit": { "state": "translated", "value": "Comedia" } },
-        "fr": { "stringUnit": { "state": "translated", "value": "Comédie" } },
-        "pl": { "stringUnit": { "state": "translated", "value": "Komedia" } }
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Komödie"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comedia"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comédie"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Komedia"
+          }
+        }
       }
     },
     "Crime": {
       "extractionState": "manual",
       "localizations": {
-        "de": { "stringUnit": { "state": "translated", "value": "Krimi" } },
-        "es": { "stringUnit": { "state": "translated", "value": "Crimen" } },
-        "fr": { "stringUnit": { "state": "translated", "value": "Crime" } },
-        "pl": { "stringUnit": { "state": "translated", "value": "Kryminał" } }
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Krimi"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Crimen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Crime"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kryminał"
+          }
+        }
       }
     },
     "Documentary": {
       "extractionState": "manual",
       "localizations": {
-        "de": { "stringUnit": { "state": "translated", "value": "Dokumentarfilm" } },
-        "es": { "stringUnit": { "state": "translated", "value": "Documental" } },
-        "fr": { "stringUnit": { "state": "translated", "value": "Documentaire" } },
-        "pl": { "stringUnit": { "state": "translated", "value": "Dokument" } }
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dokumentarfilm"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Documental"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Documentaire"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dokument"
+          }
+        }
       }
     },
     "Drama": {
       "extractionState": "manual",
       "localizations": {
-        "de": { "stringUnit": { "state": "translated", "value": "Drama" } },
-        "es": { "stringUnit": { "state": "translated", "value": "Drama" } },
-        "fr": { "stringUnit": { "state": "translated", "value": "Drame" } },
-        "pl": { "stringUnit": { "state": "translated", "value": "Dramat" } }
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drama"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drama"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drame"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dramat"
+          }
+        }
       }
     },
     "Family": {
       "extractionState": "manual",
       "localizations": {
-        "de": { "stringUnit": { "state": "translated", "value": "Familie" } },
-        "es": { "stringUnit": { "state": "translated", "value": "Familiar" } },
-        "fr": { "stringUnit": { "state": "translated", "value": "Famille" } },
-        "pl": { "stringUnit": { "state": "translated", "value": "Familijny" } }
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Familie"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Familiar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Famille"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Familijny"
+          }
+        }
       }
     },
     "Fantasy": {
       "extractionState": "manual",
       "localizations": {
-        "de": { "stringUnit": { "state": "translated", "value": "Fantasy" } },
-        "es": { "stringUnit": { "state": "translated", "value": "Fantasía" } },
-        "fr": { "stringUnit": { "state": "translated", "value": "Fantaisie" } },
-        "pl": { "stringUnit": { "state": "translated", "value": "Fantasy" } }
-      }
-    },
-    "History": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": { "stringUnit": { "state": "translated", "value": "Geschichte" } },
-        "es": { "stringUnit": { "state": "translated", "value": "Historia" } },
-        "fr": { "stringUnit": { "state": "translated", "value": "Histoire" } },
-        "pl": { "stringUnit": { "state": "translated", "value": "Historyczny" } }
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fantasy"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fantasía"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fantaisie"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fantasy"
+          }
+        }
       }
     },
     "Horror": {
       "extractionState": "manual",
       "localizations": {
-        "de": { "stringUnit": { "state": "translated", "value": "Horror" } },
-        "es": { "stringUnit": { "state": "translated", "value": "Terror" } },
-        "fr": { "stringUnit": { "state": "translated", "value": "Horreur" } },
-        "pl": { "stringUnit": { "state": "translated", "value": "Horror" } }
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Horror"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Terror"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Horreur"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Horror"
+          }
+        }
       }
     },
     "Music": {
       "extractionState": "manual",
       "localizations": {
-        "de": { "stringUnit": { "state": "translated", "value": "Musik" } },
-        "es": { "stringUnit": { "state": "translated", "value": "Música" } },
-        "fr": { "stringUnit": { "state": "translated", "value": "Musique" } },
-        "pl": { "stringUnit": { "state": "translated", "value": "Muzyczny" } }
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Musik"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Música"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Musique"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Muzyczny"
+          }
+        }
       }
     },
     "Mystery": {
       "extractionState": "manual",
       "localizations": {
-        "de": { "stringUnit": { "state": "translated", "value": "Mystery" } },
-        "es": { "stringUnit": { "state": "translated", "value": "Misterio" } },
-        "fr": { "stringUnit": { "state": "translated", "value": "Mystère" } },
-        "pl": { "stringUnit": { "state": "translated", "value": "Tajemnica" } }
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mystery"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Misterio"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mystère"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tajemnica"
+          }
+        }
       }
     },
     "Romance": {
       "extractionState": "manual",
       "localizations": {
-        "de": { "stringUnit": { "state": "translated", "value": "Romantik" } },
-        "es": { "stringUnit": { "state": "translated", "value": "Romance" } },
-        "fr": { "stringUnit": { "state": "translated", "value": "Romance" } },
-        "pl": { "stringUnit": { "state": "translated", "value": "Romans" } }
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Romantik"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Romance"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Romance"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Romans"
+          }
+        }
       }
     },
     "Science Fiction": {
       "extractionState": "manual",
       "localizations": {
-        "de": { "stringUnit": { "state": "translated", "value": "Science-Fiction" } },
-        "es": { "stringUnit": { "state": "translated", "value": "Ciencia ficción" } },
-        "fr": { "stringUnit": { "state": "translated", "value": "Science-fiction" } },
-        "pl": { "stringUnit": { "state": "translated", "value": "Sci-Fi" } }
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Science-Fiction"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ciencia ficción"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Science-fiction"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sci-Fi"
+          }
+        }
       }
     },
     "TV Movie": {
       "extractionState": "manual",
       "localizations": {
-        "de": { "stringUnit": { "state": "translated", "value": "TV-Film" } },
-        "es": { "stringUnit": { "state": "translated", "value": "Película de TV" } },
-        "fr": { "stringUnit": { "state": "translated", "value": "Téléfilm" } },
-        "pl": { "stringUnit": { "state": "translated", "value": "Film TV" } }
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TV-Film"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Película de TV"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Téléfilm"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Film TV"
+          }
+        }
       }
     },
     "Thriller": {
       "extractionState": "manual",
       "localizations": {
-        "de": { "stringUnit": { "state": "translated", "value": "Thriller" } },
-        "es": { "stringUnit": { "state": "translated", "value": "Thriller" } },
-        "fr": { "stringUnit": { "state": "translated", "value": "Thriller" } },
-        "pl": { "stringUnit": { "state": "translated", "value": "Thriller" } }
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thriller"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thriller"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thriller"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thriller"
+          }
+        }
       }
     },
     "War": {
       "extractionState": "manual",
       "localizations": {
-        "de": { "stringUnit": { "state": "translated", "value": "Krieg" } },
-        "es": { "stringUnit": { "state": "translated", "value": "Guerra" } },
-        "fr": { "stringUnit": { "state": "translated", "value": "Guerre" } },
-        "pl": { "stringUnit": { "state": "translated", "value": "Wojenny" } }
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Krieg"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guerra"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guerre"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wojenny"
+          }
+        }
       }
     },
     "Western": {
       "extractionState": "manual",
       "localizations": {
-        "de": { "stringUnit": { "state": "translated", "value": "Western" } },
-        "es": { "stringUnit": { "state": "translated", "value": "Western" } },
-        "fr": { "stringUnit": { "state": "translated", "value": "Western" } },
-        "pl": { "stringUnit": { "state": "translated", "value": "Western" } }
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Western"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Western"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Western"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Western"
+          }
+        }
+      }
+    },
+    "Or describe what you want:": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oder beschreibe, worauf du Lust hast:"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O describe lo que quieres:"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ou décris ce que tu veux :"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lub opisz na co masz ochotę:"
+          }
+        }
+      }
+    },
+    "Discover": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entdecken"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Descubrir"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Découvrir"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Odkrywaj"
+          }
+        }
+      }
+    },
+    "Mood": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stimmung"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Estado de ánimo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ambiance"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nastrój"
+          }
+        }
+      }
+    },
+    "Back to mood picker": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zurück zur Stimmungsauswahl"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Volver al selector de estado"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Retour au choix d'ambiance"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Powrót do wyboru nastroju"
+          }
+        }
+      }
+    },
+    "Back to mood": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zurück zur Stimmung"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Volver al estado de ánimo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Retour à l'ambiance"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Powrót do nastroju"
+          }
+        }
+      }
+    },
+    "Cozy": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gemütlich"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Acogedor"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cosy"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Przytulny"
+          }
+        }
+      }
+    },
+    "Dark": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dunkel"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oscuro"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sombre"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mroczny"
+          }
+        }
+      }
+    },
+    "Feel-good": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wohlfühl"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Optimista"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Feel-good"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Optymistyczny"
+          }
+        }
+      }
+    },
+    "Mind-bending": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gehirnverdreher"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Desconcertante"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Déconcertant"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mózgołam"
+          }
+        }
+      }
+    },
+    "Epic": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Episch"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Épico"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Épique"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Epicki"
+          }
+        }
+      }
+    },
+    "Nostalgic": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nostalgisch"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nostálgico"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nostalgique"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nostalgiczny"
+          }
+        }
+      }
+    },
+    "Quirky": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skurril"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Peculiar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Décalé"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dziwaczny"
+          }
+        }
+      }
+    },
+    "Slow burn": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Langsam entfaltend"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lento"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "À feu doux"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Powolne tempo"
+          }
+        }
+      }
+    },
+    "Suspenseful": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spannend"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suspense"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Palpitant"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trzymający w napięciu"
+          }
+        }
+      }
+    },
+    "Tear-jerker": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zum Weinen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lacrimógena"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Larmoyant"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wyciskający łzy"
+          }
+        }
+      }
+    },
+    "Romantic": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Romantisch"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Romántico"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Romantique"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Romantyczny"
+          }
+        }
+      }
+    },
+    "True story": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wahre Geschichte"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Historia real"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Histoire vraie"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oparty na faktach"
+          }
+        }
       }
     }
   }

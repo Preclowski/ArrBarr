@@ -25,6 +25,11 @@ public final class DiscoverViewModel: ObservableObject {
     @Published public private(set) var queue: [DiscoverItem] = []
     @Published public var filter = DiscoverFilter()
     @Published public var moodText: String = ""
+    /// Mood pills the user picked on the picker screen. Not directly
+    /// consumed by sources — the View bakes them into `moodText` on
+    /// submit. Separate field so the picker UI can read the selection
+    /// state without parsing the composite string.
+    @Published public var pickedMoods: Set<String> = []
     @Published public private(set) var failedSources: Set<Source> = []
     @Published public private(set) var llmPoolExhausted: Bool = false
     @Published public private(set) var isLoading: Bool = false
@@ -221,6 +226,7 @@ public final class DiscoverViewModel: ObservableObject {
         failedSources.removeAll()
         errorMessage = nil
         matched.removeAll()
+        pickedMoods.removeAll()
         topUpTask?.cancel()
         topUpTask = nil
     }

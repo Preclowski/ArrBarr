@@ -7,8 +7,10 @@ public struct DiscoverTabView: View {
     let onAddToRadarr: (SearchResult) -> Void
     let onOpenDetail: (DiscoverItem, Int) -> Void
 
+    @State private var mode: Mode = .picker
     @State private var showMatched: Bool = false
-    @FocusState private var moodFocused: Bool
+
+    private enum Mode { case picker, tinder }
 
     public init(viewModel: DiscoverViewModel,
                 llmAvailable: Bool,
@@ -23,37 +25,67 @@ public struct DiscoverTabView: View {
     }
 
     public var body: some View {
+        ZStack {
+            switch mode {
+            case .picker:
+                DiscoverPickerView(
+                    viewModel: viewModel,
+                    llmAvailable: llmAvailable,
+                    onSubmit: {
+                        withAnimation(.smooth(duration: 0.22)) { mode = .tinder }
+                        Task { await viewModel.reshuffle() }
+                    }
+                )
+            case .tinder:
+                tinderMode
+            }
+        }
+        // No `.task(id:)` for filter changes here anymore — explicit
+        // submit via picker is the only reshuffle trigger.
+    }
+
+    // MARK: - Tinder mode
+
+    private var tinderMode: some View {
         VStack(spacing: 0) {
-            filterRow
+            tinderTopBar
             Divider()
             if showMatched {
                 DiscoverMatchedListView(
                     items: viewModel.matched,
-                    onAct: { item in dispatch(item) },
+                    onAct: dispatch,
                     onRemove: { item in viewModel.removeMatch(id: item.dedupKey) },
                     onKeepPlaying: { withAnimation(.smooth) { showMatched = false } }
                 )
             } else {
                 swipingContent
             }
-            moodBar
-        }
-        .task(id: viewModel.userActionTick) {
-            await viewModel.reshuffle()
-            // Reshuffle clears matched too — close the panel if we were in it.
-            if showMatched { showMatched = false }
         }
     }
 
-    /// Filter bar row + the Matches(N) pill on the right when there are picks.
-    private var filterRow: some View {
+    /// Top bar inside tinder mode — Back-to-mood + Matches pill.
+    /// No structured filter chips here per UX direction; mood adjustments
+    /// happen by going back to the picker.
+    private var tinderTopBar: some View {
         HStack(spacing: 8) {
-            DiscoverFilterBar(
-                filter: Binding(get: { viewModel.filter },
-                                set: { viewModel.filter = $0 }),
-                onUserChange: { viewModel.userChangedFilter() },
-                onReshuffle: { Task { await viewModel.reshuffle() } }
-            )
+            Button {
+                withAnimation(.smooth(duration: 0.22)) { mode = .picker }
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "chevron.left")
+                        .scaledFont(size: 11, weight: .semibold)
+                    Text("Mood", bundle: .module)
+                        .scaledFont(size: 11, weight: .semibold)
+                }
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 10).padding(.vertical, 5)
+                .background(Capsule().fill(Color.primary.opacity(0.08)))
+            }
+            .buttonStyle(.plain)
+            .help(Text("Back to mood picker", bundle: .module))
+
+            Spacer()
+
             if viewModel.matched.count > 0 {
                 Button {
                     withAnimation(.smooth) { showMatched.toggle() }
@@ -71,63 +103,21 @@ public struct DiscoverTabView: View {
                                                : Color.accentColor.opacity(0.15)))
                 }
                 .buttonStyle(.plain)
-                .padding(.trailing, 12)
                 .help(Text("Your picks", bundle: .module))
             }
         }
-    }
-
-    @ViewBuilder
-    private var moodBar: some View {
-        if llmAvailable {
-            HStack(spacing: 8) {
-                Image(systemName: "sparkles")
-                    .scaledFont(size: 14)
-                    .foregroundStyle(.purple)
-                TextField("",
-                          text: Binding(get: { viewModel.moodText },
-                                        set: { viewModel.moodText = $0 }),
-                          prompt: Text("What are you in the mood for?", bundle: .module),
-                          axis: .vertical)
-                    .textFieldStyle(.plain)
-                    .focused($moodFocused)
-                    .onSubmit { submitMood() }
-                    .lineLimit(1...4)
-                    .scaledFont(size: 13)
-                Button(action: submitMood) {
-                    Image(systemName: "arrow.up.circle.fill")
-                        .scaledFont(size: 22)
-                        .foregroundStyle(
-                            viewModel.moodText
-                                .trimmingCharacters(in: .whitespaces).isEmpty
-                                ? Color.secondary
-                                : Color.accentColor
-                        )
-                }
-                .buttonStyle(.plain)
-                .disabled(viewModel.moodText.trimmingCharacters(in: .whitespaces).isEmpty)
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 8)
-            .glassyFloatingBar()
-            .padding(.horizontal, 10)
-            .padding(.bottom, 10)
-        }
-    }
-
-    private func submitMood() {
-        moodFocused = false
-        viewModel.userSubmittedMood()
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
     }
 
     private func dispatch(_ item: DiscoverItem) {
         switch item.action {
-        case .addToRadarr:
-            onAddToRadarr(item.result)
-        case .openDetail(let arrId):
-            onOpenDetail(item, arrId)
+        case .addToRadarr: onAddToRadarr(item.result)
+        case .openDetail(let arrId): onOpenDetail(item, arrId)
         }
     }
+
+    // MARK: - Swiping content (cards + CTAs)
 
     @ViewBuilder
     private var swipingContent: some View {
@@ -138,35 +128,41 @@ public struct DiscoverTabView: View {
                 Spacer()
             }
         } else if viewModel.current != nil {
-            VStack(spacing: 12) {
+            VStack(spacing: 14) {
                 cardStack
                 cardActionRow
             }
-            .padding(.horizontal, 20)
+            .padding(.horizontal, 28)         // visible side margins
             .padding(.top, 14)
-            .padding(.bottom, 10)
+            .padding(.bottom, 14)
         } else {
             emptyStackState
         }
     }
 
-    /// Top card + up to 2 behind it, offset + scaled + dimmed for the
-    /// classic tinder peek. Only the top card receives gestures / keystrokes.
+    /// 3-card stack: top + 2 behind. Cap card height to 0.92 of the
+    /// available vertical space so the peeking cards underneath actually
+    /// peek (stack effect requires breathing room).
     private var cardStack: some View {
         let stack = visibleStack.enumerated().map { ($0, $1) }
-        return ZStack {
-            ForEach(stack.reversed(), id: \.1.id) { (idx, item) in
-                DiscoverCardView(item: item)
-                    .scaleEffect(1.0 - CGFloat(idx) * 0.04, anchor: .top)
-                    .offset(y: CGFloat(idx) * 10)
-                    .opacity(idx == 0 ? 1.0 : 1.0 - Double(idx) * 0.18)
-                    .allowsHitTesting(idx == 0)
-                    .zIndex(Double(stack.count - idx))
-                    .animation(.spring(response: 0.32, dampingFraction: 0.85),
-                               value: viewModel.current?.dedupKey)
+        return GeometryReader { proxy in
+            let cardWidth  = proxy.size.width
+            let cardHeight = proxy.size.height * 0.92  // leave ~8% so 3rd card's offset stays in view
+            ZStack {
+                ForEach(stack.reversed(), id: \.1.id) { (idx, item) in
+                    DiscoverCardView(item: item)
+                        .frame(width: cardWidth, height: cardHeight)
+                        .scaleEffect(1.0 - CGFloat(idx) * 0.06, anchor: .top)
+                        .offset(y: CGFloat(idx) * 16)
+                        .opacity(idx == 0 ? 1.0 : 1.0 - Double(idx) * 0.20)
+                        .allowsHitTesting(idx == 0)
+                        .zIndex(Double(stack.count - idx))
+                        .animation(.spring(response: 0.32, dampingFraction: 0.85),
+                                   value: viewModel.current?.dedupKey)
+                }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var visibleStack: [DiscoverItem] {
@@ -175,8 +171,6 @@ public struct DiscoverTabView: View {
         return curr + peek
     }
 
-    /// Action row owned by the chrome (not the card) so it's always
-    /// visible regardless of card size. Hooks into the VM directly.
     private var cardActionRow: some View {
         HStack(spacing: 10) {
             Button { Task { await viewModel.swipe(right: false) } } label: {
@@ -223,6 +217,8 @@ public struct DiscoverTabView: View {
         }
     }
 
+    // MARK: - Empty stack
+
     @ViewBuilder
     private var emptyStackState: some View {
         VStack(spacing: 10) {
@@ -243,6 +239,14 @@ public struct DiscoverTabView: View {
                 }
                 .buttonStyle(.plain)
             }
+            Button {
+                withAnimation(.smooth(duration: 0.22)) { mode = .picker }
+            } label: {
+                Text("Back to mood", bundle: .module)
+                    .scaledFont(size: 11, weight: .semibold)
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
             if viewModel.llmPoolExhausted && llmAvailable
                && !viewModel.moodText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 Button {
@@ -259,11 +263,6 @@ public struct DiscoverTabView: View {
                 }
                 .buttonStyle(.plain)
             }
-            if !viewModel.failedSources.isEmpty {
-                Text(failureBadgeText)
-                    .scaledFont(size: 10)
-                    .foregroundStyle(.tertiary)
-            }
             if !radarrAvailable {
                 Text("Configure Radarr in Settings to save picks to your library — add-actions will open TMDB instead.",
                      bundle: .module)
@@ -272,6 +271,11 @@ public struct DiscoverTabView: View {
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 24)
                     .padding(.top, 4)
+            }
+            if !viewModel.failedSources.isEmpty {
+                Text(failureBadgeText)
+                    .scaledFont(size: 10)
+                    .foregroundStyle(.tertiary)
             }
             Spacer()
         }
