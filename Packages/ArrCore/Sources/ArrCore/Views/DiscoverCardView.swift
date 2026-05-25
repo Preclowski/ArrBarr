@@ -112,7 +112,6 @@ public struct DiscoverCardView: View {
                 Text(titleAndYear)
                     .scaledFont(size: 17, weight: .semibold)
                     .foregroundStyle(.primary)
-                    .lineLimit(2)
                 if !runtimeCertSegments.isEmpty {
                     Text(runtimeCertSegments.joined(separator: " · "))
                         .scaledFont(size: 11)
@@ -125,7 +124,7 @@ public struct DiscoverCardView: View {
                         ForEach(chips, id: \.label) { RatingPill(chip: $0) }
                     }
                 }
-                genreLabels(limit: 3)
+                genreLabels(limit: 6)
             }
             .padding(12)
             .frame(width: w, height: footerH, alignment: .topLeading)
@@ -143,7 +142,6 @@ public struct DiscoverCardView: View {
                 Text(titleAndYear)
                     .scaledFont(size: 16, weight: .semibold)
                     .foregroundStyle(.primary)
-                    .lineLimit(2)
                 if !runtimeCertSegments.isEmpty {
                     Text(runtimeCertSegments.joined(separator: " · "))
                         .scaledFont(size: 11)
@@ -173,7 +171,7 @@ public struct DiscoverCardView: View {
                     .foregroundStyle(.secondary)
             }
 
-            genreLabels(limit: 5)
+            genreLabels(limit: 12)
         }
         .padding(14)
         .frame(width: w, height: h, alignment: .topLeading)
@@ -193,7 +191,7 @@ public struct DiscoverCardView: View {
     private func genreLabels(limit: Int) -> some View {
         let visible = Array(item.result.genres.prefix(limit))
         if !visible.isEmpty {
-            HStack(spacing: 4) {
+            FlowLayout(spacing: 4) {
                 ForEach(visible, id: \.self) { g in
                     Text(g)
                         .scaledFont(size: 10, weight: .semibold)
@@ -201,11 +199,10 @@ public struct DiscoverCardView: View {
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
                         .overlay(
-                            Capsule()
+                            RoundedRectangle(cornerRadius: 4)
                                 .stroke(Color.secondary.opacity(0.5), lineWidth: 0.75)
                         )
                 }
-                Spacer(minLength: 0)
             }
         }
     }
