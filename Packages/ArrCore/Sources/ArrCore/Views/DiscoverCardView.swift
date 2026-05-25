@@ -118,7 +118,7 @@ public struct DiscoverCardView: View {
         let progress = min(1.0, abs(dragOffset.width) / 180)
         if abs(dragOffset.width) > 4 {
             Rectangle()
-                .fill(dragOffset.width > 0 ? Color.green : Color.red)
+                .fill(dragOffset.width > 0 ? Color.accentColor : Color.red)
                 .opacity(progress * 0.40)
                 .allowsHitTesting(false)
         }
@@ -132,12 +132,12 @@ public struct DiscoverCardView: View {
             Text(LocalizedStringKey(isPick ? "Pick" : "Skip"), bundle: .module)
                 .scaledFont(size: 28, weight: .heavy)
                 .textCase(.uppercase)
-                .foregroundStyle(isPick ? Color.green : Color.red)
+                .foregroundStyle(isPick ? Color.accentColor : Color.red)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 6)
                 .overlay(
                     RoundedRectangle(cornerRadius: 8)
-                        .stroke(isPick ? Color.green : Color.red, lineWidth: 3)
+                        .stroke(isPick ? Color.accentColor : Color.red, lineWidth: 3)
                 )
                 .rotationEffect(.degrees(isPick ? 15 : -15))
                 .opacity(progress)
@@ -166,17 +166,7 @@ public struct DiscoverCardView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity,
                        alignment: .topLeading)
 
-            // Bottom dark gradient — covers ~50% of card height for
-            // the info block below to read clearly.
-            LinearGradient(
-                colors: [.black.opacity(0.95), .black.opacity(0.0)],
-                startPoint: .bottom, endPoint: .top
-            )
-            .frame(height: h * 0.50)
-            .frame(maxHeight: .infinity, alignment: .bottom)
-            .allowsHitTesting(false)
-
-            // Bottom info block — title(year) / runtime·cert / ratings / genres
+            // Bottom info block — glass panel with title(year) / runtime·cert / ratings / genres
             VStack(alignment: .leading, spacing: 5) {
                 Text(titleWithYear)
                     .scaledFont(size: 17, weight: .bold)
@@ -209,6 +199,18 @@ public struct DiscoverCardView: View {
                 }
             }
             .padding(14)
+            .background(
+                // Glass panel behind the details — lets the poster bleed through
+                // while keeping the info block readable.
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(.ultraThinMaterial)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(.white.opacity(0.18), lineWidth: 0.5)
+                    )
+            )
+            .padding(.horizontal, 10)
+            .padding(.bottom, 10)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
         }
         .frame(width: w, height: h)

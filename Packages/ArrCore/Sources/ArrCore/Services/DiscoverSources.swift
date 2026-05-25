@@ -5,10 +5,12 @@ public enum DiscoverSources {
     // MARK: - TMDB Movie source
 
     /// TMDB Discover source for movies. Skips anything already in the local
-    /// Radarr library.
+    /// Radarr library. Each card is enriched via a Radarr tmdbId lookup to
+    /// get IMDb/RT/MC ratings, runtime, certification, genres, and studio.
     @MainActor
     public static func tmdbMovies(
         apiKey: String,
+        radarrClient: RadarrClient,
         libraryTmdbIds: @escaping @MainActor () -> Set<Int>
     ) -> DiscoverViewModel.TMDBSource {
         let client = TMDBClient(apiKey: apiKey)
@@ -27,22 +29,38 @@ public enum DiscoverSources {
                 runtimeGte: filter.runtime.greaterThan
             )
             let owned = libraryTmdbIds()
-            return summaries.compactMap { s -> DiscoverItem? in
-                if owned.contains(s.id) { return nil }
+            var out: [DiscoverItem] = []
+            for s in summaries {
+                if owned.contains(s.id) { continue }
+                // Enrich with Radarr's tmdbId lookup — gives us IMDb, RT, MC,
+                // runtime, certification, genres, studio. One extra HTTP call
+                // per shown TMDB card. Library hits are unaffected.
+                let term = s.year.map { "\(s.title) \($0)" } ?? s.title
+                let hits = (try? await radarrClient.lookupMovies(term: term)) ?? []
+                let enriched = hits.first(where: { $0.tmdbId == s.id }) ?? hits.first
+                let enrichedPoster: URL? = enriched.flatMap { posterURL(from: $0.images) }
+                    ?? TMDBClient.imageURL(path: s.posterPath)
                 let result = SearchResult(
                     id: s.id, foreignId: String(s.id),
                     title: s.title, subtitle: nil,
                     year: s.year,
-                    rating: s.voteAverage,
-                    imdb: nil, rottenTomatoes: nil, metacritic: nil,
-                    overview: s.overview, runtime: nil,
-                    genres: [], network: nil, certification: nil,
-                    posterURL: TMDBClient.imageURL(path: s.posterPath),
-                    source: .radarr, inLibraryArrId: nil
+                    rating: enriched?.ratings?.tmdb?.value ?? s.voteAverage,
+                    imdb: enriched?.ratings?.imdb?.value,
+                    rottenTomatoes: enriched?.ratings?.rottenTomatoes?.value,
+                    metacritic: enriched?.ratings?.metacritic?.value,
+                    overview: enriched?.overview ?? s.overview,
+                    runtime: enriched?.runtime,
+                    genres: enriched?.genres ?? [],
+                    network: enriched?.studio,
+                    certification: enriched?.certification,
+                    posterURL: enrichedPoster,
+                    source: .radarr,
+                    inLibraryArrId: nil
                 )
-                return DiscoverItem(result: result, action: .addToRadarr,
-                                    originLabel: .tmdb, kind: .movie)
+                out.append(DiscoverItem(result: result, action: .addToRadarr,
+                                        originLabel: .tmdb, kind: .movie))
             }
+            return out
         }
     }
 

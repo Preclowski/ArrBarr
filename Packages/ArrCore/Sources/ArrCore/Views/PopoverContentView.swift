@@ -1436,6 +1436,7 @@ public struct PopoverContentView: View {
                )
                : DiscoverSources.tmdbMovies(
                    apiKey: configStore.tmdbApiKey,
+                   radarrClient: radarrClient,
                    libraryTmdbIds: ownedMovieIds
                ))
             : nil
