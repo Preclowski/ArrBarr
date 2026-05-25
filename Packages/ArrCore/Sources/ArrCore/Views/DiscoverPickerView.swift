@@ -77,53 +77,34 @@ public struct DiscoverPickerView: View {
         .opacity(freeText.trimmingCharacters(in: .whitespaces).isEmpty ? 1.0 : 0.4)
     }
 
-    // MARK: - Pill cloud (animated tag cloud)
+    // MARK: - Pill cloud (concrete filter-mapping tag cloud)
 
     private var pillCloud: some View {
         DiscoverTagCloud<String>(
-            tags: Self.moodPills.map { p in
+            tags: visibleTags.map { tag in
                 DiscoverTagCloud<String>.Tag(
-                    id: p.label,
-                    label: p.label,
-                    palette: {
-                        switch p.kind {
-                        case .mood:      return .mood
-                        case .genre:     return .genre
-                        }
-                    }()
+                    id: tag.label,
+                    label: tag.label,
+                    icon: tag.icon,
+                    category: tag.cloudCategory
                 )
             },
             isPicked: { label in
-                if viewModel.pickedMoods.contains(label) { return true }
-                if let g = Self.moodPills.first(where: { $0.label == label }),
-                   case let .genre(genre) = g.kind,
-                   viewModel.filter.genres.contains(genre) {
-                    return true
-                }
-                return false
+                guard let tag = Self.cloudTags.first(where: { $0.label == label }) else { return false }
+                return tag.isPicked(viewModel)
             },
             onToggle: { label in
-                guard let pill = Self.moodPills.first(where: { $0.label == label }) else { return }
-                togglePill(pill)
+                guard let tag = Self.cloudTags.first(where: { $0.label == label }) else { return }
+                tag.apply(viewModel)
             }
         )
     }
 
-    private func togglePill(_ pill: MoodPill) {
-        switch pill.kind {
-        case .mood:
-            if viewModel.pickedMoods.contains(pill.label) {
-                viewModel.pickedMoods.remove(pill.label)
-            } else {
-                viewModel.pickedMoods.insert(pill.label)
-            }
-        case .genre(let g):
-            if viewModel.filter.genres.contains(g) {
-                viewModel.filter.genres.remove(g)
-            } else {
-                viewModel.filter.genres.insert(g)
-            }
-            viewModel.userChangedFilter()
+    /// Runtime pills are hidden when browsing shows (TV runtime is per-episode).
+    private var visibleTags: [CloudTag] {
+        Self.cloudTags.filter { tag in
+            if viewModel.mediaSelection == .show && tag.category == .runtime { return false }
+            return true
         }
     }
 
@@ -216,74 +197,154 @@ public struct DiscoverPickerView: View {
 
     // MARK: - Commit logic
 
-    private var canCommit: Bool {
-        !freeText.trimmingCharacters(in: .whitespaces).isEmpty
-            || !viewModel.pickedMoods.isEmpty
-            || !viewModel.filter.genres.isEmpty
-    }
+    /// Always true — user can browse with no signal (TMDB Discover returns
+    /// popular titles by default). Filters already applied via pills.
+    private var canCommit: Bool { true }
 
-    /// Compose final moodText from picked pills + free text, kick off
-    /// the parent's onSubmit.
     private func commit() {
-        let pills = viewModel.pickedMoods.sorted().joined(separator: ", ")
         let free = freeText.trimmingCharacters(in: .whitespacesAndNewlines)
-        let combined: String
-        switch (pills.isEmpty, free.isEmpty) {
-        case (true, true):   combined = ""
-        case (false, true):  combined = pills
-        case (true, false):  combined = free
-        case (false, false): combined = "\(pills). \(free)"
-        }
-        viewModel.moodText = combined
-
-        // If the user typed prose into the composer, let the LLM decide
-        // per-title kind regardless of the Movies/Shows toggle. The toggle
-        // only steers sources when the user is browsing without prose.
+        viewModel.moodText = free
         if !free.isEmpty && llmAvailable {
             viewModel.mediaSelection = .auto
         }
-
         viewModel.userSubmittedMood()
         freeTextFocused = false
         onSubmit()
     }
 
-    // MARK: - Pill catalog
+    // MARK: - Tag catalog
 
-    private enum PillKind {
-        case mood
-        case genre(DiscoverGenre)
+    private enum TagCategory: String {
+        case genre, decade, status, rating, runtime
     }
 
-    private struct MoodPill {
-        let label: String       // also the localization key
-        let kind: PillKind
+    private struct CloudTag {
+        let label: String           // localization key
+        let icon: String            // SF Symbol name
+        let category: TagCategory
+        let apply: (DiscoverViewModel) -> Void
+        let isPicked: (DiscoverViewModel) -> Bool
+
+        var cloudCategory: DiscoverTagCloud<String>.Category {
+            switch category {
+            case .genre:   return .genre
+            case .decade:  return .decade
+            case .status:  return .status
+            case .rating:  return .rating
+            case .runtime: return .runtime
+            }
+        }
     }
 
-    /// Curated mix: mood adjectives first, then popular genres. Order
-    /// matters — it's the order pills lay out in the cloud.
-    private static let moodPills: [MoodPill] = [
-        .init(label: "Cozy",            kind: .mood),
-        .init(label: "Dark",            kind: .mood),
-        .init(label: "Mind-bending",    kind: .mood),
-        .init(label: "Epic",            kind: .mood),
-        .init(label: "Feel-good",       kind: .mood),
-        .init(label: "Nostalgic",       kind: .mood),
-        .init(label: "Quirky",          kind: .mood),
-        .init(label: "Slow burn",       kind: .mood),
-        .init(label: "Suspenseful",     kind: .mood),
-        .init(label: "Tear-jerker",     kind: .mood),
-        .init(label: "Romantic",        kind: .mood),
-        .init(label: "True story",      kind: .mood),
-        .init(label: "Comedy",          kind: .genre(.comedy)),
-        .init(label: "Thriller",        kind: .genre(.thriller)),
-        .init(label: "Horror",          kind: .genre(.horror)),
-        .init(label: "Action",          kind: .genre(.action)),
-        .init(label: "Drama",           kind: .genre(.drama)),
-        .init(label: "Science Fiction", kind: .genre(.scienceFiction)),
-        .init(label: "Animation",       kind: .genre(.animation)),
-        .init(label: "Documentary",     kind: .genre(.documentary)),
-        .init(label: "Fantasy",         kind: .genre(.fantasy)),
-    ]
+    private static let cloudTags: [CloudTag] = makeTags()
+
+    private static func makeTags() -> [CloudTag] {
+        var tags: [CloudTag] = []
+
+        // GENRES — 18 (tvMovie excluded per spec)
+        let genreSpec: [(DiscoverGenre, String)] = [
+            (.action,         "bolt"),
+            (.adventure,      "map"),
+            (.animation,      "paintbrush"),
+            (.comedy,         "face.smiling"),
+            (.crime,          "lock"),
+            (.documentary,    "doc.text"),
+            (.drama,          "theatermasks"),
+            (.family,         "figure.2.and.child.holdinghands"),
+            (.fantasy,        "sparkle"),
+            (.history,        "book.closed"),
+            (.horror,         "drop"),
+            (.music,          "music.note"),
+            (.mystery,        "questionmark"),
+            (.romance,        "heart"),
+            (.scienceFiction, "atom"),
+            (.thriller,       "exclamationmark.triangle"),
+            (.war,            "shield"),
+            (.western,        "sun.haze"),
+        ]
+        for (g, icon) in genreSpec {
+            tags.append(CloudTag(
+                label: g.displayName,
+                icon: icon,
+                category: .genre,
+                apply: { vm in
+                    if vm.filter.genres.contains(g) { vm.filter.genres.remove(g) }
+                    else { vm.filter.genres.insert(g) }
+                    vm.userChangedFilter()
+                },
+                isPicked: { vm in vm.filter.genres.contains(g) }
+            ))
+        }
+
+        // DECADES — single-select; re-tap clears.
+        for d in [DiscoverDecade.eighties, .nineties, .twoThousands,
+                  .twoThousandTens, .twoThousandTwenties] {
+            tags.append(CloudTag(
+                label: d.rawValue,
+                icon: "calendar",
+                category: .decade,
+                apply: { vm in
+                    vm.filter.decade = (vm.filter.decade == d) ? .any : d
+                    vm.userChangedFilter()
+                },
+                isPicked: { vm in vm.filter.decade == d }
+            ))
+        }
+
+        // STATUS
+        tags.append(CloudTag(
+            label: "Owned", icon: "checkmark.circle", category: .status,
+            apply: { vm in
+                vm.filter.status = (vm.filter.status == .owned) ? .any : .owned
+                vm.userChangedFilter()
+            },
+            isPicked: { vm in vm.filter.status == .owned }
+        ))
+        tags.append(CloudTag(
+            label: "To download", icon: "arrow.down.circle", category: .status,
+            apply: { vm in
+                vm.filter.status = (vm.filter.status == .toDownload) ? .any : .toDownload
+                vm.userChangedFilter()
+            },
+            isPicked: { vm in vm.filter.status == .toDownload }
+        ))
+
+        // RATING — exclusive; re-tap clears.
+        tags.append(CloudTag(
+            label: "Highly rated", icon: "star.fill", category: .rating,
+            apply: { vm in
+                vm.filter.rating = (vm.filter.rating == .highlyRated) ? .any : .highlyRated
+                vm.userChangedFilter()
+            },
+            isPicked: { vm in vm.filter.rating == .highlyRated }
+        ))
+        tags.append(CloudTag(
+            label: "Cult favorite", icon: "flame", category: .rating,
+            apply: { vm in
+                vm.filter.rating = (vm.filter.rating == .cultFavorite) ? .any : .cultFavorite
+                vm.userChangedFilter()
+            },
+            isPicked: { vm in vm.filter.rating == .cultFavorite }
+        ))
+
+        // RUNTIME
+        tags.append(CloudTag(
+            label: "Short", icon: "hare", category: .runtime,
+            apply: { vm in
+                vm.filter.runtime = (vm.filter.runtime == .short) ? .any : .short
+                vm.userChangedFilter()
+            },
+            isPicked: { vm in vm.filter.runtime == .short }
+        ))
+        tags.append(CloudTag(
+            label: "Epic", icon: "hourglass", category: .runtime,
+            apply: { vm in
+                vm.filter.runtime = (vm.filter.runtime == .epic) ? .any : .epic
+                vm.userChangedFilter()
+            },
+            isPicked: { vm in vm.filter.runtime == .epic }
+        ))
+
+        return tags
+    }
 }
-

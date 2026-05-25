@@ -17,19 +17,18 @@ public struct DiscoverTagCloud<TagID: Hashable & Sendable>: View {
     public struct Tag: Identifiable {
         public let id: TagID
         public let label: String   // also used as LocalizedStringKey
-        public let palette: Palette
-        public init(id: TagID, label: String, palette: Palette) {
+        public let icon: String    // SF Symbol name
+        public let category: Category
+        public init(id: TagID, label: String, icon: String, category: Category) {
             self.id = id
             self.label = label
-            self.palette = palette
+            self.icon = icon
+            self.category = category
         }
     }
 
-    public enum Palette {
-        /// Colorful — cycles through purple / teal / orange / blue / pink.
-        case mood
-        /// Muted — grey fill, narrower size range, feels categorical.
-        case genre
+    public enum Category {
+        case genre, decade, status, rating, runtime
     }
 
     // MARK: - Init
@@ -80,21 +79,26 @@ public struct DiscoverTagCloud<TagID: Hashable & Sendable>: View {
         Button {
             onToggle(tag.id)
         } label: {
-            Text(LocalizedStringKey(tag.label), bundle: .module)
-                .scaledFont(size: fontSize, weight: picked ? .semibold : .medium)
-                .padding(.horizontal, picked ? 12 : 10)
-                .padding(.vertical, picked ? 6 : 5)
-                .background(
-                    Capsule().fill(picked
-                        ? tint.opacity(0.25)
-                        : tint.opacity(0.08))
-                )
-                .overlay(
-                    Capsule().stroke(picked ? tint.opacity(0.7) : .clear,
-                                     lineWidth: picked ? 1 : 0)
-                )
-                .foregroundStyle(picked ? tint : .primary.opacity(0.85))
-                .scaleEffect(picked ? 1.08 : 1.0)
+            HStack(spacing: 4) {
+                Image(systemName: tag.icon)
+                    .scaledFont(size: max(9, fontSize * 0.75),
+                                weight: picked ? .semibold : .medium)
+                Text(LocalizedStringKey(tag.label), bundle: .module)
+                    .scaledFont(size: fontSize, weight: picked ? .semibold : .medium)
+            }
+            .padding(.horizontal, picked ? 12 : 10)
+            .padding(.vertical, picked ? 6 : 5)
+            .background(
+                Capsule().fill(picked
+                    ? tint.opacity(0.25)
+                    : tint.opacity(0.08))
+            )
+            .overlay(
+                Capsule().stroke(picked ? tint.opacity(0.7) : .clear,
+                                 lineWidth: picked ? 1 : 0)
+            )
+            .foregroundStyle(picked ? tint : .primary.opacity(0.85))
+            .scaleEffect(picked ? 1.08 : 1.0)
         }
         .buttonStyle(.plain)
         .rotationEffect(rot)
@@ -164,11 +168,17 @@ public struct DiscoverTagCloud<TagID: Hashable & Sendable>: View {
     }
 
     private func tagTint(for tag: Tag, idx: Int) -> Color {
-        switch tag.palette {
-        case .mood:
-            let palette: [Color] = [.purple, .orange, .teal, .blue, .pink]
-            return palette[Int(stableHash(tag.label) % UInt32(palette.count))]
+        switch tag.category {
         case .genre:
+            let palette: [Color] = [.orange, .red, .yellow, .pink]
+            return palette[Int(stableHash(tag.label) % UInt32(palette.count))]
+        case .decade:
+            return .blue
+        case .status:
+            return .green
+        case .rating:
+            return .yellow
+        case .runtime:
             return .gray
         }
     }

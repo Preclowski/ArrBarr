@@ -10438,6 +10438,39 @@
           }
         }
       }
+    },
+    "Highly rated": {
+      "extractionState": "manual",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wysoko oceniany"
+          }
+        }
+      }
+    },
+    "Cult favorite": {
+      "extractionState": "manual",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kultowy"
+          }
+        }
+      }
+    },
+    "Short": {
+      "extractionState": "manual",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Krótki"
+          }
+        }
+      }
     }
   }
 }
