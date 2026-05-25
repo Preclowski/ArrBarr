@@ -169,19 +169,25 @@ public struct DiscoverFilter: Equatable, Sendable {
     public var status: DiscoverStatus
     public var rating: DiscoverRatingTier
     public var runtime: DiscoverRuntime
+    /// TMDB person ids extracted from LLM mood text (actors, directors).
+    /// Passed as `with_people` to TMDB Discover — server-side filter only;
+    /// ignored in local library matches.
+    public var personIds: [Int]
 
     public init(decade: DiscoverDecade = .any,
                 monitoredOnly: Bool = false,
                 genres: Set<DiscoverGenre> = [],
                 status: DiscoverStatus = .any,
                 rating: DiscoverRatingTier = .any,
-                runtime: DiscoverRuntime = .any) {
+                runtime: DiscoverRuntime = .any,
+                personIds: [Int] = []) {
         self.decade = decade
         self.monitoredOnly = monitoredOnly
         self.genres = genres
         self.status = status
         self.rating = rating
         self.runtime = runtime
+        self.personIds = personIds
     }
 
     /// Old `matches(year:monitored:)` — thin wrapper for back-compat.

@@ -12,6 +12,17 @@ public struct RootFolder: Decodable, Identifiable {
     let path: String
 }
 
+// MARK: - Cast member (for Discover card back face)
+
+public struct SearchResultCastMember: Equatable, Sendable {
+    public let name: String
+    public let posterURL: URL?
+    public init(name: String, posterURL: URL?) {
+        self.name = name
+        self.posterURL = posterURL
+    }
+}
+
 // MARK: - Search result (unified)
 
 public struct SearchResult: Identifiable, Equatable, Sendable {
@@ -36,13 +47,20 @@ public struct SearchResult: Identifiable, Equatable, Sendable {
     /// chat UI can route a tap to DetailView instead of the add flow.
     /// `nil` for non-cross-referenced results (e.g. regular `*_search` calls).
     let inLibraryArrId: Int?
+    /// Top cast members — populated lazily when the Discover card back face is
+    /// viewed. Empty for all non-Discover results and on first display.
+    let cast: [SearchResultCastMember]
+    /// Director name — populated lazily when the Discover card back face is viewed.
+    let director: String?
 
     init(id: Int, foreignId: String, title: String, subtitle: String?,
          year: Int?, rating: Double?, imdb: Double?, rottenTomatoes: Double?,
          metacritic: Double?, overview: String?, runtime: Int?,
          genres: [String], network: String?, certification: String?,
          posterURL: URL?, source: QueueItem.Source,
-         inLibraryArrId: Int? = nil) {
+         inLibraryArrId: Int? = nil,
+         cast: [SearchResultCastMember] = [],
+         director: String? = nil) {
         self.id = id
         self.foreignId = foreignId
         self.title = title
@@ -60,6 +78,8 @@ public struct SearchResult: Identifiable, Equatable, Sendable {
         self.posterURL = posterURL
         self.source = source
         self.inLibraryArrId = inLibraryArrId
+        self.cast = cast
+        self.director = director
     }
 
     /// Re-stamp `inLibraryArrId` without retyping every other field.
@@ -76,7 +96,26 @@ public struct SearchResult: Identifiable, Equatable, Sendable {
             genres: self.genres, network: self.network,
             certification: self.certification,
             posterURL: self.posterURL, source: self.source,
-            inLibraryArrId: id
+            inLibraryArrId: id,
+            cast: self.cast, director: self.director
+        )
+    }
+
+    /// Return a copy with credits applied. Called by DiscoverViewModel's
+    /// lazy credits fetch when the user hovers a card.
+    func withCredits(cast: [SearchResultCastMember], director: String?) -> SearchResult {
+        SearchResult(
+            id: self.id, foreignId: self.foreignId,
+            title: self.title, subtitle: self.subtitle,
+            year: self.year, rating: self.rating,
+            imdb: self.imdb, rottenTomatoes: self.rottenTomatoes,
+            metacritic: self.metacritic,
+            overview: self.overview, runtime: self.runtime,
+            genres: self.genres, network: self.network,
+            certification: self.certification,
+            posterURL: self.posterURL, source: self.source,
+            inLibraryArrId: self.inLibraryArrId,
+            cast: cast, director: director
         )
     }
 }

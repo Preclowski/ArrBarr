@@ -85,6 +85,34 @@ public struct TMDBTVCreditsResponse: Decodable, Sendable {
     public let cast: [TMDBTVSummary]
 }
 
+// MARK: - Movie credits (cast + crew)
+
+public struct TMDBCredits: Decodable, Sendable, Equatable {
+    public let cast: [TMDBCreditPerson]
+    public let crew: [TMDBCreditPerson]
+}
+
+public struct TMDBCreditPerson: Decodable, Sendable, Equatable, Identifiable {
+    public let id: Int
+    public let name: String
+    public let profilePath: String?
+    /// For cast: the character name. For crew: nil.
+    public let character: String?
+    /// For crew: the job (e.g., "Director"). For cast: nil.
+    public let job: String?
+    /// For crew: the department (e.g., "Directing"). For cast: nil.
+    public let department: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, character, job, department
+        case profilePath = "profile_path"
+    }
+
+    public var posterURL: URL? {
+        TMDBClient.imageURL(path: profilePath, size: "w185")
+    }
+}
+
 public struct TMDBDiscoverMovieResponse: Decodable, Sendable {
     public let results: [TMDBMovieSummary]
 }
@@ -177,6 +205,14 @@ public struct TMDBClient: Sendable {
         return resp.results
     }
 
+    public func movieCredits(movieId: Int) async throws -> TMDBCredits {
+        let resp: TMDBCredits = try await get(
+            path: "/movie/\(movieId)/credits",
+            query: []
+        )
+        return resp
+    }
+
     public func personMovieCredits(personId: Int) async throws -> [TMDBMovieSummary] {
         let resp: TMDBMovieCreditsResponse = try await get(
             path: "/person/\(personId)/movie_credits", query: []
@@ -201,7 +237,8 @@ public struct TMDBClient: Sendable {
         minVoteCount: Int = 50,
         voteAverageGte: Double? = nil,
         runtimeLte: Int? = nil,
-        runtimeGte: Int? = nil
+        runtimeGte: Int? = nil,
+        personIds: [Int] = []
     ) async throws -> [TMDBMovieSummary] {
         var query: [URLQueryItem] = [
             URLQueryItem(name: "sort_by", value: sortBy),
@@ -225,6 +262,10 @@ public struct TMDBClient: Sendable {
         }
         if let r = runtimeGte {
             query.append(URLQueryItem(name: "with_runtime.gte", value: String(r)))
+        }
+        if !personIds.isEmpty {
+            query.append(URLQueryItem(name: "with_people",
+                                      value: personIds.map(String.init).joined(separator: ",")))
         }
         let resp: TMDBDiscoverMovieResponse = try await get(path: "/discover/movie", query: query)
         return resp.results
