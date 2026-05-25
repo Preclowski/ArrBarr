@@ -92,29 +92,9 @@ public struct DiscoverTabView: View {
     }
 
     private var activeFilterSummary: String {
-        var parts: [String] = []
-        if viewModel.filter.decade.range != nil {
-            parts.append(viewModel.filter.decade.rawValue)
-        }
-        if !viewModel.filter.genres.isEmpty {
-            parts.append(viewModel.filter.genres.map(\.displayName).sorted().joined(separator: ", "))
-        }
-        if viewModel.filter.rating != .any {
-            parts.append(viewModel.filter.rating.rawValue.capitalized)
-        }
-        if viewModel.filter.runtime != .any {
-            parts.append(viewModel.filter.runtime.rawValue.capitalized)
-        }
-        if !viewModel.filter.personIds.isEmpty {
-            let count = viewModel.filter.personIds.count
-            parts.append("\(count) person\(count == 1 ? "" : "s")")
-        }
-        if !viewModel.moodText.trimmingCharacters(in: .whitespaces).isEmpty {
-            let mood = viewModel.moodText.trimmingCharacters(in: .whitespaces)
-            let truncated = mood.count > 24 ? String(mood.prefix(24)) + "\u{2026}" : mood
-            parts.append("\u{201C}\(truncated)\u{201D}")
-        }
-        return parts.joined(separator: " \u{00B7} ")
+        let mood = viewModel.moodText.trimmingCharacters(in: .whitespaces)
+        guard !mood.isEmpty else { return "" }
+        return mood.count > 40 ? String(mood.prefix(40)) + "\u{2026}" : mood
     }
 
     private var tinderTopBar: some View {
@@ -183,13 +163,7 @@ public struct DiscoverTabView: View {
     }
 
     private func clearAllFilters() {
-        viewModel.filter.decade = .any
-        viewModel.filter.genres = []
-        viewModel.filter.rating = .any
-        viewModel.filter.runtime = .any
-        viewModel.filter.personIds = []
         viewModel.moodText = ""
-        viewModel.userChangedFilter()
         Task { await viewModel.reshuffle() }
     }
 
