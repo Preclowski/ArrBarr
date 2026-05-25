@@ -22,7 +22,6 @@ public struct DiscoverPickerView: View {
     /// True once the user has manually clicked the disclosure chevron in
     /// the current session. Once set, auto-collapse on empty text no longer
     /// fires — the user's explicit choice wins.
-    @State private var moreFiltersManuallyExpanded: Bool = false
 
     public init(viewModel: DiscoverViewModel,
                 llmAvailable: Bool,
@@ -399,191 +398,57 @@ public struct DiscoverPickerView: View {
         }
     }
 
-    // MARK: - Suggestions row
+    // MARK: - AI starters footer
 
-    private static let suggestionsOrder: [SuggestedFilter.Category] =
-        [.people, .genre, .decade, .rating, .runtime, .ai]
-
-    private static func suggestionsRowLabel(
-        _ category: SuggestedFilter.Category
-    ) -> LocalizedStringKey {
-        switch category {
-        case .people:  return "Osoby"
-        case .genre:   return "Gatunki"
-        case .decade:  return "Dekady"
-        case .rating:  return "Vibe"
-        case .runtime: return "Długość"
-        case .ai:      return "AI"
-        }
-    }
-
+    /// Three rotating starter prompts as a slim footer below the
+    /// catalog. Replaces the old multi-row Suggestions table — the
+    /// catalog is always visible now, so the only signal we still
+    /// need is "you can also write naturally". Tap fills the composer
+    /// and focuses it. No filter mutation.
     @ViewBuilder
-    private var suggestionsRow: some View {
-        let grouped = viewModel.suggestionsByCategory(llmAvailable: llmAvailable)
+    private var aiStartersFooter: some View {
         VStack(alignment: .leading, spacing: 6) {
-            ForEach(Self.suggestionsOrder, id: \.self) { cat in
-                let items = grouped[cat] ?? []
-                // Show the row when there are suggestions OR when the
-                // category supports custom additions (so the "+ Add"
-                // chip stays reachable even if every suggestion is
-                // already active or the catalog is empty). AI row only
-                // renders when items are present.
-                if !items.isEmpty || canAddCustom(cat) {
-                    HStack(alignment: .firstTextBaseline, spacing: 8) {
-                        suggestionsRowHeader(cat)
-                        FlowLayout(spacing: 5) {
-                            ForEach(items) { s in
-                                suggestionPill(s)
-                            }
-                            // "+ Add" / "+ Add person" affordance pinned
-                            // at the end of each addable sub-row. User
-                            // no longer needs to expand More filters to
-                            // discover the custom-addition path.
-                            suggestionsAddChip(for: cat)
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    /// True when the category supports user-added entries directly
-    /// (people via TMDB search, free-form labels via custom tags).
-    private func canAddCustom(_ cat: SuggestedFilter.Category) -> Bool {
-        switch cat {
-        case .people, .genre, .decade, .rating, .runtime: return true
-        case .ai: return false
-        }
-    }
-
-    /// "+ Add" affordance per category. People uses TMDB free-text
-    /// search (unbounded universe). Catalog categories use the same
-    /// inline-text-input chip but in their own category color — so
-    /// the chip blends with the regular pills above it and the user
-    /// can type a custom label that persists to the next session.
-    @ViewBuilder
-    private func suggestionsAddChip(for cat: SuggestedFilter.Category) -> some View {
-        switch cat {
-        case .people:  addPersonChip
-        case .genre:   addCustomTagChip(for: .genre)
-        case .decade:  addCustomTagChip(for: .decade)
-        case .rating:  addCustomTagChip(for: .rating)
-        case .runtime: addCustomTagChip(for: .runtime)
-        case .ai:      EmptyView()
-        }
-    }
-
-    @ViewBuilder
-    private func suggestionsRowHeader(_ category: SuggestedFilter.Category) -> some View {
-        HStack(spacing: 3) {
-            if category == .ai {
+            HStack(spacing: 4) {
                 Image(systemName: "sparkles")
-                    .scaledFont(size: 8, weight: .semibold)
+                    .scaledFont(size: 9, weight: .semibold)
                     .foregroundStyle(.pink)
+                Text("AI starters", bundle: .module)
+                    .scaledFont(size: 9, weight: .semibold)
+                    .tracking(0.5)
+                    .textCase(.uppercase)
+                    .foregroundStyle(.tertiary)
             }
-            Text(Self.suggestionsRowLabel(category), bundle: .module)
-                .scaledFont(size: 9, weight: .semibold)
-                .tracking(0.5)
-                .textCase(.uppercase)
-                .foregroundStyle(.tertiary)
-        }
-        .frame(width: 50, alignment: .leading)
-    }
-
-    @ViewBuilder
-    private func suggestionPill(_ s: SuggestedFilter) -> some View {
-        SuggestionPillButton(
-            label: s.label,
-            icon: s.icon,
-            color: Self.color(for: s.category),
-            action: { applySuggestion(s) }
-        )
-    }
-
-    private func applySuggestion(_ s: SuggestedFilter) {
-        switch s.category {
-        case .people:
-            let name = String(s.id.dropFirst("person.".count))
-            viewModel.bumpPersonUsage(name)
-            Task { await viewModel.togglePerson(name: name) }
-        case .genre:
-            if let g = DiscoverGenre.allCases.first(where: {
-                "genre.\($0.rawValue)" == s.id
-            }) {
-                if viewModel.filter.genres.contains(g) {
-                    viewModel.filter.genres.remove(g)
-                } else {
-                    viewModel.filter.genres.insert(g)
-                }
-                viewModel.userChangedFilter()
-            }
-        case .decade:
-            if let d = DiscoverDecade.allCases.first(where: {
-                "decade.\($0.rawValue)" == s.id
-            }) {
-                viewModel.filter.decade =
-                    (viewModel.filter.decade == d) ? .any : d
-                viewModel.userChangedFilter()
-            }
-        case .rating:
-            if let r = DiscoverRatingTier.allCases.first(where: {
-                "rating.\($0.rawValue)" == s.id
-            }) {
-                viewModel.filter.rating =
-                    (viewModel.filter.rating == r) ? .any : r
-                viewModel.userChangedFilter()
-            }
-        case .runtime:
-            if let rt = DiscoverRuntime.allCases.first(where: {
-                "runtime.\($0.rawValue)" == s.id
-            }) {
-                viewModel.filter.runtime =
-                    (viewModel.filter.runtime == rt) ? .any : rt
-                viewModel.userChangedFilter()
-            }
-        case .ai:
-            // AI starter — drop the prompt into the free-text field and focus
-            // the composer so the user can edit before sending. No filter
-            // mutation; the prompt is just intent for the LLM.
-            freeText = s.label
-            freeTextFocused = true
-            return
-        }
-    }
-
-    /// Bare colored pill with hover state. Same idiom as the catalog
-    /// `PillButtonView` but always-colored (no "secondary when unpicked"
-    /// state, because the row never shows already-picked items).
-    private struct SuggestionPillButton: View {
-        let label: String
-        let icon: String?
-        let color: Color
-        let action: () -> Void
-        @State private var isHovering = false
-
-        var body: some View {
-            let strokeOpacity: Double = isHovering ? 0.95 : 0.55
-            let strokeWidth: CGFloat = isHovering ? 1.2 : 1.0
-            Button(action: action) {
-                HStack(spacing: 3) {
-                    if let icon {
-                        Image(systemName: icon)
-                            .scaledFont(size: 8, weight: .semibold)
+            FlowLayout(spacing: 5) {
+                ForEach(Self.aiStarters, id: \.self) { prompt in
+                    Button {
+                        freeText = String(localized: String.LocalizationValue(prompt),
+                                          bundle: .module)
+                        freeTextFocused = true
+                    } label: {
+                        HStack(spacing: 3) {
+                            Image(systemName: "sparkles")
+                                .scaledFont(size: 8, weight: .semibold)
+                            Text(LocalizedStringKey(prompt), bundle: .module)
+                                .scaledFont(size: 10, weight: .semibold)
+                        }
+                        .foregroundStyle(.pink)
+                        .padding(.horizontal, 7).padding(.vertical, 4)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 5)
+                                .stroke(Color.pink.opacity(0.55), lineWidth: 1)
+                        )
                     }
-                    Text(label)
-                        .scaledFont(size: 10, weight: .semibold)
+                    .buttonStyle(.plain)
                 }
-                .foregroundStyle(color)
-                .padding(.horizontal, 7).padding(.vertical, 4)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 5)
-                        .stroke(color.opacity(strokeOpacity), lineWidth: strokeWidth)
-                )
             }
-            .buttonStyle(.plain)
-            .onHover { hovering in isHovering = hovering }
         }
     }
+
+    private static let aiStarters: [String] = [
+        "Cozy Sunday afternoon",
+        "Long flight",
+        "Date night",
+    ]
 
     // MARK: - Main picker scroll
 
@@ -591,41 +456,15 @@ public struct DiscoverPickerView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 tmdbMissingBanner
-                suggestionsRow
-                moreFiltersChevron
-                if moreFiltersExpanded {
-                    pillRows
-                        .transition(.opacity.combined(with: .move(edge: .top)))
-                }
+                pillRows
+                if llmAvailable { aiStartersFooter }
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 14)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .animation(.smooth(duration: 0.22), value: moreFiltersExpanded)
         }
     }
 
-    // MARK: - More filters disclosure
-
-    @ViewBuilder
-    private var moreFiltersChevron: some View {
-        Button {
-            withAnimation(.smooth(duration: 0.2)) {
-                moreFiltersManuallyExpanded.toggle()
-            }
-        } label: {
-            HStack(spacing: 4) {
-                Image(systemName: moreFiltersExpanded ? "chevron.down" : "chevron.right")
-                    .scaledFont(size: 9, weight: .semibold)
-                Text("More filters", bundle: .module)
-                    .scaledFont(size: 10, weight: .semibold)
-            }
-            .foregroundStyle(.secondary)
-            .padding(.vertical, 4)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
 
     // MARK: - Pill rows (inline picked state)
 
@@ -1072,11 +911,6 @@ public struct DiscoverPickerView: View {
             .buttonStyle(.plain)
             .onHover { hovering in isHovering = hovering }
         }
-    }
-
-    private var moreFiltersExpanded: Bool {
-        !freeText.trimmingCharacters(in: .whitespaces).isEmpty
-            || moreFiltersManuallyExpanded
     }
 
     // MARK: - Chip composer

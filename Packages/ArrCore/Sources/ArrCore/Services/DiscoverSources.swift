@@ -223,14 +223,20 @@ public enum DiscoverSources {
         radarrLookup: @escaping @MainActor (String) async throws -> [RadarrLookupRecord],
         sonarrLookup: @escaping @MainActor (String) async throws -> [SonarrLookupRecord],
         libraryTmdbIds: @escaping @MainActor () -> Set<Int>,
-        decade: @escaping @MainActor () -> DiscoverDecade,
+        filterAccessor: @escaping @MainActor () -> DiscoverFilter,
+        selectedPeopleAccessor: @escaping @MainActor () -> [String] = { [] },
         kindHint: DiscoverMediaSelection = .movie,
         count: Int = 20
     ) -> DiscoverViewModel.LLMSource {
         return { exclude, mood in
+            // Pass the FULL filter into the prompt so genre / decade /
+            // rating / runtime / people land as explicit constraint
+            // lines, not buried in free-form mood text.
             let prompt = DiscoverLLMPrompt.build(
-                mood: mood, decade: decade(), count: count,
-                exclude: exclude, kindHint: kindHint
+                mood: mood,
+                filter: filterAccessor(),
+                selectedPeople: selectedPeopleAccessor(),
+                count: count, exclude: exclude, kindHint: kindHint
             )
             let response = try await provider.respond(prompt: prompt, tools: [], history: [])
             let parsed: DiscoverLLMPrompt.Response
