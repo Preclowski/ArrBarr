@@ -10,26 +10,8 @@ public enum DiscoverLLMPrompt {
         public let kind: DiscoverItemKind?
     }
 
-    public struct SuggestedFilters: Equatable, Sendable {
-        public let genres: [DiscoverGenre]      // resolved from names by parser
-        public let decade: DiscoverDecade?
-        public let status: DiscoverStatus?
-        /// Raw actor/director names extracted from mood text. Resolved to
-        /// TMDB person ids by DiscoverSources.llm after parsing.
-        public let people: [String]
-
-        public init(genres: [DiscoverGenre], decade: DiscoverDecade?,
-                    status: DiscoverStatus?, people: [String] = []) {
-            self.genres = genres
-            self.decade = decade
-            self.status = status
-            self.people = people
-        }
-    }
-
     public struct Response: Equatable, Sendable {
         public let suggestions: [Suggestion]
-        public let filters: SuggestedFilters
     }
 
     public enum ParseError: Error {
@@ -38,46 +20,33 @@ public enum DiscoverLLMPrompt {
     }
 
     public static func build(mood: String,
-                             decade: DiscoverDecade,
                              count: Int,
                              exclude: [String],
                              kindHint: DiscoverMediaSelection = .movie) -> String {
         var lines: [String] = []
-        let filtersSchema = "\"filters\": { \"genres\": [string], " +
-            "\"decade\": \"1980s\"|\"1990s\"|\"2000s\"|\"2010s\"|\"2020s\"|null, " +
-            "\"status\": \"any\"|\"owned\"|\"to_download\"|null, " +
-            "\"people\": [string] }"
         switch kindHint {
         case .movie:
             lines.append(
                 "You recommend movies for a tinder-style picker. " +
                 "Reply with a single JSON object, no prose, no markdown: " +
-                "{ \"titles\": [ { \"title\": string, \"year\": int|null } ], " +
-                filtersSchema + "}."
+                "{ \"titles\": [ { \"title\": string, \"year\": int|null } ] }."
             )
             lines.append("Return only movies — no TV shows.")
         case .show:
             lines.append(
                 "You recommend TV shows for a tinder-style picker. " +
                 "Reply with a single JSON object, no prose, no markdown: " +
-                "{ \"titles\": [ { \"title\": string, \"year\": int|null } ], " +
-                filtersSchema + "}."
+                "{ \"titles\": [ { \"title\": string, \"year\": int|null } ] }."
             )
             lines.append("Return only TV shows — no movies.")
         }
         lines.append("Mood: \(mood)")
-        if let range = decade.range {
-            lines.append("User-set era constraint already: \(range.lowerBound)-\(range.upperBound). Respect or refine it.")
-        }
         let kindLabel: String
         switch kindHint {
         case .movie: kindLabel = "movies"
         case .show:  kindLabel = "TV shows"
         }
         lines.append("Return exactly \(count) distinct \(kindLabel) in `titles`.")
-        lines.append("`filters.genres` may name standard genres (Action, Comedy, Drama, Thriller, etc.) — at most 3.")
-        lines.append("`filters.people` lists actor or director names explicitly mentioned in the mood — empty array if none.")
-        lines.append("`filters.status` is `owned` only when the user clearly wants what they already have.")
         if !exclude.isEmpty {
             lines.append("Do NOT include any of these already-shown titles:")
             lines.append(exclude.joined(separator: ", "))
@@ -91,16 +60,7 @@ public enum DiscoverLLMPrompt {
             throw ParseError.noJSONObjectFound
         }
         struct TitleRow: Decodable { let title: String; let year: Int?; let kind: String? }
-        struct FiltersRow: Decodable {
-            let genres: [String]?
-            let decade: String?
-            let status: String?
-            let people: [String]?
-        }
-        struct Root: Decodable {
-            let titles: [TitleRow]
-            let filters: FiltersRow?
-        }
+        struct Root: Decodable { let titles: [TitleRow] }
         do {
             let root = try JSONDecoder().decode(Root.self, from: Data(jsonSlice.utf8))
             let suggestions = root.titles.map { row -> Suggestion in
@@ -113,22 +73,7 @@ public enum DiscoverLLMPrompt {
                 }
                 return Suggestion(title: row.title, year: row.year, kind: kind)
             }
-            let genres = (root.filters?.genres ?? []).compactMap { DiscoverGenre.from(name: $0) }
-            let decade: DiscoverDecade? = (root.filters?.decade).flatMap { raw in
-                DiscoverDecade.allCases.first { $0.rawValue.lowercased() == raw.lowercased() }
-            }
-            let status: DiscoverStatus? = (root.filters?.status).flatMap { raw in
-                switch raw.lowercased() {
-                case "owned": return .owned
-                case "to_download", "todownload", "to-download": return .toDownload
-                case "any": return .any
-                default: return nil
-                }
-            }
-            let people = root.filters?.people ?? []
-            return Response(suggestions: suggestions,
-                            filters: SuggestedFilters(genres: genres, decade: decade,
-                                                      status: status, people: people))
+            return Response(suggestions: suggestions)
         } catch {
             throw ParseError.malformedJSON(underlying: error)
         }

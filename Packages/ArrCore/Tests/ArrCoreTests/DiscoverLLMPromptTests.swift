@@ -3,127 +3,80 @@ import XCTest
 
 final class DiscoverLLMPromptTests: XCTestCase {
 
-    func test_buildPrompt_includesMoodAndAskedCount() {
-        let p = DiscoverLLMPrompt.build(mood: "short 90s comedy",
-                                        decade: .nineties, count: 20, exclude: [])
-        XCTAssertTrue(p.contains("short 90s comedy"))
-        XCTAssertTrue(p.contains("20"))
-        XCTAssertTrue(p.contains("1990"))
+    // MARK: - build
+
+    func test_build_movie_includesMoodAndCount_andExclusionList() {
+        let p = DiscoverLLMPrompt.build(
+            mood: "cozy 90s comedy",
+            count: 12,
+            exclude: ["Toy Story", "Heat"],
+            kindHint: .movie
+        )
+        XCTAssertTrue(p.contains("Mood: cozy 90s comedy"))
+        XCTAssertTrue(p.contains("Return exactly 12 distinct movies"))
+        XCTAssertTrue(p.contains("Toy Story, Heat"))
+        XCTAssertTrue(p.contains("Return only movies"))
+        XCTAssertFalse(p.contains("filters"))    // no structured filter schema anymore
+        XCTAssertFalse(p.contains("decade"))     // no era constraint anymore
     }
 
-    func test_buildPrompt_listsExcludesWhenPresent() {
-        let p = DiscoverLLMPrompt.build(mood: "noir", decade: .any, count: 20,
-                                        exclude: ["Drive (2011)", "Heat (1995)"])
-        XCTAssertTrue(p.contains("Drive (2011)"))
-        XCTAssertTrue(p.contains("Heat (1995)"))
+    func test_build_show_returnsOnlyTVShows() {
+        let p = DiscoverLLMPrompt.build(
+            mood: "moody crime",
+            count: 8,
+            exclude: [],
+            kindHint: .show
+        )
+        XCTAssertTrue(p.contains("Return only TV shows"))
+        XCTAssertTrue(p.contains("Return exactly 8 distinct TV shows"))
     }
 
-    func test_buildPrompt_omitsExcludeSectionWhenEmpty() {
-        let p = DiscoverLLMPrompt.build(mood: "anything", decade: .any,
-                                        count: 20, exclude: [])
-        XCTAssertFalse(p.lowercased().contains("do not include"))
+    func test_build_emptyExclusion_omitsExclusionSection() {
+        let p = DiscoverLLMPrompt.build(
+            mood: "anything",
+            count: 5,
+            exclude: [],
+            kindHint: .movie
+        )
+        XCTAssertFalse(p.contains("Do NOT include"))
     }
 
-    func test_parse_extractsTitlesAndFilters() throws {
+    // MARK: - parse
+
+    func test_parse_titlesOnly_returnsSuggestions() throws {
+        let raw = #"""
+        {"titles":[{"title":"Heat","year":1995},{"title":"Inception","year":2010}]}
+        """#
+        let resp = try DiscoverLLMPrompt.parse(raw)
+        XCTAssertEqual(resp.suggestions.count, 2)
+        XCTAssertEqual(resp.suggestions[0].title, "Heat")
+        XCTAssertEqual(resp.suggestions[0].year, 1995)
+        XCTAssertEqual(resp.suggestions[1].title, "Inception")
+    }
+
+    func test_parse_titleKindAnnotation_isHonoured() throws {
+        let raw = #"""
+        {"titles":[{"title":"Breaking Bad","year":2008,"kind":"show"}]}
+        """#
+        let resp = try DiscoverLLMPrompt.parse(raw)
+        XCTAssertEqual(resp.suggestions.first?.kind, .show)
+    }
+
+    func test_parse_stripsMarkdownFences() throws {
         let raw = """
-        { "titles": [{"title":"Drive","year":2011}, {"title":"Heat","year":1995}],
-          "filters": { "genres": ["Thriller", "Crime"], "decade": "2010s", "status": "any" } }
-        """
-        let r = try DiscoverLLMPrompt.parse(raw)
-        XCTAssertEqual(r.suggestions.map(\.title), ["Drive", "Heat"])
-        XCTAssertEqual(Set(r.filters.genres), [.thriller, .crime])
-        XCTAssertEqual(r.filters.decade, .twoThousandTens)
-        XCTAssertEqual(r.filters.status, .any)
-    }
-
-    func test_parse_acceptsMissingFiltersBlock() throws {
-        let raw = """
-        { "titles": [{"title":"Drive","year":2011}] }
-        """
-        let r = try DiscoverLLMPrompt.parse(raw)
-        XCTAssertEqual(r.suggestions.count, 1)
-        XCTAssertTrue(r.filters.genres.isEmpty)
-        XCTAssertNil(r.filters.decade)
-        XCTAssertNil(r.filters.status)
-    }
-
-    func test_parse_toleratesCodeFences() throws {
-        let raw = """
-        Here you go:
         ```json
-        { "titles": [{"title":"Drive","year":2011}] }
+        {"titles":[{"title":"Akira","year":1988}]}
         ```
         """
-        let r = try DiscoverLLMPrompt.parse(raw)
-        XCTAssertEqual(r.suggestions.count, 1)
+        let resp = try DiscoverLLMPrompt.parse(raw)
+        XCTAssertEqual(resp.suggestions.first?.title, "Akira")
     }
 
-    func test_parse_toleratesTrailingProse() throws {
-        let raw = """
-        { "titles": [{"title":"Drive","year":2011}] }
-        Hope this helps!
-        """
-        let r = try DiscoverLLMPrompt.parse(raw)
-        XCTAssertEqual(r.suggestions.count, 1)
+    func test_parse_noJSON_throws() {
+        XCTAssertThrowsError(try DiscoverLLMPrompt.parse("hello there")) { err in
+            guard case DiscoverLLMPrompt.ParseError.noJSONObjectFound = err else {
+                return XCTFail("Unexpected error: \(err)")
+            }
+        }
     }
-
-    func test_parse_throwsOnNoObject() {
-        XCTAssertThrowsError(try DiscoverLLMPrompt.parse("not json at all"))
-    }
-
-    func test_parse_unknownGenreNamesIgnored() throws {
-        let raw = """
-        { "titles": [{"title":"X","year":null}],
-          "filters": { "genres": ["Comedy", "Bogus Genre"] } }
-        """
-        let r = try DiscoverLLMPrompt.parse(raw)
-        XCTAssertEqual(r.filters.genres, [.comedy])
-    }
-
-    // MARK: - Kind parsing
-
-    func test_parse_kindField_parsesMovieAndShow() throws {
-        let raw = """
-        { "titles": [
-            {"title":"Drive","year":2011,"kind":"movie"},
-            {"title":"Breaking Bad","year":2008,"kind":"show"}
-          ] }
-        """
-        let r = try DiscoverLLMPrompt.parse(raw)
-        XCTAssertEqual(r.suggestions[0].kind, .movie)
-        XCTAssertEqual(r.suggestions[1].kind, .show)
-    }
-
-    func test_parse_kindField_nilWhenAbsent() throws {
-        let raw = """
-        { "titles": [{"title":"Drive","year":2011}] }
-        """
-        let r = try DiscoverLLMPrompt.parse(raw)
-        XCTAssertNil(r.suggestions[0].kind)
-    }
-
-    func test_parse_kindField_tvAliasesResolveToShow() throws {
-        let raw = """
-        { "titles": [{"title":"Sopranos","year":1999,"kind":"tv"}] }
-        """
-        let r = try DiscoverLLMPrompt.parse(raw)
-        XCTAssertEqual(r.suggestions[0].kind, .show)
-    }
-
-    // MARK: - Kind hint in build
-
-    func test_buildPrompt_movieHint_mentionsMoviesOnly() {
-        let p = DiscoverLLMPrompt.build(mood: "noir", decade: .any,
-                                        count: 10, exclude: [], kindHint: .movie)
-        XCTAssertTrue(p.contains("movies"), "should mention movies")
-        XCTAssertFalse(p.contains("\"kind\""), "movie mode should omit kind field in schema")
-    }
-
-    func test_buildPrompt_showHint_mentionsTVShows() {
-        let p = DiscoverLLMPrompt.build(mood: "noir", decade: .any,
-                                        count: 10, exclude: [], kindHint: .show)
-        XCTAssertTrue(p.lowercased().contains("tv show") || p.lowercased().contains("shows"),
-                      "should mention TV shows")
-    }
-
 }
