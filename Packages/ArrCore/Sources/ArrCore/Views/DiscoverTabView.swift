@@ -160,9 +160,13 @@ public struct DiscoverTabView: View {
                         .scaleEffect(1.0 - CGFloat(idx) * 0.08, anchor: .top)
                         .offset(x: isTop ? dragOffset.width : 0,
                                 y: CGFloat(idx) * 18 + (isTop ? dragOffset.height * 0.3 : 0))
-                        .rotationEffect(.degrees(isTop ? Double(dragOffset.width / 18) : 0),
-                                        anchor: .bottom)
-                        .opacity(idx == 0 ? 1.0 : 1.0 - Double(idx) * 0.28)
+                        .rotationEffect(
+                            isTop
+                                ? .degrees(Double(dragOffset.width / 18))
+                                : stackRotation(for: item, idx: idx),
+                            anchor: isTop ? .bottom : .center
+                        )
+                        .opacity(idx == 0 ? 1.0 : 1.0 - Double(idx) * 0.25)
                         .allowsHitTesting(isTop)
                         .zIndex(Double(stack.count - idx))
                         .gesture(isTop ? dragGesture : nil)
@@ -173,6 +177,18 @@ public struct DiscoverTabView: View {
             // Center the stack vertically so empty space splits above + below.
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
         }
+    }
+
+    private func stackRotation(for item: DiscoverItem, idx: Int) -> Angle {
+        // Top card sits flat. Peek cards tilt a few degrees in alternating
+        // directions, deterministic per item so the layout doesn't shuffle.
+        guard idx > 0 else { return .zero }
+        // FNV-1a-ish hash → -1..+1
+        var h: UInt32 = 2166136261
+        for byte in item.dedupKey.utf8 { h ^= UInt32(byte); h = h &* 16777619 }
+        let normalized = Double(h % 200) / 100.0 - 1.0  // -1..+1
+        let degrees = normalized * 3.5  // ±3.5° max
+        return .degrees(degrees)
     }
 
     private var dragGesture: some Gesture {

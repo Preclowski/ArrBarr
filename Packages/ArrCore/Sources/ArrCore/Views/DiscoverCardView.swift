@@ -218,10 +218,27 @@ public struct DiscoverCardView: View {
             swipeStamp
         }
         .overlay(
+            // 1) Crisp outer border — what catches light on the card's edge.
             RoundedRectangle(cornerRadius: 16)
-                .stroke(.white.opacity(0.28), lineWidth: 1)
+                .stroke(.white.opacity(0.32), lineWidth: 1)
         )
-        .shadow(color: .black.opacity(0.35), radius: 14, x: 0, y: 6)
+        .overlay(
+            // 2) Inner bottom highlight — a thin gradient on the bottom edge
+            //    suggesting card thickness. Just 4pt tall.
+            VStack {
+                Spacer()
+                LinearGradient(
+                    colors: [.white.opacity(0.0), .white.opacity(0.18)],
+                    startPoint: .top, endPoint: .bottom
+                )
+                .frame(height: 4)
+                .blendMode(.plusLighter)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .allowsHitTesting(false)
+        )
+        .shadow(color: .black.opacity(0.45), radius: 12, x: 0, y: 4)
+        .shadow(color: .black.opacity(0.20), radius: 4, x: 0, y: 1)
     }
 
     // MARK: - Info drawer
