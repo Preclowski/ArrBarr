@@ -91,6 +91,11 @@ public struct PopoverContentView: View {
         }
     }
 
+    /// Discover needs at least Radarr (the library source + add-to-radarr
+    /// action both require it). TMDB-only / LLM-only modes are gated
+    /// inside the VM, not here.
+    private var discoverAvailable: Bool { radarrConfigured }
+
     @ViewBuilder
     private var chatTabContent: some View {
         if !chatHolder.vm.providerIsAvailable {
@@ -104,6 +109,7 @@ public struct PopoverContentView: View {
         case queue = "Queue"
         case upcoming = "Upcoming"
         case chat = "Chat"
+        case discover = "Discover"
         // `.add` (Search) removed — the queue's floating filter bar
         // now doubles as a global search. Empty filter → queue rows;
         // typing → queue rows that match + library/add-new candidates
@@ -127,6 +133,11 @@ public struct PopoverContentView: View {
             }
             .onChange(of: chatAvailable) { _, available in
                 if !available && selectedTab == .chat {
+                    selectedTab = .queue
+                }
+            }
+            .onChange(of: discoverAvailable) { _, available in
+                if !available && selectedTab == .discover {
                     selectedTab = .queue
                 }
             }
@@ -209,6 +220,8 @@ public struct PopoverContentView: View {
                         case .upcoming: upcomingContent
                         case .chat:
                             chatTabContent
+                        case .discover:
+                            DiscoverTabView()
                         }
                     }
                 } else {
@@ -432,6 +445,7 @@ public struct PopoverContentView: View {
         Tab.allCases.filter { tab in
             switch tab {
             case .chat: return chatAvailable
+            case .discover: return discoverAvailable
             default:    return true
             }
         }
