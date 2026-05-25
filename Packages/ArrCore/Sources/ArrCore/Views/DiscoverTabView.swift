@@ -137,14 +137,89 @@ public struct DiscoverTabView: View {
                 ProgressView().controlSize(.small)
                 Spacer()
             }
-        } else if let item = viewModel.current {
-            DiscoverCardView(
-                item: item,
-                onSwipeRight: { Task { await viewModel.swipe(right: true) } },
-                onSwipeLeft:  { Task { await viewModel.swipe(right: false) } }
-            )
+        } else if viewModel.current != nil {
+            VStack(spacing: 12) {
+                cardStack
+                cardActionRow
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 14)
+            .padding(.bottom, 10)
         } else {
             emptyStackState
+        }
+    }
+
+    /// Top card + up to 2 behind it, offset + scaled + dimmed for the
+    /// classic tinder peek. Only the top card receives gestures / keystrokes.
+    private var cardStack: some View {
+        let stack = visibleStack.enumerated().map { ($0, $1) }
+        return ZStack {
+            ForEach(stack.reversed(), id: \.1.id) { (idx, item) in
+                DiscoverCardView(item: item)
+                    .scaleEffect(1.0 - CGFloat(idx) * 0.04, anchor: .top)
+                    .offset(y: CGFloat(idx) * 10)
+                    .opacity(idx == 0 ? 1.0 : 1.0 - Double(idx) * 0.18)
+                    .allowsHitTesting(idx == 0)
+                    .zIndex(Double(stack.count - idx))
+                    .animation(.spring(response: 0.32, dampingFraction: 0.85),
+                               value: viewModel.current?.dedupKey)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var visibleStack: [DiscoverItem] {
+        let curr = viewModel.current.map { [$0] } ?? []
+        let peek = Array(viewModel.queue.prefix(2))
+        return curr + peek
+    }
+
+    /// Action row owned by the chrome (not the card) so it's always
+    /// visible regardless of card size. Hooks into the VM directly.
+    private var cardActionRow: some View {
+        HStack(spacing: 10) {
+            Button { Task { await viewModel.swipe(right: false) } } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "xmark")
+                        .scaledFont(size: 11, weight: .semibold)
+                    Text("Skip", bundle: .module)
+                        .scaledFont(size: 12, weight: .semibold)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 7)
+            }
+            .modifier(GlassProminentButtonStyle())
+            .tint(.red)
+            .keyboardShortcut(.leftArrow, modifiers: [])
+
+            Button { Task { await viewModel.swipe(right: true) } } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: rightActionIcon)
+                        .scaledFont(size: 11, weight: .semibold)
+                    Text(rightActionLabel, bundle: .module)
+                        .scaledFont(size: 12, weight: .semibold)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 7)
+            }
+            .modifier(GlassProminentButtonStyle())
+            .keyboardShortcut(.rightArrow, modifiers: [])
+        }
+    }
+
+    private var rightActionIcon: String {
+        guard let item = viewModel.current else { return "plus" }
+        switch item.action {
+        case .addToRadarr: return "plus"
+        case .openDetail:  return "play.fill"
+        }
+    }
+    private var rightActionLabel: LocalizedStringKey {
+        guard let item = viewModel.current else { return "Add to Radarr" }
+        switch item.action {
+        case .addToRadarr: return "Add to Radarr"
+        case .openDetail:  return "Watch"
         }
     }
 
