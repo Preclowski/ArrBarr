@@ -465,11 +465,6 @@ public struct DiscoverPickerView: View {
             } label: {
                 Image(systemName: "arrow.up.circle.fill")
                     .scaledFont(size: 22)
-                    .foregroundStyle(
-                        canCommit
-                            ? Color.accentColor
-                            : Color.secondary
-                    )
             }
             .buttonStyle(.plain)
             .disabled(!canCommit)
