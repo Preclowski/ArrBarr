@@ -1435,10 +1435,10 @@ public struct PopoverContentView: View {
         var cachedRadarrLibrary: [RadarrLibraryRecord] = []
         var cachedSonarrLibrary: [SonarrLibraryRecord] = []
 
-        if selection == .movie || selection == .auto {
+        if selection == .movie {
             do { cachedRadarrLibrary = try await radarrClient.fetchAllMovies() } catch {}
         }
-        if selection == .show || selection == .auto {
+        if selection == .show {
             do { cachedSonarrLibrary = try await sonarrClient.fetchAllSeries() } catch {}
         }
 
@@ -1492,10 +1492,9 @@ public struct PopoverContentView: View {
             )
             : nil
 
-        // In .auto mode skip TMDB and Library — LLM is the only source.
         discoverViewModel.configure(
-            tmdb: selection == .auto ? nil : tmdbSource,
-            library: selection == .auto ? nil : librarySource,
+            tmdb: tmdbSource,
+            library: librarySource,
             llm: llmSource
         )
         discoverViewModel.configureCredits(apiKey: tmdbApiKey)

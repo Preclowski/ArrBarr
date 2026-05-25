@@ -320,7 +320,6 @@ public struct DiscoverPickerView: View {
             switch kind {
             case .movie: return ("Movies", .blue, "film")
             case .show:  return ("Shows", .orange, "tv")
-            case .auto:  return ("AI decides", .purple, "sparkles")
             }
         }()
         HStack(spacing: 6) {
@@ -600,9 +599,6 @@ public struct DiscoverPickerView: View {
     private func commit() {
         let free = freeText.trimmingCharacters(in: .whitespacesAndNewlines)
         viewModel.moodText = free
-        if !free.isEmpty && llmAvailable {
-            viewModel.mediaSelection = .auto
-        }
         viewModel.userSubmittedMood()
         freeTextFocused = false
         onSubmit()

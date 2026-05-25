@@ -7,14 +7,13 @@ public enum DiscoverItemKind: String, Equatable, Sendable {
 
 /// The user's media-type selection in the Discover picker.
 public enum DiscoverMediaSelection: String, CaseIterable, Identifiable, Sendable {
-    case movie, show, auto
+    case movie, show
 
     public var id: String { rawValue }
     public var displayName: String {
         switch self {
         case .movie: return "Movies"
         case .show:  return "Shows"
-        case .auto:  return "AI decides"
         }
     }
 }

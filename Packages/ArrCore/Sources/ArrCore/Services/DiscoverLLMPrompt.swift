@@ -5,7 +5,7 @@ public enum DiscoverLLMPrompt {
     public struct Suggestion: Equatable, Sendable {
         public let title: String
         public let year: Int?
-        /// Only present when `kindHint == .auto` — LLM annotates each title.
+        /// Optional kind annotation from the LLM response.
         /// `nil` means the caller infers the kind from the current mediaSelection.
         public let kind: DiscoverItemKind?
     }
@@ -64,15 +64,6 @@ public enum DiscoverLLMPrompt {
                 filtersSchema + "}."
             )
             lines.append("Return only TV shows — no movies.")
-        case .auto:
-            lines.append(
-                "You recommend movies and TV shows for a tinder-style picker. " +
-                "Decide for each title whether it is a movie or a TV show based on the mood. " +
-                "Reply with a single JSON object, no prose, no markdown: " +
-                "{ \"titles\": [ { \"title\": string, \"year\": int|null, \"kind\": \"movie\"|\"show\" } ], " +
-                filtersSchema + "}."
-            )
-            lines.append("Label each title with `\"kind\": \"movie\"` or `\"kind\": \"show\"` as appropriate.")
         }
         lines.append("Mood: \(mood)")
         if let range = decade.range {
@@ -82,7 +73,6 @@ public enum DiscoverLLMPrompt {
         switch kindHint {
         case .movie: kindLabel = "movies"
         case .show:  kindLabel = "TV shows"
-        case .auto:  kindLabel = "titles (mix of movies and shows)"
         }
         lines.append("Return exactly \(count) distinct \(kindLabel) in `titles`.")
         lines.append("`filters.genres` may name standard genres (Action, Comedy, Drama, Thriller, etc.) — at most 3.")

@@ -211,8 +211,6 @@ public enum DiscoverSources {
     /// backend used to enrich suggestions:
     ///   - `.movie` — Radarr lookup, all cards are movies.
     ///   - `.show`  — Sonarr lookup, all cards are shows.
-    ///   - `.auto`  — LLM annotates each title; each suggestion's own
-    ///                `kind` field routes the lookup.
     @MainActor
     public static func llm(
         provider: LLMProvider,
@@ -239,7 +237,7 @@ public enum DiscoverSources {
             let owned = libraryTmdbIds()
             var out: [DiscoverItem] = []
             for s in parsed.suggestions {
-                // Resolve kind: use suggestion's own label in .auto mode,
+                // Resolve kind: use suggestion's own label when present,
                 // otherwise fall back to the kindHint.
                 let resolvedKind: DiscoverItemKind
                 if let sugKind = s.kind {

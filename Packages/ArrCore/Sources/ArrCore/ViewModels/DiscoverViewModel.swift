@@ -195,15 +195,9 @@ public final class DiscoverViewModel: ObservableObject {
 
     private func availableSources() -> [Source] {
         var out: [Source] = []
-        // In .auto mode the LLM is the only source — it labels each title
-        // with its own kind. TMDB and Library need a known kind to route
-        // correctly, so they are skipped.
-        let autoMode = mediaSelection == .auto
-        if !autoMode {
-            if tmdb != nil && !failedSources.contains(.tmdb) { out.append(.tmdb) }
-            if library != nil && !failedSources.contains(.library) && !libraryDrained {
-                out.append(.library)
-            }
+        if tmdb != nil && !failedSources.contains(.tmdb) { out.append(.tmdb) }
+        if library != nil && !failedSources.contains(.library) && !libraryDrained {
+            out.append(.library)
         }
         if llm != nil && !failedSources.contains(.llm) && !llmDormant
            && !moodText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {

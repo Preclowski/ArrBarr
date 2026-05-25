@@ -156,25 +156,6 @@ final class DiscoverViewModelTests: XCTestCase {
         XCTAssertEqual(receivedExcludes[1].count, 2, "second call should exclude the 2 already-shown")
     }
 
-    func test_autoMode_firesOnlyLLM() async {
-        var tmdbCalls = 0, libCalls = 0, llmCalls = 0
-        let vm = freshVM()
-        vm.mediaSelection = .auto
-        vm.moodText = "noir"
-        vm.configure(
-            tmdb: { _, _ in tmdbCalls += 1; return [] },
-            library: { _ in libCalls += 1; return [] },
-            llm: { _, _ in
-                llmCalls += 1
-                return DiscoverViewModel.LLMResult(items: [], suggestedFilters: nil)
-            }
-        )
-        await vm.start()
-        XCTAssertEqual(tmdbCalls, 0)
-        XCTAssertEqual(libCalls, 0)
-        XCTAssertEqual(llmCalls, 1)
-    }
-
     func test_llmDrain_appliesSuggestedFilters() async {
         let suggested = DiscoverLLMPrompt.SuggestedFilters(
             genres: [.comedy, .drama], decade: .nineties, status: .owned)

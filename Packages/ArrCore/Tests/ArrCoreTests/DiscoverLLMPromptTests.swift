@@ -126,11 +126,4 @@ final class DiscoverLLMPromptTests: XCTestCase {
                       "should mention TV shows")
     }
 
-    func test_buildPrompt_autoHint_includesKindFieldInSchema() {
-        let p = DiscoverLLMPrompt.build(mood: "noir", decade: .any,
-                                        count: 10, exclude: [], kindHint: .auto)
-        XCTAssertTrue(p.contains("\"kind\""), "auto mode should include kind field in schema")
-        XCTAssertTrue(p.contains("\"movie\"") && p.contains("\"show\""),
-                      "should show both options")
-    }
 }
