@@ -8,16 +8,12 @@ public final class DiscoverViewModel: ObservableObject {
         case tmdb, library, llm
     }
 
-    public enum DiscoverStage: Sendable { case picker, tinder }
-
     // MARK: - Persistence keys
 
     private static let hasPickedKindKey = "ArrBarr.discoverHasPickedKind"
     private static let autoJumpEnabledKey = "ArrBarr.discoverAutoJumpEnabled"
 
     // MARK: - Published state
-
-    @Published public var stage: DiscoverStage = .picker
 
     @Published public var hasPickedKind: Bool {
         didSet {
@@ -146,12 +142,6 @@ public final class DiscoverViewModel: ObservableObject {
     }
 
     // MARK: - User-action tick helpers
-
-    /// Call when the user submits the mood field. Bumps `userActionTick`
-    /// so the View's `task(id:)` fires a reshuffle.
-    public func userSubmittedMood() {
-        userActionTick &+= 1
-    }
 
     /// Call when the user changes the media kind selector (Movies / Shows / AI decides).
     public func mediaSelectionChanged() {
