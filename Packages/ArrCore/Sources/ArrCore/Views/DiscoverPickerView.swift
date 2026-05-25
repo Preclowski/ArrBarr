@@ -456,137 +456,20 @@ public struct DiscoverPickerView: View {
         }
     }
 
-    /// Maps `SuggestedFilter.Category` to the right "+ Add" affordance.
-    /// People: free-text TMDB search (unbounded universe). Catalog
-    /// categories (genre / decade / rating / runtime): native Menu
-    /// listing every item from the enum + a "Custom…" fallback that
-    /// flips into the inline text field for free-form LLM intent.
+    /// "+ Add" affordance per category. People uses TMDB free-text
+    /// search (unbounded universe). Catalog categories use the same
+    /// inline-text-input chip but in their own category color — so
+    /// the chip blends with the regular pills above it and the user
+    /// can type a custom label that persists to the next session.
     @ViewBuilder
     private func suggestionsAddChip(for cat: SuggestedFilter.Category) -> some View {
         switch cat {
         case .people:  addPersonChip
-        case .genre:   catalogAddMenu(for: .genre)
-        case .decade:  catalogAddMenu(for: .decade)
-        case .rating:  catalogAddMenu(for: .rating)
-        case .runtime: catalogAddMenu(for: .runtime)
+        case .genre:   addCustomTagChip(for: .genre)
+        case .decade:  addCustomTagChip(for: .decade)
+        case .rating:  addCustomTagChip(for: .rating)
+        case .runtime: addCustomTagChip(for: .runtime)
         case .ai:      EmptyView()
-        }
-    }
-
-    /// "+ Add" chip that opens a native macOS Menu pre-populated with
-    /// the category's full enum + a Custom… option. If the user is
-    /// already in the inline-text-input mode for this category (they
-    /// chose Custom…), render the text field instead of the menu.
-    @ViewBuilder
-    private func catalogAddMenu(for category: PickerCategory) -> some View {
-        if addingTagFor == category.rawValue {
-            // Custom… was chosen — render the inline text field via the
-            // existing helper. Same UX as before for free-form labels.
-            addCustomTagChip(for: category)
-        } else {
-            Menu {
-                catalogMenuItems(for: category)
-                Divider()
-                Button {
-                    addingTagFor = category.rawValue
-                    newCustomTagText = ""
-                } label: {
-                    Label {
-                        Text("Custom…", bundle: .module)
-                    } icon: {
-                        Image(systemName: "pencil")
-                    }
-                }
-            } label: {
-                HStack(spacing: 3) {
-                    Image(systemName: "plus")
-                        .scaledFont(size: 8, weight: .bold)
-                    Text("Add", bundle: .module)
-                        .scaledFont(size: 10, weight: .semibold)
-                }
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, 7).padding(.vertical, 4)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 5)
-                        .stroke(Color.secondary.opacity(0.5),
-                                style: StrokeStyle(lineWidth: 1, dash: [3, 2]))
-                )
-            }
-            .menuStyle(.borderlessButton)
-            .menuIndicator(.hidden)
-            .fixedSize()
-        }
-    }
-
-    /// Menu items for a single catalog category — one Button per enum
-    /// case. Toggles the same filter state the in-catalog pill taps do,
-    /// so picking from this menu is equivalent to tapping the pill in
-    /// More filters. Already-active items render a leading checkmark.
-    @ViewBuilder
-    private func catalogMenuItems(for category: PickerCategory) -> some View {
-        switch category {
-        case .people:
-            // People uses TMDB free-text search, never the catalog menu.
-            EmptyView()
-        case .genre:
-            ForEach(DiscoverGenre.allCases, id: \.self) { g in
-                Button {
-                    if viewModel.filter.genres.contains(g) {
-                        viewModel.filter.genres.remove(g)
-                    } else {
-                        viewModel.filter.genres.insert(g)
-                    }
-                    viewModel.userChangedFilter()
-                } label: {
-                    if viewModel.filter.genres.contains(g) {
-                        Label(g.displayName, systemImage: "checkmark")
-                    } else {
-                        Text(g.displayName)
-                    }
-                }
-            }
-        case .decade:
-            ForEach(DiscoverDecade.allCases.filter { $0 != .any }, id: \.self) { d in
-                Button {
-                    viewModel.filter.decade =
-                        (viewModel.filter.decade == d) ? .any : d
-                    viewModel.userChangedFilter()
-                } label: {
-                    if viewModel.filter.decade == d {
-                        Label(d.rawValue, systemImage: "checkmark")
-                    } else {
-                        Text(d.rawValue)
-                    }
-                }
-            }
-        case .rating:
-            ForEach(DiscoverRatingTier.allCases.filter { $0 != .any }, id: \.self) { r in
-                Button {
-                    viewModel.filter.rating =
-                        (viewModel.filter.rating == r) ? .any : r
-                    viewModel.userChangedFilter()
-                } label: {
-                    if viewModel.filter.rating == r {
-                        Label(r.rawValue.capitalized, systemImage: "checkmark")
-                    } else {
-                        Text(r.rawValue.capitalized)
-                    }
-                }
-            }
-        case .runtime:
-            ForEach(DiscoverRuntime.allCases.filter { $0 != .any }, id: \.self) { rt in
-                Button {
-                    viewModel.filter.runtime =
-                        (viewModel.filter.runtime == rt) ? .any : rt
-                    viewModel.userChangedFilter()
-                } label: {
-                    if viewModel.filter.runtime == rt {
-                        Label(rt.rawValue.capitalized, systemImage: "checkmark")
-                    } else {
-                        Text(rt.rawValue.capitalized)
-                    }
-                }
-            }
         }
     }
 
@@ -813,13 +696,14 @@ public struct DiscoverPickerView: View {
     /// that the user can right-click to remove.
     @ViewBuilder
     private var addPersonChip: some View {
+        let color: Color = .teal
         if addingPerson {
             HStack(spacing: 4) {
                 TextField("Person", text: $newPersonText,
-                          prompt: Text("Add person", bundle: .module))
+                          prompt: Text("Type name…", bundle: .module))
                     .textFieldStyle(.plain)
                     .scaledFont(size: 10, weight: .semibold)
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(color)
                     .focused($newPersonFocused)
                     .frame(width: 110)
                     .onSubmit { commitNewPerson() }
@@ -828,19 +712,17 @@ public struct DiscoverPickerView: View {
                 } label: {
                     Image(systemName: "checkmark")
                         .scaledFont(size: 8, weight: .bold)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(color)
                 }
                 .buttonStyle(.plain)
                 .help(Text("Save person", bundle: .module))
-                // Cancel — close input without saving. Mirrors macOS form
-                // affordances where ✓ commits and × bails.
                 Button {
                     newPersonText = ""
                     addingPerson = false
                 } label: {
                     Image(systemName: "xmark")
                         .scaledFont(size: 8, weight: .bold)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(color.opacity(0.5))
                 }
                 .buttonStyle(.plain)
                 .help(Text("Cancel", bundle: .module))
@@ -848,7 +730,7 @@ public struct DiscoverPickerView: View {
             .padding(.horizontal, 7).padding(.vertical, 4)
             .overlay(
                 RoundedRectangle(cornerRadius: 5)
-                    .stroke(Color.secondary.opacity(0.6), lineWidth: 1)
+                    .stroke(color.opacity(0.85), lineWidth: 1.2)
             )
             .onAppear { newPersonFocused = true }
         } else {
@@ -861,16 +743,11 @@ public struct DiscoverPickerView: View {
                     Text("Add person", bundle: .module)
                         .scaledFont(size: 10, weight: .semibold)
                 }
-                // Neutral grey — the "+" chip is a meta affordance ("add
-                // something here"), not a selectable filter. Painting it
-                // the category color made it compete visually with the
-                // real pills.
-                .foregroundStyle(.secondary)
+                .foregroundStyle(color)
                 .padding(.horizontal, 7).padding(.vertical, 4)
                 .overlay(
                     RoundedRectangle(cornerRadius: 5)
-                        .stroke(Color.secondary.opacity(0.5),
-                                style: StrokeStyle(lineWidth: 1, dash: [3, 2]))
+                        .stroke(color.opacity(0.55), lineWidth: 1)
                 )
             }
             .buttonStyle(.plain)
@@ -900,13 +777,19 @@ public struct DiscoverPickerView: View {
     /// real pills.
     @ViewBuilder
     private func addCustomTagChip(for category: PickerCategory) -> some View {
+        // Match the category accent so the chip blends with the
+        // regular pills above it. Earlier dashed-grey treatment made
+        // the affordance feel like a debug button bolted onto the
+        // category. With the colored skin, "+ Add" reads as "another
+        // colored item I can drop in here".
+        let color = catalogColor(for: category)
         if addingTagFor == category.rawValue {
             HStack(spacing: 4) {
                 TextField("Custom", text: $newCustomTagText,
-                          prompt: Text("Add", bundle: .module))
+                          prompt: Text("Type label…", bundle: .module))
                     .textFieldStyle(.plain)
                     .scaledFont(size: 10, weight: .semibold)
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(color)
                     .focused($newCustomTagFocused)
                     .frame(width: 90)
                     .onSubmit { commitNewCustomTag(category: category) }
@@ -915,7 +798,7 @@ public struct DiscoverPickerView: View {
                 } label: {
                     Image(systemName: "checkmark")
                         .scaledFont(size: 8, weight: .bold)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(color)
                 }
                 .buttonStyle(.plain)
                 Button {
@@ -924,7 +807,7 @@ public struct DiscoverPickerView: View {
                 } label: {
                     Image(systemName: "xmark")
                         .scaledFont(size: 8, weight: .bold)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(color.opacity(0.5))
                 }
                 .buttonStyle(.plain)
                 .help(Text("Cancel", bundle: .module))
@@ -932,7 +815,7 @@ public struct DiscoverPickerView: View {
             .padding(.horizontal, 7).padding(.vertical, 4)
             .overlay(
                 RoundedRectangle(cornerRadius: 5)
-                    .stroke(Color.secondary.opacity(0.6), lineWidth: 1)
+                    .stroke(color.opacity(0.85), lineWidth: 1.2)
             )
             .onAppear { newCustomTagFocused = true }
         } else {
@@ -946,15 +829,27 @@ public struct DiscoverPickerView: View {
                     Text("Add", bundle: .module)
                         .scaledFont(size: 10, weight: .semibold)
                 }
-                .foregroundStyle(.secondary)
+                .foregroundStyle(color)
                 .padding(.horizontal, 7).padding(.vertical, 4)
                 .overlay(
                     RoundedRectangle(cornerRadius: 5)
-                        .stroke(Color.secondary.opacity(0.5),
-                                style: StrokeStyle(lineWidth: 1, dash: [3, 2]))
+                        .stroke(color.opacity(0.55), lineWidth: 1)
                 )
             }
             .buttonStyle(.plain)
+        }
+    }
+
+    /// Matches the colors in `tint(for:)` and `color(for:)` so the
+    /// "+ Add" chip and the inline TextField inherit the category's
+    /// accent — keeps the visual language consistent end-to-end.
+    private func catalogColor(for category: PickerCategory) -> Color {
+        switch category {
+        case .people:  return .teal
+        case .genre:   return .blue
+        case .decade:  return .orange
+        case .rating:  return .green
+        case .runtime: return .purple
         }
     }
 
