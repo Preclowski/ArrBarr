@@ -157,16 +157,16 @@ public struct DiscoverTabView: View {
                                      isHovered: isTop ? $isCardHovered : .constant(false),
                                      dragOffset: isTop ? dragOffset : .zero)
                         .frame(width: w, height: h)
-                        .scaleEffect(1.0 - CGFloat(idx) * 0.08, anchor: .top)
+                        .scaleEffect(1.0 - CGFloat(idx) * 0.04, anchor: .top)
                         .offset(x: isTop ? dragOffset.width : 0,
-                                y: CGFloat(idx) * 18 + (isTop ? dragOffset.height * 0.3 : 0))
+                                y: CGFloat(idx) * 22 + (isTop ? dragOffset.height * 0.3 : 0))
                         .rotationEffect(
                             isTop
                                 ? .degrees(Double(dragOffset.width / 18))
                                 : stackRotation(for: item, idx: idx),
                             anchor: isTop ? .bottom : .center
                         )
-                        .opacity(idx == 0 ? 1.0 : 1.0 - Double(idx) * 0.25)
+                        .opacity(idx == 0 ? 1.0 : 1.0 - Double(idx) * 0.15)
                         .allowsHitTesting(isTop)
                         .zIndex(Double(stack.count - idx))
                         .gesture(isTop ? dragGesture : nil)

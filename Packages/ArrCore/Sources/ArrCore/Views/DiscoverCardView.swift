@@ -157,7 +157,7 @@ public struct DiscoverCardView: View {
                 url: item.result.posterURL,
                 apiKey: nil,
                 size: CGSize(width: w, height: h),
-                cornerRadius: 0
+                cornerRadius: 16
             )
 
             // Origin chip top-left
@@ -294,32 +294,21 @@ public struct DiscoverCardView: View {
         }
         .padding(12)
         .frame(width: w, height: h, alignment: .topLeading)
-        // Single-layer glass — just the material. No dark wash, no gradient
-        // overlay. The material's natural translucency IS the glass effect.
+        // Single-layer glass — thinMaterial so the poster bleeds through.
         .background(
-            UnevenRoundedRectangle(
-                topLeadingRadius: 16,
-                bottomLeadingRadius: 16,
-                bottomTrailingRadius: 0,
-                topTrailingRadius: 0
-            )
-            .fill(.regularMaterial)
+            RoundedRectangle(cornerRadius: 16)
+                .fill(.thinMaterial)
         )
         .overlay(
             // Sharp edge highlight — light catching the top of a glass pane.
-            UnevenRoundedRectangle(
-                topLeadingRadius: 16,
-                bottomLeadingRadius: 16,
-                bottomTrailingRadius: 0,
-                topTrailingRadius: 0
-            )
-            .stroke(
-                LinearGradient(
-                    colors: [.white.opacity(0.40), .white.opacity(0.10), .white.opacity(0.05)],
-                    startPoint: .top, endPoint: .bottom
-                ),
-                lineWidth: 1
-            )
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(
+                    LinearGradient(
+                        colors: [.white.opacity(0.40), .white.opacity(0.10), .white.opacity(0.05)],
+                        startPoint: .top, endPoint: .bottom
+                    ),
+                    lineWidth: 1
+                )
         )
         .shadow(color: .black.opacity(0.18), radius: 4, x: 1, y: 0)
     }
