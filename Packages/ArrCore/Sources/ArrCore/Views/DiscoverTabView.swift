@@ -86,6 +86,32 @@ public struct DiscoverTabView: View {
             )
     }
 
+    private var activeFilterSummary: String {
+        var parts: [String] = []
+        if viewModel.filter.decade.range != nil {
+            parts.append(viewModel.filter.decade.rawValue)
+        }
+        if !viewModel.filter.genres.isEmpty {
+            parts.append(viewModel.filter.genres.map(\.displayName).sorted().joined(separator: ", "))
+        }
+        if viewModel.filter.rating != .any {
+            parts.append(viewModel.filter.rating.rawValue.capitalized)
+        }
+        if viewModel.filter.runtime != .any {
+            parts.append(viewModel.filter.runtime.rawValue.capitalized)
+        }
+        if !viewModel.filter.personIds.isEmpty {
+            let count = viewModel.filter.personIds.count
+            parts.append("\(count) person\(count == 1 ? "" : "s")")
+        }
+        if !viewModel.moodText.trimmingCharacters(in: .whitespaces).isEmpty {
+            let mood = viewModel.moodText.trimmingCharacters(in: .whitespaces)
+            let truncated = mood.count > 24 ? String(mood.prefix(24)) + "\u{2026}" : mood
+            parts.append("\u{201C}\(truncated)\u{201D}")
+        }
+        return parts.joined(separator: " \u{00B7} ")
+    }
+
     private var tinderTopBar: some View {
         HStack(spacing: 6) {
             FloatingBackButton(action: {
@@ -100,12 +126,53 @@ public struct DiscoverTabView: View {
                     .scaledFont(size: 15, weight: .semibold)
                     .foregroundStyle(.primary)
                     .lineLimit(1)
+            } else if !activeFilterSummary.isEmpty {
+                filterSummaryChip
             }
             Spacer()
         }
         .padding(.horizontal, 12)
         .padding(.top, 10)
         .padding(.bottom, 4)
+    }
+
+    private var filterSummaryChip: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "line.3.horizontal.decrease")
+                .scaledFont(size: 10, weight: .semibold)
+                .foregroundStyle(.secondary)
+            Text(activeFilterSummary)
+                .scaledFont(size: 11, weight: .medium)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .truncationMode(.middle)
+            Button {
+                withAnimation(.smooth(duration: 0.2)) {
+                    clearAllFilters()
+                }
+            } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .scaledFont(size: 11)
+                    .foregroundStyle(.tertiary)
+            }
+            .buttonStyle(.plain)
+            .help(Text("Clear filters", bundle: .module))
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(Capsule().fill(Color.primary.opacity(0.06)))
+        .overlay(Capsule().stroke(Color.primary.opacity(0.18), lineWidth: 0.5))
+    }
+
+    private func clearAllFilters() {
+        viewModel.filter.decade = .any
+        viewModel.filter.genres = []
+        viewModel.filter.rating = .any
+        viewModel.filter.runtime = .any
+        viewModel.filter.personIds = []
+        viewModel.moodText = ""
+        viewModel.userChangedFilter()
+        Task { await viewModel.reshuffle() }
     }
 
     private func dispatch(_ item: DiscoverItem) {

@@ -120,6 +120,14 @@ public enum DiscoverSources {
         fetchAll: @escaping @MainActor () async throws -> [RadarrLibraryRecord]
     ) -> DiscoverViewModel.LibrarySource {
         return { filter in
+            // Library records don't carry cast info — we'd have to fetch
+            // per-movie credits which would be N extra TMDB calls. When
+            // the user has a person filter active, skip the library
+            // source entirely so the tinder deck only contains cards that
+            // genuinely match. TMDB + LLM both honor `personIds`
+            // server-side / via prompt.
+            if !filter.personIds.isEmpty { return [] }
+
             let all = try await fetchAll()
             let filtered = all.filter { rec in
                 filter.matches(year: rec.year, monitored: rec.monitored,
@@ -164,6 +172,10 @@ public enum DiscoverSources {
         fetchAll: @escaping @MainActor () async throws -> [SonarrLibraryRecord]
     ) -> DiscoverViewModel.LibrarySource {
         return { filter in
+            // TV series records don't carry cast info — bail when personIds
+            // is active so only genuinely matching sources are shown.
+            if !filter.personIds.isEmpty { return [] }
+
             let all = try await fetchAll()
             let filtered = all.filter { rec in
                 // Use simple decade + monitored matching; SonarrLibraryRecord

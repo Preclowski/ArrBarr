@@ -9482,6 +9482,35 @@
         }
       }
     },
+    "Clear filters": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Filter zurücksetzen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Borrar filtros"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Effacer les filtres"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wyczyść filtry"
+          }
+        }
+      }
+    },
     "Action": {
       "extractionState": "manual",
       "localizations": {
