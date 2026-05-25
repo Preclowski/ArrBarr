@@ -101,15 +101,6 @@ public struct PopoverContentView: View {
         }
     }
 
-    /// Discover surfaces any time at least one source can fire:
-    /// Radarr-backed library, TMDB Discover, or LLM mood picker.
-    /// The VM gates each source independently — and swipe-right falls
-    /// back to a TMDB deep-link when Radarr isn't configured (see
-    /// onAddToRadarr handler below).
-    private var discoverAvailable: Bool {
-        radarrConfigured || configStore.tmdbEnabled || chatAvailable
-    }
-
     @ViewBuilder
     private var chatTabContent: some View {
         if !chatHolder.vm.providerIsAvailable {
@@ -536,39 +527,6 @@ public struct PopoverContentView: View {
             default:    return true
             }
         }
-    }
-
-    /// Bare search list rendered as content for the Add tab. The result
-    /// detail (SearchAddPanel) is still presented as an overlay over the
-    /// whole popover — that view has its own internal back/forward
-    /// navigation and we keep it modal so the user can't half-add a
-    /// release by switching tabs underneath it.
-    @ViewBuilder
-    private var addTabContent: some View {
-        SearchView(viewModel: searchViewModel) { result in
-            // Library hit → drill into DetailView via the same
-            // synthetic-item pipeline that Queue/Upcoming use. Addable
-            // hit (no arrId) → open the SearchAddPanel form as before.
-            // Single tap-handler keeps SearchView source-unaware.
-            if let arrId = result.inLibraryArrId {
-                DetailRequest.post(
-                    DetailRequest.syntheticItem(
-                        source: result.source,
-                        entityId: arrId,
-                        title: result.title,
-                        posterURL: result.posterURL,
-                        posterRequiresAuth: false
-                    )
-                )
-            } else {
-                searchResult = result
-            }
-        }
-        .environmentObject(configStore)
-        // Globally scale every `.scaledFont(size:)` site by the user's
-        // preference (Default / Larger / Largest). Injected once at the
-        // root so individual views just read `@Environment(\.fontScale)`.
-        .environment(\.fontScale, configStore.fontScale)
     }
 
     private var tabBar: some View {
