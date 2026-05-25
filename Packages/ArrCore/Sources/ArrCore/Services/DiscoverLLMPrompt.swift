@@ -37,71 +37,16 @@ public enum DiscoverLLMPrompt {
         case malformedJSON(underlying: Error)
     }
 
-    /// Structured-payload variant. Embeds every active filter as an
-    /// explicit constraint line so the LLM doesn't have to infer
-    /// intent from free text alone — "User picked Comedy + 1990s +
-    /// Tarantino" is a stronger signal than the same words buried in
-    /// a mood blob. Custom labels from `+ Add` flow through `mood`
-    /// already (the View concatenates them in), no extra param needed.
-    public static func build(mood: String,
-                             filter: DiscoverFilter,
-                             selectedPeople: [String] = [],
-                             count: Int,
-                             exclude: [String],
-                             kindHint: DiscoverMediaSelection = .movie) -> String {
-        var lines = baseInstructions(count: count, kindHint: kindHint)
-        let trimmedMood = mood.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !trimmedMood.isEmpty {
-            lines.append("Mood: \(trimmedMood)")
-        }
-        if !filter.genres.isEmpty {
-            let names = filter.genres.map(\.displayName)
-                .sorted().joined(separator: ", ")
-            lines.append("Selected genres: \(names). All suggestions must match at least one.")
-        }
-        if let range = filter.decade.range {
-            lines.append("Era constraint: \(range.lowerBound)-\(range.upperBound).")
-        }
-        if filter.rating != .any {
-            lines.append("Quality tier: \(filter.rating.rawValue).")
-        }
-        if filter.runtime != .any {
-            lines.append("Runtime preference: \(filter.runtime.rawValue).")
-        }
-        if !selectedPeople.isEmpty {
-            let joined = selectedPeople.sorted().joined(separator: ", ")
-            lines.append("People constraint: \(joined). Every suggestion must feature at least one as actor or director.")
-        }
-        if !exclude.isEmpty {
-            lines.append("Do NOT include any of these already-shown titles:")
-            lines.append(exclude.joined(separator: ", "))
-        }
-        return lines.joined(separator: "\n")
-    }
-
-    /// Legacy signature kept so existing tests + callers compile. Wraps
-    /// the structured variant with an empty filter except the decade.
     public static func build(mood: String,
                              decade: DiscoverDecade,
                              count: Int,
                              exclude: [String],
                              kindHint: DiscoverMediaSelection = .movie) -> String {
-        var f = DiscoverFilter()
-        f.decade = decade
-        return build(mood: mood, filter: f, selectedPeople: [],
-                     count: count, exclude: exclude, kindHint: kindHint)
-    }
-
-    /// JSON schema + count + kind copy that's identical across both
-    /// `build` overloads.
-    private static func baseInstructions(count: Int,
-                                         kindHint: DiscoverMediaSelection) -> [String] {
         var lines: [String] = []
         let filtersSchema = "\"filters\": { \"genres\": [string], " +
             "\"decade\": \"1980s\"|\"1990s\"|\"2000s\"|\"2010s\"|\"2020s\"|null, " +
             "\"status\": \"any\"|\"owned\"|\"to_download\"|null, " +
             "\"people\": [string] }"
-        let kindLabel: String
         switch kindHint {
         case .movie:
             lines.append(
@@ -111,7 +56,6 @@ public enum DiscoverLLMPrompt {
                 filtersSchema + "}."
             )
             lines.append("Return only movies — no TV shows.")
-            kindLabel = "movies"
         case .show:
             lines.append(
                 "You recommend TV shows for a tinder-style picker. " +
@@ -120,13 +64,25 @@ public enum DiscoverLLMPrompt {
                 filtersSchema + "}."
             )
             lines.append("Return only TV shows — no movies.")
-            kindLabel = "TV shows"
+        }
+        lines.append("Mood: \(mood)")
+        if let range = decade.range {
+            lines.append("User-set era constraint already: \(range.lowerBound)-\(range.upperBound). Respect or refine it.")
+        }
+        let kindLabel: String
+        switch kindHint {
+        case .movie: kindLabel = "movies"
+        case .show:  kindLabel = "TV shows"
         }
         lines.append("Return exactly \(count) distinct \(kindLabel) in `titles`.")
         lines.append("`filters.genres` may name standard genres (Action, Comedy, Drama, Thriller, etc.) — at most 3.")
         lines.append("`filters.people` lists actor or director names explicitly mentioned in the mood — empty array if none.")
         lines.append("`filters.status` is `owned` only when the user clearly wants what they already have.")
-        return lines
+        if !exclude.isEmpty {
+            lines.append("Do NOT include any of these already-shown titles:")
+            lines.append(exclude.joined(separator: ", "))
+        }
+        return lines.joined(separator: "\n")
     }
 
     public static func parse(_ raw: String) throws -> Response {

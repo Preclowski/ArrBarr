@@ -69,10 +69,6 @@ public struct PopoverContentView: View {
     /// `SearchAddPanel` — back returns straight to chat instead of
     /// dropping the user on the Add tab they never asked to visit.
     @State private var searchAddFromChat = false
-    /// True when the user reached the SearchAddPanel from a Discover
-    /// pick. Back behaviour returns them to the Discover tab so they
-    /// can keep browsing matches, instead of falling back to chat.
-    @State private var searchAddFromDiscover = false
     /// Auto-collapse timer for the "Next week" banner — the banner
     /// snaps back to the 4-item peek 30s after the user expands it.
     @State private var bannerCollapseTask: Task<Void, Never>?
@@ -183,20 +179,14 @@ public struct PopoverContentView: View {
                 withAnimation(.smooth(duration: 0.22)) { detailItem = item }
             }
             .onReceive(NotificationCenter.default.publisher(for: .arrBarrOpenSearchAdd)) { note in
-                // Chat tap-to-add OR Discover pick tap → SearchAddPanel
-                // overlay. The origin flag drives Back behaviour so the
-                // user returns to whichever tab they came from instead
-                // of always falling back to chat.
+                // Chat tap-to-add — show the SearchAddPanel overlay
+                // pre-loaded with the result. `searchAddFromChat` lets
+                // Back return straight to chat instead of dropping the
+                // user on the Add tab.
                 guard let result = note.userInfo?["result"] as? SearchResult else { return }
                 historySource = nil
                 detailItem = nil
-                if selectedTab == .discover {
-                    searchAddFromDiscover = true
-                    searchAddFromChat = false
-                } else {
-                    searchAddFromChat = true
-                    searchAddFromDiscover = false
-                }
+                searchAddFromChat = true
                 searchResult = result
             }
             .onReceive(NotificationCenter.default.publisher(for: .arrBarrOpenDiscoverInTinder)) { note in
@@ -349,13 +339,7 @@ public struct PopoverContentView: View {
     private var searchAddOverlay: some View {
         if let result = searchResult {
             SearchAddPanel(result: result, viewModel: searchViewModel) {
-                if searchAddFromDiscover {
-                    searchAddFromDiscover = false
-                    searchResult = nil
-                    withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
-                        selectedTab = .discover
-                    }
-                } else if searchAddFromChat {
+                if searchAddFromChat {
                     searchAddFromChat = false
                     searchResult = nil
                     withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
@@ -517,11 +501,11 @@ public struct PopoverContentView: View {
     /// user can bail to another tab without being stranded.
     private var hideTabBarDeepInDiscover: Bool {
         guard selectedTab == .discover else { return false }
-        // Hide tabs only in the swipe deck. Picker is the root of the
-        // Discover tab and must always expose tabs — otherwise the user
-        // gets stranded with no "<" (we removed the loop-causing picker
-        // back button in Task 77) and no way to leave the tab.
-        return discoverViewModel.stage == .tinder
+        if discoverViewModel.stage == .tinder { return true }
+        // .picker stage: only hide if we're editing filters from an
+        // active tinder session (chip-tap path) — fromTinderBackBar shows "<".
+        if discoverViewModel.current != nil { return true }
+        return false
     }
 
     // MARK: - Tab bar
@@ -1504,10 +1488,7 @@ public struct PopoverContentView: View {
                     try await sonarrClient.lookupSeries(term: term)
                 },
                 libraryTmdbIds: ownedMovieIds,
-                filterAccessor: { [vm = discoverViewModel] in vm.filter },
-                selectedPeopleAccessor: { [vm = discoverViewModel] in
-                    Array(vm.selectedPersonNames)
-                },
+                decade: { [vm = discoverViewModel] in vm.filter.decade },
                 kindHint: selection
             )
             : nil
