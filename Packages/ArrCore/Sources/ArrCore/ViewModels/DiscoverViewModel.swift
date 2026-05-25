@@ -6,7 +6,7 @@ import SwiftUI
 /// just renders them in sequence.
 public struct SuggestedFilter: Sendable, Equatable, Identifiable {
     public enum Category: String, Sendable {
-        case people, genre, decade, rating, runtime
+        case people, genre, decade, rating, runtime, ai
     }
     public let id: String       // e.g. "person.Quentin Tarantino", "genre.action"
     public let label: String    // display label as-is
@@ -312,6 +312,38 @@ public final class DiscoverViewModel: ObservableObject {
         let discovery = Array(unused.prefix(discoveryCount))
         return topUsed + discovery
     }
+
+    /// Suggestions grouped by category for the per-category mini-row layout.
+    /// AI bucket holds starter prompts as pseudo-filters — their `label` is
+    /// the prompt text the View should drop into `moodText`. Omitted when
+    /// `llmAvailable` is false. Caller iterates a fixed display order.
+    public func suggestionsByCategory(llmAvailable: Bool)
+        -> [SuggestedFilter.Category: [SuggestedFilter]] {
+        var out: [SuggestedFilter.Category: [SuggestedFilter]] = [:]
+        // Distribute filter suggestions by their category. Cap each bucket
+        // at 3 so a single category doesn't dominate the strip.
+        for s in suggestedFilters where s.category != .ai {
+            var bucket = out[s.category] ?? []
+            if bucket.count < 3 { bucket.append(s) }
+            out[s.category] = bucket
+        }
+        if llmAvailable {
+            out[.ai] = Self.aiStarterPrompts
+        }
+        return out
+    }
+
+    /// Curated starter prompts surfaced as the AI suggestion row. Kept
+    /// short so the row stays visually balanced; the LLM doesn't need many
+    /// examples to convey "you can write naturally here".
+    private static let aiStarterPrompts: [SuggestedFilter] = [
+        .init(id: "ai.cozy", label: "Cozy Sunday afternoon",
+              category: .ai, icon: "sparkles"),
+        .init(id: "ai.flight", label: "Long flight",
+              category: .ai, icon: "sparkles"),
+        .init(id: "ai.date", label: "Date night",
+              category: .ai, icon: "sparkles"),
+    ]
 
     /// Curated default catalog. Order doubles as the cold-start sort —
     /// when no usage data exists, the View shows the first 10 entries.

@@ -67,6 +67,7 @@ public struct DiscoverPickerView: View {
         case .decade:  return .orange
         case .rating:  return .green
         case .runtime: return .purple
+        case .ai:      return .pink
         }
     }
 
@@ -487,6 +488,9 @@ public struct DiscoverPickerView: View {
                     (viewModel.filter.runtime == rt) ? .any : rt
                 viewModel.userChangedFilter()
             }
+        case .ai:
+            // Handled in Task 3
+            return
         }
     }
 

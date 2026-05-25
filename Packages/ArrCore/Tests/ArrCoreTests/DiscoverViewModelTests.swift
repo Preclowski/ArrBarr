@@ -293,4 +293,18 @@ final class DiscoverViewModelTests: XCTestCase {
         // First entry should be the top-of-curation Tarantino.
         XCTAssertEqual(filters.first?.id, "person.Quentin Tarantino")
     }
+
+    func test_suggestionsByCategory_includesAiStarters_whenLLMAvailable() {
+        let vm = freshVM()
+        let grouped = vm.suggestionsByCategory(llmAvailable: true)
+        XCTAssertFalse((grouped[.ai] ?? []).isEmpty,
+                       "AI bucket should expose starter prompts when LLM available")
+        XCTAssertTrue((grouped[.people] ?? []).contains(where: { $0.id == "person.Quentin Tarantino" }))
+    }
+
+    func test_suggestionsByCategory_excludesAi_whenLLMUnavailable() {
+        let vm = freshVM()
+        let grouped = vm.suggestionsByCategory(llmAvailable: false)
+        XCTAssertNil(grouped[.ai], "AI bucket should be absent without LLM")
+    }
 }
