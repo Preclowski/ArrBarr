@@ -1850,6 +1850,64 @@
         }
       }
     },
+    "Add TMDB API key in Settings to discover new films.": {
+      "extractionState": "manual",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dodaj klucz TMDB w Ustawieniach, by odkrywać nowe filmy."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TMDB-API-Schlüssel in den Einstellungen hinzufügen, um neue Filme zu entdecken."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Añade la clave TMDB en Ajustes para descubrir nuevas películas."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajoutez une clé API TMDB dans les Réglages pour découvrir de nouveaux films."
+          }
+        }
+      }
+    },
+    "To discover new films, add a TMDB API key in Settings → AI → Discovery.": {
+      "extractionState": "manual",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aby odkrywać nowe filmy, dodaj klucz TMDB w Ustawieniach → AI → Odkrywanie."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Um neue Filme zu entdecken, füge einen TMDB-API-Schlüssel unter Einstellungen → KI → Entdecken hinzu."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Para descubrir nuevas películas, añade una clave API TMDB en Ajustes → IA → Descubrir."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pour découvrir de nouveaux films, ajoutez une clé API TMDB dans Réglages → IA → Découverte."
+          }
+        }
+      }
+    },
     "Considering…": {
       "extractionState": "manual",
       "localizations": {

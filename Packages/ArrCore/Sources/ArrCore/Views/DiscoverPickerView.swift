@@ -12,6 +12,7 @@ public enum PickerStage {
 public struct DiscoverPickerView: View {
     @ObservedObject var viewModel: DiscoverViewModel
     let llmAvailable: Bool
+    let tmdbAvailable: Bool
     @Binding var stage: PickerStage
     let onSubmit: () -> Void
 
@@ -21,10 +22,12 @@ public struct DiscoverPickerView: View {
 
     public init(viewModel: DiscoverViewModel,
                 llmAvailable: Bool,
+                tmdbAvailable: Bool,
                 stage: Binding<PickerStage>,
                 onSubmit: @escaping () -> Void) {
         self.viewModel = viewModel
         self.llmAvailable = llmAvailable
+        self.tmdbAvailable = tmdbAvailable
         self._stage = stage
         self.onSubmit = onSubmit
     }
@@ -346,11 +349,40 @@ public struct DiscoverPickerView: View {
         .overlay(Capsule().stroke(color.opacity(0.45), lineWidth: 0.75))
     }
 
+    // MARK: - TMDB missing banner
+
+    @ViewBuilder
+    private var tmdbMissingBanner: some View {
+        if !tmdbAvailable {
+            HStack(spacing: 6) {
+                Image(systemName: "key.fill")
+                    .scaledFont(size: 10, weight: .medium)
+                    .foregroundStyle(.orange)
+                Text("Add TMDB API key in Settings to discover new films.", bundle: .module)
+                    .scaledFont(size: 10)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(Color.orange.opacity(0.08))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 6)
+                    .stroke(Color.orange.opacity(0.3), lineWidth: 0.5)
+            )
+        }
+    }
+
     // MARK: - Main picker scroll
 
     private var mainPickerScroll: some View {
         ScrollView {
             VStack(spacing: 12) {
+                tmdbMissingBanner
                 kindIndicator
                     .frame(maxWidth: .infinity, alignment: .leading)
                 if !selectedTagsForCurrentStage.isEmpty {

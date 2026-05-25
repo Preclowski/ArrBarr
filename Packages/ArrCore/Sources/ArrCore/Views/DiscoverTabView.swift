@@ -4,6 +4,7 @@ public struct DiscoverTabView: View {
     @ObservedObject var viewModel: DiscoverViewModel
     let llmAvailable: Bool
     let radarrAvailable: Bool
+    let tmdbAvailable: Bool
     let onAddToRadarr: (SearchResult) -> Void
     let onAddToSonarr: (SearchResult) -> Void
     let onOpenDetail: (DiscoverItem, QueueItem.Source, Int) -> Void
@@ -17,12 +18,14 @@ public struct DiscoverTabView: View {
     public init(viewModel: DiscoverViewModel,
                 llmAvailable: Bool,
                 radarrAvailable: Bool,
+                tmdbAvailable: Bool,
                 onAddToRadarr: @escaping (SearchResult) -> Void,
                 onAddToSonarr: @escaping (SearchResult) -> Void,
                 onOpenDetail: @escaping (DiscoverItem, QueueItem.Source, Int) -> Void) {
         self.viewModel = viewModel
         self.llmAvailable = llmAvailable
         self.radarrAvailable = radarrAvailable
+        self.tmdbAvailable = tmdbAvailable
         self.onAddToRadarr = onAddToRadarr
         self.onAddToSonarr = onAddToSonarr
         self.onOpenDetail = onOpenDetail
@@ -35,6 +38,7 @@ public struct DiscoverTabView: View {
                 DiscoverPickerView(
                     viewModel: viewModel,
                     llmAvailable: llmAvailable,
+                    tmdbAvailable: tmdbAvailable,
                     stage: $pickerStage,
                     onSubmit: {
                         withAnimation(.smooth(duration: 0.22)) { viewModel.stage = .tinder }
@@ -455,6 +459,20 @@ public struct DiscoverTabView: View {
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 24)
                     .padding(.top, 4)
+            }
+            if !tmdbAvailable {
+                VStack(spacing: 4) {
+                    Image(systemName: "key.fill")
+                        .scaledFont(size: 14, weight: .medium)
+                        .foregroundStyle(.orange)
+                    Text("To discover new films, add a TMDB API key in Settings → AI → Discovery.",
+                         bundle: .module)
+                        .scaledFont(size: 11)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+                .padding(.horizontal, 24)
+                .padding(.top, 10)
             }
             if !viewModel.failedSources.isEmpty {
                 Text(failureBadgeText)
