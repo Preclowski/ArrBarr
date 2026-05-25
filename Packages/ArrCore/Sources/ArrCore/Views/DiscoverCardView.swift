@@ -24,16 +24,6 @@ public struct DiscoverCardView: View {
     @Binding var isHovered: Bool
     var dragOffset: CGSize = .zero
 
-    private var cardSurface: Color {
-        Color(nsColor: NSColor(name: nil, dynamicProvider: { appearance in
-            if appearance.bestMatch(from: [.darkAqua, .vibrantDark]) != nil {
-                return NSColor(red: 0.18, green: 0.18, blue: 0.20, alpha: 1.0)
-            } else {
-                return NSColor(red: 0.97, green: 0.97, blue: 0.97, alpha: 1.0)
-            }
-        }))
-    }
-
     public init(item: DiscoverItem,
                 isHovered: Binding<Bool>,
                 dragOffset: CGSize = .zero) {
@@ -87,28 +77,31 @@ public struct DiscoverCardView: View {
 
     @ViewBuilder
     private func frontFace(w: CGFloat, h: CGFloat) -> some View {
-        // Poster + footer plate, hard edge between them.
-        let footerH: CGFloat = 110
-        let posterH = h - footerH
+        ZStack(alignment: .bottomLeading) {
+            // Full-card raw poster.
+            RemotePoster(
+                url: item.result.posterURL,
+                apiKey: nil,
+                size: CGSize(width: w, height: h),
+                cornerRadius: 0
+            )
+            .frame(width: w, height: h)
+            .clipped()
 
-        VStack(spacing: 0) {
-            ZStack(alignment: .topTrailing) {
-                RemotePoster(
-                    url: item.result.posterURL,
-                    apiKey: nil,
-                    size: CGSize(width: w, height: posterH),
-                    cornerRadius: 0
-                )
-                .frame(width: w, height: posterH)
-                .clipped()
+            // Origin chip top-right on the poster.
+            originChip
+                .padding(10)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
 
-                // Only chrome on the poster art: source badge top-right.
-                originChip
-                    .padding(10)
-            }
+            // Glass panel at the bottom — fades from transparent at top
+            // to opaque glass at the bottom. Covers ~55% of card height
+            // so the metadata sits on the dense glass region.
+            bottomGlassPanel(h: h * 0.55)
+                .frame(maxHeight: .infinity, alignment: .bottom)
+                .allowsHitTesting(false)
 
-            // FOOTER PLATE — solid color, no material, no gradient.
-            VStack(alignment: .leading, spacing: 4) {
+            // Metadata sits on the dense (bottom) part of the glass panel.
+            VStack(alignment: .leading, spacing: 5) {
                 Text(titleAndYear)
                     .scaledFont(size: 17, weight: .semibold)
                     .foregroundStyle(.primary)
@@ -126,56 +119,113 @@ public struct DiscoverCardView: View {
                 }
                 genreLabels(limit: 6)
             }
-            .padding(12)
-            .frame(width: w, height: footerH, alignment: .topLeading)
-            .background(cardSurface)
+            .padding(14)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
         }
         .frame(width: w, height: h)
+    }
+
+    /// Glass material masked by a vertical gradient — transparent at top,
+    /// fully opaque (= visible glass blur) at bottom.
+    @ViewBuilder
+    private func bottomGlassPanel(h: CGFloat) -> some View {
+        Rectangle()
+            .fill(.regularMaterial)
+            .mask(
+                LinearGradient(
+                    colors: [.clear, .black.opacity(0.8), .black],
+                    startPoint: .top, endPoint: .bottom
+                )
+            )
+            .frame(height: h)
     }
 
     // MARK: - Back face
 
     @ViewBuilder
     private func backFace(w: CGFloat, h: CGFloat) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(titleAndYear)
-                    .scaledFont(size: 16, weight: .semibold)
-                    .foregroundStyle(.primary)
-                if !runtimeCertSegments.isEmpty {
-                    Text(runtimeCertSegments.joined(separator: " · "))
-                        .scaledFont(size: 11)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
-                let chips = discoverRatingChips(for: item.result)
-                if !chips.isEmpty {
-                    HStack(spacing: 5) {
-                        ForEach(chips, id: \.label) { RatingPill(chip: $0) }
+        ZStack(alignment: .top) {
+            // Full-card poster underneath — barely peeks through at the
+            // very top where the glass panel fades.
+            RemotePoster(
+                url: item.result.posterURL,
+                apiKey: nil,
+                size: CGSize(width: w, height: h),
+                cornerRadius: 0
+            )
+            .frame(width: w, height: h)
+            .clipped()
+
+            // Glass panel covers ~92% of card from top down, fading the
+            // first ~8% from transparent to opaque so a sliver of poster
+            // peeks through.
+            topGlassPanel(h: h)
+                .frame(height: h)
+                .allowsHitTesting(false)
+
+            // Reading content sits on the dense glass region.
+            VStack(alignment: .leading, spacing: 14) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(titleAndYear)
+                        .scaledFont(size: 16, weight: .semibold)
+                        .foregroundStyle(.primary)
+                    if !runtimeCertSegments.isEmpty {
+                        Text(runtimeCertSegments.joined(separator: " · "))
+                            .scaledFont(size: 11)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                    let chips = discoverRatingChips(for: item.result)
+                    if !chips.isEmpty {
+                        HStack(spacing: 5) {
+                            ForEach(chips, id: \.label) { RatingPill(chip: $0) }
+                        }
                     }
                 }
-            }
 
-            if let overview = item.result.overview, !overview.isEmpty {
-                ScrollView {
-                    Text(overview)
-                        .scaledFont(size: 13)
-                        .foregroundStyle(.primary)
-                        .lineSpacing(3)
-                        .multilineTextAlignment(.leading)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                if let overview = item.result.overview, !overview.isEmpty {
+                    ScrollView {
+                        Text(overview)
+                            .scaledFont(size: 13)
+                            .foregroundStyle(.primary)
+                            .lineSpacing(3)
+                            .multilineTextAlignment(.leading)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                } else {
+                    Text("No overview available", bundle: .module)
+                        .scaledFont(size: 12)
+                        .foregroundStyle(.secondary)
                 }
-            } else {
-                Text("No overview available", bundle: .module)
-                    .scaledFont(size: 12)
-                    .foregroundStyle(.secondary)
-            }
 
-            genreLabels(limit: 12)
+                genreLabels(limit: 12)
+            }
+            .padding(.top, 28)   // skip the transparent fade region
+            .padding(.horizontal, 14)
+            .padding(.bottom, 14)
+            .frame(width: w, height: h, alignment: .topLeading)
         }
-        .padding(14)
-        .frame(width: w, height: h, alignment: .topLeading)
-        .background(Color(nsColor: .windowBackgroundColor))
+        .frame(width: w, height: h)
+    }
+
+    /// Glass material covering most of the card. Fades from transparent
+    /// at the very top edge (showing the poster underneath) to fully
+    /// opaque glass below. The user sees the panel as a single sheet of
+    /// frosted glass laid over the poster.
+    @ViewBuilder
+    private func topGlassPanel(h: CGFloat) -> some View {
+        Rectangle()
+            .fill(.regularMaterial)
+            .mask(
+                LinearGradient(
+                    stops: [
+                        .init(color: .clear, location: 0.0),
+                        .init(color: .black.opacity(0.7), location: 0.08),
+                        .init(color: .black, location: 0.18),
+                    ],
+                    startPoint: .top, endPoint: .bottom
+                )
+            )
     }
 
     // MARK: - Shared helpers
