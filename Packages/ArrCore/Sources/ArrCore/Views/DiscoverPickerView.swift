@@ -387,20 +387,57 @@ public struct DiscoverPickerView: View {
 
     // MARK: - Suggestions row
 
-    /// Compact row of pills sourced from `viewModel.suggestedFilters`. Tap
-    /// behaviour mirrors the in-catalog pill taps — flips the same filter
-    /// state, so picked items move to the composer as a chip and disappear
-    /// from this row in the same frame (the VM dedupes).
+    private static let suggestionsOrder: [SuggestedFilter.Category] =
+        [.people, .genre, .decade, .rating, .runtime, .ai]
+
+    private static func suggestionsRowLabel(
+        _ category: SuggestedFilter.Category
+    ) -> LocalizedStringKey {
+        switch category {
+        case .people:  return "Osoby"
+        case .genre:   return "Gatunki"
+        case .decade:  return "Dekady"
+        case .rating:  return "Vibe"
+        case .runtime: return "Długość"
+        case .ai:      return "AI"
+        }
+    }
+
     @ViewBuilder
     private var suggestionsRow: some View {
-        let suggestions = viewModel.suggestedFilters
-        if !suggestions.isEmpty {
-            FlowLayout(spacing: 5) {
-                ForEach(suggestions) { s in
-                    suggestionPill(s)
+        let grouped = viewModel.suggestionsByCategory(llmAvailable: llmAvailable)
+        VStack(alignment: .leading, spacing: 6) {
+            ForEach(Self.suggestionsOrder, id: \.self) { cat in
+                let items = grouped[cat] ?? []
+                if !items.isEmpty {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        suggestionsRowHeader(cat)
+                        FlowLayout(spacing: 5) {
+                            ForEach(items) { s in
+                                suggestionPill(s)
+                            }
+                        }
+                    }
                 }
             }
         }
+    }
+
+    @ViewBuilder
+    private func suggestionsRowHeader(_ category: SuggestedFilter.Category) -> some View {
+        HStack(spacing: 3) {
+            if category == .ai {
+                Image(systemName: "sparkles")
+                    .scaledFont(size: 8, weight: .semibold)
+                    .foregroundStyle(.pink)
+            }
+            Text(Self.suggestionsRowLabel(category), bundle: .module)
+                .scaledFont(size: 9, weight: .semibold)
+                .tracking(0.5)
+                .textCase(.uppercase)
+                .foregroundStyle(.tertiary)
+        }
+        .frame(width: 50, alignment: .leading)
     }
 
     @ViewBuilder
@@ -455,7 +492,11 @@ public struct DiscoverPickerView: View {
                 viewModel.userChangedFilter()
             }
         case .ai:
-            // Handled in Task 3
+            // AI starter — drop the prompt into the free-text field and focus
+            // the composer so the user can edit before sending. No filter
+            // mutation; the prompt is just intent for the LLM.
+            freeText = s.label
+            freeTextFocused = true
             return
         }
     }
