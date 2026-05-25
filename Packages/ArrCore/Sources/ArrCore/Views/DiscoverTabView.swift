@@ -147,21 +147,15 @@ public struct DiscoverTabView: View {
         }
     }
 
-    /// 3-card stack: top + 2 behind. Enforce 2:3 poster aspect ratio.
-    /// Height is bounded by the vertical budget (84% of available space to leave room
-    /// for peeking cards) and the width-constrained ratio (width × 1.5).
-    /// Width is derived from height to maintain 2:3, and may be narrower than the
-    /// container (centered by default).
     private var cardStack: some View {
         let stack = visibleStack.enumerated().map { ($0, $1) }
         return GeometryReader { proxy in
-            // Reserve ~16% of vertical space for the peek of the 3rd card
-            // (22pt offset × 2 plus a bit of breathing room).
-            let availableH = proxy.size.height * 0.84
-            // Enforce 2:3 poster aspect. Card height is bounded by both the
-            // vertical budget and what fits at the container's width × 1.5.
-            let h = min(availableH, proxy.size.width * 1.5)
-            let w = h / 1.5
+            // Larger vertical reserve (was 0.84) so peek cards have room.
+            let availableH = proxy.size.height * 0.75
+            // Relax aspect (was 1.5 → 1.4) so the card isn't quite full-poster
+            // shape when the popover is narrow; this keeps height under budget.
+            let h = min(availableH, proxy.size.width * 1.4)
+            let w = h / 1.4
             ZStack {
                 ForEach(stack.reversed(), id: \.1.id) { (idx, item) in
                     DiscoverCardView(item: item)
@@ -186,21 +180,27 @@ public struct DiscoverTabView: View {
     }
 
     private var cardActionRow: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 8) {
+            // Skip: ghost button (~38% width). De-emphasised path.
             Button { Task { await viewModel.swipe(right: false) } } label: {
-                HStack(spacing: 6) {
+                HStack(spacing: 4) {
                     Image(systemName: "xmark")
-                        .scaledFont(size: 11, weight: .semibold)
+                        .scaledFont(size: 10, weight: .semibold)
                     Text("Skip", bundle: .module)
-                        .scaledFont(size: 12, weight: .semibold)
+                        .scaledFont(size: 11, weight: .semibold)
                 }
+                .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 7)
+                .background(
+                    Capsule().stroke(Color.primary.opacity(0.18), lineWidth: 1)
+                )
             }
-            .modifier(GlassProminentButtonStyle())
-            .tint(.red)
+            .buttonStyle(.plain)
             .keyboardShortcut(.leftArrow, modifiers: [])
+            .layoutPriority(0.38)
 
+            // Primary: full GlassProminent, ~62% width via layoutPriority.
             Button { Task { await viewModel.swipe(right: true) } } label: {
                 HStack(spacing: 6) {
                     Image(systemName: rightActionIcon)
@@ -213,6 +213,7 @@ public struct DiscoverTabView: View {
             }
             .modifier(GlassProminentButtonStyle())
             .keyboardShortcut(.rightArrow, modifiers: [])
+            .layoutPriority(0.62)
         }
     }
 
