@@ -10294,17 +10294,6 @@
         }
       }
     },
-    "Describe a mood, a vibe, a director, anything": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "new",
-            "value": "Describe a mood, a vibe, a director, anything"
-          }
-        }
-      }
-    },
     "Discover": {
       "extractionState": "manual",
       "localizations": {
@@ -12694,17 +12683,6 @@
           "stringUnit": {
             "state": "new",
             "value": "Configure an LLM provider in Settings to get AI-powered picks."
-          }
-        }
-      }
-    },
-    "What do you feel like watching?": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "new",
-            "value": "What do you feel like watching?"
           }
         }
       }
