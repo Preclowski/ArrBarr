@@ -111,6 +111,14 @@ struct SeasonRow: View {
     /// "which season is open" question and the row shouldn't be
     /// individually collapsible.
     var hideExpandChevron: Bool = false
+    /// Series identity passed to each `EpisodeRow` so the long-hover
+    /// tooltip can render the same poster + title + subtitle chrome
+    /// as the queue tooltip. nil falls back to a slim tooltip with
+    /// just episode info.
+    var seriesTitle: String? = nil
+    var seriesPosterURL: URL? = nil
+    var seriesPosterRequiresAuth: Bool = false
+    var seriesPosterAPIKey: String? = nil
 
     @State private var expanded: Bool
     @State private var isHoveringHeader = false
@@ -130,7 +138,11 @@ struct SeasonRow: View {
          onDeleteEpisode: ((QueueItem) -> Void)? = nil,
          onSetMonitored: ((Bool) async -> Void)? = nil,
          initiallyExpanded: Bool = false,
-         hideExpandChevron: Bool = false) {
+         hideExpandChevron: Bool = false,
+         seriesTitle: String? = nil,
+         seriesPosterURL: URL? = nil,
+         seriesPosterRequiresAuth: Bool = false,
+         seriesPosterAPIKey: String? = nil) {
         self.season = season
         self.episodes = episodes
         self.queueByEpisodeId = queueByEpisodeId
@@ -144,6 +156,10 @@ struct SeasonRow: View {
         self.onSetMonitored = onSetMonitored
         self.initiallyExpanded = initiallyExpanded
         self.hideExpandChevron = hideExpandChevron
+        self.seriesTitle = seriesTitle
+        self.seriesPosterURL = seriesPosterURL
+        self.seriesPosterRequiresAuth = seriesPosterRequiresAuth
+        self.seriesPosterAPIKey = seriesPosterAPIKey
         self._expanded = State(initialValue: initiallyExpanded)
     }
 
@@ -251,7 +267,11 @@ struct SeasonRow: View {
                             onTap: onTapEpisode,
                             onPauseQueueItem: onPauseEpisode,
                             onResumeQueueItem: onResumeEpisode,
-                            onDeleteQueueItem: onDeleteEpisode
+                            onDeleteQueueItem: onDeleteEpisode,
+                            seriesTitle: seriesTitle,
+                            seriesPosterURL: seriesPosterURL,
+                            seriesPosterRequiresAuth: seriesPosterRequiresAuth,
+                            seriesPosterAPIKey: seriesPosterAPIKey
                         )
                     }
                     seasonLegend
@@ -990,6 +1010,13 @@ struct EpisodeRow: View {
     var onPauseQueueItem: ((QueueItem) -> Void)? = nil
     var onResumeQueueItem: ((QueueItem) -> Void)? = nil
     var onDeleteQueueItem: ((QueueItem) -> Void)? = nil
+    /// Series identity for the long-hover tooltip — lets it render
+    /// the queue-tooltip chrome (poster + series title + season /
+    /// episode subtitle) instead of an episode-only slim card.
+    var seriesTitle: String? = nil
+    var seriesPosterURL: URL? = nil
+    var seriesPosterRequiresAuth: Bool = false
+    var seriesPosterAPIKey: String? = nil
 
     @State private var isHovering = false
     @State private var isSearching = false
@@ -1170,10 +1197,16 @@ struct EpisodeRow: View {
             }
         }
         .popover(isPresented: $showTooltip, arrowEdge: .leading) {
-            EpisodeRowTooltip(episode: episode,
-                              queueItem: queueItem,
-                              episodeFile: episodeFile)
-                .popoverBehavior(.applicationDefined)
+            EpisodeRowTooltip(
+                episode: episode,
+                queueItem: queueItem,
+                episodeFile: episodeFile,
+                seriesTitle: seriesTitle,
+                seriesPosterURL: seriesPosterURL,
+                seriesPosterRequiresAuth: seriesPosterRequiresAuth,
+                seriesPosterAPIKey: seriesPosterAPIKey
+            )
+            .popoverBehavior(.applicationDefined)
         }
         #endif
         // Native macOS confirm sheet for destructive actions — same
@@ -1321,38 +1354,63 @@ struct EpisodeRowTooltip: View {
     let episode: SonarrEpisodeDetail
     let queueItem: QueueItem?
     let episodeFile: SonarrEpisodeFile?
+    let seriesTitle: String?
+    let seriesPosterURL: URL?
+    let seriesPosterRequiresAuth: Bool
+    let seriesPosterAPIKey: String?
+    @EnvironmentObject var configStore: ConfigStore
+
+    public init(
+        episode: SonarrEpisodeDetail,
+        queueItem: QueueItem?,
+        episodeFile: SonarrEpisodeFile?,
+        seriesTitle: String? = nil,
+        seriesPosterURL: URL? = nil,
+        seriesPosterRequiresAuth: Bool = false,
+        seriesPosterAPIKey: String? = nil
+    ) {
+        self.episode = episode
+        self.queueItem = queueItem
+        self.episodeFile = episodeFile
+        self.seriesTitle = seriesTitle
+        self.seriesPosterURL = seriesPosterURL
+        self.seriesPosterRequiresAuth = seriesPosterRequiresAuth
+        self.seriesPosterAPIKey = seriesPosterAPIKey
+    }
 
     var body: some View {
+        // Queue-tooltip content shape (header + divider + grid +
+        // chips) without the poster — the user is already inside
+        // the series detail surface, the show's poster is right
+        // there in the hero card and would duplicate.
+        tooltipContent
+            .padding(12)
+            // 358pt = queue tooltip width (480) minus poster (110)
+            // and HStack spacing (12) — the content column lives at
+            // the same pixel width whether or not the poster is on
+            // its left.
+            .frame(width: 358, alignment: .leading)
+    }
+
+    private var tooltipContent: some View {
         VStack(alignment: .leading, spacing: 6) {
-            // Episode breadcrumb header — code as a small tinted
-            // capsule on the leading edge so it reads as an
-            // identifier "tag", visually decoupled from the title.
-            // Before this the code sat as plain text right next to
-            // the title and the eye merged "S02E04Pilot" into one
-            // smear.
-            VStack(alignment: .leading, spacing: 4) {
-                Text(episodeCode)
-                    .scaledFont(size: 9, weight: .semibold, monospacedDigit: true)
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 5)
-                    .padding(.vertical, 1)
-                    .background(Color.primary.opacity(0.08), in: Capsule())
-                if let title = episode.title, !title.isEmpty {
-                    Text(title)
-                        .scaledFont(size: 12, weight: .semibold)
-                        .foregroundStyle(.primary)
-                        .lineLimit(2)
+            header
+            Divider().opacity(0.5)
+            infoGrid
+            if let formats = primaryFormats, !formats.isEmpty {
+                customFormatChipStrip(
+                    tags: formats,
+                    score: primaryScore != 0 ? primaryScore : nil
+                )
+                if let q = queueItem, q.isUpgrade {
+                    CustomFormatDiff(
+                        newFormats: q.customFormats,
+                        existingFormats: existingFormats
+                    )
+                    .padding(.top, 2)
                 }
             }
-            Divider().opacity(0.4)
-            if let q = queueItem {
-                queueBlock(q: q)
-            } else if let file = episodeFile {
-                fileBlock(file: file)
-            }
         }
-        .padding(10)
-        .frame(width: 340, alignment: .leading)
     }
 
     private var episodeCode: String {
@@ -1361,95 +1419,156 @@ struct EpisodeRowTooltip: View {
                episode.episodeNumber ?? 0)
     }
 
-    @ViewBuilder
-    private func queueBlock(q: QueueItem) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            // Header row — status pill + quality + size + score
-            HStack(spacing: 6) {
-                StatusIconLabel(status: q.status, iconSize: 10, labelSize: 11, labelWeight: .semibold)
+    /// Formats to show in the chip strip — queue item's tags if a
+    /// download is in flight, otherwise the on-disk file's tags.
+    private var primaryFormats: [String]? {
+        if let q = queueItem { return q.customFormats }
+        if let file = episodeFile {
+            return (file.customFormats ?? []).map(\.name)
+        }
+        return nil
+    }
+
+    private var primaryScore: Int {
+        queueItem?.customFormatScore ?? episodeFile?.customFormatScore ?? 0
+    }
+
+    private var existingFormats: [String] {
+        (episodeFile?.customFormats ?? []).map(\.name)
+    }
+
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            // Series title + Upgrade/New badge sit on the same line —
+            // mirrors `QueueItemTooltip.header`'s "title + badge"
+            // arrangement.
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text(seriesTitle ?? episode.title ?? "—")
+                    .scaledFont(size: 13, weight: .semibold)
+                    .foregroundStyle(.primary)
+                    .lineLimit(2)
+                if let q = queueItem {
+                    MediaBadgeCluster(isUpgrade: q.isUpgrade)
+                }
                 Spacer(minLength: 4)
-                ScoreLabel(
-                    delta: q.customFormatScore,
-                    from: q.existingCustomFormatScore,
-                    size: 11
+            }
+            // Subtitle = "Season 02 · Episode 04 — Cold Start".
+            // Same shape as queue rows' subtitle, builds the
+            // "what season / episode am I looking at" answer in
+            // one glance.
+            Text(seasonEpisodeSubtitle)
+                .scaledFont(size: 11)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+        }
+    }
+
+    private var seasonEpisodeSubtitle: String {
+        var bits: [String] = []
+        if let sn = episode.seasonNumber {
+            bits.append(String(format: "Season %02d", sn))
+        }
+        if let en = episode.episodeNumber {
+            bits.append(String(format: "Episode %02d", en))
+        }
+        let prefix = bits.joined(separator: " · ")
+        if let t = episode.title, !t.isEmpty, seriesTitle != nil {
+            return prefix.isEmpty ? t : "\(prefix) — \(t)"
+        }
+        return prefix
+    }
+
+    @ViewBuilder
+    private var infoGrid: some View {
+        Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 10, verticalSpacing: 3) {
+            if let q = queueItem {
+                gridRow(
+                    label: "Status",
+                    value: AnyView(
+                        HStack(spacing: 4) {
+                            StatusIconLabel(status: q.status,
+                                            iconSize: 10,
+                                            labelSize: 11,
+                                            labelWeight: .semibold)
+                            Text(verbatim: "· \(Int((q.progress * 100).rounded()))%")
+                                .scaledFont(size: 11, monospacedDigit: true)
+                                .foregroundStyle(.secondary)
+                        }
+                    )
                 )
-            }
-            HStack(spacing: 4) {
-                if let qq = q.quality, !qq.isEmpty {
-                    Text(qq)
-                        .scaledFont(size: 11, weight: .medium)
-                        .foregroundStyle(.primary)
-                }
-                if q.sizeTotal > 0 {
-                    Text("·").foregroundStyle(.tertiary)
-                    Text(ByteCountFormatter.string(fromByteCount: q.sizeTotal, countStyle: .file))
-                        .scaledFont(size: 11)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            // Upgrade diff sub-line — same `└─ OLD` rendering as the
-            // queue-row tooltip and movie detail file section.
-            if q.isUpgrade, hasExistingMetadata(q) {
-                ExistingFileDiffRow(
-                    existingQuality: q.existingQuality,
-                    existingSize: q.existingSize,
-                    existingScore: q.existingCustomFormatScore,
-                    newScore: q.customFormatScore,
-                    newQuality: q.quality,
-                    newSize: q.sizeTotal > 0 ? q.sizeTotal : nil,
-                    tagsDiffer: Set(q.customFormats) != Set(q.existingCustomFormats)
+                gridRow(
+                    label: "Quality",
+                    value: AnyView(qualitySizeScore(
+                        quality: q.quality,
+                        size: q.sizeTotal,
+                        score: q.customFormatScore
+                    ))
                 )
-            }
-            if !q.customFormats.isEmpty {
-                TooltipFlowLayout(spacing: 3) {
-                    ForEach(q.customFormats, id: \.self) { TagChip(text: $0) }
+                if let file = episodeFile, q.isUpgrade {
+                    GridRow(alignment: .firstTextBaseline) {
+                        Color.clear.frame(width: 0, height: 0)
+                        ExistingFileDiffRow(
+                            existingQuality: file.quality?.name,
+                            existingSize: file.size,
+                            existingScore: file.customFormatScore,
+                            newScore: q.customFormatScore,
+                            newQuality: q.quality,
+                            newSize: q.sizeTotal > 0 ? q.sizeTotal : nil,
+                            tagsDiffer: Set(q.customFormats) != Set(existingFormats)
+                        )
+                    }
                 }
-                .padding(.top, 2)
+                if let client = q.downloadClient {
+                    gridRow(label: "Client", value: AnyView(
+                        Text(client).scaledFont(size: 11).foregroundStyle(.secondary)
+                    ))
+                }
+            } else if let file = episodeFile {
+                gridRow(label: "On disk", value: AnyView(qualitySizeScore(
+                    quality: file.quality?.name,
+                    size: file.size ?? 0,
+                    score: file.customFormatScore ?? 0
+                )))
             }
         }
     }
 
     @ViewBuilder
-    private func fileBlock(file: SonarrEpisodeFile) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(spacing: 6) {
-                Text("On disk", bundle: .module)
-                    .scaledFont(size: 10, weight: .semibold)
+    private func gridRow(label: LocalizedStringKey, value: AnyView) -> some View {
+        GridRow(alignment: .firstTextBaseline) {
+            Text(label, bundle: .module)
+                .scaledFont(size: 10, weight: .semibold)
+                .foregroundStyle(.tertiary)
+                .textCase(.uppercase)
+                .tracking(0.4)
+                .gridColumnAlignment(.leading)
+            value
+        }
+    }
+
+    @ViewBuilder
+    private func qualitySizeScore(quality: String?, size: Int64, score: Int) -> some View {
+        HStack(spacing: 4) {
+            if let q = quality, !q.isEmpty {
+                Text(q)
+                    .scaledFont(size: 11, weight: .medium)
+                    .foregroundStyle(.primary)
+            }
+            if size > 0 {
+                if quality?.isEmpty == false {
+                    Text("·").foregroundStyle(.tertiary)
+                }
+                Text(ByteCountFormatter.string(fromByteCount: size, countStyle: .file))
+                    .scaledFont(size: 11)
                     .foregroundStyle(.secondary)
-                    .textCase(.uppercase)
-                    .tracking(0.5)
-                Spacer(minLength: 4)
-                if let score = file.customFormatScore {
-                    ScoreLabel(score: score, size: 11)
-                }
             }
-            HStack(spacing: 4) {
-                if let qq = file.quality?.name, !qq.isEmpty {
-                    Text(qq)
-                        .scaledFont(size: 11, weight: .medium)
-                        .foregroundStyle(.primary)
-                }
-                if let size = file.size, size > 0 {
-                    Text("·").foregroundStyle(.tertiary)
-                    Text(ByteCountFormatter.string(fromByteCount: size, countStyle: .file))
-                        .scaledFont(size: 11)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            if let formats = file.customFormats, !formats.isEmpty {
-                TooltipFlowLayout(spacing: 3) {
-                    ForEach(formats, id: \.name) { f in TagChip(text: f.name) }
-                }
-                .padding(.top, 2)
+            if score != 0 {
+                Text("·").foregroundStyle(.tertiary)
+                ScoreLabel(score: score, size: 11)
             }
         }
     }
 
-    private func hasExistingMetadata(_ item: QueueItem) -> Bool {
-        (item.existingQuality.map { !$0.isEmpty } ?? false)
-            || (item.existingSize ?? 0) > 0
-            || (item.existingCustomFormatScore ?? 0) != 0
-    }
 }
 
 struct TrackRow: View {

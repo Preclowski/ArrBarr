@@ -614,7 +614,11 @@ public struct DetailView: View {
                             },
                             onSetMonitored: setSeasonMonitoredClosure(seasonNumber: active.seasonNumber),
                             initiallyExpanded: true,
-                            hideExpandChevron: true
+                            hideExpandChevron: true,
+                            seriesTitle: sonarrDetail?.title ?? item.title,
+                            seriesPosterURL: arrPosterURL(images: sonarrDetail?.images, for: item, in: configStore) ?? item.posterURL,
+                            seriesPosterRequiresAuth: item.posterRequiresAuth,
+                            seriesPosterAPIKey: configStore.sonarr.apiKey
                         )
                     }
                 }
