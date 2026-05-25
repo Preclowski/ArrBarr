@@ -37,26 +37,32 @@ public struct DiscoverCardView: View {
             let w = geo.size.width
             let h = geo.size.height
             ZStack {
-                // FRONT — rotates 0 → -180° on flip
+                // FRONT — pivots around leading edge (spine), slides right, lifts slightly
                 frontFace(w: w, h: h)
                     .opacity(isHovered ? 0 : 1)
                     .rotation3DEffect(
                         .degrees(isHovered ? -180 : 0),
                         axis: (x: 0, y: 1, z: 0),
-                        perspective: 0.5
+                        anchor: .leading,
+                        perspective: 0.7
                     )
+                    .offset(x: isHovered ? w * 0.5 : 0)
+                    .scaleEffect(isHovered ? 0.92 : 1.0)
 
-                // BACK — rotates +180° → 0 on flip
+                // BACK — slides in from right, settles flat at center
                 backFace(w: w, h: h)
                     .opacity(isHovered ? 1 : 0)
                     .rotation3DEffect(
                         .degrees(isHovered ? 0 : 180),
                         axis: (x: 0, y: 1, z: 0),
-                        perspective: 0.5
+                        anchor: .leading,
+                        perspective: 0.7
                     )
+                    .offset(x: isHovered ? 0 : w * 0.5)
+                    .scaleEffect(isHovered ? 1.0 : 0.92)
             }
             .frame(width: w, height: h)
-            .animation(.interactiveSpring(response: 0.4, dampingFraction: 0.78), value: isHovered)
+            .animation(.interactiveSpring(response: 0.55, dampingFraction: 0.72), value: isHovered)
             .overlay(swipeTint.allowsHitTesting(false))
             .overlay(alignment: dragOffset.width > 0 ? .topLeading : .topTrailing) {
                 swipeStamp
@@ -117,7 +123,6 @@ public struct DiscoverCardView: View {
                         ForEach(chips, id: \.label) { RatingPill(chip: $0) }
                     }
                 }
-                genreLabels(limit: 6)
             }
             .padding(14)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
