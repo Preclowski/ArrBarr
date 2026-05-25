@@ -421,15 +421,16 @@ public struct DiscoverPickerView: View {
                 Text(LocalizedStringKey(tag.label), bundle: .module)
                     .scaledFont(size: 10, weight: .semibold)
             }
-            .foregroundStyle(picked ? Color.white : color)
+            .foregroundStyle(picked ? color : Color.secondary)
             .padding(.horizontal, 7).padding(.vertical, 4)
             .background(
                 RoundedRectangle(cornerRadius: 5)
-                    .fill(picked ? color : .clear)
+                    .fill(.clear)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 5)
-                    .stroke(color.opacity(picked ? 0 : 0.85), lineWidth: 1.0)
+                    .stroke(picked ? color : Color.secondary.opacity(0.4),
+                            lineWidth: picked ? 1.2 : 1.0)
             )
         }
         .buttonStyle(.plain)

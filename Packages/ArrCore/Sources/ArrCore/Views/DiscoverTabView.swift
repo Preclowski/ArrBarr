@@ -63,42 +63,14 @@ public struct DiscoverTabView: View {
         }
     }
 
-    /// Top bar inside tinder mode — circular "<" back + optional matches pill.
     private var tinderTopBar: some View {
-        HStack(spacing: 8) {
-            Button {
-                withAnimation(.smooth(duration: 0.22)) { viewModel.stage = .picker }
-            } label: {
-                Image(systemName: "chevron.left")
-                    .scaledFont(size: 13, weight: .semibold)
-                    .foregroundStyle(.secondary)
-                    .frame(width: 30, height: 30)
-                    .background(Circle().fill(Color.primary.opacity(0.08)))
-            }
-            .buttonStyle(.plain)
-            .help(Text("Back to mood picker", bundle: .module))
-
-            Spacer()
-
-            if viewModel.matched.count > 0 {
-                Button {
-                    withAnimation(.smooth) { showMatched.toggle() }
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "rectangle.stack.fill")
-                            .scaledFont(size: 11, weight: .semibold)
-                        Text(verbatim: "\(viewModel.matched.count)")
-                            .scaledFont(size: 11, weight: .semibold)
-                    }
-                    .foregroundStyle(showMatched ? .white : Color.accentColor)
-                    .padding(.horizontal, 10).padding(.vertical, 5)
-                    .background(Capsule().fill(showMatched
-                                               ? Color.accentColor
-                                               : Color.accentColor.opacity(0.15)))
+        HStack(spacing: 6) {
+            FloatingBackButton(action: {
+                withAnimation(.smooth(duration: 0.22)) {
+                    viewModel.stage = .picker
                 }
-                .buttonStyle(.plain)
-                .help(Text("Your picks", bundle: .module))
-            }
+            })
+            Spacer()
         }
         .padding(.horizontal, 12)
         .padding(.top, 10)
@@ -209,40 +181,59 @@ public struct DiscoverTabView: View {
     }
 
     private var cardActionRow: some View {
-        GeometryReader { geo in
-            let spacing: CGFloat = 8
-            let skipW  = max(80, (geo.size.width - spacing) * 0.38)
-            let watchW = max(120, (geo.size.width - spacing) * 0.62)
-            HStack(spacing: spacing) {
-                Button { Task { await viewModel.swipe(right: false) } } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "xmark")
-                            .scaledFont(size: 11, weight: .semibold)
-                        Text("Skip", bundle: .module)
-                            .scaledFont(size: 12, weight: .semibold)
-                    }
-                    .frame(width: skipW)
-                    .padding(.vertical, 7)
+        HStack(spacing: 8) {
+            Button { Task { await viewModel.swipe(right: false) } } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "xmark")
+                        .scaledFont(size: 11, weight: .semibold)
+                    Text("Skip", bundle: .module)
+                        .scaledFont(size: 12, weight: .semibold)
                 }
-                .modifier(GlassProminentButtonStyle())
-                .tint(.red)
-                .keyboardShortcut(.leftArrow, modifiers: [])
-
-                Button { Task { await viewModel.swipe(right: true) } } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: rightActionIcon)
-                            .scaledFont(size: 11, weight: .semibold)
-                        Text(rightActionLabel, bundle: .module)
-                            .scaledFont(size: 12, weight: .semibold)
-                    }
-                    .frame(width: watchW)
-                    .padding(.vertical, 7)
-                }
-                .modifier(GlassProminentButtonStyle())
-                .keyboardShortcut(.rightArrow, modifiers: [])
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 7)
             }
+            .modifier(GlassProminentButtonStyle())
+            .tint(.red)
+            .keyboardShortcut(.leftArrow, modifiers: [])
+
+            Button { Task { await viewModel.swipe(right: true) } } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: rightActionIcon)
+                        .scaledFont(size: 11, weight: .semibold)
+                    Text(rightActionLabel, bundle: .module)
+                        .scaledFont(size: 12, weight: .semibold)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 7)
+            }
+            .modifier(GlassProminentButtonStyle())
+            .keyboardShortcut(.rightArrow, modifiers: [])
+
+            // Third button: compact list opener with a badge count.
+            Button {
+                withAnimation(.smooth) { showMatched.toggle() }
+            } label: {
+                ZStack(alignment: .topTrailing) {
+                    Image(systemName: "rectangle.stack.fill")
+                        .scaledFont(size: 13, weight: .semibold)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 7)
+                    if viewModel.matched.count > 0 {
+                        Text(verbatim: "\(min(viewModel.matched.count, 99))")
+                            .scaledFont(size: 9, weight: .bold)
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 1)
+                            .background(Capsule().fill(Color.accentColor))
+                            .offset(x: 4, y: -4)
+                    }
+                }
+                .frame(minWidth: 32)
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.regular)
+            .help(Text("Your picks", bundle: .module))
         }
-        .frame(height: 36)
     }
 
     private var rightActionIcon: String {

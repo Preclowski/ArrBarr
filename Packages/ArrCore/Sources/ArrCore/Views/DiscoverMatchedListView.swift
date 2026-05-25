@@ -74,76 +74,19 @@ public struct DiscoverMatchedListView: View {
 
     @ViewBuilder
     private func row(_ item: DiscoverItem) -> some View {
-        HStack(spacing: 10) {
-            RemotePoster(url: item.result.posterURL, apiKey: nil)
-                .frame(width: 44, height: 66)
-                .clipShape(RoundedRectangle(cornerRadius: 4))
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(item.result.title)
-                    .scaledFont(size: 13, weight: .semibold)
-                    .lineLimit(2)
-                HStack(spacing: 6) {
-                    if let y = item.result.year {
-                        Text(verbatim: "\(y)")
-                            .scaledFont(size: 11)
-                            .foregroundStyle(.secondary)
-                    }
-                    originBadge(item.originLabel)
-                }
-            }
-            Spacer()
-
-            Button {
-                onAct(item)
-            } label: {
-                Image(systemName: actionIcon(item.action))
-                    .scaledFont(size: 18, weight: .semibold)
-                    .foregroundStyle(Color.accentColor)
-            }
-            .buttonStyle(.plain)
-            .help(Text(actionHelp(item.action), bundle: .module))
-
+        HStack(spacing: 6) {
+            SearchResultRow(result: item.result, onTap: { onAct(item) })
+                .frame(maxWidth: .infinity, alignment: .leading)
             Button {
                 onRemove(item)
             } label: {
                 Image(systemName: "xmark.circle.fill")
-                    .scaledFont(size: 14)
+                    .scaledFont(size: 13)
                     .foregroundStyle(.tertiary)
             }
             .buttonStyle(.plain)
+            .padding(.trailing, 8)
             .help(Text("Remove", bundle: .module))
-        }
-        .padding(.vertical, 4)
-    }
-
-    private func originBadge(_ origin: DiscoverItem.Origin) -> some View {
-        let label: LocalizedStringKey
-        let icon: String
-        switch origin {
-        case .tmdb:    label = "From TMDB";          icon = "film"
-        case .library: label = "From your library";  icon = "books.vertical"
-        case .llm:     label = "From AI";            icon = "sparkles"
-        }
-        return HStack(spacing: 3) {
-            Image(systemName: icon).scaledFont(size: 9)
-            Text(label, bundle: .module).scaledFont(size: 10)
-        }
-        .foregroundStyle(.tertiary)
-    }
-
-    private func actionIcon(_ action: DiscoverAction) -> String {
-        switch action {
-        case .addToRadarr: return "plus.circle.fill"
-        case .addToSonarr: return "tv.circle.fill"
-        case .openDetail:  return "play.circle.fill"
-        }
-    }
-    private func actionHelp(_ action: DiscoverAction) -> LocalizedStringKey {
-        switch action {
-        case .addToRadarr: return "Add to Radarr"
-        case .addToSonarr: return "Add to Sonarr"
-        case .openDetail:  return "Watch"
         }
     }
 }
