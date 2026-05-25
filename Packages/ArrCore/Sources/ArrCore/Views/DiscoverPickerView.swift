@@ -19,6 +19,10 @@ public struct DiscoverPickerView: View {
     @State private var addingTagFor: String? = nil
     @State private var newCustomTagText: String = ""
     @FocusState private var newCustomTagFocused: Bool
+    /// True once the user has manually clicked the disclosure chevron in
+    /// the current session. Once set, auto-collapse on empty text no longer
+    /// fires — the user's explicit choice wins.
+    @State private var moreFiltersManuallyExpanded: Bool = false
 
     public init(viewModel: DiscoverViewModel,
                 llmAvailable: Bool,
@@ -701,6 +705,28 @@ public struct DiscoverPickerView: View {
         ]),
     ]
 
+    // MARK: - More filters disclosure
+
+    @ViewBuilder
+    private var moreFiltersChevron: some View {
+        Button {
+            withAnimation(.smooth(duration: 0.2)) {
+                moreFiltersManuallyExpanded.toggle()
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: moreFiltersExpanded ? "chevron.down" : "chevron.right")
+                    .scaledFont(size: 9, weight: .semibold)
+                Text("More filters", bundle: .module)
+                    .scaledFont(size: 10, weight: .semibold)
+            }
+            .foregroundStyle(.secondary)
+            .padding(.vertical, 4)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
     // MARK: - Pill rows (inline picked state)
 
     /// All tags grouped by category, picked or not — selection is signaled
@@ -1010,6 +1036,11 @@ public struct DiscoverPickerView: View {
             .buttonStyle(.plain)
             .onHover { hovering in isHovering = hovering }
         }
+    }
+
+    private var moreFiltersExpanded: Bool {
+        !freeText.trimmingCharacters(in: .whitespaces).isEmpty
+            || moreFiltersManuallyExpanded
     }
 
     // MARK: - Chip composer
