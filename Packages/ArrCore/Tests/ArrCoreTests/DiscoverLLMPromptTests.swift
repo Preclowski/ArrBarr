@@ -79,4 +79,58 @@ final class DiscoverLLMPromptTests: XCTestCase {
         let r = try DiscoverLLMPrompt.parse(raw)
         XCTAssertEqual(r.filters.genres, [.comedy])
     }
+
+    // MARK: - Kind parsing
+
+    func test_parse_kindField_parsesMovieAndShow() throws {
+        let raw = """
+        { "titles": [
+            {"title":"Drive","year":2011,"kind":"movie"},
+            {"title":"Breaking Bad","year":2008,"kind":"show"}
+          ] }
+        """
+        let r = try DiscoverLLMPrompt.parse(raw)
+        XCTAssertEqual(r.suggestions[0].kind, .movie)
+        XCTAssertEqual(r.suggestions[1].kind, .show)
+    }
+
+    func test_parse_kindField_nilWhenAbsent() throws {
+        let raw = """
+        { "titles": [{"title":"Drive","year":2011}] }
+        """
+        let r = try DiscoverLLMPrompt.parse(raw)
+        XCTAssertNil(r.suggestions[0].kind)
+    }
+
+    func test_parse_kindField_tvAliasesResolveToShow() throws {
+        let raw = """
+        { "titles": [{"title":"Sopranos","year":1999,"kind":"tv"}] }
+        """
+        let r = try DiscoverLLMPrompt.parse(raw)
+        XCTAssertEqual(r.suggestions[0].kind, .show)
+    }
+
+    // MARK: - Kind hint in build
+
+    func test_buildPrompt_movieHint_mentionsMoviesOnly() {
+        let p = DiscoverLLMPrompt.build(mood: "noir", decade: .any,
+                                        count: 10, exclude: [], kindHint: .movie)
+        XCTAssertTrue(p.contains("movies"), "should mention movies")
+        XCTAssertFalse(p.contains("\"kind\""), "movie mode should omit kind field in schema")
+    }
+
+    func test_buildPrompt_showHint_mentionsTVShows() {
+        let p = DiscoverLLMPrompt.build(mood: "noir", decade: .any,
+                                        count: 10, exclude: [], kindHint: .show)
+        XCTAssertTrue(p.lowercased().contains("tv show") || p.lowercased().contains("shows"),
+                      "should mention TV shows")
+    }
+
+    func test_buildPrompt_autoHint_includesKindFieldInSchema() {
+        let p = DiscoverLLMPrompt.build(mood: "noir", decade: .any,
+                                        count: 10, exclude: [], kindHint: .auto)
+        XCTAssertTrue(p.contains("\"kind\""), "auto mode should include kind field in schema")
+        XCTAssertTrue(p.contains("\"movie\"") && p.contains("\"show\""),
+                      "should show both options")
+    }
 }

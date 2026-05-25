@@ -5,6 +5,9 @@ public enum DiscoverLLMPrompt {
     public struct Suggestion: Equatable, Sendable {
         public let title: String
         public let year: Int?
+        /// Only present when `kindHint == .auto` — LLM annotates each title.
+        /// `nil` means the caller infers the kind from the current mediaSelection.
+        public let kind: DiscoverItemKind?
     }
 
     public struct SuggestedFilters: Equatable, Sendable {
@@ -26,21 +29,51 @@ public enum DiscoverLLMPrompt {
     public static func build(mood: String,
                              decade: DiscoverDecade,
                              count: Int,
-                             exclude: [String]) -> String {
+                             exclude: [String],
+                             kindHint: DiscoverMediaSelection = .movie) -> String {
         var lines: [String] = []
-        lines.append(
-            "You recommend movies for a tinder-style picker. " +
-            "Reply with a single JSON object, no prose, no markdown: " +
-            "{ \"titles\": [ { \"title\": string, \"year\": int|null } ], " +
-            "\"filters\": { \"genres\": [string], \"decade\": \"1980s\"|\"1990s\"|\"2000s\"|\"2010s\"|\"2020s\"|null, " +
-            "\"status\": \"any\"|\"owned\"|\"to_download\"|null } }."
-        )
+        switch kindHint {
+        case .movie:
+            lines.append(
+                "You recommend movies for a tinder-style picker. " +
+                "Reply with a single JSON object, no prose, no markdown: " +
+                "{ \"titles\": [ { \"title\": string, \"year\": int|null } ], " +
+                "\"filters\": { \"genres\": [string], \"decade\": \"1980s\"|\"1990s\"|\"2000s\"|\"2010s\"|\"2020s\"|null, " +
+                "\"status\": \"any\"|\"owned\"|\"to_download\"|null } }."
+            )
+            lines.append("Return only movies — no TV shows.")
+        case .show:
+            lines.append(
+                "You recommend TV shows for a tinder-style picker. " +
+                "Reply with a single JSON object, no prose, no markdown: " +
+                "{ \"titles\": [ { \"title\": string, \"year\": int|null } ], " +
+                "\"filters\": { \"genres\": [string], \"decade\": \"1980s\"|\"1990s\"|\"2000s\"|\"2010s\"|\"2020s\"|null, " +
+                "\"status\": \"any\"|\"owned\"|\"to_download\"|null } }."
+            )
+            lines.append("Return only TV shows — no movies.")
+        case .auto:
+            lines.append(
+                "You recommend movies and TV shows for a tinder-style picker. " +
+                "Decide for each title whether it is a movie or a TV show based on the mood. " +
+                "Reply with a single JSON object, no prose, no markdown: " +
+                "{ \"titles\": [ { \"title\": string, \"year\": int|null, \"kind\": \"movie\"|\"show\" } ], " +
+                "\"filters\": { \"genres\": [string], \"decade\": \"1980s\"|\"1990s\"|\"2000s\"|\"2010s\"|\"2020s\"|null, " +
+                "\"status\": \"any\"|\"owned\"|\"to_download\"|null } }."
+            )
+            lines.append("Label each title with `\"kind\": \"movie\"` or `\"kind\": \"show\"` as appropriate.")
+        }
         lines.append("Mood: \(mood)")
         if let range = decade.range {
             lines.append("User-set era constraint already: \(range.lowerBound)-\(range.upperBound). Respect or refine it.")
         }
-        lines.append("Return exactly \(count) distinct movies in `titles`.")
-        lines.append("`filters.genres` may name standard movie genres (Action, Comedy, Drama, Thriller, etc.) — at most 3.")
+        let kindLabel: String
+        switch kindHint {
+        case .movie: kindLabel = "movies"
+        case .show:  kindLabel = "TV shows"
+        case .auto:  kindLabel = "titles (mix of movies and shows)"
+        }
+        lines.append("Return exactly \(count) distinct \(kindLabel) in `titles`.")
+        lines.append("`filters.genres` may name standard genres (Action, Comedy, Drama, Thriller, etc.) — at most 3.")
         lines.append("`filters.status` is `owned` only when the user clearly wants what they already have.")
         if !exclude.isEmpty {
             lines.append("Do NOT include any of these already-shown titles:")
@@ -54,7 +87,7 @@ public enum DiscoverLLMPrompt {
         guard let jsonSlice = extractFirstObject(from: cleaned) else {
             throw ParseError.noJSONObjectFound
         }
-        struct TitleRow: Decodable { let title: String; let year: Int? }
+        struct TitleRow: Decodable { let title: String; let year: Int?; let kind: String? }
         struct FiltersRow: Decodable {
             let genres: [String]?
             let decade: String?
@@ -66,7 +99,16 @@ public enum DiscoverLLMPrompt {
         }
         do {
             let root = try JSONDecoder().decode(Root.self, from: Data(jsonSlice.utf8))
-            let suggestions = root.titles.map { Suggestion(title: $0.title, year: $0.year) }
+            let suggestions = root.titles.map { row -> Suggestion in
+                let kind: DiscoverItemKind? = row.kind.flatMap { raw in
+                    switch raw.lowercased() {
+                    case "movie": return .movie
+                    case "show", "tv", "series": return .show
+                    default: return nil
+                    }
+                }
+                return Suggestion(title: row.title, year: row.year, kind: kind)
+            }
             let genres = (root.filters?.genres ?? []).compactMap { DiscoverGenre.from(name: $0) }
             let decade: DiscoverDecade? = (root.filters?.decade).flatMap { raw in
                 DiscoverDecade.allCases.first { $0.rawValue.lowercased() == raw.lowercased() }

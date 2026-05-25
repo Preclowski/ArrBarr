@@ -39,6 +39,8 @@ public final class DiscoverViewModel: ObservableObject {
     /// taps, explicit reshuffle). The View's `task(id:)` keys on this so
     /// LLM-applied filter changes don't trigger an infinite reshuffle loop.
     @Published public private(set) var userActionTick: Int = 0
+    /// Media kind the user selected in the picker segmented control.
+    @Published public var mediaSelection: DiscoverMediaSelection = .movie
 
     // MARK: - Source closures
 
@@ -80,6 +82,11 @@ public final class DiscoverViewModel: ObservableObject {
 
     /// Call when the user submits the mood field.
     public func userSubmittedMood() {
+        userActionTick &+= 1
+    }
+
+    /// Call when the user changes the media kind selector (Movies / Shows / AI decides).
+    public func mediaSelectionChanged() {
         userActionTick &+= 1
     }
 
@@ -135,9 +142,15 @@ public final class DiscoverViewModel: ObservableObject {
 
     private func availableSources() -> [Source] {
         var out: [Source] = []
-        if tmdb != nil && !failedSources.contains(.tmdb) { out.append(.tmdb) }
-        if library != nil && !failedSources.contains(.library) && !libraryDrained {
-            out.append(.library)
+        // In .auto mode the LLM is the only source — it labels each title
+        // with its own kind. TMDB and Library need a known kind to route
+        // correctly, so they are skipped.
+        let autoMode = mediaSelection == .auto
+        if !autoMode {
+            if tmdb != nil && !failedSources.contains(.tmdb) { out.append(.tmdb) }
+            if library != nil && !failedSources.contains(.library) && !libraryDrained {
+                out.append(.library)
+            }
         }
         if llm != nil && !failedSources.contains(.llm) && !llmDormant
            && !moodText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -227,6 +240,8 @@ public final class DiscoverViewModel: ObservableObject {
         errorMessage = nil
         matched.removeAll()
         pickedMoods.removeAll()
+        // Note: mediaSelection is intentionally NOT reset here — it's a
+        // user-level preference that persists across reshuffles.
         topUpTask?.cancel()
         topUpTask = nil
     }

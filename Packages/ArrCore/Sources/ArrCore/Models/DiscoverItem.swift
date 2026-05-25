@@ -1,12 +1,34 @@
 import Foundation
 
+/// Whether a Discover card represents a movie or a TV show.
+public enum DiscoverItemKind: String, Equatable, Sendable {
+    case movie, show
+}
+
+/// The user's media-type selection in the Discover picker.
+public enum DiscoverMediaSelection: String, CaseIterable, Identifiable, Sendable {
+    case movie, show, auto
+
+    public var id: String { rawValue }
+    public var displayName: String {
+        switch self {
+        case .movie: return "Movies"
+        case .show:  return "Shows"
+        case .auto:  return "AI decides"
+        }
+    }
+}
+
 public enum DiscoverAction: Equatable, Sendable {
     /// Card represents a movie not in Radarr. Swipe-right opens the
     /// existing SearchAddPanel overlay.
     case addToRadarr
-    /// Card represents a movie already in Radarr. Swipe-right opens
+    /// Card represents a show not in Sonarr. Swipe-right opens the
+    /// existing SearchAddPanel overlay (with source: .sonarr).
+    case addToSonarr
+    /// Card represents a title already in the library. Swipe-right opens
     /// DetailView via the existing DetailRequest pipeline.
-    case openDetail(arrId: Int)
+    case openDetail(source: QueueItem.Source, arrId: Int)
 }
 
 public struct DiscoverItem: Identifiable, Equatable, Sendable {
@@ -15,6 +37,8 @@ public struct DiscoverItem: Identifiable, Equatable, Sendable {
     /// Source label for the bottom-of-card chip ("From TMDB" / "From your
     /// library" / "From AI").
     public let originLabel: Origin
+    /// Whether this card represents a movie or a TV show.
+    public let kind: DiscoverItemKind
 
     public enum Origin: String, Sendable {
         case tmdb, library, llm
@@ -34,10 +58,12 @@ public struct DiscoverItem: Identifiable, Equatable, Sendable {
         return "title:\(title)|\(year)"
     }
 
-    public init(result: SearchResult, action: DiscoverAction, originLabel: Origin = .tmdb) {
+    public init(result: SearchResult, action: DiscoverAction,
+                originLabel: Origin = .tmdb, kind: DiscoverItemKind = .movie) {
         self.result = result
         self.action = action
         self.originLabel = originLabel
+        self.kind = kind
     }
 }
 
