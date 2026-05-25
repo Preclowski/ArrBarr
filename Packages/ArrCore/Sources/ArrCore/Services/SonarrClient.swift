@@ -403,6 +403,22 @@ public actor SonarrClient: ArrAPIClient {
         return (try? JSONDecoder().decode([SonarrLibraryRecord].self, from: data)) ?? []
     }
 
+    /// Title-based series lookup used by the Discover LLM source to enrich
+    /// LLM-suggested show titles with poster / overview / year before they
+    /// surface as cards. Mirrors Sonarr's `/api/v3/series/lookup?term=…`.
+    func lookupSeries(term: String) async throws -> [SonarrLookupRecord] {
+        if DemoMode.isActive { return [] }
+        guard config.isConfigured else { throw HTTPError.notConfigured }
+        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
+        let url = try http.url(
+            base: config.baseURL,
+            path: "\(apiBase)/series/lookup",
+            query: [URLQueryItem(name: "term", value: term)]
+        )
+        let data = try await http.get(url, headers: apiHeaders)
+        return (try? JSONDecoder().decode([SonarrLookupRecord].self, from: data)) ?? []
+    }
+
     private static func unifyCalendar(_ r: SonarrCalendarRecord, baseURL: String) -> UpcomingItem? {
         guard let dateStr = r.airDateUtc, let date = parseArrDate(dateStr) else { return nil }
 

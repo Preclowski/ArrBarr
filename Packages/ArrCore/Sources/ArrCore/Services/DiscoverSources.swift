@@ -2,19 +2,17 @@ import Foundation
 
 public enum DiscoverSources {
 
-    // MARK: - TMDB source
+    // MARK: - TMDB Movie source
 
-    /// TMDB Discover source. Skips anything already in the local Radarr
-    /// library — caller passes `libraryTmdbIds` so we don't repaint
-    /// titles the user already owns. The closure is captured at
-    /// `configure` time and re-reads the Set on every call.
+    /// TMDB Discover source for movies. Skips anything already in the local
+    /// Radarr library.
     @MainActor
-    public static func tmdb(
+    public static func tmdbMovies(
         apiKey: String,
         libraryTmdbIds: @escaping @MainActor () -> Set<Int>
     ) -> DiscoverViewModel.TMDBSource {
         let client = TMDBClient(apiKey: apiKey)
-        return { filter, _ /* page — TMDB client doesn't currently page; reserved for future */ in
+        return { filter, _ in
             let range = filter.decade.range
             let genreIds = filter.genres.map(\.rawValue)
             let summaries = try await client.discoverMovies(
@@ -37,17 +35,61 @@ public enum DiscoverSources {
                     posterURL: TMDBClient.imageURL(path: s.posterPath),
                     source: .radarr, inLibraryArrId: nil
                 )
-                return DiscoverItem(result: result, action: .addToRadarr, originLabel: .tmdb)
+                return DiscoverItem(result: result, action: .addToRadarr,
+                                    originLabel: .tmdb, kind: .movie)
             }
         }
     }
 
-    // MARK: - Library source
+    // MARK: - TMDB TV source
 
-    /// Library source. Caller supplies the async fetch (so PopoverContentView
-    /// can cache the library list across sources). Filter is applied locally.
+    /// TMDB Discover source for TV shows. Skips anything already in the
+    /// local Sonarr library (matched by TVDB id).
     @MainActor
-    public static func library(
+    public static func tmdbShows(
+        apiKey: String,
+        libraryTvdbIds: @escaping @MainActor () -> Set<Int>
+    ) -> DiscoverViewModel.TMDBSource {
+        let client = TMDBClient(apiKey: apiKey)
+        return { filter, _ in
+            let range = filter.decade.range
+            // TMDB TV genres use the same numeric IDs as movies for most
+            // genres — we reuse DiscoverGenre.rawValue here.
+            let genreIds = filter.genres.map(\.rawValue)
+            let summaries = try await client.discoverTV(
+                genreIds: genreIds,
+                startYear: range?.lowerBound,
+                endYear: range?.upperBound,
+                sortBy: "popularity.desc"
+            )
+            let owned = libraryTvdbIds()
+            return summaries.compactMap { s -> DiscoverItem? in
+                // TMDB TV ids are not TVDB ids, so we can't filter owned
+                // by id here — just surface all and let action handle it.
+                _ = owned
+                let result = SearchResult(
+                    id: s.id, foreignId: String(s.id),
+                    title: s.name, subtitle: nil,
+                    year: s.year,
+                    rating: s.voteAverage,
+                    imdb: nil, rottenTomatoes: nil, metacritic: nil,
+                    overview: s.overview, runtime: nil,
+                    genres: [], network: nil, certification: nil,
+                    posterURL: TMDBClient.imageURL(path: s.posterPath),
+                    source: .sonarr, inLibraryArrId: nil
+                )
+                return DiscoverItem(result: result, action: .addToSonarr,
+                                    originLabel: .tmdb, kind: .show)
+            }
+        }
+    }
+
+    // MARK: - Radarr Library source
+
+    /// Radarr library source. Caller supplies the async fetch so
+    /// PopoverContentView can cache the list across sources.
+    @MainActor
+    public static func radarrLibrary(
         fetchAll: @escaping @MainActor () async throws -> [RadarrLibraryRecord]
     ) -> DiscoverViewModel.LibrarySource {
         return { filter in
@@ -71,8 +113,48 @@ public enum DiscoverSources {
                 )
                 return DiscoverItem(
                     result: result,
-                    action: .openDetail(arrId: arrId),
-                    originLabel: .library
+                    action: .openDetail(source: .radarr, arrId: arrId),
+                    originLabel: .library,
+                    kind: .movie
+                )
+            }
+        }
+    }
+
+    // MARK: - Sonarr Library source
+
+    /// Sonarr library source. Filters by decade and monitored status.
+    /// Genre filtering is skipped — Sonarr library records may not
+    /// carry full genre metadata.
+    @MainActor
+    public static func sonarrLibrary(
+        fetchAll: @escaping @MainActor () async throws -> [SonarrLibraryRecord]
+    ) -> DiscoverViewModel.LibrarySource {
+        return { filter in
+            let all = try await fetchAll()
+            let filtered = all.filter { rec in
+                // Use simple decade + monitored matching; SonarrLibraryRecord
+                // has no `hasFile` or `genres` field.
+                filter.matches(year: rec.year, monitored: rec.monitored)
+            }
+            let shuffled = filtered.shuffled()
+            return shuffled.compactMap { rec -> DiscoverItem? in
+                guard let arrId = rec.id, let title = rec.title else { return nil }
+                let poster: URL? = posterURL(from: rec.images)
+                let result = SearchResult(
+                    id: arrId, foreignId: rec.tvdbId.map(String.init) ?? "",
+                    title: title, subtitle: nil,
+                    year: rec.year, rating: nil, imdb: nil,
+                    rottenTomatoes: nil, metacritic: nil,
+                    overview: nil, runtime: nil,
+                    genres: [], network: nil, certification: nil,
+                    posterURL: poster, source: .sonarr, inLibraryArrId: arrId
+                )
+                return DiscoverItem(
+                    result: result,
+                    action: .openDetail(source: .sonarr, arrId: arrId),
+                    originLabel: .library,
+                    kind: .show
                 )
             }
         }
@@ -80,22 +162,26 @@ public enum DiscoverSources {
 
     // MARK: - LLM source
 
-    /// LLM source. Stateless: builds a prompt with the cumulative exclude
-    /// list, parses titles + suggested filters, looks each title up in
-    /// Radarr to enrich with poster/overview/year so the card UI is
-    /// uniform with other sources. Returns empty items when nothing
-    /// parses — VM treats that as pool exhaustion.
+    /// LLM source. `kindHint` controls the prompt style and the lookup
+    /// backend used to enrich suggestions:
+    ///   - `.movie` — Radarr lookup, all cards are movies.
+    ///   - `.show`  — Sonarr lookup, all cards are shows.
+    ///   - `.auto`  — LLM annotates each title; each suggestion's own
+    ///                `kind` field routes the lookup.
     @MainActor
     public static func llm(
         provider: LLMProvider,
         radarrLookup: @escaping @MainActor (String) async throws -> [RadarrLookupRecord],
+        sonarrLookup: @escaping @MainActor (String) async throws -> [SonarrLookupRecord],
         libraryTmdbIds: @escaping @MainActor () -> Set<Int>,
         decade: @escaping @MainActor () -> DiscoverDecade,
+        kindHint: DiscoverMediaSelection = .movie,
         count: Int = 20
     ) -> DiscoverViewModel.LLMSource {
         return { exclude, mood in
             let prompt = DiscoverLLMPrompt.build(
-                mood: mood, decade: decade(), count: count, exclude: exclude
+                mood: mood, decade: decade(), count: count,
+                exclude: exclude, kindHint: kindHint
             )
             let response = try await provider.respond(prompt: prompt, tools: [], history: [])
             let parsed: DiscoverLLMPrompt.Response
@@ -107,31 +193,63 @@ public enum DiscoverSources {
             let owned = libraryTmdbIds()
             var out: [DiscoverItem] = []
             for s in parsed.suggestions {
+                // Resolve kind: use suggestion's own label in .auto mode,
+                // otherwise fall back to the kindHint.
+                let resolvedKind: DiscoverItemKind
+                if let sugKind = s.kind {
+                    resolvedKind = sugKind
+                } else {
+                    resolvedKind = kindHint == .show ? .show : .movie
+                }
+
                 let term = s.year.map { "\(s.title) \($0)" } ?? s.title
-                let hits = (try? await radarrLookup(term)) ?? []
-                guard let first = hits.first else { continue }
-                let tmdbId = first.tmdbId ?? 0
-                let poster: URL? = posterURL(from: first.images)
-                let result = SearchResult(
-                    id: tmdbId, foreignId: tmdbId == 0 ? "" : String(tmdbId),
-                    title: first.title, subtitle: nil,
-                    year: first.year,
-                    rating: first.ratings?.tmdb?.value,
-                    imdb: first.ratings?.imdb?.value,
-                    rottenTomatoes: first.ratings?.rottenTomatoes?.value,
-                    metacritic: first.ratings?.metacritic?.value,
-                    overview: first.overview, runtime: first.runtime,
-                    genres: first.genres ?? [], network: first.studio,
-                    certification: first.certification,
-                    posterURL: poster,
-                    source: .radarr,
-                    inLibraryArrId: nil
-                )
-                // Already-owned LLM suggestions still surface as addToRadarr —
-                // the existing SearchAddPanel detects the dup and routes to
-                // the right action surface.
-                _ = owned
-                out.append(DiscoverItem(result: result, action: .addToRadarr, originLabel: .llm))
+
+                switch resolvedKind {
+                case .movie:
+                    let hits = (try? await radarrLookup(term)) ?? []
+                    guard let first = hits.first else { continue }
+                    let tmdbId = first.tmdbId ?? 0
+                    let poster: URL? = posterURL(from: first.images)
+                    let result = SearchResult(
+                        id: tmdbId, foreignId: tmdbId == 0 ? "" : String(tmdbId),
+                        title: first.title, subtitle: nil,
+                        year: first.year,
+                        rating: first.ratings?.tmdb?.value,
+                        imdb: first.ratings?.imdb?.value,
+                        rottenTomatoes: first.ratings?.rottenTomatoes?.value,
+                        metacritic: first.ratings?.metacritic?.value,
+                        overview: first.overview, runtime: first.runtime,
+                        genres: first.genres ?? [], network: first.studio,
+                        certification: first.certification,
+                        posterURL: poster,
+                        source: .radarr,
+                        inLibraryArrId: nil
+                    )
+                    _ = owned
+                    out.append(DiscoverItem(result: result, action: .addToRadarr,
+                                            originLabel: .llm, kind: .movie))
+
+                case .show:
+                    let hits = (try? await sonarrLookup(term)) ?? []
+                    guard let first = hits.first else { continue }
+                    let tvdbId = first.tvdbId ?? 0
+                    let poster: URL? = posterURL(from: first.images)
+                    let result = SearchResult(
+                        id: tvdbId, foreignId: tvdbId == 0 ? "" : String(tvdbId),
+                        title: first.title, subtitle: nil,
+                        year: first.year,
+                        rating: first.ratings?.value,
+                        imdb: nil, rottenTomatoes: nil, metacritic: nil,
+                        overview: first.overview, runtime: first.runtime,
+                        genres: first.genres ?? [], network: first.network,
+                        certification: nil,
+                        posterURL: poster,
+                        source: .sonarr,
+                        inLibraryArrId: nil
+                    )
+                    out.append(DiscoverItem(result: result, action: .addToSonarr,
+                                            originLabel: .llm, kind: .show))
+                }
             }
             let suggestedFilters = parsed.filters.genres.isEmpty
                 && parsed.filters.decade == nil
