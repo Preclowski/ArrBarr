@@ -59,7 +59,6 @@ public struct DiscoverTabView: View {
             if showMatched {
                 DiscoverMatchedListView(
                     items: viewModel.matched,
-                    onAct: dispatch,
                     onRemove: { item in viewModel.removeMatch(id: item.dedupKey) }
                 )
             } else {
