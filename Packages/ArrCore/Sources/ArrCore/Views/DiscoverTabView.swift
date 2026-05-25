@@ -220,7 +220,7 @@ public struct DiscoverTabView: View {
                     Text("Skip", bundle: .module)
                         .scaledFont(size: 12, weight: .semibold)
                 }
-                .frame(maxWidth: .infinity)
+                .frame(width: 90)
                 .padding(.vertical, 7)
             }
             .modifier(GlassProminentButtonStyle())
@@ -240,7 +240,7 @@ public struct DiscoverTabView: View {
             .modifier(GlassProminentButtonStyle())
             .keyboardShortcut(.rightArrow, modifiers: [])
 
-            // Third button: compact list opener with a badge count.
+            // Third button: compact list opener with badge — keep current.
             Button {
                 withAnimation(.smooth) { showMatched.toggle() }
             } label: {
