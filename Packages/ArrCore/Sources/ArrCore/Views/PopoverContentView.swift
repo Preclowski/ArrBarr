@@ -71,9 +71,13 @@ public struct PopoverContentView: View {
     @State private var searchAddFromChat = false
     /// Mirror of `searchAddFromChat` for Discover-origin opens. Set by
     /// Discover tinder CTAs (`onAddToRadarr`/`onAddToSonarr`) and by
-    /// the `arrBarrOpenSearchAdd` receiver when `selectedTab == .discover`.
-    /// `searchAddOverlay` reads this to route Back to the Discover tab.
+    /// the `arrBarrOpenSearchAdd` receiver when `showDiscoverOverlay == true`.
+    /// `searchAddOverlay` reads this to route Back to the Discover overlay.
     @State private var searchAddFromDiscover = false
+    /// True while the chat-triggered Discover overlay is visible. Set by
+    /// the `arrBarrOpenDiscoverInTinder` notification handler and cleared
+    /// by the overlay's own back-button (`onClose`).
+    @State private var showDiscoverOverlay = false
     /// Auto-collapse timer for the "Next week" banner — the banner
     /// snaps back to the 4-item peek 30s after the user expands it.
     @State private var bannerCollapseTask: Task<Void, Never>?
@@ -119,11 +123,13 @@ public struct PopoverContentView: View {
         case queue = "Queue"
         case upcoming = "Upcoming"
         case chat = "Chat"
-        case discover = "Discover"
         // `.add` (Search) removed — the queue's floating filter bar
         // now doubles as a global search. Empty filter → queue rows;
         // typing → queue rows that match + library/add-new candidates
         // pulled via `SearchViewModel`. One surface, both jobs.
+        // `.discover` removed — Discover is now a chat-triggered overlay
+        // opened by the `arrBarrOpenDiscoverInTinder` notification, not
+        // a persistent tab.
     }
 
     public var body: some View {
@@ -137,18 +143,12 @@ public struct PopoverContentView: View {
                     whisparrConfig: configStore.whisparr
                 )
                 chatHolder.reconfigure(store: configStore)
-                Task { await configureDiscover() }
             }
             .onChange(of: ChatViewModelHolder.signature(store: configStore)) { _, _ in
                 chatHolder.reconfigure(store: configStore)
             }
             .onChange(of: chatAvailable) { _, available in
                 if !available && selectedTab == .chat {
-                    selectedTab = .queue
-                }
-            }
-            .onChange(of: discoverAvailable) { _, available in
-                if !available && selectedTab == .discover {
                     selectedTab = .queue
                 }
             }
@@ -192,9 +192,9 @@ public struct PopoverContentView: View {
                 historySource = nil
                 detailItem = nil
                 // Origin flag reflects where the user came from so Back
-                // routes correctly. Discover-tab opens (e.g. tapping a
+                // routes correctly. Discover-overlay opens (e.g. tapping a
                 // PickCard in Your Picks) must NOT fall through to chat.
-                if selectedTab == .discover {
+                if showDiscoverOverlay {
                     searchAddFromDiscover = true
                     searchAddFromChat = false
                 } else {
@@ -206,13 +206,14 @@ public struct PopoverContentView: View {
             .onReceive(NotificationCenter.default.publisher(for: .arrBarrOpenDiscoverInTinder)) { note in
                 guard let mood = note.userInfo?["mood"] as? String,
                       !mood.trimmingCharacters(in: .whitespaces).isEmpty else { return }
-                withAnimation(.smooth(duration: 0.22)) {
-                    selectedTab = .discover
-                }
                 discoverViewModel.moodText = mood
-                discoverViewModel.userSubmittedMood()
-                discoverViewModel.stage = .tinder
-                Task { await discoverViewModel.reshuffle() }
+                Task {
+                    await configureDiscover()
+                    await discoverViewModel.reshuffle()
+                }
+                withAnimation(.smooth(duration: 0.22)) {
+                    showDiscoverOverlay = true
+                }
             }
     }
 
@@ -251,45 +252,51 @@ public struct PopoverContentView: View {
                         case .upcoming: upcomingContent
                         case .chat:
                             chatTabContent
-                        case .discover:
-                            DiscoverTabView(
-                                viewModel: discoverViewModel,
-                                llmAvailable: chatAvailable,
-                                radarrAvailable: radarrConfigured,
-                                onAddToRadarr: openDiscoverAddToRadarr,
-                                onAddToSonarr: openDiscoverAddToSonarr,
-                                onOpenDetail: { item, source, arrId in
-                                    DetailRequest.post(
-                                        DetailRequest.syntheticItem(
-                                            source: source,
-                                            entityId: arrId,
-                                            title: item.result.title,
-                                            posterURL: item.result.posterURL,
-                                            posterRequiresAuth: false
-                                        )
-                                    )
-                                }
-                            )
-                            .onChange(of: discoverViewModel.mediaSelection) { _, _ in
-                                Task { await configureDiscover() }
-                            }
                         }
                     }
                 } else {
                     emptyState
                 }
             }
-            // Tab content stays mounted under both overlays (SearchAddPanel
-            // + DetailView) so scroll positions, expanded sections, and
+            // Tab content stays mounted under all overlays (SearchAddPanel,
+            // Discover, + DetailView) so scroll positions, expanded sections, and
             // other transient view-state survive a round-trip. Opacity-hide
             // keeps it visually out of the way; allowsHitTesting(false)
             // prevents stray clicks from leaking through to it.
-            .opacity((searchResult != nil || detailItem != nil) ? 0 : 1)
-            .allowsHitTesting(!(searchResult != nil || detailItem != nil))
+            .opacity((searchResult != nil || detailItem != nil || showDiscoverOverlay) ? 0 : 1)
+            .allowsHitTesting(!(searchResult != nil || detailItem != nil || showDiscoverOverlay))
 
             if searchResult != nil {
                 searchAddOverlay
                     .transition(.opacity)
+            }
+
+            if showDiscoverOverlay {
+                DiscoverTabView(
+                    viewModel: discoverViewModel,
+                    llmAvailable: chatAvailable,
+                    radarrAvailable: radarrConfigured,
+                    onAddToRadarr: openDiscoverAddToRadarr,
+                    onAddToSonarr: openDiscoverAddToSonarr,
+                    onOpenDetail: { item, source, arrId in
+                        DetailRequest.post(
+                            DetailRequest.syntheticItem(
+                                source: source,
+                                entityId: arrId,
+                                title: item.result.title,
+                                posterURL: item.result.posterURL,
+                                posterRequiresAuth: false
+                            )
+                        )
+                    },
+                    onClose: {
+                        withAnimation(.smooth(duration: 0.22)) {
+                            showDiscoverOverlay = false
+                        }
+                    }
+                )
+                .background(.background)
+                .transition(.opacity)
             }
 
             if let detailItem {
@@ -341,8 +348,8 @@ public struct PopoverContentView: View {
                 if searchAddFromDiscover {
                     searchAddFromDiscover = false
                     searchResult = nil
-                    withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
-                        selectedTab = .discover
+                    withAnimation(.smooth(duration: 0.22)) {
+                        showDiscoverOverlay = true
                     }
                 } else if searchAddFromChat {
                     searchAddFromChat = false
@@ -526,7 +533,6 @@ public struct PopoverContentView: View {
         Tab.allCases.filter { tab in
             switch tab {
             case .chat: return chatAvailable
-            case .discover: return discoverAvailable
             default:    return true
             }
         }
