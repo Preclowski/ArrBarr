@@ -1400,11 +1400,16 @@ public struct PopoverContentView: View {
                 )
                 : nil,
             library: DiscoverSources.library(fetchAll: fetchLibrary),
-            // TODO: wire LLM once provider accessor exists on ChatViewModelHolder.
-            // ChatViewModel.provider is currently private with no public getter;
-            // adding a mutator on ChatViewModelHolder just for this was out of scope
-            // per the task spec. Pass nil for MVP — Discover works without it.
-            llm: nil
+            llm: chatAvailable
+                ? DiscoverSources.llm(
+                    provider: chatHolder.vm.provider,
+                    radarrLookup: { term in
+                        try await radarrClient.lookupMovies(term: term)
+                    },
+                    libraryTmdbIds: ownedIds,
+                    decade: { [vm = discoverViewModel] in vm.filter.decade }
+                )
+                : nil
         )
     }
 

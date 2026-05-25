@@ -8,7 +8,9 @@ public final class ChatViewModel: ObservableObject {
     @Published public private(set) var pendingConfirm: ToolCall?
     @Published public private(set) var lastError: String?
 
-    private let provider: LLMProvider
+    /// Exposed so other feature surfaces (e.g. Discover) can reuse the
+    /// already-configured provider instead of constructing their own.
+    public let provider: LLMProvider
     private let tools: [LLMTool]
     private let invokeTool: @Sendable (_ name: String, _ args: JSONValue) async throws -> ToolCallOutput
     /// Suspended continuation that resumes when the user taps Confirm
