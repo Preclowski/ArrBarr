@@ -4,6 +4,13 @@ import XCTest
 @MainActor
 final class DiscoverViewModelTests: XCTestCase {
 
+    /// Each test gets a fresh, isolated UserDefaults to avoid cross-test
+    /// contamination from persisted mediaSelection values.
+    private func freshVM() -> DiscoverViewModel {
+        let suite = UserDefaults(suiteName: "test.\(UUID().uuidString)")!
+        return DiscoverViewModel(defaults: suite)
+    }
+
     private func makeItem(_ id: Int, _ origin: DiscoverItem.Origin) -> DiscoverItem {
         let r = SearchResult(
             id: id, foreignId: String(id), title: "T\(id)", subtitle: nil,
@@ -16,7 +23,7 @@ final class DiscoverViewModelTests: XCTestCase {
     }
 
     func test_start_pullsFromAllAvailableSources_andDedupes() async {
-        let vm = DiscoverViewModel()
+        let vm = freshVM()
         vm.configure(
             tmdb: { _, _ in [self.makeItem(1, .tmdb), self.makeItem(2, .tmdb)] },
             library: { _ in [self.makeItem(2, .library), self.makeItem(3, .library)] },
@@ -28,7 +35,7 @@ final class DiscoverViewModelTests: XCTestCase {
     }
 
     func test_swipe_advancesToNextCard() async {
-        let vm = DiscoverViewModel()
+        let vm = freshVM()
         vm.configure(
             tmdb: { _, _ in [self.makeItem(1, .tmdb), self.makeItem(2, .tmdb), self.makeItem(3, .tmdb)] },
             library: { _ in [] }, llm: nil
@@ -42,7 +49,7 @@ final class DiscoverViewModelTests: XCTestCase {
     }
 
     func test_swipeRight_appendsToMatched_andAdvances() async {
-        let vm = DiscoverViewModel()
+        let vm = freshVM()
         vm.configure(
             tmdb: { _, _ in [self.makeItem(1, .tmdb), self.makeItem(2, .tmdb)] },
             library: { _ in [] }, llm: nil
@@ -58,7 +65,7 @@ final class DiscoverViewModelTests: XCTestCase {
     }
 
     func test_removeMatch_dropsByDedupKey() async {
-        let vm = DiscoverViewModel()
+        let vm = freshVM()
         vm.configure(
             tmdb: { _, _ in [self.makeItem(1, .tmdb), self.makeItem(2, .tmdb)] },
             library: { _ in [] }, llm: nil
@@ -72,7 +79,7 @@ final class DiscoverViewModelTests: XCTestCase {
     }
 
     func test_reset_clearsMatched() async {
-        let vm = DiscoverViewModel()
+        let vm = freshVM()
         vm.configure(
             tmdb: { _, _ in [self.makeItem(1, .tmdb)] },
             library: { _ in [] }, llm: nil
@@ -86,7 +93,7 @@ final class DiscoverViewModelTests: XCTestCase {
 
     func test_topUp_fetchesMoreWhenQueueBelowThreshold() async {
         var tmdbCalls = 0
-        let vm = DiscoverViewModel()
+        let vm = freshVM()
         vm.configure(
             tmdb: { _, page in
                 tmdbCalls += 1
@@ -104,7 +111,7 @@ final class DiscoverViewModelTests: XCTestCase {
 
     func test_perSourceFailure_dropsOnlyThatSource() async {
         struct Boom: Error {}
-        let vm = DiscoverViewModel()
+        let vm = freshVM()
         vm.configure(
             tmdb: { _, _ in throw Boom() },
             library: { _ in [self.makeItem(7, .library)] },
@@ -117,7 +124,7 @@ final class DiscoverViewModelTests: XCTestCase {
 
     func test_llmDormantWhenMoodEmpty() async {
         var llmCalled = false
-        let vm = DiscoverViewModel()
+        let vm = freshVM()
         vm.configure(
             tmdb: { _, _ in [] }, library: { _ in [] },
             llm: { _, _ in llmCalled = true; return .init(items: [], suggestedFilters: nil) }
@@ -129,7 +136,7 @@ final class DiscoverViewModelTests: XCTestCase {
 
     func test_requestMoreLLM_appendsToQueueAndAccumulatesExcludes() async {
         var receivedExcludes: [[String]] = []
-        let vm = DiscoverViewModel()
+        let vm = freshVM()
         vm.configure(
             tmdb: { _, _ in [] }, library: { _ in [] },
             llm: { excludes, _ in
@@ -151,7 +158,7 @@ final class DiscoverViewModelTests: XCTestCase {
 
     func test_autoMode_firesOnlyLLM() async {
         var tmdbCalls = 0, libCalls = 0, llmCalls = 0
-        let vm = DiscoverViewModel()
+        let vm = freshVM()
         vm.mediaSelection = .auto
         vm.moodText = "noir"
         vm.configure(
@@ -171,7 +178,7 @@ final class DiscoverViewModelTests: XCTestCase {
     func test_llmDrain_appliesSuggestedFilters() async {
         let suggested = DiscoverLLMPrompt.SuggestedFilters(
             genres: [.comedy, .drama], decade: .nineties, status: .owned)
-        let vm = DiscoverViewModel()
+        let vm = freshVM()
         vm.configure(
             tmdb: { _, _ in [] }, library: { _ in [] },
             llm: { _, _ in

@@ -38,7 +38,15 @@ public final class DiscoverViewModel: ObservableObject {
     /// LLM-applied filter changes don't trigger an infinite reshuffle loop.
     @Published public private(set) var userActionTick: Int = 0
     /// Media kind the user selected in the picker segmented control.
-    @Published public var mediaSelection: DiscoverMediaSelection = .movie
+    /// Persisted to UserDefaults so the choice survives app restarts.
+    private static let mediaSelectionKey = "ArrBarr.discoverMediaSelection"
+    private let defaults: UserDefaults
+
+    @Published public var mediaSelection: DiscoverMediaSelection {
+        didSet {
+            defaults.set(mediaSelection.rawValue, forKey: Self.mediaSelectionKey)
+        }
+    }
 
     // MARK: - Source closures
 
@@ -60,7 +68,12 @@ public final class DiscoverViewModel: ObservableObject {
     private var topUpTask: Task<Void, Never>?
     private let topUpThreshold = 5
 
-    public init() {}
+    public init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+        let stored = defaults.string(forKey: Self.mediaSelectionKey)
+            .flatMap { DiscoverMediaSelection(rawValue: $0) }
+        self.mediaSelection = stored ?? .movie
+    }
 
     public func configure(tmdb: TMDBSource?, library: LibrarySource?, llm: LLMSource?) {
         self.tmdb = tmdb

@@ -7824,6 +7824,35 @@
         }
       }
     },
+    "What are you discovering?": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Was entdeckst du?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Qué descubres?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Que cherchez-vous ?"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Czego dziś szukasz?"
+          }
+        }
+      }
+    },
     "What are you in the mood for?": {
       "extractionState": "manual",
       "localizations": {

@@ -269,19 +269,84 @@ public struct DiscoverPickerView: View {
 
     public var body: some View {
         VStack(spacing: 0) {
-            ScrollView {
-                VStack(spacing: 12) {
+            if stage == .kind {
+                kindOnlyScreen
+            } else {
+                mainPickerScroll
+            }
+            if llmAvailable {
+                composer.padding(.horizontal, 10).padding(.bottom, 10)
+            } else {
+                discoverButtonFallback
+            }
+        }
+    }
+
+    // MARK: - Kind-only screen
+
+    private var kindOnlyScreen: some View {
+        VStack(spacing: 24) {
+            Spacer()
+            Text("What are you discovering?", bundle: .module)
+                .scaledFont(size: 14, weight: .medium)
+                .foregroundStyle(.secondary)
+            HStack(spacing: 18) {
+                kindBigButton(.movie, color: .blue, icon: "film")
+                kindBigButton(.show,  color: .orange, icon: "tv")
+            }
+            Spacer()
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    @ViewBuilder
+    private func kindBigButton(_ kind: DiscoverMediaSelection,
+                               color: Color,
+                               icon: String) -> some View {
+        Button {
+            withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
+                viewModel.mediaSelection = kind
+                stage = .filters
+                viewModel.mediaSelectionChanged()
+            }
+        } label: {
+            VStack(spacing: 10) {
+                Image(systemName: icon)
+                    .scaledFont(size: 32, weight: .semibold)
+                    .foregroundStyle(color)
+                Text(LocalizedStringKey(kind.displayName), bundle: .module)
+                    .scaledFont(size: 15, weight: .semibold)
+                    .foregroundStyle(color)
+            }
+            .frame(width: 110, height: 110)
+            .background(
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(color.opacity(0.15))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(color.opacity(0.5), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Main picker scroll
+
+    private var mainPickerScroll: some View {
+        ScrollView {
+            VStack(spacing: 12) {
+                if !selectedTagsForCurrentStage.isEmpty {
                     selectedRow
                     Divider().padding(.horizontal, 12)
-                    availableRow
-                    moodStarters
                 }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 14)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                availableRow
+                moodStarters
             }
-            if llmAvailable { composer.padding(.horizontal, 10).padding(.bottom, 10) }
-            else { discoverButtonFallback }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 14)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
@@ -312,10 +377,10 @@ public struct DiscoverPickerView: View {
                                 Text(LocalizedStringKey(prompt), bundle: .module)
                                     .scaledFont(size: 11, weight: .medium)
                             }
-                            .foregroundStyle(.purple.opacity(0.85))
+                            .foregroundStyle(.secondary)
                             .padding(.horizontal, 10).padding(.vertical, 5)
-                            .background(Capsule().fill(.ultraThinMaterial))
-                            .overlay(Capsule().stroke(Color.purple.opacity(0.3), lineWidth: 0.5))
+                            .background(Capsule().fill(Color.primary.opacity(0.06)))
+                            .overlay(Capsule().stroke(Color.primary.opacity(0.18), lineWidth: 0.5))
                         }
                         .buttonStyle(.plain)
                     }
@@ -334,24 +399,19 @@ public struct DiscoverPickerView: View {
 
     // MARK: - Selected row
 
+    @ViewBuilder
     private var selectedRow: some View {
         let tags = selectedTagsForCurrentStage
-        return Group {
-            if tags.isEmpty {
-                Text("Pick a media kind to start:", bundle: .module)
-                    .scaledFont(size: 11)
-                    .foregroundStyle(.tertiary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            } else {
-                FlowLayout(spacing: 5) {
-                    ForEach(tags) { tag in
-                        pillView(tag, picked: true)
-                            .matchedGeometryEffect(id: tag.id, in: labelNamespace)
-                            .transition(.opacity)
-                    }
+        if !tags.isEmpty {
+            FlowLayout(spacing: 5) {
+                ForEach(tags) { tag in
+                    pillView(tag, picked: true)
+                        .matchedGeometryEffect(id: tag.id, in: labelNamespace)
+                        .transition(.opacity)
                 }
             }
         }
+        // Nothing rendered if empty → no reserved space.
     }
 
     // MARK: - Available row
