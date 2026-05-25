@@ -106,22 +106,36 @@ public struct DiscoverPickerView: View {
                                  icon: "person.fill", category: .people))
         }
 
-        // Curated short list — the long form (18 genres) made the cloud
-        // feel like a checkbox menu. These 8 cover ~80% of what users
-        // reach for; anything else can be added via the "+ Add" chip.
-        let genreSpec: [(DiscoverGenre, String)] = [
-            (.action,         "bolt"),
-            (.comedy,         "face.smiling"),
-            (.drama,          "theatermasks"),
-            (.horror,         "drop"),
-            (.romance,        "heart"),
-            (.scienceFiction, "atom"),
-            (.thriller,       "exclamationmark.triangle"),
-            (.documentary,    "doc.text"),
+        // Full TMDB genre taxonomy — More filters is the long-tail
+        // catalog, so it shows every genre the API supports. The short
+        // curated list still lives in the Suggestions row above (one
+        // mini-row of the 3 most popular). Per-genre icons keep the
+        // list scannable; genres without a chosen icon fall back to a
+        // generic "tag" glyph.
+        let genreIcons: [DiscoverGenre: String] = [
+            .action: "bolt",
+            .adventure: "map",
+            .animation: "paintbrush",
+            .comedy: "face.smiling",
+            .crime: "lock",
+            .documentary: "doc.text",
+            .drama: "theatermasks",
+            .family: "figure.2.and.child.holdinghands",
+            .fantasy: "sparkle",
+            .history: "book.closed",
+            .horror: "drop",
+            .music: "music.note",
+            .mystery: "questionmark",
+            .romance: "heart",
+            .scienceFiction: "atom",
+            .thriller: "exclamationmark.triangle",
+            .war: "shield",
+            .western: "sun.haze",
         ]
-        for (g, icon) in genreSpec {
+        for g in DiscoverGenre.allCases {
             out.append(PickerTag(id: "genre.\(g.rawValue)", label: g.displayName,
-                                 icon: icon, category: .genre))
+                                 icon: genreIcons[g] ?? "tag",
+                                 category: .genre))
         }
 
         for d in [DiscoverDecade.eighties, .nineties, .twoThousands,
@@ -896,34 +910,42 @@ public struct DiscoverPickerView: View {
     // MARK: - Chip composer
 
     private var chipComposer: some View {
-        FlowLayout(spacing: 5) {
-            kindChip
-            composerCategoryGroup(.genre, label: "Gatunek")
-            composerCategoryGroup(.people, label: "Z")
-            composerCategoryGroup(.decade, label: "Z lat")
-            composerCategoryGroup(.rating, label: "Vibe")
-            composerCategoryGroup(.runtime, label: "Długość")
-            Image(systemName: "sparkles")
-                .scaledFont(size: 11, weight: .semibold)
-                .foregroundStyle(Color.pink.opacity(0.8))
-            TextField("", text: $freeText,
-                      prompt: Text("…lub opisz słownie", bundle: .module),
-                      axis: .vertical)
-                .textFieldStyle(.plain)
-                .focused($freeTextFocused)
-                .lineLimit(1...4)
-                .scaledFont(size: 13)
-                .frame(minWidth: 80)
-                .onSubmit {
-                    if canCommit { commit() }
-                }
-                .onKeyPress(.delete) {
-                    if freeText.isEmpty, let last = activeChips.last {
-                        last.onRemove()
-                        return .handled
+        // Send button lives OUTSIDE the FlowLayout so it pins to the
+        // trailing edge regardless of how many lines the chips + text
+        // take. Inside FlowLayout, send would float after the last
+        // text — bouncing around the row, harder to find on long
+        // multi-line composers.
+        HStack(alignment: .bottom, spacing: 8) {
+            FlowLayout(spacing: 5) {
+                kindChip
+                composerCategoryGroup(.genre, label: "Gatunek")
+                composerCategoryGroup(.people, label: "Z")
+                composerCategoryGroup(.decade, label: "Z lat")
+                composerCategoryGroup(.rating, label: "Vibe")
+                composerCategoryGroup(.runtime, label: "Długość")
+                Image(systemName: "sparkles")
+                    .scaledFont(size: 11, weight: .semibold)
+                    .foregroundStyle(Color.pink.opacity(0.8))
+                TextField("", text: $freeText,
+                          prompt: Text("…lub opisz słownie", bundle: .module),
+                          axis: .vertical)
+                    .textFieldStyle(.plain)
+                    .focused($freeTextFocused)
+                    .lineLimit(1...4)
+                    .scaledFont(size: 13)
+                    .frame(minWidth: 80)
+                    .onSubmit {
+                        if canCommit { commit() }
                     }
-                    return .ignored
-                }
+                    .onKeyPress(.delete) {
+                        if freeText.isEmpty, let last = activeChips.last {
+                            last.onRemove()
+                            return .handled
+                        }
+                        return .ignored
+                    }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
             sendButton
         }
         .padding(.horizontal, 12)
