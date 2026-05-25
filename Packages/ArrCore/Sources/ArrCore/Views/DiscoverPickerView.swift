@@ -855,10 +855,22 @@ public struct DiscoverPickerView: View {
 
     private func commitNewCustomTag(category: PickerCategory) {
         let label = newCustomTagText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !label.isEmpty else {
+            newCustomTagText = ""
+            addingTagFor = nil
+            return
+        }
+        // Persist to the library (customTagsByCategory in UserDefaults
+        // → reappears in the catalog next session) AND surface the
+        // label in the composer's TextField so the user sees their
+        // input has landed. Earlier we wrote it to `viewModel.moodText`
+        // only, which is a separate state from the View's `freeText` —
+        // the TextField stayed empty after commit and the action read
+        // as silently cancelled.
         viewModel.addCustomTag(category: category.rawValue, label: label)
-        // Custom genre / decade / rating / runtime labels feed `moodText`
-        // (see `toggle(_:)`), so auto-select by writing the label there.
-        if !label.isEmpty { viewModel.moodText = label }
+        let trimmed = freeText.trimmingCharacters(in: .whitespacesAndNewlines)
+        freeText = trimmed.isEmpty ? label : "\(trimmed) \(label)"
+        freeTextFocused = true
         newCustomTagText = ""
         addingTagFor = nil
     }
