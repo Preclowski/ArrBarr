@@ -28,7 +28,7 @@ public struct DiscoverTagCloud<TagID: Hashable & Sendable>: View {
     }
 
     public enum Category {
-        case genre, decade, status, rating, runtime
+        case genre, decade, rating, runtime
     }
 
     // MARK: - Init
@@ -81,24 +81,19 @@ public struct DiscoverTagCloud<TagID: Hashable & Sendable>: View {
         } label: {
             HStack(spacing: 4) {
                 Image(systemName: tag.icon)
-                    .scaledFont(size: max(9, fontSize * 0.75),
-                                weight: picked ? .semibold : .medium)
+                    .scaledFont(size: max(9, fontSize * 0.75), weight: .semibold)
                 Text(LocalizedStringKey(tag.label), bundle: .module)
-                    .scaledFont(size: fontSize, weight: picked ? .semibold : .medium)
+                    .scaledFont(size: fontSize, weight: .semibold)
             }
-            .padding(.horizontal, picked ? 12 : 10)
-            .padding(.vertical, picked ? 6 : 5)
+            .foregroundStyle(picked ? Color.white : tint)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
             .background(
-                Capsule().fill(picked
-                    ? tint.opacity(0.25)
-                    : tint.opacity(0.08))
+                Capsule().fill(picked ? tint : tint.opacity(0.18))
             )
-            .overlay(
-                Capsule().stroke(picked ? tint.opacity(0.7) : .clear,
-                                 lineWidth: picked ? 1 : 0)
-            )
-            .foregroundStyle(picked ? tint : .primary.opacity(0.85))
-            .scaleEffect(picked ? 1.08 : 1.0)
+            .shadow(color: picked ? tint.opacity(0.35) : .clear,
+                    radius: 4, x: 0, y: 1)
+            .scaleEffect(picked ? 1.06 : 1.0)
         }
         .buttonStyle(.plain)
         .rotationEffect(rot)
@@ -152,16 +147,17 @@ public struct DiscoverTagCloud<TagID: Hashable & Sendable>: View {
     private func fontSize(for tag: Tag, idx: Int, picked: Bool) -> CGFloat {
         // First few tags (center) are visually heavier; hash variance
         // prevents every Nth tag reading as the same size.
+        // Filled pills feel larger at the same pt size → range dialled down one notch.
         let h = stableHash(tag.label)
         let bucket = Int(h % 5) // 0..4
 
         let center: CGFloat
         switch idx {
-        case 0..<4:    center = 16
-        case 4..<10:   center = 13
+        case 0..<4:    center = 14   // was 16
+        case 4..<10:   center = 12   // was 13
         default:       center = 11
         }
-        let jitter: CGFloat = [-1, 0, 1, 0, 2][bucket]
+        let jitter: CGFloat = [-1, 0, 1, 0, 1][bucket]
         let s = center + jitter
 
         return s + (picked ? 1 : 0)
@@ -170,16 +166,15 @@ public struct DiscoverTagCloud<TagID: Hashable & Sendable>: View {
     private func tagTint(for tag: Tag, idx: Int) -> Color {
         switch tag.category {
         case .genre:
-            let palette: [Color] = [.orange, .red, .yellow, .pink]
+            // Genres vary across the status palette — hash bucket → tint.
+            let palette: [Color] = [.blue, .orange, .purple, .red, .green]
             return palette[Int(stableHash(tag.label) % UInt32(palette.count))]
         case .decade:
             return .blue
-        case .status:
-            return .green
         case .rating:
-            return .yellow
+            return .green     // "good" rating = .completed-green
         case .runtime:
-            return .gray
+            return .purple    // .importing-purple
         }
     }
 

@@ -215,7 +215,7 @@ public struct DiscoverPickerView: View {
     // MARK: - Tag catalog
 
     private enum TagCategory: String {
-        case genre, decade, status, rating, runtime
+        case genre, decade, rating, runtime
     }
 
     private struct CloudTag {
@@ -229,7 +229,6 @@ public struct DiscoverPickerView: View {
             switch category {
             case .genre:   return .genre
             case .decade:  return .decade
-            case .status:  return .status
             case .rating:  return .rating
             case .runtime: return .runtime
             }
@@ -290,24 +289,6 @@ public struct DiscoverPickerView: View {
                 isPicked: { vm in vm.filter.decade == d }
             ))
         }
-
-        // STATUS
-        tags.append(CloudTag(
-            label: "Owned", icon: "checkmark.circle", category: .status,
-            apply: { vm in
-                vm.filter.status = (vm.filter.status == .owned) ? .any : .owned
-                vm.userChangedFilter()
-            },
-            isPicked: { vm in vm.filter.status == .owned }
-        ))
-        tags.append(CloudTag(
-            label: "To download", icon: "arrow.down.circle", category: .status,
-            apply: { vm in
-                vm.filter.status = (vm.filter.status == .toDownload) ? .any : .toDownload
-                vm.userChangedFilter()
-            },
-            isPicked: { vm in vm.filter.status == .toDownload }
-        ))
 
         // RATING — exclusive; re-tap clears.
         tags.append(CloudTag(
