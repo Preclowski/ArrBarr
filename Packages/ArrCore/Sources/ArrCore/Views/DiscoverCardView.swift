@@ -78,7 +78,25 @@ public struct DiscoverCardView: View {
         [
             item.result.runtime.flatMap { $0 > 0 ? "\($0) min" : nil },
             item.result.certification.flatMap { $0.isEmpty ? nil : $0 },
+            item.result.network.flatMap { $0.isEmpty ? nil : $0 },
         ].compactMap { $0 }
+    }
+
+    private var frontMetadataLine: String {
+        var parts: [String] = []
+        if let r = item.result.runtime, r > 0 {
+            parts.append("\(r) min")
+        }
+        if let c = item.result.certification, !c.isEmpty {
+            parts.append(c)
+        }
+        // Always include a primary rating fallback so the line never disappears.
+        if let imdb = item.result.imdb {
+            parts.append(String(format: "IMDb %.1f", imdb))
+        } else if let r = item.result.rating {
+            parts.append(String(format: "★ %.1f", r))
+        }
+        return parts.joined(separator: " · ")
     }
 
     @ViewBuilder
@@ -166,8 +184,8 @@ public struct DiscoverCardView: View {
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
 
-                if !runtimeCertSegments.isEmpty {
-                    Text(runtimeCertSegments.joined(separator: " · "))
+                if !frontMetadataLine.isEmpty {
+                    Text(frontMetadataLine)
                         .scaledFont(size: 11, weight: .medium)
                         .foregroundStyle(.white.opacity(0.85))
                 }
@@ -256,35 +274,50 @@ public struct DiscoverCardView: View {
         }
         .padding(12)
         .frame(width: w, height: h, alignment: .topLeading)
-        // Solid dark drawer with a small slip of poster visible on the right
-        // edge of the card. Inner side has a thin highlight to suggest depth.
+        // Layered glass drawer — strong material for visible blur, subtle dark
+        // wash for text legibility, top highlight to sell the glass pane.
         .background(
-            UnevenRoundedRectangle(
-                topLeadingRadius: 16,
-                bottomLeadingRadius: 16,
-                bottomTrailingRadius: 0,
-                topTrailingRadius: 0
-            )
-            .fill(.ultraThinMaterial)
-        )
-        .background(
-            UnevenRoundedRectangle(
-                topLeadingRadius: 16,
-                bottomLeadingRadius: 16,
-                bottomTrailingRadius: 0,
-                topTrailingRadius: 0
-            )
-            .fill(Color.black.opacity(0.35))
+            ZStack {
+                // 1) Strongly visible material — gives the actual blur.
+                UnevenRoundedRectangle(
+                    topLeadingRadius: 16,
+                    bottomLeadingRadius: 16,
+                    bottomTrailingRadius: 0,
+                    topTrailingRadius: 0
+                )
+                .fill(.regularMaterial)
+
+                // 2) Subtle dark wash for legible white text on bright posters.
+                //    Keep it light so the glass still reads as translucent.
+                UnevenRoundedRectangle(
+                    topLeadingRadius: 16,
+                    bottomLeadingRadius: 16,
+                    bottomTrailingRadius: 0,
+                    topTrailingRadius: 0
+                )
+                .fill(Color.black.opacity(0.15))
+
+                // 3) Top highlight — thin white gradient at the very top edge
+                //    suggests light catching a glass pane.
+                LinearGradient(
+                    colors: [.white.opacity(0.18), .white.opacity(0.0)],
+                    startPoint: .top, endPoint: .center
+                )
+                .frame(maxHeight: .infinity, alignment: .top)
+                .allowsHitTesting(false)
+            }
         )
         .overlay(
-            // Sharp trailing edge — looks like the drawer's spine.
-            Rectangle()
-                .fill(.white.opacity(0.06))
-                .frame(width: 0.75)
-                .frame(maxHeight: .infinity)
-                .offset(x: w / 2 - 0.375),
-            alignment: .trailing
+            // 4) Inner edge highlight (1pt white border at low opacity) gives
+            //    the glass panel a crisp boundary.
+            UnevenRoundedRectangle(
+                topLeadingRadius: 16,
+                bottomLeadingRadius: 16,
+                bottomTrailingRadius: 0,
+                topTrailingRadius: 0
+            )
+            .stroke(.white.opacity(0.18), lineWidth: 0.75)
         )
-        .shadow(color: .black.opacity(0.45), radius: 8, x: 4, y: 0)
+        .shadow(color: .black.opacity(0.25), radius: 6, x: 2, y: 0)
     }
 }
