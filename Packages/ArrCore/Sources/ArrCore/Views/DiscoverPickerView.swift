@@ -423,17 +423,51 @@ public struct DiscoverPickerView: View {
         VStack(alignment: .leading, spacing: 6) {
             ForEach(Self.suggestionsOrder, id: \.self) { cat in
                 let items = grouped[cat] ?? []
-                if !items.isEmpty {
+                // Show the row when there are suggestions OR when the
+                // category supports custom additions (so the "+ Add"
+                // chip stays reachable even if every suggestion is
+                // already active or the catalog is empty). AI row only
+                // renders when items are present.
+                if !items.isEmpty || canAddCustom(cat) {
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
                         suggestionsRowHeader(cat)
                         FlowLayout(spacing: 5) {
                             ForEach(items) { s in
                                 suggestionPill(s)
                             }
+                            // "+ Add" / "+ Add person" affordance pinned
+                            // at the end of each addable sub-row. User
+                            // no longer needs to expand More filters to
+                            // discover the custom-addition path.
+                            suggestionsAddChip(for: cat)
                         }
                     }
                 }
             }
+        }
+    }
+
+    /// True when the category supports user-added entries directly
+    /// (people via TMDB search, free-form labels via custom tags).
+    private func canAddCustom(_ cat: SuggestedFilter.Category) -> Bool {
+        switch cat {
+        case .people, .genre, .decade, .rating, .runtime: return true
+        case .ai: return false
+        }
+    }
+
+    /// Maps `SuggestedFilter.Category` to the View's `PickerCategory`
+    /// and renders the appropriate "+ Add" chip. Centralised so the
+    /// Suggestions row and `pillRows` use the same affordance.
+    @ViewBuilder
+    private func suggestionsAddChip(for cat: SuggestedFilter.Category) -> some View {
+        switch cat {
+        case .people:  addPersonChip
+        case .genre:   addCustomTagChip(for: .genre)
+        case .decade:  addCustomTagChip(for: .decade)
+        case .rating:  addCustomTagChip(for: .rating)
+        case .runtime: addCustomTagChip(for: .runtime)
+        case .ai:      EmptyView()
         }
     }
 
