@@ -66,6 +66,7 @@ public struct DiscoverMatchedListView: View {
                                 .scaledFont(size: 12)
                                 .foregroundStyle(.secondary)
                         }
+                        sourceBadge(for: item)
                     }
                     if !metadataLine(for: item).isEmpty {
                         Text(metadataLine(for: item))
@@ -92,6 +93,30 @@ public struct DiscoverMatchedListView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+    }
+
+    @ViewBuilder
+    private func sourceBadge(for item: DiscoverItem) -> some View {
+        switch item.originLabel {
+        case .library:
+            InLibraryBadge()
+        case .tmdb:
+            outlineBadge(text: "Discover", color: .blue)
+        case .llm:
+            outlineBadge(text: "AI", color: .purple)
+        }
+    }
+
+    @ViewBuilder
+    private func outlineBadge(text: String, color: Color) -> some View {
+        Text(LocalizedStringKey(text), bundle: .module)
+            .scaledFont(size: 9, weight: .semibold)
+            .foregroundStyle(color)
+            .padding(.horizontal, 5)
+            .padding(.vertical, 1)
+            .overlay(
+                Capsule().stroke(color.opacity(0.6), lineWidth: 0.75)
+            )
     }
 
     private func metadataLine(for item: DiscoverItem) -> String {

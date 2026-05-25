@@ -329,7 +329,9 @@ public struct DiscoverTabView: View {
 
     private var cardActionRow: some View {
         HStack(spacing: 8) {
-            Button { Task { await viewModel.swipe(right: false) } } label: {
+            Button {
+                completeSwipe(right: false, fromTranslation: .zero)
+            } label: {
                 HStack(spacing: 6) {
                     Image(systemName: "xmark")
                         .scaledFont(size: 11, weight: .semibold)
@@ -343,7 +345,9 @@ public struct DiscoverTabView: View {
             .tint(.red)
             .keyboardShortcut(.leftArrow, modifiers: [])
 
-            Button { Task { await viewModel.swipe(right: true) } } label: {
+            Button {
+                completeSwipe(right: true, fromTranslation: .zero)
+            } label: {
                 HStack(spacing: 6) {
                     Image(systemName: rightActionIcon)
                         .scaledFont(size: 11, weight: .semibold)
