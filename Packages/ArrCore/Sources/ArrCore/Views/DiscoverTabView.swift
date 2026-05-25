@@ -13,7 +13,6 @@ public struct DiscoverTabView: View {
     @State private var dragOffset: CGSize = .zero
     @State private var isCardHovered: Bool = false
     @State private var isDragging: Bool = false
-    @State private var pickerStage: PickerStage = .kind
 
     public init(viewModel: DiscoverViewModel,
                 llmAvailable: Bool,
@@ -39,7 +38,6 @@ public struct DiscoverTabView: View {
                     viewModel: viewModel,
                     llmAvailable: llmAvailable,
                     tmdbAvailable: tmdbAvailable,
-                    stage: $pickerStage,
                     onSubmit: {
                         withAnimation(.smooth(duration: 0.22)) { viewModel.stage = .tinder }
                         Task { await viewModel.reshuffle() }
@@ -48,9 +46,6 @@ public struct DiscoverTabView: View {
             case .tinder:
                 tinderMode
             }
-        }
-        .onAppear {
-            pickerStage = viewModel.hasPickedKind ? .filters : .kind
         }
         // No `.task(id:)` for filter changes here anymore — explicit
         // submit via picker is the only reshuffle trigger.
@@ -147,10 +142,9 @@ public struct DiscoverTabView: View {
 
     private var filterSummaryChip: some View {
         HStack(spacing: 6) {
-            // Chip body — tappable to re-open picker at .filters stage.
+            // Chip body — tappable to re-open picker.
             Button {
                 withAnimation(.smooth(duration: 0.22)) {
-                    pickerStage = .filters
                     viewModel.stage = .picker
                 }
             } label: {

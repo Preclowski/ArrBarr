@@ -1,19 +1,11 @@
 import SwiftUI
 
-// MARK: - PickerStage
-
-public enum PickerStage {
-    case kind
-    case filters
-}
-
 // MARK: - DiscoverPickerView
 
 public struct DiscoverPickerView: View {
     @ObservedObject var viewModel: DiscoverViewModel
     let llmAvailable: Bool
     let tmdbAvailable: Bool
-    @Binding var stage: PickerStage
     let onSubmit: () -> Void
 
     @State private var freeText: String = ""
@@ -23,12 +15,10 @@ public struct DiscoverPickerView: View {
     public init(viewModel: DiscoverViewModel,
                 llmAvailable: Bool,
                 tmdbAvailable: Bool,
-                stage: Binding<PickerStage>,
                 onSubmit: @escaping () -> Void) {
         self.viewModel = viewModel
         self.llmAvailable = llmAvailable
         self.tmdbAvailable = tmdbAvailable
-        self._stage = stage
         self.onSubmit = onSubmit
     }
 
@@ -44,14 +34,9 @@ public struct DiscoverPickerView: View {
         func hash(into h: inout Hasher) { h.combine(id) }
     }
 
-    private enum PickerCategory { case kind, genre, decade, rating, runtime }
+    private enum PickerCategory { case genre, decade, rating, runtime }
 
     // MARK: - Tag catalog
-
-    private static let kindTags: [PickerTag] = [
-        PickerTag(id: "kind.movie", label: "Movies", icon: "film",  category: .kind),
-        PickerTag(id: "kind.show",  label: "Shows",  icon: "tv",    category: .kind),
-    ]
 
     private func filterTags() -> [PickerTag] {
         var out: [PickerTag] = []
@@ -106,12 +91,6 @@ public struct DiscoverPickerView: View {
 
     private func isPicked(_ tag: PickerTag) -> Bool {
         switch tag.category {
-        case .kind:
-            switch tag.id {
-            case "kind.movie": return viewModel.mediaSelection == .movie && stage == .filters
-            case "kind.show":  return viewModel.mediaSelection == .show  && stage == .filters
-            default: return false
-            }
         case .genre:
             return DiscoverGenre.allCases.contains {
                 "genre.\($0.rawValue)" == tag.id && viewModel.filter.genres.contains($0)
@@ -128,28 +107,6 @@ public struct DiscoverPickerView: View {
     private func toggle(_ tag: PickerTag) {
         withAnimation(.spring(response: 0.45, dampingFraction: 0.78)) {
             switch tag.category {
-            case .kind:
-                switch tag.id {
-                case "kind.movie":
-                    if viewModel.mediaSelection == .movie && stage == .filters {
-                        stage = .kind
-                    } else {
-                        viewModel.mediaSelection = .movie
-                        stage = .filters
-                        viewModel.hasPickedKind = true
-                    }
-                    viewModel.mediaSelectionChanged()
-                case "kind.show":
-                    if viewModel.mediaSelection == .show && stage == .filters {
-                        stage = .kind
-                    } else {
-                        viewModel.mediaSelection = .show
-                        stage = .filters
-                        viewModel.hasPickedKind = true
-                    }
-                    viewModel.mediaSelectionChanged()
-                default: break
-                }
             case .genre:
                 if let g = DiscoverGenre.allCases.first(where: { "genre.\($0.rawValue)" == tag.id }) {
                     if viewModel.filter.genres.contains(g) { viewModel.filter.genres.remove(g) }
@@ -179,7 +136,6 @@ public struct DiscoverPickerView: View {
 
     private func tint(for tag: PickerTag) -> Color {
         switch tag.category {
-        case .kind:    return .blue
         case .genre:
             // Group genres by mood family so color carries meaning.
             let intense:     Set<DiscoverGenre> = [.action, .crime, .war, .thriller, .horror]
@@ -203,23 +159,11 @@ public struct DiscoverPickerView: View {
     // MARK: - Partitioning
 
     private var availableTagsForCurrentStage: [PickerTag] {
-        switch stage {
-        case .kind:
-            return Self.kindTags.filter { !isPicked($0) }
-        case .filters:
-            return filterTags().filter { !isPicked($0) }
-        }
+        filterTags().filter { !isPicked($0) }
     }
 
     private var selectedTagsForCurrentStage: [PickerTag] {
-        switch stage {
-        case .kind:
-            return []
-        case .filters:
-            // Kind is shown via the kindIndicator pill at the top; don't
-            // duplicate it in the selected-filters row.
-            return filterTags().filter { isPicked($0) }
-        }
+        filterTags().filter(isPicked)
     }
 
     // MARK: - Body
@@ -227,11 +171,7 @@ public struct DiscoverPickerView: View {
     public var body: some View {
         VStack(spacing: 0) {
             fromTinderBackBar
-            if stage == .kind {
-                kindOnlyScreen
-            } else {
-                mainPickerScroll
-            }
+            mainPickerScroll
             if llmAvailable {
                 composer.padding(.horizontal, 10).padding(.bottom, 10)
             } else {
@@ -260,93 +200,48 @@ public struct DiscoverPickerView: View {
         }
     }
 
-    // MARK: - Kind-only screen
+    // MARK: - Kind selector bar
 
-    private var kindOnlyScreen: some View {
-        VStack(spacing: 24) {
-            Spacer()
-            Text("What are you discovering?", bundle: .module)
-                .scaledFont(size: 14, weight: .medium)
-                .foregroundStyle(.secondary)
-            HStack(spacing: 18) {
-                kindBigButton(.movie, color: .blue, icon: "film")
-                kindBigButton(.show,  color: .orange, icon: "tv")
-            }
-            Spacer()
-            Spacer()
+    private var kindSelectorBar: some View {
+        HStack(spacing: 8) {
+            kindButton(.movie, label: "Movies", color: .blue, icon: "film")
+            kindButton(.show,  label: "Shows",  color: .orange, icon: "tv")
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     @ViewBuilder
-    private func kindBigButton(_ kind: DiscoverMediaSelection,
-                               color: Color,
-                               icon: String) -> some View {
+    private func kindButton(_ kind: DiscoverMediaSelection,
+                            label: LocalizedStringKey,
+                            color: Color,
+                            icon: String) -> some View {
+        let active = viewModel.mediaSelection == kind
         Button {
-            withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
                 viewModel.mediaSelection = kind
-                stage = .filters
                 viewModel.hasPickedKind = true
                 viewModel.mediaSelectionChanged()
             }
         } label: {
-            VStack(spacing: 10) {
+            HStack(spacing: 5) {
                 Image(systemName: icon)
-                    .scaledFont(size: 32, weight: .semibold)
-                    .foregroundStyle(color)
-                Text(LocalizedStringKey(kind.displayName), bundle: .module)
-                    .scaledFont(size: 15, weight: .semibold)
-                    .foregroundStyle(color)
+                    .scaledFont(size: 11, weight: .semibold)
+                Text(label, bundle: .module)
+                    .scaledFont(size: 12, weight: .semibold)
             }
-            .frame(width: 110, height: 110)
+            .foregroundStyle(active ? Color.white : color)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
             .background(
-                RoundedRectangle(cornerRadius: 14)
-                    .fill(color.opacity(0.15))
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(active ? color : color.opacity(0.12))
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 14)
-                    .stroke(color.opacity(0.5), lineWidth: 1)
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(color.opacity(active ? 0 : 0.4), lineWidth: 0.75)
             )
         }
         .buttonStyle(.plain)
-    }
-
-    // MARK: - Kind indicator
-
-    /// Small colored pill near the top of the filters stage. Tells the user
-    /// which media kind is selected; the chevron-down affords tapping back
-    /// to the .kind stage to change it.
-    @ViewBuilder
-    private var kindIndicator: some View {
-        let kind = viewModel.mediaSelection
-        let (label, color, icon): (LocalizedStringKey, Color, String) = {
-            switch kind {
-            case .movie: return ("Movies", .blue, "film")
-            case .show:  return ("Shows", .orange, "tv")
-            }
-        }()
-        HStack(spacing: 6) {
-            Image(systemName: icon)
-                .scaledFont(size: 10, weight: .semibold)
-            Text(label, bundle: .module)
-                .scaledFont(size: 11, weight: .semibold)
-            Button {
-                withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
-                    stage = .kind
-                }
-            } label: {
-                Image(systemName: "chevron.down")
-                    .scaledFont(size: 9, weight: .semibold)
-                    .foregroundStyle(.tertiary)
-            }
-            .buttonStyle(.plain)
-            .help(Text("Change media kind", bundle: .module))
-        }
-        .foregroundStyle(color)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 5)
-        .background(Capsule().fill(color.opacity(0.15)))
-        .overlay(Capsule().stroke(color.opacity(0.45), lineWidth: 0.75))
     }
 
     // MARK: - TMDB missing banner
@@ -383,8 +278,7 @@ public struct DiscoverPickerView: View {
         ScrollView {
             VStack(spacing: 12) {
                 tmdbMissingBanner
-                kindIndicator
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                kindSelectorBar
                 if !selectedTagsForCurrentStage.isEmpty {
                     selectedRow
                     Divider().padding(.horizontal, 12)
@@ -403,7 +297,6 @@ public struct DiscoverPickerView: View {
     @ViewBuilder
     private var moodStarters: some View {
         if llmAvailable
-           && stage == .filters
            && freeText.trimmingCharacters(in: .whitespaces).isEmpty {
             VStack(alignment: .leading, spacing: 6) {
                 Text("MOOD STARTERS", bundle: .module)
@@ -467,26 +360,15 @@ public struct DiscoverPickerView: View {
     private var availableRow: some View {
         let tags = availableTagsForCurrentStage
         return VStack(alignment: .leading, spacing: 10) {
-            if stage == .kind {
-                // Stage .kind has just 2 pills; no header needed.
-                FlowLayout(spacing: 5) {
-                    ForEach(tags) { tag in
-                        pillView(tag, picked: false)
-                            .matchedGeometryEffect(id: tag.id, in: labelNamespace)
-                            .transition(.opacity)
-                    }
-                }
-            } else {
-                ForEach(categoriesOrdered, id: \.self) { category in
-                    let group = tags.filter { $0.category == category }
-                    if !group.isEmpty {
-                        categoryHeader(category)
-                        FlowLayout(spacing: 5) {
-                            ForEach(group) { tag in
-                                pillView(tag, picked: false)
-                                    .matchedGeometryEffect(id: tag.id, in: labelNamespace)
-                                    .transition(.opacity)
-                            }
+            ForEach(categoriesOrdered, id: \.self) { category in
+                let group = tags.filter { $0.category == category }
+                if !group.isEmpty {
+                    categoryHeader(category)
+                    FlowLayout(spacing: 5) {
+                        ForEach(group) { tag in
+                            pillView(tag, picked: false)
+                                .matchedGeometryEffect(id: tag.id, in: labelNamespace)
+                                .transition(.opacity)
                         }
                     }
                 }
@@ -506,7 +388,6 @@ public struct DiscoverPickerView: View {
             case .decade:  return "DECADE"
             case .rating:  return "VIBE"
             case .runtime: return "LENGTH"
-            case .kind:    return ""
             }
         }()
         Text(label, bundle: .module)
@@ -566,7 +447,7 @@ public struct DiscoverPickerView: View {
     // MARK: - Composer
 
     private var composerPlaceholder: LocalizedStringKey {
-        let pickedFilters = selectedTagsForCurrentStage.filter { $0.category != .kind }.count
+        let pickedFilters = selectedTagsForCurrentStage.count
         if pickedFilters == 0 {
             return "What are you in the mood for?"
         } else {
@@ -625,7 +506,7 @@ public struct DiscoverPickerView: View {
     // MARK: - Commit logic
 
     private var canCommit: Bool {
-        stage == .filters || !freeText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        viewModel.hasPickedKind || !freeText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     private func commit() {
