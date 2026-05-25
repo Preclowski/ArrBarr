@@ -5,9 +5,7 @@ import SwiftUI
 func discoverRatingChips(for result: SearchResult) -> [RatingChip] {
     var out: [RatingChip] = []
     if let imdb = result.imdb {
-        out.append(RatingChip(label: "IMDb",
-                              value: String(format: "%.1f", imdb),
-                              color: .yellow))
+        out.append(RatingChip(label: "IMDb", value: String(format: "%.1f", imdb), color: .yellow))
     }
     if let rt = result.rottenTomatoes {
         out.append(RatingChip(label: "RT", value: "\(Int(rt))%", color: .red))
@@ -16,9 +14,7 @@ func discoverRatingChips(for result: SearchResult) -> [RatingChip] {
         out.append(RatingChip(label: "MC", value: "\(Int(mc))", color: .green))
     }
     if result.imdb == nil, let r = result.rating {
-        out.append(RatingChip(label: "★",
-                              value: String(format: "%.1f", r),
-                              color: .yellow))
+        out.append(RatingChip(label: "★", value: String(format: "%.1f", r), color: .yellow))
     }
     return out
 }
@@ -40,78 +36,197 @@ public struct DiscoverCardView: View {
         GeometryReader { geo in
             let w = geo.size.width
             let h = geo.size.height
-            ZStack(alignment: .leading) {
-                // 1) The poster card — always rendered, just tilted when
-                //    hovered. The drawer overlays it on the left.
+            ZStack {
+                // FRONT — rotates 0 → -180° on flip
                 frontFace(w: w, h: h)
+                    .opacity(isHovered ? 0 : 1)
                     .rotation3DEffect(
-                        .degrees(isHovered ? 8 : 0),
+                        .degrees(isHovered ? -180 : 0),
                         axis: (x: 0, y: 1, z: 0),
-                        anchor: .trailing,
                         perspective: 0.5
                     )
 
-                // 2) The drawer — slides in from the left edge of the
-                //    card, covers ~65% of the card width. Hidden by
-                //    default (offset off-screen left).
-                if isHovered && abs(dragOffset.width) < 10 {
-                    infoDrawer(w: w * 0.80, h: h)
-                        .transition(.move(edge: .leading).combined(with: .opacity))
-                }
+                // BACK — rotates +180° → 0 on flip
+                backFace(w: w, h: h)
+                    .opacity(isHovered ? 1 : 0)
+                    .rotation3DEffect(
+                        .degrees(isHovered ? 0 : 180),
+                        axis: (x: 0, y: 1, z: 0),
+                        perspective: 0.5
+                    )
             }
             .frame(width: w, height: h)
-            .animation(.spring(response: 0.4, dampingFraction: 0.78), value: isHovered)
+            .animation(.interactiveSpring(response: 0.4, dampingFraction: 0.78), value: isHovered)
+            .overlay(swipeTint.allowsHitTesting(false))
+            .overlay(alignment: dragOffset.width > 0 ? .topLeading : .topTrailing) {
+                swipeStamp
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(Color(nsColor: .separatorColor).opacity(0.5), lineWidth: 1)
+            )
+            .shadow(color: .black.opacity(0.25), radius: 12, x: 0, y: 4)
             .onHover { hovering in
-                isHovered = hovering
+                isHovered = hovering && abs(dragOffset.width) < 10
             }
         }
     }
 
-    // MARK: - Shared helpers
+    // MARK: - Front face
 
-    private var titleWithYear: String {
-        if let y = item.result.year { return "\(item.result.title) (\(y))" }
-        return item.result.title
+    @ViewBuilder
+    private func frontFace(w: CGFloat, h: CGFloat) -> some View {
+        // Poster + footer plate, hard edge between them.
+        let footerH: CGFloat = 110
+        let posterH = h - footerH
+
+        VStack(spacing: 0) {
+            ZStack(alignment: .topTrailing) {
+                RemotePoster(
+                    url: item.result.posterURL,
+                    apiKey: nil,
+                    size: CGSize(width: w, height: posterH),
+                    cornerRadius: 0
+                )
+                .frame(width: w, height: posterH)
+                .clipped()
+
+                // Only chrome on the poster art: source badge top-right.
+                originChip
+                    .padding(10)
+            }
+
+            // FOOTER PLATE — solid color, no material, no gradient.
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Text(item.result.title)
+                        .scaledFont(size: 17, weight: .semibold)
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                    Spacer(minLength: 0)
+                    if let y = item.result.year {
+                        Text(verbatim: "\(y)")
+                            .scaledFont(size: 13, weight: .medium, monospacedDigit: true)
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+                if !runtimeCertSegments.isEmpty {
+                    Text(runtimeCertSegments.joined(separator: " · "))
+                        .scaledFont(size: 11)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+                let chips = discoverRatingChips(for: item.result)
+                if !chips.isEmpty {
+                    HStack(spacing: 5) {
+                        ForEach(chips, id: \.label) { RatingPill(chip: $0) }
+                    }
+                }
+                if !item.result.genres.isEmpty {
+                    Text(item.result.genres.prefix(4).joined(separator: " · "))
+                        .scaledFont(size: 11)
+                        .foregroundStyle(.tertiary)
+                        .lineLimit(1)
+                }
+            }
+            .padding(12)
+            .frame(width: w, height: footerH, alignment: .topLeading)
+            .background(Color(nsColor: .windowBackgroundColor))
+        }
+        .frame(width: w, height: h)
     }
+
+    // MARK: - Back face
+
+    @ViewBuilder
+    private func backFace(w: CGFloat, h: CGFloat) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top, spacing: 10) {
+                RemotePoster(
+                    url: item.result.posterURL,
+                    apiKey: nil,
+                    size: CGSize(width: 40, height: 60),
+                    cornerRadius: 4
+                )
+                .frame(width: 40, height: 60)
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(alignment: .firstTextBaseline, spacing: 6) {
+                        Text(item.result.title)
+                            .scaledFont(size: 15, weight: .semibold)
+                            .foregroundStyle(.primary)
+                            .lineLimit(2)
+                        Spacer(minLength: 0)
+                        if let y = item.result.year {
+                            Text(verbatim: "\(y)")
+                                .scaledFont(size: 12, weight: .medium, monospacedDigit: true)
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
+                    if !runtimeCertSegments.isEmpty {
+                        Text(runtimeCertSegments.joined(separator: " · "))
+                            .scaledFont(size: 11)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                    let chips = discoverRatingChips(for: item.result)
+                    if !chips.isEmpty {
+                        HStack(spacing: 4) {
+                            ForEach(chips, id: \.label) { RatingPill(chip: $0) }
+                        }
+                    }
+                }
+            }
+
+            Divider()
+
+            if let overview = item.result.overview, !overview.isEmpty {
+                ScrollView {
+                    Text(overview)
+                        .scaledFont(size: 13)
+                        .foregroundStyle(.primary)
+                        .lineSpacing(3)
+                        .multilineTextAlignment(.leading)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            } else {
+                Text("No overview available", bundle: .module)
+                    .scaledFont(size: 12)
+                    .foregroundStyle(.secondary)
+            }
+
+            if !item.result.genres.isEmpty {
+                Divider()
+                Text(item.result.genres.joined(separator: ", "))
+                    .scaledFont(size: 11)
+                    .foregroundStyle(.tertiary)
+            }
+        }
+        .padding(14)
+        .frame(width: w, height: h, alignment: .topLeading)
+        .background(Color(nsColor: .windowBackgroundColor))
+    }
+
+    // MARK: - Shared helpers
 
     private var runtimeCertSegments: [String] {
         [
-            item.result.runtime.flatMap { $0 > 0 ? "\($0) min" : nil },
+            item.result.runtime.flatMap { $0 > 0 ? "\($0 / 60)h \($0 % 60)m" : nil },
             item.result.certification.flatMap { $0.isEmpty ? nil : $0 },
             item.result.network.flatMap { $0.isEmpty ? nil : $0 },
         ].compactMap { $0 }
     }
 
-    private var frontMetadataLine: String {
-        var parts: [String] = []
-        if let r = item.result.runtime, r > 0 {
-            parts.append("\(r) min")
-        }
-        if let c = item.result.certification, !c.isEmpty {
-            parts.append(c)
-        }
-        // Always include a primary rating fallback so the line never disappears.
-        if let imdb = item.result.imdb {
-            parts.append(String(format: "IMDb %.1f", imdb))
-        } else if let r = item.result.rating {
-            parts.append(String(format: "★ %.1f", r))
-        }
-        return parts.joined(separator: " · ")
-    }
-
     @ViewBuilder
     private var originChip: some View {
         switch item.originLabel {
-        case .library:
-            InLibraryBadge()
-        case .tmdb:
-            TagChip(text: "Discover", color: .blue)
-        case .llm:
-            TagChip(text: "AI", color: .purple)
+        case .library: InLibraryBadge()
+        case .tmdb:    TagChip(text: "Discover", color: .blue)
+        case .llm:     TagChip(text: "AI", color: .purple)
         }
     }
 
-    // MARK: - Swipe tint / stamp
+    // MARK: - Swipe tint / stamp (unchanged from previous task)
 
     @ViewBuilder
     private var swipeTint: some View {
@@ -120,7 +235,6 @@ public struct DiscoverCardView: View {
             Rectangle()
                 .fill(dragOffset.width > 0 ? Color.accentColor : Color.red)
                 .opacity(progress * 0.40)
-                .allowsHitTesting(false)
         }
     }
 
@@ -144,174 +258,5 @@ public struct DiscoverCardView: View {
                 .padding(24)
                 .allowsHitTesting(false)
         }
-    }
-
-    // MARK: - Front face
-
-    @ViewBuilder
-    private func frontFace(w: CGFloat, h: CGFloat) -> some View {
-        ZStack(alignment: .bottomLeading) {
-            Color.black
-
-            RemotePoster(
-                url: item.result.posterURL,
-                apiKey: nil,
-                size: CGSize(width: w, height: h),
-                cornerRadius: 16
-            )
-
-            // Origin chip top-left
-            originChip
-                .padding(10)
-                .frame(maxWidth: .infinity, maxHeight: .infinity,
-                       alignment: .topLeading)
-
-            // Bottom info block — glass panel with title(year) / runtime·cert / ratings / genres
-            VStack(alignment: .leading, spacing: 5) {
-                Text(titleWithYear)
-                    .scaledFont(size: 17, weight: .bold)
-                    .foregroundStyle(.white)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.leading)
-                    .shadow(color: .black.opacity(0.55), radius: 3, x: 0, y: 1)
-
-                if !frontMetadataLine.isEmpty {
-                    Text(frontMetadataLine)
-                        .scaledFont(size: 12, weight: .semibold)
-                        .foregroundStyle(.white.opacity(0.95))
-                        .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 1)
-                }
-
-                let chips = discoverRatingChips(for: item.result)
-                if !chips.isEmpty {
-                    HStack(spacing: 5) {
-                        ForEach(chips, id: \.label) { RatingPill(chip: $0) }
-                    }
-                    .padding(.top, 2)
-                }
-
-                if !item.result.genres.isEmpty {
-                    Text(item.result.genres.prefix(3).joined(separator: " · "))
-                        .scaledFont(size: 11, weight: .medium)
-                        .foregroundStyle(.white.opacity(0.85))
-                        .shadow(color: .black.opacity(0.4), radius: 2, x: 0, y: 1)
-                        .lineLimit(1)
-                }
-            }
-            .padding(14)
-            .background(
-                // Glass panel behind the details — lets the poster bleed through
-                // while keeping the info block readable.
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(.ultraThinMaterial)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(.white.opacity(0.18), lineWidth: 0.5)
-                    )
-            )
-            .padding(.horizontal, 10)
-            .padding(.bottom, 10)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
-        }
-        .frame(width: w, height: h)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-        .overlay(swipeTint)
-        .overlay(alignment: dragOffset.width > 0 ? .topLeading : .topTrailing) {
-            swipeStamp
-        }
-        .overlay(
-            // 1) Crisp outer border — what catches light on the card's edge.
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(.white.opacity(0.32), lineWidth: 1)
-        )
-        .overlay(
-            // 2) Inner bottom highlight — a thin gradient on the bottom edge
-            //    suggesting card thickness. Just 4pt tall.
-            VStack {
-                Spacer()
-                LinearGradient(
-                    colors: [.white.opacity(0.0), .white.opacity(0.18)],
-                    startPoint: .top, endPoint: .bottom
-                )
-                .frame(height: 4)
-                .blendMode(.plusLighter)
-            }
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            .allowsHitTesting(false)
-        )
-        .shadow(color: .black.opacity(0.45), radius: 12, x: 0, y: 4)
-        .shadow(color: .black.opacity(0.20), radius: 4, x: 0, y: 1)
-    }
-
-    // MARK: - Info drawer
-
-    @ViewBuilder
-    private func infoDrawer(w: CGFloat, h: CGFloat) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            originChip
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-            VStack(alignment: .leading, spacing: 3) {
-                Text(titleWithYear)
-                    .scaledFont(size: 15, weight: .semibold)
-                    .foregroundStyle(.primary)
-                    .lineLimit(2)
-                if !runtimeCertSegments.isEmpty {
-                    Text(runtimeCertSegments.joined(separator: " · "))
-                        .scaledFont(size: 11, weight: .medium)
-                        .foregroundStyle(.secondary)
-                }
-            }
-
-            let chips = discoverRatingChips(for: item.result)
-            if !chips.isEmpty {
-                HStack(spacing: 5) {
-                    ForEach(chips, id: \.label) { RatingPill(chip: $0) }
-                }
-            }
-
-            if !item.result.genres.isEmpty {
-                Text(item.result.genres.prefix(4).joined(separator: " · "))
-                    .scaledFont(size: 11, weight: .medium)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
-
-            Divider().opacity(0.25)
-
-            if let overview = item.result.overview, !overview.isEmpty {
-                ScrollView {
-                    Text(overview)
-                        .scaledFont(size: 12)
-                        .foregroundStyle(.primary)
-                        .lineSpacing(3)
-                        .multilineTextAlignment(.leading)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-            } else {
-                Text("No overview available", bundle: .module)
-                    .scaledFont(size: 12)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .padding(12)
-        .frame(width: w, height: h, alignment: .topLeading)
-        // Single-layer glass — thinMaterial so the poster bleeds through.
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(.thinMaterial)
-        )
-        .overlay(
-            // Sharp edge highlight — light catching the top of a glass pane.
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(
-                    LinearGradient(
-                        colors: [.white.opacity(0.40), .white.opacity(0.10), .white.opacity(0.05)],
-                        startPoint: .top, endPoint: .bottom
-                    ),
-                    lineWidth: 1
-                )
-        )
-        .shadow(color: .black.opacity(0.18), radius: 4, x: 1, y: 0)
     }
 }
