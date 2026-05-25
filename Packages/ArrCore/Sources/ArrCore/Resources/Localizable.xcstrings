@@ -1792,6 +1792,35 @@
         }
       }
     },
+    "Configure Radarr in Settings to save picks to your library — add-actions will open TMDB instead.": {
+      "extractionState": "manual",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skonfiguruj Radarr w Ustawieniach, by zapisywać wybory do biblioteki — akcje „Dodaj” będą otwierać TMDB."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Konfiguriere Radarr in den Einstellungen, um Auswahl zur Bibliothek hinzuzufügen — sonst öffnen Add-Aktionen TMDB."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Configura Radarr en Ajustes para guardar selecciones — si no, las acciones abrirán TMDB."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Configurez Radarr dans les Réglages pour sauvegarder vos sélections — sinon, les actions ouvrent TMDB."
+          }
+        }
+      }
+    },
     "Continue": {
       "extractionState": "manual",
       "localizations": {

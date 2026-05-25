@@ -3,6 +3,7 @@ import SwiftUI
 public struct DiscoverTabView: View {
     @ObservedObject var viewModel: DiscoverViewModel
     let llmAvailable: Bool
+    let radarrAvailable: Bool
     let onAddToRadarr: (SearchResult) -> Void
     let onOpenDetail: (DiscoverItem, Int) -> Void
 
@@ -11,10 +12,12 @@ public struct DiscoverTabView: View {
 
     public init(viewModel: DiscoverViewModel,
                 llmAvailable: Bool,
+                radarrAvailable: Bool,
                 onAddToRadarr: @escaping (SearchResult) -> Void,
                 onOpenDetail: @escaping (DiscoverItem, Int) -> Void) {
         self.viewModel = viewModel
         self.llmAvailable = llmAvailable
+        self.radarrAvailable = radarrAvailable
         self.onAddToRadarr = onAddToRadarr
         self.onOpenDetail = onOpenDetail
     }
@@ -195,6 +198,15 @@ public struct DiscoverTabView: View {
                 Text(failureBadgeText)
                     .scaledFont(size: 10)
                     .foregroundStyle(.tertiary)
+            }
+            if !radarrAvailable {
+                Text("Configure Radarr in Settings to save picks to your library — add-actions will open TMDB instead.",
+                     bundle: .module)
+                    .scaledFont(size: 10)
+                    .foregroundStyle(.tertiary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 24)
+                    .padding(.top, 4)
             }
             Spacer()
         }

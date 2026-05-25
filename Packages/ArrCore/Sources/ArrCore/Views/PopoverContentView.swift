@@ -92,10 +92,14 @@ public struct PopoverContentView: View {
         }
     }
 
-    /// Discover needs at least Radarr (the library source + add-to-radarr
-    /// action both require it). TMDB-only / LLM-only modes are gated
-    /// inside the VM, not here.
-    private var discoverAvailable: Bool { radarrConfigured }
+    /// Discover surfaces any time at least one source can fire:
+    /// Radarr-backed library, TMDB Discover, or LLM mood picker.
+    /// The VM gates each source independently — and swipe-right falls
+    /// back to a TMDB deep-link when Radarr isn't configured (see
+    /// onAddToRadarr handler below).
+    private var discoverAvailable: Bool {
+        radarrConfigured || configStore.tmdbEnabled || chatAvailable
+    }
 
     @ViewBuilder
     private var chatTabContent: some View {
@@ -226,8 +230,16 @@ public struct PopoverContentView: View {
                             DiscoverTabView(
                                 viewModel: discoverViewModel,
                                 llmAvailable: chatAvailable,
+                                radarrAvailable: radarrConfigured,
                                 onAddToRadarr: { result in
-                                    self.searchResult = result
+                                    if self.radarrConfigured {
+                                        self.searchResult = result
+                                    } else if !result.foreignId.isEmpty,
+                                              let url = URL(string: "https://www.themoviedb.org/movie/\(result.foreignId)") {
+                                        // No Radarr to add to — open the TMDB page so the user can at
+                                        // least bookmark / research the title.
+                                        PlatformURLOpener.open(url)
+                                    }
                                 },
                                 onOpenDetail: { item, arrId in
                                     DetailRequest.post(
