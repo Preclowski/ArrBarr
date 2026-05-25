@@ -1,15 +1,20 @@
 import SwiftUI
 
+/// Picks collage — matches the chat-carousel `SearchResultCard` pattern
+/// (poster + title + year/rating) and routes taps through the same
+/// `DetailRequest` / `SearchAddRequest` pipeline. DetailView already knows
+/// how to show an existing arr entity vs. pulling fresh metadata from
+/// TMDB, so we don't repaint that branching here.
+///
+/// Removal lives in a right-click context menu — the collage stays a
+/// single tappable surface like the chat carousel does.
 public struct DiscoverMatchedListView: View {
     let items: [DiscoverItem]
-    let onAct: (DiscoverItem) -> Void
     let onRemove: (DiscoverItem) -> Void
 
     public init(items: [DiscoverItem],
-                onAct: @escaping (DiscoverItem) -> Void,
                 onRemove: @escaping (DiscoverItem) -> Void) {
         self.items = items
-        self.onAct = onAct
         self.onRemove = onRemove
     }
 
@@ -18,19 +23,71 @@ public struct DiscoverMatchedListView: View {
             emptyState
         } else {
             ScrollView {
-                LazyVGrid(columns: [
-                    GridItem(.flexible(), spacing: 8),
-                    GridItem(.flexible(), spacing: 8),
-                    GridItem(.flexible(), spacing: 8),
-                ], spacing: 8) {
-                    ForEach(items) { item in
-                        PickCell(item: item, onAct: onAct, onRemove: onRemove)
+                VStack(alignment: .leading, spacing: 16) {
+                    ForEach(sections, id: \.titleKey) { section in
+                        sectionView(titleKey: section.titleKey, items: section.items)
                     }
                 }
-                .padding(.horizontal, 12)
+                .padding(.horizontal, 14)
                 .padding(.vertical, 12)
             }
         }
+    }
+
+    @ViewBuilder
+    private func sectionView(titleKey: String, items: [DiscoverItem]) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                Text(LocalizedStringKey(titleKey), bundle: .module)
+                    .scaledFont(size: 11, weight: .semibold)
+                    .tracking(0.6)
+                    .textCase(.uppercase)
+                    .foregroundStyle(.secondary)
+                Text(verbatim: "\(items.count)")
+                    .scaledFont(size: 11, weight: .medium)
+                    .foregroundStyle(.tertiary)
+                Spacer()
+            }
+            LazyVGrid(columns: [
+                GridItem(.flexible(), spacing: 12),
+                GridItem(.flexible(), spacing: 12),
+                GridItem(.flexible(), spacing: 12),
+            ], alignment: .leading, spacing: 14) {
+                ForEach(items) { item in
+                    PickCard(item: item, onRemove: onRemove)
+                }
+            }
+        }
+    }
+
+    /// Group picks by origin into ordered sections. Library items first
+    /// (already owned — quickest to watch), then TMDB discoveries, then
+    /// LLM suggestions.
+    private struct Section { let titleKey: String; let items: [DiscoverItem] }
+
+    private var sections: [Section] {
+        var library: [DiscoverItem] = []
+        var tmdb:    [DiscoverItem] = []
+        var ai:      [DiscoverItem] = []
+        for item in items {
+            if item.result.inLibraryArrId != nil || item.originLabel == .library {
+                library.append(item)
+            } else if item.originLabel == .llm {
+                ai.append(item)
+            } else {
+                tmdb.append(item)
+            }
+        }
+        var out: [Section] = []
+        // New items (Discover + AI) lead — they're the *finds*, what the
+        // user came to Discover for. In-library items group last as the
+        // "already owned" footer. Earlier order put library first
+        // because owned-is-fastest-to-watch, but the user explicitly
+        // asked: new discoveries should be the headline.
+        if !tmdb.isEmpty    { out.append(Section(titleKey: "Discover",   items: tmdb)) }
+        if !ai.isEmpty      { out.append(Section(titleKey: "AI picks",   items: ai)) }
+        if !library.isEmpty { out.append(Section(titleKey: "In library", items: library)) }
+        return out
     }
 
     private var emptyState: some View {
@@ -48,124 +105,109 @@ public struct DiscoverMatchedListView: View {
     }
 }
 
-// MARK: - PickCell
+// MARK: - PickCard
 
-private struct PickCell: View {
+/// Mirror of `SearchResultCard` from `RichToolResultView`: poster on top,
+/// title underneath, year + rating row. Tap on the card opens the detail
+/// surface — owned items route to `DetailRequest` (DetailView reads
+/// existing arr metadata); discovery items route to `SearchAddRequest`
+/// (the SearchAddPanel overlay handles the add flow).
+private struct PickCard: View {
     let item: DiscoverItem
-    let onAct: (DiscoverItem) -> Void
     let onRemove: (DiscoverItem) -> Void
 
     @State private var isHovering = false
 
     var body: some View {
-        ZStack {
-            RemotePoster(
-                url: item.result.posterURL,
-                apiKey: nil,
-                size: CGSize(width: 110, height: 165),
-                cornerRadius: 6
-            )
-            .aspectRatio(2.0/3.0, contentMode: .fit)
+        VStack(alignment: .leading, spacing: 3) {
+            // `fill: true` makes the poster expand to its caller-provided
+            // frame instead of locking to a fixed 100×150. Without it the
+            // poster stayed 100pt wide while the text below filled the
+            // whole grid cell (~105–115pt depending on popover width),
+            // so the title appeared to "extend past" the poster edge.
+            // Now poster + text share the exact same column width.
+            Color.clear
+                .aspectRatio(2.0/3.0, contentMode: .fit)
+                .frame(maxWidth: .infinity)
+                .overlay(
+                    RemotePoster(
+                        url: item.result.posterURL,
+                        apiKey: nil,
+                        size: CGSize(width: 100, height: 150),
+                        cornerRadius: 6,
+                        fill: true
+                    )
+                )
+            // Title clamped to one line — at poster-tile widths (~95pt)
+            // two-line wrap of a 12pt title regularly bled past the
+            // poster edge. Smaller font + single-line truncation keeps
+            // text strictly inside the column. Full title is available
+            // on hover (the help tooltip) for anything truncated.
+            Text(item.result.title)
+                .scaledFont(size: 11, weight: .semibold)
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .foregroundStyle(isHovering ? .primary : .secondary)
+                .help(Text(verbatim: item.result.title))
 
-            if isHovering {
-                hoverOverlay
-                    .transition(.opacity)
-            }
-        }
-        .overlay(alignment: .topLeading) {
-            // Source badge always visible top-left.
-            sourceBadge
-                .padding(6)
-        }
-        .clipShape(RoundedRectangle(cornerRadius: 6))
-        .onHover { hovering in
-            withAnimation(.easeInOut(duration: 0.15)) { isHovering = hovering }
-        }
-    }
-
-    @ViewBuilder
-    private var hoverOverlay: some View {
-        ZStack {
-            // Dark scrim so action icons are legible on any poster.
-            Color.black.opacity(0.55)
-
-            VStack(spacing: 4) {
-                Text(item.result.title)
-                    .scaledFont(size: 11, weight: .semibold)
-                    .foregroundStyle(.white)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 6)
-                if let y = item.result.year {
-                    Text(verbatim: "\(y)")
+            HStack(spacing: 6) {
+                if let year = item.result.year {
+                    Text(String(year))
                         .scaledFont(size: 10)
-                        .foregroundStyle(.white.opacity(0.8))
+                        .foregroundStyle(.secondary)
                 }
-                Spacer().frame(height: 4)
-                HStack(spacing: 14) {
-                    Button {
-                        onAct(item)
-                    } label: {
-                        Image(systemName: actionIcon)
-                            .scaledFont(size: 16, weight: .semibold)
-                            .foregroundStyle(.white)
-                            .frame(width: 28, height: 28)
-                            .background(Circle().fill(Color.accentColor))
+                if let rating = item.result.rating {
+                    HStack(spacing: 2) {
+                        Image(systemName: "star.fill")
+                            .scaledFont(size: 8)
+                        Text(String(format: "%.1f", rating))
+                            .scaledFont(size: 10)
                     }
-                    .buttonStyle(.plain)
-                    .help(Text(actionHelp, bundle: .module))
-
-                    Button {
-                        onRemove(item)
-                    } label: {
-                        Image(systemName: "xmark")
-                            .scaledFont(size: 14, weight: .semibold)
-                            .foregroundStyle(.white)
-                            .frame(width: 28, height: 28)
-                            .background(Circle().fill(Color.red.opacity(0.85)))
-                    }
-                    .buttonStyle(.plain)
-                    .help(Text("Remove", bundle: .module))
+                    .foregroundStyle(.secondary)
                 }
             }
-            .padding(6)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .contentShape(Rectangle())
+        .onHover { hovering in
+            withAnimation(.easeInOut(duration: 0.12)) { isHovering = hovering }
+        }
+        // `.onTapGesture` on the whole VStack — `Button(.plain)` inside
+        // `LazyVGrid` inside `ScrollView` has a known SwiftUI bug on
+        // macOS where the hit-test misses on some cells. The tap gesture
+        // hits reliably and the title-color accent on hover gives the
+        // user a clear "this is clickable" signal.
+        .onTapGesture { handleTap() }
+        .contextMenu {
+            Button(role: .destructive) {
+                onRemove(item)
+            } label: {
+                Label {
+                    Text("Remove from picks", bundle: .module)
+                } icon: {
+                    Image(systemName: "trash")
+                }
+            }
         }
     }
 
-    @ViewBuilder
-    private var sourceBadge: some View {
-        switch item.originLabel {
-        case .library:
-            InLibraryBadge()
-        case .tmdb:
-            outlineBadge(text: "Discover", color: .blue)
-        case .llm:
-            outlineBadge(text: "AI", color: .purple)
-        }
-    }
-
-    @ViewBuilder
-    private func outlineBadge(text: String, color: Color) -> some View {
-        Text(LocalizedStringKey(text), bundle: .module)
-            .scaledFont(size: 8, weight: .semibold)
-            .foregroundStyle(color)
-            .padding(.horizontal, 4).padding(.vertical, 1)
-            .background(Capsule().fill(.regularMaterial))
-            .overlay(Capsule().stroke(color.opacity(0.6), lineWidth: 0.75))
-    }
-
-    private var actionIcon: String {
-        switch item.action {
-        case .addToRadarr, .addToSonarr: return "plus"
-        case .openDetail: return "play.fill"
-        }
-    }
-
-    private var actionHelp: LocalizedStringKey {
-        switch item.action {
-        case .addToRadarr: return "Add to Radarr"
-        case .addToSonarr: return "Add to Sonarr"
-        case .openDetail:  return "Watch"
+    /// Owned items → DetailView via DetailRequest (reads existing arr id).
+    /// Fresh discovery items → SearchAddPanel via SearchAddRequest.
+    /// Same routing as `SearchResultCard` in the chat carousel.
+    private func handleTap() {
+        if let arrId = item.result.inLibraryArrId {
+            DetailRequest.post(
+                DetailRequest.syntheticItem(
+                    source: item.result.source,
+                    entityId: arrId,
+                    title: item.result.title,
+                    posterURL: item.result.posterURL,
+                    posterRequiresAuth: false
+                )
+            )
+        } else {
+            SearchAddRequest.post(item.result)
         }
     }
 }
