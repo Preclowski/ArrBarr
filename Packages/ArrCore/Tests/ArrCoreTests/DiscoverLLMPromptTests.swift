@@ -2,69 +2,81 @@ import XCTest
 @testable import ArrCore
 
 final class DiscoverLLMPromptTests: XCTestCase {
+
     func test_buildPrompt_includesMoodAndAskedCount() {
-        let prompt = DiscoverLLMPrompt.build(
-            mood: "short 90s comedy",
-            decade: .nineties,
-            count: 20,
-            exclude: []
-        )
-        XCTAssertTrue(prompt.contains("short 90s comedy"))
-        XCTAssertTrue(prompt.contains("20"))
-        XCTAssertTrue(prompt.contains("1990"))
+        let p = DiscoverLLMPrompt.build(mood: "short 90s comedy",
+                                        decade: .nineties, count: 20, exclude: [])
+        XCTAssertTrue(p.contains("short 90s comedy"))
+        XCTAssertTrue(p.contains("20"))
+        XCTAssertTrue(p.contains("1990"))
     }
 
     func test_buildPrompt_listsExcludesWhenPresent() {
-        let prompt = DiscoverLLMPrompt.build(
-            mood: "noir",
-            decade: .any,
-            count: 20,
-            exclude: ["Drive (2011)", "Heat (1995)"]
-        )
-        XCTAssertTrue(prompt.contains("Drive (2011)"))
-        XCTAssertTrue(prompt.contains("Heat (1995)"))
+        let p = DiscoverLLMPrompt.build(mood: "noir", decade: .any, count: 20,
+                                        exclude: ["Drive (2011)", "Heat (1995)"])
+        XCTAssertTrue(p.contains("Drive (2011)"))
+        XCTAssertTrue(p.contains("Heat (1995)"))
     }
 
     func test_buildPrompt_omitsExcludeSectionWhenEmpty() {
-        let prompt = DiscoverLLMPrompt.build(
-            mood: "anything", decade: .any, count: 20, exclude: [])
-        XCTAssertFalse(prompt.lowercased().contains("do not include"))
+        let p = DiscoverLLMPrompt.build(mood: "anything", decade: .any,
+                                        count: 20, exclude: [])
+        XCTAssertFalse(p.lowercased().contains("do not include"))
     }
 
-    func test_parse_extractsTitlesFromCleanJSON() throws {
+    func test_parse_extractsTitlesAndFilters() throws {
         let raw = """
-        [{"title":"Drive","year":2011,"reason":"x"},
-         {"title":"Heat","year":1995,"reason":"y"}]
+        { "titles": [{"title":"Drive","year":2011}, {"title":"Heat","year":1995}],
+          "filters": { "genres": ["Thriller", "Crime"], "decade": "2010s", "status": "any" } }
         """
-        let parsed = try DiscoverLLMPrompt.parse(raw)
-        XCTAssertEqual(parsed.count, 2)
-        XCTAssertEqual(parsed[0].title, "Drive")
-        XCTAssertEqual(parsed[0].year, 2011)
-        XCTAssertEqual(parsed[1].title, "Heat")
+        let r = try DiscoverLLMPrompt.parse(raw)
+        XCTAssertEqual(r.suggestions.map(\.title), ["Drive", "Heat"])
+        XCTAssertEqual(Set(r.filters.genres), [.thriller, .crime])
+        XCTAssertEqual(r.filters.decade, .twoThousandTens)
+        XCTAssertEqual(r.filters.status, .any)
+    }
+
+    func test_parse_acceptsMissingFiltersBlock() throws {
+        let raw = """
+        { "titles": [{"title":"Drive","year":2011}] }
+        """
+        let r = try DiscoverLLMPrompt.parse(raw)
+        XCTAssertEqual(r.suggestions.count, 1)
+        XCTAssertTrue(r.filters.genres.isEmpty)
+        XCTAssertNil(r.filters.decade)
+        XCTAssertNil(r.filters.status)
     }
 
     func test_parse_toleratesCodeFences() throws {
         let raw = """
         Here you go:
         ```json
-        [{"title":"Drive","year":2011,"reason":"x"}]
+        { "titles": [{"title":"Drive","year":2011}] }
         ```
         """
-        let parsed = try DiscoverLLMPrompt.parse(raw)
-        XCTAssertEqual(parsed.count, 1)
-        XCTAssertEqual(parsed[0].title, "Drive")
+        let r = try DiscoverLLMPrompt.parse(raw)
+        XCTAssertEqual(r.suggestions.count, 1)
     }
 
     func test_parse_toleratesTrailingProse() throws {
         let raw = """
-        [{"title":"Drive","year":2011,"reason":"x"}]
+        { "titles": [{"title":"Drive","year":2011}] }
         Hope this helps!
         """
-        let parsed = try DiscoverLLMPrompt.parse(raw)
-        XCTAssertEqual(parsed.count, 1)
+        let r = try DiscoverLLMPrompt.parse(raw)
+        XCTAssertEqual(r.suggestions.count, 1)
     }
 
-    func test_parse_throwsOnNoArray() {
+    func test_parse_throwsOnNoObject() {
         XCTAssertThrowsError(try DiscoverLLMPrompt.parse("not json at all"))
+    }
+
+    func test_parse_unknownGenreNamesIgnored() throws {
+        let raw = """
+        { "titles": [{"title":"X","year":null}],
+          "filters": { "genres": ["Comedy", "Bogus Genre"] } }
+        """
+        let r = try DiscoverLLMPrompt.parse(raw)
+        XCTAssertEqual(r.filters.genres, [.comedy])
     }
 }
