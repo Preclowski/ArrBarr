@@ -56,7 +56,7 @@ public struct DiscoverTagCloud<TagID: Hashable & Sendable>: View {
                 .frame(width: geo.size.width, height: geo.size.height)
             }
         }
-        .frame(minHeight: 280)
+        .frame(minHeight: 320)
     }
 
     // MARK: - Pill builder
@@ -66,15 +66,22 @@ public struct DiscoverTagCloud<TagID: Hashable & Sendable>: View {
         let picked = isPicked(tag.id)
         let base = basePosition(for: tag, idx: idx, in: size)
         let bob = oscillation(idx: idx, t: t)
-        let rot = Angle(degrees: sin(t * 0.5 + Double(idx) * 0.7) * 3)
-        let fs = fontSize(for: tag, idx: idx, picked: picked)
+
+        // Base rotation derived from the label hash → persistent across
+        // re-renders. Range ±12° feels lively without becoming hard to read.
+        let baseAngleDeg = Double(stableHash(tag.label) % 25) - 12  // -12..+12
+        // TimelineView wobble adds ±2° on top, with per-tag phase.
+        let wobbleDeg = sin(t * 0.5 + Double(idx) * 0.7) * 2
+        let rot = Angle(degrees: baseAngleDeg + wobbleDeg)
+
+        let fontSize = fontSize(for: tag, idx: idx, picked: picked)
         let tint = tagTint(for: tag, idx: idx)
 
         Button {
             onToggle(tag.id)
         } label: {
             Text(LocalizedStringKey(tag.label), bundle: .module)
-                .scaledFont(size: fs, weight: picked ? .semibold : .medium)
+                .scaledFont(size: fontSize, weight: picked ? .semibold : .medium)
                 .padding(.horizontal, picked ? 12 : 10)
                 .padding(.vertical, picked ? 6 : 5)
                 .background(
@@ -83,9 +90,8 @@ public struct DiscoverTagCloud<TagID: Hashable & Sendable>: View {
                         : tint.opacity(0.08))
                 )
                 .overlay(
-                    Capsule().stroke(
-                        picked ? tint.opacity(0.7) : .clear,
-                        lineWidth: picked ? 1 : 0)
+                    Capsule().stroke(picked ? tint.opacity(0.7) : .clear,
+                                     lineWidth: picked ? 1 : 0)
                 )
                 .foregroundStyle(picked ? tint : .primary.opacity(0.85))
                 .scaleEffect(picked ? 1.08 : 1.0)
@@ -98,46 +104,63 @@ public struct DiscoverTagCloud<TagID: Hashable & Sendable>: View {
 
     // MARK: - Layout helpers
 
-    /// Stable, hash-derived base position. Uses a loose 4-column grid with
-    /// per-tag jitter so the layout doesn't read as a grid.
+    /// Phyllotactic (golden-angle) spiral placement. Each tag radiates from
+    /// center at an irrational angle increment — produces natural-looking
+    /// circular distribution with no obvious pattern.
     private func basePosition(for tag: Tag, idx: Int, in size: CGSize) -> CGPoint {
-        let cols = 4
-        let rows = max(3, (tags.count + cols - 1) / cols)
-        let col = idx % cols
-        let row = idx / cols
-        let cellW = size.width / CGFloat(cols)
-        let cellH = size.height / CGFloat(rows)
-        let baseX = cellW * (CGFloat(col) + 0.5)
-        let baseY = cellH * (CGFloat(row) + 0.5)
-        // Per-tag jitter from label hash so the grid baseline isn't obvious.
+        let cx = size.width / 2
+        let cy = size.height / 2
+
+        // r grows as sqrt(idx) so density stays roughly uniform.
+        // 28 was tuned for ~21 tags in a ~376×320 area.
+        let r = sqrt(Double(idx) + 0.5) * 28
+
+        // Golden angle in radians (≈ 137.508°). Irrational ratio → no
+        // regular spokes appear.
+        let goldenAngle = Double.pi * (3.0 - sqrt(5.0))
+        let theta = Double(idx) * goldenAngle
+
+        // Per-tag micro-jitter from label hash — adjacent indices won't sit
+        // perfectly on the spiral.
         let h = stableHash(tag.label)
-        let jitterX = CGFloat((h & 0xFF)) / 255.0 - 0.5         // -0.5 ... +0.5
-        let jitterY = CGFloat(((h >> 8) & 0xFF)) / 255.0 - 0.5
+        let jr = Double((h & 0xFF)) / 255.0 - 0.5       // -0.5 ... +0.5
+        let jt = Double(((h >> 8) & 0xFF)) / 255.0 - 0.5
+
+        let x = cx + CGFloat((r + jr * 8) * cos(theta + jt * 0.25))
+        let y = cy + CGFloat((r + jr * 8) * sin(theta + jt * 0.25))
+
+        // Clamp to interior so wider pills near the edge don't clip off.
+        let pad: CGFloat = 50
         return CGPoint(
-            x: (baseX + jitterX * cellW * 0.35).clamped(to: 40...(size.width - 40)),
-            y: (baseY + jitterY * cellH * 0.35).clamped(to: 16...(size.height - 16))
+            x: min(max(x, pad), size.width - pad),
+            y: min(max(y, pad * 0.6), size.height - pad * 0.6)
         )
     }
 
     private func oscillation(idx: Int, t: TimeInterval) -> CGVector {
         let phase = Double(idx) * 0.9
         return CGVector(
-            dx: CGFloat(sin(t * 0.6 + phase) * 4),
-            dy: CGFloat(cos(t * 0.5 + phase * 1.3) * 5)
+            dx: CGFloat(sin(t * 0.6 + phase) * 2.5),
+            dy: CGFloat(cos(t * 0.5 + phase * 1.3) * 3.0)
         )
     }
 
     private func fontSize(for tag: Tag, idx: Int, picked: Bool) -> CGFloat {
+        // First few tags (center) are visually heavier; hash variance
+        // prevents every Nth tag reading as the same size.
         let h = stableHash(tag.label)
-        let bucket = Int(h % 4) // 0..3
-        let base: CGFloat
-        switch tag.palette {
-        case .mood:
-            base = [11, 12, 13, 14][bucket]
-        case .genre:
-            base = [11, 11, 12, 13][bucket]
+        let bucket = Int(h % 5) // 0..4
+
+        let center: CGFloat
+        switch idx {
+        case 0..<4:    center = 16
+        case 4..<10:   center = 13
+        default:       center = 11
         }
-        return base + (picked ? 1 : 0)
+        let jitter: CGFloat = [-1, 0, 1, 0, 2][bucket]
+        let s = center + jitter
+
+        return s + (picked ? 1 : 0)
     }
 
     private func tagTint(for tag: Tag, idx: Int) -> Color {

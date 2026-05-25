@@ -265,9 +265,9 @@ public struct DiscoverPickerView: View {
     private static let moodPills: [MoodPill] = [
         .init(label: "Cozy",            kind: .mood),
         .init(label: "Dark",            kind: .mood),
-        .init(label: "Feel-good",       kind: .mood),
         .init(label: "Mind-bending",    kind: .mood),
         .init(label: "Epic",            kind: .mood),
+        .init(label: "Feel-good",       kind: .mood),
         .init(label: "Nostalgic",       kind: .mood),
         .init(label: "Quirky",          kind: .mood),
         .init(label: "Slow burn",       kind: .mood),
