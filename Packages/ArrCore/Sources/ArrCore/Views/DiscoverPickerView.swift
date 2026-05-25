@@ -777,11 +777,6 @@ public struct DiscoverPickerView: View {
     /// real pills.
     @ViewBuilder
     private func addCustomTagChip(for category: PickerCategory) -> some View {
-        // Match the category accent so the chip blends with the
-        // regular pills above it. Earlier dashed-grey treatment made
-        // the affordance feel like a debug button bolted onto the
-        // category. With the colored skin, "+ Add" reads as "another
-        // colored item I can drop in here".
         let color = catalogColor(for: category)
         if addingTagFor == category.rawValue {
             HStack(spacing: 4) {
@@ -818,6 +813,18 @@ public struct DiscoverPickerView: View {
                     .stroke(color.opacity(0.85), lineWidth: 1.2)
             )
             .onAppear { newCustomTagFocused = true }
+            // Autocomplete popover — surfaces existing taxonomy items
+            // that match what the user is typing. Tap a suggestion to
+            // toggle that item in the filter (same effect as clicking
+            // the pill in More filters); Enter on free text falls
+            // through to `commitNewCustomTag` and saves as custom.
+            .popover(isPresented: Binding(
+                get: { autocompleteMatches(for: category,
+                                           query: newCustomTagText).count > 0 },
+                set: { _ in }
+            ), arrowEdge: .bottom) {
+                autocompletePopover(for: category, color: color)
+            }
         } else {
             Button {
                 addingTagFor = category.rawValue
@@ -838,6 +845,111 @@ public struct DiscoverPickerView: View {
             }
             .buttonStyle(.plain)
         }
+    }
+
+    // MARK: - Autocomplete
+
+    /// Catalog match for `addCustomTagChip` autocomplete. Each entry
+    /// carries a display label + a `toggle` closure that flips the
+    /// matching enum case in the filter when the user picks it.
+    private struct CatalogMatch: Identifiable {
+        let id: String
+        let label: String
+        let toggle: () -> Void
+    }
+
+    /// Returns up to 6 catalog items whose displayName contains the
+    /// query (case-insensitive). Empty query → empty list. Returns
+    /// `[]` for any category that doesn't have a finite catalog (only
+    /// genre / decade / rating / runtime use this).
+    private func autocompleteMatches(for category: PickerCategory,
+                                     query raw: String) -> [CatalogMatch] {
+        let q = raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !q.isEmpty else { return [] }
+        switch category {
+        case .genre:
+            return DiscoverGenre.allCases
+                .filter { $0.displayName.lowercased().contains(q) }
+                .prefix(6)
+                .map { g in
+                    CatalogMatch(id: "genre.\(g.rawValue)", label: g.displayName) {
+                        if viewModel.filter.genres.contains(g) {
+                            viewModel.filter.genres.remove(g)
+                        } else {
+                            viewModel.filter.genres.insert(g)
+                        }
+                        viewModel.userChangedFilter()
+                    }
+                }
+        case .decade:
+            return DiscoverDecade.allCases.filter { $0 != .any }
+                .filter { $0.rawValue.lowercased().contains(q) }
+                .prefix(6)
+                .map { d in
+                    CatalogMatch(id: "decade.\(d.rawValue)", label: d.rawValue) {
+                        viewModel.filter.decade =
+                            (viewModel.filter.decade == d) ? .any : d
+                        viewModel.userChangedFilter()
+                    }
+                }
+        case .rating:
+            return DiscoverRatingTier.allCases.filter { $0 != .any }
+                .filter { $0.rawValue.lowercased().contains(q) }
+                .prefix(6)
+                .map { r in
+                    CatalogMatch(id: "rating.\(r.rawValue)",
+                                 label: r.rawValue.capitalized) {
+                        viewModel.filter.rating =
+                            (viewModel.filter.rating == r) ? .any : r
+                        viewModel.userChangedFilter()
+                    }
+                }
+        case .runtime:
+            return DiscoverRuntime.allCases.filter { $0 != .any }
+                .filter { $0.rawValue.lowercased().contains(q) }
+                .prefix(6)
+                .map { rt in
+                    CatalogMatch(id: "runtime.\(rt.rawValue)",
+                                 label: rt.rawValue.capitalized) {
+                        viewModel.filter.runtime =
+                            (viewModel.filter.runtime == rt) ? .any : rt
+                        viewModel.userChangedFilter()
+                    }
+                }
+        case .people:
+            return [] // people uses TMDB free-text search, no local catalog.
+        }
+    }
+
+    /// Popover content for the autocomplete dropdown. Each match
+    /// renders as a Button row; tap = toggle + close input + clear.
+    @ViewBuilder
+    private func autocompletePopover(for category: PickerCategory,
+                                     color: Color) -> some View {
+        let matches = autocompleteMatches(for: category,
+                                          query: newCustomTagText)
+        VStack(alignment: .leading, spacing: 2) {
+            ForEach(matches) { m in
+                Button {
+                    m.toggle()
+                    newCustomTagText = ""
+                    addingTagFor = nil
+                } label: {
+                    HStack {
+                        Text(m.label)
+                            .scaledFont(size: 11, weight: .medium)
+                            .foregroundStyle(color)
+                        Spacer(minLength: 8)
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.vertical, 4)
+        .frame(minWidth: 140)
     }
 
     /// Matches the colors in `tint(for:)` and `color(for:)` so the
