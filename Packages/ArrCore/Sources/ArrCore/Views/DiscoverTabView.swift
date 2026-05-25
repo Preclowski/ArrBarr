@@ -22,7 +22,6 @@ public struct DiscoverTabView: View {
     public var body: some View {
         VStack(spacing: 0) {
             filterRow
-            moodComposer
             Divider()
             if showMatched {
                 DiscoverMatchedListView(
@@ -34,6 +33,7 @@ public struct DiscoverTabView: View {
             } else {
                 swipingContent
             }
+            moodBar
         }
         .task(id: filterFingerprint) {
             await viewModel.reshuffle()
@@ -74,38 +74,49 @@ public struct DiscoverTabView: View {
     }
 
     @ViewBuilder
-    private var moodComposer: some View {
+    private var moodBar: some View {
         if llmAvailable {
             HStack(spacing: 8) {
                 Image(systemName: "sparkles")
-                    .scaledFont(size: 13)
+                    .scaledFont(size: 14)
                     .foregroundStyle(.purple)
-                TextField("", text: Binding(get: { viewModel.moodText },
-                                            set: { viewModel.moodText = $0 }),
+                TextField("",
+                          text: Binding(get: { viewModel.moodText },
+                                        set: { viewModel.moodText = $0 }),
                           prompt: Text("What are you in the mood for?", bundle: .module),
                           axis: .vertical)
                     .textFieldStyle(.plain)
                     .focused($moodFocused)
-                    .lineLimit(1...3)
-                    .scaledFont(size: 12)
-                if !viewModel.moodText.trimmingCharacters(in: .whitespaces).isEmpty {
-                    Button {
-                        viewModel.moodText = ""
-                        moodFocused = false
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .scaledFont(size: 14)
-                            .foregroundStyle(.tertiary)
-                    }
-                    .buttonStyle(.plain)
+                    .onSubmit { submitMood() }
+                    .lineLimit(1...4)
+                    .scaledFont(size: 13)
+                Button(action: submitMood) {
+                    Image(systemName: "arrow.up.circle.fill")
+                        .scaledFont(size: 22)
+                        .foregroundStyle(
+                            viewModel.moodText
+                                .trimmingCharacters(in: .whitespaces).isEmpty
+                                ? Color.secondary
+                                : Color.accentColor
+                        )
                 }
+                .buttonStyle(.plain)
+                .disabled(viewModel.moodText.trimmingCharacters(in: .whitespaces).isEmpty)
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 8)
             .glassyFloatingBar()
-            .padding(.horizontal, 12)
-            .padding(.bottom, 6)
+            .padding(.horizontal, 10)
+            .padding(.bottom, 10)
         }
+    }
+
+    private func submitMood() {
+        moodFocused = false
+        // Reshuffle is also fired automatically by task(id: filterFingerprint)
+        // when moodText changes, but call it explicitly so a no-change Enter
+        // (user re-submits same mood) still re-runs the LLM source.
+        Task { await viewModel.reshuffle() }
     }
 
     private var filterFingerprint: Int {
