@@ -1,5 +1,57 @@
 import SwiftUI
 
+// MARK: - FlowLayout
+
+struct FlowLayout: Layout {
+    let spacing: CGFloat
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let maxWidth = proposal.width ?? .infinity
+        let (_, totalHeight) = layoutRows(maxWidth: maxWidth, subviews: subviews)
+        return CGSize(width: maxWidth, height: totalHeight)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let (rows, _) = layoutRows(maxWidth: bounds.width, subviews: subviews)
+        var y = bounds.minY
+        for row in rows {
+            var x = bounds.minX
+            let rowHeight = row.map { subviews[$0].sizeThatFits(.unspecified).height }.max() ?? 0
+            for idx in row {
+                let s = subviews[idx].sizeThatFits(.unspecified)
+                subviews[idx].place(at: CGPoint(x: x, y: y),
+                                    proposal: ProposedViewSize(width: s.width, height: s.height))
+                x += s.width + spacing
+            }
+            y += rowHeight + spacing
+        }
+    }
+
+    private func layoutRows(maxWidth: CGFloat, subviews: Subviews) -> (rows: [[Int]], totalHeight: CGFloat) {
+        var rows: [[Int]] = [[]]
+        var rowWidth: CGFloat = 0
+        var totalHeight: CGFloat = 0
+        var currentRowHeight: CGFloat = 0
+        for (i, sub) in subviews.enumerated() {
+            let s = sub.sizeThatFits(.unspecified)
+            let needed = s.width + (rows[rows.count - 1].isEmpty ? 0 : spacing)
+            if rowWidth + needed > maxWidth, !rows[rows.count - 1].isEmpty {
+                totalHeight += currentRowHeight + spacing
+                rows.append([])
+                rowWidth = 0
+                currentRowHeight = 0
+            }
+            rows[rows.count - 1].append(i)
+            rowWidth += s.width + (rows[rows.count - 1].count > 1 ? spacing : 0)
+            currentRowHeight = max(currentRowHeight, s.height)
+        }
+        totalHeight += currentRowHeight
+        return (rows, totalHeight)
+    }
+}
+
+// MARK: - DiscoverPickerView
+
 public struct DiscoverPickerView: View {
     @ObservedObject var viewModel: DiscoverViewModel
     let llmAvailable: Bool
@@ -7,6 +59,8 @@ public struct DiscoverPickerView: View {
 
     @State private var freeText: String = ""
     @FocusState private var freeTextFocused: Bool
+    @State private var stage: PickerStage = .kind
+    @Namespace private var labelNamespace
 
     public init(viewModel: DiscoverViewModel,
                 llmAvailable: Bool,
@@ -16,132 +70,283 @@ public struct DiscoverPickerView: View {
         self.onSubmit = onSubmit
     }
 
+    // MARK: - Stage model
+
+    private enum PickerStage {
+        case kind
+        case filters
+    }
+
+    // MARK: - Tag descriptor
+
+    private struct PickerTag: Identifiable, Hashable {
+        let id: String
+        let label: String
+        let icon: String?
+        let category: PickerCategory
+
+        static func == (l: Self, r: Self) -> Bool { l.id == r.id }
+        func hash(into h: inout Hasher) { h.combine(id) }
+    }
+
+    private enum PickerCategory { case kind, genre, decade, rating, runtime }
+
+    // MARK: - Tag catalog
+
+    private static let kindTags: [PickerTag] = [
+        PickerTag(id: "kind.movie", label: "Movies", icon: "film",  category: .kind),
+        PickerTag(id: "kind.show",  label: "Shows",  icon: "tv",    category: .kind),
+    ]
+
+    private func filterTags() -> [PickerTag] {
+        var out: [PickerTag] = []
+
+        let genreSpec: [(DiscoverGenre, String)] = [
+            (.action,         "bolt"),
+            (.adventure,      "map"),
+            (.animation,      "paintbrush"),
+            (.comedy,         "face.smiling"),
+            (.crime,          "lock"),
+            (.documentary,    "doc.text"),
+            (.drama,          "theatermasks"),
+            (.family,         "figure.2.and.child.holdinghands"),
+            (.fantasy,        "sparkle"),
+            (.history,        "book.closed"),
+            (.horror,         "drop"),
+            (.music,          "music.note"),
+            (.mystery,        "questionmark"),
+            (.romance,        "heart"),
+            (.scienceFiction, "atom"),
+            (.thriller,       "exclamationmark.triangle"),
+            (.war,            "shield"),
+            (.western,        "sun.haze"),
+        ]
+        for (g, icon) in genreSpec {
+            out.append(PickerTag(id: "genre.\(g.rawValue)", label: g.displayName,
+                                 icon: icon, category: .genre))
+        }
+
+        for d in [DiscoverDecade.eighties, .nineties, .twoThousands,
+                  .twoThousandTens, .twoThousandTwenties] {
+            out.append(PickerTag(id: "decade.\(d.rawValue)", label: d.rawValue,
+                                 icon: "calendar", category: .decade))
+        }
+
+        out.append(PickerTag(id: "rating.highlyRated", label: "Highly rated",
+                             icon: "star.fill", category: .rating))
+        out.append(PickerTag(id: "rating.cultFavorite", label: "Cult favorite",
+                             icon: "flame", category: .rating))
+
+        if viewModel.mediaSelection != .show {
+            out.append(PickerTag(id: "runtime.short", label: "Short",
+                                 icon: "hare", category: .runtime))
+            out.append(PickerTag(id: "runtime.epic",  label: "Epic",
+                                 icon: "hourglass", category: .runtime))
+        }
+
+        return out
+    }
+
+    // MARK: - isPicked / toggle
+
+    private func isPicked(_ tag: PickerTag) -> Bool {
+        switch tag.category {
+        case .kind:
+            switch tag.id {
+            case "kind.movie": return viewModel.mediaSelection == .movie && stage == .filters
+            case "kind.show":  return viewModel.mediaSelection == .show  && stage == .filters
+            default: return false
+            }
+        case .genre:
+            return DiscoverGenre.allCases.contains {
+                "genre.\($0.rawValue)" == tag.id && viewModel.filter.genres.contains($0)
+            }
+        case .decade:
+            return "decade.\(viewModel.filter.decade.rawValue)" == tag.id
+        case .rating:
+            return "rating.\(viewModel.filter.rating.rawValue)" == tag.id
+        case .runtime:
+            return "runtime.\(viewModel.filter.runtime.rawValue)" == tag.id
+        }
+    }
+
+    private func toggle(_ tag: PickerTag) {
+        withAnimation(.spring(response: 0.45, dampingFraction: 0.78)) {
+            switch tag.category {
+            case .kind:
+                switch tag.id {
+                case "kind.movie":
+                    if viewModel.mediaSelection == .movie && stage == .filters {
+                        stage = .kind
+                    } else {
+                        viewModel.mediaSelection = .movie
+                        stage = .filters
+                    }
+                    viewModel.mediaSelectionChanged()
+                case "kind.show":
+                    if viewModel.mediaSelection == .show && stage == .filters {
+                        stage = .kind
+                    } else {
+                        viewModel.mediaSelection = .show
+                        stage = .filters
+                    }
+                    viewModel.mediaSelectionChanged()
+                default: break
+                }
+            case .genre:
+                if let g = DiscoverGenre.allCases.first(where: { "genre.\($0.rawValue)" == tag.id }) {
+                    if viewModel.filter.genres.contains(g) { viewModel.filter.genres.remove(g) }
+                    else { viewModel.filter.genres.insert(g) }
+                    viewModel.userChangedFilter()
+                }
+            case .decade:
+                if let d = DiscoverDecade.allCases.first(where: { "decade.\($0.rawValue)" == tag.id }) {
+                    viewModel.filter.decade = (viewModel.filter.decade == d) ? .any : d
+                    viewModel.userChangedFilter()
+                }
+            case .rating:
+                if let r = DiscoverRatingTier.allCases.first(where: { "rating.\($0.rawValue)" == tag.id }) {
+                    viewModel.filter.rating = (viewModel.filter.rating == r) ? .any : r
+                    viewModel.userChangedFilter()
+                }
+            case .runtime:
+                if let rt = DiscoverRuntime.allCases.first(where: { "runtime.\($0.rawValue)" == tag.id }) {
+                    viewModel.filter.runtime = (viewModel.filter.runtime == rt) ? .any : rt
+                    viewModel.userChangedFilter()
+                }
+            }
+        }
+    }
+
+    // MARK: - Tint
+
+    private func tint(for tag: PickerTag) -> Color {
+        switch tag.category {
+        case .kind:    return .blue
+        case .genre:
+            let palette: [Color] = [.blue, .orange, .purple, .red, .green]
+            return palette[abs(tag.id.hashValue) % palette.count]
+        case .decade:  return .blue
+        case .rating:  return .green
+        case .runtime: return .purple
+        }
+    }
+
+    // MARK: - Partitioning
+
+    private var availableTagsForCurrentStage: [PickerTag] {
+        switch stage {
+        case .kind:
+            return Self.kindTags.filter { !isPicked($0) }
+        case .filters:
+            return filterTags().filter { !isPicked($0) }
+        }
+    }
+
+    private var selectedTagsForCurrentStage: [PickerTag] {
+        switch stage {
+        case .kind:
+            return []
+        case .filters:
+            let kind = Self.kindTags.first(where: { isPicked($0) })
+            let filters = filterTags().filter { isPicked($0) }
+            return (kind.map { [$0] } ?? []) + filters
+        }
+    }
+
+    // MARK: - Body
+
     public var body: some View {
         VStack(spacing: 0) {
             ScrollView {
-                VStack(spacing: 14) {
-                    kindSelector
-                    Spacer().frame(height: 2)
-                    pillCloud
-                    if llmAvailable {
-                        orWriteLabel
-                    }
+                VStack(spacing: 12) {
+                    selectedRow
+                    Divider().padding(.horizontal, 12)
+                    availableRow
                 }
-                .padding(.horizontal, 14)
+                .padding(.horizontal, 12)
                 .padding(.vertical, 14)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
             if llmAvailable {
-                VStack(spacing: 0) {
-                    composer
-                        .padding(.horizontal, 10)
-                        .padding(.top, 4)
-                    aiKindHint
-                        .padding(.bottom, 10)
-                }
+                composer
+                    .padding(.horizontal, 10)
+                    .padding(.bottom, 10)
             } else {
                 discoverButtonFallback
             }
         }
     }
 
-    // MARK: - Kind selector
+    // MARK: - Selected row
 
-    /// Only movie/show are shown; .auto is set programmatically when the
-    /// user has typed prose into the composer.
-    private let userVisibleKinds: [DiscoverMediaSelection] = [.movie, .show]
-
-    private var kindSelector: some View {
-        HStack(spacing: 4) {
-            ForEach(userVisibleKinds) { kind in
-                Button {
-                    if viewModel.mediaSelection != kind {
-                        viewModel.mediaSelection = kind
-                        viewModel.mediaSelectionChanged()
+    private var selectedRow: some View {
+        let tags = selectedTagsForCurrentStage
+        return Group {
+            if tags.isEmpty {
+                Text("Pick a media kind to start:", bundle: .module)
+                    .scaledFont(size: 11)
+                    .foregroundStyle(.tertiary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                FlowLayout(spacing: 6) {
+                    ForEach(tags) { tag in
+                        pillView(tag, picked: true)
+                            .matchedGeometryEffect(id: tag.id, in: labelNamespace)
+                            .transition(.opacity)
                     }
-                } label: {
-                    Text(LocalizedStringKey(kind.displayName), bundle: .module)
-                        .scaledFont(size: 11,
-                                    weight: viewModel.mediaSelection == kind ? .semibold : .medium)
-                        .padding(.horizontal, 10).padding(.vertical, 5)
-                        .background(Capsule().fill(
-                            viewModel.mediaSelection == kind
-                                ? Color.accentColor.opacity(0.20)
-                                : Color.primary.opacity(0.06)))
-                        .foregroundStyle(viewModel.mediaSelection == kind
-                                         ? Color.accentColor : .secondary)
                 }
-                .buttonStyle(.plain)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .opacity(freeText.trimmingCharacters(in: .whitespaces).isEmpty ? 1.0 : 0.4)
     }
 
-    // MARK: - Pill cloud (concrete filter-mapping tag cloud)
+    // MARK: - Available row
 
-    private var pillCloud: some View {
-        DiscoverTagCloud<String>(
-            tags: visibleTags.map { tag in
-                DiscoverTagCloud<String>.Tag(
-                    id: tag.label,
-                    label: tag.label,
-                    icon: tag.icon,
-                    category: tag.cloudCategory
-                )
-            },
-            isPicked: { label in
-                guard let tag = Self.cloudTags.first(where: { $0.label == label }) else { return false }
-                return tag.isPicked(viewModel)
-            },
-            onToggle: { label in
-                guard let tag = Self.cloudTags.first(where: { $0.label == label }) else { return }
-                tag.apply(viewModel)
+    private var availableRow: some View {
+        let tags = availableTagsForCurrentStage
+        return FlowLayout(spacing: 6) {
+            ForEach(tags) { tag in
+                pillView(tag, picked: false)
+                    .matchedGeometryEffect(id: tag.id, in: labelNamespace)
+                    .transition(.opacity)
             }
-        )
-    }
-
-    /// Runtime pills are hidden when browsing shows (TV runtime is per-episode).
-    private var visibleTags: [CloudTag] {
-        Self.cloudTags.filter { tag in
-            if viewModel.mediaSelection == .show && tag.category == .runtime { return false }
-            return true
         }
     }
 
-    // MARK: - "Or write" label
-
-    private var orWriteLabel: some View {
-        Text("Or describe what you want:", bundle: .module)
-            .scaledFont(size: 11)
-            .foregroundStyle(.tertiary)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.top, 4)
-    }
-
-    // MARK: - AI kind hint
+    // MARK: - Pill view
 
     @ViewBuilder
-    private var aiKindHint: some View {
-        if llmAvailable
-           && !freeText.trimmingCharacters(in: .whitespaces).isEmpty {
-            HStack(spacing: 3) {
-                Image(systemName: "sparkles")
-                    .scaledFont(size: 9)
-                Text("AI will pick movies or shows based on your description", bundle: .module)
-                    .scaledFont(size: 10)
+    private func pillView(_ tag: PickerTag, picked: Bool) -> some View {
+        let color = tint(for: tag)
+        Button { toggle(tag) } label: {
+            HStack(spacing: 4) {
+                if picked {
+                    Image(systemName: "checkmark")
+                        .scaledFont(size: 9, weight: .bold)
+                }
+                if let icon = tag.icon, !picked {
+                    Image(systemName: icon)
+                        .scaledFont(size: 10, weight: .semibold)
+                }
+                Text(LocalizedStringKey(tag.label), bundle: .module)
+                    .scaledFont(size: 12, weight: .semibold)
             }
-            .foregroundStyle(.purple.opacity(0.85))
-            .padding(.horizontal, 14)
-            .padding(.top, 4)
-            .transition(.opacity.combined(with: .move(edge: .bottom)))
+            .foregroundStyle(picked ? Color.white : color)
+            .padding(.horizontal, 9).padding(.vertical, 5)
+            .background(
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(picked ? color : .clear)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 6)
+                    .stroke(color.opacity(picked ? 0 : 0.55), lineWidth: 1)
+            )
         }
+        .buttonStyle(.plain)
     }
 
-    // MARK: - Composer (pinned to bottom when LLM available)
+    // MARK: - Composer
 
-    /// Chat-style composer. NO left icon — match ChatView's inputBar
-    /// exactly (TextField + send arrow only). Send is enabled when either
-    /// free text OR pills are non-empty.
     private var composer: some View {
         HStack(spacing: 8) {
             TextField("",
@@ -197,9 +402,9 @@ public struct DiscoverPickerView: View {
 
     // MARK: - Commit logic
 
-    /// Always true — user can browse with no signal (TMDB Discover returns
-    /// popular titles by default). Filters already applied via pills.
-    private var canCommit: Bool { true }
+    private var canCommit: Bool {
+        stage == .filters || !freeText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
 
     private func commit() {
         let free = freeText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -210,122 +415,5 @@ public struct DiscoverPickerView: View {
         viewModel.userSubmittedMood()
         freeTextFocused = false
         onSubmit()
-    }
-
-    // MARK: - Tag catalog
-
-    private enum TagCategory: String {
-        case genre, decade, rating, runtime
-    }
-
-    private struct CloudTag {
-        let label: String           // localization key
-        let icon: String            // SF Symbol name
-        let category: TagCategory
-        let apply: (DiscoverViewModel) -> Void
-        let isPicked: (DiscoverViewModel) -> Bool
-
-        var cloudCategory: DiscoverTagCloud<String>.Category {
-            switch category {
-            case .genre:   return .genre
-            case .decade:  return .decade
-            case .rating:  return .rating
-            case .runtime: return .runtime
-            }
-        }
-    }
-
-    private static let cloudTags: [CloudTag] = makeTags()
-
-    private static func makeTags() -> [CloudTag] {
-        var tags: [CloudTag] = []
-
-        // GENRES — 18 (tvMovie excluded per spec)
-        let genreSpec: [(DiscoverGenre, String)] = [
-            (.action,         "bolt"),
-            (.adventure,      "map"),
-            (.animation,      "paintbrush"),
-            (.comedy,         "face.smiling"),
-            (.crime,          "lock"),
-            (.documentary,    "doc.text"),
-            (.drama,          "theatermasks"),
-            (.family,         "figure.2.and.child.holdinghands"),
-            (.fantasy,        "sparkle"),
-            (.history,        "book.closed"),
-            (.horror,         "drop"),
-            (.music,          "music.note"),
-            (.mystery,        "questionmark"),
-            (.romance,        "heart"),
-            (.scienceFiction, "atom"),
-            (.thriller,       "exclamationmark.triangle"),
-            (.war,            "shield"),
-            (.western,        "sun.haze"),
-        ]
-        for (g, icon) in genreSpec {
-            tags.append(CloudTag(
-                label: g.displayName,
-                icon: icon,
-                category: .genre,
-                apply: { vm in
-                    if vm.filter.genres.contains(g) { vm.filter.genres.remove(g) }
-                    else { vm.filter.genres.insert(g) }
-                    vm.userChangedFilter()
-                },
-                isPicked: { vm in vm.filter.genres.contains(g) }
-            ))
-        }
-
-        // DECADES — single-select; re-tap clears.
-        for d in [DiscoverDecade.eighties, .nineties, .twoThousands,
-                  .twoThousandTens, .twoThousandTwenties] {
-            tags.append(CloudTag(
-                label: d.rawValue,
-                icon: "calendar",
-                category: .decade,
-                apply: { vm in
-                    vm.filter.decade = (vm.filter.decade == d) ? .any : d
-                    vm.userChangedFilter()
-                },
-                isPicked: { vm in vm.filter.decade == d }
-            ))
-        }
-
-        // RATING — exclusive; re-tap clears.
-        tags.append(CloudTag(
-            label: "Highly rated", icon: "star.fill", category: .rating,
-            apply: { vm in
-                vm.filter.rating = (vm.filter.rating == .highlyRated) ? .any : .highlyRated
-                vm.userChangedFilter()
-            },
-            isPicked: { vm in vm.filter.rating == .highlyRated }
-        ))
-        tags.append(CloudTag(
-            label: "Cult favorite", icon: "flame", category: .rating,
-            apply: { vm in
-                vm.filter.rating = (vm.filter.rating == .cultFavorite) ? .any : .cultFavorite
-                vm.userChangedFilter()
-            },
-            isPicked: { vm in vm.filter.rating == .cultFavorite }
-        ))
-
-        // RUNTIME
-        tags.append(CloudTag(
-            label: "Short", icon: "hare", category: .runtime,
-            apply: { vm in
-                vm.filter.runtime = (vm.filter.runtime == .short) ? .any : .short
-                vm.userChangedFilter()
-            },
-            isPicked: { vm in vm.filter.runtime == .short }
-        ))
-        tags.append(CloudTag(
-            label: "Epic", icon: "hourglass", category: .runtime,
-            apply: { vm in
-                vm.filter.runtime = (vm.filter.runtime == .epic) ? .any : .epic
-                vm.userChangedFilter()
-            },
-            isPicked: { vm in vm.filter.runtime == .epic }
-        ))
-
-        return tags
     }
 }
