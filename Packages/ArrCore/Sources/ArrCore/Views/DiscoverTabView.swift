@@ -38,7 +38,7 @@ public struct DiscoverTabView: View {
             }
             moodBar
         }
-        .task(id: filterFingerprint) {
+        .task(id: viewModel.userActionTick) {
             await viewModel.reshuffle()
             // Reshuffle clears matched too — close the panel if we were in it.
             if showMatched { showMatched = false }
@@ -51,6 +51,7 @@ public struct DiscoverTabView: View {
             DiscoverFilterBar(
                 filter: Binding(get: { viewModel.filter },
                                 set: { viewModel.filter = $0 }),
+                onUserChange: { viewModel.userChangedFilter() },
                 onReshuffle: { Task { await viewModel.reshuffle() } }
             )
             if viewModel.matched.count > 0 {
@@ -116,18 +117,7 @@ public struct DiscoverTabView: View {
 
     private func submitMood() {
         moodFocused = false
-        // Reshuffle is also fired automatically by task(id: filterFingerprint)
-        // when moodText changes, but call it explicitly so a no-change Enter
-        // (user re-submits same mood) still re-runs the LLM source.
-        Task { await viewModel.reshuffle() }
-    }
-
-    private var filterFingerprint: Int {
-        var hasher = Hasher()
-        hasher.combine(viewModel.filter.decade)
-        hasher.combine(viewModel.filter.monitoredOnly)
-        hasher.combine(viewModel.moodText)
-        return hasher.finalize()
+        viewModel.userSubmittedMood()
     }
 
     private func dispatch(_ item: DiscoverItem) {
