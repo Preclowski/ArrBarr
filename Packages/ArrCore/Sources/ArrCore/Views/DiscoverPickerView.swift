@@ -224,8 +224,19 @@ public struct DiscoverPickerView: View {
         switch tag.category {
         case .kind:    return .blue
         case .genre:
-            let palette: [Color] = [.blue, .orange, .purple, .red, .green]
-            return palette[abs(tag.id.hashValue) % palette.count]
+            // Group genres by mood family so color carries meaning.
+            let intense:     Set<DiscoverGenre> = [.action, .crime, .war, .thriller, .horror]
+            let warm:        Set<DiscoverGenre> = [.comedy, .family, .animation, .music]
+            let serious:     Set<DiscoverGenre> = [.drama, .romance, .history, .documentary]
+            let imaginative: Set<DiscoverGenre> = [.scienceFiction, .fantasy, .mystery, .adventure, .western, .tvMovie]
+            // Resolve which DiscoverGenre this tag.id refers to.
+            guard let g = DiscoverGenre.allCases.first(where: { "genre.\($0.rawValue)" == tag.id })
+            else { return .blue }
+            if intense.contains(g)     { return .red }
+            if warm.contains(g)        { return .orange }
+            if serious.contains(g)     { return .blue }
+            if imaginative.contains(g) { return .purple }
+            return .blue
         case .decade:  return .blue
         case .rating:  return .green
         case .runtime: return .purple
@@ -304,13 +315,53 @@ public struct DiscoverPickerView: View {
 
     private var availableRow: some View {
         let tags = availableTagsForCurrentStage
-        return FlowLayout(spacing: 6) {
-            ForEach(tags) { tag in
-                pillView(tag, picked: false)
-                    .matchedGeometryEffect(id: tag.id, in: labelNamespace)
-                    .transition(.opacity)
+        return VStack(alignment: .leading, spacing: 10) {
+            if stage == .kind {
+                // Stage .kind has just 2 pills; no header needed.
+                FlowLayout(spacing: 6) {
+                    ForEach(tags) { tag in
+                        pillView(tag, picked: false)
+                            .matchedGeometryEffect(id: tag.id, in: labelNamespace)
+                            .transition(.opacity)
+                    }
+                }
+            } else {
+                ForEach(categoriesOrdered, id: \.self) { category in
+                    let group = tags.filter { $0.category == category }
+                    if !group.isEmpty {
+                        categoryHeader(category)
+                        FlowLayout(spacing: 6) {
+                            ForEach(group) { tag in
+                                pillView(tag, picked: false)
+                                    .matchedGeometryEffect(id: tag.id, in: labelNamespace)
+                                    .transition(.opacity)
+                            }
+                        }
+                    }
+                }
             }
         }
+    }
+
+    private var categoriesOrdered: [PickerCategory] {
+        [.genre, .decade, .rating, .runtime]
+    }
+
+    @ViewBuilder
+    private func categoryHeader(_ cat: PickerCategory) -> some View {
+        let label: LocalizedStringKey = {
+            switch cat {
+            case .genre:   return "GENRE"
+            case .decade:  return "DECADE"
+            case .rating:  return "VIBE"
+            case .runtime: return "LENGTH"
+            case .kind:    return ""
+            }
+        }()
+        Text(label, bundle: .module)
+            .scaledFont(size: 9, weight: .semibold)
+            .tracking(0.6)
+            .foregroundStyle(.tertiary)
     }
 
     // MARK: - Pill view
