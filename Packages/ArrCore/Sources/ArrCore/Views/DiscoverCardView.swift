@@ -27,10 +27,7 @@ public struct DiscoverCardView: View {
     /// overview overlaid on a bottom gradient and origin chip top-left.
     private var card: some View {
         ZStack(alignment: .bottomLeading) {
-            RemotePoster(url: item.result.posterURL, apiKey: nil)
-                .scaledToFill()
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .clipped()
+            RemotePoster(url: item.result.posterURL, apiKey: nil, fill: true)
 
             // Bottom gradient for text legibility — covers ~45% of height.
             LinearGradient(

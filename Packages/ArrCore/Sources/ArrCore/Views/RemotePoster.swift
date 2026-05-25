@@ -33,6 +33,12 @@ public struct RemotePoster: View {
     var size: CGSize = CGSize(width: 40, height: 60)
     var cornerRadius: CGFloat = 4
     var fallbackSymbol: String = "photo"
+    /// When `true`, the inner fixed frame is replaced with
+    /// `.frame(maxWidth: .infinity, maxHeight: .infinity)` so the poster
+    /// fills whatever rectangle the caller provides. The caller is
+    /// responsible for sizing the parent; `RemotePoster` clips the overflow.
+    /// Default `false` preserves all existing call-site behaviour.
+    var fill: Bool = false
 
     @State private var image: PlatformImage?
     @State private var failed = false
@@ -53,7 +59,7 @@ public struct RemotePoster: View {
                 }
             }
         }
-        .frame(width: size.width, height: size.height)
+        .modifier(RemotePosterFrame(fill: fill, size: size))
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
         .overlay(
             RoundedRectangle(cornerRadius: cornerRadius)
@@ -63,6 +69,20 @@ public struct RemotePoster: View {
         .task(id: url) {
             await load()
         }
+    }
+
+    public init(url: URL?,
+                apiKey: String?,
+                size: CGSize = CGSize(width: 40, height: 60),
+                cornerRadius: CGFloat = 4,
+                fallbackSymbol: String = "photo",
+                fill: Bool = false) {
+        self.url = url
+        self.apiKey = apiKey
+        self.size = size
+        self.cornerRadius = cornerRadius
+        self.fallbackSymbol = fallbackSymbol
+        self.fill = fill
     }
 
     private func load() async {
@@ -76,6 +96,28 @@ public struct RemotePoster: View {
         await MainActor.run {
             image = result
             failed = (result == nil)
+        }
+    }
+}
+
+/// Applies either a fixed frame (normal mode) or a fill frame that
+/// expands to the parent's bounds. Extracted so the `fill` branch
+/// avoids the inner fixed size entirely — outer modifiers like
+/// `.scaledToFill()` can't defeat a `.frame(width:height:)` applied
+/// further up the chain, so the branch must be chosen *before* the
+/// frame modifier is attached.
+private struct RemotePosterFrame: ViewModifier {
+    let fill: Bool
+    let size: CGSize
+
+    func body(content: Content) -> some View {
+        if fill {
+            content
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .clipped()
+        } else {
+            content
+                .frame(width: size.width, height: size.height)
         }
     }
 }
