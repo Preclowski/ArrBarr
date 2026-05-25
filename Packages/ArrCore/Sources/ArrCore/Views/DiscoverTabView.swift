@@ -132,8 +132,8 @@ public struct DiscoverTabView: View {
         } else if viewModel.current != nil {
             cardStack
                 .padding(.horizontal, 28)
-                .padding(.top, 14)
-                .padding(.bottom, 14)
+                .padding(.top, 6)
+                .padding(.bottom, 28)
             // cardActionRow no longer sits here — it's pinned at the
             // bottom of tinderMode as `ctaIsland` (thinMaterial strip,
             // same pattern as DetailView's downloadCTAStrip).
