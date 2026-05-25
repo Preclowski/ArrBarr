@@ -120,7 +120,7 @@ final class DiscoverViewModelTests: XCTestCase {
         let vm = DiscoverViewModel()
         vm.configure(
             tmdb: { _, _ in [] }, library: { _ in [] },
-            llm: { _, _ in llmCalled = true; return [] }
+            llm: { _, _ in llmCalled = true; return .init(items: [], suggestedFilters: nil) }
         )
         vm.moodText = ""
         await vm.start()
@@ -135,7 +135,8 @@ final class DiscoverViewModelTests: XCTestCase {
             llm: { excludes, _ in
                 receivedExcludes.append(excludes)
                 let base = receivedExcludes.count * 100
-                return [self.makeItem(base + 1, .llm), self.makeItem(base + 2, .llm)]
+                return .init(items: [self.makeItem(base + 1, .llm), self.makeItem(base + 2, .llm)],
+                             suggestedFilters: nil)
             }
         )
         vm.moodText = "noir"
@@ -146,5 +147,24 @@ final class DiscoverViewModelTests: XCTestCase {
         await vm.requestMoreLLM()
         XCTAssertEqual(receivedExcludes.count, 2)
         XCTAssertEqual(receivedExcludes[1].count, 2, "second call should exclude the 2 already-shown")
+    }
+
+    func test_llmDrain_appliesSuggestedFilters() async {
+        let suggested = DiscoverLLMPrompt.SuggestedFilters(
+            genres: [.comedy, .drama], decade: .nineties, status: .owned)
+        let vm = DiscoverViewModel()
+        vm.configure(
+            tmdb: { _, _ in [] }, library: { _ in [] },
+            llm: { _, _ in
+                DiscoverViewModel.LLMResult(
+                    items: [self.makeItem(1, .llm)],
+                    suggestedFilters: suggested)
+            }
+        )
+        vm.moodText = "x"
+        await vm.start()
+        XCTAssertEqual(vm.filter.genres, [.comedy, .drama])
+        XCTAssertEqual(vm.filter.decade, .nineties)
+        XCTAssertEqual(vm.filter.status, .owned)
     }
 }

@@ -8,6 +8,17 @@ public final class DiscoverViewModel: ObservableObject {
         case tmdb, library, llm
     }
 
+    // MARK: - LLM result type
+
+    public struct LLMResult: Sendable {
+        public let items: [DiscoverItem]
+        public let suggestedFilters: DiscoverLLMPrompt.SuggestedFilters?
+        public init(items: [DiscoverItem], suggestedFilters: DiscoverLLMPrompt.SuggestedFilters?) {
+            self.items = items
+            self.suggestedFilters = suggestedFilters
+        }
+    }
+
     // MARK: - Published state
 
     @Published public private(set) var current: DiscoverItem?
@@ -19,12 +30,16 @@ public final class DiscoverViewModel: ObservableObject {
     @Published public private(set) var isLoading: Bool = false
     @Published public private(set) var errorMessage: String?
     @Published public private(set) var matched: [DiscoverItem] = []
+    /// Incremented only by user-driven actions (mood submit, filter chip
+    /// taps, explicit reshuffle). The View's `task(id:)` keys on this so
+    /// LLM-applied filter changes don't trigger an infinite reshuffle loop.
+    @Published public private(set) var userActionTick: Int = 0
 
     // MARK: - Source closures
 
     public typealias TMDBSource = @MainActor (DiscoverFilter, Int) async throws -> [DiscoverItem]
     public typealias LibrarySource = @MainActor (DiscoverFilter) async throws -> [DiscoverItem]
-    public typealias LLMSource = @MainActor ([String], String) async throws -> [DiscoverItem]
+    public typealias LLMSource = @MainActor ([String], String) async throws -> LLMResult
 
     private var tmdb: TMDBSource?
     private var library: LibrarySource?
@@ -46,6 +61,21 @@ public final class DiscoverViewModel: ObservableObject {
         self.tmdb = tmdb
         self.library = library
         self.llm = llm
+    }
+
+    // MARK: - User-action tick helpers
+
+    /// Call when the user explicitly changes a filter (decade, genre, status,
+    /// monitoredOnly). This increments the tick so the View's task(id:)
+    /// fires a reshuffle — but LLM-applied filter changes do NOT call this,
+    /// avoiding an infinite loop.
+    public func userChangedFilter() {
+        userActionTick &+= 1
+    }
+
+    /// Call when the user submits the mood field.
+    public func userSubmittedMood() {
+        userActionTick &+= 1
     }
 
     // MARK: - Lifecycle
@@ -122,12 +152,16 @@ public final class DiscoverViewModel: ObservableObject {
                 items = try await library!(filter)
                 libraryDrained = true
             case .llm:
-                items = try await llm!(llmShownTitles, moodText)
+                let result = try await llm!(llmShownTitles, moodText)
+                items = result.items
                 if items.isEmpty {
                     llmDormant = true
                     llmPoolExhausted = true
                 } else {
                     llmShownTitles.append(contentsOf: items.map(titleYearKey))
+                }
+                if let suggested = result.suggestedFilters {
+                    applySuggestedFilters(suggested)
                 }
             }
             append(items)
@@ -135,6 +169,17 @@ public final class DiscoverViewModel: ObservableObject {
             failedSources.insert(source)
             errorMessage = "Discover source failed: \(source) (\(error))"
         }
+    }
+
+    /// Apply LLM-suggested filters to the current filter without triggering
+    /// userActionTick — so the View's task(id: userActionTick) does NOT fire
+    /// a new reshuffle, breaking the potential infinite loop.
+    private func applySuggestedFilters(_ s: DiscoverLLMPrompt.SuggestedFilters) {
+        var f = filter
+        if !s.genres.isEmpty { f.genres = Set(s.genres) }
+        if let d = s.decade { f.decade = d }
+        if let st = s.status { f.status = st }
+        filter = f
     }
 
     private func append(_ items: [DiscoverItem]) {

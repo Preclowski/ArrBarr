@@ -16,7 +16,9 @@ public enum DiscoverSources {
         let client = TMDBClient(apiKey: apiKey)
         return { filter, _ /* page — TMDB client doesn't currently page; reserved for future */ in
             let range = filter.decade.range
+            let genreIds = filter.genres.map(\.rawValue)
             let summaries = try await client.discoverMovies(
+                genreIds: genreIds,
                 startYear: range?.lowerBound,
                 endYear: range?.upperBound,
                 sortBy: "popularity.desc"
@@ -51,7 +53,8 @@ public enum DiscoverSources {
         return { filter in
             let all = try await fetchAll()
             let filtered = all.filter { rec in
-                filter.matches(year: rec.year, monitored: rec.monitored)
+                filter.matches(year: rec.year, monitored: rec.monitored,
+                               hasFile: rec.hasFile, genres: rec.genres)
             }
             let shuffled = filtered.shuffled()
             return shuffled.compactMap { rec -> DiscoverItem? in
@@ -78,9 +81,10 @@ public enum DiscoverSources {
     // MARK: - LLM source
 
     /// LLM source. Stateless: builds a prompt with the cumulative exclude
-    /// list, parses titles, looks each one up in Radarr to enrich with
-    /// poster/overview/year so the card UI is uniform with other sources.
-    /// Returns empty when nothing parses — VM treats that as pool exhaustion.
+    /// list, parses titles + suggested filters, looks each title up in
+    /// Radarr to enrich with poster/overview/year so the card UI is
+    /// uniform with other sources. Returns empty items when nothing
+    /// parses — VM treats that as pool exhaustion.
     @MainActor
     public static func llm(
         provider: LLMProvider,
@@ -94,15 +98,15 @@ public enum DiscoverSources {
                 mood: mood, decade: decade(), count: count, exclude: exclude
             )
             let response = try await provider.respond(prompt: prompt, tools: [], history: [])
-            let suggestions: [DiscoverLLMPrompt.Suggestion]
+            let parsed: DiscoverLLMPrompt.Response
             do {
-                suggestions = try DiscoverLLMPrompt.parse(response.text)
+                parsed = try DiscoverLLMPrompt.parse(response.text)
             } catch {
-                return []
+                return DiscoverViewModel.LLMResult(items: [], suggestedFilters: nil)
             }
             let owned = libraryTmdbIds()
             var out: [DiscoverItem] = []
-            for s in suggestions {
+            for s in parsed.suggestions {
                 let term = s.year.map { "\(s.title) \($0)" } ?? s.title
                 let hits = (try? await radarrLookup(term)) ?? []
                 guard let first = hits.first else { continue }
@@ -129,7 +133,12 @@ public enum DiscoverSources {
                 _ = owned
                 out.append(DiscoverItem(result: result, action: .addToRadarr, originLabel: .llm))
             }
-            return out
+            let suggestedFilters = parsed.filters.genres.isEmpty
+                && parsed.filters.decade == nil
+                && parsed.filters.status == nil
+                ? nil
+                : parsed.filters
+            return DiscoverViewModel.LLMResult(items: out, suggestedFilters: suggestedFilters)
         }
     }
 
