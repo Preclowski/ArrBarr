@@ -198,7 +198,10 @@ public struct TMDBClient: Sendable {
         startYear: Int? = nil,
         endYear: Int? = nil,
         sortBy: String = "popularity.desc",
-        minVoteCount: Int = 50
+        minVoteCount: Int = 50,
+        voteAverageGte: Double? = nil,
+        runtimeLte: Int? = nil,
+        runtimeGte: Int? = nil
     ) async throws -> [TMDBMovieSummary] {
         var query: [URLQueryItem] = [
             URLQueryItem(name: "sort_by", value: sortBy),
@@ -214,6 +217,15 @@ public struct TMDBClient: Sendable {
         if let y = endYear {
             query.append(URLQueryItem(name: "primary_release_date.lte", value: "\(y)-12-31"))
         }
+        if let v = voteAverageGte {
+            query.append(URLQueryItem(name: "vote_average.gte", value: String(v)))
+        }
+        if let r = runtimeLte {
+            query.append(URLQueryItem(name: "with_runtime.lte", value: String(r)))
+        }
+        if let r = runtimeGte {
+            query.append(URLQueryItem(name: "with_runtime.gte", value: String(r)))
+        }
         let resp: TMDBDiscoverMovieResponse = try await get(path: "/discover/movie", query: query)
         return resp.results
     }
@@ -223,7 +235,8 @@ public struct TMDBClient: Sendable {
         startYear: Int? = nil,
         endYear: Int? = nil,
         sortBy: String = "popularity.desc",
-        minVoteCount: Int = 20
+        minVoteCount: Int = 20,
+        voteAverageGte: Double? = nil
     ) async throws -> [TMDBTVSummary] {
         var query: [URLQueryItem] = [
             URLQueryItem(name: "sort_by", value: sortBy),
@@ -238,6 +251,9 @@ public struct TMDBClient: Sendable {
         }
         if let y = endYear {
             query.append(URLQueryItem(name: "first_air_date.lte", value: "\(y)-12-31"))
+        }
+        if let v = voteAverageGte {
+            query.append(URLQueryItem(name: "vote_average.gte", value: String(v)))
         }
         let resp: TMDBDiscoverTVResponse = try await get(path: "/discover/tv", query: query)
         return resp.results

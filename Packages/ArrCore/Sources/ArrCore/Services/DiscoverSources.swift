@@ -15,11 +15,16 @@ public enum DiscoverSources {
         return { filter, _ in
             let range = filter.decade.range
             let genreIds = filter.genres.map(\.rawValue)
+            let voteCount = filter.rating == .cultFavorite ? 500 : 50
             let summaries = try await client.discoverMovies(
                 genreIds: genreIds,
                 startYear: range?.lowerBound,
                 endYear: range?.upperBound,
-                sortBy: "popularity.desc"
+                sortBy: "popularity.desc",
+                minVoteCount: voteCount,
+                voteAverageGte: filter.rating.minRating,
+                runtimeLte: filter.runtime.lessThan,
+                runtimeGte: filter.runtime.greaterThan
             )
             let owned = libraryTmdbIds()
             return summaries.compactMap { s -> DiscoverItem? in
@@ -56,11 +61,14 @@ public enum DiscoverSources {
             // TMDB TV genres use the same numeric IDs as movies for most
             // genres — we reuse DiscoverGenre.rawValue here.
             let genreIds = filter.genres.map(\.rawValue)
+            let voteCount = filter.rating == .cultFavorite ? 500 : 20
             let summaries = try await client.discoverTV(
                 genreIds: genreIds,
                 startYear: range?.lowerBound,
                 endYear: range?.upperBound,
-                sortBy: "popularity.desc"
+                sortBy: "popularity.desc",
+                minVoteCount: voteCount,
+                voteAverageGte: filter.rating.minRating
             )
             let owned = libraryTvdbIds()
             return summaries.compactMap { s -> DiscoverItem? in
@@ -96,7 +104,8 @@ public enum DiscoverSources {
             let all = try await fetchAll()
             let filtered = all.filter { rec in
                 filter.matches(year: rec.year, monitored: rec.monitored,
-                               hasFile: rec.hasFile, genres: rec.genres)
+                               hasFile: rec.hasFile, genres: rec.genres,
+                               runtime: rec.runtime)
             }
             let shuffled = filtered.shuffled()
             return shuffled.compactMap { rec -> DiscoverItem? in
