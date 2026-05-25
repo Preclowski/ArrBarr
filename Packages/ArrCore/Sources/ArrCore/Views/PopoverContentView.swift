@@ -1257,7 +1257,7 @@ public struct PopoverContentView: View {
             // Hide them while a filter is active so the surface
             // collapses to just the matching queue rows.
             if key == ConfigStore.tonightOrderKey {
-                guard !filtering, queueScope == nil,
+                guard !filtering,
                       configStore.showTonight && !viewModel.tonight.isEmpty else { return nil }
                 return .tonight
             }
