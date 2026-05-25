@@ -25,6 +25,8 @@ public struct DiscoverCardView: View {
     var dragOffset: CGSize = .zero
     var credits: TMDBCredits?
 
+    @State private var overviewExpanded: Bool = false
+
     public init(item: DiscoverItem,
                 isHovered: Binding<Bool>,
                 dragOffset: CGSize = .zero,
@@ -59,6 +61,9 @@ public struct DiscoverCardView: View {
             )
             .onHover { hovering in
                 isHovered = hovering && abs(dragOffset.width) < 10
+            }
+            .onChange(of: item.dedupKey) { _, _ in
+                overviewExpanded = false
             }
         }
     }
@@ -174,12 +179,30 @@ public struct DiscoverCardView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 14) {
                         if let overview = item.result.overview, !overview.isEmpty {
-                            Text(overview)
-                                .scaledFont(size: 13)
-                                .foregroundStyle(.primary)
-                                .lineSpacing(3)
-                                .multilineTextAlignment(.leading)
-                                .frame(maxWidth: .infinity, alignment: .leading)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(overview)
+                                    .scaledFont(size: 13)
+                                    .foregroundStyle(.primary)
+                                    .lineSpacing(3)
+                                    .multilineTextAlignment(.leading)
+                                    .lineLimit(overviewExpanded ? nil : 4)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .animation(.easeInOut(duration: 0.18), value: overviewExpanded)
+
+                                if overview.count > 280 {
+                                    Button {
+                                        withAnimation(.easeInOut(duration: 0.18)) {
+                                            overviewExpanded.toggle()
+                                        }
+                                    } label: {
+                                        Text(LocalizedStringKey(overviewExpanded ? "Show less" : "Show more"),
+                                             bundle: .module)
+                                            .scaledFont(size: 11, weight: .semibold)
+                                            .foregroundStyle(Color.accentColor)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
                         } else {
                             Text("No overview available", bundle: .module)
                                 .scaledFont(size: 12)
@@ -193,7 +216,7 @@ public struct DiscoverCardView: View {
                                 HStack(spacing: 4) {
                                     Text("Directed by", bundle: .module)
                                         .scaledFont(size: 10, weight: .medium)
-                                        .foregroundStyle(.secondary)
+                                        .foregroundStyle(.primary)
                                     Text(dirName)
                                         .scaledFont(size: 11, weight: .semibold)
                                         .foregroundStyle(.primary)
@@ -201,21 +224,23 @@ public struct DiscoverCardView: View {
                                 .padding(.top, 2)
                             }
                             if !credits.cast.isEmpty {
-                                HStack(spacing: 8) {
-                                    ForEach(credits.cast.prefix(4)) { person in
-                                        VStack(spacing: 4) {
-                                            personAvatar(person)
-                                            Text(person.name)
-                                                .scaledFont(size: 9, weight: .semibold)
-                                                .foregroundStyle(.white)
-                                                .lineLimit(2)
-                                                .multilineTextAlignment(.center)
-                                                .frame(width: 56)
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    HStack(spacing: 10) {
+                                        ForEach(credits.cast.prefix(12)) { person in
+                                            VStack(spacing: 4) {
+                                                personAvatar(person)
+                                                Text(person.name)
+                                                    .scaledFont(size: 9, weight: .semibold)
+                                                    .foregroundStyle(.white)
+                                                    .lineLimit(2)
+                                                    .multilineTextAlignment(.center)
+                                                    .frame(width: 56)
+                                            }
                                         }
                                     }
-                                    Spacer(minLength: 0)
+                                    .padding(.vertical, 2)
                                 }
-                                .padding(.top, 2)
+                                .padding(.top, 4)
                             }
                         }
                     }
