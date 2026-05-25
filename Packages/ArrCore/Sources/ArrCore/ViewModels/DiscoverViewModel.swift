@@ -141,13 +141,6 @@ public final class DiscoverViewModel: ObservableObject {
         }
     }
 
-    // MARK: - User-action tick helpers
-
-    /// Call when the user changes the media kind selector (Movies / Shows / AI decides).
-    public func mediaSelectionChanged() {
-        userActionTick &+= 1
-    }
-
     // MARK: - Lifecycle
 
     public func start() async {
