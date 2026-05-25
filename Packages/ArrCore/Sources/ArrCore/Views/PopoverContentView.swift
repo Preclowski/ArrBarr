@@ -69,6 +69,11 @@ public struct PopoverContentView: View {
     /// `SearchAddPanel` — back returns straight to chat instead of
     /// dropping the user on the Add tab they never asked to visit.
     @State private var searchAddFromChat = false
+    /// Mirror of `searchAddFromChat` for Discover-origin opens. Set by
+    /// Discover tinder CTAs (`onAddToRadarr`/`onAddToSonarr`) and by
+    /// the `arrBarrOpenSearchAdd` receiver when `selectedTab == .discover`.
+    /// `searchAddOverlay` reads this to route Back to the Discover tab.
+    @State private var searchAddFromDiscover = false
     /// Auto-collapse timer for the "Next week" banner — the banner
     /// snaps back to the 4-item peek 30s after the user expands it.
     @State private var bannerCollapseTask: Task<Void, Never>?
@@ -186,7 +191,16 @@ public struct PopoverContentView: View {
                 guard let result = note.userInfo?["result"] as? SearchResult else { return }
                 historySource = nil
                 detailItem = nil
-                searchAddFromChat = true
+                // Origin flag reflects where the user came from so Back
+                // routes correctly. Discover-tab opens (e.g. tapping a
+                // PickCard in Your Picks) must NOT fall through to chat.
+                if selectedTab == .discover {
+                    searchAddFromDiscover = true
+                    searchAddFromChat = false
+                } else {
+                    searchAddFromChat = true
+                    searchAddFromDiscover = false
+                }
                 searchResult = result
             }
             .onReceive(NotificationCenter.default.publisher(for: .arrBarrOpenDiscoverInTinder)) { note in
@@ -245,20 +259,8 @@ public struct PopoverContentView: View {
                                 llmAvailable: chatAvailable,
                                 radarrAvailable: radarrConfigured,
                                 tmdbAvailable: configStore.tmdbEnabled,
-                                onAddToRadarr: { result in
-                                    if self.radarrConfigured {
-                                        self.searchResult = result
-                                    } else if !result.foreignId.isEmpty,
-                                              let url = URL(string: "https://www.themoviedb.org/movie/\(result.foreignId)") {
-                                        // No Radarr to add to — open the TMDB page so the user can at
-                                        // least bookmark / research the title.
-                                        PlatformURLOpener.open(url)
-                                    }
-                                },
-                                onAddToSonarr: { result in
-                                    // SearchAddPanel already handles source:.sonarr routing.
-                                    self.searchResult = result
-                                },
+                                onAddToRadarr: openDiscoverAddToRadarr,
+                                onAddToSonarr: openDiscoverAddToSonarr,
                                 onOpenDetail: { item, source, arrId in
                                     DetailRequest.post(
                                         DetailRequest.syntheticItem(
@@ -339,7 +341,13 @@ public struct PopoverContentView: View {
     private var searchAddOverlay: some View {
         if let result = searchResult {
             SearchAddPanel(result: result, viewModel: searchViewModel) {
-                if searchAddFromChat {
+                if searchAddFromDiscover {
+                    searchAddFromDiscover = false
+                    searchResult = nil
+                    withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
+                        selectedTab = .discover
+                    }
+                } else if searchAddFromChat {
                     searchAddFromChat = false
                     searchResult = nil
                     withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
@@ -490,6 +498,30 @@ public struct PopoverContentView: View {
         f.timeStyle = .short
         return f
     }()
+
+    // MARK: - Discover add-to-arr callbacks
+
+    /// Tinder card "Pick" → SearchAddPanel. Sets the origin flag so Back
+    /// from the panel returns to Discover, not chat. Falls through to a
+    /// TMDB URL open when no Radarr is configured.
+    private func openDiscoverAddToRadarr(_ result: SearchResult) {
+        if radarrConfigured {
+            searchAddFromDiscover = true
+            searchAddFromChat = false
+            searchResult = result
+        } else if !result.foreignId.isEmpty,
+                  let url = URL(string: "https://www.themoviedb.org/movie/\(result.foreignId)") {
+            PlatformURLOpener.open(url)
+        }
+    }
+
+    /// Tinder card "Pick" for shows. Mirrors the Radarr variant; the
+    /// SearchAddPanel itself routes based on `result.source`.
+    private func openDiscoverAddToSonarr(_ result: SearchResult) {
+        searchAddFromDiscover = true
+        searchAddFromChat = false
+        searchResult = result
+    }
 
     // MARK: - Tab bar visibility
 
