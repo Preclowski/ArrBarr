@@ -26,10 +26,14 @@ func discoverRatingChips(for result: SearchResult) -> [RatingChip] {
 public struct DiscoverCardView: View {
     let item: DiscoverItem
     @Binding var isHovered: Bool
+    var dragOffset: CGSize = .zero
 
-    public init(item: DiscoverItem, isHovered: Binding<Bool>) {
+    public init(item: DiscoverItem,
+                isHovered: Binding<Bool>,
+                dragOffset: CGSize = .zero) {
         self.item = item
         self._isHovered = isHovered
+        self.dragOffset = dragOffset
     }
 
     public var body: some View {
@@ -51,7 +55,7 @@ public struct DiscoverCardView: View {
                 //    card, covers ~65% of the card width. Hidden by
                 //    default (offset off-screen left).
                 if isHovered {
-                    infoDrawer(w: w * 0.65, h: h)
+                    infoDrawer(w: w * 0.80, h: h)
                         .transition(.move(edge: .leading).combined(with: .opacity))
                 }
             }
@@ -86,6 +90,41 @@ public struct DiscoverCardView: View {
             TagChip(text: "Discover", color: .blue)
         case .llm:
             TagChip(text: "AI", color: .purple)
+        }
+    }
+
+    // MARK: - Swipe tint / stamp
+
+    @ViewBuilder
+    private var swipeTint: some View {
+        let progress = min(1.0, abs(dragOffset.width) / 180)
+        if abs(dragOffset.width) > 4 {
+            Rectangle()
+                .fill(dragOffset.width > 0 ? Color.green : Color.red)
+                .opacity(progress * 0.40)
+                .allowsHitTesting(false)
+        }
+    }
+
+    @ViewBuilder
+    private var swipeStamp: some View {
+        let progress = min(1.0, abs(dragOffset.width) / 180)
+        if abs(dragOffset.width) > 30 {
+            let isPick = dragOffset.width > 0
+            Text(LocalizedStringKey(isPick ? "Pick" : "Skip"), bundle: .module)
+                .scaledFont(size: 28, weight: .heavy)
+                .textCase(.uppercase)
+                .foregroundStyle(isPick ? Color.green : Color.red)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 6)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(isPick ? Color.green : Color.red, lineWidth: 3)
+                )
+                .rotationEffect(.degrees(isPick ? 15 : -15))
+                .opacity(progress)
+                .padding(24)
+                .allowsHitTesting(false)
         }
     }
 
@@ -153,6 +192,10 @@ public struct DiscoverCardView: View {
         }
         .frame(width: w, height: h)
         .clipShape(RoundedRectangle(cornerRadius: 16))
+        .overlay(swipeTint)
+        .overlay(alignment: dragOffset.width > 0 ? .topLeading : .topTrailing) {
+            swipeStamp
+        }
         .overlay(
             RoundedRectangle(cornerRadius: 16)
                 .stroke(.white.opacity(0.28), lineWidth: 1)
@@ -165,20 +208,19 @@ public struct DiscoverCardView: View {
     @ViewBuilder
     private func infoDrawer(w: CGFloat, h: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .top, spacing: 6) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(titleWithYear)
-                        .scaledFont(size: 15, weight: .semibold)
-                        .foregroundStyle(.white)
-                        .lineLimit(2)
-                    if !runtimeCertSegments.isEmpty {
-                        Text(runtimeCertSegments.joined(separator: " · "))
-                            .scaledFont(size: 11, weight: .medium)
-                            .foregroundStyle(.white.opacity(0.85))
-                    }
+            originChip
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(titleWithYear)
+                    .scaledFont(size: 15, weight: .semibold)
+                    .foregroundStyle(.white)
+                    .lineLimit(2)
+                if !runtimeCertSegments.isEmpty {
+                    Text(runtimeCertSegments.joined(separator: " · "))
+                        .scaledFont(size: 11, weight: .medium)
+                        .foregroundStyle(.white.opacity(0.85))
                 }
-                Spacer(minLength: 0)
-                originChip
             }
 
             let chips = discoverRatingChips(for: item.result)
@@ -223,7 +265,16 @@ public struct DiscoverCardView: View {
                 bottomTrailingRadius: 0,
                 topTrailingRadius: 0
             )
-            .fill(Color(red: 0.07, green: 0.07, blue: 0.09))
+            .fill(.ultraThinMaterial)
+        )
+        .background(
+            UnevenRoundedRectangle(
+                topLeadingRadius: 16,
+                bottomLeadingRadius: 16,
+                bottomTrailingRadius: 0,
+                topTrailingRadius: 0
+            )
+            .fill(Color.black.opacity(0.35))
         )
         .overlay(
             // Sharp trailing edge — looks like the drawer's spine.

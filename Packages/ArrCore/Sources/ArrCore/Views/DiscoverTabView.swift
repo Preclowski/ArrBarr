@@ -153,7 +153,8 @@ public struct DiscoverTabView: View {
                 ForEach(stack.reversed(), id: \.1.id) { (idx, item) in
                     let isTop = (idx == 0)
                     DiscoverCardView(item: item,
-                                     isHovered: isTop ? $isCardHovered : .constant(false))
+                                     isHovered: isTop ? $isCardHovered : .constant(false),
+                                     dragOffset: isTop ? dragOffset : .zero)
                         .frame(width: w, height: h)
                         .scaleEffect(1.0 - CGFloat(idx) * 0.08, anchor: .top)
                         .offset(x: isTop ? dragOffset.width : 0,
