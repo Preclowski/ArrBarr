@@ -31,9 +31,13 @@ public struct DiscoverPickerView: View {
                 .padding(.vertical, 14)
             }
             if llmAvailable {
-                composer
-                    .padding(.horizontal, 10)
-                    .padding(.bottom, 10)
+                VStack(spacing: 0) {
+                    composer
+                        .padding(.horizontal, 10)
+                        .padding(.top, 4)
+                    aiKindHint
+                        .padding(.bottom, 10)
+                }
             } else {
                 discoverButtonFallback
             }
@@ -42,9 +46,13 @@ public struct DiscoverPickerView: View {
 
     // MARK: - Kind selector
 
+    /// Only movie/show are shown; .auto is set programmatically when the
+    /// user has typed prose into the composer.
+    private let userVisibleKinds: [DiscoverMediaSelection] = [.movie, .show]
+
     private var kindSelector: some View {
         HStack(spacing: 4) {
-            ForEach(DiscoverMediaSelection.allCases) { kind in
+            ForEach(userVisibleKinds) { kind in
                 Button {
                     if viewModel.mediaSelection != kind {
                         viewModel.mediaSelection = kind
@@ -66,49 +74,39 @@ public struct DiscoverPickerView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .opacity(freeText.trimmingCharacters(in: .whitespaces).isEmpty ? 1.0 : 0.4)
     }
 
-    // MARK: - Pill cloud
+    // MARK: - Pill cloud (animated tag cloud)
 
-    /// Flow-layout cloud of mood + genre pills. Built with `FlowLayout`
-    /// (defined below) since SwiftUI's HStack can't wrap.
     private var pillCloud: some View {
-        FlowLayout(spacing: 6) {
-            ForEach(Self.moodPills, id: \.label) { pill in
-                pillButton(pill)
-            }
-        }
-    }
-
-    private func pillButton(_ pill: MoodPill) -> some View {
-        let isPicked: Bool = {
-            switch pill.kind {
-            case .mood:
-                return viewModel.pickedMoods.contains(pill.label)
-            case .genre(let g):
-                return viewModel.filter.genres.contains(g)
-            }
-        }()
-        return Button {
-            togglePill(pill)
-        } label: {
-            Text(LocalizedStringKey(pill.label), bundle: .module)
-                .scaledFont(size: 12, weight: isPicked ? .semibold : .medium)
-                .padding(.horizontal, 11)
-                .padding(.vertical, 6)
-                .background(
-                    Capsule().fill(isPicked
-                        ? Color.accentColor.opacity(0.20)
-                        : Color.primary.opacity(0.07))
+        DiscoverTagCloud<String>(
+            tags: Self.moodPills.map { p in
+                DiscoverTagCloud<String>.Tag(
+                    id: p.label,
+                    label: p.label,
+                    palette: {
+                        switch p.kind {
+                        case .mood:      return .mood
+                        case .genre:     return .genre
+                        }
+                    }()
                 )
-                .overlay(
-                    Capsule().stroke(isPicked
-                        ? Color.accentColor.opacity(0.6)
-                        : .clear, lineWidth: 1)
-                )
-                .foregroundStyle(isPicked ? Color.accentColor : .primary)
-        }
-        .buttonStyle(.plain)
+            },
+            isPicked: { label in
+                if viewModel.pickedMoods.contains(label) { return true }
+                if let g = Self.moodPills.first(where: { $0.label == label }),
+                   case let .genre(genre) = g.kind,
+                   viewModel.filter.genres.contains(genre) {
+                    return true
+                }
+                return false
+            },
+            onToggle: { label in
+                guard let pill = Self.moodPills.first(where: { $0.label == label }) else { return }
+                togglePill(pill)
+            }
+        )
     }
 
     private func togglePill(_ pill: MoodPill) {
@@ -137,6 +135,25 @@ public struct DiscoverPickerView: View {
             .foregroundStyle(.tertiary)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.top, 4)
+    }
+
+    // MARK: - AI kind hint
+
+    @ViewBuilder
+    private var aiKindHint: some View {
+        if llmAvailable
+           && !freeText.trimmingCharacters(in: .whitespaces).isEmpty {
+            HStack(spacing: 3) {
+                Image(systemName: "sparkles")
+                    .scaledFont(size: 9)
+                Text("AI will pick movies or shows based on your description", bundle: .module)
+                    .scaledFont(size: 10)
+            }
+            .foregroundStyle(.purple.opacity(0.85))
+            .padding(.horizontal, 14)
+            .padding(.top, 4)
+            .transition(.opacity.combined(with: .move(edge: .bottom)))
+        }
     }
 
     // MARK: - Composer (pinned to bottom when LLM available)
@@ -218,6 +235,14 @@ public struct DiscoverPickerView: View {
         case (false, false): combined = "\(pills). \(free)"
         }
         viewModel.moodText = combined
+
+        // If the user typed prose into the composer, let the LLM decide
+        // per-title kind regardless of the Movies/Shows toggle. The toggle
+        // only steers sources when the user is browsing without prose.
+        if !free.isEmpty && llmAvailable {
+            viewModel.mediaSelection = .auto
+        }
+
         viewModel.userSubmittedMood()
         freeTextFocused = false
         onSubmit()
@@ -262,56 +287,3 @@ public struct DiscoverPickerView: View {
     ]
 }
 
-// MARK: - FlowLayout
-
-/// Simple flow layout: lays out children left-to-right, wrapping to a
-/// new line when the next child would overflow. SwiftUI's `HStack`
-/// can't wrap; `Layout` protocol gives us the primitive cheaply.
-struct FlowLayout: Layout {
-    let spacing: CGFloat
-
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let maxWidth = proposal.width ?? .infinity
-        let (_, totalHeight) = layoutRows(maxWidth: maxWidth, subviews: subviews)
-        return CGSize(width: maxWidth, height: totalHeight)
-    }
-
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        let (rows, _) = layoutRows(maxWidth: bounds.width, subviews: subviews)
-        var y = bounds.minY
-        for row in rows {
-            var x = bounds.minX
-            for idx in row {
-                let s = subviews[idx].sizeThatFits(.unspecified)
-                subviews[idx].place(at: CGPoint(x: x, y: y),
-                                    proposal: ProposedViewSize(width: s.width, height: s.height))
-                x += s.width + spacing
-            }
-            let rowHeight = row.map { subviews[$0].sizeThatFits(.unspecified).height }.max() ?? 0
-            y += rowHeight + spacing
-        }
-    }
-
-    private func layoutRows(maxWidth: CGFloat, subviews: Subviews) -> (rows: [[Int]], totalHeight: CGFloat) {
-        var rows: [[Int]] = [[]]
-        var rowWidth: CGFloat = 0
-        var totalHeight: CGFloat = 0
-        var currentRowHeight: CGFloat = 0
-
-        for (i, sub) in subviews.enumerated() {
-            let s = sub.sizeThatFits(.unspecified)
-            let needed = s.width + (rows[rows.count - 1].isEmpty ? 0 : spacing)
-            if rowWidth + needed > maxWidth, !rows[rows.count - 1].isEmpty {
-                totalHeight += currentRowHeight + spacing
-                rows.append([])
-                rowWidth = 0
-                currentRowHeight = 0
-            }
-            rows[rows.count - 1].append(i)
-            rowWidth += s.width + (rows[rows.count - 1].count > 1 ? spacing : 0)
-            currentRowHeight = max(currentRowHeight, s.height)
-        }
-        totalHeight += currentRowHeight
-        return (rows, totalHeight)
-    }
-}

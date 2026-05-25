@@ -9830,6 +9830,35 @@
         }
       }
     },
+    "AI will pick movies or shows based on your description": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "KI wählt Filme oder Serien anhand deiner Beschreibung"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La IA elegirá películas o series según tu descripción"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L'IA choisira des films ou des séries selon ta description"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI dobierze filmy lub seriale na podstawie Twojego opisu"
+          }
+        }
+      }
+    },
     "Or describe what you want:": {
       "extractionState": "manual",
       "localizations": {
