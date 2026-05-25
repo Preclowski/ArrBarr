@@ -343,7 +343,7 @@ public struct DiscoverPickerView: View {
                     .foregroundStyle(.tertiary)
                     .frame(maxWidth: .infinity, alignment: .leading)
             } else {
-                FlowLayout(spacing: 6) {
+                FlowLayout(spacing: 5) {
                     ForEach(tags) { tag in
                         pillView(tag, picked: true)
                             .matchedGeometryEffect(id: tag.id, in: labelNamespace)
@@ -361,7 +361,7 @@ public struct DiscoverPickerView: View {
         return VStack(alignment: .leading, spacing: 10) {
             if stage == .kind {
                 // Stage .kind has just 2 pills; no header needed.
-                FlowLayout(spacing: 6) {
+                FlowLayout(spacing: 5) {
                     ForEach(tags) { tag in
                         pillView(tag, picked: false)
                             .matchedGeometryEffect(id: tag.id, in: labelNamespace)
@@ -373,7 +373,7 @@ public struct DiscoverPickerView: View {
                     let group = tags.filter { $0.category == category }
                     if !group.isEmpty {
                         categoryHeader(category)
-                        FlowLayout(spacing: 6) {
+                        FlowLayout(spacing: 5) {
                             ForEach(group) { tag in
                                 pillView(tag, picked: false)
                                     .matchedGeometryEffect(id: tag.id, in: labelNamespace)
@@ -413,23 +413,23 @@ public struct DiscoverPickerView: View {
     private func pillView(_ tag: PickerTag, picked: Bool) -> some View {
         let color = tint(for: tag)
         Button { toggle(tag) } label: {
-            HStack(spacing: 4) {
+            HStack(spacing: 3) {
                 if let icon = tag.icon {
                     Image(systemName: icon)
-                        .scaledFont(size: 10, weight: .semibold)
+                        .scaledFont(size: 8, weight: .semibold)
                 }
                 Text(LocalizedStringKey(tag.label), bundle: .module)
-                    .scaledFont(size: 12, weight: .semibold)
+                    .scaledFont(size: 10, weight: .semibold)
             }
             .foregroundStyle(picked ? Color.white : color)
-            .padding(.horizontal, 9).padding(.vertical, 5)
+            .padding(.horizontal, 7).padding(.vertical, 4)
             .background(
-                RoundedRectangle(cornerRadius: 6)
+                RoundedRectangle(cornerRadius: 5)
                     .fill(picked ? color : .clear)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 6)
-                    .stroke(color.opacity(picked ? 0 : 0.85), lineWidth: 1.2)
+                RoundedRectangle(cornerRadius: 5)
+                    .stroke(color.opacity(picked ? 0 : 0.85), lineWidth: 1.0)
             )
         }
         .buttonStyle(.plain)
