@@ -37,7 +37,6 @@ public struct DiscoverTabView: View {
                 DiscoverPickerView(
                     viewModel: viewModel,
                     llmAvailable: llmAvailable,
-                    tmdbAvailable: tmdbAvailable,
                     onSubmit: {
                         withAnimation(.smooth(duration: 0.22)) { viewModel.stage = .tinder }
                         Task { await viewModel.reshuffle() }

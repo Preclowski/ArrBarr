@@ -10294,6 +10294,10 @@
         }
       }
     },
+    "Describe a mood, a vibe, a director, anything": {
+      "extractionState": "manual",
+      "localizations": {}
+    },
     "Discover": {
       "extractionState": "manual",
       "localizations": {
@@ -12675,6 +12679,10 @@
           }
         }
       }
+    },
+    "What do you feel like watching?": {
+      "extractionState": "manual",
+      "localizations": {}
     }
   }
 }
