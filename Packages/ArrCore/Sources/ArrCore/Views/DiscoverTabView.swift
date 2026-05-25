@@ -12,6 +12,7 @@ public struct DiscoverTabView: View {
     @State private var dragOffset: CGSize = .zero
     @State private var isCardHovered: Bool = false
     @State private var isDragging: Bool = false
+    @State private var pickerStage: PickerStage = .kind
 
     public init(viewModel: DiscoverViewModel,
                 llmAvailable: Bool,
@@ -34,6 +35,7 @@ public struct DiscoverTabView: View {
                 DiscoverPickerView(
                     viewModel: viewModel,
                     llmAvailable: llmAvailable,
+                    stage: $pickerStage,
                     onSubmit: {
                         withAnimation(.smooth(duration: 0.22)) { viewModel.stage = .tinder }
                         Task { await viewModel.reshuffle() }
@@ -42,6 +44,9 @@ public struct DiscoverTabView: View {
             case .tinder:
                 tinderMode
             }
+        }
+        .onAppear {
+            pickerStage = viewModel.hasPickedKind ? .filters : .kind
         }
         // No `.task(id:)` for filter changes here anymore — explicit
         // submit via picker is the only reshuffle trigger.
@@ -138,14 +143,28 @@ public struct DiscoverTabView: View {
 
     private var filterSummaryChip: some View {
         HStack(spacing: 6) {
-            Image(systemName: "line.3.horizontal.decrease")
-                .scaledFont(size: 10, weight: .semibold)
-                .foregroundStyle(.secondary)
-            Text(activeFilterSummary)
-                .scaledFont(size: 11, weight: .medium)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-                .truncationMode(.middle)
+            // Chip body — tappable to re-open picker at .filters stage.
+            Button {
+                withAnimation(.smooth(duration: 0.22)) {
+                    pickerStage = .filters
+                    viewModel.stage = .picker
+                }
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "line.3.horizontal.decrease")
+                        .scaledFont(size: 10, weight: .semibold)
+                        .foregroundStyle(.secondary)
+                    Text(activeFilterSummary)
+                        .scaledFont(size: 11, weight: .medium)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            // × — clear all filters, stay in tinder.
             Button {
                 withAnimation(.smooth(duration: 0.2)) {
                     clearAllFilters()

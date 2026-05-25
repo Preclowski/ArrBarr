@@ -25,9 +25,19 @@ public final class DiscoverViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Persistence keys
+
+    private static let hasPickedKindKey = "ArrBarr.discoverHasPickedKind"
+
     // MARK: - Published state
 
     @Published public var stage: DiscoverStage = .picker
+
+    @Published public var hasPickedKind: Bool {
+        didSet {
+            defaults.set(hasPickedKind, forKey: Self.hasPickedKindKey)
+        }
+    }
     @Published public private(set) var current: DiscoverItem?
     @Published public private(set) var queue: [DiscoverItem] = []
     @Published public var filter = DiscoverFilter()
@@ -83,6 +93,7 @@ public final class DiscoverViewModel: ObservableObject {
         let stored = defaults.string(forKey: Self.mediaSelectionKey)
             .flatMap { DiscoverMediaSelection(rawValue: $0) }
         self.mediaSelection = stored ?? .movie
+        self.hasPickedKind = defaults.bool(forKey: Self.hasPickedKindKey)
     }
 
     public func configure(tmdb: TMDBSource?, library: LibrarySource?, llm: LLMSource?) {

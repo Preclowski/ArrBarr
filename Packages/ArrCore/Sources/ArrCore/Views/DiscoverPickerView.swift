@@ -1,30 +1,32 @@
 import SwiftUI
 
+// MARK: - PickerStage
+
+public enum PickerStage {
+    case kind
+    case filters
+}
+
 // MARK: - DiscoverPickerView
 
 public struct DiscoverPickerView: View {
     @ObservedObject var viewModel: DiscoverViewModel
     let llmAvailable: Bool
+    @Binding var stage: PickerStage
     let onSubmit: () -> Void
 
     @State private var freeText: String = ""
     @FocusState private var freeTextFocused: Bool
-    @State private var stage: PickerStage = .kind
     @Namespace private var labelNamespace
 
     public init(viewModel: DiscoverViewModel,
                 llmAvailable: Bool,
+                stage: Binding<PickerStage>,
                 onSubmit: @escaping () -> Void) {
         self.viewModel = viewModel
         self.llmAvailable = llmAvailable
+        self._stage = stage
         self.onSubmit = onSubmit
-    }
-
-    // MARK: - Stage model
-
-    private enum PickerStage {
-        case kind
-        case filters
     }
 
     // MARK: - Tag descriptor
@@ -131,6 +133,7 @@ public struct DiscoverPickerView: View {
                     } else {
                         viewModel.mediaSelection = .movie
                         stage = .filters
+                        viewModel.hasPickedKind = true
                     }
                     viewModel.mediaSelectionChanged()
                 case "kind.show":
@@ -139,6 +142,7 @@ public struct DiscoverPickerView: View {
                     } else {
                         viewModel.mediaSelection = .show
                         stage = .filters
+                        viewModel.hasPickedKind = true
                     }
                     viewModel.mediaSelectionChanged()
                 default: break
@@ -219,6 +223,7 @@ public struct DiscoverPickerView: View {
 
     public var body: some View {
         VStack(spacing: 0) {
+            fromTinderBackBar
             if stage == .kind {
                 kindOnlyScreen
             } else {
@@ -228,6 +233,26 @@ public struct DiscoverPickerView: View {
                 composer.padding(.horizontal, 10).padding(.bottom, 10)
             } else {
                 discoverButtonFallback
+            }
+        }
+    }
+
+    // MARK: - Back bar (shown when arriving from tinder)
+
+    private var fromTinderBackBar: some View {
+        Group {
+            if viewModel.current != nil {
+                HStack(spacing: 6) {
+                    FloatingBackButton(action: {
+                        withAnimation(.smooth(duration: 0.22)) {
+                            viewModel.stage = .tinder
+                        }
+                    })
+                    Spacer()
+                }
+                .padding(.horizontal, 12)
+                .padding(.top, 10)
+                .padding(.bottom, 4)
             }
         }
     }
@@ -258,6 +283,7 @@ public struct DiscoverPickerView: View {
             withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
                 viewModel.mediaSelection = kind
                 stage = .filters
+                viewModel.hasPickedKind = true
                 viewModel.mediaSelectionChanged()
             }
         } label: {
