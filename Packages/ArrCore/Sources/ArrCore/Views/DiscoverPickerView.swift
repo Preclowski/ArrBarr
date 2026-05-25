@@ -346,29 +346,6 @@ public struct DiscoverPickerView: View {
         return out
     }
 
-    // MARK: - Rotating placeholder
-
-    @State private var placeholderTick: Int = 0
-
-    /// Rotates every 3 seconds while composer is empty and unfocused. Goes
-    /// quiet while focused so it doesn't fight the cursor.
-    private static let placeholderRotation: [String] = [
-        "Try: Cozy Sunday afternoon…",
-        "Try: Friends over with pizza…",
-        "Try: Date night…",
-        "Try: Long flight…",
-        "Try: Crowd-pleaser…",
-    ]
-
-    private var currentPlaceholder: String {
-        if !activeChips.isEmpty {
-            return "Or describe…"
-        }
-        return Self.placeholderRotation[
-            placeholderTick % Self.placeholderRotation.count
-        ]
-    }
-
     // MARK: - Body
 
     public var body: some View {
@@ -377,17 +354,6 @@ public struct DiscoverPickerView: View {
             chipComposer
                 .padding(.horizontal, 10)
                 .padding(.bottom, 10)
-        }
-        .task {
-            // Drives `placeholderTick` so the placeholder rotates every 3s.
-            // Pauses while focused / non-empty / chips present (currentPlaceholder
-            // returns "Or describe…" in those cases anyway).
-            while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: 3_000_000_000)
-                if !freeTextFocused && freeText.isEmpty && activeChips.isEmpty {
-                    placeholderTick &+= 1
-                }
-            }
         }
     }
 
@@ -888,19 +854,19 @@ public struct DiscoverPickerView: View {
 
     // MARK: - Chip composer
 
-    /// Tag-input style composer:
-    ///   [🎞 Movies][Tarantino ×][Comedy ×]  Or describe…  [↑]
-    /// Chips wrap to additional rows via FlowLayout; the TextField flows
-    /// inline after the last chip and absorbs the remaining space.
     private var chipComposer: some View {
         FlowLayout(spacing: 5) {
             kindChip
-            ForEach(activeChips) { chip in
-                activeChipView(chip)
-            }
+            composerCategoryGroup(.genre, label: "Gatunek:")
+            composerCategoryGroup(.people, label: "Z:")
+            composerCategoryGroup(.decade, label: "Z lat:")
+            composerCategoryGroup(.rating, label: "Vibe:")
+            composerCategoryGroup(.runtime, label: "Długość:")
+            Image(systemName: "sparkles")
+                .scaledFont(size: 11, weight: .semibold)
+                .foregroundStyle(Color.pink.opacity(0.8))
             TextField("", text: $freeText,
-                      prompt: Text(LocalizedStringKey(currentPlaceholder),
-                                   bundle: .module),
+                      prompt: Text("…lub opisz słownie", bundle: .module),
                       axis: .vertical)
                 .textFieldStyle(.plain)
                 .focused($freeTextFocused)
@@ -911,9 +877,6 @@ public struct DiscoverPickerView: View {
                     if canCommit { commit() }
                 }
                 .onKeyPress(.delete) {
-                    // Backspace on empty text removes the last chip — the
-                    // standard tag-input affordance. If text is non-empty,
-                    // let the OS handle the deletion normally.
                     if freeText.isEmpty, let last = activeChips.last {
                         last.onRemove()
                         return .handled
@@ -925,6 +888,24 @@ public struct DiscoverPickerView: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
         .glassyFloatingBar()
+    }
+
+    /// Renders "Label: chip chip chip" for a category, but only when there
+    /// is at least one active chip of that category. Kept inline so
+    /// FlowLayout treats it as content rather than a separate row.
+    @ViewBuilder
+    private func composerCategoryGroup(
+        _ category: SuggestedFilter.Category,
+        label: LocalizedStringKey
+    ) -> some View {
+        let chips = activeChips.filter { $0.category == category }
+        if !chips.isEmpty {
+            Text(label, bundle: .module)
+                .scaledFont(size: 11, weight: .medium)
+                .italic()
+                .foregroundStyle(.secondary)
+            ForEach(chips) { chip in activeChipView(chip) }
+        }
     }
 
     @ViewBuilder
