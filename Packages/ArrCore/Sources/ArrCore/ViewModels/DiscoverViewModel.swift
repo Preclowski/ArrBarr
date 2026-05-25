@@ -8,6 +8,8 @@ public final class DiscoverViewModel: ObservableObject {
         case tmdb, library, llm
     }
 
+    public enum DiscoverStage: Sendable { case picker, tinder }
+
     // MARK: - LLM result type
 
     public struct LLMResult: Sendable {
@@ -21,6 +23,7 @@ public final class DiscoverViewModel: ObservableObject {
 
     // MARK: - Published state
 
+    @Published public var stage: DiscoverStage = .picker
     @Published public private(set) var current: DiscoverItem?
     @Published public private(set) var queue: [DiscoverItem] = []
     @Published public var filter = DiscoverFilter()

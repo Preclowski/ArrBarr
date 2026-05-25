@@ -8,10 +8,8 @@ public struct DiscoverTabView: View {
     let onAddToSonarr: (SearchResult) -> Void
     let onOpenDetail: (DiscoverItem, QueueItem.Source, Int) -> Void
 
-    @State private var mode: Mode = .picker
     @State private var showMatched: Bool = false
-
-    private enum Mode { case picker, tinder }
+    @State private var dragOffset: CGSize = .zero
 
     public init(viewModel: DiscoverViewModel,
                 llmAvailable: Bool,
@@ -29,13 +27,13 @@ public struct DiscoverTabView: View {
 
     public var body: some View {
         ZStack {
-            switch mode {
+            switch viewModel.stage {
             case .picker:
                 DiscoverPickerView(
                     viewModel: viewModel,
                     llmAvailable: llmAvailable,
                     onSubmit: {
-                        withAnimation(.smooth(duration: 0.22)) { mode = .tinder }
+                        withAnimation(.smooth(duration: 0.22)) { viewModel.stage = .tinder }
                         Task { await viewModel.reshuffle() }
                     }
                 )
@@ -52,7 +50,6 @@ public struct DiscoverTabView: View {
     private var tinderMode: some View {
         VStack(spacing: 0) {
             tinderTopBar
-            Divider()
             if showMatched {
                 DiscoverMatchedListView(
                     items: viewModel.matched,
@@ -66,23 +63,17 @@ public struct DiscoverTabView: View {
         }
     }
 
-    /// Top bar inside tinder mode — Back-to-mood + Matches pill.
-    /// No structured filter chips here per UX direction; mood adjustments
-    /// happen by going back to the picker.
+    /// Top bar inside tinder mode — circular "<" back + optional matches pill.
     private var tinderTopBar: some View {
         HStack(spacing: 8) {
             Button {
-                withAnimation(.smooth(duration: 0.22)) { mode = .picker }
+                withAnimation(.smooth(duration: 0.22)) { viewModel.stage = .picker }
             } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: "chevron.left")
-                        .scaledFont(size: 11, weight: .semibold)
-                    Text("Mood", bundle: .module)
-                        .scaledFont(size: 11, weight: .semibold)
-                }
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, 10).padding(.vertical, 5)
-                .background(Capsule().fill(Color.primary.opacity(0.08)))
+                Image(systemName: "chevron.left")
+                    .scaledFont(size: 13, weight: .semibold)
+                    .foregroundStyle(.secondary)
+                    .frame(width: 30, height: 30)
+                    .background(Circle().fill(Color.primary.opacity(0.08)))
             }
             .buttonStyle(.plain)
             .help(Text("Back to mood picker", bundle: .module))
@@ -110,7 +101,8 @@ public struct DiscoverTabView: View {
             }
         }
         .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .padding(.top, 10)
+        .padding(.bottom, 4)
     }
 
     private func dispatch(_ item: DiscoverItem) {
@@ -157,19 +149,56 @@ public struct DiscoverTabView: View {
             let w = h / 1.5
             ZStack {
                 ForEach(stack.reversed(), id: \.1.id) { (idx, item) in
+                    let isTop = (idx == 0)
                     DiscoverCardView(item: item)
                         .frame(width: w, height: h)
                         .scaleEffect(1.0 - CGFloat(idx) * 0.08, anchor: .top)
-                        .offset(y: CGFloat(idx) * 18)
+                        .offset(x: isTop ? dragOffset.width : 0,
+                                y: CGFloat(idx) * 18 + (isTop ? dragOffset.height * 0.3 : 0))
+                        .rotationEffect(.degrees(isTop ? Double(dragOffset.width / 18) : 0),
+                                        anchor: .bottom)
                         .opacity(idx == 0 ? 1.0 : 1.0 - Double(idx) * 0.28)
-                        .allowsHitTesting(idx == 0)
+                        .allowsHitTesting(isTop)
                         .zIndex(Double(stack.count - idx))
+                        .gesture(isTop ? dragGesture : nil)
                         .animation(.spring(response: 0.32, dampingFraction: 0.85),
                                    value: viewModel.current?.dedupKey)
                 }
             }
             // Center the stack vertically so empty space splits above + below.
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+        }
+    }
+
+    private var dragGesture: some Gesture {
+        DragGesture()
+            .onChanged { value in
+                dragOffset = value.translation
+            }
+            .onEnded { value in
+                let threshold: CGFloat = 90
+                if value.translation.width > threshold {
+                    completeSwipe(right: true, fromTranslation: value.translation)
+                } else if value.translation.width < -threshold {
+                    completeSwipe(right: false, fromTranslation: value.translation)
+                } else {
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
+                        dragOffset = .zero
+                    }
+                }
+            }
+    }
+
+    private func completeSwipe(right: Bool, fromTranslation t: CGSize) {
+        let flyDistance: CGFloat = 1000
+        let target = CGSize(width: right ? flyDistance : -flyDistance, height: t.height)
+        withAnimation(.easeOut(duration: 0.28)) {
+            dragOffset = target
+        }
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 280_000_000)
+            await viewModel.swipe(right: right)
+            dragOffset = .zero
         }
     }
 
@@ -186,20 +215,17 @@ public struct DiscoverTabView: View {
             let watchW = max(120, (geo.size.width - spacing) * 0.62)
             HStack(spacing: spacing) {
                 Button { Task { await viewModel.swipe(right: false) } } label: {
-                    HStack(spacing: 4) {
+                    HStack(spacing: 6) {
                         Image(systemName: "xmark")
-                            .scaledFont(size: 10, weight: .semibold)
-                        Text("Skip", bundle: .module)
                             .scaledFont(size: 11, weight: .semibold)
+                        Text("Skip", bundle: .module)
+                            .scaledFont(size: 12, weight: .semibold)
                     }
-                    .foregroundStyle(.secondary)
                     .frame(width: skipW)
                     .padding(.vertical, 7)
-                    .background(
-                        Capsule().stroke(Color.primary.opacity(0.18), lineWidth: 1)
-                    )
                 }
-                .buttonStyle(.plain)
+                .modifier(GlassProminentButtonStyle())
+                .tint(.red)
                 .keyboardShortcut(.leftArrow, modifiers: [])
 
                 Button { Task { await viewModel.swipe(right: true) } } label: {
@@ -259,7 +285,7 @@ public struct DiscoverTabView: View {
                 .buttonStyle(.plain)
             }
             Button {
-                withAnimation(.smooth(duration: 0.22)) { mode = .picker }
+                withAnimation(.smooth(duration: 0.22)) { viewModel.stage = .picker }
             } label: {
                 Text("Back to mood", bundle: .module)
                     .scaledFont(size: 11, weight: .semibold)
