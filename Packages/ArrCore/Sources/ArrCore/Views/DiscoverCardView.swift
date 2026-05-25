@@ -40,37 +40,14 @@ public struct DiscoverCardView: View {
             let w = geo.size.width
             let h = geo.size.height
             ZStack {
-                // FRONT — when not hovered, shown 100%.
                 frontFace(w: w, h: h)
                     .opacity(isHovered ? 0 : 1)
-                    .scaleEffect(isHovered ? 0.97 : 1.0, anchor: .center)
-
-                // BACK — when hovered, slides up from below + lifts + tilts.
-                if isHovered {
-                    backFace(w: w, h: h)
-                        .transition(
-                            .asymmetric(
-                                insertion: .move(edge: .bottom)
-                                    .combined(with: .opacity)
-                                    .combined(with: .scale(scale: 0.96, anchor: .bottom)),
-                                removal: .opacity
-                            )
-                        )
-                }
+                    .blur(radius: isHovered ? 8 : 0)
+                backFace(w: w, h: h)
+                    .opacity(isHovered ? 1 : 0)
             }
-            .frame(width: w, height: h)
-            .rotation3DEffect(
-                .degrees(isHovered ? 6 : 0),
-                axis: (x: 1, y: 0, z: 0),    // tilt forward toward viewer
-                anchor: .center,
-                perspective: 0.6
-            )
-            .scaleEffect(isHovered ? 1.04 : 1.0, anchor: .center)
-            .shadow(color: .black.opacity(isHovered ? 0.55 : 0.45),
-                    radius: isHovered ? 22 : 16,
-                    x: 0,
-                    y: isHovered ? 10 : 6)
-            .animation(.spring(response: 0.5, dampingFraction: 0.78), value: isHovered)
+            .animation(.easeInOut(duration: 0.28), value: isHovered)
+            .shadow(color: .black.opacity(0.45), radius: 16, x: 0, y: 6)
             .overlay(swipeTint.allowsHitTesting(false))
             .overlay(alignment: dragOffset.width > 0 ? .topLeading : .topTrailing) {
                 swipeStamp
@@ -215,55 +192,60 @@ public struct DiscoverCardView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .frame(height: headerH, alignment: .topLeading)
 
-                // GLASS region — overview + director + cast + genres.
-                VStack(alignment: .leading, spacing: 12) {
-                    if let overview = item.result.overview, !overview.isEmpty {
-                        ScrollView {
+                // EVERYTHING ELSE inside ScrollView — overview, genres,
+                // director, cast all scroll together.
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 12) {
+                        if let overview = item.result.overview, !overview.isEmpty {
                             Text(overview)
                                 .scaledFont(size: 13)
                                 .foregroundStyle(.primary)
                                 .lineSpacing(3)
                                 .multilineTextAlignment(.leading)
                                 .frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                    } else {
-                        Text("No overview available", bundle: .module)
-                            .scaledFont(size: 12)
-                            .foregroundStyle(.secondary)
-                    }
-                    // Director line
-                    if let credits = credits, let dirName = directorName(from: credits) {
-                        HStack(spacing: 4) {
-                            Text("Directed by", bundle: .module)
-                                .scaledFont(size: 10, weight: .medium)
+                        } else {
+                            Text("No overview available", bundle: .module)
+                                .scaledFont(size: 12)
                                 .foregroundStyle(.secondary)
-                            Text(dirName)
-                                .scaledFont(size: 11, weight: .semibold)
-                                .foregroundStyle(.primary)
                         }
-                    }
-                    // Cast headshots — up to 4 chips with face + name below
-                    if let credits = credits, !credits.cast.isEmpty {
-                        HStack(spacing: 8) {
-                            ForEach(credits.cast.prefix(4)) { person in
-                                VStack(spacing: 4) {
-                                    personAvatar(person)
-                                    Text(person.name)
-                                        .scaledFont(size: 9, weight: .medium)
+
+                        genreLabels(limit: 12)
+
+                        if let credits {
+                            if let dirName = directorName(from: credits) {
+                                HStack(spacing: 4) {
+                                    Text("Directed by", bundle: .module)
+                                        .scaledFont(size: 10, weight: .medium)
                                         .foregroundStyle(.secondary)
-                                        .lineLimit(1)
-                                        .frame(width: 50)
+                                    Text(dirName)
+                                        .scaledFont(size: 11, weight: .semibold)
+                                        .foregroundStyle(.primary)
                                 }
+                                .padding(.top, 4)
                             }
-                            Spacer(minLength: 0)
+                            if !credits.cast.isEmpty {
+                                HStack(spacing: 8) {
+                                    ForEach(credits.cast.prefix(4)) { person in
+                                        VStack(spacing: 4) {
+                                            personAvatar(person)
+                                            Text(person.name)
+                                                .scaledFont(size: 9, weight: .medium)
+                                                .foregroundStyle(.secondary)
+                                                .lineLimit(1)
+                                                .frame(width: 50)
+                                        }
+                                    }
+                                    Spacer(minLength: 0)
+                                }
+                                .padding(.top, 2)
+                            }
                         }
                     }
-                    genreLabels(limit: 12)
+                    .padding(.horizontal, 14)
+                    .padding(.top, 12)
+                    .padding(.bottom, 14)
+                    .frame(maxWidth: .infinity, alignment: .topLeading)
                 }
-                .padding(.horizontal, 14)
-                .padding(.top, 12)
-                .padding(.bottom, 14)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
             .frame(width: w, height: h)
         }
