@@ -28,47 +28,29 @@ public struct DiscoverCardView: View {
                     cornerRadius: 0
                 )
 
-                // Bottom gradient — covers ~45% for text legibility.
-                LinearGradient(
-                    colors: [.black.opacity(0.9), .black.opacity(0.0)],
-                    startPoint: .bottom, endPoint: .top
-                )
-                .frame(height: h * 0.45)
-                .frame(maxHeight: .infinity, alignment: .bottom)
-                .allowsHitTesting(false)
-
                 // Top-left origin chip.
                 originChip
                     .padding(10)
                     .frame(maxWidth: .infinity, maxHeight: .infinity,
                            alignment: .topLeading)
 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(item.result.title)
-                        .scaledFont(size: 18, weight: .bold)
+                // Bottom-left year chip (no title — poster art carries the identity).
+                if let y = item.result.year {
+                    Text(verbatim: "\(y)")
+                        .scaledFont(size: 11, weight: .semibold)
                         .foregroundStyle(.white)
-                        .lineLimit(2)
-                    if let y = item.result.year {
-                        Text(verbatim: "\(y)")
-                            .scaledFont(size: 12, weight: .medium)
-                            .foregroundStyle(.white.opacity(0.85))
-                    }
-                    if let overview = item.result.overview, !overview.isEmpty {
-                        Text(overview)
-                            .scaledFont(size: 11)
-                            .foregroundStyle(.white.opacity(0.85))
-                            .lineLimit(2)
-                            .padding(.top, 2)
-                    }
+                        .padding(.horizontal, 8).padding(.vertical, 3)
+                        .background(Capsule().fill(Color.black.opacity(0.55)))
+                        .padding(10)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity,
+                               alignment: .bottomLeading)
                 }
-                .padding(.horizontal, 14)
-                .padding(.bottom, 14)
             }
             .frame(width: w, height: h)
             .clipShape(RoundedRectangle(cornerRadius: 16))
             .overlay(
                 RoundedRectangle(cornerRadius: 16)
-                    .stroke(.white.opacity(0.18), lineWidth: 0.75)
+                    .stroke(.white.opacity(0.28), lineWidth: 1)
             )
             .shadow(color: .black.opacity(0.35), radius: 14, x: 0, y: 6)
         }
@@ -83,7 +65,8 @@ public struct DiscoverCardView: View {
         }
         .foregroundStyle(.white)
         .padding(.horizontal, 8).padding(.vertical, 4)
-        .background(Capsule().fill(.ultraThinMaterial))
+        .background(Capsule().fill(Color.black.opacity(0.55)))
+        .overlay(Capsule().stroke(.white.opacity(0.15), lineWidth: 0.5))
     }
 
     private var originIcon: String {

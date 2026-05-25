@@ -150,26 +150,26 @@ public struct DiscoverTabView: View {
     private var cardStack: some View {
         let stack = visibleStack.enumerated().map { ($0, $1) }
         return GeometryReader { proxy in
-            // Larger vertical reserve (was 0.84) so peek cards have room.
-            let availableH = proxy.size.height * 0.75
-            // Relax aspect (was 1.5 → 1.4) so the card isn't quite full-poster
-            // shape when the popover is narrow; this keeps height under budget.
-            let h = min(availableH, proxy.size.width * 1.4)
-            let w = h / 1.4
+            // Reserve ~12% vertical for the peek stack at the bottom.
+            let availableH = proxy.size.height * 0.88
+            // True 2:3 poster aspect (restored from 1.4 → 1.5).
+            let h = min(availableH, proxy.size.width * 1.5)
+            let w = h / 1.5
             ZStack {
                 ForEach(stack.reversed(), id: \.1.id) { (idx, item) in
                     DiscoverCardView(item: item)
                         .frame(width: w, height: h)
                         .scaleEffect(1.0 - CGFloat(idx) * 0.08, anchor: .top)
-                        .offset(y: CGFloat(idx) * 22)
-                        .opacity(idx == 0 ? 1.0 : 1.0 - Double(idx) * 0.25)
+                        .offset(y: CGFloat(idx) * 18)
+                        .opacity(idx == 0 ? 1.0 : 1.0 - Double(idx) * 0.28)
                         .allowsHitTesting(idx == 0)
                         .zIndex(Double(stack.count - idx))
                         .animation(.spring(response: 0.32, dampingFraction: 0.85),
                                    value: viewModel.current?.dedupKey)
                 }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            // Center the stack vertically so empty space splits above + below.
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
         }
     }
 
@@ -180,41 +180,43 @@ public struct DiscoverTabView: View {
     }
 
     private var cardActionRow: some View {
-        HStack(spacing: 8) {
-            // Skip: ghost button (~38% width). De-emphasised path.
-            Button { Task { await viewModel.swipe(right: false) } } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: "xmark")
-                        .scaledFont(size: 10, weight: .semibold)
-                    Text("Skip", bundle: .module)
-                        .scaledFont(size: 11, weight: .semibold)
+        GeometryReader { geo in
+            let spacing: CGFloat = 8
+            let skipW  = max(80, (geo.size.width - spacing) * 0.38)
+            let watchW = max(120, (geo.size.width - spacing) * 0.62)
+            HStack(spacing: spacing) {
+                Button { Task { await viewModel.swipe(right: false) } } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "xmark")
+                            .scaledFont(size: 10, weight: .semibold)
+                        Text("Skip", bundle: .module)
+                            .scaledFont(size: 11, weight: .semibold)
+                    }
+                    .foregroundStyle(.secondary)
+                    .frame(width: skipW)
+                    .padding(.vertical, 7)
+                    .background(
+                        Capsule().stroke(Color.primary.opacity(0.18), lineWidth: 1)
+                    )
                 }
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 7)
-                .background(
-                    Capsule().stroke(Color.primary.opacity(0.18), lineWidth: 1)
-                )
-            }
-            .buttonStyle(.plain)
-            .keyboardShortcut(.leftArrow, modifiers: [])
-            .layoutPriority(0.38)
+                .buttonStyle(.plain)
+                .keyboardShortcut(.leftArrow, modifiers: [])
 
-            // Primary: full GlassProminent, ~62% width via layoutPriority.
-            Button { Task { await viewModel.swipe(right: true) } } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: rightActionIcon)
-                        .scaledFont(size: 11, weight: .semibold)
-                    Text(rightActionLabel, bundle: .module)
-                        .scaledFont(size: 12, weight: .semibold)
+                Button { Task { await viewModel.swipe(right: true) } } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: rightActionIcon)
+                            .scaledFont(size: 11, weight: .semibold)
+                        Text(rightActionLabel, bundle: .module)
+                            .scaledFont(size: 12, weight: .semibold)
+                    }
+                    .frame(width: watchW)
+                    .padding(.vertical, 7)
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 7)
+                .modifier(GlassProminentButtonStyle())
+                .keyboardShortcut(.rightArrow, modifiers: [])
             }
-            .modifier(GlassProminentButtonStyle())
-            .keyboardShortcut(.rightArrow, modifiers: [])
-            .layoutPriority(0.62)
         }
+        .frame(height: 36)
     }
 
     private var rightActionIcon: String {
