@@ -48,4 +48,19 @@ final class DiscoverItemTests: XCTestCase {
         XCTAssertFalse(filter.matches(year: 2011, monitored: false))
         XCTAssertFalse(filter.matches(year: 2011, monitored: nil))
     }
+
+    func test_filter_genreIntersection_andStatus() {
+        var f = DiscoverFilter()
+        f.genres = [.comedy]
+        f.status = .owned
+
+        XCTAssertTrue(f.matches(year: 2010, monitored: true, hasFile: true,
+                                genres: ["Comedy", "Drama"]))
+        XCTAssertFalse(f.matches(year: 2010, monitored: true, hasFile: false,
+                                 genres: ["Comedy"]),
+                       "status=owned requires hasFile=true")
+        XCTAssertFalse(f.matches(year: 2010, monitored: true, hasFile: true,
+                                 genres: ["Drama"]),
+                       "genre intersection must be non-empty")
+    }
 }

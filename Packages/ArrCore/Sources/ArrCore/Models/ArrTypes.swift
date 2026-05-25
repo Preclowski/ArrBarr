@@ -406,6 +406,8 @@ public struct RadarrLibraryRecord: Decodable, Sendable, Equatable {
     let hasFile: Bool?
     let monitored: Bool?
     let images: [ArrImage]?
+    let genres: [String]?
+    let runtime: Int?
 }
 public struct SonarrLibraryRecord: Decodable, Sendable, Equatable {
     let id: Int?
