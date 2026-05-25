@@ -116,7 +116,7 @@ public enum DiscoverSources {
                     title: title, subtitle: nil,
                     year: rec.year, rating: nil, imdb: nil,
                     rottenTomatoes: nil, metacritic: nil,
-                    overview: nil, runtime: nil,
+                    overview: rec.overview, runtime: nil,
                     genres: [], network: nil, certification: nil,
                     posterURL: poster, source: .radarr, inLibraryArrId: arrId
                 )
@@ -155,7 +155,7 @@ public enum DiscoverSources {
                     title: title, subtitle: nil,
                     year: rec.year, rating: nil, imdb: nil,
                     rottenTomatoes: nil, metacritic: nil,
-                    overview: nil, runtime: nil,
+                    overview: rec.overview, runtime: nil,
                     genres: [], network: nil, certification: nil,
                     posterURL: poster, source: .sonarr, inLibraryArrId: arrId
                 )

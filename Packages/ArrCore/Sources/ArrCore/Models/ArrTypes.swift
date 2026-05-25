@@ -408,6 +408,7 @@ public struct RadarrLibraryRecord: Decodable, Sendable, Equatable {
     let images: [ArrImage]?
     let genres: [String]?
     let runtime: Int?
+    let overview: String?
 }
 public struct SonarrLibraryRecord: Decodable, Sendable, Equatable {
     let id: Int?
@@ -423,6 +424,7 @@ public struct SonarrLibraryRecord: Decodable, Sendable, Equatable {
     /// Lets `sonarr_get_series` answer "is S3 monitored?" without a
     /// second round-trip to the series detail endpoint.
     let seasons: [SonarrLibrarySeason]?
+    let overview: String?
 }
 public struct SonarrLibraryStatistics: Decodable, Sendable, Equatable {
     let episodeCount: Int?
