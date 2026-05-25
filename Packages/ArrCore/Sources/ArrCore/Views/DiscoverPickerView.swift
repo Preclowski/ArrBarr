@@ -65,7 +65,13 @@ public struct DiscoverPickerView: View {
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .onAppear { inputFocused = true }
+        .onAppear {
+            // Auto-focus only on a fresh visit; returning from tinder
+            // shouldn't steal focus from the user.
+            if viewModel.moodText.isEmpty {
+                inputFocused = true
+            }
+        }
     }
 
     private var submitDisabled: Bool {

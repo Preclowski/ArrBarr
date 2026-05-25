@@ -10296,7 +10296,14 @@
     },
     "Describe a mood, a vibe, a director, anything": {
       "extractionState": "manual",
-      "localizations": {}
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Describe a mood, a vibe, a director, anything"
+          }
+        }
+      }
     },
     "Discover": {
       "extractionState": "manual",
@@ -12682,7 +12689,14 @@
     },
     "What do you feel like watching?": {
       "extractionState": "manual",
-      "localizations": {}
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "What do you feel like watching?"
+          }
+        }
+      }
     }
   }
 }
