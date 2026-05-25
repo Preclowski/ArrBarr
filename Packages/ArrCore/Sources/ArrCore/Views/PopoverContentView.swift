@@ -1445,7 +1445,6 @@ public struct PopoverContentView: View {
 
         let selection = discoverViewModel.mediaSelection
 
-        // Per-selection library caches — eagerly loaded once per configure call.
         var cachedRadarrLibrary: [RadarrLibraryRecord] = []
         var cachedSonarrLibrary: [SonarrLibraryRecord] = []
 
@@ -1468,50 +1467,26 @@ public struct PopoverContentView: View {
             }
             return cachedSonarrLibrary
         }
-        let ownedMovieIds: @MainActor () -> Set<Int> = {
-            Set(cachedRadarrLibrary.compactMap(\.tmdbId))
-        }
-
-        let tmdbSource: DiscoverViewModel.TMDBSource? = configStore.tmdbEnabled
-            ? (selection == .show
-               ? DiscoverSources.tmdbShows(
-                   apiKey: configStore.tmdbApiKey,
-                   libraryTvdbIds: { [] }   // TMDB TV ids != TVDB ids; skip owned filter
-               )
-               : DiscoverSources.tmdbMovies(
-                   apiKey: configStore.tmdbApiKey,
-                   radarrClient: radarrClient,
-                   libraryTmdbIds: ownedMovieIds
-               ))
-            : nil
 
         let librarySource: DiscoverViewModel.LibrarySource? = selection == .show
             ? DiscoverSources.sonarrLibrary(fetchAll: fetchSonarr)
             : DiscoverSources.radarrLibrary(fetchAll: fetchRadarr)
 
-        let tmdbApiKey = configStore.tmdbApiKey
         let llmSource: DiscoverViewModel.LLMSource? = chatAvailable
             ? DiscoverSources.llm(
                 provider: chatHolder.vm.provider,
-                tmdbClient: { TMDBClient(apiKey: tmdbApiKey) },
-                radarrLookup: { term in
-                    try await radarrClient.lookupMovies(term: term)
-                },
-                sonarrLookup: { term in
-                    try await sonarrClient.lookupSeries(term: term)
-                },
-                libraryTmdbIds: ownedMovieIds,
-                decade: { [vm = discoverViewModel] in vm.filter.decade },
+                radarrLookup: { term in try await radarrClient.lookupMovies(term: term) },
+                sonarrLookup: { term in try await sonarrClient.lookupSeries(term: term) },
                 kindHint: selection
             )
             : nil
 
         discoverViewModel.configure(
-            tmdb: tmdbSource,
+            tmdb: nil,
             library: librarySource,
             llm: llmSource
         )
-        discoverViewModel.configureCredits(apiKey: tmdbApiKey)
+        discoverViewModel.configureCredits(apiKey: configStore.tmdbApiKey)
     }
 
     // MARK: - Upcoming content
