@@ -310,11 +310,11 @@ public struct DiscoverTabView: View {
     private func completeSwipe(right: Bool, fromTranslation t: CGSize) {
         let flyDistance: CGFloat = 1000
         let target = CGSize(width: right ? flyDistance : -flyDistance, height: t.height)
-        withAnimation(.easeOut(duration: 0.28)) {
+        withAnimation(.easeOut(duration: 0.55)) {
             dragOffset = target
         }
         Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 280_000_000)
+            try? await Task.sleep(nanoseconds: 550_000_000)
             await viewModel.swipe(right: right)
             dragOffset = .zero
             isDragging = false
@@ -464,6 +464,20 @@ public struct DiscoverTabView: View {
                         .scaledFont(size: 14, weight: .medium)
                         .foregroundStyle(.orange)
                     Text("To discover new films, add a TMDB API key in Settings → AI → Discovery.",
+                         bundle: .module)
+                        .scaledFont(size: 11)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+                .padding(.horizontal, 24)
+                .padding(.top, 10)
+            }
+            if viewModel.tmdbReturnedEmpty && tmdbAvailable {
+                VStack(spacing: 4) {
+                    Image(systemName: "magnifyingglass")
+                        .scaledFont(size: 12, weight: .medium)
+                        .foregroundStyle(.secondary)
+                    Text("TMDB found no new films matching your filters. Try clearing some.",
                          bundle: .module)
                         .scaledFont(size: 11)
                         .foregroundStyle(.secondary)

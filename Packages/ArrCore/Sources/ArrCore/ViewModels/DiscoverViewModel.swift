@@ -48,6 +48,12 @@ public final class DiscoverViewModel: ObservableObject {
     /// back face for cast headshots + director.
     @Published public private(set) var creditsCache: [Int: TMDBCredits] = [:]
     @Published public private(set) var llmPoolExhausted: Bool = false
+    /// True when the last TMDB fetch returned > 0 raw server-side results
+    /// but all were filtered out as already in-library.
+    @Published public private(set) var tmdbAllInLibrary: Bool = false
+    /// True when the last TMDB fetch returned 0 results from the server
+    /// (filter combo returned nothing — not a network error).
+    @Published public private(set) var tmdbReturnedEmpty: Bool = false
     @Published public private(set) var isLoading: Bool = false
     @Published public private(set) var errorMessage: String?
     @Published public private(set) var matched: [DiscoverItem] = []
@@ -234,7 +240,9 @@ public final class DiscoverViewModel: ObservableObject {
             switch source {
             case .tmdb:
                 tmdbPage += 1
-                return try await tmdb!(filter, tmdbPage)
+                let items = try await tmdb!(filter, tmdbPage)
+                tmdbReturnedEmpty = items.isEmpty
+                return items
             case .library:
                 let items = try await library!(filter)
                 libraryDrained = true
@@ -338,6 +346,8 @@ public final class DiscoverViewModel: ObservableObject {
         libraryDrained = false
         llmDormant = false
         llmPoolExhausted = false
+        tmdbAllInLibrary = false
+        tmdbReturnedEmpty = false
         failedSources.removeAll()
         errorMessage = nil
         matched.removeAll()

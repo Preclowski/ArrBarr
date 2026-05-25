@@ -20,7 +20,7 @@ public struct DiscoverMatchedListView: View {
             ScrollView {
                 LazyVStack(spacing: 8) {
                     ForEach(items) { item in
-                        row(item)
+                        MatchedRow(item: item, onAct: onAct, onRemove: onRemove)
                     }
                 }
                 .padding(.vertical, 8)
@@ -42,9 +42,18 @@ public struct DiscoverMatchedListView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(40)
     }
+}
 
-    @ViewBuilder
-    private func row(_ item: DiscoverItem) -> some View {
+// MARK: - MatchedRow
+
+private struct MatchedRow: View {
+    let item: DiscoverItem
+    let onAct: (DiscoverItem) -> Void
+    let onRemove: (DiscoverItem) -> Void
+
+    @State private var isHovering = false
+
+    var body: some View {
         Button {
             onAct(item)
         } label: {
@@ -93,6 +102,14 @@ public struct DiscoverMatchedListView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .background(
+            RoundedRectangle(cornerRadius: 6)
+                .fill(isHovering ? Color.primary.opacity(0.06) : Color.clear)
+                .padding(.horizontal, -6)
+        )
+        .onHover { hovering in
+            withAnimation(.easeInOut(duration: 0.15)) { isHovering = hovering }
+        }
     }
 
     @ViewBuilder

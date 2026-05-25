@@ -1908,6 +1908,35 @@
         }
       }
     },
+    "TMDB found no new films matching your filters. Try clearing some.": {
+      "extractionState": "manual",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TMDB nie znalazł nowych filmów pasujących do Twoich filtrów. Spróbuj wyczyścić część z nich."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TMDB hat keine neuen Filme zu deinen Filtern gefunden. Versuche, einige zu löschen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TMDB no encontró películas nuevas con tus filtros. Intenta borrar algunos."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TMDB n'a trouvé aucun nouveau film correspondant à vos filtres. Essayez d'en effacer quelques-uns."
+          }
+        }
+      }
+    },
     "Considering…": {
       "extractionState": "manual",
       "localizations": {

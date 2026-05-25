@@ -30,6 +30,11 @@ public enum DiscoverSources {
                 personIds: filter.personIds
             )
             let owned = libraryTmdbIds()
+            #if DEBUG
+            let filteredCount = summaries.filter { !owned.contains($0.id) }.count
+            print("[Discover] TMDB raw count: \(summaries.count), filter: decade=\(filter.decade), genres=\(filter.genres), personIds=\(filter.personIds)")
+            print("[Discover] TMDB after library dedup: \(filteredCount), owned count: \(owned.count)")
+            #endif
             var out: [DiscoverItem] = []
             for s in summaries {
                 if owned.contains(s.id) { continue }
