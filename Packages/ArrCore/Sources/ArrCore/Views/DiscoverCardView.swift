@@ -133,51 +133,32 @@ public struct DiscoverCardView: View {
 
     @ViewBuilder
     private func backFace(w: CGFloat, h: CGFloat) -> some View {
-        let headerH: CGFloat = h * 0.38
+        ZStack {
+            // Poster underneath everything (gets blurred by the glass overlay).
+            RemotePoster(url: item.result.posterURL, apiKey: nil,
+                         size: CGSize(width: w, height: h), cornerRadius: 0)
+                .frame(width: w, height: h)
+                .clipped()
 
-        ZStack(alignment: .top) {
-            // Raw poster underneath the entire card.
-            RemotePoster(
-                url: item.result.posterURL,
-                apiKey: nil,
-                size: CGSize(width: w, height: h),
-                cornerRadius: 0
-            )
-            .frame(width: w, height: h)
-            .clipped()
+            // Full-card glass panel — covers the entire poster so text reads
+            // on a uniform surface, no shadows needed.
+            Rectangle()
+                .fill(.regularMaterial)
+                .frame(width: w, height: h)
+                .allowsHitTesting(false)
 
-            // Glass panel covers the bottom ~62% only — fades in at top.
-            VStack(spacing: 0) {
-                Spacer().frame(height: headerH * 0.7) // glass fade starts inside header
-                Rectangle()
-                    .fill(.regularMaterial)
-                    .mask(
-                        LinearGradient(
-                            stops: [
-                                .init(color: .clear, location: 0.0),
-                                .init(color: .black.opacity(0.85), location: 0.18),
-                                .init(color: .black, location: 0.35),
-                            ],
-                            startPoint: .top, endPoint: .bottom
-                        )
-                    )
-            }
-            .frame(width: w, height: h)
-            .allowsHitTesting(false)
-
-            // Content: header on poster (top), overview + genres on glass (bottom).
-            VStack(alignment: .leading, spacing: 0) {
-                // HEADER on poster, white text + shadows.
+            // Content: header (compact, intrinsic) + scrollable info.
+            VStack(alignment: .leading, spacing: 10) {
+                // HEADER — compact, intrinsic height.
                 VStack(alignment: .leading, spacing: 4) {
                     Text(titleAndYear)
-                        .scaledFont(size: 16, weight: .semibold)
-                        .foregroundStyle(.white)
-                        .shadow(color: .black.opacity(0.6), radius: 3, x: 0, y: 1)
+                        .scaledFont(size: 17, weight: .bold)
+                        .foregroundStyle(.primary)
+                        .lineLimit(2)
                     if !runtimeCertSegments.isEmpty {
                         Text(runtimeCertSegments.joined(separator: " · "))
-                            .scaledFont(size: 11)
-                            .foregroundStyle(.white.opacity(0.95))
-                            .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 1)
+                            .scaledFont(size: 11, weight: .medium)
+                            .foregroundStyle(.secondary)
                             .lineLimit(1)
                     }
                     let chips = discoverRatingChips(for: item.result)
@@ -185,17 +166,13 @@ public struct DiscoverCardView: View {
                         HStack(spacing: 5) {
                             ForEach(chips, id: \.label) { RatingPill(chip: $0) }
                         }
+                        .padding(.top, 2)
                     }
                 }
-                .padding(.horizontal, 14)
-                .padding(.top, 14)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .frame(height: headerH, alignment: .topLeading)
 
-                // EVERYTHING ELSE inside ScrollView — overview, genres,
-                // director, cast all scroll together.
+                // SCROLLABLE CONTENT — overview, genres, director, cast.
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 14) {
                         if let overview = item.result.overview, !overview.isEmpty {
                             Text(overview)
                                 .scaledFont(size: 13)
@@ -221,7 +198,7 @@ public struct DiscoverCardView: View {
                                         .scaledFont(size: 11, weight: .semibold)
                                         .foregroundStyle(.primary)
                                 }
-                                .padding(.top, 4)
+                                .padding(.top, 2)
                             }
                             if !credits.cast.isEmpty {
                                 HStack(spacing: 8) {
@@ -229,10 +206,11 @@ public struct DiscoverCardView: View {
                                         VStack(spacing: 4) {
                                             personAvatar(person)
                                             Text(person.name)
-                                                .scaledFont(size: 9, weight: .medium)
-                                                .foregroundStyle(.secondary)
-                                                .lineLimit(1)
-                                                .frame(width: 50)
+                                                .scaledFont(size: 9, weight: .semibold)
+                                                .foregroundStyle(.white)
+                                                .lineLimit(2)
+                                                .multilineTextAlignment(.center)
+                                                .frame(width: 56)
                                         }
                                     }
                                     Spacer(minLength: 0)
@@ -241,13 +219,11 @@ public struct DiscoverCardView: View {
                             }
                         }
                     }
-                    .padding(.horizontal, 14)
-                    .padding(.top, 12)
-                    .padding(.bottom, 14)
                     .frame(maxWidth: .infinity, alignment: .topLeading)
                 }
             }
-            .frame(width: w, height: h)
+            .padding(14)
+            .frame(width: w, height: h, alignment: .topLeading)
         }
         .frame(width: w, height: h)
     }
