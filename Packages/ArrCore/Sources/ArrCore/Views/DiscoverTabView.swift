@@ -10,6 +10,7 @@ public struct DiscoverTabView: View {
 
     @State private var showMatched: Bool = false
     @State private var dragOffset: CGSize = .zero
+    @State private var isCardFlipped: Bool = false
 
     public init(viewModel: DiscoverViewModel,
                 llmAvailable: Bool,
@@ -151,7 +152,8 @@ public struct DiscoverTabView: View {
             ZStack {
                 ForEach(stack.reversed(), id: \.1.id) { (idx, item) in
                     let isTop = (idx == 0)
-                    DiscoverCardView(item: item)
+                    DiscoverCardView(item: item,
+                                     isFlipped: isTop ? $isCardFlipped : .constant(false))
                         .frame(width: w, height: h)
                         .scaleEffect(1.0 - CGFloat(idx) * 0.08, anchor: .top)
                         .offset(x: isTop ? dragOffset.width : 0,
@@ -161,7 +163,7 @@ public struct DiscoverTabView: View {
                         .opacity(idx == 0 ? 1.0 : 1.0 - Double(idx) * 0.28)
                         .allowsHitTesting(isTop)
                         .zIndex(Double(stack.count - idx))
-                        .gesture(isTop ? dragGesture : nil)
+                        .gesture(isTop && !isCardFlipped ? dragGesture : nil)
                         .animation(.spring(response: 0.32, dampingFraction: 0.85),
                                    value: viewModel.current?.dedupKey)
                 }
@@ -274,11 +276,10 @@ public struct DiscoverTabView: View {
         }
     }
     private var rightActionLabel: LocalizedStringKey {
-        guard let item = viewModel.current else { return "Add to Radarr" }
+        guard let item = viewModel.current else { return "Pick" }
         switch item.action {
-        case .addToRadarr: return "Add to Radarr"
-        case .addToSonarr: return "Add to Sonarr"
-        case .openDetail:  return "Watch"
+        case .addToRadarr, .addToSonarr: return "Pick"
+        case .openDetail:                return "Watch"
         }
     }
 

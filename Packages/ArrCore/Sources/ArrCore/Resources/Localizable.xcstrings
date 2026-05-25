@@ -9888,6 +9888,35 @@
         }
       }
     },
+    "Pick": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nehmen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¡Lo quiero!"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Je prends !"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Biorę!"
+          }
+        }
+      }
+    },
     "Pick a media kind to start:": {
       "extractionState": "manual",
       "localizations": {
