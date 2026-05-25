@@ -2,17 +2,11 @@ import SwiftUI
 
 public struct DiscoverFilterBar: View {
     @Binding var filter: DiscoverFilter
-    @Binding var moodText: String
-    let llmAvailable: Bool
     let onReshuffle: () -> Void
 
     public init(filter: Binding<DiscoverFilter>,
-                moodText: Binding<String>,
-                llmAvailable: Bool,
                 onReshuffle: @escaping () -> Void) {
         self._filter = filter
-        self._moodText = moodText
-        self.llmAvailable = llmAvailable
         self.onReshuffle = onReshuffle
     }
 
@@ -20,7 +14,6 @@ public struct DiscoverFilterBar: View {
         HStack(spacing: 8) {
             decadePicker
             monitoredToggle
-            if llmAvailable { moodField }
             Spacer(minLength: 4)
             Button(action: onReshuffle) {
                 Image(systemName: "arrow.triangle.2.circlepath")
@@ -75,20 +68,5 @@ public struct DiscoverFilterBar: View {
                 : Color.primary.opacity(0.08)))
         }
         .buttonStyle(.plain)
-    }
-
-    private var moodField: some View {
-        HStack(spacing: 4) {
-            Image(systemName: "sparkles")
-                .scaledFont(size: 11)
-                .foregroundStyle(.purple)
-            TextField("", text: $moodText, prompt:
-                Text("Mood…", bundle: .module))
-                .textFieldStyle(.plain)
-                .scaledFont(size: 11)
-                .frame(minWidth: 80, maxWidth: 140)
-        }
-        .padding(.horizontal, 8).padding(.vertical, 4)
-        .background(Capsule().fill(Color.primary.opacity(0.06)))
     }
 }

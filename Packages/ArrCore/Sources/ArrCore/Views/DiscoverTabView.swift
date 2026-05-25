@@ -7,6 +7,7 @@ public struct DiscoverTabView: View {
     let onOpenDetail: (DiscoverItem, Int) -> Void
 
     @State private var showMatched: Bool = false
+    @FocusState private var moodFocused: Bool
 
     public init(viewModel: DiscoverViewModel,
                 llmAvailable: Bool,
@@ -21,6 +22,7 @@ public struct DiscoverTabView: View {
     public var body: some View {
         VStack(spacing: 0) {
             filterRow
+            moodComposer
             Divider()
             if showMatched {
                 DiscoverMatchedListView(
@@ -48,9 +50,6 @@ public struct DiscoverTabView: View {
             DiscoverFilterBar(
                 filter: Binding(get: { viewModel.filter },
                                 set: { viewModel.filter = $0 }),
-                moodText: Binding(get: { viewModel.moodText },
-                                  set: { viewModel.moodText = $0 }),
-                llmAvailable: llmAvailable,
                 onReshuffle: { Task { await viewModel.reshuffle() } }
             )
             if viewModel.matched.count > 0 {
@@ -73,6 +72,41 @@ public struct DiscoverTabView: View {
                 .padding(.trailing, 12)
                 .help(Text("Your picks", bundle: .module))
             }
+        }
+    }
+
+    @ViewBuilder
+    private var moodComposer: some View {
+        if llmAvailable {
+            HStack(spacing: 8) {
+                Image(systemName: "sparkles")
+                    .scaledFont(size: 13)
+                    .foregroundStyle(.purple)
+                TextField("", text: Binding(get: { viewModel.moodText },
+                                            set: { viewModel.moodText = $0 }),
+                          prompt: Text("What are you in the mood for?", bundle: .module),
+                          axis: .vertical)
+                    .textFieldStyle(.plain)
+                    .focused($moodFocused)
+                    .lineLimit(1...3)
+                    .scaledFont(size: 12)
+                if !viewModel.moodText.trimmingCharacters(in: .whitespaces).isEmpty {
+                    Button {
+                        viewModel.moodText = ""
+                        moodFocused = false
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .scaledFont(size: 14)
+                            .foregroundStyle(.tertiary)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .glassyFloatingBar()
+            .padding(.horizontal, 12)
+            .padding(.bottom, 6)
         }
     }
 

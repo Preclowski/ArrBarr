@@ -7648,6 +7648,35 @@
         }
       }
     },
+    "What are you in the mood for?": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Worauf hast du Lust?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Qué te apetece?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Que voulez-vous regarder ?"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Na co masz dziś ochotę?"
+          }
+        }
+      }
+    },
     "What's New in ArrBarr": {
       "extractionState": "manual",
       "localizations": {
