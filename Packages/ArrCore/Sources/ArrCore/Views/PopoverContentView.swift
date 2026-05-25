@@ -128,7 +128,7 @@ public struct PopoverContentView: View {
                     whisparrConfig: configStore.whisparr
                 )
                 chatHolder.reconfigure(store: configStore)
-                configureDiscover()
+                Task { await configureDiscover() }
             }
             .onChange(of: ChatViewModelHolder.signature(store: configStore)) { _, _ in
                 chatHolder.reconfigure(store: configStore)
@@ -1375,13 +1375,25 @@ public struct PopoverContentView: View {
     /// The `cachedLibrary` var lives inside this function's scope so all three
     /// source closures capture the same value by reference — one fetch, shared
     /// dedup across TMDB / library / LLM sources.
-    private func configureDiscover() {
+    private func configureDiscover() async {
         let radarrCfg = configStore.radarr
         let radarrClient = RadarrClient(config: radarrCfg)
 
         // Single shared library cache so fetchAllMovies is called at most once
         // per session across all three source closures.
         var cachedLibrary: [RadarrLibraryRecord] = []
+
+        // Eagerly load the library so all three sources have an authoritative
+        // owned-id set on their first call. Without this, TMDB Discover's first
+        // page slips through with the empty set and surfaces owned movies as
+        // "Add to Radarr".
+        do {
+            cachedLibrary = try await radarrClient.fetchAllMovies()
+        } catch {
+            // If the library fetch fails, sources just see an empty set —
+            // matches current behavior, the failure surfaces per-source.
+        }
+
         let fetchLibrary: @MainActor () async throws -> [RadarrLibraryRecord] = {
             if cachedLibrary.isEmpty {
                 cachedLibrary = try await radarrClient.fetchAllMovies()
