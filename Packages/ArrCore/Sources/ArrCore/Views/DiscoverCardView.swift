@@ -25,36 +25,40 @@ func discoverRatingChips(for result: SearchResult) -> [RatingChip] {
 
 public struct DiscoverCardView: View {
     let item: DiscoverItem
-    @Binding var isFlipped: Bool
+    @Binding var isHovered: Bool
 
-    public init(item: DiscoverItem, isFlipped: Binding<Bool>) {
+    public init(item: DiscoverItem, isHovered: Binding<Bool>) {
         self.item = item
-        self._isFlipped = isFlipped
+        self._isHovered = isHovered
     }
 
     public var body: some View {
         GeometryReader { geo in
             let w = geo.size.width
             let h = geo.size.height
-            ZStack {
-                // Front face — poster + overlays.
+            ZStack(alignment: .leading) {
+                // 1) The poster card — always rendered, just tilted when
+                //    hovered. The drawer overlays it on the left.
                 frontFace(w: w, h: h)
-                    .opacity(isFlipped ? 0 : 1)
-                    .rotation3DEffect(.degrees(isFlipped ? 180 : 0),
-                                      axis: (x: 0, y: 1, z: 0),
-                                      perspective: 0.6)
+                    .rotation3DEffect(
+                        .degrees(isHovered ? 8 : 0),
+                        axis: (x: 0, y: 1, z: 0),
+                        anchor: .trailing,
+                        perspective: 0.5
+                    )
 
-                // Back face — overview + ratings.
-                // Mirrored so it reads correctly after the flip.
-                backFace(w: w, h: h)
-                    .opacity(isFlipped ? 1 : 0)
-                    .rotation3DEffect(.degrees(isFlipped ? 0 : -180),
-                                      axis: (x: 0, y: 1, z: 0),
-                                      perspective: 0.6)
+                // 2) The drawer — slides in from the left edge of the
+                //    card, covers ~65% of the card width. Hidden by
+                //    default (offset off-screen left).
+                if isHovered {
+                    infoDrawer(w: w * 0.65, h: h)
+                        .transition(.move(edge: .leading).combined(with: .opacity))
+                }
             }
-            .animation(.spring(response: 0.55, dampingFraction: 0.78), value: isFlipped)
+            .frame(width: w, height: h)
+            .animation(.spring(response: 0.4, dampingFraction: 0.78), value: isHovered)
             .onHover { hovering in
-                isFlipped = hovering
+                isHovered = hovering
             }
         }
     }
@@ -156,12 +160,12 @@ public struct DiscoverCardView: View {
         .shadow(color: .black.opacity(0.35), radius: 14, x: 0, y: 6)
     }
 
-    // MARK: - Back face
+    // MARK: - Info drawer
 
     @ViewBuilder
-    private func backFace(w: CGFloat, h: CGFloat) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(alignment: .top, spacing: 8) {
+    private func infoDrawer(w: CGFloat, h: CGFloat) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .top, spacing: 6) {
                 VStack(alignment: .leading, spacing: 3) {
                     Text(titleWithYear)
                         .scaledFont(size: 15, weight: .semibold)
@@ -173,7 +177,7 @@ public struct DiscoverCardView: View {
                             .foregroundStyle(.white.opacity(0.85))
                     }
                 }
-                Spacer()
+                Spacer(minLength: 0)
                 originChip
             }
 
@@ -208,16 +212,28 @@ public struct DiscoverCardView: View {
                     .foregroundStyle(.white.opacity(0.55))
             }
         }
-        .padding(14)
+        .padding(12)
         .frame(width: w, height: h, alignment: .topLeading)
+        // Solid dark drawer with a small slip of poster visible on the right
+        // edge of the card. Inner side has a thin highlight to suggest depth.
         .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color(red: 0.08, green: 0.08, blue: 0.10))
+            UnevenRoundedRectangle(
+                topLeadingRadius: 16,
+                bottomLeadingRadius: 16,
+                bottomTrailingRadius: 0,
+                topTrailingRadius: 0
+            )
+            .fill(Color(red: 0.07, green: 0.07, blue: 0.09))
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(.white.opacity(0.28), lineWidth: 1)
+            // Sharp trailing edge — looks like the drawer's spine.
+            Rectangle()
+                .fill(.white.opacity(0.06))
+                .frame(width: 0.75)
+                .frame(maxHeight: .infinity)
+                .offset(x: w / 2 - 0.375),
+            alignment: .trailing
         )
-        .shadow(color: .black.opacity(0.35), radius: 14, x: 0, y: 6)
+        .shadow(color: .black.opacity(0.45), radius: 8, x: 4, y: 0)
     }
 }
