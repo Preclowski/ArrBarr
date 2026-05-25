@@ -1,146 +1,159 @@
 # Discover Tab — Design Spec
 
-**Date:** 2026-05-25
+**Date:** 2026-05-25 (revised after architecture review)
 **Status:** Approved, ready for plan
 
 ## Goal
 
-Add a Tinder-style "Discover" tab to ArrBarr's popover that surfaces movie suggestions from three sources, blended fairly, with source-appropriate swipe actions.
+Add a Tinder-style "Discover" tab to ArrBarr's popover that surfaces movie suggestions from three sources — blended fairly, with source-appropriate swipe actions, reusing as much existing machinery as possible.
 
 ## Sources
 
 | Source | What it returns | Swipe right (👍) | Swipe left (👎) |
 |---|---|---|---|
-| **Radarr Discover** | Movies *not* in library, from Radarr's recommendations / import-list endpoint (exact endpoint TBD during plan, depending on Radarr API version) | Add to Radarr (monitor + `searchMovie`) | Skip for this session |
-| **Library (existing)** | Random movies *in* library, matching active filters — a mood picker over what you already own | Open `DetailView` | Skip |
-| **LLM** | Mood-driven recommendations from the configured `ChatProvider` — user describes what they're in the mood for, LLM returns a batch of 30 titles maintained as a session pool; we client-side dedupe against the library | Radarr `movie/lookup` → add | Skip |
+| **TMDB Discover** | Movies *not* in user's library, via existing `TMDBClient.discoverMovies(...)` | Add to Radarr (same flow as Search tab uses) | Skip for this session |
+| **Library** | Random movies *in* library (Radarr `fetchAllMovies`), filtered by decade + monitored toggle | Open `DetailView` | Skip |
+| **LLM** | Stateless completion call seeded by user's mood text; returns N titles, each enriched via Radarr `movie/lookup` | Add to Radarr (if not already there) / Open detail (if owned) | Skip |
 
-LLM source is hidden if no provider is configured. It is also dormant when the mood field is empty — without a mood, the bucket mixes only Discover + Library.
+LLM source is hidden when no provider is configured *or* when the mood field is empty.
 
 ## Surface
 
-New tab in `PopoverContentView` alongside Queue / Upcoming / History. No separate window.
+New tab in `Views/PopoverContentView.swift` alongside Queue / Upcoming / History / Search. Mirrors the shape of the Search tab.
+
+## Reuse Map (deduplication-first)
+
+| Need | Existing primitive | New code? |
+|---|---|---|
+| Unified result model | `Models/SearchTypes.swift` → `SearchResult` (title, year, overview, runtime, genres, poster, ratings, `inLibraryArrId`) | None — wrap in `DiscoverItem` |
+| TMDB discover endpoint | `Services/TMDBClient.swift` → `discoverMovies(...)` | None |
+| LLM call | `Services/LLMProvider.swift` → `respond(prompt:tools:history:)` | None — stateless single-shot |
+| Movie lookup for LLM titles | `Services/RadarrClient.swift` → `movie/lookup` (also wrapped by `SearchClient`) | None |
+| Add movie to Radarr | Existing flow from Search tab | None |
+| Card body rendering | `Views/MediaHeaderCard.swift` + `Views/RemotePoster.swift` | None — just compose |
+| Open detail | Existing `DetailView` push from PopoverContentView | None |
+| Tab wiring pattern | `Views/SearchView.swift` + `ViewModels/SearchViewModel.swift` (closest precedent) | Mirror |
 
 ## Architecture
 
-New module inside `Packages/ArrCore/Sources/ArrCore`:
+New files inside `Packages/ArrCore/Sources/ArrCore/`:
 
 ```
 Models/
-  DiscoverCard.swift            # unified card (poster, title, year, overview, runtime, genres, source, payload)
-  DiscoverFilter.swift          # genres / decade / runtime / monitored + moodText
-Services/
-  DiscoverSourceProtocol.swift  # async fetch(count, filter, seed) -> [DiscoverCard]
-  RadarrDiscoverSource.swift    # /api/v3/movie/discover (recommendations)
-  RadarrLibrarySource.swift     # uses existing fetchAllMovies + local filter
-  LLMDiscoverSource.swift       # ChatProvider prompt -> JSON titles -> Radarr lookup for enrichment
-  DiscoverBucket.swift          # mixing, seed, prefetch, dedup
+  DiscoverItem.swift          # { result: SearchResult; action: DiscoverAction }
 ViewModels/
-  DiscoverViewModel.swift
+  DiscoverViewModel.swift     # three async sources + round-robin + dedup
 Views/
-  DiscoverTabView.swift
-  DiscoverCardView.swift        # poster + overview + badges + action buttons
-  DiscoverFilterBar.swift
+  DiscoverTabView.swift       # filter bar + current-card stack + action buttons
+  DiscoverFilterBar.swift     # decade picker, monitored toggle, mood field
 ```
 
-`DiscoverCard.source` is an enum:
+No new protocol abstraction over sources — the three are too different to share a contract usefully, and the VM is small enough to call them directly.
 
 ```swift
-enum CardSource {
-    case radarrDiscover(tmdbId: Int)
-    case library(movieId: Int)
-    case llm(title: String, year: Int?)
+enum DiscoverAction {
+    case addToRadarr        // TMDB / LLM-when-not-owned
+    case openDetail         // Library / LLM-when-owned
+}
+
+struct DiscoverItem: Identifiable {
+    let id: String           // tmdbId-or-titleYear, used as dedup key
+    let result: SearchResult
+    let action: DiscoverAction
 }
 ```
 
-The view renders all cards identically; only the action buttons and labels differ per source.
+## ViewModel — round-robin without a bucket
 
-## Mixing Algorithm — Bucket + Seed
+```swift
+@MainActor
+final class DiscoverViewModel: ObservableObject {
+    @Published var current: DiscoverItem?
+    @Published var queue: [DiscoverItem] = []
+    @Published var filter = DiscoverFilter()
+    @Published var moodText: String = ""
+    @Published var llmPoolExhausted = false
+    @Published var error: String?
 
+    private var seenIds = Set<String>()
+    private var llmExclude: [String] = []     // titles already shown by LLM
+    private var rrIndex = 0                    // round-robin pointer
+
+    func start() async { … }                   // first 10 per source
+    func nextSourceIndex() -> Int { … }        // skips exhausted/dormant sources
+    func topUpIfNeeded() async { … }           // when queue < 5
+    func swipe(_ item: DiscoverItem, right: Bool) async { … }
+    func requestMoreLLM() async { … }          // re-call with updated exclude list
+}
 ```
-SessionSeed = UInt64 (time-based on tab open; reseeded on pull-to-refresh or filter change)
-enabledSources = [Discover, Library]
-if mood not empty and llmConfigured: enabledSources += [LLM]
 
-bucket = []
-for source in enabledSources:
-    bucket += try await source.fetch(count: 10, filter, seed)
-queue = bucket.shuffled(using: SeededRNG(seed))
-```
+Round-robin order: `[tmdb, library, llm]`, skipping any source that is exhausted (TMDB page run out) or dormant (LLM with no mood / pool empty). Dedup is a single `Set<String>` keyed by the item's `id`. No seeded RNG, no shared "bucket" type, no source protocol.
 
-- **Fair share:** equal quota (10) per source per fetch. If a source fails, the others still play; a small "LLM unavailable" badge surfaces in the filter bar.
-- **Top-up:** when `queue.count < 5`, asynchronously fetch 10 more from each *available* source, shuffle the new slice with the same seed, and append — current card position is preserved.
-- **LLM as pool, not as endpoint:** the LLM source does *not* hit the API on every top-up. It hits it once per session to fill a 30-title pool, then `fetch(count: 10)` just drains 10 from that pool. When the pool is empty, the source goes dormant and is dropped from `enabledSources` until the user clicks "more LLM suggestions" (see LLM Source Details).
-- **Dedup in session:** `Set<String>` keyed by `tmdbId` or `lowercased(title)+year`. LLM duplicates of library titles are filtered here (counted against quota → we drain more from the pool to compensate).
-- **Determinism:** seed enables reproducible debug sessions and future undo.
-- **Prefetch:** next 3 posters preloaded via existing `RemotePoster`.
+## LLM Source — stateless with exclude-list
+
+The architecture review surfaced that `LLMProvider` has no server-side session, so any "more suggestions" call has to resend its own exclude context. Embrace it instead of fighting it.
+
+**Request shape (one shot per "more" press):**
+- System: "You recommend movies for a tinder-style picker. Reply only as JSON array `[{title, year, reason}]`."
+- User: `"Mood: <user mood text>. Active filters: <decade if set>. Suggest 20 movies. Do NOT include any of these already-shown titles: <comma-separated exclude list>."`
+
+**Drain:**
+1. Parse JSON → titles.
+2. For each: `RadarrClient.movie/lookup?term="<title> <year>"`. Use first match. If lookup finds `tmdbId` already in the local Radarr library, mark the resulting `DiscoverItem.action = .openDetail`; otherwise `.addToRadarr`.
+3. Append exclude list with `"title (year)"` for every produced item.
+4. Lookup miss → drop title silently.
+
+**Pool exhaustion / "more" button:** when the LLM pool is drained, the source goes dormant and a "✨ more LLM suggestions" button appears under the current card. Click → another stateless call with the cumulative exclude list. The exclude list grows linearly with shown titles; for a typical session (<60 titles) this is well within prompt budget.
+
+**Mood change:** clears exclude list, clears LLM pool, marks source active.
 
 ## Filter Bar
 
-Top of the tab:
-
 ```
-[ Genre ▾ ] [ Decade ▾ ] [ Runtime ▾ ] [ ✨ mood: ____________ ]   [↻ reshuffle]
+[ Decade ▾ ] [ ◯ Monitored only ] [ ✨ mood: ____________ ]   [↻ reshuffle]
 ```
 
-- The mood field is shown only when an LLM provider is configured.
-- The mood field is the **trigger** for the LLM source: empty mood = no LLM cards in the mix; filled mood = LLM source becomes active and seeds its pool.
-- Semantics between structured filters and mood: **OR**. A card passes the filter if it matches the structured filters *or* matches the LLM's interpretation of the mood text. This intentionally widens the pool (the mood can pull in things outside your strict filters).
-- Structured filters apply locally to each source's output.
-- The mood text is the LLM source's primary prompt. Additionally, on first activation in a session, the LLM is asked once to translate the mood into hint-filters (genres, era, runtime hints) that we apply to Discover/Library output as the "OR mood" branch. This translation is cached for the session.
-- Any filter change (structured or mood) → new seed → bucket reset and (for mood change) a fresh LLM conversation.
+- **Decade** + **Monitored only** apply to TMDB Discover (year range) and Library (in-memory filter on `RadarrLibraryRecord`). LLM ignores them (mood is its only directive).
+- **Mood** is the LLM trigger and is shown only when a provider is configured. Empty mood = LLM dormant.
+- **Reshuffle** = clear queue, re-fetch all active sources, reset seen-set kept *only* for this session.
 
-## LLM Source Details
-
-**Session-scoped conversation.** The LLM source maintains a multi-turn `ChatProvider` conversation for the duration of the discover session. This is the cheapest way to avoid repeats without resending the full exclude-list on every refill.
-
-**First turn (on mood entry or mood change):**
-- System prompt: explain we're picking movies for a tinder-style UI; respond strictly as JSON `[{title, year, reason}]`; return 30 distinct titles.
-- User message: the mood text, plus any active structured filters as soft hints.
-- Response: 30 titles → parsed into a session pool.
-
-**Second turn — "translate mood" (same first response can include this, or a separate quick call):**
-- Ask the model to also emit hint-filters (`{genres: [...], decade: ..., runtimeRange: ...}`) representing the mood, cached for the session and OR'd against the structured filter bar when running Discover/Library.
-
-**Drain:**
-- `LLMDiscoverSource.fetch(count: 10)` pops 10 from the pool, runs Radarr `movie/lookup?term=...` on each to enrich with poster, `tmdbId`, overview (uniform card UI).
-- If a returned `tmdbId` is already in `fetchAllMovies()` → dedup silently and drain another from the pool.
-- Lookup failure → skip that title, drain another.
-
-**Pool exhaustion:**
-- Source goes dormant; bucket continues with Discover + Library only.
-- A "✨ more LLM suggestions" button appears under the card. Click → next turn in the *same* conversation: "give me 30 more, different from before". The model has the conversation context, so we don't have to resend any exclude-list. Append to pool, mark source active again.
-
-**Mood change:**
-- New mood = new conversation (old context is no longer relevant). Fresh 30, fresh hint-filters.
+No genre or runtime filter in MVP — `RadarrLibraryRecord` carries neither and we explicitly chose not to extend `fetchAllMovies` for MVP. Discoverable in a follow-up if needed.
 
 ## State & Errors
 
-- `DiscoverViewModel` exposes `@Published var current: DiscoverCard?`, `queue`, `isLoading`, `error`.
-- No cross-session persistence — every session starts fresh (intentional; repeats are acceptable since mood changes day-to-day).
-- Per-source errors degrade gracefully: failing source is dropped from the bucket for the session, others continue. A small badge in the filter bar surfaces this.
+- Per-source error degrades that source for the session and surfaces a small badge in the filter bar; the other sources continue.
+- No cross-session persistence. Every tab open starts fresh.
+- LLM JSON parse failures → drop the response, surface "LLM gave invalid response", stay dormant until next "more" click.
 
 ## Tests (ArrCoreTests)
 
-- `DiscoverBucketTests`: seed determinism; in-session dedup; top-up behavior; fair share when one source fails; LLM-dormant flow when pool empty.
-- `LLMDiscoverSourceTests`: JSON parsing; pool drain; dedupe against library; fallback when Radarr lookup returns nothing; "more suggestions" appends to pool; mood change resets conversation.
-- `DiscoverFilterTests`: OR semantics between structured filters and LLM hint-filters.
+- `DiscoverViewModelTests`:
+  - Round-robin skips exhausted / dormant sources.
+  - Dedup never yields the same `id` twice in a session.
+  - Top-up fires when queue drops below threshold and doesn't reorder current card.
+  - Per-source failure drops that source only.
+- `LLMDiscoverTests`:
+  - Prompt builder produces correct exclude list across multiple "more" calls.
+  - JSON parsing is tolerant of trailing prose / code fences.
+  - Items already in Radarr library get `.openDetail` action; rest get `.addToRadarr`.
+  - Mood change clears state.
 
 ## Scope
 
-**MVP** (this plan):
-- New tab, three sources, bucket+seed mixing, swipe right/left with source-specific actions
-- Structured filter bar (genre / decade / runtime)
-- Mood field gating LLM source; session-scoped LLM conversation with 30-title pool and "more suggestions" button
-- LLM-driven hint-filter translation OR'd with structured filters
-- No cross-session history
+**MVP (this plan):**
+- New tab; three sources (TMDB Discover, Library, LLM); round-robin + dedup in the VM.
+- Filter bar: decade + monitored + mood (mood gates LLM).
+- Card body via `MediaHeaderCard` + `RemotePoster`; swipe via two buttons + ←/→ keyboard.
+- Swipe-right actions per source as described.
+- "More LLM suggestions" button when LLM pool empties.
 
-**Deferred (separate future work):**
-- "Watch later" list of right-swipes
-- Cross-session swipe persistence
-- Undo last swipe
-- Swipe animations / drag gestures (MVP uses buttons + ←/→ keyboard)
+**Deferred:**
+- Genre / runtime filters (would require enriching `RadarrLibraryRecord` via fuller `fetchAllMovies` payload).
+- "Watch later" list of right-swipes.
+- Cross-session swipe history.
+- Undo last swipe.
+- Drag gesture / animated card stack (MVP uses buttons + keyboard).
 
 ## Localization
 
-All UI strings go through `loc("Key")` per project convention.
+All UI strings via `loc("Key")` per project convention.
