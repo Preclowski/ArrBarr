@@ -37,32 +37,37 @@ public struct DiscoverCardView: View {
             let w = geo.size.width
             let h = geo.size.height
             ZStack {
-                // FRONT — pivots around leading edge (spine), slides right, lifts slightly
+                // FRONT — when not hovered, shown 100%.
                 frontFace(w: w, h: h)
                     .opacity(isHovered ? 0 : 1)
-                    .rotation3DEffect(
-                        .degrees(isHovered ? -180 : 0),
-                        axis: (x: 0, y: 1, z: 0),
-                        anchor: .leading,
-                        perspective: 0.7
-                    )
-                    .offset(x: isHovered ? w * 0.5 : 0)
-                    .scaleEffect(isHovered ? 0.92 : 1.0)
+                    .scaleEffect(isHovered ? 0.97 : 1.0, anchor: .center)
 
-                // BACK — slides in from right, settles flat at center
-                backFace(w: w, h: h)
-                    .opacity(isHovered ? 1 : 0)
-                    .rotation3DEffect(
-                        .degrees(isHovered ? 0 : 180),
-                        axis: (x: 0, y: 1, z: 0),
-                        anchor: .leading,
-                        perspective: 0.7
-                    )
-                    .offset(x: isHovered ? 0 : w * 0.5)
-                    .scaleEffect(isHovered ? 1.0 : 0.92)
+                // BACK — when hovered, slides up from below + lifts + tilts.
+                if isHovered {
+                    backFace(w: w, h: h)
+                        .transition(
+                            .asymmetric(
+                                insertion: .move(edge: .bottom)
+                                    .combined(with: .opacity)
+                                    .combined(with: .scale(scale: 0.96, anchor: .bottom)),
+                                removal: .opacity
+                            )
+                        )
+                }
             }
             .frame(width: w, height: h)
-            .animation(.interactiveSpring(response: 0.55, dampingFraction: 0.72), value: isHovered)
+            .rotation3DEffect(
+                .degrees(isHovered ? 6 : 0),
+                axis: (x: 1, y: 0, z: 0),    // tilt forward toward viewer
+                anchor: .center,
+                perspective: 0.6
+            )
+            .scaleEffect(isHovered ? 1.04 : 1.0, anchor: .center)
+            .shadow(color: .black.opacity(isHovered ? 0.55 : 0.45),
+                    radius: isHovered ? 22 : 16,
+                    x: 0,
+                    y: isHovered ? 10 : 6)
+            .animation(.spring(response: 0.5, dampingFraction: 0.78), value: isHovered)
             .overlay(swipeTint.allowsHitTesting(false))
             .overlay(alignment: dragOffset.width > 0 ? .topLeading : .topTrailing) {
                 swipeStamp
@@ -72,7 +77,6 @@ public struct DiscoverCardView: View {
                 RoundedRectangle(cornerRadius: 14)
                     .stroke(Color.white.opacity(0.12), lineWidth: 1)
             )
-            .shadow(color: .black.opacity(0.45), radius: 16, x: 0, y: 6)
             .onHover { hovering in
                 isHovered = hovering && abs(dragOffset.width) < 10
             }
@@ -149,9 +153,10 @@ public struct DiscoverCardView: View {
 
     @ViewBuilder
     private func backFace(w: CGFloat, h: CGFloat) -> some View {
+        let headerH: CGFloat = h * 0.38
+
         ZStack(alignment: .top) {
-            // Full-card poster underneath — barely peeks through at the
-            // very top where the glass panel fades.
+            // Raw poster underneath the entire card.
             RemotePoster(
                 url: item.result.posterURL,
                 apiKey: nil,
@@ -161,23 +166,38 @@ public struct DiscoverCardView: View {
             .frame(width: w, height: h)
             .clipped()
 
-            // Glass panel covers ~92% of card from top down, fading the
-            // first ~8% from transparent to opaque so a sliver of poster
-            // peeks through.
-            topGlassPanel(h: h)
-                .frame(height: h)
-                .allowsHitTesting(false)
+            // Glass panel covers the bottom ~62% only — fades in at top.
+            VStack(spacing: 0) {
+                Spacer().frame(height: headerH * 0.7) // glass fade starts inside header
+                Rectangle()
+                    .fill(.regularMaterial)
+                    .mask(
+                        LinearGradient(
+                            stops: [
+                                .init(color: .clear, location: 0.0),
+                                .init(color: .black.opacity(0.85), location: 0.18),
+                                .init(color: .black, location: 0.35),
+                            ],
+                            startPoint: .top, endPoint: .bottom
+                        )
+                    )
+            }
+            .frame(width: w, height: h)
+            .allowsHitTesting(false)
 
-            // Reading content sits on the dense glass region.
-            VStack(alignment: .leading, spacing: 14) {
+            // Content: header on poster (top), overview + genres on glass (bottom).
+            VStack(alignment: .leading, spacing: 0) {
+                // HEADER on poster, white text + shadows.
                 VStack(alignment: .leading, spacing: 4) {
                     Text(titleAndYear)
                         .scaledFont(size: 16, weight: .semibold)
-                        .foregroundStyle(.primary)
+                        .foregroundStyle(.white)
+                        .shadow(color: .black.opacity(0.6), radius: 3, x: 0, y: 1)
                     if !runtimeCertSegments.isEmpty {
                         Text(runtimeCertSegments.joined(separator: " · "))
                             .scaledFont(size: 11)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.white.opacity(0.95))
+                            .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 1)
                             .lineLimit(1)
                     }
                     let chips = discoverRatingChips(for: item.result)
@@ -187,50 +207,37 @@ public struct DiscoverCardView: View {
                         }
                     }
                 }
+                .padding(.horizontal, 14)
+                .padding(.top, 14)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(height: headerH, alignment: .topLeading)
 
-                if let overview = item.result.overview, !overview.isEmpty {
-                    ScrollView {
-                        Text(overview)
-                            .scaledFont(size: 13)
-                            .foregroundStyle(.primary)
-                            .lineSpacing(3)
-                            .multilineTextAlignment(.leading)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                // GLASS region — overview + genres.
+                VStack(alignment: .leading, spacing: 12) {
+                    if let overview = item.result.overview, !overview.isEmpty {
+                        ScrollView {
+                            Text(overview)
+                                .scaledFont(size: 13)
+                                .foregroundStyle(.primary)
+                                .lineSpacing(3)
+                                .multilineTextAlignment(.leading)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                    } else {
+                        Text("No overview available", bundle: .module)
+                            .scaledFont(size: 12)
+                            .foregroundStyle(.secondary)
                     }
-                } else {
-                    Text("No overview available", bundle: .module)
-                        .scaledFont(size: 12)
-                        .foregroundStyle(.secondary)
+                    genreLabels(limit: 12)
                 }
-
-                genreLabels(limit: 12)
+                .padding(.horizontal, 14)
+                .padding(.top, 12)
+                .padding(.bottom, 14)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
-            .padding(.top, 28)   // skip the transparent fade region
-            .padding(.horizontal, 14)
-            .padding(.bottom, 14)
-            .frame(width: w, height: h, alignment: .topLeading)
+            .frame(width: w, height: h)
         }
         .frame(width: w, height: h)
-    }
-
-    /// Glass material covering most of the card. Fades from transparent
-    /// at the very top edge (showing the poster underneath) to fully
-    /// opaque glass below. The user sees the panel as a single sheet of
-    /// frosted glass laid over the poster.
-    @ViewBuilder
-    private func topGlassPanel(h: CGFloat) -> some View {
-        Rectangle()
-            .fill(.regularMaterial)
-            .mask(
-                LinearGradient(
-                    stops: [
-                        .init(color: .clear, location: 0.0),
-                        .init(color: .black.opacity(0.7), location: 0.08),
-                        .init(color: .black, location: 0.18),
-                    ],
-                    startPoint: .top, endPoint: .bottom
-                )
-            )
     }
 
     // MARK: - Shared helpers
