@@ -153,9 +153,11 @@ public struct DiscoverTabView: View {
             ZStack {
                 ForEach(stack.reversed(), id: \.1.id) { (idx, item) in
                     let isTop = (idx == 0)
+                    let tmdbId = Int(item.result.foreignId) ?? item.result.id
                     DiscoverCardView(item: item,
                                      isHovered: isTop ? $isCardHovered : .constant(false),
-                                     dragOffset: isTop ? dragOffset : .zero)
+                                     dragOffset: isTop ? dragOffset : .zero,
+                                     credits: isTop ? viewModel.creditsCache[tmdbId] : nil)
                         .frame(width: w, height: h)
                         .scaleEffect(1.0 - CGFloat(idx) * 0.04, anchor: .top)
                         .offset(x: isTop ? dragOffset.width : 0,
@@ -172,6 +174,11 @@ public struct DiscoverTabView: View {
                         .gesture(isTop ? dragGesture : nil)
                         .animation(.spring(response: 0.32, dampingFraction: 0.85),
                                    value: viewModel.current?.dedupKey)
+                        .onChange(of: isCardHovered) { _, hovering in
+                            if hovering && isTop && tmdbId > 0 {
+                                viewModel.fetchCreditsIfNeeded(for: tmdbId)
+                            }
+                        }
                 }
             }
             // Center the stack vertically so empty space splits above + below.

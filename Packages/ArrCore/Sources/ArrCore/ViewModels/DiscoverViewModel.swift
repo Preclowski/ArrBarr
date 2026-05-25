@@ -15,9 +15,13 @@ public final class DiscoverViewModel: ObservableObject {
     public struct LLMResult: Sendable {
         public let items: [DiscoverItem]
         public let suggestedFilters: DiscoverLLMPrompt.SuggestedFilters?
-        public init(items: [DiscoverItem], suggestedFilters: DiscoverLLMPrompt.SuggestedFilters?) {
+        public let resolvedPersonIds: [Int]
+        public init(items: [DiscoverItem],
+                    suggestedFilters: DiscoverLLMPrompt.SuggestedFilters?,
+                    resolvedPersonIds: [Int] = []) {
             self.items = items
             self.suggestedFilters = suggestedFilters
+            self.resolvedPersonIds = resolvedPersonIds
         }
     }
 
@@ -29,6 +33,10 @@ public final class DiscoverViewModel: ObservableObject {
     @Published public var filter = DiscoverFilter()
     @Published public var moodText: String = ""
     @Published public private(set) var failedSources: Set<Source> = []
+    /// tmdbId → fetched credits. Populated lazily when the view requests
+    /// a card's credits via `fetchCreditsIfNeeded`. Used by the card's
+    /// back face for cast headshots + director.
+    @Published public private(set) var creditsCache: [Int: TMDBCredits] = [:]
     @Published public private(set) var llmPoolExhausted: Bool = false
     @Published public private(set) var isLoading: Bool = false
     @Published public private(set) var errorMessage: String?
@@ -67,6 +75,8 @@ public final class DiscoverViewModel: ObservableObject {
     private var llmDormant = false
     private var topUpTask: Task<Void, Never>?
     private let topUpThreshold = 5
+    private var creditsFetchingIds = Set<Int>()
+    private var tmdbApiKey: String = ""
 
     public init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
@@ -79,6 +89,27 @@ public final class DiscoverViewModel: ObservableObject {
         self.tmdb = tmdb
         self.library = library
         self.llm = llm
+    }
+
+    public func configureCredits(apiKey: String) {
+        tmdbApiKey = apiKey
+    }
+
+    /// Lazily fetch cast + crew for a TMDB movie id. Safe to call on every
+    /// hover — silently no-ops if already cached or fetching.
+    public func fetchCreditsIfNeeded(for tmdbId: Int) {
+        guard !tmdbApiKey.isEmpty,
+              tmdbId > 0,
+              creditsCache[tmdbId] == nil,
+              !creditsFetchingIds.contains(tmdbId) else { return }
+        creditsFetchingIds.insert(tmdbId)
+        Task { @MainActor in
+            defer { creditsFetchingIds.remove(tmdbId) }
+            let client = TMDBClient(apiKey: tmdbApiKey)
+            if let credits = try? await client.movieCredits(movieId: tmdbId) {
+                creditsCache[tmdbId] = credits
+            }
+        }
     }
 
     // MARK: - User-action tick helpers
@@ -190,7 +221,7 @@ public final class DiscoverViewModel: ObservableObject {
                     llmShownTitles.append(contentsOf: items.map(titleYearKey))
                 }
                 if let suggested = result.suggestedFilters {
-                    applySuggestedFilters(suggested)
+                    applySuggestedFilters(suggested, personIds: result.resolvedPersonIds)
                 }
             }
             append(items)
@@ -203,11 +234,13 @@ public final class DiscoverViewModel: ObservableObject {
     /// Apply LLM-suggested filters to the current filter without triggering
     /// userActionTick — so the View's task(id: userActionTick) does NOT fire
     /// a new reshuffle, breaking the potential infinite loop.
-    private func applySuggestedFilters(_ s: DiscoverLLMPrompt.SuggestedFilters) {
+    private func applySuggestedFilters(_ s: DiscoverLLMPrompt.SuggestedFilters,
+                                       personIds: [Int] = []) {
         var f = filter
         if !s.genres.isEmpty { f.genres = Set(s.genres) }
         if let d = s.decade { f.decade = d }
         if let st = s.status { f.status = st }
+        if !personIds.isEmpty { f.personIds = personIds }
         filter = f
     }
 
@@ -250,6 +283,8 @@ public final class DiscoverViewModel: ObservableObject {
         failedSources.removeAll()
         errorMessage = nil
         matched.removeAll()
+        creditsCache.removeAll()
+        creditsFetchingIds.removeAll()
         // Note: mediaSelection is intentionally NOT reset here — it's a
         // user-level preference that persists across reshuffles.
         topUpTask?.cancel()

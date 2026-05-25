@@ -26,7 +26,8 @@ public enum DiscoverSources {
                 minVoteCount: voteCount,
                 voteAverageGte: filter.rating.minRating,
                 runtimeLte: filter.runtime.lessThan,
-                runtimeGte: filter.runtime.greaterThan
+                runtimeGte: filter.runtime.greaterThan,
+                personIds: filter.personIds
             )
             let owned = libraryTmdbIds()
             var out: [DiscoverItem] = []
@@ -203,6 +204,7 @@ public enum DiscoverSources {
     @MainActor
     public static func llm(
         provider: LLMProvider,
+        tmdbClient: @escaping @MainActor () -> TMDBClient,
         radarrLookup: @escaping @MainActor (String) async throws -> [RadarrLookupRecord],
         sonarrLookup: @escaping @MainActor (String) async throws -> [SonarrLookupRecord],
         libraryTmdbIds: @escaping @MainActor () -> Set<Int>,
@@ -283,12 +285,24 @@ public enum DiscoverSources {
                                             originLabel: .llm, kind: .show))
                 }
             }
+
+            // Resolve people names to TMDB person ids (capped at 5).
+            let tmdb = tmdbClient()
+            var personIds: [Int] = []
+            for name in parsed.filters.people.prefix(5) {
+                if let person = (try? await tmdb.searchPerson(query: name))?.first {
+                    personIds.append(person.id)
+                }
+            }
+
             let suggestedFilters = parsed.filters.genres.isEmpty
                 && parsed.filters.decade == nil
                 && parsed.filters.status == nil
+                && parsed.filters.people.isEmpty
                 ? nil
                 : parsed.filters
-            return DiscoverViewModel.LLMResult(items: out, suggestedFilters: suggestedFilters)
+            return DiscoverViewModel.LLMResult(items: out, suggestedFilters: suggestedFilters,
+                                               resolvedPersonIds: personIds)
         }
     }
 

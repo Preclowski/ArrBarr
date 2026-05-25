@@ -1445,9 +1445,11 @@ public struct PopoverContentView: View {
             ? DiscoverSources.sonarrLibrary(fetchAll: fetchSonarr)
             : DiscoverSources.radarrLibrary(fetchAll: fetchRadarr)
 
+        let tmdbApiKey = configStore.tmdbApiKey
         let llmSource: DiscoverViewModel.LLMSource? = chatAvailable
             ? DiscoverSources.llm(
                 provider: chatHolder.vm.provider,
+                tmdbClient: { TMDBClient(apiKey: tmdbApiKey) },
                 radarrLookup: { term in
                     try await radarrClient.lookupMovies(term: term)
                 },
@@ -1466,6 +1468,7 @@ public struct PopoverContentView: View {
             library: selection == .auto ? nil : librarySource,
             llm: llmSource
         )
+        discoverViewModel.configureCredits(apiKey: tmdbApiKey)
     }
 
     // MARK: - Upcoming content

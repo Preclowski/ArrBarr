@@ -14,6 +14,17 @@ public enum DiscoverLLMPrompt {
         public let genres: [DiscoverGenre]      // resolved from names by parser
         public let decade: DiscoverDecade?
         public let status: DiscoverStatus?
+        /// Raw actor/director names extracted from mood text. Resolved to
+        /// TMDB person ids by DiscoverSources.llm after parsing.
+        public let people: [String]
+
+        public init(genres: [DiscoverGenre], decade: DiscoverDecade?,
+                    status: DiscoverStatus?, people: [String] = []) {
+            self.genres = genres
+            self.decade = decade
+            self.status = status
+            self.people = people
+        }
     }
 
     public struct Response: Equatable, Sendable {
@@ -32,14 +43,17 @@ public enum DiscoverLLMPrompt {
                              exclude: [String],
                              kindHint: DiscoverMediaSelection = .movie) -> String {
         var lines: [String] = []
+        let filtersSchema = "\"filters\": { \"genres\": [string], " +
+            "\"decade\": \"1980s\"|\"1990s\"|\"2000s\"|\"2010s\"|\"2020s\"|null, " +
+            "\"status\": \"any\"|\"owned\"|\"to_download\"|null, " +
+            "\"people\": [string] }"
         switch kindHint {
         case .movie:
             lines.append(
                 "You recommend movies for a tinder-style picker. " +
                 "Reply with a single JSON object, no prose, no markdown: " +
                 "{ \"titles\": [ { \"title\": string, \"year\": int|null } ], " +
-                "\"filters\": { \"genres\": [string], \"decade\": \"1980s\"|\"1990s\"|\"2000s\"|\"2010s\"|\"2020s\"|null, " +
-                "\"status\": \"any\"|\"owned\"|\"to_download\"|null } }."
+                filtersSchema + "}."
             )
             lines.append("Return only movies — no TV shows.")
         case .show:
@@ -47,8 +61,7 @@ public enum DiscoverLLMPrompt {
                 "You recommend TV shows for a tinder-style picker. " +
                 "Reply with a single JSON object, no prose, no markdown: " +
                 "{ \"titles\": [ { \"title\": string, \"year\": int|null } ], " +
-                "\"filters\": { \"genres\": [string], \"decade\": \"1980s\"|\"1990s\"|\"2000s\"|\"2010s\"|\"2020s\"|null, " +
-                "\"status\": \"any\"|\"owned\"|\"to_download\"|null } }."
+                filtersSchema + "}."
             )
             lines.append("Return only TV shows — no movies.")
         case .auto:
@@ -57,8 +70,7 @@ public enum DiscoverLLMPrompt {
                 "Decide for each title whether it is a movie or a TV show based on the mood. " +
                 "Reply with a single JSON object, no prose, no markdown: " +
                 "{ \"titles\": [ { \"title\": string, \"year\": int|null, \"kind\": \"movie\"|\"show\" } ], " +
-                "\"filters\": { \"genres\": [string], \"decade\": \"1980s\"|\"1990s\"|\"2000s\"|\"2010s\"|\"2020s\"|null, " +
-                "\"status\": \"any\"|\"owned\"|\"to_download\"|null } }."
+                filtersSchema + "}."
             )
             lines.append("Label each title with `\"kind\": \"movie\"` or `\"kind\": \"show\"` as appropriate.")
         }
@@ -74,6 +86,7 @@ public enum DiscoverLLMPrompt {
         }
         lines.append("Return exactly \(count) distinct \(kindLabel) in `titles`.")
         lines.append("`filters.genres` may name standard genres (Action, Comedy, Drama, Thriller, etc.) — at most 3.")
+        lines.append("`filters.people` lists actor or director names explicitly mentioned in the mood — empty array if none.")
         lines.append("`filters.status` is `owned` only when the user clearly wants what they already have.")
         if !exclude.isEmpty {
             lines.append("Do NOT include any of these already-shown titles:")
@@ -92,6 +105,7 @@ public enum DiscoverLLMPrompt {
             let genres: [String]?
             let decade: String?
             let status: String?
+            let people: [String]?
         }
         struct Root: Decodable {
             let titles: [TitleRow]
@@ -121,8 +135,10 @@ public enum DiscoverLLMPrompt {
                 default: return nil
                 }
             }
+            let people = root.filters?.people ?? []
             return Response(suggestions: suggestions,
-                            filters: SuggestedFilters(genres: genres, decade: decade, status: status))
+                            filters: SuggestedFilters(genres: genres, decade: decade,
+                                                      status: status, people: people))
         } catch {
             throw ParseError.malformedJSON(underlying: error)
         }

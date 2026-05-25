@@ -23,13 +23,16 @@ public struct DiscoverCardView: View {
     let item: DiscoverItem
     @Binding var isHovered: Bool
     var dragOffset: CGSize = .zero
+    var credits: TMDBCredits?
 
     public init(item: DiscoverItem,
                 isHovered: Binding<Bool>,
-                dragOffset: CGSize = .zero) {
+                dragOffset: CGSize = .zero,
+                credits: TMDBCredits? = nil) {
         self.item = item
         self._isHovered = isHovered
         self.dragOffset = dragOffset
+        self.credits = credits
     }
 
     public var body: some View {
@@ -212,7 +215,7 @@ public struct DiscoverCardView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .frame(height: headerH, alignment: .topLeading)
 
-                // GLASS region — overview + genres.
+                // GLASS region — overview + director + cast + genres.
                 VStack(alignment: .leading, spacing: 12) {
                     if let overview = item.result.overview, !overview.isEmpty {
                         ScrollView {
@@ -227,6 +230,33 @@ public struct DiscoverCardView: View {
                         Text("No overview available", bundle: .module)
                             .scaledFont(size: 12)
                             .foregroundStyle(.secondary)
+                    }
+                    // Director line
+                    if let credits = credits, let dirName = directorName(from: credits) {
+                        HStack(spacing: 4) {
+                            Text("Directed by", bundle: .module)
+                                .scaledFont(size: 10, weight: .medium)
+                                .foregroundStyle(.secondary)
+                            Text(dirName)
+                                .scaledFont(size: 11, weight: .semibold)
+                                .foregroundStyle(.primary)
+                        }
+                    }
+                    // Cast headshots — up to 4 chips with face + name below
+                    if let credits = credits, !credits.cast.isEmpty {
+                        HStack(spacing: 8) {
+                            ForEach(credits.cast.prefix(4)) { person in
+                                VStack(spacing: 4) {
+                                    personAvatar(person)
+                                    Text(person.name)
+                                        .scaledFont(size: 9, weight: .medium)
+                                        .foregroundStyle(.secondary)
+                                        .lineLimit(1)
+                                        .frame(width: 50)
+                                }
+                            }
+                            Spacer(minLength: 0)
+                        }
                     }
                     genreLabels(limit: 12)
                 }
@@ -266,6 +296,33 @@ public struct DiscoverCardView: View {
                         )
                 }
             }
+        }
+    }
+
+    private func directorName(from credits: TMDBCredits) -> String? {
+        credits.crew.first(where: { $0.job == "Director" })?.name
+    }
+
+    @ViewBuilder
+    private func personAvatar(_ person: TMDBCreditPerson) -> some View {
+        if let url = person.posterURL {
+            AsyncImage(url: url) { phase in
+                switch phase {
+                case .success(let img):
+                    img.resizable().scaledToFill()
+                default:
+                    Image(systemName: "person.fill")
+                        .foregroundStyle(.tertiary)
+                }
+            }
+            .frame(width: 38, height: 38)
+            .clipShape(Circle())
+            .overlay(Circle().stroke(.white.opacity(0.2), lineWidth: 0.5))
+        } else {
+            Circle()
+                .fill(Color.secondary.opacity(0.2))
+                .frame(width: 38, height: 38)
+                .overlay(Image(systemName: "person.fill").foregroundStyle(.tertiary))
         }
     }
 
