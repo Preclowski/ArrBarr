@@ -21,16 +21,12 @@ public struct DiscoverCardView: View {
             originChip
             actionRow
         }
-        .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 14)
-                .fill(Color.primary.opacity(0.04))
-        )
+        .padding(.vertical, 8)
     }
 
     private var poster: some View {
         RemotePoster(url: item.result.posterURL, apiKey: nil)
-            .frame(width: 160, height: 240)
+            .frame(width: 240, height: 360)
             .clipShape(RoundedRectangle(cornerRadius: 8))
     }
 
