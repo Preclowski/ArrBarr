@@ -56,7 +56,9 @@ public struct InLibraryBadge: View {
             .foregroundStyle(Color.accentColor)
             .padding(.horizontal, 5)
             .padding(.vertical, 1)
-            .background(Color.accentColor.opacity(0.18), in: Capsule())
+            .overlay(
+                Capsule().stroke(Color.accentColor.opacity(0.6), lineWidth: 0.75)
+            )
     }
 }
 
