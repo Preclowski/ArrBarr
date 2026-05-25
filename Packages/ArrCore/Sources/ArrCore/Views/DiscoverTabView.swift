@@ -101,9 +101,10 @@ public struct DiscoverTabView: View {
         } else if viewModel.current != nil {
             VStack(spacing: 14) {
                 cardStack
+                    .padding(.horizontal, 28)     // visible side margins around the card
                 cardActionRow
+                    .padding(.horizontal, 12)     // wider cluster — CTAs hug the popover edges
             }
-            .padding(.horizontal, 28)         // visible side margins
             .padding(.top, 14)
             .padding(.bottom, 14)
         } else {
