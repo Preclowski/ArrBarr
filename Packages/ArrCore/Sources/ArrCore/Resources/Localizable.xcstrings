@@ -12687,6 +12687,17 @@
         }
       }
     },
+    "Configure an LLM provider in Settings to get AI-powered picks.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Configure an LLM provider in Settings to get AI-powered picks."
+          }
+        }
+      }
+    },
     "What do you feel like watching?": {
       "extractionState": "manual",
       "localizations": {

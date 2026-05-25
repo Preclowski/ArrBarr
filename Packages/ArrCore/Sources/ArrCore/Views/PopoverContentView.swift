@@ -256,7 +256,6 @@ public struct PopoverContentView: View {
                                 viewModel: discoverViewModel,
                                 llmAvailable: chatAvailable,
                                 radarrAvailable: radarrConfigured,
-                                tmdbAvailable: configStore.tmdbEnabled,
                                 onAddToRadarr: openDiscoverAddToRadarr,
                                 onAddToSonarr: openDiscoverAddToSonarr,
                                 onOpenDetail: { item, source, arrId in

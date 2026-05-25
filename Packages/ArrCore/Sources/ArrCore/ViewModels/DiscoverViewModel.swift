@@ -43,9 +43,6 @@ public final class DiscoverViewModel: ObservableObject {
     /// back face for cast headshots + director.
     @Published public private(set) var creditsCache: [Int: TMDBCredits] = [:]
     @Published public private(set) var llmPoolExhausted: Bool = false
-    /// True when the last TMDB fetch returned > 0 raw server-side results
-    /// but all were filtered out as already in-library.
-    @Published public private(set) var tmdbAllInLibrary: Bool = false
     /// True when the last TMDB fetch returned 0 results from the server
     /// (filter combo returned nothing — not a network error).
     @Published public private(set) var tmdbReturnedEmpty: Bool = false
@@ -150,15 +147,8 @@ public final class DiscoverViewModel: ObservableObject {
 
     // MARK: - User-action tick helpers
 
-    /// Call when the user explicitly changes a filter (decade, genre, status,
-    /// monitoredOnly). This increments the tick so the View's task(id:)
-    /// fires a reshuffle — but LLM-applied filter changes do NOT call this,
-    /// avoiding an infinite loop.
-    public func userChangedFilter() {
-        userActionTick &+= 1
-    }
-
-    /// Call when the user submits the mood field.
+    /// Call when the user submits the mood field. Bumps `userActionTick`
+    /// so the View's `task(id:)` fires a reshuffle.
     public func userSubmittedMood() {
         userActionTick &+= 1
     }
@@ -371,7 +361,6 @@ public final class DiscoverViewModel: ObservableObject {
         libraryDrained = false
         llmDormant = false
         llmPoolExhausted = false
-        tmdbAllInLibrary = false
         tmdbReturnedEmpty = false
         failedSources.removeAll()
         errorMessage = nil
