@@ -73,10 +73,6 @@ public struct PopoverContentView: View {
     /// snaps back to the 4-item peek 30s after the user expands it.
     @State private var bannerCollapseTask: Task<Void, Never>?
 
-    private var hideTabBarForDiscoverTinder: Bool {
-        selectedTab == .discover && discoverViewModel.stage == .tinder
-    }
-
     private var sonarrConfigured: Bool { configStore.sonarr.isVisible }
     private var radarrConfigured: Bool { configStore.radarr.isVisible }
     private var lidarrConfigured: Bool { configStore.lidarr.isVisible }
@@ -223,9 +219,7 @@ public struct PopoverContentView: View {
                         onClose: { self.historySource = nil }
                     )
                 } else if anyArrConfigured {
-                    if !hideTabBarForDiscoverTinder {
-                        tabBar
-                    }
+                    tabBar
                     Group {
                         switch selectedTab {
                         case .queue: queueContent
