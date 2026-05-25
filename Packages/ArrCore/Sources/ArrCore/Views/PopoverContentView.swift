@@ -27,6 +27,7 @@ public struct PopoverContentView: View {
     @State private var historyRefreshNonce = 0
     @StateObject private var searchViewModel = SearchViewModel()
     @StateObject private var chatHolder = ChatViewModelHolder()
+    @StateObject private var discoverViewModel = DiscoverViewModel()
     @State private var searchResult: SearchResult?
     @State private var detailItem: QueueItem?
     /// Queue tab filter — substring match against item titles. Mirrors
@@ -127,6 +128,7 @@ public struct PopoverContentView: View {
                     whisparrConfig: configStore.whisparr
                 )
                 chatHolder.reconfigure(store: configStore)
+                configureDiscover()
             }
             .onChange(of: ChatViewModelHolder.signature(store: configStore)) { _, _ in
                 chatHolder.reconfigure(store: configStore)
@@ -221,7 +223,24 @@ public struct PopoverContentView: View {
                         case .chat:
                             chatTabContent
                         case .discover:
-                            DiscoverTabView()
+                            DiscoverTabView(
+                                viewModel: discoverViewModel,
+                                llmAvailable: chatAvailable,
+                                onAddToRadarr: { result in
+                                    self.searchResult = result
+                                },
+                                onOpenDetail: { item, arrId in
+                                    DetailRequest.post(
+                                        DetailRequest.syntheticItem(
+                                            source: .radarr,
+                                            entityId: arrId,
+                                            title: item.result.title,
+                                            posterURL: item.result.posterURL,
+                                            posterRequiresAuth: false
+                                        )
+                                    )
+                                }
+                            )
                         }
                     }
                 } else {
@@ -1348,6 +1367,45 @@ public struct PopoverContentView: View {
     private func health(for source: QueueItem.Source) -> [ArrHealthRecord] {
         guard configStore.showIndexerIssues else { return [] }
         return viewModel.health.records(for: source)
+    }
+
+    // MARK: - Discover wiring
+
+    /// Constructs sources and configures `discoverViewModel` once on appear.
+    /// The `cachedLibrary` var lives inside this function's scope so all three
+    /// source closures capture the same value by reference — one fetch, shared
+    /// dedup across TMDB / library / LLM sources.
+    private func configureDiscover() {
+        let radarrCfg = configStore.radarr
+        let radarrClient = RadarrClient(config: radarrCfg)
+
+        // Single shared library cache so fetchAllMovies is called at most once
+        // per session across all three source closures.
+        var cachedLibrary: [RadarrLibraryRecord] = []
+        let fetchLibrary: @MainActor () async throws -> [RadarrLibraryRecord] = {
+            if cachedLibrary.isEmpty {
+                cachedLibrary = try await radarrClient.fetchAllMovies()
+            }
+            return cachedLibrary
+        }
+        let ownedIds: @MainActor () -> Set<Int> = {
+            Set(cachedLibrary.compactMap(\.tmdbId))
+        }
+
+        discoverViewModel.configure(
+            tmdb: configStore.tmdbEnabled
+                ? DiscoverSources.tmdb(
+                    apiKey: configStore.tmdbApiKey,
+                    libraryTmdbIds: ownedIds
+                )
+                : nil,
+            library: DiscoverSources.library(fetchAll: fetchLibrary),
+            // TODO: wire LLM once provider accessor exists on ChatViewModelHolder.
+            // ChatViewModel.provider is currently private with no public getter;
+            // adding a mutator on ChatViewModelHolder just for this was out of scope
+            // per the task spec. Pass nil for MVP — Discover works without it.
+            llm: nil
+        )
     }
 
     // MARK: - Upcoming content

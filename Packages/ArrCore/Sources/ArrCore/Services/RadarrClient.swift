@@ -242,6 +242,22 @@ public actor RadarrClient: ArrAPIClient {
         return (try? JSONDecoder().decode([RadarrLibraryRecord].self, from: data)) ?? []
     }
 
+    /// Title-based movie lookup used by the Discover LLM source to enrich
+    /// LLM-suggested titles with poster / ratings / overview before they
+    /// surface as cards. Mirrors Radarr's `/api/v3/movie/lookup?term=…`.
+    func lookupMovies(term: String) async throws -> [RadarrLookupRecord] {
+        if DemoMode.isActive { return [] }
+        guard config.isConfigured else { throw HTTPError.notConfigured }
+        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
+        let url = try http.url(
+            base: config.baseURL,
+            path: "\(apiBase)/movie/lookup",
+            query: [URLQueryItem(name: "term", value: term)]
+        )
+        let data = try await http.get(url, headers: apiHeaders)
+        return (try? JSONDecoder().decode([RadarrLookupRecord].self, from: data)) ?? []
+    }
+
     private static func unifyCalendar(_ r: RadarrCalendarRecord, baseURL: String) -> UpcomingItem? {
         let (dateStr, releaseType): (String?, String) =
             if r.digitalRelease != nil { (r.digitalRelease, "Digital") }
