@@ -456,18 +456,137 @@ public struct DiscoverPickerView: View {
         }
     }
 
-    /// Maps `SuggestedFilter.Category` to the View's `PickerCategory`
-    /// and renders the appropriate "+ Add" chip. Centralised so the
-    /// Suggestions row and `pillRows` use the same affordance.
+    /// Maps `SuggestedFilter.Category` to the right "+ Add" affordance.
+    /// People: free-text TMDB search (unbounded universe). Catalog
+    /// categories (genre / decade / rating / runtime): native Menu
+    /// listing every item from the enum + a "Custom…" fallback that
+    /// flips into the inline text field for free-form LLM intent.
     @ViewBuilder
     private func suggestionsAddChip(for cat: SuggestedFilter.Category) -> some View {
         switch cat {
         case .people:  addPersonChip
-        case .genre:   addCustomTagChip(for: .genre)
-        case .decade:  addCustomTagChip(for: .decade)
-        case .rating:  addCustomTagChip(for: .rating)
-        case .runtime: addCustomTagChip(for: .runtime)
+        case .genre:   catalogAddMenu(for: .genre)
+        case .decade:  catalogAddMenu(for: .decade)
+        case .rating:  catalogAddMenu(for: .rating)
+        case .runtime: catalogAddMenu(for: .runtime)
         case .ai:      EmptyView()
+        }
+    }
+
+    /// "+ Add" chip that opens a native macOS Menu pre-populated with
+    /// the category's full enum + a Custom… option. If the user is
+    /// already in the inline-text-input mode for this category (they
+    /// chose Custom…), render the text field instead of the menu.
+    @ViewBuilder
+    private func catalogAddMenu(for category: PickerCategory) -> some View {
+        if addingTagFor == category.rawValue {
+            // Custom… was chosen — render the inline text field via the
+            // existing helper. Same UX as before for free-form labels.
+            addCustomTagChip(for: category)
+        } else {
+            Menu {
+                catalogMenuItems(for: category)
+                Divider()
+                Button {
+                    addingTagFor = category.rawValue
+                    newCustomTagText = ""
+                } label: {
+                    Label {
+                        Text("Custom…", bundle: .module)
+                    } icon: {
+                        Image(systemName: "pencil")
+                    }
+                }
+            } label: {
+                HStack(spacing: 3) {
+                    Image(systemName: "plus")
+                        .scaledFont(size: 8, weight: .bold)
+                    Text("Add", bundle: .module)
+                        .scaledFont(size: 10, weight: .semibold)
+                }
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 7).padding(.vertical, 4)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 5)
+                        .stroke(Color.secondary.opacity(0.5),
+                                style: StrokeStyle(lineWidth: 1, dash: [3, 2]))
+                )
+            }
+            .menuStyle(.borderlessButton)
+            .menuIndicator(.hidden)
+            .fixedSize()
+        }
+    }
+
+    /// Menu items for a single catalog category — one Button per enum
+    /// case. Toggles the same filter state the in-catalog pill taps do,
+    /// so picking from this menu is equivalent to tapping the pill in
+    /// More filters. Already-active items render a leading checkmark.
+    @ViewBuilder
+    private func catalogMenuItems(for category: PickerCategory) -> some View {
+        switch category {
+        case .people:
+            // People uses TMDB free-text search, never the catalog menu.
+            EmptyView()
+        case .genre:
+            ForEach(DiscoverGenre.allCases, id: \.self) { g in
+                Button {
+                    if viewModel.filter.genres.contains(g) {
+                        viewModel.filter.genres.remove(g)
+                    } else {
+                        viewModel.filter.genres.insert(g)
+                    }
+                    viewModel.userChangedFilter()
+                } label: {
+                    if viewModel.filter.genres.contains(g) {
+                        Label(g.displayName, systemImage: "checkmark")
+                    } else {
+                        Text(g.displayName)
+                    }
+                }
+            }
+        case .decade:
+            ForEach(DiscoverDecade.allCases.filter { $0 != .any }, id: \.self) { d in
+                Button {
+                    viewModel.filter.decade =
+                        (viewModel.filter.decade == d) ? .any : d
+                    viewModel.userChangedFilter()
+                } label: {
+                    if viewModel.filter.decade == d {
+                        Label(d.rawValue, systemImage: "checkmark")
+                    } else {
+                        Text(d.rawValue)
+                    }
+                }
+            }
+        case .rating:
+            ForEach(DiscoverRatingTier.allCases.filter { $0 != .any }, id: \.self) { r in
+                Button {
+                    viewModel.filter.rating =
+                        (viewModel.filter.rating == r) ? .any : r
+                    viewModel.userChangedFilter()
+                } label: {
+                    if viewModel.filter.rating == r {
+                        Label(r.rawValue.capitalized, systemImage: "checkmark")
+                    } else {
+                        Text(r.rawValue.capitalized)
+                    }
+                }
+            }
+        case .runtime:
+            ForEach(DiscoverRuntime.allCases.filter { $0 != .any }, id: \.self) { rt in
+                Button {
+                    viewModel.filter.runtime =
+                        (viewModel.filter.runtime == rt) ? .any : rt
+                    viewModel.userChangedFilter()
+                } label: {
+                    if viewModel.filter.runtime == rt {
+                        Label(rt.rawValue.capitalized, systemImage: "checkmark")
+                    } else {
+                        Text(rt.rawValue.capitalized)
+                    }
+                }
+            }
         }
     }
 
