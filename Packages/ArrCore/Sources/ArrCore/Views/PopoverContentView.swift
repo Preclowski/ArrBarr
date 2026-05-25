@@ -241,10 +241,14 @@ public struct PopoverContentView: View {
                                         PlatformURLOpener.open(url)
                                     }
                                 },
-                                onOpenDetail: { item, arrId in
+                                onAddToSonarr: { result in
+                                    // SearchAddPanel already handles source:.sonarr routing.
+                                    self.searchResult = result
+                                },
+                                onOpenDetail: { item, source, arrId in
                                     DetailRequest.post(
                                         DetailRequest.syntheticItem(
-                                            source: .radarr,
+                                            source: source,
                                             entityId: arrId,
                                             title: item.result.title,
                                             posterURL: item.result.posterURL,
@@ -253,6 +257,9 @@ public struct PopoverContentView: View {
                                     )
                                 }
                             )
+                            .onChange(of: discoverViewModel.mediaSelection) { _, _ in
+                                Task { await configureDiscover() }
+                            }
                         }
                     }
                 } else {
@@ -1383,57 +1390,80 @@ public struct PopoverContentView: View {
 
     // MARK: - Discover wiring
 
-    /// Constructs sources and configures `discoverViewModel` once on appear.
-    /// The `cachedLibrary` var lives inside this function's scope so all three
-    /// source closures capture the same value by reference — one fetch, shared
-    /// dedup across TMDB / library / LLM sources.
+    /// Constructs sources and configures `discoverViewModel` based on the
+    /// current `mediaSelection`. Called on appear and on every media-kind
+    /// toggle so the right sources are wired in.
     private func configureDiscover() async {
         let radarrCfg = configStore.radarr
+        let sonarrCfg = configStore.sonarr
         let radarrClient = RadarrClient(config: radarrCfg)
+        let sonarrClient = SonarrClient(config: sonarrCfg)
 
-        // Single shared library cache so fetchAllMovies is called at most once
-        // per session across all three source closures.
-        var cachedLibrary: [RadarrLibraryRecord] = []
+        let selection = discoverViewModel.mediaSelection
 
-        // Eagerly load the library so all three sources have an authoritative
-        // owned-id set on their first call. Without this, TMDB Discover's first
-        // page slips through with the empty set and surfaces owned movies as
-        // "Add to Radarr".
-        do {
-            cachedLibrary = try await radarrClient.fetchAllMovies()
-        } catch {
-            // If the library fetch fails, sources just see an empty set —
-            // matches current behavior, the failure surfaces per-source.
+        // Per-selection library caches — eagerly loaded once per configure call.
+        var cachedRadarrLibrary: [RadarrLibraryRecord] = []
+        var cachedSonarrLibrary: [SonarrLibraryRecord] = []
+
+        if selection == .movie || selection == .auto {
+            do { cachedRadarrLibrary = try await radarrClient.fetchAllMovies() } catch {}
+        }
+        if selection == .show || selection == .auto {
+            do { cachedSonarrLibrary = try await sonarrClient.fetchAllSeries() } catch {}
         }
 
-        let fetchLibrary: @MainActor () async throws -> [RadarrLibraryRecord] = {
-            if cachedLibrary.isEmpty {
-                cachedLibrary = try await radarrClient.fetchAllMovies()
+        let fetchRadarr: @MainActor () async throws -> [RadarrLibraryRecord] = {
+            if cachedRadarrLibrary.isEmpty {
+                cachedRadarrLibrary = try await radarrClient.fetchAllMovies()
             }
-            return cachedLibrary
+            return cachedRadarrLibrary
         }
-        let ownedIds: @MainActor () -> Set<Int> = {
-            Set(cachedLibrary.compactMap(\.tmdbId))
+        let fetchSonarr: @MainActor () async throws -> [SonarrLibraryRecord] = {
+            if cachedSonarrLibrary.isEmpty {
+                cachedSonarrLibrary = try await sonarrClient.fetchAllSeries()
+            }
+            return cachedSonarrLibrary
+        }
+        let ownedMovieIds: @MainActor () -> Set<Int> = {
+            Set(cachedRadarrLibrary.compactMap(\.tmdbId))
         }
 
+        let tmdbSource: DiscoverViewModel.TMDBSource? = configStore.tmdbEnabled
+            ? (selection == .show
+               ? DiscoverSources.tmdbShows(
+                   apiKey: configStore.tmdbApiKey,
+                   libraryTvdbIds: { [] }   // TMDB TV ids != TVDB ids; skip owned filter
+               )
+               : DiscoverSources.tmdbMovies(
+                   apiKey: configStore.tmdbApiKey,
+                   libraryTmdbIds: ownedMovieIds
+               ))
+            : nil
+
+        let librarySource: DiscoverViewModel.LibrarySource? = selection == .show
+            ? DiscoverSources.sonarrLibrary(fetchAll: fetchSonarr)
+            : DiscoverSources.radarrLibrary(fetchAll: fetchRadarr)
+
+        let llmSource: DiscoverViewModel.LLMSource? = chatAvailable
+            ? DiscoverSources.llm(
+                provider: chatHolder.vm.provider,
+                radarrLookup: { term in
+                    try await radarrClient.lookupMovies(term: term)
+                },
+                sonarrLookup: { term in
+                    try await sonarrClient.lookupSeries(term: term)
+                },
+                libraryTmdbIds: ownedMovieIds,
+                decade: { [vm = discoverViewModel] in vm.filter.decade },
+                kindHint: selection
+            )
+            : nil
+
+        // In .auto mode skip TMDB and Library — LLM is the only source.
         discoverViewModel.configure(
-            tmdb: configStore.tmdbEnabled
-                ? DiscoverSources.tmdb(
-                    apiKey: configStore.tmdbApiKey,
-                    libraryTmdbIds: ownedIds
-                )
-                : nil,
-            library: DiscoverSources.library(fetchAll: fetchLibrary),
-            llm: chatAvailable
-                ? DiscoverSources.llm(
-                    provider: chatHolder.vm.provider,
-                    radarrLookup: { term in
-                        try await radarrClient.lookupMovies(term: term)
-                    },
-                    libraryTmdbIds: ownedIds,
-                    decade: { [vm = discoverViewModel] in vm.filter.decade }
-                )
-                : nil
+            tmdb: selection == .auto ? nil : tmdbSource,
+            library: selection == .auto ? nil : librarySource,
+            llm: llmSource
         )
     }
 

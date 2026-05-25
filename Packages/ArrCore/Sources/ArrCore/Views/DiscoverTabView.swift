@@ -5,7 +5,8 @@ public struct DiscoverTabView: View {
     let llmAvailable: Bool
     let radarrAvailable: Bool
     let onAddToRadarr: (SearchResult) -> Void
-    let onOpenDetail: (DiscoverItem, Int) -> Void
+    let onAddToSonarr: (SearchResult) -> Void
+    let onOpenDetail: (DiscoverItem, QueueItem.Source, Int) -> Void
 
     @State private var mode: Mode = .picker
     @State private var showMatched: Bool = false
@@ -16,11 +17,13 @@ public struct DiscoverTabView: View {
                 llmAvailable: Bool,
                 radarrAvailable: Bool,
                 onAddToRadarr: @escaping (SearchResult) -> Void,
-                onOpenDetail: @escaping (DiscoverItem, Int) -> Void) {
+                onAddToSonarr: @escaping (SearchResult) -> Void,
+                onOpenDetail: @escaping (DiscoverItem, QueueItem.Source, Int) -> Void) {
         self.viewModel = viewModel
         self.llmAvailable = llmAvailable
         self.radarrAvailable = radarrAvailable
         self.onAddToRadarr = onAddToRadarr
+        self.onAddToSonarr = onAddToSonarr
         self.onOpenDetail = onOpenDetail
     }
 
@@ -112,8 +115,12 @@ public struct DiscoverTabView: View {
 
     private func dispatch(_ item: DiscoverItem) {
         switch item.action {
-        case .addToRadarr: onAddToRadarr(item.result)
-        case .openDetail(let arrId): onOpenDetail(item, arrId)
+        case .addToRadarr:
+            onAddToRadarr(item.result)
+        case .addToSonarr:
+            onAddToSonarr(item.result)
+        case .openDetail(let source, let arrId):
+            onOpenDetail(item, source, arrId)
         }
     }
 
@@ -206,6 +213,7 @@ public struct DiscoverTabView: View {
         guard let item = viewModel.current else { return "plus" }
         switch item.action {
         case .addToRadarr: return "plus"
+        case .addToSonarr: return "tv"
         case .openDetail:  return "play.fill"
         }
     }
@@ -213,6 +221,7 @@ public struct DiscoverTabView: View {
         guard let item = viewModel.current else { return "Add to Radarr" }
         switch item.action {
         case .addToRadarr: return "Add to Radarr"
+        case .addToSonarr: return "Add to Sonarr"
         case .openDetail:  return "Watch"
         }
     }

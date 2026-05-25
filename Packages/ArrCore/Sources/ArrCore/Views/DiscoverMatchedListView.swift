@@ -135,12 +135,14 @@ public struct DiscoverMatchedListView: View {
     private func actionIcon(_ action: DiscoverAction) -> String {
         switch action {
         case .addToRadarr: return "plus.circle.fill"
+        case .addToSonarr: return "tv.circle.fill"
         case .openDetail:  return "play.circle.fill"
         }
     }
     private func actionHelp(_ action: DiscoverAction) -> LocalizedStringKey {
         switch action {
         case .addToRadarr: return "Add to Radarr"
+        case .addToSonarr: return "Add to Sonarr"
         case .openDetail:  return "Watch"
         }
     }

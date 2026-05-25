@@ -17,23 +17,55 @@ public struct DiscoverPickerView: View {
     }
 
     public var body: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 0) {
             ScrollView {
-                VStack(spacing: 16) {
-                    Spacer().frame(height: 6)
+                VStack(spacing: 14) {
+                    kindSelector
+                    Spacer().frame(height: 2)
                     pillCloud
                     if llmAvailable {
                         orWriteLabel
-                        composer
                     }
                 }
                 .padding(.horizontal, 14)
-                .padding(.vertical, 12)
+                .padding(.vertical, 14)
             }
-            discoverButton
-                .padding(.horizontal, 14)
-                .padding(.bottom, 12)
+            if llmAvailable {
+                composer
+                    .padding(.horizontal, 10)
+                    .padding(.bottom, 10)
+            } else {
+                discoverButtonFallback
+            }
         }
+    }
+
+    // MARK: - Kind selector
+
+    private var kindSelector: some View {
+        HStack(spacing: 4) {
+            ForEach(DiscoverMediaSelection.allCases) { kind in
+                Button {
+                    if viewModel.mediaSelection != kind {
+                        viewModel.mediaSelection = kind
+                        viewModel.mediaSelectionChanged()
+                    }
+                } label: {
+                    Text(LocalizedStringKey(kind.displayName), bundle: .module)
+                        .scaledFont(size: 11,
+                                    weight: viewModel.mediaSelection == kind ? .semibold : .medium)
+                        .padding(.horizontal, 10).padding(.vertical, 5)
+                        .background(Capsule().fill(
+                            viewModel.mediaSelection == kind
+                                ? Color.accentColor.opacity(0.20)
+                                : Color.primary.opacity(0.06)))
+                        .foregroundStyle(viewModel.mediaSelection == kind
+                                         ? Color.accentColor : .secondary)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     // MARK: - Pill cloud
@@ -97,7 +129,7 @@ public struct DiscoverPickerView: View {
         }
     }
 
-    // MARK: - "Or write" + composer
+    // MARK: - "Or write" label
 
     private var orWriteLabel: some View {
         Text("Or describe what you want:", bundle: .module)
@@ -107,8 +139,11 @@ public struct DiscoverPickerView: View {
             .padding(.top, 4)
     }
 
+    // MARK: - Composer (pinned to bottom when LLM available)
+
     /// Chat-style composer. NO left icon — match ChatView's inputBar
-    /// exactly (TextField + send arrow only).
+    /// exactly (TextField + send arrow only). Send is enabled when either
+    /// free text OR pills are non-empty.
     private var composer: some View {
         HStack(spacing: 8) {
             TextField("",
@@ -119,29 +154,31 @@ public struct DiscoverPickerView: View {
                 .focused($freeTextFocused)
                 .lineLimit(1...4)
                 .scaledFont(size: 13)
-                .onSubmit { commit() }
+                .onSubmit {
+                    if canCommit { commit() }
+                }
             Button {
                 commit()
             } label: {
                 Image(systemName: "arrow.up.circle.fill")
                     .scaledFont(size: 22)
                     .foregroundStyle(
-                        freeText.trimmingCharacters(in: .whitespaces).isEmpty
-                            ? Color.secondary
-                            : Color.accentColor
+                        canCommit
+                            ? Color.accentColor
+                            : Color.secondary
                     )
             }
             .buttonStyle(.plain)
-            .disabled(freeText.trimmingCharacters(in: .whitespaces).isEmpty)
+            .disabled(!canCommit)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
         .glassyFloatingBar()
     }
 
-    // MARK: - Discover CTA
+    // MARK: - Fallback Discover button (no LLM)
 
-    private var discoverButton: some View {
+    private var discoverButtonFallback: some View {
         Button {
             commit()
         } label: {
@@ -155,6 +192,17 @@ public struct DiscoverPickerView: View {
             .padding(.vertical, 9)
         }
         .modifier(GlassProminentButtonStyle())
+        .disabled(!canCommit)
+        .padding(.horizontal, 14)
+        .padding(.bottom, 12)
+    }
+
+    // MARK: - Commit logic
+
+    private var canCommit: Bool {
+        !freeText.trimmingCharacters(in: .whitespaces).isEmpty
+            || !viewModel.pickedMoods.isEmpty
+            || !viewModel.filter.genres.isEmpty
     }
 
     /// Compose final moodText from picked pills + free text, kick off
