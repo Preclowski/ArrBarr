@@ -109,18 +109,10 @@ public struct DiscoverCardView: View {
 
             // FOOTER PLATE — solid color, no material, no gradient.
             VStack(alignment: .leading, spacing: 4) {
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Text(item.result.title)
-                        .scaledFont(size: 17, weight: .semibold)
-                        .foregroundStyle(.primary)
-                        .lineLimit(1)
-                    Spacer(minLength: 0)
-                    if let y = item.result.year {
-                        Text(verbatim: "\(y)")
-                            .scaledFont(size: 13, weight: .medium, monospacedDigit: true)
-                            .foregroundStyle(.tertiary)
-                    }
-                }
+                Text(titleAndYear)
+                    .scaledFont(size: 17, weight: .semibold)
+                    .foregroundStyle(.primary)
+                    .lineLimit(2)
                 if !runtimeCertSegments.isEmpty {
                     Text(runtimeCertSegments.joined(separator: " · "))
                         .scaledFont(size: 11)
@@ -133,12 +125,7 @@ public struct DiscoverCardView: View {
                         ForEach(chips, id: \.label) { RatingPill(chip: $0) }
                     }
                 }
-                if !item.result.genres.isEmpty {
-                    Text(item.result.genres.prefix(4).joined(separator: " · "))
-                        .scaledFont(size: 11)
-                        .foregroundStyle(.tertiary)
-                        .lineLimit(1)
-                }
+                genreLabels(limit: 3)
             }
             .padding(12)
             .frame(width: w, height: footerH, alignment: .topLeading)
@@ -151,44 +138,25 @@ public struct DiscoverCardView: View {
 
     @ViewBuilder
     private func backFace(w: CGFloat, h: CGFloat) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .top, spacing: 10) {
-                RemotePoster(
-                    url: item.result.posterURL,
-                    apiKey: nil,
-                    size: CGSize(width: 40, height: 60),
-                    cornerRadius: 4
-                )
-                .frame(width: 40, height: 60)
-                VStack(alignment: .leading, spacing: 3) {
-                    HStack(alignment: .firstTextBaseline, spacing: 6) {
-                        Text(item.result.title)
-                            .scaledFont(size: 15, weight: .semibold)
-                            .foregroundStyle(.primary)
-                            .lineLimit(2)
-                        Spacer(minLength: 0)
-                        if let y = item.result.year {
-                            Text(verbatim: "\(y)")
-                                .scaledFont(size: 12, weight: .medium, monospacedDigit: true)
-                                .foregroundStyle(.tertiary)
-                        }
-                    }
-                    if !runtimeCertSegments.isEmpty {
-                        Text(runtimeCertSegments.joined(separator: " · "))
-                            .scaledFont(size: 11)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                    }
-                    let chips = discoverRatingChips(for: item.result)
-                    if !chips.isEmpty {
-                        HStack(spacing: 4) {
-                            ForEach(chips, id: \.label) { RatingPill(chip: $0) }
-                        }
+        VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(titleAndYear)
+                    .scaledFont(size: 16, weight: .semibold)
+                    .foregroundStyle(.primary)
+                    .lineLimit(2)
+                if !runtimeCertSegments.isEmpty {
+                    Text(runtimeCertSegments.joined(separator: " · "))
+                        .scaledFont(size: 11)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+                let chips = discoverRatingChips(for: item.result)
+                if !chips.isEmpty {
+                    HStack(spacing: 5) {
+                        ForEach(chips, id: \.label) { RatingPill(chip: $0) }
                     }
                 }
             }
-
-            Divider()
 
             if let overview = item.result.overview, !overview.isEmpty {
                 ScrollView {
@@ -205,12 +173,7 @@ public struct DiscoverCardView: View {
                     .foregroundStyle(.secondary)
             }
 
-            if !item.result.genres.isEmpty {
-                Divider()
-                Text(item.result.genres.joined(separator: ", "))
-                    .scaledFont(size: 11)
-                    .foregroundStyle(.tertiary)
-            }
+            genreLabels(limit: 5)
         }
         .padding(14)
         .frame(width: w, height: h, alignment: .topLeading)
@@ -218,6 +181,34 @@ public struct DiscoverCardView: View {
     }
 
     // MARK: - Shared helpers
+
+    private var titleAndYear: String {
+        if let y = item.result.year {
+            return "\(item.result.title) (\(y))"
+        }
+        return item.result.title
+    }
+
+    @ViewBuilder
+    private func genreLabels(limit: Int) -> some View {
+        let visible = Array(item.result.genres.prefix(limit))
+        if !visible.isEmpty {
+            HStack(spacing: 4) {
+                ForEach(visible, id: \.self) { g in
+                    Text(g)
+                        .scaledFont(size: 10, weight: .semibold)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .overlay(
+                            Capsule()
+                                .stroke(Color.secondary.opacity(0.5), lineWidth: 0.75)
+                        )
+                }
+                Spacer(minLength: 0)
+            }
+        }
+    }
 
     private var runtimeCertSegments: [String] {
         [
