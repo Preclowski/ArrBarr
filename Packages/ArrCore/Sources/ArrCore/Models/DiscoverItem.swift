@@ -138,25 +138,57 @@ public enum DiscoverDecade: String, CaseIterable, Identifiable, Sendable {
     }
 }
 
+public enum DiscoverRatingTier: String, CaseIterable, Identifiable, Sendable {
+    case any
+    case highlyRated      // vote_average >= 7.5
+    case cultFavorite     // vote_count  >= 500
+
+    public var id: String { rawValue }
+    public var minRating: Double? {
+        self == .highlyRated ? 7.5 : nil
+    }
+    public var minVoteCount: Int? {
+        self == .cultFavorite ? 500 : nil
+    }
+}
+
+public enum DiscoverRuntime: String, CaseIterable, Identifiable, Sendable {
+    case any
+    case short          // runtime < 90 minutes
+    case epic           // runtime > 150 minutes
+
+    public var id: String { rawValue }
+    public var lessThan: Int? { self == .short ? 90 : nil }
+    public var greaterThan: Int? { self == .epic ? 150 : nil }
+}
+
 public struct DiscoverFilter: Equatable, Sendable {
     public var decade: DiscoverDecade
     public var monitoredOnly: Bool          // legacy — keep for back-compat in tests
     public var genres: Set<DiscoverGenre>
     public var status: DiscoverStatus
+    public var rating: DiscoverRatingTier
+    public var runtime: DiscoverRuntime
+
     public init(decade: DiscoverDecade = .any,
                 monitoredOnly: Bool = false,
                 genres: Set<DiscoverGenre> = [],
-                status: DiscoverStatus = .any) {
+                status: DiscoverStatus = .any,
+                rating: DiscoverRatingTier = .any,
+                runtime: DiscoverRuntime = .any) {
         self.decade = decade
         self.monitoredOnly = monitoredOnly
         self.genres = genres
         self.status = status
+        self.rating = rating
+        self.runtime = runtime
     }
-    /// Old `matches(year:monitored:)` becomes a richer overload — keep
-    /// the existing one as a thin wrapper so prior tests still pass.
+
+    /// Old `matches(year:monitored:)` — thin wrapper for back-compat.
     public func matches(year: Int?, monitored: Bool?) -> Bool {
         matches(year: year, monitored: monitored, hasFile: nil, genres: nil)
     }
+
     public func matches(year: Int?, monitored: Bool?,
                         hasFile: Bool?, genres recordGenres: [String]?) -> Bool {
         if let range = decade.range {
@@ -175,6 +207,18 @@ public struct DiscoverFilter: Equatable, Sendable {
             let wanted = Set(genres.map { $0.displayName.lowercased() })
             if names.intersection(wanted).isEmpty { return false }
         }
+        return true
+    }
+
+    /// Richer overload that also filters by runtime (minutes).
+    /// Rating is handled at the TMDB source level, not here.
+    public func matches(year: Int?, monitored: Bool?, hasFile: Bool?,
+                        genres recordGenres: [String]?, runtime recordRuntime: Int?) -> Bool {
+        if !matches(year: year, monitored: monitored, hasFile: hasFile, genres: recordGenres) {
+            return false
+        }
+        if let lt = runtime.lessThan, let r = recordRuntime, r >= lt { return false }
+        if let gt = runtime.greaterThan, let r = recordRuntime, r <= gt { return false }
         return true
     }
 }

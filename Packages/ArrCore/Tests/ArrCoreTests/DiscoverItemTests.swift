@@ -63,4 +63,21 @@ final class DiscoverItemTests: XCTestCase {
                                  genres: ["Drama"]),
                        "genre intersection must be non-empty")
     }
+
+    func test_filter_ratingAndRuntime_areExposed() {
+        var f = DiscoverFilter()
+        f.rating = .highlyRated
+        f.runtime = .short
+        XCTAssertEqual(f.rating.minRating, 7.5)
+        XCTAssertEqual(f.runtime.lessThan, 90)
+    }
+
+    func test_filter_runtimeOverload_excludesByRuntime() {
+        var f = DiscoverFilter()
+        f.runtime = .short
+        XCTAssertTrue(f.matches(year: 2010, monitored: true, hasFile: true,
+                                genres: ["Comedy"], runtime: 85))
+        XCTAssertFalse(f.matches(year: 2010, monitored: true, hasFile: true,
+                                 genres: ["Comedy"], runtime: 95))
+    }
 }
