@@ -154,7 +154,7 @@ final class DiscoverViewModelTests: XCTestCase {
         let vm = freshVM()
         vm.configure(
             tmdb: { _, _ in [] }, library: { _ in [] },
-            llm: { _, _ in llmCalled = true; return .init(items: [], suggestedFilters: nil) }
+            llm: { _, _ in llmCalled = true; return [] }
         )
         vm.moodText = ""
         await vm.start()
@@ -169,8 +169,7 @@ final class DiscoverViewModelTests: XCTestCase {
             llm: { excludes, _ in
                 receivedExcludes.append(excludes)
                 let base = receivedExcludes.count * 100
-                return .init(items: [self.makeItem(base + 1, .llm), self.makeItem(base + 2, .llm)],
-                             suggestedFilters: nil)
+                return [self.makeItem(base + 1, .llm), self.makeItem(base + 2, .llm)]
             }
         )
         vm.moodText = "noir"
@@ -240,71 +239,5 @@ final class DiscoverViewModelTests: XCTestCase {
         XCTAssertEqual(vm.lastFetchedCounts[.tmdb], 0)
         XCTAssertNotNil(vm.sourceErrors[.tmdb])
         XCTAssertTrue(vm.sourceErrors[.tmdb]?.contains("boom") ?? false)
-    }
-
-    func test_llmDrain_appliesSuggestedFilters() async {
-        let suggested = DiscoverLLMPrompt.SuggestedFilters(
-            genres: [.comedy, .drama], decade: .nineties, status: .owned)
-        let vm = freshVM()
-        vm.configure(
-            tmdb: { _, _ in [] }, library: { _ in [] },
-            llm: { _, _ in
-                DiscoverViewModel.LLMResult(
-                    items: [self.makeItem(1, .llm)],
-                    suggestedFilters: suggested)
-            }
-        )
-        vm.moodText = "x"
-        await vm.start()
-        XCTAssertEqual(vm.filter.genres, [.comedy, .drama])
-        XCTAssertEqual(vm.filter.decade, .nineties)
-        XCTAssertEqual(vm.filter.status, .owned)
-    }
-
-    func test_suggestedFilters_sortsByUsageDescending() {
-        let vm = freshVM()
-        vm.bumpPersonUsage("Quentin Tarantino")
-        vm.bumpPersonUsage("Quentin Tarantino")
-        vm.bumpPersonUsage("Christopher Nolan")
-        let ids = vm.suggestedFilters.map(\.id)
-        let tarantinoIdx = ids.firstIndex(of: "person.Quentin Tarantino")
-        let nolanIdx = ids.firstIndex(of: "person.Christopher Nolan")
-        XCTAssertNotNil(tarantinoIdx)
-        XCTAssertNotNil(nolanIdx)
-        XCTAssertLessThan(tarantinoIdx!, nolanIdx!,
-                          "More-used Tarantino should come before less-used Nolan")
-    }
-
-    func test_suggestedFilters_excludesActiveFilters() {
-        let vm = freshVM()
-        vm.filter.genres = [.comedy]
-        let ids = vm.suggestedFilters.map(\.id)
-        XCTAssertFalse(ids.contains("genre.\(DiscoverGenre.comedy.rawValue)"),
-                       "Comedy is active, should not appear in suggestions")
-        XCTAssertTrue(ids.contains("genre.\(DiscoverGenre.drama.rawValue)"),
-                      "Inactive Drama should still appear")
-    }
-
-    func test_suggestedFilters_coldStartReturnsCuratedTen() {
-        let vm = freshVM()
-        let filters = vm.suggestedFilters
-        XCTAssertEqual(filters.count, 10,
-                       "Fresh VM should show 10 curated discovery suggestions")
-        // First entry should be the top-of-curation Tarantino.
-        XCTAssertEqual(filters.first?.id, "person.Quentin Tarantino")
-    }
-
-    func test_suggestionsByCategory_includesAiStarters_whenLLMAvailable() {
-        let vm = freshVM()
-        let grouped = vm.suggestionsByCategory(llmAvailable: true)
-        XCTAssertFalse((grouped[.ai] ?? []).isEmpty,
-                       "AI bucket should expose starter prompts when LLM available")
-        XCTAssertTrue((grouped[.people] ?? []).contains(where: { $0.id == "person.Quentin Tarantino" }))
-    }
-
-    func test_suggestionsByCategory_excludesAi_whenLLMUnavailable() {
-        let vm = freshVM()
-        let grouped = vm.suggestionsByCategory(llmAvailable: false)
-        XCTAssertNil(grouped[.ai], "AI bucket should be absent without LLM")
     }
 }
