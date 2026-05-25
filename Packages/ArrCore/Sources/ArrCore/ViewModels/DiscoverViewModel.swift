@@ -63,6 +63,10 @@ public final class DiscoverViewModel: ObservableObject {
         await start()
     }
 
+    /// On swipe-right the action and the swiped card are surfaced via
+    /// `pendingAction` + `pendingActionItem` while `current` advances to
+    /// the next card. The view must consume `pendingActionItem` (not
+    /// `current`) when executing the swipe-right side effect.
     public func swipe(right: Bool) async {
         guard let item = current else { return }
         if right {
@@ -77,7 +81,8 @@ public final class DiscoverViewModel: ObservableObject {
     }
 
     public func requestMoreLLM() async {
-        guard llm != nil else { return }
+        guard llm != nil,
+              !moodText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         llmDormant = false
         llmPoolExhausted = false
         await drain(source: .llm)
@@ -103,7 +108,8 @@ public final class DiscoverViewModel: ObservableObject {
         if library != nil && !failedSources.contains(.library) && !libraryDrained {
             out.append(.library)
         }
-        if llm != nil && !failedSources.contains(.llm) && !llmDormant && !moodText.isEmpty {
+        if llm != nil && !failedSources.contains(.llm) && !llmDormant
+           && !moodText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             out.append(.llm)
         }
         return out
