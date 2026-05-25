@@ -59,8 +59,30 @@ public struct DiscoverTabView: View {
                 )
             } else {
                 swipingContent
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                if viewModel.current != nil {
+                    ctaIsland
+                }
             }
         }
+    }
+
+    /// Sticky bottom CTA "island" — same shape as DetailView's
+    /// downloadCTAStrip: thinMaterial panel spanning edge-to-edge with
+    /// a hairline divider on top. Keeps Skip / Watch / List visually
+    /// grouped on a single surface instead of floating in dead space.
+    private var ctaIsland: some View {
+        cardActionRow
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .frame(maxWidth: .infinity)
+            .background(
+                Rectangle()
+                    .fill(.thinMaterial)
+                    .overlay(alignment: .top) {
+                        Divider().opacity(0.4)
+                    }
+            )
     }
 
     private var tinderTopBar: some View {
@@ -99,14 +121,13 @@ public struct DiscoverTabView: View {
                 Spacer()
             }
         } else if viewModel.current != nil {
-            VStack(spacing: 14) {
-                cardStack
-                    .padding(.horizontal, 28)     // visible side margins around the card
-                cardActionRow
-                    .padding(.horizontal, 12)     // wider cluster — CTAs hug the popover edges
-            }
-            .padding(.top, 14)
-            .padding(.bottom, 14)
+            cardStack
+                .padding(.horizontal, 28)
+                .padding(.top, 14)
+                .padding(.bottom, 14)
+            // cardActionRow no longer sits here — it's pinned at the
+            // bottom of tinderMode as `ctaIsland` (thinMaterial strip,
+            // same pattern as DetailView's downloadCTAStrip).
         } else {
             emptyStackState
         }
