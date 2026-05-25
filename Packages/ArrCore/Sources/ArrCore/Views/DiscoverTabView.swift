@@ -147,21 +147,28 @@ public struct DiscoverTabView: View {
         }
     }
 
-    /// 3-card stack: top + 2 behind. Cap card height to 0.92 of the
-    /// available vertical space so the peeking cards underneath actually
-    /// peek (stack effect requires breathing room).
+    /// 3-card stack: top + 2 behind. Enforce 2:3 poster aspect ratio.
+    /// Height is bounded by the vertical budget (84% of available space to leave room
+    /// for peeking cards) and the width-constrained ratio (width × 1.5).
+    /// Width is derived from height to maintain 2:3, and may be narrower than the
+    /// container (centered by default).
     private var cardStack: some View {
         let stack = visibleStack.enumerated().map { ($0, $1) }
         return GeometryReader { proxy in
-            let cardWidth  = proxy.size.width
-            let cardHeight = proxy.size.height * 0.92  // leave ~8% so 3rd card's offset stays in view
+            // Reserve ~16% of vertical space for the peek of the 3rd card
+            // (22pt offset × 2 plus a bit of breathing room).
+            let availableH = proxy.size.height * 0.84
+            // Enforce 2:3 poster aspect. Card height is bounded by both the
+            // vertical budget and what fits at the container's width × 1.5.
+            let h = min(availableH, proxy.size.width * 1.5)
+            let w = h / 1.5
             ZStack {
                 ForEach(stack.reversed(), id: \.1.id) { (idx, item) in
                     DiscoverCardView(item: item)
-                        .frame(width: cardWidth, height: cardHeight)
-                        .scaleEffect(1.0 - CGFloat(idx) * 0.06, anchor: .top)
-                        .offset(y: CGFloat(idx) * 16)
-                        .opacity(idx == 0 ? 1.0 : 1.0 - Double(idx) * 0.20)
+                        .frame(width: w, height: h)
+                        .scaleEffect(1.0 - CGFloat(idx) * 0.08, anchor: .top)
+                        .offset(y: CGFloat(idx) * 22)
+                        .opacity(idx == 0 ? 1.0 : 1.0 - Double(idx) * 0.25)
                         .allowsHitTesting(idx == 0)
                         .zIndex(Double(stack.count - idx))
                         .animation(.spring(response: 0.32, dampingFraction: 0.85),
