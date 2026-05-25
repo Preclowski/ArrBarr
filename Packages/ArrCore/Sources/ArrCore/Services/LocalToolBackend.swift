@@ -74,6 +74,7 @@ public actor LocalToolBackend: ToolBackend {
         case "lidarr_get_artist_albums":    return try await lidarrGetArtistAlbums(arguments)
         case "lidarr_monitor_album":        return try await lidarrMonitorAlbum(arguments)
         case "lidarr_search_album":         return try await lidarrSearchAlbumTool(arguments)
+        case "discover_in_tinder":          return try await discoverInTinder(arguments)
         default:
             throw LocalToolError.unknownTool(name)
         }
@@ -513,6 +514,28 @@ public actor LocalToolBackend: ToolBackend {
         } catch {
             return ToolCallOutput(text: "PARTIAL: monitoring on, but search FAILED: \(error.localizedDescription). Tell the user the album is monitored but they need to manually search.")
         }
+    }
+
+    /// Switch to the Discover tab in tinder mode with a user-supplied mood.
+    /// Posts a NotificationCenter event so the View layer owns the mutation —
+    /// keeps the tool stateless and avoids a circular dependency on UI types.
+    private func discoverInTinder(_ arguments: JSONValue) async throws -> ToolCallOutput {
+        guard case .object(let dict) = arguments,
+              case .string(let mood) = dict["mood"] else {
+            return ToolCallOutput(text: "ERROR: missing required 'mood' string.")
+        }
+        let trimmed = mood.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            return ToolCallOutput(text: "ERROR: 'mood' cannot be empty.")
+        }
+        await MainActor.run {
+            NotificationCenter.default.post(
+                name: .arrBarrOpenDiscoverInTinder,
+                object: nil,
+                userInfo: ["mood": trimmed]
+            )
+        }
+        return ToolCallOutput(text: "Opened Discover in tinder mode with mood: \(trimmed)")
     }
 
     /// Standalone search trigger — same as the search component of

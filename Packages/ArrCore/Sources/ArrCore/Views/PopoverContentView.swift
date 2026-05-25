@@ -189,6 +189,17 @@ public struct PopoverContentView: View {
                 searchAddFromChat = true
                 searchResult = result
             }
+            .onReceive(NotificationCenter.default.publisher(for: .arrBarrOpenDiscoverInTinder)) { note in
+                guard let mood = note.userInfo?["mood"] as? String,
+                      !mood.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+                withAnimation(.smooth(duration: 0.22)) {
+                    selectedTab = .discover
+                }
+                discoverViewModel.moodText = mood
+                discoverViewModel.userSubmittedMood()
+                discoverViewModel.stage = .tinder
+                Task { await discoverViewModel.reshuffle() }
+            }
     }
 
     private var mainContent: some View {

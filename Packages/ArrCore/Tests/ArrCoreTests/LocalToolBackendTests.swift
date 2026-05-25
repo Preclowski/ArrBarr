@@ -53,24 +53,30 @@ struct LocalToolBackendTests {
         LocalToolBackend(sonarr: sonarrConfig(), radarr: radarrConfig(), lidarr: lidarrConfig())
     }
 
-    @Test("listTools returns 12 tools when sonarr/radarr/lidarr are all configured")
+    @Test("listTools returns 18 tools when sonarr/radarr/lidarr are all configured")
     func listToolsReturns12Tools() async throws {
         let tools = try await backend().listTools()
-        #expect(tools.count == 12)
+        #expect(tools.count == 18)
         let names = Set(tools.map(\.name))
         let expected: Set<String> = [
             "sonarr_search",
-            "radarr_search",
-            "sonarr_get_series",
-            "radarr_get_movies",
             "sonarr_get_calendar",
+            "sonarr_get_series",
+            "sonarr_monitor_season",
+            "sonarr_search_episodes",
+            "radarr_search",
             "radarr_get_calendar",
-            "sonarr_add_series",
-            "radarr_add_movie",
+            "radarr_get_movies",
+            "radarr_search_movie",
             "lidarr_search",
             "lidarr_get_artists",
             "lidarr_get_calendar",
-            "lidarr_add_artist",
+            "lidarr_get_artist_albums",
+            "lidarr_monitor_album",
+            "lidarr_search_album",
+            "suggest_titles",
+            "discover_in_tinder",
+            "arr_health",
         ]
         #expect(names == expected)
     }
@@ -80,8 +86,16 @@ struct LocalToolBackendTests {
         let b = LocalToolBackend(sonarr: sonarrConfig(), radarr: .empty, lidarr: .empty)
         let tools = try await b.listTools()
         let names = Set(tools.map(\.name))
-        #expect(names.allSatisfy { $0.hasPrefix("sonarr_") })
-        #expect(tools.count == 4)
+        // Radarr/Lidarr tools absent; suggest_titles, discover_in_tinder, arr_health
+        // are included whenever sonarr or radarr is configured.
+        #expect(!names.contains("radarr_search"))
+        #expect(!names.contains("lidarr_search"))
+        #expect(names.contains("sonarr_search"))
+        #expect(names.contains("suggest_titles"))
+        #expect(names.contains("discover_in_tinder"))
+        #expect(names.contains("arr_health"))
+        // sonarr(5) + suggest(1) + discover_in_tinder(1) + arr_health(1) = 8
+        #expect(tools.count == 8)
     }
 
     @Test("listTools includes TMDB tools when key set and matching arr configured")

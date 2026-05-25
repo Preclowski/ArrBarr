@@ -33,6 +33,11 @@ public enum ChatToolCatalog {
         if includeSonarr || includeRadarr {
             arr.append(contentsOf: suggestTools)
         }
+        // discover_in_tinder requires at least one arr so the Discover
+        // tab is available.
+        if includeSonarr || includeRadarr {
+            arr.append(contentsOf: discoverTinderTools)
+        }
         // arr_health needs at least one arr to query.
         if includeSonarr || includeRadarr || includeLidarr || includeWhisparr {
             arr.append(contentsOf: healthTools)
@@ -466,6 +471,32 @@ public enum ChatToolCatalog {
                     ]),
                 ]),
                 "required": .array([.string("kind"), .string("items")]),
+            ])
+        ),
+    ]
+
+    // MARK: - Discover tinder launcher
+
+    private static let discoverTinderTools: [MCPTool] = [
+        MCPTool(
+            name: "discover_in_tinder",
+            description: """
+                Open the Discover tab in tinder/swipe mode with a specific mood. \
+                Use ONLY when the user explicitly asks to see suggestions in tinder, \
+                swipe view, or discover. The user must clearly say they want a \
+                swipeable picker — don't infer it from a casual recommendation request. \
+                Example phrases: "show me X in tinder", "I want to swipe through X", \
+                "open discover with X".
+                """,
+            inputSchema: .object([
+                "type": .string("object"),
+                "properties": .object([
+                    "mood": .object([
+                        "type": .string("string"),
+                        "description": .string("The user's mood description, e.g. '90s comedies with Adam Sandler'."),
+                    ]),
+                ]),
+                "required": .array([.string("mood")]),
             ])
         ),
     ]
