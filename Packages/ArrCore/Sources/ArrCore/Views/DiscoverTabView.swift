@@ -7,6 +7,7 @@ public struct DiscoverTabView: View {
     let onAddToRadarr: (SearchResult) -> Void
     let onAddToSonarr: (SearchResult) -> Void
     let onOpenDetail: (DiscoverItem, QueueItem.Source, Int) -> Void
+    let onClose: () -> Void
 
     @State private var showMatched: Bool = false
     @State private var dragOffset: CGSize = .zero
@@ -18,33 +19,19 @@ public struct DiscoverTabView: View {
                 radarrAvailable: Bool,
                 onAddToRadarr: @escaping (SearchResult) -> Void,
                 onAddToSonarr: @escaping (SearchResult) -> Void,
-                onOpenDetail: @escaping (DiscoverItem, QueueItem.Source, Int) -> Void) {
+                onOpenDetail: @escaping (DiscoverItem, QueueItem.Source, Int) -> Void,
+                onClose: @escaping () -> Void) {
         self.viewModel = viewModel
         self.llmAvailable = llmAvailable
         self.radarrAvailable = radarrAvailable
         self.onAddToRadarr = onAddToRadarr
         self.onAddToSonarr = onAddToSonarr
         self.onOpenDetail = onOpenDetail
+        self.onClose = onClose
     }
 
     public var body: some View {
-        ZStack {
-            switch viewModel.stage {
-            case .picker:
-                DiscoverPickerView(
-                    viewModel: viewModel,
-                    llmAvailable: llmAvailable,
-                    onSubmit: {
-                        withAnimation(.smooth(duration: 0.22)) { viewModel.stage = .tinder }
-                        Task { await viewModel.reshuffle() }
-                    }
-                )
-            case .tinder:
-                tinderMode
-            }
-        }
-        // No `.task(id:)` for filter changes here anymore — explicit
-        // submit via picker is the only reshuffle trigger.
+        tinderMode
     }
 
     // MARK: - Tinder mode
@@ -100,7 +87,7 @@ public struct DiscoverTabView: View {
                 if showMatched {
                     withAnimation(.smooth(duration: 0.22)) { showMatched = false }
                 } else {
-                    withAnimation(.smooth(duration: 0.22)) { viewModel.stage = .picker }
+                    onClose()
                 }
             })
             if showMatched {
@@ -120,48 +107,19 @@ public struct DiscoverTabView: View {
 
     private var filterSummaryChip: some View {
         HStack(spacing: 6) {
-            // Chip body — tappable to re-open picker.
-            Button {
-                withAnimation(.smooth(duration: 0.22)) {
-                    viewModel.stage = .picker
-                }
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "line.3.horizontal.decrease")
-                        .scaledFont(size: 10, weight: .semibold)
-                        .foregroundStyle(.secondary)
-                    Text(activeFilterSummary)
-                        .scaledFont(size: 11, weight: .medium)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                }
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-
-            // × — clear all filters, stay in tinder.
-            Button {
-                withAnimation(.smooth(duration: 0.2)) {
-                    clearAllFilters()
-                }
-            } label: {
-                Image(systemName: "xmark.circle.fill")
-                    .scaledFont(size: 11)
-                    .foregroundStyle(.tertiary)
-            }
-            .buttonStyle(.plain)
-            .help(Text("Clear filters", bundle: .module))
+            Image(systemName: "line.3.horizontal.decrease")
+                .scaledFont(size: 10, weight: .semibold)
+                .foregroundStyle(.secondary)
+            Text(activeFilterSummary)
+                .scaledFont(size: 11, weight: .medium)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .truncationMode(.middle)
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
         .background(Capsule().fill(Color.primary.opacity(0.06)))
         .overlay(Capsule().stroke(Color.primary.opacity(0.18), lineWidth: 0.5))
-    }
-
-    private func clearAllFilters() {
-        viewModel.moodText = ""
-        Task { await viewModel.reshuffle() }
     }
 
     private func dispatch(_ item: DiscoverItem) {
@@ -398,7 +356,7 @@ public struct DiscoverTabView: View {
                 .buttonStyle(.plain)
             }
             Button {
-                withAnimation(.smooth(duration: 0.22)) { viewModel.stage = .picker }
+                onClose()
             } label: {
                 Text("Back to mood", bundle: .module)
                     .scaledFont(size: 11, weight: .semibold)
