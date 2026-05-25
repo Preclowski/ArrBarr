@@ -125,7 +125,7 @@ public struct DiscoverTabView: View {
         if viewModel.isLoading && viewModel.current == nil {
             VStack {
                 Spacer()
-                ProgressView().controlSize(.small)
+                ShimmerThinkingLabel()
                 Spacer()
             }
         } else if viewModel.current != nil {

@@ -410,16 +410,15 @@ private struct MessageBubble: View {
 
 private struct ThinkingRow: View {
     var body: some View {
-        // Match MessageBubble's icon-column layout (18pt frame + 8pt spacing)
-        // so the spinner sits exactly where a message's sparkles/wrench icon
-        // would, and the "Thinking…" label aligns with bubble text.
         HStack(alignment: .firstTextBaseline, spacing: 8) {
-            ProgressView()
-                .controlSize(.small)
-                .frame(width: 18, alignment: .center)
-            Text("Thinking…", bundle: .module)
-                .scaledFont(size: 13)
+            // Reserve the same 18pt column as MessageBubble's icon so
+            // the shimmer label aligns with bubble text below it. The
+            // little dot is the "thought bubble" anchor.
+            Image(systemName: "sparkle")
+                .scaledFont(size: 11, weight: .medium)
                 .foregroundStyle(.secondary)
+                .frame(width: 18, alignment: .center)
+            ShimmerThinkingLabel()
             Spacer(minLength: 0)
         }
     }

@@ -1821,6 +1821,35 @@
         }
       }
     },
+    "Considering…": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Überlege…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Considerando…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Réflexion…"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rozważam…"
+          }
+        }
+      }
+    },
     "Continue": {
       "extractionState": "manual",
       "localizations": {
@@ -2594,6 +2623,35 @@
         }
       }
     },
+    "Evaluating…": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bewerte…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Evaluando…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Évaluation…"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oceniam…"
+          }
+        }
+      }
+    },
     "Existing files": {
       "extractionState": "manual",
       "localizations": {
@@ -2760,6 +2818,35 @@
           "stringUnit": {
             "state": "translated",
             "value": "Filtruj…"
+          }
+        }
+      }
+    },
+    "Finding ideas…": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suche Ideen…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buscando ideas…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cherche des idées…"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Szukam pomysłów…"
           }
         }
       }
@@ -6996,6 +7083,35 @@
         }
       }
     },
+    "Thinking…": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Denke nach…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pensando…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Réflexion…"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Myślę…"
+          }
+        }
+      }
+    },
     "Today": {
       "localizations": {
         "de": {
@@ -7646,6 +7762,35 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ekran powitalny"
+          }
+        }
+      }
+    },
+    "Weighing options…": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wäge Optionen ab…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sopesando opciones…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pèse les options…"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ważę opcje…"
           }
         }
       }
