@@ -4,58 +4,29 @@ public struct DiscoverMatchedListView: View {
     let items: [DiscoverItem]
     let onAct: (DiscoverItem) -> Void
     let onRemove: (DiscoverItem) -> Void
-    let onKeepPlaying: () -> Void
 
     public init(items: [DiscoverItem],
                 onAct: @escaping (DiscoverItem) -> Void,
-                onRemove: @escaping (DiscoverItem) -> Void,
-                onKeepPlaying: @escaping () -> Void) {
+                onRemove: @escaping (DiscoverItem) -> Void) {
         self.items = items
         self.onAct = onAct
         self.onRemove = onRemove
-        self.onKeepPlaying = onKeepPlaying
     }
 
     public var body: some View {
-        VStack(spacing: 0) {
-            header
-            Divider()
-            if items.isEmpty {
-                emptyState
-            } else {
-                ScrollView {
-                    LazyVStack(spacing: 8) {
-                        ForEach(items) { item in
-                            row(item)
-                        }
+        if items.isEmpty {
+            emptyState
+        } else {
+            ScrollView {
+                LazyVStack(spacing: 8) {
+                    ForEach(items) { item in
+                        row(item)
                     }
-                    .padding(.vertical, 8)
-                    .padding(.horizontal, 12)
                 }
+                .padding(.vertical, 8)
+                .padding(.horizontal, 12)
             }
         }
-    }
-
-    private var header: some View {
-        HStack {
-            Text("Your picks", bundle: .module)
-                .scaledFont(size: 13, weight: .semibold)
-            Spacer()
-            Button(action: onKeepPlaying) {
-                HStack(spacing: 4) {
-                    Image(systemName: "rectangle.stack.fill")
-                        .scaledFont(size: 11, weight: .semibold)
-                    Text("Keep playing", bundle: .module)
-                        .scaledFont(size: 11, weight: .semibold)
-                }
-                .foregroundStyle(Color.accentColor)
-                .padding(.horizontal, 10).padding(.vertical, 5)
-                .background(Capsule().fill(Color.accentColor.opacity(0.15)))
-            }
-            .buttonStyle(.plain)
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
     }
 
     private var emptyState: some View {
@@ -74,7 +45,7 @@ public struct DiscoverMatchedListView: View {
 
     @ViewBuilder
     private func row(_ item: DiscoverItem) -> some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 0) {
             SearchResultRow(result: item.result, onTap: { onAct(item) })
                 .frame(maxWidth: .infinity, alignment: .leading)
             Button {
@@ -83,9 +54,11 @@ public struct DiscoverMatchedListView: View {
                 Image(systemName: "xmark.circle.fill")
                     .scaledFont(size: 13)
                     .foregroundStyle(.tertiary)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 8)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .padding(.trailing, 8)
             .help(Text("Remove", bundle: .module))
         }
     }

@@ -54,8 +54,7 @@ public struct DiscoverTabView: View {
                 DiscoverMatchedListView(
                     items: viewModel.matched,
                     onAct: dispatch,
-                    onRemove: { item in viewModel.removeMatch(id: item.dedupKey) },
-                    onKeepPlaying: { withAnimation(.smooth) { showMatched = false } }
+                    onRemove: { item in viewModel.removeMatch(id: item.dedupKey) }
                 )
             } else {
                 swipingContent
@@ -88,10 +87,18 @@ public struct DiscoverTabView: View {
     private var tinderTopBar: some View {
         HStack(spacing: 6) {
             FloatingBackButton(action: {
-                withAnimation(.smooth(duration: 0.22)) {
-                    viewModel.stage = .picker
+                if showMatched {
+                    withAnimation(.smooth(duration: 0.22)) { showMatched = false }
+                } else {
+                    withAnimation(.smooth(duration: 0.22)) { viewModel.stage = .picker }
                 }
             })
+            if showMatched {
+                Text("Your picks", bundle: .module)
+                    .scaledFont(size: 15, weight: .semibold)
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+            }
             Spacer()
         }
         .padding(.horizontal, 12)
