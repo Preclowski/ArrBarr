@@ -898,11 +898,11 @@ public struct DiscoverPickerView: View {
     private var chipComposer: some View {
         FlowLayout(spacing: 5) {
             kindChip
-            composerCategoryGroup(.genre, label: "Gatunek:")
-            composerCategoryGroup(.people, label: "Z:")
-            composerCategoryGroup(.decade, label: "Z lat:")
-            composerCategoryGroup(.rating, label: "Vibe:")
-            composerCategoryGroup(.runtime, label: "Długość:")
+            composerCategoryGroup(.genre, label: "Gatunek")
+            composerCategoryGroup(.people, label: "Z")
+            composerCategoryGroup(.decade, label: "Z lat")
+            composerCategoryGroup(.rating, label: "Vibe")
+            composerCategoryGroup(.runtime, label: "Długość")
             Image(systemName: "sparkles")
                 .scaledFont(size: 11, weight: .semibold)
                 .foregroundStyle(Color.pink.opacity(0.8))
@@ -941,10 +941,15 @@ public struct DiscoverPickerView: View {
     ) -> some View {
         let chips = activeChips.filter { $0.category == category }
         if !chips.isEmpty {
-            Text(label, bundle: .module)
-                .scaledFont(size: 11, weight: .medium)
-                .italic()
-                .foregroundStyle(.secondary)
+            // Colon rendered separately so xcstrings doesn't generate
+            // colliding symbols for "Vibe:" vs the existing "Vibe" key.
+            HStack(spacing: 0) {
+                Text(label, bundle: .module)
+                Text(verbatim: ":")
+            }
+            .scaledFont(size: 11, weight: .medium)
+            .italic()
+            .foregroundStyle(.secondary)
             ForEach(chips) { chip in activeChipView(chip) }
         }
     }
