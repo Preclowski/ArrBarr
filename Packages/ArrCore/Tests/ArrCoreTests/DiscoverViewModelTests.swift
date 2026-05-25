@@ -41,23 +41,47 @@ final class DiscoverViewModelTests: XCTestCase {
         XCTAssertEqual(vm.current?.dedupKey, "tmdb:3")
     }
 
-    func test_swipeRight_surfacesPendingActionItem_snapshotOfPreviousCard() async {
+    func test_swipeRight_appendsToMatched_andAdvances() async {
         let vm = DiscoverViewModel()
         vm.configure(
             tmdb: { _, _ in [self.makeItem(1, .tmdb), self.makeItem(2, .tmdb)] },
             library: { _ in [] }, llm: nil
         )
         await vm.start()
-        let original = vm.current
-        XCTAssertEqual(original?.dedupKey, "tmdb:1")
+        XCTAssertEqual(vm.current?.dedupKey, "tmdb:1")
+        XCTAssertTrue(vm.matched.isEmpty)
         await vm.swipe(right: true)
-        XCTAssertEqual(vm.pendingAction, .addToRadarr)
-        XCTAssertEqual(vm.pendingActionItem?.dedupKey, "tmdb:1",
-                       "pendingActionItem must snapshot the swiped card even after current advances")
+        XCTAssertEqual(vm.matched.map(\.dedupKey), ["tmdb:1"])
         XCTAssertEqual(vm.current?.dedupKey, "tmdb:2")
-        vm.clearPendingAction()
-        XCTAssertNil(vm.pendingAction)
-        XCTAssertNil(vm.pendingActionItem)
+        await vm.swipe(right: false)
+        XCTAssertEqual(vm.matched.map(\.dedupKey), ["tmdb:1"], "left swipe must not append")
+    }
+
+    func test_removeMatch_dropsByDedupKey() async {
+        let vm = DiscoverViewModel()
+        vm.configure(
+            tmdb: { _, _ in [self.makeItem(1, .tmdb), self.makeItem(2, .tmdb)] },
+            library: { _ in [] }, llm: nil
+        )
+        await vm.start()
+        await vm.swipe(right: true)
+        await vm.swipe(right: true)
+        XCTAssertEqual(vm.matched.count, 2)
+        vm.removeMatch(id: "tmdb:1")
+        XCTAssertEqual(vm.matched.map(\.dedupKey), ["tmdb:2"])
+    }
+
+    func test_reset_clearsMatched() async {
+        let vm = DiscoverViewModel()
+        vm.configure(
+            tmdb: { _, _ in [self.makeItem(1, .tmdb)] },
+            library: { _ in [] }, llm: nil
+        )
+        await vm.start()
+        await vm.swipe(right: true)
+        XCTAssertEqual(vm.matched.count, 1)
+        await vm.reshuffle()
+        XCTAssertTrue(vm.matched.isEmpty)
     }
 
     func test_topUp_fetchesMoreWhenQueueBelowThreshold() async {

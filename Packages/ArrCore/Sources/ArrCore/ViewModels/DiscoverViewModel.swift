@@ -18,8 +18,7 @@ public final class DiscoverViewModel: ObservableObject {
     @Published public private(set) var llmPoolExhausted: Bool = false
     @Published public private(set) var isLoading: Bool = false
     @Published public private(set) var errorMessage: String?
-    @Published public private(set) var pendingAction: DiscoverAction?
-    @Published public private(set) var pendingActionItem: DiscoverItem?
+    @Published public private(set) var matched: [DiscoverItem] = []
 
     // MARK: - Source closures
 
@@ -63,21 +62,23 @@ public final class DiscoverViewModel: ObservableObject {
         await start()
     }
 
-    /// On swipe-right the action and the swiped card are surfaced via
-    /// `pendingAction` + `pendingActionItem` while `current` advances to
-    /// the next card. The view must consume `pendingActionItem` (not
-    /// `current`) when executing the swipe-right side effect.
+    /// Right swipe appends the current card to `matched` (no overlay
+    /// interrupts the swiping). Left swipe discards. Either way the next
+    /// card advances and a top-up may fire.
     public func swipe(right: Bool) async {
         guard let item = current else { return }
         if right {
-            pendingAction = item.action
-            pendingActionItem = item
+            matched.append(item)
         }
         current = nil
         advanceIfNeeded()
         if queue.count < topUpThreshold {
             scheduleTopUp()
         }
+    }
+
+    public func removeMatch(id: String) {
+        matched.removeAll { $0.dedupKey == id }
     }
 
     public func requestMoreLLM() async {
@@ -87,11 +88,6 @@ public final class DiscoverViewModel: ObservableObject {
         llmPoolExhausted = false
         await drain(source: .llm)
         advanceIfNeeded()
-    }
-
-    public func clearPendingAction() {
-        pendingAction = nil
-        pendingActionItem = nil
     }
 
     // MARK: - Round-robin fill
@@ -179,8 +175,7 @@ public final class DiscoverViewModel: ObservableObject {
         llmPoolExhausted = false
         failedSources.removeAll()
         errorMessage = nil
-        pendingAction = nil
-        pendingActionItem = nil
+        matched.removeAll()
         topUpTask?.cancel()
         topUpTask = nil
     }
