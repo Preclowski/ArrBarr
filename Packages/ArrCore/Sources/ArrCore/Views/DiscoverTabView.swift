@@ -32,9 +32,7 @@ public struct DiscoverTabView: View {
                     onKeepPlaying: { withAnimation(.smooth) { showMatched = false } }
                 )
             } else {
-                ScrollView {
-                    swipingContent.padding(.vertical, 12)
-                }
+                swipingContent
             }
         }
         .task(id: filterFingerprint) {
@@ -130,14 +128,42 @@ public struct DiscoverTabView: View {
     @ViewBuilder
     private var swipingContent: some View {
         if viewModel.isLoading && viewModel.current == nil {
-            ProgressView().controlSize(.small).padding(.top, 40)
+            VStack {
+                Spacer()
+                ProgressView().controlSize(.small)
+                Spacer()
+            }
         } else if let item = viewModel.current {
             DiscoverCardView(
                 item: item,
                 onSwipeRight: { Task { await viewModel.swipe(right: true) } },
                 onSwipeLeft:  { Task { await viewModel.swipe(right: false) } }
             )
-            .padding(.horizontal, 12)
+        } else {
+            emptyStackState
+        }
+    }
+
+    @ViewBuilder
+    private var emptyStackState: some View {
+        VStack(spacing: 10) {
+            Spacer()
+            Image(systemName: "rectangle.stack.fill")
+                .scaledFont(size: 22, weight: .light)
+                .foregroundStyle(.tertiary)
+            Text("No more cards", bundle: .module)
+                .scaledFont(size: 12)
+                .foregroundStyle(.secondary)
+            if viewModel.matched.count > 0 {
+                Button {
+                    withAnimation(.smooth) { showMatched = true }
+                } label: {
+                    Text("Show your picks", bundle: .module)
+                        .scaledFont(size: 11, weight: .semibold)
+                        .foregroundStyle(Color.accentColor)
+                }
+                .buttonStyle(.plain)
+            }
             if viewModel.llmPoolExhausted && llmAvailable
                && !viewModel.moodText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 Button {
@@ -153,37 +179,15 @@ public struct DiscoverTabView: View {
                     .foregroundStyle(.purple)
                 }
                 .buttonStyle(.plain)
-                .padding(.top, 6)
             }
             if !viewModel.failedSources.isEmpty {
                 Text(failureBadgeText)
                     .scaledFont(size: 10)
                     .foregroundStyle(.tertiary)
-                    .padding(.top, 6)
             }
-        } else {
-            // When swiping is exhausted but matches exist, nudge user
-            // toward their picks list.
-            VStack(spacing: 6) {
-                Image(systemName: "rectangle.stack.fill")
-                    .scaledFont(size: 22, weight: .light)
-                    .foregroundStyle(.tertiary)
-                Text("No more cards", bundle: .module)
-                    .scaledFont(size: 12)
-                    .foregroundStyle(.secondary)
-                if viewModel.matched.count > 0 {
-                    Button {
-                        withAnimation(.smooth) { showMatched = true }
-                    } label: {
-                        Text("Show your picks", bundle: .module)
-                            .scaledFont(size: 11, weight: .semibold)
-                            .foregroundStyle(Color.accentColor)
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .padding(.top, 60)
+            Spacer()
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var failureBadgeText: String {

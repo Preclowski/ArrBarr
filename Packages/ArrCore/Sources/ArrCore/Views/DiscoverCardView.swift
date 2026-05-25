@@ -14,78 +14,62 @@ public struct DiscoverCardView: View {
     }
 
     public var body: some View {
-        VStack(spacing: 12) {
-            card
-            actionRow
+        VStack(spacing: 10) {
+            card                 // .frame(maxHeight: .infinity) — eats remaining space
+            actionRow            // intrinsic height, ~36pt
         }
         .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .padding(.top, 8)
+        .padding(.bottom, 10)
     }
 
-    /// The whole poster surface IS the card. Title, year, origin chip,
-    /// and (optional) short overview live on a dark gradient pasted on
-    /// the poster's bottom edge — tinder-style.
+    /// Poster fills the available rectangle (any aspect), with title/year/
+    /// overview overlaid on a bottom gradient and origin chip top-left.
     private var card: some View {
-        // Aspect 2:3, sized to fit the popover's content column. The
-        // GeometryReader gives us the available width and we lock height
-        // to width × 1.5, so the card scales if the popover ever grows.
-        GeometryReader { proxy in
-            let w = proxy.size.width
-            let h = w * 1.5
+        ZStack(alignment: .bottomLeading) {
+            RemotePoster(url: item.result.posterURL, apiKey: nil)
+                .scaledToFill()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .clipped()
 
-            ZStack(alignment: .bottomLeading) {
-                RemotePoster(url: item.result.posterURL, apiKey: nil)
-                    .frame(width: w, height: h)
-                    .clipped()
+            // Bottom gradient for text legibility — covers ~45% of height.
+            LinearGradient(
+                colors: [.black.opacity(0.9), .black.opacity(0.0)],
+                startPoint: .bottom, endPoint: .top
+            )
+            .frame(maxHeight: .infinity, alignment: .bottom)
+            .allowsHitTesting(false)
 
-                // Bottom darkening gradient — gives the text legible
-                // contrast against any poster artwork.
-                LinearGradient(
-                    colors: [.black.opacity(0.85), .black.opacity(0.0)],
-                    startPoint: .bottom, endPoint: .top
-                )
-                .frame(height: h * 0.45)
-                .frame(maxHeight: .infinity, alignment: .bottom)
+            // Top-left origin chip on a glass shield.
+            originChip
+                .padding(10)
+                .frame(maxWidth: .infinity, maxHeight: .infinity,
+                       alignment: .topLeading)
 
-                // Top-left origin chip — small, also gets a subtle gradient
-                // shield so it stays legible on bright posters.
-                originChip
-                    .padding(10)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity,
-                           alignment: .topLeading)
-
-                // Bottom overlay: title + year on top, optional 2-line
-                // overview below. Padding pulls them off the bottom edge.
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(item.result.title)
-                        .scaledFont(size: 18, weight: .bold)
-                        .foregroundStyle(.white)
-                        .lineLimit(2)
-                        .multilineTextAlignment(.leading)
-                    if let y = item.result.year {
-                        Text(verbatim: "\(y)")
-                            .scaledFont(size: 12, weight: .medium)
-                            .foregroundStyle(.white.opacity(0.85))
-                    }
-                    if let overview = item.result.overview, !overview.isEmpty {
-                        Text(overview)
-                            .scaledFont(size: 11)
-                            .foregroundStyle(.white.opacity(0.85))
-                            .multilineTextAlignment(.leading)
-                            .lineLimit(2)
-                            .padding(.top, 2)
-                    }
+            VStack(alignment: .leading, spacing: 4) {
+                Text(item.result.title)
+                    .scaledFont(size: 18, weight: .bold)
+                    .foregroundStyle(.white)
+                    .lineLimit(2)
+                if let y = item.result.year {
+                    Text(verbatim: "\(y)")
+                        .scaledFont(size: 12, weight: .medium)
+                        .foregroundStyle(.white.opacity(0.85))
                 }
-                .padding(.horizontal, 14)
-                .padding(.bottom, 14)
+                if let overview = item.result.overview, !overview.isEmpty {
+                    Text(overview)
+                        .scaledFont(size: 11)
+                        .foregroundStyle(.white.opacity(0.85))
+                        .lineLimit(2)
+                        .padding(.top, 2)
+                }
             }
-            .frame(width: w, height: h)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            .shadow(color: .black.opacity(0.25), radius: 12, x: 0, y: 4)
+            .padding(.horizontal, 14)
+            .padding(.bottom, 14)
         }
-        // The GeometryReader collapses to zero-height by default — we
-        // pin an aspect ratio so the layout actually reserves the space.
-        .aspectRatio(2.0 / 3.0, contentMode: .fit)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .shadow(color: .black.opacity(0.25), radius: 12, x: 0, y: 4)
     }
 
     private var originChip: some View {
@@ -107,7 +91,6 @@ public struct DiscoverCardView: View {
         case .llm:     return "sparkles"
         }
     }
-
     private var originLabel: LocalizedStringKey {
         switch item.originLabel {
         case .tmdb:    return "From TMDB"
@@ -116,38 +99,35 @@ public struct DiscoverCardView: View {
         }
     }
 
-    /// Two fat CTAs split 50/50, matching the rest of the app's button
-    /// vocabulary via the shared Glass modifiers (already in scope from
-    /// PopoverContentView.swift). Left = neutral Skip, right = prominent
-    /// action whose label/icon switch on `item.action`.
+    /// DetailView-style CTAs. Bare Button + label HStack, GlassProminent,
+    /// `.tint` for skip = red, accent for primary. No `.controlSize(.large)`.
     private var actionRow: some View {
         HStack(spacing: 10) {
             Button(action: onSwipeLeft) {
-                Label {
-                    Text("Skip", bundle: .module)
-                } icon: {
+                HStack(spacing: 6) {
                     Image(systemName: "xmark")
+                        .scaledFont(size: 11, weight: .semibold)
+                    Text("Skip", bundle: .module)
+                        .scaledFont(size: 12, weight: .semibold)
                 }
-                .scaledFont(size: 13, weight: .semibold)
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 6)
+                .padding(.vertical, 7)
             }
-            .modifier(GlassButtonStyle())
-            .controlSize(.large)
+            .modifier(GlassProminentButtonStyle())
+            .tint(.red)
             .keyboardShortcut(.leftArrow, modifiers: [])
 
             Button(action: onSwipeRight) {
-                Label {
-                    Text(rightLabel, bundle: .module)
-                } icon: {
+                HStack(spacing: 6) {
                     Image(systemName: rightIcon)
+                        .scaledFont(size: 11, weight: .semibold)
+                    Text(rightLabel, bundle: .module)
+                        .scaledFont(size: 12, weight: .semibold)
                 }
-                .scaledFont(size: 13, weight: .semibold)
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 6)
+                .padding(.vertical, 7)
             }
             .modifier(GlassProminentButtonStyle())
-            .controlSize(.large)
             .keyboardShortcut(.rightArrow, modifiers: [])
         }
     }
