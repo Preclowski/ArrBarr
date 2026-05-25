@@ -274,20 +274,63 @@ public struct DiscoverPickerView: View {
                     selectedRow
                     Divider().padding(.horizontal, 12)
                     availableRow
+                    moodStarters
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 14)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
-            if llmAvailable {
-                composer
-                    .padding(.horizontal, 10)
-                    .padding(.bottom, 10)
-            } else {
-                discoverButtonFallback
-            }
+            if llmAvailable { composer.padding(.horizontal, 10).padding(.bottom, 10) }
+            else { discoverButtonFallback }
         }
     }
+
+    // MARK: - Mood starters
+
+    @ViewBuilder
+    private var moodStarters: some View {
+        if llmAvailable
+           && stage == .filters
+           && freeText.trimmingCharacters(in: .whitespaces).isEmpty {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("MOOD STARTERS", bundle: .module)
+                    .scaledFont(size: 9, weight: .semibold)
+                    .tracking(0.6)
+                    .foregroundStyle(.tertiary)
+                FlowLayout(spacing: 6) {
+                    ForEach(Self.starterPrompts, id: \.self) { prompt in
+                        Button {
+                            freeText = String(localized: String.LocalizationValue(prompt),
+                                              bundle: .module)
+                            // Don't auto-commit — let the user inspect / edit first.
+                            // Their next action is hitting send.
+                            freeTextFocused = true
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: "sparkles")
+                                    .scaledFont(size: 10, weight: .semibold)
+                                Text(LocalizedStringKey(prompt), bundle: .module)
+                                    .scaledFont(size: 11, weight: .medium)
+                            }
+                            .foregroundStyle(.purple.opacity(0.85))
+                            .padding(.horizontal, 10).padding(.vertical, 5)
+                            .background(Capsule().fill(.ultraThinMaterial))
+                            .overlay(Capsule().stroke(Color.purple.opacity(0.3), lineWidth: 0.5))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.top, 12)
+        }
+    }
+
+    private static let starterPrompts: [String] = [
+        "Saturday night with friends",
+        "Long solo flight",
+        "Cozy Sunday afternoon"
+    ]
 
     // MARK: - Selected row
 
