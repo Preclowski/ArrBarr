@@ -10732,6 +10732,35 @@
           }
         }
       }
+    },
+    "Optional vibe — or hit ↵ to discover": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Optionale Stimmung — oder ↵ drücken"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ambiente opcional — o pulsa ↵ para descubrir"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ambiance optionnelle — ou appuyez sur ↵"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opcjonalny nastrój — lub naciśnij ↵"
+          }
+        }
+      }
     }
   }
 }

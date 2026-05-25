@@ -414,11 +414,7 @@ public struct DiscoverPickerView: View {
         let color = tint(for: tag)
         Button { toggle(tag) } label: {
             HStack(spacing: 4) {
-                if picked {
-                    Image(systemName: "checkmark")
-                        .scaledFont(size: 9, weight: .bold)
-                }
-                if let icon = tag.icon, !picked {
+                if let icon = tag.icon {
                     Image(systemName: icon)
                         .scaledFont(size: 10, weight: .semibold)
                 }
@@ -433,7 +429,7 @@ public struct DiscoverPickerView: View {
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 6)
-                    .stroke(color.opacity(picked ? 0 : 0.55), lineWidth: 1)
+                    .stroke(color.opacity(picked ? 0 : 0.85), lineWidth: 1.2)
             )
         }
         .buttonStyle(.plain)
@@ -441,11 +437,20 @@ public struct DiscoverPickerView: View {
 
     // MARK: - Composer
 
+    private var composerPlaceholder: LocalizedStringKey {
+        let pickedFilters = selectedTagsForCurrentStage.filter { $0.category != .kind }.count
+        if pickedFilters == 0 {
+            return "What are you in the mood for?"
+        } else {
+            return "Optional vibe — or hit ↵ to discover"
+        }
+    }
+
     private var composer: some View {
         HStack(spacing: 8) {
             TextField("",
                       text: $freeText,
-                      prompt: Text("What are you in the mood for?", bundle: .module),
+                      prompt: Text(composerPlaceholder, bundle: .module),
                       axis: .vertical)
                 .textFieldStyle(.plain)
                 .focused($freeTextFocused)

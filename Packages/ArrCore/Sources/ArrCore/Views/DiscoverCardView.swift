@@ -68,7 +68,7 @@ public struct DiscoverCardView: View {
             .clipShape(RoundedRectangle(cornerRadius: 16))
             .overlay(
                 RoundedRectangle(cornerRadius: 16)
-                    .stroke(.white.opacity(0.10), lineWidth: 0.5)
+                    .stroke(.white.opacity(0.18), lineWidth: 0.75)
             )
             .shadow(color: .black.opacity(0.35), radius: 14, x: 0, y: 6)
         }
