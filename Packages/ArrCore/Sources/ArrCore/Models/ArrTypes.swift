@@ -331,13 +331,13 @@ public struct RadarrLookupRecord: Decodable {
     let status: String?
 }
 
-public struct RadarrLookupRatings: Decodable {
+public struct RadarrLookupRatings: Decodable, Sendable, Equatable {
     let tmdb: RadarrLookupRatingValue?
     let imdb: RadarrLookupRatingValue?
     let metacritic: RadarrLookupRatingValue?
     let rottenTomatoes: RadarrLookupRatingValue?
 }
-public struct RadarrLookupRatingValue: Decodable {
+public struct RadarrLookupRatingValue: Decodable, Sendable, Equatable {
     let value: Double?
 }
 
@@ -409,6 +409,9 @@ public struct RadarrLibraryRecord: Decodable, Sendable, Equatable {
     let genres: [String]?
     let runtime: Int?
     let overview: String?
+    let ratings: RadarrLookupRatings?
+    let certification: String?
+    let studio: String?
 }
 public struct SonarrLibraryRecord: Decodable, Sendable, Equatable {
     let id: Int?

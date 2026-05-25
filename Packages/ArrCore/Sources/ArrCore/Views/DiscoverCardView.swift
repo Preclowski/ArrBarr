@@ -24,6 +24,16 @@ public struct DiscoverCardView: View {
     @Binding var isHovered: Bool
     var dragOffset: CGSize = .zero
 
+    private var cardSurface: Color {
+        Color(nsColor: NSColor(name: nil, dynamicProvider: { appearance in
+            if appearance.bestMatch(from: [.darkAqua, .vibrantDark]) != nil {
+                return NSColor(red: 0.18, green: 0.18, blue: 0.20, alpha: 1.0)
+            } else {
+                return NSColor(red: 0.97, green: 0.97, blue: 0.97, alpha: 1.0)
+            }
+        }))
+    }
+
     public init(item: DiscoverItem,
                 isHovered: Binding<Bool>,
                 dragOffset: CGSize = .zero) {
@@ -64,9 +74,9 @@ public struct DiscoverCardView: View {
             .clipShape(RoundedRectangle(cornerRadius: 14))
             .overlay(
                 RoundedRectangle(cornerRadius: 14)
-                    .stroke(Color(nsColor: .separatorColor).opacity(0.5), lineWidth: 1)
+                    .stroke(Color.white.opacity(0.12), lineWidth: 1)
             )
-            .shadow(color: .black.opacity(0.25), radius: 12, x: 0, y: 4)
+            .shadow(color: .black.opacity(0.45), radius: 16, x: 0, y: 6)
             .onHover { hovering in
                 isHovered = hovering && abs(dragOffset.width) < 10
             }
@@ -132,7 +142,7 @@ public struct DiscoverCardView: View {
             }
             .padding(12)
             .frame(width: w, height: footerH, alignment: .topLeading)
-            .background(Color(nsColor: .windowBackgroundColor))
+            .background(cardSurface)
         }
         .frame(width: w, height: h)
     }

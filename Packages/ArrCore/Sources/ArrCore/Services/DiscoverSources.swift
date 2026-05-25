@@ -132,10 +132,15 @@ public enum DiscoverSources {
                 let result = SearchResult(
                     id: arrId, foreignId: rec.tmdbId.map(String.init) ?? "",
                     title: title, subtitle: nil,
-                    year: rec.year, rating: nil, imdb: nil,
-                    rottenTomatoes: nil, metacritic: nil,
-                    overview: rec.overview, runtime: nil,
-                    genres: [], network: nil, certification: nil,
+                    year: rec.year,
+                    rating: rec.ratings?.tmdb?.value,
+                    imdb: rec.ratings?.imdb?.value,
+                    rottenTomatoes: rec.ratings?.rottenTomatoes?.value,
+                    metacritic: rec.ratings?.metacritic?.value,
+                    overview: rec.overview, runtime: rec.runtime,
+                    genres: rec.genres ?? [],
+                    network: rec.studio,
+                    certification: rec.certification,
                     posterURL: poster, source: .radarr, inLibraryArrId: arrId
                 )
                 return DiscoverItem(
