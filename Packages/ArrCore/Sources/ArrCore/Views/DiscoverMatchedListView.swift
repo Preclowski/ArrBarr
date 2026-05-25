@@ -45,21 +45,61 @@ public struct DiscoverMatchedListView: View {
 
     @ViewBuilder
     private func row(_ item: DiscoverItem) -> some View {
-        HStack(spacing: 0) {
-            SearchResultRow(result: item.result, onTap: { onAct(item) })
-                .frame(maxWidth: .infinity, alignment: .leading)
-            Button {
-                onRemove(item)
-            } label: {
-                Image(systemName: "xmark.circle.fill")
-                    .scaledFont(size: 13)
-                    .foregroundStyle(.tertiary)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 8)
-                    .contentShape(Rectangle())
+        Button {
+            onAct(item)
+        } label: {
+            HStack(spacing: 10) {
+                RemotePoster(
+                    url: item.result.posterURL,
+                    apiKey: nil,
+                    size: CGSize(width: 36, height: 54),
+                    cornerRadius: 4
+                )
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 6) {
+                        Text(item.result.title)
+                            .scaledFont(size: 13, weight: .semibold)
+                            .foregroundStyle(.primary)
+                            .lineLimit(1)
+                        if let y = item.result.year {
+                            Text(verbatim: "(\(y))")
+                                .scaledFont(size: 12)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    if !metadataLine(for: item).isEmpty {
+                        Text(metadataLine(for: item))
+                            .scaledFont(size: 11)
+                            .foregroundStyle(.tertiary)
+                            .lineLimit(1)
+                    }
+                }
+                Spacer(minLength: 0)
+                Button {
+                    onRemove(item)
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .scaledFont(size: 14)
+                        .foregroundStyle(.tertiary)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 8)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help(Text("Remove", bundle: .module))
             }
-            .buttonStyle(.plain)
-            .help(Text("Remove", bundle: .module))
+            .padding(.vertical, 4)
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
+    }
+
+    private func metadataLine(for item: DiscoverItem) -> String {
+        let segments: [String] = [
+            item.result.runtime.flatMap { $0 > 0 ? "\($0) min" : nil },
+            item.result.imdb.map { String(format: "IMDb %.1f", $0) },
+            item.result.genres.first,
+        ].compactMap { $0 }
+        return segments.joined(separator: " · ")
     }
 }
