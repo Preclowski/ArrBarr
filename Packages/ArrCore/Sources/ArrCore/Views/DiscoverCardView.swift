@@ -84,7 +84,8 @@ public struct DiscoverCardView: View {
                 url: item.result.posterURL,
                 apiKey: nil,
                 size: CGSize(width: w, height: h),
-                cornerRadius: 0
+                cornerRadius: 0,
+                fallbackSymbol: nil
             )
             .frame(width: w, height: h)
             .clipped()

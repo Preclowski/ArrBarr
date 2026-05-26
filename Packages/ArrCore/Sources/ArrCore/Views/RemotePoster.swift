@@ -32,7 +32,10 @@ public struct RemotePoster: View {
     let apiKey: String?
     var size: CGSize = CGSize(width: 40, height: 60)
     var cornerRadius: CGFloat = 4
-    var fallbackSymbol: String = "photo"
+    /// SF Symbol shown centered when no image is available. Pass `nil` to
+    /// suppress the icon entirely — useful when the caller (e.g. a full-card
+    /// poster) doesn't want a placeholder glyph cluttering the centre.
+    var fallbackSymbol: String? = "photo"
     /// When `true`, the inner fixed frame is replaced with
     /// `.frame(maxWidth: .infinity, maxHeight: .infinity)` so the poster
     /// fills whatever rectangle the caller provides. The caller is
@@ -53,9 +56,11 @@ public struct RemotePoster: View {
             } else {
                 ZStack {
                     Rectangle().fill(.quaternary)
-                    Image(systemName: fallbackSymbol)
-                        .font(.system(size: min(size.width, size.height) * 0.4, weight: .light))
-                        .foregroundStyle(.tertiary)
+                    if let fallbackSymbol {
+                        Image(systemName: fallbackSymbol)
+                            .font(.system(size: min(size.width, size.height) * 0.4, weight: .light))
+                            .foregroundStyle(.tertiary)
+                    }
                 }
             }
         }
@@ -75,7 +80,7 @@ public struct RemotePoster: View {
                 apiKey: String?,
                 size: CGSize = CGSize(width: 40, height: 60),
                 cornerRadius: CGFloat = 4,
-                fallbackSymbol: String = "photo",
+                fallbackSymbol: String? = "photo",
                 fill: Bool = false) {
         self.url = url
         self.apiKey = apiKey
