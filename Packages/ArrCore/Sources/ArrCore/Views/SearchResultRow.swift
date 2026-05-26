@@ -31,18 +31,16 @@ public struct SearchResultRow: View {
             posterBlurred: configStore.shouldBlurPoster(for: result.source),
             title: titleWithYear,
             metadataSegments: metadataSegments,
-            // Title slot carries both axes the user needs to scan
-            // search results: the arr identity ("Sonarr"/"Radarr")
-            // and the disposition ("In library" if already owned,
-            // "Download" if a fresh candidate). Status sections
-            // aren't headered anymore — these per-row badges are
-            // the only status signal.
+            // Title slot: arr identity ("Sonarr"/"Radarr") and, if
+            // the title is already in the library, a quiet "library"
+            // tag. Add-new candidates get no badge — absence of the
+            // library tag is the signal (the `+` affordance on the
+            // trailing edge confirms intent). Avoids burning a chip
+            // on what is effectively the default state.
             titleBadge: AnyView(HStack(spacing: 4) {
                 SourceGlyphChip(source: result.source)
                 if isInLibrary {
                     InLibraryBadge()
-                } else {
-                    DownloadBadge()
                 }
             }),
             onTap: onTap

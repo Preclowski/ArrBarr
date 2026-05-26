@@ -665,21 +665,18 @@ public struct PopoverContentView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 32)
                     } else {
-                        // Search-mode chrome only: back chevron (left)
-                        // + type filter pill (right). Per-arr scope
-                        // chips were dropped — source identity now
-                        // lives on every row via SourceGlyphChip, and
-                        // the status section headers (IN QUEUE / IN
-                        // LIBRARY / NEW) carry the kind axis, so a
-                        // third "All / Sonarr / Radarr" control was
-                        // redundant chrome at the top.
+                        // Back chevron in the top-left while
+                        // filtering — marks the search-driven
+                        // layout as a distinct nav level. Type
+                        // pill lives inline in the queueFilterBar
+                        // now (right next to the input), so the
+                        // top strip is just the back affordance.
                         if isFiltering {
                             HStack(spacing: 6) {
                                 FloatingBackButton {
                                     queueFilter = ""
                                 }
-                                Spacer(minLength: 6)
-                                typeFilterPill
+                                Spacer()
                             }
                             .padding(.horizontal, 12)
                             .padding(.top, 8)
@@ -1107,6 +1104,14 @@ public struct PopoverContentView: View {
             .scaledFont(size: 14)
             .textFieldStyle(.plain)
             .focused($queueFilterFocused)
+            if isFiltering {
+                // Type pill rides inline in the search bar while a
+                // query is active — moved out of its old top-row
+                // perch so the user adjusts the kind axis right
+                // next to the input that triggered the search.
+                typeFilterPill
+                    .transition(.opacity.combined(with: .scale(scale: 0.9)))
+            }
             if !queueFilter.isEmpty {
                 Button { queueFilter = "" } label: {
                     Image(systemName: "xmark.circle.fill")
@@ -1116,6 +1121,7 @@ public struct PopoverContentView: View {
                 .buttonStyle(.plain)
             }
         }
+        .animation(.easeInOut(duration: 0.18), value: isFiltering)
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
         .contentShape(Capsule())

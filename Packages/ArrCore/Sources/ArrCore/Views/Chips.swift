@@ -23,40 +23,24 @@ public func customFormatChipStrip(tags: [String], score: Int?) -> some View {
     }
 }
 
-/// "Download" pill — complement to `InLibraryBadge`. Surfaces search
-/// candidates the arr doesn't yet own so the user sees at a glance
-/// it's something to add rather than drill into. Green tint reads
-/// as actionable. Label says "Download" (not "New") — "new" in
-/// queue context means "first-time file" vs an upgrade, distinct
-/// from "available to add".
-public struct DownloadBadge: View {
-    public init() {}
-
-    public var body: some View {
-        Text("Download", bundle: .module)
-            .font(.system(size: 9, weight: .semibold))
-            .foregroundStyle(Color.green)
-            .padding(.horizontal, 5)
-            .padding(.vertical, 1)
-            .background(Color.green.opacity(0.18), in: Capsule())
-    }
-}
-
-/// "In queue" pill — sits on rows that are actively downloading or
-/// queued for download. Orange tint (the in-flight color used
-/// elsewhere for paused / processing states) reads as "in
-/// progress", distinct from the green "actionable add" downloads
-/// and the accent-tinted "already owned" library hits.
+/// "queued" pill — sits on rows that are actively downloading or
+/// queued for download. Outline (stroke + clear fill) so it reads
+/// as a quieter status tag than the filled chips elsewhere on the
+/// row. Orange tint matches in-flight semantics used in the rest
+/// of the app for paused / processing states.
 public struct InQueueBadge: View {
     public init() {}
 
     public var body: some View {
-        Text("In queue", bundle: .module)
+        Text("Queued", bundle: .module)
             .font(.system(size: 9, weight: .semibold))
+            .textCase(.lowercase)
             .foregroundStyle(Color.orange)
             .padding(.horizontal, 5)
             .padding(.vertical, 1)
-            .background(Color.orange.opacity(0.18), in: Capsule())
+            .overlay(
+                Capsule().stroke(Color.orange.opacity(0.55), lineWidth: 1)
+            )
     }
 }
 
@@ -86,21 +70,24 @@ public struct SourceGlyphChip: View {
     }
 }
 
-/// "In library" pill rendered next to titles whenever the item is
-/// already on the user's arr. Same shape language as the genre /
-/// rating chips (semibold accent-tinted capsule). Lifted out of
-/// SearchResultRow so search rows, upcoming rows, and any future
-/// detail surface share the exact same visual.
+/// "library" pill rendered next to titles whenever the item is
+/// already on the user's arr. Outline-only — quieter than the
+/// solid-fill genre / rating chips so the badge reads as a status
+/// tag, not a content tag. Accent-tinted to match the chevron
+/// drill-in affordance these rows already use.
 public struct InLibraryBadge: View {
     public init() {}
 
     public var body: some View {
-        Text("In library", bundle: .module)
+        Text("Library", bundle: .module)
             .scaledFont(size: 9, weight: .semibold)
+            .textCase(.lowercase)
             .foregroundStyle(Color.accentColor)
             .padding(.horizontal, 5)
             .padding(.vertical, 1)
-            .background(Color.accentColor.opacity(0.18), in: Capsule())
+            .overlay(
+                Capsule().stroke(Color.accentColor.opacity(0.55), lineWidth: 1)
+            )
     }
 }
 

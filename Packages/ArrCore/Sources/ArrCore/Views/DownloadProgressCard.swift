@@ -153,8 +153,12 @@ public struct DownloadProgressCard: View {
 
     @ViewBuilder
     private var progressBarWithPercent: some View {
+        // No outer height padding — the bar's intrinsic 3pt is enough
+        // now that the % overlay is gone. The 18pt frame existed so
+        // the centred percent label had a vertical band to sit in;
+        // without the label it was just a thick whitespace cushion
+        // around a thin bar.
         ThinProgressBar(progress: progress, tint: tint)
-            .frame(height: 18)
     }
 
     /// Trailing-edge spec for the compact queue-row variant. Same
