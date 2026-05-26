@@ -42,23 +42,29 @@ public struct NewBadge: View {
     }
 }
 
-/// Source identity chip — small capsule wrapping the arr's SF Symbol
-/// (`film` / `tv` / `music.note` / `flame`). Used as the title-slot
-/// badge inside the queue-search status-grouped layout, replacing
-/// `InLibraryBadge` / `NewBadge` whose meaning is now encoded by the
-/// section header instead.
+/// Source identity chip — capsule with the arr's SF Symbol plus its
+/// display name ("Radarr" / "Sonarr" / "Lidarr" / "Whisparr"). Used
+/// as the title-slot badge inside the queue-search status-grouped
+/// layout, replacing `InLibraryBadge` / `NewBadge` whose meaning is
+/// now encoded by the section header. The arr's name is spelled out
+/// (not just the glyph) so the chip carries the same identity the
+/// per-arr section headers use elsewhere in the app.
 public struct SourceGlyphChip: View {
     let source: QueueItem.Source
     public init(source: QueueItem.Source) {
         self.source = source
     }
     public var body: some View {
-        Image(systemName: source.symbol)
-            .scaledFont(size: 9, weight: .semibold)
-            .foregroundStyle(.secondary)
-            .padding(.horizontal, 5)
-            .padding(.vertical, 1)
-            .background(Color.primary.opacity(0.08), in: Capsule())
+        HStack(spacing: 3) {
+            Image(systemName: source.symbol)
+                .scaledFont(size: 9, weight: .semibold)
+            Text(verbatim: source.displayName)
+                .scaledFont(size: 9, weight: .semibold)
+        }
+        .foregroundStyle(.secondary)
+        .padding(.horizontal, 5)
+        .padding(.vertical, 1)
+        .background(Color.primary.opacity(0.08), in: Capsule())
     }
 }
 

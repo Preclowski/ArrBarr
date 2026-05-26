@@ -35,10 +35,14 @@ public struct QueueSearchRow: View {
         }
     }
 
+    /// Mirror `SearchResultRow`'s rhythm: lead with the subtitle (the
+    /// same first-line metadata library/new rows show), skip
+    /// release-name detail — release strings are noisy and have no
+    /// counterpart in the search rows, so including them breaks the
+    /// "one list rhythm" the status-grouped surface is going for.
     private var metadataSegments: [String] {
         [
             item.subtitle.flatMap { $0.isEmpty ? nil : $0 },
-            item.releaseName.flatMap { $0.isEmpty ? nil : $0 },
         ].compactMap { $0 }
     }
 }
