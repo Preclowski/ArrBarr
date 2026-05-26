@@ -293,6 +293,13 @@ public struct PopoverContentView: View {
                         withAnimation(.smooth(duration: 0.22)) {
                             showDiscoverOverlay = false
                         }
+                    },
+                    onRequestMore: { mood, kept, skipped in
+                        withAnimation(.smooth(duration: 0.22)) {
+                            showDiscoverOverlay = false
+                        }
+                        let prompt = Self.morePicksPrompt(mood: mood, kept: kept, skipped: skipped)
+                        Task { await chatHolder.vm.send(prompt) }
                     }
                 )
                 .background(.background)
@@ -1585,6 +1592,33 @@ public struct PopoverContentView: View {
                 .foregroundStyle(.tertiary)
             Text(text)
         }
+    }
+
+    // MARK: - Discover "more picks" prompt
+
+    /// Build the chat message that asks the agent for the next wave of
+    /// picks, carrying the session's kept + skipped titles as feedback.
+    /// The phrasing is plain English so the agent understands intent
+    /// without needing structured arguments — it then calls
+    /// `discover_in_quiz` with a refined pick set.
+    private static func morePicksPrompt(mood: String,
+                                        kept: [DiscoverItem],
+                                        skipped: [DiscoverItem]) -> String {
+        let trimmedMood = mood.trimmingCharacters(in: .whitespacesAndNewlines)
+        let keptList = kept.prefix(10).map(Self.titleYearLabel).joined(separator: ", ")
+        let skippedList = skipped.prefix(10).map(Self.titleYearLabel).joined(separator: ", ")
+        var lines: [String] = []
+        lines.append("Give me more picks like the ones I kept and unlike the ones I skipped, " +
+                     "in the same vibe: \"\(trimmedMood)\".")
+        if !keptList.isEmpty { lines.append("Kept: \(keptList).") }
+        if !skippedList.isEmpty { lines.append("Skipped: \(skippedList).") }
+        lines.append("Don't repeat any of those. Use discover_in_quiz with 12–20 fresh picks.")
+        return lines.joined(separator: " ")
+    }
+
+    private static func titleYearLabel(_ item: DiscoverItem) -> String {
+        if let y = item.result.year { return "\(item.result.title) (\(y))" }
+        return item.result.title
     }
 
 }

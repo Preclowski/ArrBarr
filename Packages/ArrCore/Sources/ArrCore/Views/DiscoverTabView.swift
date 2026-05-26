@@ -8,6 +8,7 @@ public struct DiscoverTabView: View {
     let onAddToSonarr: (SearchResult) -> Void
     let onOpenDetail: (DiscoverItem, QueueItem.Source, Int) -> Void
     let onClose: () -> Void
+    let onRequestMore: (_ mood: String, _ kept: [DiscoverItem], _ skipped: [DiscoverItem]) -> Void
 
     @State private var showMatched: Bool = false
     @State private var dragOffset: CGSize = .zero
@@ -20,7 +21,8 @@ public struct DiscoverTabView: View {
                 onAddToRadarr: @escaping (SearchResult) -> Void,
                 onAddToSonarr: @escaping (SearchResult) -> Void,
                 onOpenDetail: @escaping (DiscoverItem, QueueItem.Source, Int) -> Void,
-                onClose: @escaping () -> Void) {
+                onClose: @escaping () -> Void,
+                onRequestMore: @escaping (_ mood: String, _ kept: [DiscoverItem], _ skipped: [DiscoverItem]) -> Void = { _, _, _ in }) {
         self.viewModel = viewModel
         self.llmAvailable = llmAvailable
         self.radarrAvailable = radarrAvailable
@@ -28,6 +30,7 @@ public struct DiscoverTabView: View {
         self.onAddToSonarr = onAddToSonarr
         self.onOpenDetail = onOpenDetail
         self.onClose = onClose
+        self.onRequestMore = onRequestMore
     }
 
     public var body: some View {
@@ -363,6 +366,24 @@ public struct DiscoverTabView: View {
                     .foregroundStyle(.secondary)
             }
             .buttonStyle(.plain)
+            if viewModel.hasSessionEngagement {
+                Button {
+                    onRequestMore(viewModel.moodText,
+                                  viewModel.sessionMatched,
+                                  viewModel.sessionSkipped)
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "sparkles")
+                            .scaledFont(size: 12, weight: .semibold)
+                        Text("More picks like these", bundle: .module)
+                            .scaledFont(size: 13, weight: .semibold)
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                }
+                .buttonStyle(.borderedProminent)
+                .padding(.top, 6)
+            }
             if viewModel.llmPoolExhausted && llmAvailable
                && !viewModel.moodText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 Button {

@@ -9453,6 +9453,17 @@
         }
       }
     },
+    "More picks like these": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "More picks like these"
+          }
+        }
+      }
+    },
     "Show your picks": {
       "extractionState": "manual",
       "localizations": {

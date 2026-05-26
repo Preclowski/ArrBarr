@@ -45,6 +45,12 @@ public final class DiscoverViewModel: ObservableObject {
     @Published public private(set) var isLoading: Bool = false
     @Published public private(set) var errorMessage: String?
     @Published public private(set) var matched: [DiscoverItem] = []
+    /// Cards the user swiped right in the current session (since the
+    /// last `seed(items:mood:)`). Cleared when a new session starts so
+    /// the "more picks" feedback only carries fresh signal.
+    @Published public private(set) var sessionMatched: [DiscoverItem] = []
+    /// Cards the user swiped left in the current session.
+    @Published public private(set) var sessionSkipped: [DiscoverItem] = []
     /// Increments every time the matched list crosses a 10-pick boundary
     /// (10, 20, 30, …). View observes via .onChange to trigger an
     /// auto-jump to the picks list.
@@ -153,6 +159,8 @@ public final class DiscoverViewModel: ObservableObject {
     /// entirely — the seeded deck IS the session. When the user wants
     /// more, they ask explicitly (Q2 chat round-trip).
     public func seed(items: [DiscoverItem], mood: String) {
+        sessionMatched.removeAll()
+        sessionSkipped.removeAll()
         reset()
         moodText = mood
         for item in items {
@@ -183,7 +191,17 @@ public final class DiscoverViewModel: ObservableObject {
             if autoJumpEnabled, matched.count > 0, matched.count % 10 == 0 {
                 picksMilestoneTick &+= 1
             }
+            sessionMatched.append(item)
+        } else {
+            sessionSkipped.append(item)
         }
+    }
+
+    /// True when the user has actually engaged with the deck this session.
+    /// Used by the overlay to decide whether to surface "more picks like
+    /// these" — without engagement the button has no signal to feed back.
+    public var hasSessionEngagement: Bool {
+        !sessionMatched.isEmpty || !sessionSkipped.isEmpty
     }
 
     /// Second half of a swipe — actually clears `current` and pulls the
