@@ -383,14 +383,26 @@ struct QueueTabContent: View {
     private var queueFilterBar: some View {
         // Clean glass capsule — same `.glassyFloatingBar()` chrome as
         // the tab cluster above, so the bar reads as the same control
-        // surface family. Loading spinner replaces the trailing icon
+        // surface family. Loading spinner replaces the leading icon
         // while a fresh search query is in flight (arr lookups are
         // ~200-500ms each, the spinner saves a "is anything
-        // happening?" moment of doubt).
+        // happening?" moment of doubt). Critically inline-in-the-bar
+        // and not just bottom-of-list — once results render they push
+        // any bottom loader below the fold, so on the *second* search
+        // the user gets no visible feedback unless we anchor the
+        // spinner here.
         HStack(spacing: 8) {
-            Image(systemName: "magnifyingglass")
-                .scaledFont(size: 15, weight: .medium)
-                .foregroundStyle(.tertiary)
+            if searchAvailable, searchViewModel.isSearching, isFiltering {
+                ProgressView()
+                    .controlSize(.small)
+                    .frame(width: 15, height: 15)
+                    .transition(.opacity)
+            } else {
+                Image(systemName: "magnifyingglass")
+                    .scaledFont(size: 15, weight: .medium)
+                    .foregroundStyle(.tertiary)
+                    .transition(.opacity)
+            }
             TextField("", text: $queueFilter, prompt:
                 Text("Filter queue", bundle: .module)
             )
