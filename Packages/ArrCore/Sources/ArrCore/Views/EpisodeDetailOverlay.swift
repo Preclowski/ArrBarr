@@ -488,7 +488,7 @@ public struct EpisodeDetailOverlay: View {
                     .truncationMode(.middle)
                 if let existing, !existing.isEmpty, existing != release {
                     HStack(alignment: .firstTextBaseline, spacing: 4) {
-                        Image(systemName: "arrow.up")
+                        Image(systemName: "arrow.turn.down.right")
                             .scaledFont(size: 9, weight: .semibold)
                             .foregroundStyle(.tertiary)
                         Text(existing)

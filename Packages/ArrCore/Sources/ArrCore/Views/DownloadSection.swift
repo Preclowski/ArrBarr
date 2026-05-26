@@ -191,12 +191,16 @@ struct DownloadSection: View {
                     if item.isUpgrade,
                        let existing = item.existingFileName, !existing.isEmpty,
                        existing != release {
-                        // `↑` arrow — same vocabulary as the spec
-                        // diff row above. Skip when existing matches
-                        // the new release name (re-grab, nothing to
-                        // diff).
+                        // `↳` L-arrow — reads as "from this previous
+                        // file" branching off the release name above.
+                        // The straight ↑ we had before competed with
+                        // the indigo arrow.up.doc badge used as the
+                        // "Existing" header glyph elsewhere; the L
+                        // turn is unambiguous as a continuation marker.
+                        // Skip when existing matches the new release
+                        // name (re-grab, nothing to diff).
                         HStack(alignment: .firstTextBaseline, spacing: 4) {
-                            Image(systemName: "arrow.up")
+                            Image(systemName: "arrow.turn.down.right")
                                 .scaledFont(size: 9, weight: .semibold)
                                 .foregroundStyle(.tertiary)
                             Text(existing)

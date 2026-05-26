@@ -107,12 +107,17 @@ public struct TagChip: View {
     }
 
     public var body: some View {
+        // Stroke mirrors the text tint — neutral chips keep the
+        // primary outline, but the green/red diff chips and the
+        // ±score chip need the border to read in the same colour
+        // family or the row stops feeling like a colour-coded diff.
+        let strokeColor: Color = (color == .primary) ? .primary : color
         Text(text)
             .scaledFont(size: 9, weight: .medium)
             .foregroundStyle(color == .primary ? AnyShapeStyle(.primary) : AnyShapeStyle(color))
             .padding(.horizontal, 5)
             .padding(.vertical, 1)
-            .overlay(RoundedRectangle(cornerRadius: Tokens.Radius.chip).stroke(Color.primary.opacity(0.22), lineWidth: 0.75))
+            .overlay(RoundedRectangle(cornerRadius: Tokens.Radius.chip).stroke(strokeColor.opacity(0.30), lineWidth: 0.75))
     }
 }
 
@@ -204,12 +209,13 @@ public struct CustomFormatStrip: View {
                     }
                     if score != 0 {
                         let sign = score > 0 ? "+" : ""
+                        let scoreColor: Color = score > 0 ? .green : .red
                         Text(verbatim: "\(sign)\(score)")
                             .scaledFont(size: 9, weight: .semibold)
-                            .foregroundStyle(score > 0 ? Color.green : Color.red)
+                            .foregroundStyle(scoreColor)
                             .padding(.horizontal, 5)
                             .padding(.vertical, 1)
-                            .overlay(RoundedRectangle(cornerRadius: Tokens.Radius.chip).stroke(Color.primary.opacity(0.22), lineWidth: 0.75))
+                            .overlay(RoundedRectangle(cornerRadius: Tokens.Radius.chip).stroke(scoreColor.opacity(0.30), lineWidth: 0.75))
                     }
                 }
                 .fixedSize()

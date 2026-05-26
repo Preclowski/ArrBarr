@@ -457,7 +457,7 @@ public struct QueueItemTooltip: View {
         GridRow(alignment: .firstTextBaseline) {
             Color.clear.frame(width: 0, height: 0)
             HStack(alignment: .firstTextBaseline, spacing: 4) {
-                Image(systemName: "arrow.up")
+                Image(systemName: "arrow.turn.down.right")
                     .scaledFont(size: 9, weight: .semibold)
                     .foregroundStyle(.tertiary)
                 Text(path)
