@@ -225,16 +225,12 @@ struct QueueTabContent: View {
     @ViewBuilder
     private func searchResultRow(_ r: SearchResult) -> some View {
         SearchResultRow(result: r) {
-            if let arrId = r.inLibraryArrId {
-                DetailRequest.post(
-                    DetailRequest.syntheticItem(
-                        source: r.source,
-                        entityId: arrId,
-                        title: r.title,
-                        posterURL: r.posterURL,
-                        posterRequiresAuth: false
-                    )
-                )
+            // Tap routing: in-library → detail, not-in-library →
+            // local add-panel overlay (which is the queue-tab's own
+            // override — chat / library cards route via
+            // SearchAddRequest instead).
+            if r.inLibraryArrId != nil {
+                DetailRequest.tap(r)
             } else {
                 searchResult = r
             }

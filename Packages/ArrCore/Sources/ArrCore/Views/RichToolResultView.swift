@@ -242,19 +242,7 @@ private struct SearchResultCard: View {
     /// the same hero card + form they'd see if they'd reached the result via
     /// the `+` search flow — SearchAddPanel is the single source of truth.
     private func handleTap() {
-        if let arrId = result.inLibraryArrId {
-            DetailRequest.post(
-                DetailRequest.syntheticItem(
-                    source: result.source,
-                    entityId: arrId,
-                    title: result.title,
-                    posterURL: result.posterURL,
-                    posterRequiresAuth: false
-                )
-            )
-            return
-        }
-        SearchAddRequest.post(result)
+        DetailRequest.tap(result)
     }
 }
 
