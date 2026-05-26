@@ -247,24 +247,34 @@ struct QueueTabContent: View {
     @ViewBuilder
     private var statusGroupedSections: some View {
         let queueRows: [QueueRowEntry] = scopedSources.flatMap { entries(for: $0) }
-        // Cross-source merge + relevance sort. The `flatMap` lays
-        // Radarr + Sonarr + Lidarr + Whisparr end-to-end (enum
-        // order); the subsequent `sortedByRelevance` re-ranks the
-        // combined list by how well each title matches the typed
-        // query, so a strong Sonarr hit can sit above a marginal
-        // Radarr one — the previous "Radarr always first because
-        // it's case .radarr" cross-arr bias is gone.
-        let rawLibrary = SearchRelevance.sorted(scopedSources.flatMap { libraryResults(for: $0) }, query: queueFilter, mode: sortMode)
+        // Search results = library + new merged into a single block,
+        // sorted together. The earlier split into separate sections
+        // ("In library" → "Download") was artificial chrome — each
+        // row already carries its own status signal (InLibraryBadge
+        // + chevron for owned, `+` for addable), so a category divider
+        // between them just fragmented the search surface for no
+        // reader-side gain. Combining them gives a true search-result
+        // list — the user types, sees every match ranked by their
+        // chosen sort mode, and tells library vs new from the row
+        // chrome rather than which section header sits above it.
+        //
+        // Cross-source merge happens naturally here: the flatMap
+        // concatenates Radarr + Sonarr + Lidarr + Whisparr per source
+        // enum order; the subsequent `SearchRelevance.sorted` re-ranks
+        // the whole pile by match quality + sort mode, so a strong
+        // Sonarr hit can sit above a marginal Radarr one. The previous
+        // "Radarr first because of enum order" bias stays gone.
+        let rawLibrary = scopedSources.flatMap { libraryResults(for: $0) }
         let library = SearchResultDedup.removingQueueDuplicates(
             libraryResults: rawLibrary,
             queueRows: queueRows
         )
-        let newOnes = SearchRelevance.sorted(scopedSources.flatMap { newResults(for: $0) }, query: queueFilter, mode: sortMode)
+        let newOnes = scopedSources.flatMap { newResults(for: $0) }
+        let combined = SearchRelevance.sorted(library + newOnes, query: queueFilter, mode: sortMode)
 
         VStack(alignment: .leading, spacing: 0) {
             compactQueueRowsList(entries: queueRows)
-            ForEach(library) { r in searchResultRow(r) }
-            ForEach(newOnes) { r in searchResultRow(r) }
+            ForEach(combined) { r in searchResultRow(r) }
         }
     }
 
