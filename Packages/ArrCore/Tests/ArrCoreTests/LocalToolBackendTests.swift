@@ -14,8 +14,16 @@ private final class LocalStubProtocol: URLProtocol, @unchecked Sendable {
 
     override func startLoading() {
         let path = request.url?.path ?? ""
-        // Find the first matching handler by path prefix.
-        let match = Self.handlers.first { path.hasPrefix($0.key) || path.contains($0.key) }
+        // Most-specific match wins. `dict.first` iterates in hash
+        // order so when both "/api/v1/artist/lookup" and the looser
+        // "/api/v1/artist" are registered, either could be returned
+        // — which non-deterministically broke the lidarr_search test
+        // when the looser handler with `[]` body came up first.
+        // Sort handler keys by length descending and pick the first
+        // that matches.
+        let match = Self.handlers
+            .sorted { $0.key.count > $1.key.count }
+            .first { path.hasPrefix($0.key) || path.contains($0.key) }
         let (status, body) = match?.value ?? (200, Data("[]".utf8))
         let url = request.url ?? URL(string: "about:blank")!
         let response = HTTPURLResponse(url: url, statusCode: status, httpVersion: "HTTP/1.1", headerFields: [:])!
@@ -53,26 +61,42 @@ struct LocalToolBackendTests {
         LocalToolBackend(sonarr: sonarrConfig(), radarr: radarrConfig(), lidarr: lidarrConfig())
     }
 
-    @Test("listTools returns 12 tools when sonarr/radarr/lidarr are all configured")
-    func listToolsReturns12Tools() async throws {
+    @Test("listTools returns the full catalog when sonarr/radarr/lidarr are configured")
+    func listToolsReturnsCatalog() async throws {
         let tools = try await backend().listTools()
-        #expect(tools.count == 12)
         let names = Set(tools.map(\.name))
+        // The `*_add_*` tools were removed — the add flow is now
+        // UI-driven via SearchAddPanel; chat tools surface results
+        // as tappable cards instead of adding directly. The
+        // lifecycle / season-search tools, `suggest_titles`, and
+        // `arr_health` were added since the original `count == 12`
+        // assertion. Pin the test to the current catalog so a future
+        // tool addition surfaces here intentionally.
         let expected: Set<String> = [
+            // Sonarr
             "sonarr_search",
-            "radarr_search",
             "sonarr_get_series",
-            "radarr_get_movies",
             "sonarr_get_calendar",
+            "sonarr_monitor_season",
+            "sonarr_search_episodes",
+            // Radarr
+            "radarr_search",
+            "radarr_get_movies",
             "radarr_get_calendar",
-            "sonarr_add_series",
-            "radarr_add_movie",
+            "radarr_search_movie",
+            // Lidarr
             "lidarr_search",
             "lidarr_get_artists",
             "lidarr_get_calendar",
-            "lidarr_add_artist",
+            "lidarr_get_artist_albums",
+            "lidarr_monitor_album",
+            "lidarr_search_album",
+            // Cross-cutting (any-arr-configured gates these on)
+            "suggest_titles",
+            "arr_health",
         ]
         #expect(names == expected)
+        #expect(tools.count == expected.count)
     }
 
     @Test("listTools omits unconfigured arrs")
@@ -80,8 +104,14 @@ struct LocalToolBackendTests {
         let b = LocalToolBackend(sonarr: sonarrConfig(), radarr: .empty, lidarr: .empty)
         let tools = try await b.listTools()
         let names = Set(tools.map(\.name))
-        #expect(names.allSatisfy { $0.hasPrefix("sonarr_") })
-        #expect(tools.count == 4)
+        // Only sonarr_* tools — plus `suggest_titles` (gated on
+        // sonarr-or-radarr-configured) and `arr_health` (gated on
+        // any-arr-configured). These last two aren't prefixed by an
+        // arr name because they're catalog-cutting.
+        let crossCutting: Set<String> = ["suggest_titles", "arr_health"]
+        #expect(names.subtracting(crossCutting).allSatisfy { $0.hasPrefix("sonarr_") })
+        // 5 sonarr + suggest_titles + arr_health = 7
+        #expect(tools.count == 7)
     }
 
     @Test("listTools includes TMDB tools when key set and matching arr configured")
