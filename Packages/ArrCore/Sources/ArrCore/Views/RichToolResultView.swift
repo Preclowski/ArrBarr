@@ -152,6 +152,9 @@ public struct RichToolResultView: View {
                             visibleCount = min(visibleCount + Self.pageSize, items.count)
                         }
                     }
+                case .discoverSession:
+                    // Rendered by R2 — placeholder keeps switch exhaustive.
+                    EmptyView()
                 }
             }
             .padding(.vertical, 4)

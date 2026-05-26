@@ -535,7 +535,10 @@ public actor LocalToolBackend: ToolBackend {
                 userInfo: ["mood": trimmed]
             )
         }
-        return ToolCallOutput(text: "Opened Discover in tinder mode with mood: \(trimmed)")
+        return ToolCallOutput(
+            text: "Opened Discover in tinder mode with mood: \(trimmed)",
+            rich: .discoverSession(mood: trimmed)
+        )
     }
 
     /// Standalone search trigger — same as the search component of
