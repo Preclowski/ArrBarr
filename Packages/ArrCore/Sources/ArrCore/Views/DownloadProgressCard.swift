@@ -151,21 +151,10 @@ public struct DownloadProgressCard: View {
         }
     }
 
-    /// Thin (3pt) progress bar centered in an 18pt-tall frame so
-    /// the percent label can float in the same vertical band as the
-    /// bar. Reads as one element ("loading X%") rather than a bar
-    /// plus a label competing for layout.
     @ViewBuilder
     private var progressBarWithPercent: some View {
-        ZStack {
-            ThinProgressBar(progress: progress, tint: tint)
-            Text(verbatim: "\(Int((progress * 100).rounded()))%")
-                .scaledFont(size: 10, weight: .semibold, monospacedDigit: true)
-                .foregroundStyle(.primary)
-                .padding(.horizontal, 5)
-                .background(.regularMaterial, in: Capsule())
-        }
-        .frame(height: 18)
+        ThinProgressBar(progress: progress, tint: tint)
+            .frame(height: 18)
     }
 
     /// Trailing-edge spec for the compact queue-row variant. Same
