@@ -540,7 +540,7 @@ public func addFromQuiz(_ result: SearchResult) async {
         await addSeries(result,
                         qualityProfileId: defaultQualityProfileId(.sonarr),
                         rootFolderPath: defaultRootFolder(.sonarr),
-                        monitor: .future,
+                        monitor: .all,
                         seriesType: .standard,
                         seasonFolder: true)
     default: break
