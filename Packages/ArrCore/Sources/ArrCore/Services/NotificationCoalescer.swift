@@ -251,7 +251,7 @@ public final class NotificationCoalescer {
         let content = UNMutableNotificationContent()
         content.title = source.displayName
         let titles = items.prefix(3).map(\.title).joined(separator: ", ")
-        let format = String(localized: "%lld items: %@")
+        let format = String(localized: "%lld items: %@", bundle: .module)
         content.body = String(format: format, items.count, titles)
         content.sound = .default
         content.categoryIdentifier = Self.categoryIdentifier
@@ -272,7 +272,7 @@ public final class NotificationCoalescer {
         [
             item.source.displayName,
             intentLabel(for: item),
-            String(localized: String.LocalizationValue(item.status.displayName)),
+            String(localized: String.LocalizationValue(item.status.displayName), bundle: .module),
         ].joined(separator: " · ")
     }
 
@@ -312,11 +312,11 @@ public final class NotificationCoalescer {
     private func intentLabel(for item: QueueItem) -> String {
         switch item.status {
         case .warning, .failed:
-            return String(localized: "Needs attention")
+            return String(localized: "Needs attention", bundle: .module)
         default:
             return item.isUpgrade
-                ? String(localized: "Upgrade")
-                : String(localized: "New")
+                ? String(localized: "Upgrade", bundle: .module)
+                : String(localized: "New", bundle: .module)
         }
     }
 

@@ -170,9 +170,9 @@ public struct MainWindowView: View {
 
     private var navigationTitle: String {
         switch selection {
-        case .allQueue: return String(localized: "Queue")
-        case .upcoming: return String(localized: "Upcoming")
-        case .chat:     return String(localized: "Chat")
+        case .allQueue: return String(localized: "Queue", bundle: .module)
+        case .upcoming: return String(localized: "Upcoming", bundle: .module)
+        case .chat:     return String(localized: "Chat", bundle: .module)
         case .source(let s): return s.displayName
         }
     }

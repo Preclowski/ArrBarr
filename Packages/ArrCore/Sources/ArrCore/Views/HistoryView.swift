@@ -197,14 +197,14 @@ public struct HistoryRowView: View {
         if let src = item.sourceTitle { lines.append(src) }
         lines.append("")
         lines.append(item.date.formatted(date: .abbreviated, time: .shortened))
-        if let q = item.quality { lines.append("\(String(localized: "Quality:")) \(q)") }
+        if let q = item.quality { lines.append("\(String(localized: "Quality:", bundle: .module)) \(q)") }
         if item.customFormatScore != 0 {
             let sign = item.customFormatScore > 0 ? "+" : ""
-            lines.append("\(String(localized: "Score:")) \(sign)\(item.customFormatScore)")
+            lines.append("\(String(localized: "Score:", bundle: .module)) \(sign)\(item.customFormatScore)")
         }
         if !item.customFormats.isEmpty {
             let tags = item.customFormats.map { "[\($0)]" }.joined()
-            lines.append("\(String(localized: "Custom formats:")) \(tags)")
+            lines.append("\(String(localized: "Custom formats:", bundle: .module)) \(tags)")
         }
         return lines.joined(separator: "\n")
     }

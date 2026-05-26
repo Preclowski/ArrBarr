@@ -561,7 +561,7 @@ public struct SettingsView: View {
                     if hovering { NSCursor.pointingHand.push() } else { NSCursor.pop() }
                 }
                 #endif
-                .help(Text("github.com/Preclowski/ArrBarr", bundle: .module))
+                .help(Text(verbatim: "github.com/Preclowski/ArrBarr"))
                 Spacer()
                 #if os(macOS)
                 Button { NSApp.keyWindow?.close() } label: { Text("Close", bundle: .module) }
@@ -585,7 +585,7 @@ public struct SettingsView: View {
 
     private static func formatInterval(_ seconds: TimeInterval) -> String {
         if seconds == 0 {
-            return String(localized: "Never")
+            return String(localized: "Never", bundle: .module)
         } else if seconds < 60 {
             return "\(Int(seconds))s"
         } else {
@@ -595,11 +595,11 @@ public struct SettingsView: View {
 
     private static func formatTonight(hours: Int) -> String {
         if hours < 24 {
-            return String(format: String(localized: "%lld hours"), hours)
+            return String(format: String(localized: "%lld hours", bundle: .module), hours)
         }
         let days = hours / 24
-        if days == 1 { return String(localized: "24 hours") }
-        return String(format: String(localized: "%lld days"), days)
+        if days == 1 { return String(localized: "24 hours", bundle: .module) }
+        return String(format: String(localized: "%lld days", bundle: .module), days)
     }
 }
 

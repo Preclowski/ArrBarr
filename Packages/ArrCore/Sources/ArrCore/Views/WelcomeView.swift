@@ -168,7 +168,7 @@ public struct WelcomeView: View {
                     guard i != pageIndex else { return }
                     withAnimation(.easeInOut(duration: 0.22)) { pageIndex = i }
                 }
-                .help("Page \(i + 1)")
+                .help(Text("Page \(i + 1)", bundle: .module))
             }
         }
     }
@@ -200,7 +200,7 @@ public struct WelcomeView: View {
                 .foregroundStyle(.secondary)
         }
         .buttonStyle(.plain)
-        .help(String(localized: "Close"))
+        .help(String(localized: "Close", bundle: .module))
         .keyboardShortcut(.cancelAction)
     }
 
@@ -209,7 +209,7 @@ public struct WelcomeView: View {
     private var footer: some View {
         HStack(spacing: 12) {
             if case .firstRun = variant, !isLastPage {
-                Button(String(localized: "Try demo mode")) { onTryDemo() }
+                Button(String(localized: "Try demo mode", bundle: .module)) { onTryDemo() }
                     #if os(macOS)
                     .buttonStyle(.link)
                     #else
@@ -227,8 +227,8 @@ public struct WelcomeView: View {
     }
 
     private var primaryButtonTitle: String {
-        if !isLastPage { return String(localized: "Continue") }
-        return String(localized: "Done")
+        if !isLastPage { return String(localized: "Continue", bundle: .module) }
+        return String(localized: "Done", bundle: .module)
     }
 
     private func onPrimary() {

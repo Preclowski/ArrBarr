@@ -27,14 +27,14 @@ public struct QueueItem: Identifiable, Equatable, Hashable {
 
         public var displayName: String {
             switch self {
-            case .downloading: return "Downloading"
-            case .paused: return "Paused"
-            case .queued: return "Queued"
-            case .importing: return "Importing"
-            case .completed: return "Completed"
-            case .warning: return "Warning"
-            case .failed: return "Failed"
-            case .unknown: return "Unknown"
+            case .downloading: return String(localized: "Downloading", bundle: .module)
+            case .paused:      return String(localized: "Paused", bundle: .module)
+            case .queued:      return String(localized: "Queued", bundle: .module)
+            case .importing:   return String(localized: "Importing", bundle: .module)
+            case .completed:   return String(localized: "Completed", bundle: .module)
+            case .warning:     return String(localized: "Warning", bundle: .module)
+            case .failed:      return String(localized: "Failed", bundle: .module)
+            case .unknown:     return String(localized: "Unknown", bundle: .module)
             }
         }
     }

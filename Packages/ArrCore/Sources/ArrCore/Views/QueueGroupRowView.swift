@@ -167,13 +167,13 @@ public struct QueueGroupRowView: View {
         let seasons = Set(group.items.compactMap(\.seasonNumber))
         let packLabel = String(localized: "Season pack", bundle: .module)
         if seasons.count == 1, let s = seasons.first {
-            let seasonText = String(format: String(localized: "Season %02lld"), s)
+            let seasonText = String(format: String(localized: "Season %02lld", bundle: .module), s)
             return "\(seasonText) · \(packLabel) · \(episodeCountText)"
         }
         if seasons.count > 1 {
-            return "\(String(localized: "Multiple seasons")) · \(packLabel) · \(episodeCountText)"
+            return "\(String(localized: "Multiple seasons", bundle: .module)) · \(packLabel) · \(episodeCountText)"
         }
-        return "\(String(localized: "Season pack")) · \(episodeCountText)"
+        return "\(String(localized: "Season pack", bundle: .module)) · \(episodeCountText)"
     }
 
     /// Used in the alert; same logic as `seasonLabel` but always returns
@@ -184,7 +184,7 @@ public struct QueueGroupRowView: View {
     }
 
     private var episodeCountText: String {
-        String(format: String(localized: "%lld episodes"), group.memberCount)
+        String(format: String(localized: "%lld episodes", bundle: .module), group.memberCount)
     }
 
     /// Aggregate completion across all members. For `.pack` groups this

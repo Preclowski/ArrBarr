@@ -492,8 +492,8 @@ public actor SonarrClient: ArrAPIClient {
                 // Single-episode rows now lead with the same "Season XX"
                 // anchor as the season-pack rows so the eye lands on the
                 // same column whichever row type it's reading.
-                let seasonText = String(format: String(localized: "Season %02lld"), season)
-                let episodeText = String(format: String(localized: "Episode %lld"), number)
+                let seasonText = String(format: String(localized: "Season %02lld", bundle: .module), season)
+                let episodeText = String(format: String(localized: "Episode %lld", bundle: .module), number)
                 if let t = episodeTitle {
                     subtitle = "\(seasonText) · \(episodeText) — \(t)"
                 } else {

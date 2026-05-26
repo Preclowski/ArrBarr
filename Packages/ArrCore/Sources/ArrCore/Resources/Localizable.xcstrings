@@ -116,6 +116,41 @@
         }
       }
     },
+    "%lld items: %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld items: %@"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld elementów: %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld elementos: %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld éléments : %@"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Elemente: %@"
+          }
+        }
+      }
+    },
     "%lld tracks": {
       "extractionState": "manual",
       "localizations": {
@@ -909,6 +944,41 @@
           "stringUnit": {
             "state": "translated",
             "value": "ArrBarr wird jetzt neu gestartet, um die Änderung anzuwenden."
+          }
+        }
+      }
+    },
+    "ArrBarr will relaunch. Open Settings → General to enable Demo mode and load preview content.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ArrBarr will relaunch. Open Settings → General to enable Demo mode and load preview content."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ArrBarr uruchomi się ponownie. Otwórz Ustawienia → Ogólne, aby włączyć Tryb demo i załadować przykładowe dane."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ArrBarr se reiniciará. Abre Ajustes → General para activar el Modo demo y cargar contenido de muestra."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ArrBarr va redémarrer. Ouvrez Réglages → Général pour activer le Mode démo et charger des contenus d'exemple."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ArrBarr wird neu gestartet. Öffne Einstellungen → Allgemein, um den Demo-Modus zu aktivieren und Beispieldaten zu laden."
           }
         }
       }
@@ -4420,6 +4490,41 @@
         }
       }
     },
+    "Page %lld": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Page %lld"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Strona %lld"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Página %lld"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Page %lld"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seite %lld"
+          }
+        }
+      }
+    },
     "Password": {
       "localizations": {
         "de": {
@@ -5958,6 +6063,41 @@
           "stringUnit": {
             "state": "translated",
             "value": "Sezon %02lld"
+          }
+        }
+      }
+    },
+    "Season 01 · Episode %lld — %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Season 01 · Episode %lld — %@"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sezon 01 · Odcinek %lld — %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Temporada 01 · Episodio %lld — %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saison 01 · Épisode %lld — %@"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Staffel 01 · Folge %lld — %@"
           }
         }
       }
@@ -7890,6 +8030,41 @@
           "stringUnit": {
             "state": "translated",
             "value": "Interrogera vos indexers et démarrera un téléchargement si une release correspond."
+          }
+        }
+      }
+    },
+    "Will query your indexers for every episode in this season — including upgrades for episodes already on disk.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Will query your indexers for every episode in this season — including upgrades for episodes already on disk."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Odpyta indeksery o każdy odcinek z tego sezonu — w tym aktualizacje odcinków już posiadanych."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Consultará tus indexadores para cada episodio de esta temporada — incluidas mejoras de episodios ya en disco."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Interroge vos indexeurs pour chaque épisode de cette saison — y compris les mises à niveau des épisodes déjà sur disque."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fragt deine Indexer für jede Folge dieser Staffel ab — einschließlich Upgrades für bereits vorhandene Folgen."
           }
         }
       }

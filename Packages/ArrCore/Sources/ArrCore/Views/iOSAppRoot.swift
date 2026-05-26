@@ -64,7 +64,7 @@ private struct QueueTab: View {
             .padding(.vertical, 8)
         }
         .refreshable { await viewModel.refresh() }
-        .navigationTitle("Queue")
+        .navigationTitle(Text("Queue", bundle: .module))
         .navigationDestination(item: $detailItem) { item in
             DetailView(item: item, onBack: { detailItem = nil }, viewModel: viewModel)
                 .navigationBarBackButtonHidden(true)
@@ -210,7 +210,7 @@ private struct UpcomingTab: View {
                 .listStyle(.insetGrouped)
             }
         }
-        .navigationTitle("Upcoming")
+        .navigationTitle(Text("Upcoming", bundle: .module))
         .refreshable { await viewModel.refresh() }
     }
 
@@ -281,7 +281,7 @@ private struct SearchTab: View {
                 )
             }
         }
-        .navigationTitle("Search")
+        .navigationTitle(Text("Search", bundle: .module))
         .onAppear {
             searchVM.setup(
                 radarrConfig: configStore.radarr,
@@ -326,7 +326,7 @@ private struct SettingsTab: View {
                 return true
             }
         )
-        .navigationTitle("Settings")
+        .navigationTitle(Text("Settings", bundle: .module))
     }
 }
 #endif

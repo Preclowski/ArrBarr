@@ -20,8 +20,11 @@ struct LocalizationCatalogTests {
         "Needs you",
         "Tonight",
         "Show indexer issues warning",
-        "Show Tonight banner",
-        "Show Needs you",
+        // "Show Tonight banner" / "Show Needs you" dropped — the
+        // ConfigStore booleans they used to label live as data only;
+        // the Settings section that toggled them with text labels
+        // moved to the section-order drag list (showing source
+        // names instead). No runtime render = no translation needed.
         "Show history",
         "Refresh",
         "More options",

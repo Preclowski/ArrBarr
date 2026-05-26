@@ -354,9 +354,13 @@ public final class QueueViewModel: ObservableObject {
         queues: [QueueItem.Source: [QueueItem]],
         health: HealthResult
     ) -> [NeedsYouItem] {
-        queues.values
+        // Iterate per Source.allCases (enum-declaration order) instead
+        // of `queues.values` so the rendered "Needs you" list keeps a
+        // stable Radarr → Sonarr → Lidarr → Whisparr order regardless
+        // of dict hash order. Same content, deterministic surface.
+        QueueItem.Source.allCases
             .lazy
-            .flatMap { $0 }
+            .flatMap { queues[$0] ?? [] }
             .filter { $0.status == .failed || $0.status == .warning }
             .map(NeedsYouItem.init)
     }
@@ -505,7 +509,7 @@ public struct NeedsYouItem: Identifiable, Equatable {
     public var title: String { item.title }
     public var subtitle: String {
         item.status == .warning
-            ? String(localized: "Manual import required")
+            ? String(localized: "Manual import required", bundle: .module)
             : item.status.displayName
     }
 }
