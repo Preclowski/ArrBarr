@@ -61,32 +61,23 @@ public struct DiscoverMatchedListView: View {
     }
 
     /// Group picks by origin into ordered sections. Library items first
-    /// (already owned — quickest to watch), then TMDB discoveries, then
-    /// LLM suggestions.
+    /// (already owned — quickest to watch), then discoveries.
     private struct Section { let titleKey: String; let items: [DiscoverItem] }
 
     private var sections: [Section] {
         var library: [DiscoverItem] = []
-        var tmdb:    [DiscoverItem] = []
-        var ai:      [DiscoverItem] = []
+        var discover: [DiscoverItem] = []
         for item in items {
             if item.result.inLibraryArrId != nil || item.originLabel == .library {
                 library.append(item)
-            } else if item.originLabel == .llm {
-                ai.append(item)
             } else {
-                tmdb.append(item)
+                discover.append(item)
             }
         }
         var out: [Section] = []
-        // New items (Discover + AI) lead — they're the *finds*, what the
-        // user came to Discover for. In-library items group last as the
-        // "already owned" footer. Earlier order put library first
-        // because owned-is-fastest-to-watch, but the user explicitly
-        // asked: new discoveries should be the headline.
-        if !tmdb.isEmpty    { out.append(Section(titleKey: "Discover",   items: tmdb)) }
-        if !ai.isEmpty      { out.append(Section(titleKey: "AI picks",   items: ai)) }
-        if !library.isEmpty { out.append(Section(titleKey: "In library", items: library)) }
+        // New finds lead; "In library" groups last as the already-owned footer.
+        if !discover.isEmpty { out.append(Section(titleKey: "Discover",   items: discover)) }
+        if !library.isEmpty  { out.append(Section(titleKey: "In library", items: library)) }
         return out
     }
 
