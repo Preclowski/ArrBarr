@@ -31,12 +31,13 @@ public struct SearchResultRow: View {
             posterBlurred: configStore.shouldBlurPoster(for: result.source),
             title: titleWithYear,
             metadataSegments: metadataSegments,
-            // Every search result now carries a typed badge — library
-            // hits show the existing `InLibraryBadge`, fresh
-            // candidates a green `New` chip. Gives the user a quick
-            // "do I already own this?" read without scanning the
-            // trailing chevron column.
-            titleBadge: AnyView(isInLibrary ? AnyView(InLibraryBadge()) : AnyView(NewBadge())),
+            // Source identity lives in the title slot now — the
+            // queue-search status-grouped layout puts library/new
+            // status in the section header above each block, so the
+            // per-row badge becomes a tautology. The arr glyph here
+            // is what carries cross-source distinction inside a
+            // section.
+            titleBadge: AnyView(SourceGlyphChip(source: result.source)),
             onTap: onTap
         ) {
             if isInLibrary {
@@ -74,12 +75,6 @@ public struct SearchResultRow: View {
                 .popoverBehavior(.applicationDefined)
         }
         #endif
-    }
-
-    /// See `InLibraryBadge` for the shared visual — this row just
-    /// hands it through so the trailing affordance has a stable name.
-    private var inLibraryBadge: some View {
-        InLibraryBadge()
     }
 
     /// "Title (1994)" — same idea as MediaHeaderCard. The year is just a
