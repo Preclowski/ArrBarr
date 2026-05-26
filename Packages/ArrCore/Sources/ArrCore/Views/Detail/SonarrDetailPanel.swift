@@ -77,20 +77,6 @@ struct SonarrDetailPanel: View {
         }
     }
 
-    /// Resolves the `SonarrEpisodeDetail` that matches a queue item's
-    /// season/episode and pushes the episode overlay. Called from
-    /// EpisodeRow's hover-icon click → drill into the episode view.
-    /// If no matching episode is in `sonarrEpisodes` yet (timing
-    /// window — series detail finished loading before episodes), we
-    /// just no-op rather than open a half-populated view.
-    private func openEpisodeFromQueueItem(_ q: QueueItem) {
-        guard let sn = q.seasonNumber, let en = q.episodeNumber else { return }
-        guard let ep = sonarrEpisodes.first(where: {
-            $0.seasonNumber == sn && $0.episodeNumber == en
-        }) else { return }
-        withAnimation(.smooth(duration: 0.22)) { selectedEpisode = ep }
-    }
-
     /// Map episode-id → active queue item, built from `siblings`
     /// (queue items for this series) joined to the loaded
     /// `sonarrEpisodes`. Powers the per-episode in-progress
