@@ -639,8 +639,9 @@ public actor LocalToolBackend: ToolBackend {
                 ]
             )
         }
+        let frontPosters = resolved.prefix(3).compactMap { $0.result.posterURL }
         let summary = "Opened Discover quiz with \(payload.count) picks for: \(label)"
-        return ToolCallOutput(text: summary, rich: .discoverSession(mood: label))
+        return ToolCallOutput(text: summary, rich: .discoverSession(mood: label, posterURLs: Array(frontPosters)))
     }
 
     /// Standalone search trigger — same as the search component of

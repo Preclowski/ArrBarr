@@ -13,5 +13,5 @@ public enum ChatRichContent: Sendable, Equatable {
     case libraryArtists([LidarrLibraryRecord])
     case libraryScenes([WhisparrLibraryRecord])
     case calendar([UpcomingItem])
-    case discoverSession(mood: String)
+    case discoverSession(mood: String, posterURLs: [URL])
 }

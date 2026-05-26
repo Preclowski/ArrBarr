@@ -154,8 +154,10 @@ public struct RichToolResultView: View {
                             visibleCount = min(visibleCount + Self.pageSize, items.count)
                         }
                     }
-                case .discoverSession(let mood):
-                    DiscoverSessionCard(mood: mood, isResumable: isResumable)
+                case .discoverSession(let mood, let posterURLs):
+                    DiscoverSessionCard(mood: mood,
+                                        posterURLs: posterURLs,
+                                        isResumable: isResumable)
                 }
             }
             .padding(.vertical, 4)
@@ -330,16 +332,21 @@ private struct LibraryRecordCard: View {
 
 // MARK: - Discover session resume card
 
-// MARK: - Discover session resume card
-
 private struct DiscoverSessionCard: View {
     let mood: String
+    let posterURLs: [URL]
     let isResumable: Bool
 
-    @EnvironmentObject private var discoverViewModel: DiscoverViewModel
+    // All three cards at the same size — peek is achieved by offset only,
+    // not scaling. The user wanted the stack to read as full-size cards
+    // overlapping, not a fan of shrinking cards.
+    private let cardWidth: CGFloat = 76
+    private var cardHeight: CGFloat { cardWidth * 1.5 }   // 2:3 poster aspect
 
-    private let frontWidth: CGFloat = 64
-    private var frontHeight: CGFloat { frontWidth * 1.5 }
+    // Offsets are generous enough that the corner of each back card is
+    // visible past the front. Bigger offset = clearer "stack" reading.
+    private let middleOffset: CGSize = CGSize(width: 14, height: 10)
+    private let backOffset:   CGSize = CGSize(width: 28, height: 20)
 
     var body: some View {
         Group {
@@ -354,7 +361,7 @@ private struct DiscoverSessionCard: View {
     }
 
     private var content: some View {
-        HStack(alignment: .center, spacing: 12) {
+        HStack(alignment: .top, spacing: 14) {
             stackVisual
             VStack(alignment: .leading, spacing: 4) {
                 Text(isResumable ? "Resume Discover" : "Discover session",
@@ -369,42 +376,29 @@ private struct DiscoverSessionCard: View {
             }
             Spacer(minLength: 0)
         }
-        .frame(maxWidth: 280, alignment: .leading)
+        .frame(maxWidth: 320, alignment: .leading)
         .contentShape(Rectangle())
-    }
-
-    /// Up to three posters (current + next 2 in queue). Empty when the
-    /// session is non-resumable — older cards keep their silhouette.
-    private var posters: [URL?] {
-        guard isResumable else { return [] }
-        var out: [URL?] = []
-        if let current = discoverViewModel.current { out.append(current.result.posterURL) }
-        for item in discoverViewModel.queue.prefix(3 - out.count) {
-            out.append(item.result.posterURL)
-        }
-        return out
     }
 
     private var stackVisual: some View {
         ZStack(alignment: .topLeading) {
-            // Back peek
-            cardLayer(posterURL: posters.dropFirst(2).first ?? nil,
-                      scale: 0.90, offsetX: 18, offsetY: 14, opacity: 0.5)
-            // Middle peek
-            cardLayer(posterURL: posters.dropFirst(1).first ?? nil,
-                      scale: 0.95, offsetX: 9, offsetY: 7, opacity: 0.75)
-            // Front
-            cardLayer(posterURL: posters.first ?? nil,
-                      scale: 1.0, offsetX: 0, offsetY: 0, opacity: 1.0,
-                      showBadge: true)
+            // Render back → middle → front so the front lands on top.
+            cardLayer(posterURL: posterURLs.dropFirst(2).first,
+                      offset: backOffset, opacity: 0.5)
+            cardLayer(posterURL: posterURLs.dropFirst(1).first,
+                      offset: middleOffset, opacity: 0.75)
+            cardLayer(posterURL: posterURLs.first,
+                      offset: .zero, opacity: 1.0, showBadge: true)
         }
-        .frame(width: frontWidth + 22, height: frontHeight + 18, alignment: .topLeading)
+        // Reserve enough room so the bottom-right corner of the back card
+        // isn't clipped: cardWidth + backOffset.width / cardHeight + backOffset.height.
+        .frame(width: cardWidth + backOffset.width,
+               height: cardHeight + backOffset.height,
+               alignment: .topLeading)
     }
 
     private func cardLayer(posterURL: URL?,
-                           scale: CGFloat,
-                           offsetX: CGFloat,
-                           offsetY: CGFloat,
+                           offset: CGSize,
                            opacity: Double,
                            showBadge: Bool = false) -> some View {
         ZStack {
@@ -412,32 +406,30 @@ private struct DiscoverSessionCard: View {
                 RemotePoster(
                     url: posterURL,
                     apiKey: nil,
-                    size: CGSize(width: frontWidth, height: frontHeight),
-                    cornerRadius: 6
+                    size: CGSize(width: cardWidth, height: cardHeight),
+                    cornerRadius: 8
                 )
             } else {
-                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
                     .fill(Color.primary.opacity(0.08))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
                             .stroke(Color.primary.opacity(0.18), lineWidth: 0.5)
                     )
-                    .frame(width: frontWidth, height: frontHeight)
+                    .frame(width: cardWidth, height: cardHeight)
             }
             if showBadge {
                 Image(systemName: isResumable
                       ? "rectangle.stack.fill.badge.play"
                       : "rectangle.stack.fill")
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(size: 18, weight: .semibold))
                     .foregroundStyle(.white)
-                    .padding(4)
-                    .background(Circle().fill(Color.black.opacity(0.5)))
-                    .padding(4)
-                    .frame(width: frontWidth, height: frontHeight, alignment: .bottomTrailing)
+                    .shadow(color: .black.opacity(0.5), radius: 2)
+                    .padding(6)
+                    .frame(width: cardWidth, height: cardHeight, alignment: .bottomTrailing)
             }
         }
-        .scaleEffect(scale, anchor: .topLeading)
-        .offset(x: offsetX, y: offsetY)
+        .offset(x: offset.width, y: offset.height)
         .opacity(opacity)
     }
 
