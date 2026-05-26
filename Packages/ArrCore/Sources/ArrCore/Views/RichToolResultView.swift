@@ -334,59 +334,87 @@ private struct DiscoverSessionCard: View {
     let mood: String
     let isResumable: Bool
 
+    // Stack geometry — poster aspect, small enough to fit in chat row.
+    private let frontWidth: CGFloat = 60
+    private var frontHeight: CGFloat { frontWidth * 1.5 }
+
     var body: some View {
-        if isResumable {
-            Button(action: tap) {
-                cardContent(opacity: 1.0)
+        Group {
+            if isResumable {
+                Button(action: tap) { content }
+                    .buttonStyle(.plain)
+            } else {
+                content.opacity(0.55)
             }
-            .buttonStyle(.plain)
-        } else {
-            cardContent(opacity: 0.55)
         }
+        .padding(.vertical, 4)
     }
 
-    private func cardContent(opacity: Double) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: isResumable
-                  ? "rectangle.stack.fill.badge.play"
-                  : "rectangle.stack.fill")
-                .scaledFont(size: 14, weight: .semibold)
-                .foregroundStyle(isResumable ? Color.accentColor : Color.secondary)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(isResumable ? "Resume Discover" : "Discover session", bundle: .module)
+    private var content: some View {
+        HStack(alignment: .center, spacing: 12) {
+            stackVisual
+            VStack(alignment: .leading, spacing: 4) {
+                Text(isResumable ? "Resume Discover" : "Discover session",
+                     bundle: .module)
                     .scaledFont(size: 12, weight: .semibold)
                     .foregroundStyle(.primary)
-                Text(verbatim: "\u{201C}\(truncated)\u{201D}")
+                Text(verbatim: "\u{201C}\(truncatedMood)\u{201D}")
                     .scaledFont(size: 11)
                     .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
+                    .lineLimit(2)
+                    .truncationMode(.tail)
             }
             Spacer(minLength: 0)
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
-        .frame(minWidth: 180, maxWidth: 280, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(Color.primary.opacity(0.06))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .stroke(Color.primary.opacity(0.18), lineWidth: 0.5)
-        )
-        .opacity(opacity)
+        .frame(maxWidth: 280, alignment: .leading)
         .contentShape(Rectangle())
     }
 
-    private var truncated: String {
-        let trimmed = mood.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.count > 40 ? String(trimmed.prefix(40)) + "\u{2026}" : trimmed
+    private var stackVisual: some View {
+        ZStack(alignment: .topLeading) {
+            cardShape
+                .frame(width: frontWidth, height: frontHeight)
+                .scaleEffect(0.92, anchor: .topLeading)
+                .offset(x: 12, y: 8)
+                .opacity(0.5)
+            cardShape
+                .frame(width: frontWidth, height: frontHeight)
+                .scaleEffect(0.96, anchor: .topLeading)
+                .offset(x: 6, y: 4)
+                .opacity(0.75)
+            cardShape
+                .frame(width: frontWidth, height: frontHeight)
+                .overlay(
+                    Image(systemName: isResumable
+                          ? "rectangle.stack.fill.badge.play"
+                          : "rectangle.stack.fill")
+                        .scaledFont(size: 18, weight: .semibold)
+                        .foregroundStyle(isResumable
+                                         ? Color.accentColor
+                                         : Color.secondary)
+                )
+        }
+        // Reserve space for the offset peek cards so the HStack doesn't clip.
+        .frame(width: frontWidth + 14, height: frontHeight + 10, alignment: .topLeading)
     }
 
-    /// Resume tap signal. The actual handler in PopoverContentView
-    /// listens on the same `arrBarrOpenDiscoverInTinder` notification
-    /// but distinguishes resume from fresh by the `resume` userInfo key.
+    private var cardShape: some View {
+        RoundedRectangle(cornerRadius: 6, style: .continuous)
+            .fill(Color.primary.opacity(0.08))
+            .overlay(
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .stroke(Color.primary.opacity(0.18), lineWidth: 0.5)
+            )
+    }
+
+    private var truncatedMood: String {
+        let trimmed = mood.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.count > 60 ? String(trimmed.prefix(60)) + "\u{2026}" : trimmed
+    }
+
+    /// Resume tap signal. PopoverContentView listens on the same
+    /// notification but distinguishes resume from fresh by the
+    /// `resume` userInfo key.
     private func tap() {
         NotificationCenter.default.post(
             name: .arrBarrOpenDiscoverInTinder,
