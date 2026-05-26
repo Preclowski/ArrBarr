@@ -644,8 +644,8 @@ public struct EpisodeDetailOverlay: View {
             .padding(.vertical, 7)
         }
         .tint(q.status.tint)
-        .modifier(GlassProminentButtonStyle())
         .progressFillCTA(progress: q.progress, tint: q.status.tint)
+        .modifier(GlassProminentButtonStyle())
     }
 
     @ViewBuilder
@@ -1490,9 +1490,6 @@ struct EpisodeRowTooltip: View {
                                             iconSize: 10,
                                             labelSize: 11,
                                             labelWeight: .semibold)
-                            Text(verbatim: "· \(Int((q.progress * 100).rounded()))%")
-                                .scaledFont(size: 11, monospacedDigit: true)
-                                .foregroundStyle(.secondary)
                         }
                     )
                 )
@@ -2003,10 +2000,6 @@ struct ProgressLine: View {
                             iconSize: 10,
                             labelSize: 11,
                             labelWeight: .semibold)
-            Text("·").foregroundStyle(.tertiary)
-            Text(verbatim: "\(Int((item.progress * 100).rounded()))%")
-                .scaledFont(size: 11, weight: .semibold, monospacedDigit: true)
-                .foregroundStyle(.secondary)
             Spacer(minLength: 6)
             ScoreLabel(score: item.customFormatScore, size: 11)
         }
@@ -2190,9 +2183,11 @@ struct MultiRow: View {
                         .foregroundStyle(.indigo)
                 }
                 Spacer(minLength: 4)
-                Text(trailingText)
-                    .scaledFont(size: 10, monospacedDigit: true)
-                    .foregroundStyle(.tertiary)
+                if item.status == .queued {
+                    Text(verbatim: trailingText)
+                        .scaledFont(size: 10, monospacedDigit: true)
+                        .foregroundStyle(.tertiary)
+                }
                 ScoreLabel(score: item.customFormatScore)
             }
             ThinProgressBar(progress: item.progress, tint: item.status.tint)

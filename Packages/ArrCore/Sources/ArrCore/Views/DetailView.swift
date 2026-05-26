@@ -399,11 +399,11 @@ public struct DetailView: View {
         }
         .disabled(ctaInFlight)
         .tint(f.status.tint)
-        .modifier(GlassProminentButtonStyle())
         .progressFillCTA(
             progress: f.source == .sonarr ? 1 : f.progress,
             tint: f.status.tint
         )
+        .modifier(GlassProminentButtonStyle())
     }
 
     @ViewBuilder
