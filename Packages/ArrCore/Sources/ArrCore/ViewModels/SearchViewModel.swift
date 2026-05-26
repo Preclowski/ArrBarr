@@ -17,6 +17,12 @@ public final class SearchViewModel: ObservableObject {
     /// spinner per keystroke.
     @Published var isSearching = false
     @Published var errorMessage: String?
+    /// Parsed form of `query` — `.ref(_:)` when the user typed an
+    /// external-id prefix (`tmdb:N`, `imdb:ttN`, …), `.text(_)`
+    /// otherwise. Owned by the VM so the sorter and the per-source
+    /// clients all see the same interpretation; parsed once per
+    /// `onQueryChange`.
+    @Published private(set) var parsedInput: SearchInput = .text("")
 
     /// Bumped on every `onQueryChange`. The async search task carries
     /// the generation it was launched with; only the task whose
@@ -68,6 +74,7 @@ public final class SearchViewModel: ObservableObject {
         errorMessage = nil
         searchGeneration += 1
         let myGen = searchGeneration
+        parsedInput = QueryParser.parse(query)
 
         let trimmed = query.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else {
@@ -130,7 +137,7 @@ public final class SearchViewModel: ObservableObject {
     private func fetchOne(client: SearchClient?) async -> [SearchResult] {
         guard let client else { return [] }
         do {
-            async let fetchResults = client.lookup(query: query)
+            async let fetchResults = client.lookup(input: parsedInput)
             async let fetchLibrary = client.fetchLibraryArrIdMap()
             let (raw, map) = try await (fetchResults, fetchLibrary)
             // Used to be `raw.filter { !ids.contains($0.id) }` — hiding

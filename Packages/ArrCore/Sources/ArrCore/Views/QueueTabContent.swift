@@ -193,7 +193,11 @@ struct QueueTabContent: View {
             queueRows: queueRows
         )
         let newOnes = scopedSources.flatMap { newResults(for: $0) }
-        let combined = SearchRelevance.sortedByRelevance(library + newOnes, query: queueFilter)
+        // Use the VM's parsed input — recognises `tmdb:N` / `imdb:ttN`
+        // refs end-to-end. For plain-text queries this is equivalent
+        // to `.text(queueFilter)`, but routing through the VM keeps
+        // the sorter and the per-source clients on the same input.
+        let combined = SearchRelevance.sortedByRelevance(library + newOnes, input: searchViewModel.parsedInput)
 
         VStack(alignment: .leading, spacing: 0) {
             compactQueueRowsList(entries: queueRows)

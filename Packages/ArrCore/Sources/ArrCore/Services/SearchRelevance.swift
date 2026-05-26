@@ -134,15 +134,55 @@ enum SearchRelevance {
             + bayesianQuality(result) * qualityWeight
     }
 
+    /// Ref-aware rank. For `.text` inputs, falls through to the
+    /// string-based scoring above. For `.ref(_:)` inputs, the result
+    /// either matches the ref (max score) or doesn't (zero) — there's
+    /// no fuzzy middle ground for ID lookup.
+    static func rank(_ result: SearchResult, against input: SearchInput) -> Double {
+        switch input {
+        case .text(let q):
+            return rank(result, normalizedQuery: normalize(q))
+        case .ref(let ref):
+            // ID match returns a score above any text-match tier so
+            // a matching record always sorts to the top, regardless
+            // of what `bayesianQuality` would contribute. Quality is
+            // still added so a hypothetical "two results with the
+            // same ref" tie (shouldn't happen, but parsing edges
+            // exist) breaks predictably.
+            return result.mediaRef == ref
+                ? 100_000 + bayesianQuality(result) * qualityWeight
+                : 0
+        }
+    }
+
     /// Sort + cross-source merge in one pass. Caller hands in the raw
-    /// per-source flatMap; we sort by relevance to the query, with
+    /// per-source flatMap; we sort by relevance to the input, with
     /// Bayesian-adjusted rating as the in-tier tie-breaker. Stable
     /// w.r.t. equal-rank ties via Swift 5+'s stable `sorted(by:)`.
-    static func sortedByRelevance(_ results: [SearchResult], query: String) -> [SearchResult] {
-        let q = normalize(query)
-        guard !q.isEmpty else { return results }
-        return results.sorted { lhs, rhs in
-            rank(lhs, normalizedQuery: q) > rank(rhs, normalizedQuery: q)
+    static func sortedByRelevance(_ results: [SearchResult], input: SearchInput) -> [SearchResult] {
+        switch input {
+        case .text(let q):
+            let normalized = normalize(q)
+            guard !normalized.isEmpty else { return results }
+            return results.sorted { lhs, rhs in
+                rank(lhs, normalizedQuery: normalized) > rank(rhs, normalizedQuery: normalized)
+            }
+        case .ref:
+            // Ref inputs: keep only matches (everything else scores
+            // 0). Saves the consumer from having to filter out
+            // unrelated rows that snuck in from other sources.
+            return results
+                .filter { rank($0, against: input) > 0 }
+                .sorted { lhs, rhs in
+                    rank(lhs, against: input) > rank(rhs, against: input)
+                }
         }
+    }
+
+    /// String-input convenience kept for legacy call sites — wraps the
+    /// query in `.text` and delegates. New code should prefer the
+    /// `input:` variant so refs are recognised end-to-end.
+    static func sortedByRelevance(_ results: [SearchResult], query: String) -> [SearchResult] {
+        sortedByRelevance(results, input: .text(query))
     }
 }

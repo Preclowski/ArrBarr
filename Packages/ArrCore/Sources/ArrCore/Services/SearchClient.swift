@@ -19,7 +19,22 @@ public actor SearchClient {
 
     // MARK: - Lookup
 
+    /// Plain-text lookup. Preserved as a convenience wrapper so chat
+    /// tools and tests that pass a String don't need to wrap manually.
     func lookup(query: String) async throws -> [SearchResult] {
+        try await lookup(input: .text(query))
+    }
+
+    /// Structured lookup. `.ref(_:)` inputs short-circuit on sources
+    /// that can't resolve the ref's scheme (e.g. a `tmdb:N` query
+    /// against Sonarr returns empty without a round-trip — Sonarr's
+    /// endpoint would otherwise search the literal "tmdb:N" string
+    /// in titles and yield garbage).
+    func lookup(input: SearchInput) async throws -> [SearchResult] {
+        if case .ref(let ref) = input, !ref.compatibleSources.contains(source) {
+            return []
+        }
+        let query = input.arrTerm
         if DemoMode.isActive {
             // Simulate a brief network round-trip so the loading state is
             // visible. Real arr API responses to a typed query are
