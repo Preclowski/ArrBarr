@@ -100,6 +100,9 @@ public struct DiscoverTabView: View {
                     .lineLimit(1)
             } else if !activeFilterSummary.isEmpty {
                 filterSummaryChip
+                if viewModel.sessionTotal > 0 {
+                    progressChip
+                }
             }
             Spacer()
         }
@@ -123,6 +126,22 @@ public struct DiscoverTabView: View {
         .padding(.vertical, 4)
         .background(Capsule().fill(Color.primary.opacity(0.06)))
         .overlay(Capsule().stroke(Color.primary.opacity(0.18), lineWidth: 0.5))
+    }
+
+    private var progressChip: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "rectangle.stack")
+                .scaledFont(size: 10, weight: .semibold)
+                .foregroundStyle(.tertiary)
+            Text(verbatim: "\(viewModel.sessionConsumed) / \(viewModel.sessionTotal)")
+                .scaledFont(size: 11, weight: .medium)
+                .foregroundStyle(.tertiary)
+                .monospacedDigit()
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(Capsule().fill(Color.primary.opacity(0.04)))
+        .overlay(Capsule().stroke(Color.primary.opacity(0.12), lineWidth: 0.5))
     }
 
     private func dispatch(_ item: DiscoverItem) {

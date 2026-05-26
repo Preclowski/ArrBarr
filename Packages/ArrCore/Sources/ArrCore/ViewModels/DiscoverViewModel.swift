@@ -51,6 +51,11 @@ public final class DiscoverViewModel: ObservableObject {
     @Published public private(set) var sessionMatched: [DiscoverItem] = []
     /// Cards the user swiped left in the current session.
     @Published public private(set) var sessionSkipped: [DiscoverItem] = []
+    /// Total number of picks the agent seeded for the current session.
+    /// Set by `seed(items:mood:)` and used by the View to render the
+    /// "N / total" progress chip. Doesn't shrink as the user swipes —
+    /// progress is derived as `total - (queue.count + (current == nil ? 0 : 1))`.
+    @Published public private(set) var sessionTotal: Int = 0
     /// Increments every time the matched list crosses a 10-pick boundary
     /// (10, 20, 30, …). View observes via .onChange to trigger an
     /// auto-jump to the picks list.
@@ -163,6 +168,7 @@ public final class DiscoverViewModel: ObservableObject {
         sessionSkipped.removeAll()
         reset()
         moodText = mood
+        sessionTotal = items.count
         for item in items {
             if seenKeys.insert(item.dedupKey).inserted {
                 queue.append(item)
@@ -202,6 +208,14 @@ public final class DiscoverViewModel: ObservableObject {
     /// these" — without engagement the button has no signal to feed back.
     public var hasSessionEngagement: Bool {
         !sessionMatched.isEmpty || !sessionSkipped.isEmpty
+    }
+
+    /// Number of cards the user has already moved past (swiped or
+    /// committed) in the current session. Combined with `sessionTotal`
+    /// this drives the "N / total" chip.
+    public var sessionConsumed: Int {
+        let remaining = queue.count + (current == nil ? 0 : 1)
+        return max(0, sessionTotal - remaining)
     }
 
     /// Second half of a swipe — actually clears `current` and pulls the
