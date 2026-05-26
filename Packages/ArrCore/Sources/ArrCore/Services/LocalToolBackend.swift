@@ -545,6 +545,15 @@ public actor LocalToolBackend: ToolBackend {
         // Resolve each pick through the appropriate arr lookup, mirroring
         // what DiscoverSources.llm does per-item — same SearchResult /
         // DiscoverItem shape so the overlay treats them identically.
+        //
+        // Library map fetched in parallel with the per-pick lookups (mirrors
+        // suggest_titles). Owned picks get inLibraryArrId set and
+        // originLabel=.library so the matched-list sections them under
+        // "In library" with an openDetail tap instead of an add flow.
+        async let libraryMapFetch: [Int: Int] = (kind == "series")
+            ? sonarrLibraryByTVDBId()
+            : radarrLibraryByTMDBId()
+
         let radarrClient = RadarrClient(config: radarr)
         let sonarrClient = SonarrClient(config: sonarr)
         var resolved: [DiscoverItem] = []
@@ -557,7 +566,7 @@ public actor LocalToolBackend: ToolBackend {
                 guard let first = hits.first else { continue }
                 let tmdbId = first.tmdbId ?? 0
                 let poster = (first.images ?? []).posterURL(baseURL: radarr.baseURL).0
-                let result = SearchResult(
+                let resultBase = SearchResult(
                     id: tmdbId, foreignId: tmdbId == 0 ? "" : String(tmdbId),
                     title: first.title, subtitle: nil,
                     year: first.year,
@@ -572,15 +581,23 @@ public actor LocalToolBackend: ToolBackend {
                     source: .radarr,
                     inLibraryArrId: nil
                 )
-                resolved.append(DiscoverItem(result: result, action: .addToRadarr,
-                                             originLabel: .llm, kind: .movie))
+                let libraryMap = await libraryMapFetch
+                if let arrId = libraryMap[tmdbId] {
+                    let owned = resultBase.withInLibraryArrId(arrId)
+                    resolved.append(DiscoverItem(result: owned,
+                                                 action: .openDetail(source: .radarr, arrId: arrId),
+                                                 originLabel: .library, kind: .movie))
+                } else {
+                    resolved.append(DiscoverItem(result: resultBase, action: .addToRadarr,
+                                                 originLabel: .llm, kind: .movie))
+                }
             case "series":
                 guard sonarr.isConfigured else { continue }
                 let hits = (try? await sonarrClient.lookupSeries(term: term)) ?? []
                 guard let first = hits.first else { continue }
                 let tvdbId = first.tvdbId ?? 0
                 let poster = (first.images ?? []).posterURL(baseURL: sonarr.baseURL).0
-                let result = SearchResult(
+                let resultBase = SearchResult(
                     id: tvdbId, foreignId: tvdbId == 0 ? "" : String(tvdbId),
                     title: first.title, subtitle: nil,
                     year: first.year,
@@ -593,8 +610,16 @@ public actor LocalToolBackend: ToolBackend {
                     source: .sonarr,
                     inLibraryArrId: nil
                 )
-                resolved.append(DiscoverItem(result: result, action: .addToSonarr,
-                                             originLabel: .llm, kind: .show))
+                let libraryMap = await libraryMapFetch
+                if let arrId = libraryMap[tvdbId] {
+                    let owned = resultBase.withInLibraryArrId(arrId)
+                    resolved.append(DiscoverItem(result: owned,
+                                                 action: .openDetail(source: .sonarr, arrId: arrId),
+                                                 originLabel: .library, kind: .show))
+                } else {
+                    resolved.append(DiscoverItem(result: resultBase, action: .addToSonarr,
+                                                 originLabel: .llm, kind: .show))
+                }
             default: break
             }
         }

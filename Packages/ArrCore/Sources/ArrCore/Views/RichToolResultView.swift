@@ -338,7 +338,7 @@ private struct DiscoverSessionCard: View {
 
     @EnvironmentObject private var discoverViewModel: DiscoverViewModel
 
-    private let frontWidth: CGFloat = 60
+    private let frontWidth: CGFloat = 64
     private var frontHeight: CGFloat { frontWidth * 1.5 }
 
     var body: some View {
@@ -389,16 +389,16 @@ private struct DiscoverSessionCard: View {
         ZStack(alignment: .topLeading) {
             // Back peek
             cardLayer(posterURL: posters.dropFirst(2).first ?? nil,
-                      scale: 0.92, offsetX: 12, offsetY: 8, opacity: 0.5)
+                      scale: 0.90, offsetX: 18, offsetY: 14, opacity: 0.5)
             // Middle peek
             cardLayer(posterURL: posters.dropFirst(1).first ?? nil,
-                      scale: 0.96, offsetX: 6, offsetY: 4, opacity: 0.75)
+                      scale: 0.95, offsetX: 9, offsetY: 7, opacity: 0.75)
             // Front
             cardLayer(posterURL: posters.first ?? nil,
                       scale: 1.0, offsetX: 0, offsetY: 0, opacity: 1.0,
                       showBadge: true)
         }
-        .frame(width: frontWidth + 14, height: frontHeight + 10, alignment: .topLeading)
+        .frame(width: frontWidth + 22, height: frontHeight + 18, alignment: .topLeading)
     }
 
     private func cardLayer(posterURL: URL?,
