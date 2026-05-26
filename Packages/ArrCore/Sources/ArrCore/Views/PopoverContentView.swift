@@ -665,31 +665,26 @@ public struct PopoverContentView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 32)
                     } else {
-                        if configuredSources.count > 1 || isFiltering {
+                        // Search-mode chrome only: back chevron (left)
+                        // + type filter pill (right). Per-arr scope
+                        // chips were dropped — source identity now
+                        // lives on every row via SourceGlyphChip, and
+                        // the status section headers (IN QUEUE / IN
+                        // LIBRARY / NEW) carry the kind axis, so a
+                        // third "All / Sonarr / Radarr" control was
+                        // redundant chrome at the top.
+                        if isFiltering {
                             HStack(spacing: 6) {
-                                // Back chevron only while filtering —
-                                // marks the search-driven layout as a
-                                // distinct nav level. Tap clears the
-                                // query, which collapses queueResultType
-                                // back to .all via the existing onChange.
-                                if isFiltering {
-                                    FloatingBackButton {
-                                        queueFilter = ""
-                                    }
-                                    .transition(.opacity.combined(with: .scale(scale: 0.9)))
-                                }
-                                if configuredSources.count > 1 {
-                                    scopeChipsRow
+                                FloatingBackButton {
+                                    queueFilter = ""
                                 }
                                 Spacer(minLength: 6)
-                                if isFiltering {
-                                    typeFilterPill
-                                        .transition(.opacity.combined(with: .scale(scale: 0.9)))
-                                }
+                                typeFilterPill
                             }
                             .padding(.horizontal, 12)
                             .padding(.top, 8)
                             .padding(.bottom, 2)
+                            .transition(.opacity.combined(with: .scale(scale: 0.95)))
                             .animation(.easeInOut(duration: 0.18), value: isFiltering)
                         }
                         queueBody
