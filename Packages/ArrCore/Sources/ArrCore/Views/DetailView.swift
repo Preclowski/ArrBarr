@@ -945,15 +945,15 @@ public struct DetailView: View {
                         Text(year).foregroundStyle(.secondary)
                     }
                     if let type = album?.albumType, !type.isEmpty {
-                        Text("·").foregroundStyle(.tertiary)
+                        SeparatorDot()
                         Text(type).foregroundStyle(.secondary)
                     }
                     if let stats = album?.statistics, let count = stats.totalTrackCount, count > 0 {
-                        Text("·").foregroundStyle(.tertiary)
+                        SeparatorDot()
                         Text("\(count) tracks", bundle: .module).foregroundStyle(.secondary)
                     }
                     if let dur = album?.duration, dur > 0 {
-                        Text("·").foregroundStyle(.tertiary)
+                        SeparatorDot()
                         Text(formatDuration(ms: dur)).foregroundStyle(.secondary)
                     }
                 }

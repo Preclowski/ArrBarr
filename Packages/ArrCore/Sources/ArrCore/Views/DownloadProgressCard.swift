@@ -174,14 +174,14 @@ public struct DownloadProgressCard: View {
             }
             if item.sizeTotal > 0 {
                 if item.quality?.isEmpty == false {
-                    Text("·").foregroundStyle(.tertiary)
+                    SeparatorDot()
                 }
                 Text(ByteCountFormatter.string(fromByteCount: item.sizeTotal, countStyle: .file))
                     .scaledFont(size: 10)
                     .foregroundStyle(.secondary)
             }
             if item.customFormatScore != 0 {
-                Text("·").foregroundStyle(.tertiary)
+                SeparatorDot()
                 ScoreLabel(score: item.customFormatScore, size: 10)
             }
         }
@@ -205,14 +205,14 @@ public struct DownloadProgressCard: View {
             }
             if let size, size > 0 {
                 if quality?.isEmpty == false {
-                    Text("·").foregroundStyle(.tertiary)
+                    SeparatorDot()
                 }
                 Text(ByteCountFormatter.string(fromByteCount: size, countStyle: .file))
                     .scaledFont(size: 11)
                     .foregroundStyle(.secondary)
             }
             if score != 0 {
-                Text("·").foregroundStyle(.tertiary)
+                SeparatorDot()
                 ScoreLabel(score: score, size: 11)
             }
             Spacer(minLength: 0)

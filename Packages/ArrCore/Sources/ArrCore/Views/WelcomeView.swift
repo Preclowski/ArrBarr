@@ -361,14 +361,14 @@ private struct MenuBarIllustration: View {
             Image(systemName: "applelogo")
                 .scaledFont(size: 9, weight: .semibold)
                 .foregroundStyle(.primary)
-            Text("ArrBarr").scaledFont(size: 9, weight: .semibold)
+            Text(verbatim: "ArrBarr").scaledFont(size: 9, weight: .semibold)
             Text("File", bundle: .module).scaledFont(size: 9).foregroundStyle(.primary.opacity(0.85))
             Text("View", bundle: .module).scaledFont(size: 9).foregroundStyle(.primary.opacity(0.85))
             Spacer()
             Image(systemName: "wifi").scaledFont(size: 9).foregroundStyle(.secondary)
             Image(systemName: "battery.100percent").scaledFont(size: 9).foregroundStyle(.secondary)
             statusItemBadge
-            Text("9:41").scaledFont(size: 9, weight: .medium).foregroundStyle(.secondary)
+            Text(verbatim: "9:41").scaledFont(size: 9, weight: .medium).foregroundStyle(.secondary)
         }
     }
 
@@ -377,7 +377,7 @@ private struct MenuBarIllustration: View {
             Image(systemName: "arrow.down.circle.fill")
                 .scaledFont(size: 10, weight: .semibold)
                 .foregroundStyle(.tint)
-            Text("3").scaledFont(size: 9, weight: .semibold)
+            Text(verbatim: "3").scaledFont(size: 9, weight: .semibold)
         }
         .padding(.horizontal, 4)
         .padding(.vertical, 2)
@@ -490,7 +490,7 @@ private struct TonightIllustration: View {
             Text("Tonight", bundle: .module)
                 .scaledFont(size: 11, weight: .semibold)
                 .foregroundStyle(.primary)
-            Text("2")
+            Text(verbatim: "2")
                 .scaledFont(size: 9, weight: .semibold)
                 .foregroundStyle(.secondary)
                 .padding(.horizontal, 5)

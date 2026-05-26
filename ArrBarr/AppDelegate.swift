@@ -137,22 +137,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func registerNotificationCategories() {
         let openAction = UNNotificationAction(
             identifier: NotificationCoalescer.openActionIdentifier,
-            title: String(localized: "Open in browser"),
+            title: String(localized: "Open in browser", bundle: .arrCore),
             options: [.foreground]
         )
         let pauseAction = UNNotificationAction(
             identifier: NotificationCoalescer.pauseActionIdentifier,
-            title: String(localized: "Pause"),
+            title: String(localized: "Pause", bundle: .arrCore),
             options: []
         )
         let resumeAction = UNNotificationAction(
             identifier: NotificationCoalescer.resumeActionIdentifier,
-            title: String(localized: "Start downloading"),
+            title: String(localized: "Start downloading", bundle: .arrCore),
             options: []
         )
         let removeAction = UNNotificationAction(
             identifier: NotificationCoalescer.removeActionIdentifier,
-            title: String(localized: "Remove"),
+            title: String(localized: "Remove", bundle: .arrCore),
             options: [.destructive]
         )
 
@@ -242,16 +242,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func showStatusMenu() {
         let menu = NSMenu()
-        menu.addItem(withTitle: String(localized: "Refresh"), action: #selector(menuRefresh), keyEquivalent: "r").target = self
-        let addItem = menu.addItem(withTitle: String(localized: "Add…"), action: #selector(menuAdd), keyEquivalent: "n")
+        menu.addItem(withTitle: String(localized: "Refresh", bundle: .arrCore), action: #selector(menuRefresh), keyEquivalent: "r").target = self
+        let addItem = menu.addItem(withTitle: String(localized: "Add", bundle: .arrCore), action: #selector(menuAdd), keyEquivalent: "n")
         addItem.target = self
         menu.addItem(.separator())
-        let openWindowItem = menu.addItem(withTitle: String(localized: "Open Window…"), action: #selector(menuOpenWindow), keyEquivalent: "n")
+        let openWindowItem = menu.addItem(withTitle: String(localized: "Open Window…", bundle: .arrCore), action: #selector(menuOpenWindow), keyEquivalent: "n")
         openWindowItem.keyEquivalentModifierMask = [.command, .shift]
         openWindowItem.target = self
-        menu.addItem(withTitle: String(localized: "Settings…"), action: #selector(menuSettings), keyEquivalent: ",").target = self
+        menu.addItem(withTitle: String(localized: "Settings…", bundle: .arrCore), action: #selector(menuSettings), keyEquivalent: ",").target = self
         menu.addItem(.separator())
-        menu.addItem(withTitle: String(localized: "Quit ArrBarr"), action: #selector(menuQuit), keyEquivalent: "q").target = self
+        menu.addItem(withTitle: String(localized: "Quit ArrBarr", bundle: .arrCore), action: #selector(menuQuit), keyEquivalent: "q").target = self
         statusItem.menu = menu
         statusItem.button?.performClick(nil)
         statusItem.menu = nil
@@ -292,7 +292,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ).environmentObject(configStore)
         let hosting = NSHostingController(rootView: view)
         let win = NSWindow(contentViewController: hosting)
-        win.title = String(localized: "ArrBarr Settings")
+        win.title = String(localized: "ArrBarr Settings", bundle: .arrCore)
         win.styleMask = [.titled]
         win.setContentSize(NSSize(width: 520, height: 460))
         win.isReleasedWhenClosed = false
@@ -442,7 +442,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let hosting = NSHostingController(rootView: view)
         let win = NSWindow(contentViewController: hosting)
-        win.title = String(localized: "Welcome to ArrBarr")
+        win.title = String(localized: "Welcome to ArrBarr", bundle: .arrCore)
         // Apple "What's New" style: no titlebar text, content extends under
         // the title bar (we draw our own close button in the top-right), and
         // the user can drag the window from anywhere on the background.
@@ -489,10 +489,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         UserDefaults.standard.set(true, forKey: DeveloperMode.key)
 
         let alert = NSAlert()
-        alert.messageText = String(localized: "Developer options enabled")
-        alert.informativeText = String(localized: "ArrBarr will relaunch. Open Settings → General to enable Demo mode and load preview content.")
-        alert.addButton(withTitle: String(localized: "Relaunch"))
-        alert.addButton(withTitle: String(localized: "Cancel"))
+        alert.messageText = String(localized: "Developer options enabled", bundle: .arrCore)
+        alert.informativeText = String(localized: "ArrBarr will relaunch. Open Settings → General to enable Demo mode and load preview content.", bundle: .arrCore)
+        alert.addButton(withTitle: String(localized: "Relaunch", bundle: .arrCore))
+        alert.addButton(withTitle: String(localized: "Cancel", bundle: .arrCore))
         let response = alert.runModal()
         guard response == .alertFirstButtonReturn else { return }
 
@@ -502,11 +502,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func setDemoModeAndRelaunch(_ enabled: Bool) -> Bool {
         let alert = NSAlert()
         alert.messageText = enabled
-            ? String(localized: "Demo mode enabled")
-            : String(localized: "Demo mode disabled")
-        alert.informativeText = String(localized: "ArrBarr will relaunch now to apply the change.")
-        alert.addButton(withTitle: String(localized: "Relaunch"))
-        alert.addButton(withTitle: String(localized: "Cancel"))
+            ? String(localized: "Demo mode enabled", bundle: .arrCore)
+            : String(localized: "Demo mode disabled", bundle: .arrCore)
+        alert.informativeText = String(localized: "ArrBarr will relaunch now to apply the change.", bundle: .arrCore)
+        alert.addButton(withTitle: String(localized: "Relaunch", bundle: .arrCore))
+        alert.addButton(withTitle: String(localized: "Cancel", bundle: .arrCore))
         let response = alert.runModal()
         guard response == .alertFirstButtonReturn else { return false }
 

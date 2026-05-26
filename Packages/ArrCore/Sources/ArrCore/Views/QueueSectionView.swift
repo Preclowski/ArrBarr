@@ -49,7 +49,7 @@ public struct QueueSectionView: View {
                 .scaledFont(size: 12, weight: .semibold)
                 .foregroundStyle(.secondary)
             if error == nil {
-                Text("\(itemCount)")
+                Text(verbatim: "\(itemCount)")
                     .scaledFont(size: 11)
                     .foregroundStyle(.tertiary)
                 if !health.isEmpty { healthBadge }

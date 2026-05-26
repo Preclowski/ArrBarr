@@ -222,7 +222,7 @@ struct SeasonRow: View {
                             }
                         }
                         .frame(width: 60, height: 3)
-                        Text("\(have)/\(total)")
+                        Text(verbatim: "\(have)/\(total)")
                             .scaledFont(size: 10, monospacedDigit: true)
                             .foregroundStyle(.secondary)
                             .frame(width: 42, alignment: .trailing)
@@ -693,7 +693,7 @@ public struct EpisodeDetailOverlay: View {
                 } else {
                     Image(systemName: "magnifyingglass")
                         .scaledFont(size: 11, weight: .semibold)
-                    Text("Search this episode", bundle: .module)
+                    Text("Search this episode?", bundle: .module)
                         .scaledFont(size: 12, weight: .semibold)
                 }
             }
@@ -748,7 +748,7 @@ public struct EpisodeDetailOverlay: View {
             Image(systemName: "tv")
                 .scaledFont(size: 11)
                 .foregroundStyle(.tertiary)
-            Text("Sonarr")
+            Text(verbatim: "Sonarr")
                 .scaledFont(size: 11)
                 .foregroundStyle(.tertiary)
         }
@@ -1553,14 +1553,14 @@ struct EpisodeRowTooltip: View {
             }
             if size > 0 {
                 if quality?.isEmpty == false {
-                    Text("·").foregroundStyle(.tertiary)
+                    SeparatorDot()
                 }
                 Text(ByteCountFormatter.string(fromByteCount: size, countStyle: .file))
                     .scaledFont(size: 11)
                     .foregroundStyle(.secondary)
             }
             if score != 0 {
-                Text("·").foregroundStyle(.tertiary)
+                SeparatorDot()
                 ScoreLabel(score: score, size: 11)
             }
         }
@@ -1739,7 +1739,7 @@ struct DownloadSection: View {
         if !segments.isEmpty || (!showListingBadges && item.downloadClient != nil) {
             HStack(spacing: 4) {
                 ForEach(Array(segments.enumerated()), id: \.offset) { idx, seg in
-                    if idx > 0 { Text("·").foregroundStyle(.tertiary) }
+                    if idx > 0 { SeparatorDot() }
                     Text(verbatim: seg)
                         .scaledFont(size: 11)
                         .foregroundStyle(.secondary)
@@ -1889,16 +1889,16 @@ struct DownloadSection: View {
             if let q = quality, !q.isEmpty {
                 Text(q)
             } else {
-                Text("—").foregroundStyle(.tertiary)
+                Text(verbatim: "—").foregroundStyle(.tertiary)
             }
             if size > 0 {
-                Text("·").foregroundStyle(.tertiary)
+                SeparatorDot()
                 Text(ByteCountFormatter.string(fromByteCount: size, countStyle: .file))
             }
             if score != 0 {
-                Text("·").foregroundStyle(.tertiary)
+                SeparatorDot()
                 let sign = score > 0 ? "+" : ""
-                Text("\(sign)\(score)")
+                Text(verbatim: "\(sign)\(score)")
                     .foregroundStyle(score > 0 ? Color.green : Color.red)
                     .scaledFont(size: 11, weight: .semibold)
             }
@@ -1926,7 +1926,7 @@ struct DownloadSection: View {
                     Text("In queue", bundle: .module)
                         .scaledFont(size: 11, weight: .semibold)
                         .foregroundStyle(.secondary)
-                    Text("·").foregroundStyle(.tertiary)
+                    SeparatorDot()
                     Text(String(format: String(localized: "%lld downloads", bundle: .module), items.count))
                         .scaledFont(size: 11)
                         .foregroundStyle(.secondary)
@@ -2014,7 +2014,7 @@ struct ProgressLine: View {
                 item.sizeTotal > 0 ? sizeText : nil,
             ].compactMap { $0 }
             ForEach(Array(segments.enumerated()), id: \.offset) { idx, segment in
-                if idx > 0 { Text("·").foregroundStyle(.tertiary) }
+                if idx > 0 { SeparatorDot() }
                 Text(verbatim: segment)
                     .scaledFont(size: 11)
                     .foregroundStyle(.secondary)
@@ -2379,13 +2379,13 @@ struct ExistingFileBanner: View {
                         .foregroundStyle(.primary)
                 }
                 if let size, size > 0 {
-                    Text("·").foregroundStyle(.tertiary)
+                    SeparatorDot()
                     Text(ByteCountFormatter.string(fromByteCount: size, countStyle: .file))
                         .scaledFont(size: 11)
                         .foregroundStyle(.secondary)
                 }
                 if let s = customFormatScore, s != 0 {
-                    Text("·").foregroundStyle(.tertiary)
+                    SeparatorDot()
                     ScoreLabel(score: s, size: 11)
                 }
             }
@@ -2437,15 +2437,15 @@ struct ExistingFileLine: View {
                         .foregroundStyle(.secondary)
                 }
                 if let size = item.existingSize, size > 0 {
-                    Text("·").foregroundStyle(.tertiary)
+                    SeparatorDot()
                     Text(ByteCountFormatter.string(fromByteCount: size, countStyle: .file))
                         .scaledFont(size: 11)
                         .foregroundStyle(.secondary)
                 }
                 if let s = item.existingCustomFormatScore, s != 0 {
-                    Text("·").foregroundStyle(.tertiary)
+                    SeparatorDot()
                     let sign = s > 0 ? "+" : ""
-                    Text("\(sign)\(s)")
+                    Text(verbatim: "\(sign)\(s)")
                         .scaledFont(size: 11, weight: .semibold)
                         .foregroundStyle(s > 0 ? Color.green : Color.red)
                 }

@@ -204,7 +204,7 @@ public struct CustomFormatStrip: View {
                     }
                     if score != 0 {
                         let sign = score > 0 ? "+" : ""
-                        Text("\(sign)\(score)")
+                        Text(verbatim: "\(sign)\(score)")
                             .scaledFont(size: 9, weight: .semibold)
                             .foregroundStyle(score > 0 ? Color.green : Color.red)
                             .padding(.horizontal, 5)

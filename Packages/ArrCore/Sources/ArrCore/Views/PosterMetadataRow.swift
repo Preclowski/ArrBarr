@@ -125,7 +125,7 @@ public struct PosterMetadataRow<TrailingAccessory: View>: View {
         HStack(spacing: 4) {
             ForEach(Array(metadataSegments.enumerated()), id: \.offset) { idx, seg in
                 if idx > 0 {
-                    Text("·").foregroundStyle(.tertiary)
+                    SeparatorDot()
                 }
                 Text(seg).foregroundStyle(.secondary)
             }

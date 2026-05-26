@@ -210,7 +210,7 @@ public struct SearchAddPanel: View {
 
     private var lidarrForm: some View {
         VStack(spacing: 4) {
-            formPicker("Quality Profile",
+            formPicker("Quality profile",
                        selection: Binding(
                            get: { selectedProfileId ?? viewModel.qualityProfiles.first?.id ?? 0 },
                            set: { selectedProfileId = $0 }
@@ -226,7 +226,7 @@ public struct SearchAddPanel: View {
                            options: viewModel.metadataProfiles.map { ($0.id, $0.name) })
             }
 
-            formPicker("Root Folder",
+            formPicker("Root folder",
                        selection: Binding(
                            get: { selectedRootFolder ?? viewModel.rootFolders.first?.path ?? "" },
                            set: { selectedRootFolder = $0 }
@@ -250,14 +250,14 @@ public struct SearchAddPanel: View {
 
     private var whisparrForm: some View {
         VStack(spacing: 4) {
-            formPicker("Quality Profile",
+            formPicker("Quality profile",
                        selection: Binding(
                            get: { selectedProfileId ?? viewModel.qualityProfiles.first?.id ?? 0 },
                            set: { selectedProfileId = $0 }
                        ),
                        options: viewModel.qualityProfiles.map { ($0.id, $0.name) })
 
-            formPicker("Root Folder",
+            formPicker("Root folder",
                        selection: Binding(
                            get: { selectedRootFolder ?? viewModel.rootFolders.first?.path ?? "" },
                            set: { selectedRootFolder = $0 }
@@ -276,14 +276,14 @@ public struct SearchAddPanel: View {
 
     private var radarrForm: some View {
         VStack(spacing: 4) {
-            formPicker("Quality Profile",
+            formPicker("Quality profile",
                        selection: Binding(
                            get: { selectedProfileId ?? viewModel.qualityProfiles.first?.id ?? 0 },
                            set: { selectedProfileId = $0 }
                        ),
                        options: viewModel.qualityProfiles.map { ($0.id, $0.name) })
 
-            formPicker("Root Folder",
+            formPicker("Root folder",
                        selection: Binding(
                            get: { selectedRootFolder ?? viewModel.rootFolders.first?.path ?? "" },
                            set: { selectedRootFolder = $0 }
@@ -308,14 +308,14 @@ public struct SearchAddPanel: View {
             // picker capsules touch the popover edge while the section
             // labels and chips around them are inset — reads as wonky.
             VStack(spacing: 4) {
-                formPicker("Quality Profile",
+                formPicker("Quality profile",
                            selection: Binding(
                                get: { selectedProfileId ?? viewModel.qualityProfiles.first?.id ?? 0 },
                                set: { selectedProfileId = $0 }
                            ),
                            options: viewModel.qualityProfiles.map { ($0.id, $0.name) })
 
-                formPicker("Root Folder",
+                formPicker("Root folder",
                            selection: Binding(
                                get: { selectedRootFolder ?? viewModel.rootFolders.first?.path ?? "" },
                                set: { selectedRootFolder = $0 }
@@ -429,8 +429,8 @@ public struct SearchAddPanel: View {
 
     // MARK: - Helpers
 
-    private func sectionLabel(_ text: String) -> some View {
-        Text(text)
+    private func sectionLabel(_ text: LocalizedStringKey) -> some View {
+        Text(text, bundle: .module)
             .scaledFont(size: 10, weight: .semibold)
             .foregroundStyle(.tertiary)
             .textCase(.uppercase)
@@ -440,10 +440,10 @@ public struct SearchAddPanel: View {
             .padding(.bottom, 2)
     }
 
-    private func formPicker<T: Hashable>(_ label: String, selection: Binding<T>,
+    private func formPicker<T: Hashable>(_ label: LocalizedStringKey, selection: Binding<T>,
                                          options: [(T, String)]) -> some View {
         HStack {
-            Text(label)
+            Text(label, bundle: .module)
                 .scaledFont(size: 11)
                 .foregroundStyle(.secondary)
             Spacer()
@@ -453,7 +453,7 @@ public struct SearchAddPanel: View {
                 }
             } label: {
                 HStack(spacing: 3) {
-                    Text(options.first(where: { $0.0 == selection.wrappedValue })?.1
+                    Text(verbatim: options.first(where: { $0.0 == selection.wrappedValue })?.1
                          ?? options.first?.1 ?? "—")
                         .scaledFont(size: 11)
                     Image(systemName: "chevron.up.chevron.down")

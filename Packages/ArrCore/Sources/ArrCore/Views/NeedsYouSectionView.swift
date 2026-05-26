@@ -20,7 +20,7 @@ public struct NeedsYouSectionView: View {
                 Text("Needs you", bundle: .module)
                     .scaledFont(size: 12, weight: .semibold)
                     .foregroundStyle(.secondary)
-                Text("\(items.count)")
+                Text(verbatim: "\(items.count)")
                     .scaledFont(size: 11)
                     .foregroundStyle(.tertiary)
                 Spacer()

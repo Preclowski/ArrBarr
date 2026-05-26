@@ -155,15 +155,15 @@ public struct ScoreLabel: View {
             let deltaSign = delta > 0 ? "+" : (delta == 0 ? "±" : "")
             let scoreColor: Color = score > 0 ? .green : (score < 0 ? .red : .secondary)
             HStack(spacing: 3) {
-                Text("\(scoreSign)\(score)")
+                Text(verbatim: "\(scoreSign)\(score)")
                     .foregroundStyle(scoreColor)
-                Text("(\(deltaSign)\(delta))")
+                Text(verbatim: "(\(deltaSign)\(delta))")
                     .foregroundStyle(Color.green.opacity(0.55))
             }
             .scaledFont(size: size, weight: weight, monospacedDigit: true)
         } else if score != 0 {
             let sign = score > 0 ? "+" : ""
-            Text("\(sign)\(score)")
+            Text(verbatim: "\(sign)\(score)")
                 .scaledFont(size: size, weight: weight)
                 .foregroundStyle(score > 0 ? Color.green : Color.red)
         }
@@ -319,20 +319,20 @@ public struct ExistingFileDiffRow: View {
                         .foregroundStyle(.secondary)
                 }
                 if showSize, let size = existingSize, size > 0 {
-                    if showQuality { Text("·").foregroundStyle(.tertiary) }
+                    if showQuality { SeparatorDot() }
                     Text(ByteCountFormatter.string(fromByteCount: size, countStyle: .file))
                         .scaledFont(size: 11)
                         .foregroundStyle(.secondary)
                 }
                 if showScore {
-                    if showQuality || showSize { Text("·").foregroundStyle(.tertiary) }
+                    if showQuality || showSize { SeparatorDot() }
                     if let s = existingScore, s != 0 {
                         ScoreLabel(score: s, size: 11, weight: .regular)
                     }
                     if let existing = existingScore, existing != newScore {
                         let delta = newScore - existing
                         let sign = delta > 0 ? "+" : ""
-                        Text("(\(sign)\(delta))")
+                        Text(verbatim: "(\(sign)\(delta))")
                             .scaledFont(size: 10, weight: .semibold)
                             .foregroundStyle(delta > 0 ? Color.green : Color.red)
                     }

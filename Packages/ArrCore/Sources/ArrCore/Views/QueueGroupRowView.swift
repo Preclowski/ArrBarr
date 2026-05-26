@@ -166,7 +166,7 @@ public struct QueueGroupRowView: View {
     /// belongs in the subtitle alongside other shape descriptors.
     private var seasonLabel: String? {
         let seasons = Set(group.items.compactMap(\.seasonNumber))
-        let packLabel = String(localized: "season pack")
+        let packLabel = String(localized: "Season pack", bundle: .module)
         if seasons.count == 1, let s = seasons.first {
             let seasonText = String(format: String(localized: "Season %02lld"), s)
             return "\(seasonText) · \(packLabel) · \(episodeCountText)"
@@ -430,9 +430,9 @@ public struct QueueGroupTooltip: View {
             HStack(spacing: 4) {
                 Text(uniform.quality).foregroundStyle(.primary)
                 if uniform.score != 0 {
-                    Text("·").foregroundStyle(.tertiary)
+                    SeparatorDot()
                     let sign = uniform.score > 0 ? "+" : ""
-                    Text("\(sign)\(uniform.score)")
+                    Text(verbatim: "\(sign)\(uniform.score)")
                         .scaledFont(size: 11, weight: .semibold)
                         .foregroundStyle(uniform.score > 0 ? Color.green : Color.red)
                 }
@@ -490,7 +490,7 @@ public struct QueueGroupTooltip: View {
             HStack(spacing: 4) {
                 if let label = seasonLabel {
                     Text(label)
-                    Text("·").foregroundStyle(.tertiary)
+                    SeparatorDot()
                 }
                 Text("\(group.memberCount) episodes", bundle: .module)
             }
@@ -640,12 +640,12 @@ public struct TooltipQueueRow: View {
         if let existing = item.existingCustomFormatScore {
             let delta = item.customFormatScore - existing
             let sign = delta > 0 ? "+" : (delta == 0 ? "±" : "")
-            Text("\(sign)\(delta)")
+            Text(verbatim: "\(sign)\(delta)")
                 .scaledFont(size: 10, weight: .semibold, monospacedDigit: true)
                 .foregroundStyle(delta > 0 ? Color.green : (delta < 0 ? Color.red : .secondary))
         } else if item.customFormatScore != 0 {
             let sign = item.customFormatScore > 0 ? "+" : ""
-            Text("\(sign)\(item.customFormatScore)")
+            Text(verbatim: "\(sign)\(item.customFormatScore)")
                 .scaledFont(size: 10, weight: .semibold, monospacedDigit: true)
                 .foregroundStyle(item.customFormatScore > 0 ? Color.green : Color.red)
         }

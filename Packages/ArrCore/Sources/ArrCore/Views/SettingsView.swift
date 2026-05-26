@@ -64,6 +64,12 @@ public struct SettingsView: View {
             #endif
         }
         .environment(\.locale, configStore.currentLocale)
+        // Settings is hosted in its own NSWindow on macOS and as a tab on
+        // iOS — neither path inherits the popover's `\.fontScale` env, so
+        // the Text-size picker had no effect on Settings itself (the most
+        // visible place where the user *previews* the change). Inject the
+        // env right here; observing configStore re-renders on every step.
+        .environment(\.fontScale, configStore.fontScale)
         .onAppear {
             if initialAppLanguage == nil { initialAppLanguage = configStore.appLanguage }
         }
@@ -73,7 +79,7 @@ public struct SettingsView: View {
     /// General pane and the iOS combined form so the "restart required"
     /// affordance behaves identically on both platforms.
     /// Text-size preset picker — three discrete steps (Default / Larger /
-    /// Largest = 1.0 / 1.10 / 1.20). Affects every `.scaledFont(size:)`
+    /// Largest = 1.0 / 1.20 / 1.45). Affects every `.scaledFont(size:)`
     /// site in the app via the `\.fontScale` env value injected at root.
     @ViewBuilder
     private var textSizePicker: some View {
@@ -126,11 +132,15 @@ public struct SettingsView: View {
                     }
                 } label: { Text("AI provider", bundle: .module) }
                 if configStore.chatProvider == .openai {
-                    TextField("API base URL", text: $configStore.openai.baseURL,
-                              prompt: Text(verbatim: "https://api.openai.com/v1"))
+                    TextField(text: $configStore.openai.baseURL,
+                              prompt: Text(verbatim: "https://api.openai.com/v1")) {
+                        Text("API base URL", bundle: .module)
+                    }
                     SecureField(text: $configStore.openai.apiKey) { Text("API key", bundle: .module) }
-                    TextField("Model", text: $configStore.openai.model,
-                              prompt: Text(verbatim: "gpt-4o-mini"))
+                    TextField(text: $configStore.openai.model,
+                              prompt: Text(verbatim: "gpt-4o-mini")) {
+                        Text("Model", bundle: .module)
+                    }
                 }
                 if configStore.chatProvider == .foundationModels {
                     #if os(macOS)
@@ -152,8 +162,10 @@ public struct SettingsView: View {
                 }
             } header: { Text("Model", bundle: .module) }
             Section {
-                SecureField("TMDB API key", text: $configStore.tmdbApiKey,
-                            prompt: Text(verbatim: "v3 read key"))
+                SecureField(text: $configStore.tmdbApiKey,
+                            prompt: Text(verbatim: "v3 read key")) {
+                    Text("TMDB API key", bundle: .module)
+                }
                 if let url = URL(string: "https://www.themoviedb.org/settings/api") {
                     Link(destination: url) {
                         Label { Text("Get a free TMDB key", bundle: .module) } icon: { Image(systemName: "link") }
@@ -256,14 +268,14 @@ public struct SettingsView: View {
             aiSection
             if devModeRevealed {
                 Section {
-                    Toggle("Demo mode", isOn: Binding(
+                    Toggle(isOn: Binding(
                         get: { demoModeOn },
                         set: { newValue in
                             guard newValue != demoModeOn else { return }
                             let committed = onSetDemoMode?(newValue) ?? false
                             if committed { demoModeOn = newValue }
                         }
-                    ))
+                    )) { Text("Demo mode", bundle: .module) }
                     if demoModeOn {
                         if let onTestNotification {
                             Button { onTestNotification() } label: { Text("Send test notification", bundle: .module) }
@@ -296,7 +308,7 @@ public struct SettingsView: View {
                 }
                 .buttonStyle(.plain)
                 Link(destination: URL(string: "https://github.com/Preclowski/ArrBarr")!) {
-                    Label { Text("GitHub", bundle: .module) } icon: { Image(systemName: "link") }
+                    Label { Text(verbatim: "GitHub") } icon: { Image(systemName: "link") }
                 }
                 Text(verbatim: "Made with 🥨")
                     .foregroundStyle(.secondary)
@@ -407,7 +419,7 @@ public struct SettingsView: View {
             } header: { Text("Refresh Interval", bundle: .module) }
             if DeveloperMode.isActive {
                 Section {
-                    Toggle("Demo mode", isOn: Binding(
+                    Toggle(isOn: Binding(
                         get: { demoModeOn },
                         set: { newValue in
                             guard newValue != demoModeOn else { return }
@@ -417,7 +429,7 @@ public struct SettingsView: View {
                             let committed = onSetDemoMode?(newValue) ?? false
                             if committed { demoModeOn = newValue }
                         }
-                    ))
+                    )) { Text("Demo mode", bundle: .module) }
                     if demoModeOn {
                         if let onTestNotification {
                             Button { onTestNotification() } label: { Text("Send test notification", bundle: .module) }
@@ -526,16 +538,14 @@ public struct SettingsView: View {
                     .scaledFont(size: 11)
                     .foregroundStyle(.secondary)
                     .textSelection(.enabled)
-                    .help("ArrBarr \(Self.versionString)")
-                Text("·")
+                    .help(Text(verbatim: "ArrBarr \(Self.versionString)"))
+                SeparatorDot()
                     .scaledFont(size: 11)
-                    .foregroundStyle(.tertiary)
                 Text(verbatim: "Made with 🥨")
                     .scaledFont(size: 11)
                     .foregroundStyle(.secondary)
-                Text("·")
+                SeparatorDot()
                     .scaledFont(size: 11)
-                    .foregroundStyle(.tertiary)
                 Link(destination: URL(string: "https://github.com/Preclowski/ArrBarr")!) {
                     HStack(spacing: 3) {
                         Image(systemName: "link")
@@ -608,24 +618,32 @@ private struct ServiceFields: View {
     }
 
     public var body: some View {
-        Toggle("Enabled", isOn: $config.enabled.animation())
+        Toggle(isOn: $config.enabled.animation()) { Text("Enabled", bundle: .module) }
 
         if config.enabled, let notifyBinding {
-            Toggle("Notify on new grabs", isOn: notifyBinding)
+            Toggle(isOn: notifyBinding) { Text("Notify on new grabs", bundle: .module) }
         }
 
         if config.enabled {
-            TextField("URL", text: $config.baseURL, prompt: Text(kind.urlPlaceholder))
-                .autocorrectionDisabled(true)
+            TextField(text: $config.baseURL, prompt: Text(verbatim: kind.urlPlaceholder)) {
+                Text("URL", bundle: .module)
+            }
+            .autocorrectionDisabled(true)
 
             if kind.requiresApiKey {
-                SecureField("API Key", text: $config.apiKey, prompt: Text("Paste your API key", bundle: .module))
+                SecureField(text: $config.apiKey, prompt: Text("Paste your API key", bundle: .module)) {
+                    Text("API Key", bundle: .module)
+                }
             }
 
             if kind.requiresLogin {
-                TextField("Username", text: $config.username, prompt: Text("admin", bundle: .module))
-                    .autocorrectionDisabled(true)
-                SecureField("Password", text: $config.password, prompt: Text("Password", bundle: .module))
+                TextField(text: $config.username, prompt: Text("admin", bundle: .module)) {
+                    Text("Username", bundle: .module)
+                }
+                .autocorrectionDisabled(true)
+                SecureField(text: $config.password, prompt: Text("Password", bundle: .module)) {
+                    Text("Password", bundle: .module)
+                }
             }
 
             HStack(spacing: 8) {

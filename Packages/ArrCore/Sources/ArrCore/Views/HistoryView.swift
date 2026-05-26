@@ -159,10 +159,10 @@ public struct HistoryRowView: View {
                     Text(LocalizedStringKey(item.eventType.displayName))
                         .foregroundStyle(eventTint)
                     if let q = item.quality, !q.isEmpty {
-                        Text("·").foregroundStyle(.tertiary)
+                        SeparatorDot()
                         Text(q).foregroundStyle(.tertiary)
                     }
-                    Text("·").foregroundStyle(.tertiary)
+                    SeparatorDot()
                     Text(relativeDate).foregroundStyle(.tertiary)
                 }
                 .scaledFont(size: 10)

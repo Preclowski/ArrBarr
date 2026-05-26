@@ -135,7 +135,7 @@ public struct SearchView: View {
                     Text(title, bundle: .module)
                         .scaledFont(size: 12, weight: .semibold)
                         .foregroundStyle(.secondary)
-                    Text("\(results.count)")
+                    Text(verbatim: "\(results.count)")
                         .scaledFont(size: 11)
                         .foregroundStyle(.tertiary)
                     Spacer()

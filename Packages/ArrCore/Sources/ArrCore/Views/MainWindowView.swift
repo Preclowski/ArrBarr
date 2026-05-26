@@ -218,7 +218,7 @@ public struct MainWindowView: View {
                 Text(source.displayName)
                 Spacer()
                 if count > 0 {
-                    Text("\(count)")
+                    Text(verbatim: "\(count)")
                         .scaledFont(size: 10, weight: .semibold, monospacedDigit: true)
                         .foregroundStyle(.secondary)
                         .padding(.horizontal, 6)

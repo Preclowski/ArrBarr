@@ -171,7 +171,7 @@ public struct MediaHeaderCard: View {
                 certification.flatMap { $0.isEmpty ? nil : $0 },
             ].compactMap { $0 }
             ForEach(Array(segments.enumerated()), id: \.offset) { idx, segment in
-                if idx > 0 { Text("·").foregroundStyle(.tertiary) }
+                if idx > 0 { SeparatorDot() }
                 Text(segment).foregroundStyle(.secondary)
             }
         }

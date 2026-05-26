@@ -664,6 +664,76 @@
         }
       }
     },
+    "Album details": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Album details"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Szczegóły albumu"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Albumdetails"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Detalles del álbum"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Détails de l'album"
+          }
+        }
+      }
+    },
+    "All": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wszystkie"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Todos"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tous"
+          }
+        }
+      }
+    },
     "Apple Intelligence": {
       "extractionState": "manual",
       "localizations": {
@@ -948,6 +1018,41 @@
           "stringUnit": {
             "state": "translated",
             "value": "ArrBarr nie zajmuje miejsca w Docku i pokazuje aktywne pobierania w mgnieniu oka. Kliknij ikonę, aby otworzyć okno; kliknij prawym, aby zobaczyć szybkie opcje."
+          }
+        }
+      }
+    },
+    "ArrBarr will relaunch now to apply the change.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ArrBarr will relaunch now to apply the change."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "new",
+            "value": "ArrBarr will relaunch now to apply the change."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "new",
+            "value": "ArrBarr will relaunch now to apply the change."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "new",
+            "value": "ArrBarr will relaunch now to apply the change."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "new",
+            "value": "ArrBarr will relaunch now to apply the change."
           }
         }
       }
@@ -1242,6 +1347,76 @@
           "stringUnit": {
             "state": "translated",
             "value": "Anuluj"
+          }
+        }
+      }
+    },
+    "Cancel download": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancel download"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anuluj pobieranie"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download abbrechen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancelar descarga"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Annuler le téléchargement"
+          }
+        }
+      }
+    },
+    "Cancel this download?": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancel this download?"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anulować to pobieranie?"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diesen Download abbrechen?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Cancelar esta descarga?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Annuler ce téléchargement ?"
           }
         }
       }
@@ -1906,6 +2081,70 @@
         }
       }
     },
+    "Custom…": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eigene…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Personalizado…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Personnalisé…"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Własne…"
+          }
+        }
+      }
+    },
+    "Default": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Default"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Domyślny"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Standard"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Predeterminado"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Par défaut"
+          }
+        }
+      }
+    },
     "Deleted": {
       "localizations": {
         "de": {
@@ -1992,6 +2231,41 @@
         }
       }
     },
+    "Demo mode disabled": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Demo mode disabled"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Demo mode disabled"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Demo mode disabled"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Demo mode disabled"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Demo mode disabled"
+          }
+        }
+      }
+    },
     "Demo mode enabled": {
       "extractionState": "manual",
       "localizations": {
@@ -2050,6 +2324,41 @@
         }
       }
     },
+    "Developer options enabled": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Developer options enabled"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Developer options enabled"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Developer options enabled"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Developer options enabled"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Developer options enabled"
+          }
+        }
+      }
+    },
     "Disc %lld": {
       "extractionState": "manual",
       "localizations": {
@@ -2075,6 +2384,35 @@
           "stringUnit": {
             "state": "translated",
             "value": "Disque %lld"
+          }
+        }
+      }
+    },
+    "Discover": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entdecken"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Descubrir"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Découvrir"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Odkrywaj"
           }
         }
       }
@@ -2193,6 +2531,35 @@
         }
       }
     },
+    "Done": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fertig"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hecho"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Terminé"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gotowe"
+          }
+        }
+      }
+    },
     "Download": {
       "extractionState": "manual",
       "localizations": {
@@ -2222,60 +2589,37 @@
         }
       }
     },
-    "Discover": {
+    "Download actions": {
       "extractionState": "manual",
       "localizations": {
-        "de": {
+        "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Entdecken"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Descubrir"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Découvrir"
+            "value": "Download actions"
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Odkrywaj"
+            "value": "Akcje pobierania"
           }
-        }
-      }
-    },
-    "Done": {
-      "extractionState": "manual",
-      "localizations": {
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fertig"
+            "value": "Download-Aktionen"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Hecho"
+            "value": "Acciones de descarga"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Terminé"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Gotowe"
+            "value": "Actions de téléchargement"
           }
         }
       }
@@ -2477,6 +2821,41 @@
           "stringUnit": {
             "state": "translated",
             "value": "Podoba ci się ArrBarr?"
+          }
+        }
+      }
+    },
+    "Episode %lld": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Episode %lld"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Episode %lld"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Episode %lld"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Episode %lld"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Episode %lld"
           }
         }
       }
@@ -2765,6 +3144,41 @@
         }
       }
     },
+    "Filter queue": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Filter queue"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Filtruj kolejkę"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Warteschlange filtern"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Filtrar cola"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Filtrer la file d'attente"
+          }
+        }
+      }
+    },
     "Filter…": {
       "localizations": {
         "de": {
@@ -2789,6 +3203,93 @@
           "stringUnit": {
             "state": "translated",
             "value": "Filtruj…"
+          }
+        }
+      }
+    },
+    "From AI": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aus KI"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "De IA"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "De l’IA"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Z AI"
+          }
+        }
+      }
+    },
+    "From TMDB": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aus TMDB"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "De TMDB"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "De TMDB"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Z TMDB"
+          }
+        }
+      }
+    },
+    "From your library": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aus deiner Bibliothek"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "De tu biblioteca"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "De votre bibliothèque"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Z Twojej biblioteki"
           }
         }
       }
@@ -2936,6 +3437,76 @@
         }
       }
     },
+    "Here are %lld films you might enjoy.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Here are %lld films you might enjoy."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Here are %lld films you might enjoy."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Here are %lld films you might enjoy."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Here are %lld films you might enjoy."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Here are %lld films you might enjoy."
+          }
+        }
+      }
+    },
+    "Here are %lld series you might enjoy.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Here are %lld series you might enjoy."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Here are %lld series you might enjoy."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Here are %lld series you might enjoy."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Here are %lld series you might enjoy."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Here are %lld series you might enjoy."
+          }
+        }
+      }
+    },
     "History": {
       "localizations": {
         "de": {
@@ -3049,6 +3620,70 @@
         }
       }
     },
+    "In library": {
+      "extractionState": "manual",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "W bibliotece"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In Bibliothek"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En biblioteca"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dans la bibliothèque"
+          }
+        }
+      }
+    },
+    "In library or new": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In library or new"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "W bibliotece lub nowe"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In Bibliothek oder neu"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En biblioteca o nuevo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dans la bibliothèque ou nouveau"
+          }
+        }
+      }
+    },
     "In queue": {
       "extractionState": "manual",
       "localizations": {
@@ -3135,6 +3770,41 @@
         }
       }
     },
+    "Keep download": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keep download"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zachowaj pobieranie"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download behalten"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mantener descarga"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conserver le téléchargement"
+          }
+        }
+      }
+    },
     "Language": {
       "localizations": {
         "de": {
@@ -3159,6 +3829,76 @@
           "stringUnit": {
             "state": "translated",
             "value": "Język"
+          }
+        }
+      }
+    },
+    "Larger": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Larger"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Większy"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Größer"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Más grande"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plus grand"
+          }
+        }
+      }
+    },
+    "Largest": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Largest"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Największy"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Am größten"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El más grande"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le plus grand"
           }
         }
       }
@@ -3508,6 +4248,41 @@
         }
       }
     },
+    "Manual import required": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manual import required"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Manual import required"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Manual import required"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Manual import required"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Manual import required"
+          }
+        }
+      }
+    },
     "Media Managers": {
       "localizations": {
         "de": {
@@ -3532,6 +4307,41 @@
           "stringUnit": {
             "state": "translated",
             "value": "Menedżery mediów"
+          }
+        }
+      }
+    },
+    "Metadata Profile": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Metadata Profile"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Metadata Profile"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Metadata Profile"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Metadata Profile"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Metadata Profile"
           }
         }
       }
@@ -3561,6 +4371,41 @@
           "stringUnit": {
             "state": "translated",
             "value": "Modèle"
+          }
+        }
+      }
+    },
+    "Monitor": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Monitor"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Monitor"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Monitor"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Monitor"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Monitor"
           }
         }
       }
@@ -3652,6 +4497,163 @@
         }
       }
     },
+    "Monitored": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Überwacht"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Monitorizadas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Surveillés"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Monitorowane"
+          }
+        }
+      }
+    },
+    "Mood…": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stimmung…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ánimo…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Humeur…"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nastrój…"
+          }
+        }
+      }
+    },
+    "More": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "More"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Więcej"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mehr"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Más"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plus"
+          }
+        }
+      }
+    },
+    "More AI suggestions": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weitere KI-Vorschläge"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Más sugerencias IA"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plus de suggestions IA"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Więcej propozycji AI"
+          }
+        }
+      }
+    },
+    "More actions": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "More actions"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Więcej akcji"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weitere Aktionen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Más acciones"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plus d’actions"
+          }
+        }
+      }
+    },
     "More options": {
       "localizations": {
         "de": {
@@ -3676,6 +4678,41 @@
           "stringUnit": {
             "state": "translated",
             "value": "Więcej opcji"
+          }
+        }
+      }
+    },
+    "Movie details": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Movie details"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Szczegóły filmu"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Filmdetails"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Detalles de la película"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Détails du film"
           }
         }
       }
@@ -3910,6 +4947,35 @@
         }
       }
     },
+    "Next week": {
+      "extractionState": "manual",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "W tym tygodniu"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese Woche"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esta semana"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cette semaine"
+          }
+        }
+      }
+    },
     "No download ID — item hasn't reached the client yet": {
       "localizations": {
         "de": {
@@ -3962,6 +5028,64 @@
           "stringUnit": {
             "state": "translated",
             "value": "Brak historii"
+          }
+        }
+      }
+    },
+    "No matches.": {
+      "extractionState": "manual",
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Brak wyników."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Treffer."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sin resultados."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun résultat."
+          }
+        }
+      }
+    },
+    "No more cards": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine weiteren Karten"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No hay más tarjetas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plus de cartes"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Koniec sugestii"
           }
         }
       }
@@ -4134,6 +5258,41 @@
           "stringUnit": {
             "state": "translated",
             "value": "Powiadomienia"
+          }
+        }
+      }
+    },
+    "Notify on new grabs": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notify on new grabs"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Notify on new grabs"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Notify on new grabs"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Notify on new grabs"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Notify on new grabs"
           }
         }
       }
@@ -4417,6 +5576,76 @@
           "stringUnit": {
             "state": "translated",
             "value": "Wstrzymaj %@"
+          }
+        }
+      }
+    },
+    "Pause download": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pause download"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Pause download"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Pause download"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Pause download"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Pause download"
+          }
+        }
+      }
+    },
+    "Pause episode download": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pause episode download"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wstrzymaj pobieranie odcinka"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Episode-Download pausieren"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pausar descarga del episodio"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mettre en pause le téléchargement"
           }
         }
       }
@@ -4789,6 +6018,41 @@
         }
       }
     },
+    "Re-downloading identical release": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Re-downloading identical release"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ponowne pobieranie identycznego wydania"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Identische Veröffentlichung wird erneut heruntergeladen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Re-descargando lanzamiento idéntico"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Re-téléchargement d’une version identique"
+          }
+        }
+      }
+    },
     "Refresh": {
       "localizations": {
         "de": {
@@ -4958,6 +6222,41 @@
         }
       }
     },
+    "Remove episode download": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove episode download"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anuluj pobieranie"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Episode-Download entfernen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eliminar descarga del episodio"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Supprimer le téléchargement"
+          }
+        }
+      }
+    },
     "Remove from client": {
       "localizations": {
         "de": {
@@ -5011,6 +6310,41 @@
           "stringUnit": {
             "state": "translated",
             "value": "Zmień kolejność sekcji, ukryj to, czego nie potrzebujesz, dostosuj częstotliwość odświeżania i wybierz język w ustawieniach. Pokazuj tylko to, co ważne."
+          }
+        }
+      }
+    },
+    "Replacing": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Replacing"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zastępuje"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ersetzt"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reemplaza"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remplace"
           }
         }
       }
@@ -5073,6 +6407,35 @@
         }
       }
     },
+    "Reshuffle": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neu mischen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mezclar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mélanger"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Przetasuj"
+          }
+        }
+      }
+    },
     "Restart ArrBarr to apply language change.": {
       "localizations": {
         "de": {
@@ -5130,6 +6493,76 @@
         }
       }
     },
+    "Result kind": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Type"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Typ"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Typ"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tipo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Type"
+          }
+        }
+      }
+    },
+    "Result type": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Result type"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Typ wyników"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ergebnistyp"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tipo de resultado"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Type de résultat"
+          }
+        }
+      }
+    },
     "Resume": {
       "localizations": {
         "de": {
@@ -5182,6 +6615,76 @@
           "stringUnit": {
             "state": "translated",
             "value": "Wznów %@"
+          }
+        }
+      }
+    },
+    "Resume download": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resume download"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Resume download"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Resume download"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Resume download"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Resume download"
+          }
+        }
+      }
+    },
+    "Resume episode download": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resume episode download"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wznów pobieranie odcinka"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Episode-Download fortsetzen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reanudar descarga del episodio"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reprendre le téléchargement de l'épisode"
           }
         }
       }
@@ -5273,6 +6776,41 @@
         }
       }
     },
+    "Same spec, retagged": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Same spec, retagged"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ta sama specyfikacja, inne tagi"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gleiche Spezifikation, neu getaggt"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Misma especificación, retaggeada"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Même spec, ré-étiquetée"
+          }
+        }
+      }
+    },
     "Save": {
       "localizations": {
         "de": {
@@ -5358,64 +6896,6 @@
         }
       }
     },
-    "In library": {
-      "extractionState": "manual",
-      "localizations": {
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "W bibliotece"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "In Bibliothek"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "En biblioteca"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dans la bibliothèque"
-          }
-        }
-      }
-    },
-    "No matches.": {
-      "extractionState": "manual",
-      "localizations": {
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Brak wyników."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Keine Treffer."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sin resultados."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aucun résultat."
-          }
-        }
-      }
-    },
     "Search": {
       "extractionState": "manual",
       "localizations": {
@@ -5441,35 +6921,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Rechercher"
-          }
-        }
-      }
-    },
-    "Searching": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Suche"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Búsqueda"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Recherche"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wyszukiwanie"
           }
         }
       }
@@ -5764,6 +7215,76 @@
         }
       }
     },
+    "Search queued": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search queued"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Search queued"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Search queued"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Search queued"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Search queued"
+          }
+        }
+      }
+    },
+    "Search scope": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search scope"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zakres wyszukiwania"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suchbereich"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ámbito de búsqueda"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Portée de la recherche"
+          }
+        }
+      }
+    },
     "Search this episode?": {
       "extractionState": "manual",
       "localizations": {
@@ -5822,6 +7343,70 @@
         }
       }
     },
+    "Search whole series": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search whole series"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Szukaj całego serialu"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ganze Serie suchen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buscar serie completa"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rechercher toute la série"
+          }
+        }
+      }
+    },
+    "Searching": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suche"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Búsqueda"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recherche"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wyszukiwanie"
+          }
+        }
+      }
+    },
     "Season": {
       "extractionState": "manual",
       "localizations": {
@@ -5847,42 +7432,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Sezon"
-          }
-        }
-      }
-    },
-    "Season pill %lld": {
-      "comment": "Season label used in the pill bar — e.g. 'Sezon 1'. Distinct key from 'Season %02lld' to avoid xcstring symbol-generation collision.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Season %lld"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Staffel %lld"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Temporada %lld"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Saison %lld"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sezon %lld"
           }
         }
       }
@@ -5941,6 +7490,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Pakiet sezonu"
+          }
+        }
+      }
+    },
+    "Season pill %lld": {
+      "comment": "Season label used in the pill bar — e.g. 'Sezon 1'. Distinct key from 'Season %02lld' to avoid xcstring symbol-generation collision.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Season %lld"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Staffel %lld"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Temporada %lld"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saison %lld"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sezon %lld"
           }
         }
       }
@@ -6118,6 +7703,76 @@
         }
       }
     },
+    "Series Type": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Series Type"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Series Type"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Series Type"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Series Type"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Series Type"
+          }
+        }
+      }
+    },
+    "Series details": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Series details"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Szczegóły serialu"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seriendetails"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Detalles de la serie"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Détails de la série"
+          }
+        }
+      }
+    },
     "Set MCP server URL in Settings to start chatting.": {
       "extractionState": "manual",
       "localizations": {
@@ -6143,6 +7798,41 @@
           "stringUnit": {
             "state": "translated",
             "value": "Définissez l'URL du serveur MCP dans Réglages pour commencer à discuter."
+          }
+        }
+      }
+    },
+    "Settings": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Settings"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Settings"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Settings"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Settings"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Settings"
           }
         }
       }
@@ -6316,140 +8006,6 @@
         }
       }
     },
-    "Next week": {
-      "extractionState": "manual",
-      "localizations": {
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "W tym tygodniu"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Diese Woche"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Esta semana"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cette semaine"
-          }
-        }
-      }
-    },
-    "Resume episode download": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Resume episode download"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wznów pobieranie odcinka"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Episode-Download fortsetzen"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Reanudar descarga del episodio"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Reprendre le téléchargement de l'épisode"
-          }
-        }
-      }
-    },
-    "Pause episode download": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pause episode download"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wstrzymaj pobieranie odcinka"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Episode-Download pausieren"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pausar descarga del episodio"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mettre en pause le téléchargement"
-          }
-        }
-      }
-    },
-    "Remove episode download": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Remove episode download"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Anuluj pobieranie"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Episode-Download entfernen"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Eliminar descarga del episodio"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Supprimer le téléchargement"
-          }
-        }
-      }
-    },
     "Show more": {
       "extractionState": "manual",
       "localizations": {
@@ -6475,6 +8031,41 @@
           "stringUnit": {
             "state": "translated",
             "value": "Afficher plus"
+          }
+        }
+      }
+    },
+    "Show poster": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show poster"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Show poster"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Show poster"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Show poster"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Show poster"
           }
         }
       }
@@ -6589,6 +8180,41 @@
           "stringUnit": {
             "state": "translated",
             "value": "Sonarr — powiadamiaj o nowych pobraniach"
+          }
+        }
+      }
+    },
+    "Source": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Source"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Źródło"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quelle"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fuente"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Source"
           }
         }
       }
@@ -6966,6 +8592,41 @@
         }
       }
     },
+    "Text size": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Text size"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rozmiar tekstu"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schriftgröße"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tamaño del texto"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Taille du texte"
+          }
+        }
+      }
+    },
     "The footer is gone. Add new content via the **+** button next to the tabs, or press **⌘N** anywhere in the popover. The **⋯** menu next to it holds Settings, Quit and Open Window — and everything's also in the right-click menu on the menu bar icon.": {
       "extractionState": "manual",
       "localizations": {
@@ -6991,6 +8652,41 @@
           "stringUnit": {
             "state": "translated",
             "value": "Le pied de page a disparu. Ajoutez du contenu via le bouton **Add** à côté des onglets, ou appuyez sur **⌘N** n'importe où dans le popover. Le menu **⋯** à côté contient Réglages, Quitter et Ouvrir la fenêtre — tout est aussi dans le menu contextuel de l'icône de la barre de menus."
+          }
+        }
+      }
+    },
+    "Thinking…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thinking…"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Thinking…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Thinking…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Thinking…"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Thinking…"
           }
         }
       }
@@ -7366,6 +9062,41 @@
         }
       }
     },
+    "Unaired": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unaired"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Unaired"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Unaired"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Unaired"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Unaired"
+          }
+        }
+      }
+    },
     "Unknown": {
       "localizations": {
         "de": {
@@ -7645,6 +9376,41 @@
           "stringUnit": {
             "state": "translated",
             "value": "Wersja %@"
+          }
+        }
+      }
+    },
+    "View": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "View"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "new",
+            "value": "View"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "new",
+            "value": "View"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "new",
+            "value": "View"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "new",
+            "value": "View"
           }
         }
       }
@@ -8025,6 +9791,41 @@
         }
       }
     },
+    "from": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "from"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "z"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "aus"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "de"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "de"
+          }
+        }
+      }
+    },
     "qBittorrent": {
       "extractionState": "manual",
       "localizations": {
@@ -8079,1113 +9880,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "rTorrent"
-          }
-        }
-      }
-    },
-    "Movie details": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Movie details"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Szczegóły filmu"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Filmdetails"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Detalles de la película"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Détails du film"
-          }
-        }
-      }
-    },
-    "Series details": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Series details"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Szczegóły serialu"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Seriendetails"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Detalles de la serie"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Détails de la série"
-          }
-        }
-      }
-    },
-    "Album details": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Album details"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Szczegóły albumu"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Albumdetails"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Detalles del álbum"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Détails de l'album"
-          }
-        }
-      }
-    },
-    "Download actions": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Download actions"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Akcje pobierania"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Download-Aktionen"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Acciones de descarga"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Actions de téléchargement"
-          }
-        }
-      }
-    },
-    "More": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "More"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Więcej"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mehr"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Más"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Plus"
-          }
-        }
-      }
-    },
-    "Cancel download": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cancel download"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Anuluj pobieranie"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Download abbrechen"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cancelar descarga"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Annuler le téléchargement"
-          }
-        }
-      }
-    },
-    "Keep download": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Keep download"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zachowaj pobieranie"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Download behalten"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mantener descarga"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Conserver le téléchargement"
-          }
-        }
-      }
-    },
-    "More actions": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "More actions"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Więcej akcji"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Weitere Aktionen"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Más acciones"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Plus d’actions"
-          }
-        }
-      }
-    },
-    "Cancel this download?": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cancel this download?"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Anulować to pobieranie?"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Diesen Download abbrechen?"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "¿Cancelar esta descarga?"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Annuler ce téléchargement ?"
-          }
-        }
-      }
-    },
-    "Search whole series": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Search whole series"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Szukaj całego serialu"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ganze Serie suchen"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Buscar serie completa"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Rechercher toute la série"
-          }
-        }
-      }
-    },
-    "Text size": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Text size"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Rozmiar tekstu"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Schriftgröße"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tamaño del texto"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Taille du texte"
-          }
-        }
-      }
-    },
-    "Default": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Default"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Domyślny"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Standard"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Predeterminado"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Par défaut"
-          }
-        }
-      }
-    },
-    "Larger": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Larger"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Większy"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Größer"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Más grande"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Plus grand"
-          }
-        }
-      }
-    },
-    "Largest": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Largest"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Największy"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Am größten"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "El más grande"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Le plus grand"
-          }
-        }
-      }
-    },
-    "Filter queue": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Filter queue"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Filtruj kolejkę"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Warteschlange filtern"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Filtrar cola"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Filtrer la file d'attente"
-          }
-        }
-      }
-    },
-    "All": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "All"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wszystkie"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Alle"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Todos"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tous"
-          }
-        }
-      }
-    },
-    "In library or new": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "In library or new"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "W bibliotece lub nowe"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "In Bibliothek oder neu"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "En biblioteca o nuevo"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dans la bibliothèque ou nouveau"
-          }
-        }
-      }
-    },
-    "Search scope": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Search scope"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zakres wyszukiwania"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Suchbereich"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ámbito de búsqueda"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Portée de la recherche"
-          }
-        }
-      }
-    },
-    "Result type": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Result type"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Typ wyników"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ergebnistyp"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tipo de resultado"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Type de résultat"
-          }
-        }
-      }
-    },
-    "Source": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Source"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Źródło"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Quelle"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fuente"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Source"
-          }
-        }
-      }
-    },
-    "Result kind": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Type"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Typ"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Typ"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tipo"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Type"
-          }
-        }
-      }
-    },
-    "from": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "from"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "z"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "aus"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "de"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "de"
-          }
-        }
-      }
-    },
-    "Replacing": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Replacing"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zastępuje"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ersetzt"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Reemplaza"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Remplace"
-          }
-        }
-      }
-    },
-    "Same spec, retagged": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Same spec, retagged"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ta sama specyfikacja, inne tagi"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Gleiche Spezifikation, neu getaggt"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Misma especificación, retaggeada"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Même spec, ré-étiquetée"
-          }
-        }
-      }
-    },
-    "Re-downloading identical release": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Re-downloading identical release"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ponowne pobieranie identycznego wydania"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Identische Veröffentlichung wird erneut heruntergeladen"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Re-descargando lanzamiento idéntico"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Re-téléchargement d’une version identique"
-          }
-        }
-      }
-    },
-    "From TMDB": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aus TMDB"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "De TMDB"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "De TMDB"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Z TMDB"
-          }
-        }
-      }
-    },
-    "From your library": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aus deiner Bibliothek"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "De tu biblioteca"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "De votre bibliothèque"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Z Twojej biblioteki"
-          }
-        }
-      }
-    },
-    "From AI": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aus KI"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "De IA"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "De l’IA"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Z AI"
-          }
-        }
-      }
-    },
-    "Mood…": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Stimmung…"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ánimo…"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Humeur…"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nastrój…"
-          }
-        }
-      }
-    },
-    "Monitored": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Überwacht"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Monitorizadas"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Surveillés"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Monitorowane"
-          }
-        }
-      }
-    },
-    "Reshuffle": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Neu mischen"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mezclar"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mélanger"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Przetasuj"
-          }
-        }
-      }
-    },
-    "More AI suggestions": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Weitere KI-Vorschläge"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Más sugerencias IA"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Plus de suggestions IA"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Więcej propozycji AI"
-          }
-        }
-      }
-    },
-    "No more cards": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Keine weiteren Karten"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No hay más tarjetas"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Plus de cartes"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Koniec sugestii"
           }
         }
       }
