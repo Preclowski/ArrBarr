@@ -21,7 +21,7 @@ public struct ListingBadgesView: View {
                     .foregroundStyle(Color.indigo)
                     .padding(.horizontal, 5)
                     .padding(.vertical, 1)
-                    .background(Color.indigo.opacity(0.15), in: Capsule())
+                    .overlay(RoundedRectangle(cornerRadius: Tokens.Radius.chip).stroke(Color.indigo.opacity(0.55), lineWidth: 0.75))
                 Spacer()
             }
         }

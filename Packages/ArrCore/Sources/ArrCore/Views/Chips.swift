@@ -112,7 +112,7 @@ public struct TagChip: View {
             .foregroundStyle(color == .primary ? AnyShapeStyle(.primary) : AnyShapeStyle(color))
             .padding(.horizontal, 5)
             .padding(.vertical, 1)
-            .background(Color.primary.opacity(0.08), in: Capsule())
+            .overlay(RoundedRectangle(cornerRadius: Tokens.Radius.chip).stroke(Color.primary.opacity(0.45), lineWidth: 0.75))
     }
 }
 
@@ -200,7 +200,7 @@ public struct CustomFormatStrip: View {
                             .scaledFont(size: 9, weight: .medium)
                             .padding(.horizontal, 5)
                             .padding(.vertical, 1)
-                            .background(Color.primary.opacity(0.08), in: Capsule())
+                            .overlay(RoundedRectangle(cornerRadius: Tokens.Radius.chip).stroke(Color.primary.opacity(0.45), lineWidth: 0.75))
                     }
                     if score != 0 {
                         let sign = score > 0 ? "+" : ""
@@ -209,7 +209,7 @@ public struct CustomFormatStrip: View {
                             .foregroundStyle(score > 0 ? Color.green : Color.red)
                             .padding(.horizontal, 5)
                             .padding(.vertical, 1)
-                            .background(Color.primary.opacity(0.08), in: Capsule())
+                            .overlay(RoundedRectangle(cornerRadius: Tokens.Radius.chip).stroke(Color.primary.opacity(0.45), lineWidth: 0.75))
                     }
                 }
                 .fixedSize()

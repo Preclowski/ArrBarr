@@ -481,7 +481,7 @@ public struct QueueGroupTooltip: View {
                         .foregroundStyle(color)
                         .padding(.horizontal, 5)
                         .padding(.vertical, 2)
-                        .background(color.opacity(0.15), in: Capsule())
+                        .overlay(RoundedRectangle(cornerRadius: Tokens.Radius.chip).stroke(color.opacity(0.55), lineWidth: 0.75))
                         .lineLimit(1)
                         .fixedSize()
                 }

@@ -9,7 +9,7 @@ struct GenreChips: View {
                     .scaledFont(size: 9, weight: .medium)
                     .padding(.horizontal, 5)
                     .padding(.vertical, 1)
-                    .background(Color.primary.opacity(0.08), in: Capsule())
+                    .overlay(RoundedRectangle(cornerRadius: Tokens.Radius.chip).stroke(Color.primary.opacity(0.45), lineWidth: 0.75))
             }
         }
         .padding(.top, 2)
