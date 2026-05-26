@@ -5,6 +5,29 @@ public struct ChatView: View {
     @EnvironmentObject var configStore: ConfigStore
     @State private var draft: String = ""
     @FocusState private var inputFocused: Bool
+    @AppStorage("ArrBarr.chatTipSeen") private var chatTipSeen: Bool = false
+
+    // MARK: - Rotating placeholder
+    /// Cycles through example prompts while the input is empty.
+    /// Rotates every 4 seconds. Freezes if the user starts typing.
+    @State private var placeholderIndex: Int = 0
+    @State private var placeholderTimer: Timer?
+
+    /// Example prompts shown in the rotating placeholder. First entry
+    /// nudges toward the swipe-quiz feature explicitly; the rest mix
+    /// general chat with more quiz examples so users learn there's a
+    /// dedicated deck mode.
+    private static let placeholderExamples: [LocalizedStringKey] = [
+        "Try: give me a quiz of cozy 90s comedies",
+        "Ask: what's good in my library?",
+        "Try: pokaż mi quiz na sobotę wieczór",
+        "Ask: more like Dune (2021)",
+        "Try: surprise me with a quiz",
+    ]
+
+    private var currentPlaceholder: LocalizedStringKey {
+        Self.placeholderExamples[placeholderIndex % Self.placeholderExamples.count]
+    }
 
     public init(viewModel: ChatViewModel) {
         self.viewModel = viewModel
@@ -35,6 +58,7 @@ public struct ChatView: View {
                         onCancel: { viewModel.cancelPending() }
                     )
                 }
+                firstLaunchTip
                 inputBar
             }
             .padding(.horizontal, 10)
@@ -180,11 +204,17 @@ public struct ChatView: View {
 
     private var inputBar: some View {
         HStack(spacing: 8) {
-            TextField("Ask anything…", text: $draft, axis: .vertical)
-                .textFieldStyle(.plain)
-                .focused($inputFocused)
-                .onSubmit(send)
-                .lineLimit(1...4)
+            TextField(
+                text: $draft,
+                prompt: Text(currentPlaceholder, bundle: .module),
+                axis: .vertical
+            ) {
+                EmptyView()
+            }
+            .textFieldStyle(.plain)
+            .focused($inputFocused)
+            .onSubmit(send)
+            .lineLimit(1...4)
             Button(action: send) {
                 Image(systemName: "arrow.up.circle.fill")
                     .scaledFont(size: 22)
@@ -195,11 +225,63 @@ public struct ChatView: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
         .glassyFloatingBar()
+        .onAppear { startPlaceholderTimer() }
+        .onDisappear { placeholderTimer?.invalidate(); placeholderTimer = nil }
+        .onChange(of: draft) { _, newValue in
+            // Freeze rotation while the user is typing.
+            if !newValue.isEmpty {
+                placeholderTimer?.invalidate()
+                placeholderTimer = nil
+            } else if placeholderTimer == nil {
+                startPlaceholderTimer()
+            }
+        }
+    }
+
+    private func startPlaceholderTimer() {
+        placeholderTimer?.invalidate()
+        placeholderTimer = Timer.scheduledTimer(withTimeInterval: 4.0, repeats: true) { _ in
+            Task { @MainActor in
+                withAnimation(.smooth(duration: 0.4)) {
+                    placeholderIndex = (placeholderIndex + 1) % Self.placeholderExamples.count
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var firstLaunchTip: some View {
+        if !chatTipSeen {
+            HStack(spacing: 6) {
+                Image(systemName: "sparkles")
+                    .scaledFont(size: 11, weight: .semibold)
+                    .foregroundStyle(.tint)
+                Text("Tip: ask for a quiz of movies or shows to start swiping.", bundle: .module)
+                    .scaledFont(size: 11)
+                    .foregroundStyle(.secondary)
+                Spacer(minLength: 0)
+                Button(action: { chatTipSeen = true }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .scaledFont(size: 12)
+                        .foregroundStyle(.tertiary)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 6)
+            .background(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(Color.primary.opacity(0.05))
+            )
+            .padding(.horizontal, 14)
+            .padding(.bottom, 6)
+        }
     }
 
     private func send() {
         let text = draft
         draft = ""
+        chatTipSeen = true   // first interaction = tip's job is done
         Task { await viewModel.send(text) }
     }
 

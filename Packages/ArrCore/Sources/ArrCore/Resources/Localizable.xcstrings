@@ -12701,6 +12701,72 @@
           }
         }
       }
+    },
+    "Try: give me a quiz of cozy 90s comedies": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Try: give me a quiz of cozy 90s comedies"
+          }
+        }
+      }
+    },
+    "Ask: what's good in my library?": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Ask: what's good in my library?"
+          }
+        }
+      }
+    },
+    "Try: pokaż mi quiz na sobotę wieczór": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Try: pokaż mi quiz na sobotę wieczór"
+          }
+        }
+      }
+    },
+    "Ask: more like Dune (2021)": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Ask: more like Dune (2021)"
+          }
+        }
+      }
+    },
+    "Try: surprise me with a quiz": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Try: surprise me with a quiz"
+          }
+        }
+      }
+    },
+    "Tip: ask for a quiz of movies or shows to start swiping.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Tip: ask for a quiz of movies or shows to start swiping."
+          }
+        }
+      }
     }
   }
 }
