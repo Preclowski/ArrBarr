@@ -1653,6 +1653,76 @@
         }
       }
     },
+    "Clear filter": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear filter"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Clear filter"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Clear filter"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Clear filter"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Clear filter"
+          }
+        }
+      }
+    },
+    "Clear search": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear search"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Clear search"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Clear search"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Clear search"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Clear search"
+          }
+        }
+      }
+    },
     "Click a row in the queue to see its details, episodes, and existing files.": {
       "extractionState": "manual",
       "localizations": {
@@ -1790,6 +1860,41 @@
           "stringUnit": {
             "state": "translated",
             "value": "Zamknij"
+          }
+        }
+      }
+    },
+    "Collapse section": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Collapse section"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Collapse section"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Collapse section"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Collapse section"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Collapse section"
           }
         }
       }
@@ -3027,6 +3132,41 @@
           "stringUnit": {
             "state": "translated",
             "value": "Istniejące pliki"
+          }
+        }
+      }
+    },
+    "Expand section": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Expand section"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Expand section"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Expand section"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Expand section"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Expand section"
           }
         }
       }
@@ -7641,6 +7781,41 @@
           "stringUnit": {
             "state": "translated",
             "value": "Sélectionne un élément"
+          }
+        }
+      }
+    },
+    "Send": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Send"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Send"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Send"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Send"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Send"
           }
         }
       }

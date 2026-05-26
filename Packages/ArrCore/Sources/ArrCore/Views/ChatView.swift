@@ -192,6 +192,7 @@ public struct ChatView: View {
             }
             .buttonStyle(.plain)
             .disabled(draft.trimmingCharacters(in: .whitespaces).isEmpty || viewModel.isThinking)
+            .accessibilityLabel(Text("Send", bundle: .module))
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 8)

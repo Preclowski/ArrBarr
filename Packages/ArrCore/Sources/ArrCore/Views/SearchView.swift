@@ -247,6 +247,7 @@ public struct SearchView: View {
                         .foregroundStyle(.tertiary)
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(Text("Clear search", bundle: .module))
             }
         }
         .padding(.horizontal, 14)
