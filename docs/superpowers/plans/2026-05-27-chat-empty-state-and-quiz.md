@@ -84,7 +84,7 @@ struct QuizFiltersTests {
     func lensLabelFreeText() {
         var f = QuizFilters.defaults
         f.freeText = "coś jak Drive"
-        #expect(f.lensLabel == "Filmy · „coś jak Drive\" · nieobejrzane")
+        #expect(f.lensLabel == "Filmy · „coś jak Drive\u{201D} · nieobejrzane")
     }
 }
 ```
@@ -177,7 +177,7 @@ public struct QuizFilters: Equatable, Sendable {
         if let g = genre { parts.append(g.capitalized) }
         if case .any = yearBucket {} else { parts.append(yearBucket.displayLabel) }
         if let t = freeText, !t.isEmpty {
-            parts.append("„\(t)\"")
+            parts.append("„\(t)\u{201D}")
         } else {
             parts.append(sortBy.displayLabel)
         }
