@@ -52,8 +52,9 @@ public struct ChatView: View {
                         .frame(maxWidth: .infinity, minHeight: 380)
                 } else {
                     LazyVStack(alignment: .leading, spacing: 8) {
+                        let latestDiscoverID = viewModel.latestDiscoverSessionMessageID
                         ForEach(viewModel.messages.filter { !Self.shouldHide($0) }) { msg in
-                            MessageBubble(message: msg).id(msg.id)
+                            MessageBubble(message: msg, latestDiscoverSessionMessageID: latestDiscoverID).id(msg.id)
                         }
                         if viewModel.isThinking {
                             ThinkingRow()
@@ -215,6 +216,7 @@ public struct ChatView: View {
 
 private struct MessageBubble: View {
     let message: ChatMessage
+    var latestDiscoverSessionMessageID: UUID? = nil
     @State private var expanded = false
     @EnvironmentObject var configStore: ConfigStore
 
@@ -341,7 +343,8 @@ private struct MessageBubble: View {
                     radarr: configStore.radarr,
                     lidarr: configStore.lidarr,
                     whisparr: configStore.whisparr,
-                    blurWhisparr: configStore.blurWhisparrPosters
+                    blurWhisparr: configStore.blurWhisparrPosters,
+                    isResumable: latestDiscoverSessionMessageID == message.id
                 )
             }
         }

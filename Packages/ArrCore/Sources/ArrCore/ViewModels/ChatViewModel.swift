@@ -21,6 +21,17 @@ public final class ChatViewModel: ObservableObject {
 
     public var providerIsAvailable: Bool { provider.isAvailable }
 
+    /// ID of the most recent assistant tool message carrying a
+    /// `.discoverSession` rich payload. Used by the chat row renderer
+    /// to gate the resume card's tappability — only the newest session
+    /// stays interactive, older ones become informational.
+    public var latestDiscoverSessionMessageID: UUID? {
+        messages.reversed().first { msg in
+            if case .discoverSession = msg.richContent { return true }
+            return false
+        }?.id
+    }
+
     public init(provider: LLMProvider,
                 tools: [LLMTool],
                 invokeTool: @escaping @Sendable (_ name: String, _ args: JSONValue) async throws -> ToolCallOutput) {

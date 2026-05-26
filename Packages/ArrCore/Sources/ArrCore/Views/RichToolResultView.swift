@@ -9,19 +9,21 @@ public struct RichToolResultView: View {
     let lidarr: ServiceConfig
     let whisparr: ServiceConfig
     let blurWhisparr: Bool
+    let isResumable: Bool
 
     @State private var visibleCount: Int = Self.pageSize
     private static let pageSize = 10
 
     public init(content: ChatRichContent, sonarr: ServiceConfig, radarr: ServiceConfig,
                 lidarr: ServiceConfig = .empty, whisparr: ServiceConfig = .empty,
-                blurWhisparr: Bool = true) {
+                blurWhisparr: Bool = true, isResumable: Bool = false) {
         self.content = content
         self.sonarr = sonarr
         self.radarr = radarr
         self.lidarr = lidarr
         self.whisparr = whisparr
         self.blurWhisparr = blurWhisparr
+        self.isResumable = isResumable
     }
 
     public var body: some View {
@@ -152,9 +154,8 @@ public struct RichToolResultView: View {
                             visibleCount = min(visibleCount + Self.pageSize, items.count)
                         }
                     }
-                case .discoverSession:
-                    // Rendered by R2 — placeholder keeps switch exhaustive.
-                    EmptyView()
+                case .discoverSession(let mood):
+                    DiscoverSessionCard(mood: mood, isResumable: isResumable)
                 }
             }
             .padding(.vertical, 4)
@@ -324,6 +325,74 @@ private struct LibraryRecordCard: View {
             }
         }
         .frame(width: 100)
+    }
+}
+
+// MARK: - Discover session resume card
+
+private struct DiscoverSessionCard: View {
+    let mood: String
+    let isResumable: Bool
+
+    var body: some View {
+        if isResumable {
+            Button(action: tap) {
+                cardContent(opacity: 1.0)
+            }
+            .buttonStyle(.plain)
+        } else {
+            cardContent(opacity: 0.55)
+        }
+    }
+
+    private func cardContent(opacity: Double) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: isResumable
+                  ? "rectangle.stack.fill.badge.play"
+                  : "rectangle.stack.fill")
+                .scaledFont(size: 14, weight: .semibold)
+                .foregroundStyle(isResumable ? Color.accentColor : Color.secondary)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(isResumable ? "Resume Discover" : "Discover session", bundle: .module)
+                    .scaledFont(size: 12, weight: .semibold)
+                    .foregroundStyle(.primary)
+                Text(verbatim: "\u{201C}\(truncated)\u{201D}")
+                    .scaledFont(size: 11)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .frame(minWidth: 180, maxWidth: 280, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(Color.primary.opacity(0.06))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .stroke(Color.primary.opacity(0.18), lineWidth: 0.5)
+        )
+        .opacity(opacity)
+        .contentShape(Rectangle())
+    }
+
+    private var truncated: String {
+        let trimmed = mood.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.count > 40 ? String(trimmed.prefix(40)) + "\u{2026}" : trimmed
+    }
+
+    /// Resume tap signal. The actual handler in PopoverContentView
+    /// listens on the same `arrBarrOpenDiscoverInTinder` notification
+    /// but distinguishes resume from fresh by the `resume` userInfo key.
+    private func tap() {
+        NotificationCenter.default.post(
+            name: .arrBarrOpenDiscoverInTinder,
+            object: nil,
+            userInfo: ["resume": true]
+        )
     }
 }
 

@@ -12686,6 +12686,28 @@
           }
         }
       }
+    },
+    "Resume Discover": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Resume Discover"
+          }
+        }
+      }
+    },
+    "Discover session": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Discover session"
+          }
+        }
+      }
     }
   }
 }
