@@ -603,17 +603,18 @@ public actor LocalToolBackend: ToolBackend {
             return ToolCallOutput(text: "Couldn't resolve any of those picks through \(kind == "movie" ? "Radarr" : "Sonarr") lookup. Try other titles or check the service config.")
         }
 
+        let payload = resolved
         await MainActor.run {
             NotificationCenter.default.post(
                 name: .arrBarrOpenDiscoverInTinder,
                 object: nil,
                 userInfo: [
                     "mood": label,
-                    "items": resolved,
+                    "items": payload,
                 ]
             )
         }
-        let summary = "Opened Discover tinder with \(resolved.count) picks for: \(label)"
+        let summary = "Opened Discover tinder with \(payload.count) picks for: \(label)"
         return ToolCallOutput(text: summary, rich: .discoverSession(mood: label))
     }
 
