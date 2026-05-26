@@ -491,6 +491,8 @@ public enum ChatToolCatalog {
 
             Pass `append: true` when the user asks for MORE picks continuing the current vibe — that extends the active deck instead of starting over.
 
+            Use `library_mode: "none"` when the user explicitly asks for new/unseen content. Use `"many"` when they want to dig through what they already own. Default `"few"` for general taste-based quizzes.
+
             This is a single-shot session — there is no automatic top-up. When the user wants more, they'll ask explicitly via the chat.
 
             DO NOT use this for browsing curiosity without a swipe intent — use `suggest_titles` for that.
@@ -527,6 +529,10 @@ public enum ChatToolCatalog {
                     "append": .object([
                         "type": .string("boolean"),
                         "description": .string("When true, append these picks to the user's active quiz session instead of starting a fresh one. Use this when the user explicitly asked for MORE picks in the same vibe (continuing the existing session). Defaults to false (fresh session)."),
+                    ]),
+                    "library_mode": .object([
+                        "type": .string("string"),
+                        "description": .string("How to treat the user's existing library. 'none' = strictly exclude owned items (use when the user wants something NEW or HAVEN'T SEEN). 'few' (default) = include owned items if your picks happen to be in library, route to Open detail. 'many' = lean toward library items (use when the user wants to rediscover what they own). Defaults to 'few' if omitted."),
                     ]),
                 ]),
                 "required": .array([.string("mood"), .string("kind"), .string("items")]),

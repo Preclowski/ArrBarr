@@ -541,6 +541,14 @@ public actor LocalToolBackend: ToolBackend {
             return ToolCallOutput(text: "ERROR: 'items' must be a non-empty array of {title, year?}.")
         }
         let capped = Array(items.prefix(25))
+        let libraryMode: String = {
+            if case .object(let dict) = arguments,
+               case .string(let v) = dict["library_mode"] {
+                let lowered = v.lowercased()
+                if ["none", "few", "many"].contains(lowered) { return lowered }
+            }
+            return "few"
+        }()
 
         // Resolve each pick through the appropriate arr lookup, mirroring
         // what DiscoverSources.llm does per-item — same SearchResult /
@@ -624,7 +632,21 @@ public actor LocalToolBackend: ToolBackend {
             }
         }
 
-        if resolved.isEmpty {
+        let filtered: [DiscoverItem]
+        switch libraryMode {
+        case "none":
+            // Strict: drop everything the user already owns.
+            filtered = resolved.filter { $0.result.inLibraryArrId == nil }
+        default:
+            // "few" and "many" both pass everything through for now.
+            // "many" is reserved for future library injection.
+            filtered = resolved
+        }
+
+        if filtered.isEmpty {
+            if !resolved.isEmpty && libraryMode == "none" {
+                return ToolCallOutput(text: "All resolved picks were already in your library. Try different titles or pass library_mode: 'few' to include owned items.")
+            }
             return ToolCallOutput(text: "Couldn't resolve any of those picks through \(kind == "movie" ? "Radarr" : "Sonarr") lookup. Try other titles or check the service config.")
         }
 
@@ -636,7 +658,7 @@ public actor LocalToolBackend: ToolBackend {
             return false
         }()
 
-        let payload = resolved
+        let payload = filtered
         await MainActor.run {
             NotificationCenter.default.post(
                 name: .arrBarrOpenDiscoverQuiz,
@@ -648,7 +670,7 @@ public actor LocalToolBackend: ToolBackend {
                 ]
             )
         }
-        let frontPosters = resolved.prefix(3).compactMap { $0.result.posterURL }
+        let frontPosters = filtered.prefix(3).compactMap { $0.result.posterURL }
         let summary = "Opened Discover quiz with \(payload.count) picks for: \(label)"
         return ToolCallOutput(text: summary, rich: .discoverSession(mood: label, posterURLs: Array(frontPosters)))
     }
