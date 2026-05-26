@@ -349,9 +349,44 @@ public struct DiscoverCardView: View {
     @ViewBuilder
     private var originChip: some View {
         switch item.originLabel {
-        case .library: InLibraryBadge()
-        case .tmdb:    TagChip(text: "Discover", color: .blue)
-        case .llm:     TagChip(text: "AI", color: .purple)
+        case .library:
+            HStack(spacing: 3) {
+                Image(systemName: "checkmark.circle.fill")
+                    .scaledFont(size: 8, weight: .semibold)
+                    .foregroundStyle(Color.accentColor)
+                Text("In library", bundle: .module)
+                    .scaledFont(size: 9, weight: .semibold)
+                    .foregroundStyle(Color.accentColor)
+            }
+            .padding(.horizontal, 5)
+            .padding(.vertical, 1)
+            .overlay(
+                Capsule().stroke(Color.accentColor.opacity(0.6), lineWidth: 0.75)
+            )
+        case .tmdb:
+            HStack(spacing: 3) {
+                Image(systemName: "globe")
+                    .scaledFont(size: 8, weight: .semibold)
+                    .foregroundStyle(Color.blue)
+                Text(verbatim: "Discover")
+                    .scaledFont(size: 9, weight: .medium)
+                    .foregroundStyle(Color.blue)
+            }
+            .padding(.horizontal, 5)
+            .padding(.vertical, 1)
+            .background(Color.primary.opacity(0.08), in: Capsule())
+        case .llm:
+            HStack(spacing: 3) {
+                Image(systemName: "sparkles")
+                    .scaledFont(size: 8, weight: .semibold)
+                    .foregroundStyle(Color.purple)
+                Text(verbatim: "AI")
+                    .scaledFont(size: 9, weight: .medium)
+                    .foregroundStyle(Color.purple)
+            }
+            .padding(.horizontal, 5)
+            .padding(.vertical, 1)
+            .background(Color.primary.opacity(0.08), in: Capsule())
         }
     }
 

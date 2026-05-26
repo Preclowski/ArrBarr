@@ -343,10 +343,18 @@ private struct DiscoverSessionCard: View {
     private let cardWidth: CGFloat = 76
     private var cardHeight: CGFloat { cardWidth * 1.5 }   // 2:3 poster aspect
 
-    // Offsets are generous enough that the corner of each back card is
-    // visible past the front. Bigger offset = clearer "stack" reading.
-    private let middleOffset: CGSize = CGSize(width: 14, height: 10)
-    private let backOffset:   CGSize = CGSize(width: 28, height: 20)
+    // Tighter offsets — cards cluster around a center point with mild
+    // displacement; rotation does the heavy lifting for the "scattered
+    // pile" reading. Shadow adds physical depth.
+    private let middleOffset: CGSize = CGSize(width: 6, height: 5)
+    private let backOffset:   CGSize = CGSize(width: 12, height: 9)
+
+    // Per-layer rotation in degrees — back card tilts left, middle right,
+    // front centered. Deterministic per index (no random) so the visual
+    // is stable across re-renders.
+    private let backRotation: Double = -6
+    private let middleRotation: Double = 5
+    private let frontRotation: Double = -2
 
     var body: some View {
         Group {
@@ -398,25 +406,35 @@ private struct DiscoverSessionCard: View {
     }
 
     private var stackVisual: some View {
-        ZStack(alignment: .topLeading) {
-            // Render back → middle → front so the front lands on top.
+        ZStack(alignment: .center) {
+            // Render back → middle → front so front lands on top.
             cardLayer(posterURL: posterURLs.dropFirst(2).first,
-                      offset: backOffset, opacity: 0.5)
+                      offset: backOffset, opacity: 0.65,
+                      rotation: backRotation,
+                      shadowRadius: 3, shadowOffset: 2)
             cardLayer(posterURL: posterURLs.dropFirst(1).first,
-                      offset: middleOffset, opacity: 0.75)
+                      offset: middleOffset, opacity: 0.85,
+                      rotation: middleRotation,
+                      shadowRadius: 4, shadowOffset: 2.5)
             cardLayer(posterURL: posterURLs.first,
-                      offset: .zero, opacity: 1.0, showBadge: true)
+                      offset: .zero, opacity: 1.0,
+                      rotation: frontRotation,
+                      shadowRadius: 6, shadowOffset: 3,
+                      showBadge: true)
         }
-        // Reserve enough room so the bottom-right corner of the back card
-        // isn't clipped: cardWidth + backOffset.width / cardHeight + backOffset.height.
-        .frame(width: cardWidth + backOffset.width,
-               height: cardHeight + backOffset.height,
-               alignment: .topLeading)
+        // Frame must accommodate the rotated bounding boxes — rotations
+        // up to 6° expand width/height by ~10pt each side.
+        .frame(width: cardWidth + 28,
+               height: cardHeight + 24,
+               alignment: .center)
     }
 
     private func cardLayer(posterURL: URL?,
                            offset: CGSize,
                            opacity: Double,
+                           rotation: Double,
+                           shadowRadius: CGFloat,
+                           shadowOffset: CGFloat,
                            showBadge: Bool = false) -> some View {
         ZStack {
             if let posterURL {
@@ -446,8 +464,11 @@ private struct DiscoverSessionCard: View {
                     .frame(width: cardWidth, height: cardHeight, alignment: .bottomTrailing)
             }
         }
+        .rotationEffect(.degrees(rotation))
         .offset(x: offset.width, y: offset.height)
         .opacity(opacity)
+        .shadow(color: .black.opacity(0.35),
+                radius: shadowRadius, x: 0, y: shadowOffset)
     }
 
     private var truncatedMood: String {
