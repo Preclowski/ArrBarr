@@ -481,22 +481,47 @@ public enum ChatToolCatalog {
         MCPTool(
             name: "discover_in_tinder",
             description: """
-                Open the Discover tab in tinder/swipe mode with a specific mood. \
-                Use ONLY when the user explicitly asks to see suggestions in tinder, \
-                swipe view, or discover. The user must clearly say they want a \
-                swipeable picker — don't infer it from a casual recommendation request. \
-                Example phrases: "show me X in tinder", "I want to swipe through X", \
-                "open discover with X".
-                """,
+            Open the Discover tinder UI seeded with a curated list of titles you (the model) recommend. The user can then swipe to add or skip each one.
+
+            USE THIS when the user wants an interactive picking session — "show me some 90s sci-fi to swipe through", "give me a tinder of cozy weekend films", "pick something for me to choose from". The seeded cards appear instantly (no extra LLM round-trip).
+
+            Pass `mood` as a short user-facing label describing the set ("cozy 90s comedy", "feel-good documentaries"). This shows as the breadcrumb chip in the overlay and the resume card in chat.
+
+            Pass `items` as 5–15 picks. Include `year` whenever you can — disambiguates remakes. All picks share one `kind`.
+
+            DO NOT use this for browsing curiosity without a swipe intent — use `suggest_titles` for that.
+            """,
             inputSchema: .object([
                 "type": .string("object"),
                 "properties": .object([
                     "mood": .object([
                         "type": .string("string"),
-                        "description": .string("The user's mood description, e.g. '90s comedies with Adam Sandler'."),
+                        "description": .string("Short user-facing label for the set; shown as the breadcrumb chip and resume card title."),
+                    ]),
+                    "kind": .object([
+                        "type": .string("string"),
+                        "description": .string("'series' to resolve picks through Sonarr, 'movie' through Radarr. All items in one call must share a kind."),
+                    ]),
+                    "items": .object([
+                        "type": .string("array"),
+                        "description": .string("Ordered list of picks; order is preserved in the tinder deck."),
+                        "items": .object([
+                            "type": .string("object"),
+                            "properties": .object([
+                                "title": .object([
+                                    "type": .string("string"),
+                                    "description": .string("The work's title."),
+                                ]),
+                                "year": .object([
+                                    "type": .string("integer"),
+                                    "description": .string("Optional release year — disambiguates remakes."),
+                                ]),
+                            ]),
+                            "required": .array([.string("title")]),
+                        ]),
                     ]),
                 ]),
-                "required": .array([.string("mood")]),
+                "required": .array([.string("mood"), .string("kind"), .string("items")]),
             ])
         ),
     ]

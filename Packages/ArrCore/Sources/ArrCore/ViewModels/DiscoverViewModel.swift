@@ -155,6 +155,21 @@ public final class DiscoverViewModel: ObservableObject {
         await start()
     }
 
+    /// Replace the deck with a pre-resolved set of picks (typically from
+    /// a chat tool that has the titles in hand). Skips the fetch pipeline
+    /// entirely — top-ups still run normally through the configured sources
+    /// once the user swipes deep enough.
+    public func seed(items: [DiscoverItem], mood: String) {
+        reset()
+        moodText = mood
+        for item in items {
+            if seenKeys.insert(item.dedupKey).inserted {
+                queue.append(item)
+            }
+        }
+        advanceIfNeeded()
+    }
+
     /// Right swipe inserts the current card at index 0 of `matched` (newest
     /// first) and fires a milestone tick every 10 picks. Left swipe discards.
     /// Either way the next card advances and a top-up may fire.

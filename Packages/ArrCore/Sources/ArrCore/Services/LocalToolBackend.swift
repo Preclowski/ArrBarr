@@ -517,28 +517,104 @@ public actor LocalToolBackend: ToolBackend {
     }
 
     /// Switch to the Discover tab in tinder mode with a user-supplied mood.
-    /// Posts a NotificationCenter event so the View layer owns the mutation —
-    /// keeps the tool stateless and avoids a circular dependency on UI types.
+    /// Pre-resolves the model's picks into DiscoverItems server-side, then
+    /// posts a notification carrying both the breadcrumb label and the
+    /// resolved items so the overlay can seed synchronously — no second
+    /// LLM round-trip on the way in.
     private func discoverInTinder(_ arguments: JSONValue) async throws -> ToolCallOutput {
-        guard case .object(let dict) = arguments,
-              case .string(let mood) = dict["mood"] else {
+        guard case .object(let dict) = arguments else {
+            return ToolCallOutput(text: "ERROR: discover_in_tinder needs an object payload.")
+        }
+        guard case .string(let mood) = dict["mood"] else {
             return ToolCallOutput(text: "ERROR: missing required 'mood' string.")
         }
-        let trimmed = mood.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else {
+        let label = mood.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !label.isEmpty else {
             return ToolCallOutput(text: "ERROR: 'mood' cannot be empty.")
         }
+        let kind = Self.stringArg(arguments, key: "kind").lowercased()
+        guard kind == "movie" || kind == "series" else {
+            return ToolCallOutput(text: "ERROR: 'kind' must be 'movie' or 'series'.")
+        }
+        let items = Self.suggestItems(arguments)
+        guard !items.isEmpty else {
+            return ToolCallOutput(text: "ERROR: 'items' must be a non-empty array of {title, year?}.")
+        }
+        let capped = Array(items.prefix(15))
+
+        // Resolve each pick through the appropriate arr lookup, mirroring
+        // what DiscoverSources.llm does per-item — same SearchResult /
+        // DiscoverItem shape so the overlay treats them identically.
+        let radarrClient = RadarrClient(config: radarr)
+        let sonarrClient = SonarrClient(config: sonarr)
+        var resolved: [DiscoverItem] = []
+        for pick in capped {
+            let term = pick.year.map { "\(pick.title) \($0)" } ?? pick.title
+            switch kind {
+            case "movie":
+                guard radarr.isConfigured else { continue }
+                let hits = (try? await radarrClient.lookupMovies(term: term)) ?? []
+                guard let first = hits.first else { continue }
+                let tmdbId = first.tmdbId ?? 0
+                let poster = (first.images ?? []).posterURL(baseURL: radarr.baseURL).0
+                let result = SearchResult(
+                    id: tmdbId, foreignId: tmdbId == 0 ? "" : String(tmdbId),
+                    title: first.title, subtitle: nil,
+                    year: first.year,
+                    rating: first.ratings?.tmdb?.value,
+                    imdb: first.ratings?.imdb?.value,
+                    rottenTomatoes: first.ratings?.rottenTomatoes?.value,
+                    metacritic: first.ratings?.metacritic?.value,
+                    overview: first.overview, runtime: first.runtime,
+                    genres: first.genres ?? [], network: first.studio,
+                    certification: first.certification,
+                    posterURL: poster,
+                    source: .radarr,
+                    inLibraryArrId: nil
+                )
+                resolved.append(DiscoverItem(result: result, action: .addToRadarr,
+                                             originLabel: .llm, kind: .movie))
+            case "series":
+                guard sonarr.isConfigured else { continue }
+                let hits = (try? await sonarrClient.lookupSeries(term: term)) ?? []
+                guard let first = hits.first else { continue }
+                let tvdbId = first.tvdbId ?? 0
+                let poster = (first.images ?? []).posterURL(baseURL: sonarr.baseURL).0
+                let result = SearchResult(
+                    id: tvdbId, foreignId: tvdbId == 0 ? "" : String(tvdbId),
+                    title: first.title, subtitle: nil,
+                    year: first.year,
+                    rating: first.ratings?.value,
+                    imdb: nil, rottenTomatoes: nil, metacritic: nil,
+                    overview: first.overview, runtime: first.runtime,
+                    genres: first.genres ?? [], network: first.network,
+                    certification: nil,
+                    posterURL: poster,
+                    source: .sonarr,
+                    inLibraryArrId: nil
+                )
+                resolved.append(DiscoverItem(result: result, action: .addToSonarr,
+                                             originLabel: .llm, kind: .show))
+            default: break
+            }
+        }
+
+        if resolved.isEmpty {
+            return ToolCallOutput(text: "Couldn't resolve any of those picks through \(kind == "movie" ? "Radarr" : "Sonarr") lookup. Try other titles or check the service config.")
+        }
+
         await MainActor.run {
             NotificationCenter.default.post(
                 name: .arrBarrOpenDiscoverInTinder,
                 object: nil,
-                userInfo: ["mood": trimmed]
+                userInfo: [
+                    "mood": label,
+                    "items": resolved,
+                ]
             )
         }
-        return ToolCallOutput(
-            text: "Opened Discover in tinder mode with mood: \(trimmed)",
-            rich: .discoverSession(mood: trimmed)
-        )
+        let summary = "Opened Discover tinder with \(resolved.count) picks for: \(label)"
+        return ToolCallOutput(text: summary, rich: .discoverSession(mood: label))
     }
 
     /// Standalone search trigger — same as the search component of

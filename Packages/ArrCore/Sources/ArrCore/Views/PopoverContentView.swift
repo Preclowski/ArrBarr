@@ -196,24 +196,21 @@ public struct PopoverContentView: View {
                 searchResult = result
             }
             .onReceive(NotificationCenter.default.publisher(for: .arrBarrOpenDiscoverInTinder)) { note in
-                // Resume path: a tap on the chat's resume card just opens
-                // the overlay; the VM keeps its existing session (current
-                // card, queue, matched, moodText) untouched.
+                // Resume path: tap on a chat resume card — just open the
+                // overlay; keep VM state intact.
                 if let resume = note.userInfo?["resume"] as? Bool, resume {
-                    Task { await configureDiscover() }   // make sure sources are still wired
+                    Task { await configureDiscover() }
                     withAnimation(.smooth(duration: 0.22)) {
                         showDiscoverOverlay = true
                     }
                     return
                 }
-                // Fresh path: agent fired discover_in_tinder with a new mood.
+                // Fresh path: chat tool fired with pre-resolved items.
                 guard let mood = note.userInfo?["mood"] as? String,
-                      !mood.trimmingCharacters(in: .whitespaces).isEmpty else { return }
-                discoverViewModel.moodText = mood
-                Task {
-                    await configureDiscover()
-                    await discoverViewModel.reshuffle()
-                }
+                      !mood.trimmingCharacters(in: .whitespaces).isEmpty,
+                      let items = note.userInfo?["items"] as? [DiscoverItem] else { return }
+                discoverViewModel.seed(items: items, mood: mood)
+                Task { await configureDiscover() }   // wire sources for later top-ups
                 withAnimation(.smooth(duration: 0.22)) {
                     showDiscoverOverlay = true
                 }
