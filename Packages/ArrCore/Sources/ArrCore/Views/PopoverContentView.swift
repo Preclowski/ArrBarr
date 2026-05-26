@@ -672,17 +672,19 @@ public struct PopoverContentView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 32)
                     } else {
-                        // Back chevron in the top-left while
-                        // filtering — marks the search-driven
-                        // layout as a distinct nav level. Type
-                        // pill lives inline in the queueFilterBar
-                        // now (right next to the input), so the
-                        // top strip is just the back affordance.
+                        // Search-mode header — back chevron + screen
+                        // title ("Wyszukiwanie" in PL). Mirrors the
+                        // DetailView header pattern so the user
+                        // reads the search surface as a navigation
+                        // level, not just a filtered queue.
                         if isFiltering {
                             HStack(spacing: 6) {
                                 FloatingBackButton {
                                     queueFilter = ""
                                 }
+                                Text("Searching", bundle: .module)
+                                    .scaledFont(size: 15, weight: .semibold)
+                                    .foregroundStyle(.primary)
                                 Spacer()
                             }
                             .padding(.horizontal, 12)
