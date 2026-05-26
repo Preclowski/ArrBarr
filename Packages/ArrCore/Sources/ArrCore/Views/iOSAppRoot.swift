@@ -103,12 +103,11 @@ private struct QueueTab: View {
                     }
                 },
                 onItemTap: { needs in
-                    if let item = viewModel.radarr.first(where: { $0.id == needs.item.id })
-                        ?? viewModel.sonarr.first(where: { $0.id == needs.item.id })
-                        ?? viewModel.lidarr.first(where: { $0.id == needs.item.id })
-                        ?? viewModel.whisparr.first(where: { $0.id == needs.item.id }) {
-                        detailItem = item
-                    }
+                    let match = QueueItem.Source.allCases
+                        .lazy
+                        .compactMap { viewModel.items(for: $0).first(where: { $0.id == needs.item.id }) }
+                        .first
+                    if let match { detailItem = match }
                 }
             )
             .padding(.vertical, 12)
@@ -161,12 +160,7 @@ private struct QueueTab: View {
     }
 
     private func items(for source: QueueItem.Source) -> [QueueItem] {
-        switch source {
-        case .sonarr: return viewModel.sonarr
-        case .radarr: return viewModel.radarr
-        case .lidarr: return viewModel.lidarr
-        case .whisparr: return viewModel.whisparr
-        }
+        viewModel.items(for: source)
     }
 
     private func entries(for source: QueueItem.Source) -> [QueueRowEntry] {
@@ -178,12 +172,7 @@ private struct QueueTab: View {
     }
 
     private func error(for source: QueueItem.Source) -> String? {
-        switch source {
-        case .sonarr: return viewModel.sonarrError
-        case .radarr: return viewModel.radarrError
-        case .lidarr: return viewModel.lidarrError
-        case .whisparr: return viewModel.whisparrError
-        }
+        viewModel.error(for: source)
     }
 
     private func health(for source: QueueItem.Source) -> [ArrHealthRecord] {

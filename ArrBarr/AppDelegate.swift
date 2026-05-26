@@ -80,9 +80,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         Task.detached { await ImageCache.shared.purgeOlderThan(30) }
 
-        badgeObserver = Publishers.CombineLatest3(queueVM.$radarr, queueVM.$sonarr, queueVM.$lidarr)
-            .sink { [weak self] radarr, sonarr, lidarr in
-                let active = (radarr + sonarr + lidarr).filter { $0.status != .completed }.count
+        badgeObserver = queueVM.$queues
+            .sink { [weak self] queues in
+                // Whisparr excluded from the badge count by design — it has
+                // no "notify on new grabs" setting either; keep the menu
+                // bar focused on the standard arrs.
+                let active = [QueueItem.Source.radarr, .sonarr, .lidarr]
+                    .compactMap { queues[$0] }
+                    .flatMap { $0 }
+                    .filter { $0.status != .completed }
+                    .count
                 self?.updateStatusBarTitle(active: active)
             }
 
@@ -618,13 +625,6 @@ extension AppDelegate: @preconcurrency UNUserNotificationCenterDelegate {
     }
 
     private func findItem(source: QueueItem.Source, arrQueueId: Int) -> QueueItem? {
-        let pool: [QueueItem]
-        switch source {
-        case .radarr: pool = queueVM.radarr
-        case .sonarr: pool = queueVM.sonarr
-        case .lidarr: pool = queueVM.lidarr
-        case .whisparr: pool = queueVM.whisparr
-        }
-        return pool.first { $0.arrQueueId == arrQueueId }
+        queueVM.items(for: source).first { $0.arrQueueId == arrQueueId }
     }
 }
