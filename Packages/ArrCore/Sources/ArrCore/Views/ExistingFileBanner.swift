@@ -73,39 +73,15 @@ struct ExistingFileBanner: View {
     }
 
     public var body: some View {
+        // No header label, no inline metadata strip — same chrome as
+        // the new-release block above (filename + chip strip). The
+        // "EXISTING FILE" caption it used to crown was carrying its
+        // weight only as a section divider, and the file's own
+        // quality/size/score is already visible inside
+        // DownloadProgressCard's `└─ OLD` upgrade sub-line. Symmetric
+        // siblings: one block for the incoming release, one for the
+        // one on disk, both styled identically.
         VStack(alignment: .leading, spacing: 5) {
-            // Label leading, neutral secondary — matches the tooltip's
-            // `existingFileSummary`. Quality/size/score follow on the
-            // right edge.
-            HStack(spacing: 6) {
-                Text("Existing file", bundle: .module)
-                    .scaledFont(size: 10, weight: .semibold)
-                    .foregroundStyle(.secondary)
-                    .textCase(.uppercase)
-                    .tracking(0.5)
-                Spacer()
-                if let q = quality, !q.isEmpty {
-                    Text(q)
-                        .scaledFont(size: 11, weight: .medium)
-                        .foregroundStyle(.primary)
-                }
-                if let size, size > 0 {
-                    SeparatorDot()
-                    Text(ByteCountFormatter.string(fromByteCount: size, countStyle: .file))
-                        .scaledFont(size: 11)
-                        .foregroundStyle(.secondary)
-                }
-                if let s = customFormatScore, s != 0 {
-                    SeparatorDot()
-                    ScoreLabel(score: s, size: 11)
-                }
-            }
-            // Filename now sits directly under the header (was last in
-            // the stack — bumped up because "what file is on disk" is
-            // the natural follow-up to "EXISTING FILE", more so than
-            // its custom-format tags). Promoted from tertiary 10pt to
-            // secondary 11pt so it reads as primary content, not a
-            // footnote.
             if let name = fileName, !name.isEmpty {
                 Text(name)
                     .scaledFont(size: 11, design: .monospaced)
@@ -118,9 +94,9 @@ struct ExistingFileBanner: View {
                 let highlightRemoved = newFormats != nil
                 TooltipFlowLayout(spacing: 4) {
                     ForEach(customFormats, id: \.self) { cf in
-                        // Mirror image of CustomFormatChips' green-for-
-                        // added: red-for-going-away. Chips kept across
-                        // the upgrade stay neutral. Without `newFormats`
+                        // Mirror of CustomFormatChips' green-for-added:
+                        // red-for-going-away. Chips kept across the
+                        // upgrade stay neutral. Without `newFormats`
                         // (no diff context), all chips neutral — that's
                         // the "in library, no active download" view.
                         let isRemoved = highlightRemoved && !newSet.contains(cf)
@@ -129,11 +105,6 @@ struct ExistingFileBanner: View {
                 }
             }
         }
-        .padding(.top, 6)
         .frame(maxWidth: .infinity, alignment: .leading)
-        // No tinted card — the indigo "↑ EXISTING FILE" label on the
-        // trailing edge already brands the section; an additional
-        // indigo background dropped chip contrast and broke visual
-        // consistency with the same section inside the tooltip.
     }
 }
