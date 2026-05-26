@@ -79,43 +79,59 @@ enum SearchRelevance {
         return 0
     }
 
-    /// Bayesian-adjusted rating, IMDB Top 250 style. Pulls low-vote
-    /// ratings toward the global mean so outliers like "9.9 with 5
-    /// votes" don't strafe the top of every list.
+    /// Asymmetric Bayesian-adjusted rating. Only shrinks **high**
+    /// ratings toward the global mean — never lifts low ones up.
     ///
-    ///     adjusted = (v / (v + m)) · R + (m / (v + m)) · C
+    ///     if R > C:  adjusted = (v / (v + m)) · R + (m / (v + m)) · C
+    ///     else:      adjusted = R
     ///
-    /// `m` is the minimum-votes threshold (votes-needed-before-we-
-    /// trust-this-rating) and `C` is the global mean rating. The two
-    /// constants are tuned to TMDB scale (0–10, popular films usually
-    /// in the 5k–100k votes range) — 500 / 6.5 give a meaningful pull
-    /// for films under ~1k votes and barely move popular ones.
+    /// The naïve symmetric formula was rewarding bad films: a 0.0
+    /// rating with a handful of votes got pulled up to ~6.5 (the
+    /// global mean), which let "American Pie (1972)" — an unrated
+    /// early short with the same title prefix — ride to second place
+    /// behind the 1999 film. Shrinkage exists to protect against
+    /// HIGH-rated low-vote outliers ("9.9 with 5 votes"); applying
+    /// it both ways defeats the point.
     ///
-    /// Examples (R = rating, v = votes → adjusted):
-    ///   - 9.9 / 5      → 6.53  (heavily pulled, was a low-trust outlier)
-    ///   - 7.0 / 1_000  → 6.83  (modest pull, still respected)
+    /// `m` = 500 (votes threshold), `C` = 6.5 (global mean). Examples:
+    ///   - 9.9 / 5      → 6.53  (pulled down, was a low-trust outlier)
     ///   - 8.0 / 20_000 → 7.96  (barely moves, plenty of data)
+    ///   - 7.0 / 1_000  → 6.83  (modest pull, still respected)
+    ///   - 0.0 / 5      → 0.0   (no rescue from the mean)
+    ///   - 5.5 / 20_000 → 5.5   (below mean, left alone)
     ///
     /// Sources without vote counts (Sonarr / Lidarr / Whisparr) skip
     /// the shrinkage and return the raw rating — those scores are
-    /// already aggregated upstream (TVDB / MusicBrainz), so applying
-    /// Bayesian shrinkage on top would punish every series-side hit
-    /// for not exposing what its rating system already encodes.
+    /// already aggregated upstream (TVDB / MusicBrainz).
     static func bayesianQuality(_ result: SearchResult) -> Double {
         let R = result.rating ?? 0
-        guard let votes = result.votes, votes > 0 else { return R }
+        let C: Double = 6.5
+        guard let votes = result.votes, votes > 0, R > C else { return R }
         let v = Double(votes)
         let m: Double = 500
-        let C: Double = 6.5
         return (v / (v + m)) * R + (m / (v + m)) * C
     }
 
+    /// Quality weight inside a tier band. Multiplies the 0…10
+    /// quality range by 10 so it can outweigh small title-length
+    /// differences in the prefix/word-prefix bands. Without the
+    /// weight, a 0.0-rated film with a 1-char-shorter title beats a
+    /// 6.7-rated film in the same band (title penalty = 1 pt/char,
+    /// quality span = only 10 pt total). With ×10, a 1-point quality
+    /// advantage = a 10-char title-length advantage — quality wins
+    /// for any reasonable disagreement.
+    ///
+    /// Still capped well below the 1 000-step gap between tiers, so
+    /// a strong quality boost can't lift a substring match over a
+    /// prefix match — band order is preserved.
+    private static let qualityWeight: Double = 10
+
     /// Combined sort key — higher is better. Tier-band integer
-    /// dominates; bayesianQuality (0…10) breaks ties inside a band.
-    /// 10 is far below the 1 000-step gap between tiers so a strong
-    /// quality boost can't lift a substring match over a prefix match.
+    /// dominates; weighted bayesianQuality (0…100) breaks ties inside
+    /// a band and outweighs minor title-length differences.
     static func rank(_ result: SearchResult, normalizedQuery q: String) -> Double {
-        Double(score(result, normalizedQuery: q)) + bayesianQuality(result)
+        Double(score(result, normalizedQuery: q))
+            + bayesianQuality(result) * qualityWeight
     }
 
     /// Sort + cross-source merge in one pass. Caller hands in the raw
