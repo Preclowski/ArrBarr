@@ -487,7 +487,9 @@ public enum ChatToolCatalog {
 
             Pass `mood` as a short user-facing label describing the set ("cozy 90s comedy", "feel-good documentaries"). This shows as the breadcrumb chip in the overlay and the resume card in chat.
 
-            Pass `items` as 5–15 picks. Include `year` whenever you can — disambiguates remakes. All picks share one `kind`.
+            Pass `items` as 10–25 picks — err toward the higher end so the user has a satisfying deck to swipe through. Include `year` whenever you can — disambiguates remakes. All picks share one `kind`.
+
+            This is a single-shot session — there is no automatic top-up. When the user wants more, they'll ask explicitly via the chat.
 
             DO NOT use this for browsing curiosity without a swipe intent — use `suggest_titles` for that.
             """,

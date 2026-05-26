@@ -118,24 +118,6 @@ final class DiscoverViewModelTests: XCTestCase {
         XCTAssertTrue(vm.matched.isEmpty)
     }
 
-    func test_topUp_fetchesMoreWhenQueueBelowThreshold() async {
-        var tmdbCalls = 0
-        let vm = freshVM()
-        vm.configure(
-            tmdb: { _, page in
-                tmdbCalls += 1
-                let base = (page - 1) * 10
-                return (1...10).map { self.makeItem(base + $0, .tmdb) }
-            },
-            library: { _ in [] }, llm: nil
-        )
-        await vm.start()
-        XCTAssertEqual(tmdbCalls, 1)
-        for _ in 0..<7 { await vm.swipe(right: false) }
-        try? await Task.sleep(nanoseconds: 400_000_000)
-        XCTAssertGreaterThanOrEqual(tmdbCalls, 2)
-    }
-
     func test_perSourceFailure_dropsOnlyThatSource() async {
         struct Boom: Error {}
         let vm = freshVM()

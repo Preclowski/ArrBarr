@@ -540,7 +540,7 @@ public actor LocalToolBackend: ToolBackend {
         guard !items.isEmpty else {
             return ToolCallOutput(text: "ERROR: 'items' must be a non-empty array of {title, year?}.")
         }
-        let capped = Array(items.prefix(15))
+        let capped = Array(items.prefix(25))
 
         // Resolve each pick through the appropriate arr lookup, mirroring
         // what DiscoverSources.llm does per-item — same SearchResult /

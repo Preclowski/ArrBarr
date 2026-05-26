@@ -43,11 +43,6 @@ public final class DiscoverViewModel: ObservableObject {
     /// (filter combo returned nothing — not a network error).
     @Published public private(set) var tmdbReturnedEmpty: Bool = false
     @Published public private(set) var isLoading: Bool = false
-    /// True while a background top-up fetch is in flight. View shows a
-    /// spinner in the card slot when both `queue` and `current` are
-    /// empty and this is true — keeps the user from staring at an
-    /// empty rectangle between cards.
-    @Published public private(set) var isTopUpRunning: Bool = false
     @Published public private(set) var errorMessage: String?
     @Published public private(set) var matched: [DiscoverItem] = []
     /// Increments every time the matched list crosses a 10-pick boundary
@@ -95,8 +90,6 @@ public final class DiscoverViewModel: ObservableObject {
     private var tmdbPage = 0
     private var libraryDrained = false
     private var llmDormant = false
-    private var topUpTask: Task<Void, Never>?
-    private let topUpThreshold = 5
     private var creditsFetchingIds = Set<Int>()
     private var tmdbApiKey: String = ""
 
@@ -157,8 +150,8 @@ public final class DiscoverViewModel: ObservableObject {
 
     /// Replace the deck with a pre-resolved set of picks (typically from
     /// a chat tool that has the titles in hand). Skips the fetch pipeline
-    /// entirely — top-ups still run normally through the configured sources
-    /// once the user swipes deep enough.
+    /// entirely — the seeded deck IS the session. When the user wants
+    /// more, they ask explicitly (Q2 chat round-trip).
     public func seed(items: [DiscoverItem], mood: String) {
         reset()
         moodText = mood
@@ -179,11 +172,10 @@ public final class DiscoverViewModel: ObservableObject {
     }
 
     /// First half of a swipe — records the outcome (matched insert,
-    /// milestone tick) and kicks off a top-up fetch if the queue is
-    /// running low, but DOES NOT clear `current` or advance. The View
-    /// calls this at the *start* of the fly-off animation so the async
-    /// fetch overlaps with the visual transition. `current` stays as
-    /// the still-flying card; the next card waits in the peek stack.
+    /// milestone tick) but DOES NOT clear `current` or advance. The View
+    /// calls this at the *start* of the fly-off animation. `current`
+    /// stays as the still-flying card; the next card waits in the peek
+    /// stack.
     public func startSwipe(right: Bool) {
         guard let item = current else { return }
         if right {
@@ -191,11 +183,6 @@ public final class DiscoverViewModel: ObservableObject {
             if autoJumpEnabled, matched.count > 0, matched.count % 10 == 0 {
                 picksMilestoneTick &+= 1
             }
-        }
-        // `-1` accounts for the card we're about to consume — without it
-        // we'd kick off the top-up one swipe too late.
-        if queue.count - 1 < topUpThreshold {
-            scheduleTopUp()
         }
     }
 
@@ -322,34 +309,6 @@ public final class DiscoverViewModel: ObservableObject {
         }
     }
 
-    private func scheduleTopUp() {
-        if let existing = topUpTask, !existing.isCancelled { return }
-        isTopUpRunning = true
-        topUpTask = Task { @MainActor [weak self] in
-            guard let self else { return }
-            defer {
-                self.topUpTask = nil
-                self.isTopUpRunning = false
-            }
-            let sources = self.availableSources()
-            var perSource: [[DiscoverItem]] = Array(repeating: [], count: sources.count)
-            await withTaskGroup(of: (Int, [DiscoverItem]).self) { group in
-                for (i, src) in sources.enumerated() {
-                    group.addTask { [weak self] in
-                        guard let self else { return (i, []) }
-                        let items = await self.fetchItems(source: src)
-                        return (i, items)
-                    }
-                }
-                for await (i, items) in group {
-                    perSource[i] = items
-                }
-            }
-            self.appendInterleaved(perSource)
-            self.advanceIfNeeded()
-        }
-    }
-
     private func reset() {
         current = nil
         queue.removeAll()
@@ -374,8 +333,6 @@ public final class DiscoverViewModel: ObservableObject {
         creditsFetchingIds.removeAll()
         // Note: mediaSelection is intentionally NOT reset here — it's a
         // user-level preference that persists across reshuffles.
-        topUpTask?.cancel()
-        topUpTask = nil
     }
 
     /// Explicit "wipe my picks" — invoked from the Your Picks header.
