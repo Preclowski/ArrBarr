@@ -489,6 +489,8 @@ public enum ChatToolCatalog {
 
             Pass `items` as 10–25 picks — err toward the higher end so the user has a satisfying deck to swipe through. Include `year` whenever you can — disambiguates remakes. All picks share one `kind`.
 
+            Pass `append: true` when the user asks for MORE picks continuing the current vibe — that extends the active deck instead of starting over.
+
             This is a single-shot session — there is no automatic top-up. When the user wants more, they'll ask explicitly via the chat.
 
             DO NOT use this for browsing curiosity without a swipe intent — use `suggest_titles` for that.
@@ -521,6 +523,10 @@ public enum ChatToolCatalog {
                             ]),
                             "required": .array([.string("title")]),
                         ]),
+                    ]),
+                    "append": .object([
+                        "type": .string("boolean"),
+                        "description": .string("When true, append these picks to the user's active quiz session instead of starting a fresh one. Use this when the user explicitly asked for MORE picks in the same vibe (continuing the existing session). Defaults to false (fresh session)."),
                     ]),
                 ]),
                 "required": .array([.string("mood"), .string("kind"), .string("items")]),

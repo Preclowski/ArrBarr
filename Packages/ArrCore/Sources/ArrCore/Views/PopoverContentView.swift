@@ -204,11 +204,37 @@ public struct PopoverContentView: View {
                     }
                     return
                 }
-                // Fresh path: chat tool fired with pre-resolved items.
+                // Open-picks path: icon button on resume card — open the overlay
+                // AND jump straight to the matched-picks list.
+                if let openPicks = note.userInfo?["openPicks"] as? Bool, openPicks {
+                    Task { await configureDiscover() }
+                    withAnimation(.smooth(duration: 0.22)) {
+                        showDiscoverOverlay = true
+                    }
+                    // Defer the picks-view flip slightly so DiscoverTabView
+                    // has time to mount and subscribe to the notification.
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        NotificationCenter.default.post(
+                            name: .arrBarrShowDiscoverPicks,
+                            object: nil
+                        )
+                    }
+                    return
+                }
+                // Fresh / append path: chat tool fired with pre-resolved items.
                 guard let mood = note.userInfo?["mood"] as? String,
                       !mood.trimmingCharacters(in: .whitespaces).isEmpty,
                       let items = note.userInfo?["items"] as? [DiscoverItem] else { return }
-                discoverViewModel.seed(items: items, mood: mood)
+                let append = (note.userInfo?["append"] as? Bool) ?? false
+                let hasActiveSession = !discoverViewModel.sessionMatched.isEmpty
+                    || !discoverViewModel.sessionSkipped.isEmpty
+                    || discoverViewModel.current != nil
+                    || !discoverViewModel.queue.isEmpty
+                if append && hasActiveSession {
+                    discoverViewModel.extend(items: items)
+                } else {
+                    discoverViewModel.seed(items: items, mood: mood)
+                }
                 Task { await configureDiscover() }   // wire sources for later top-ups
                 withAnimation(.smooth(duration: 0.22)) {
                     showDiscoverOverlay = true
@@ -1611,7 +1637,7 @@ public struct PopoverContentView: View {
                      "in the same vibe: \"\(trimmedMood)\".")
         if !keptList.isEmpty { lines.append("Kept: \(keptList).") }
         if !skippedList.isEmpty { lines.append("Skipped: \(skippedList).") }
-        lines.append("Don't repeat any of those. Use discover_in_quiz with 12–20 fresh picks.")
+        lines.append("Don't repeat any of those. Use discover_in_quiz with append: true and 12–20 fresh picks.")
         return lines.joined(separator: " ")
     }
 

@@ -35,6 +35,11 @@ public struct DiscoverTabView: View {
 
     public var body: some View {
         quizMode
+            .onReceive(NotificationCenter.default.publisher(for: .arrBarrShowDiscoverPicks)) { _ in
+                withAnimation(.smooth(duration: 0.22)) {
+                    showMatched = true
+                }
+            }
     }
 
     // MARK: - Quiz mode

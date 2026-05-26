@@ -9464,6 +9464,17 @@
         }
       }
     },
+    "Open your picks": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Open your picks"
+          }
+        }
+      }
+    },
     "Show your picks": {
       "extractionState": "manual",
       "localizations": {

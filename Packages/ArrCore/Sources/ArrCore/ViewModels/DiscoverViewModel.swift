@@ -177,6 +177,22 @@ public final class DiscoverViewModel: ObservableObject {
         advanceIfNeeded()
     }
 
+    /// Append more picks to the active session without resetting state.
+    /// Used by the "more picks" flow — the user keeps their current card,
+    /// matched/skipped feedback survives, and the new items merge into
+    /// the deck (deduped against what they've already seen).
+    public func extend(items: [DiscoverItem]) {
+        var added = 0
+        for item in items {
+            if seenKeys.insert(item.dedupKey).inserted {
+                queue.append(item)
+                added += 1
+            }
+        }
+        sessionTotal += added
+        advanceIfNeeded()
+    }
+
     /// Right swipe inserts the current card at index 0 of `matched` (newest
     /// first) and fires a milestone tick every 10 picks. Left swipe discards.
     /// Either way the next card advances and a top-up may fire.

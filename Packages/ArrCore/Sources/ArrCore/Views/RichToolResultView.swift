@@ -375,6 +375,23 @@ private struct DiscoverSessionCard: View {
                     .truncationMode(.tail)
             }
             Spacer(minLength: 0)
+            if isResumable {
+                Button {
+                    NotificationCenter.default.post(
+                        name: .arrBarrOpenDiscoverQuiz,
+                        object: nil,
+                        userInfo: ["openPicks": true]
+                    )
+                } label: {
+                    Image(systemName: "list.star")
+                        .scaledFont(size: 14, weight: .semibold)
+                        .foregroundStyle(.secondary)
+                        .padding(8)
+                        .background(Circle().fill(Color.primary.opacity(0.06)))
+                }
+                .buttonStyle(.plain)
+                .help(Text("Open your picks", bundle: .module))
+            }
         }
         .frame(maxWidth: 320, alignment: .leading)
         .contentShape(Rectangle())

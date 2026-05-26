@@ -628,6 +628,14 @@ public actor LocalToolBackend: ToolBackend {
             return ToolCallOutput(text: "Couldn't resolve any of those picks through \(kind == "movie" ? "Radarr" : "Sonarr") lookup. Try other titles or check the service config.")
         }
 
+        let append: Bool = {
+            if case .object(let dict) = arguments,
+               case .bool(let v) = dict["append"] {
+                return v
+            }
+            return false
+        }()
+
         let payload = resolved
         await MainActor.run {
             NotificationCenter.default.post(
@@ -636,6 +644,7 @@ public actor LocalToolBackend: ToolBackend {
                 userInfo: [
                     "mood": label,
                     "items": payload,
+                    "append": append,
                 ]
             )
         }
