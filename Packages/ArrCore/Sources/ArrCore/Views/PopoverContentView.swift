@@ -667,6 +667,17 @@ public struct PopoverContentView: View {
                     } else {
                         if configuredSources.count > 1 || isFiltering {
                             HStack(spacing: 6) {
+                                // Back chevron only while filtering —
+                                // marks the search-driven layout as a
+                                // distinct nav level. Tap clears the
+                                // query, which collapses queueResultType
+                                // back to .all via the existing onChange.
+                                if isFiltering {
+                                    FloatingBackButton {
+                                        queueFilter = ""
+                                    }
+                                    .transition(.opacity.combined(with: .scale(scale: 0.9)))
+                                }
                                 if configuredSources.count > 1 {
                                     scopeChipsRow
                                 }
@@ -1190,9 +1201,11 @@ public struct PopoverContentView: View {
                 // pick `All` (nil) or a specific arr.
                 if let scope = queueScope, scope != source { return nil }
                 // Hide arr sections that don't have a matching row.
-                // Showing an empty "Sonarr (0)" header during filter
-                // adds noise — the user only wants to see hits.
-                if filtering, entries(for: source).isEmpty { return nil }
+                // Showing an empty "Sonarr (0)" header — whether
+                // during a filter or in the default view — adds
+                // noise; the user wants to see only sources that
+                // actually have something queued right now.
+                if entries(for: source).isEmpty { return nil }
                 return .arr(source)
             }
             return nil
