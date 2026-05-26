@@ -371,7 +371,7 @@ public struct EpisodeDetailOverlay: View {
                                 .foregroundStyle(Color.orange)
                                 .padding(.horizontal, 5)
                                 .padding(.vertical, 1)
-                                .overlay(RoundedRectangle(cornerRadius: Tokens.Radius.chip).stroke(Color.orange.opacity(0.55), lineWidth: 0.75))
+                                .overlay(RoundedRectangle(cornerRadius: Tokens.Radius.chip).stroke(Color.orange.opacity(0.30), lineWidth: 0.75))
                         }
                     }
                     Text(episode.title ?? "—")

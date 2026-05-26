@@ -280,6 +280,6 @@ struct RatingPill: View {
         }
         .padding(.horizontal, 6)
         .padding(.vertical, 2)
-        .overlay(RoundedRectangle(cornerRadius: Tokens.Radius.chip).stroke(chip.color.opacity(0.55), lineWidth: 0.75))
+        .overlay(RoundedRectangle(cornerRadius: Tokens.Radius.chip).stroke(chip.color.opacity(0.30), lineWidth: 0.75))
     }
 }

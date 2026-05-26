@@ -95,7 +95,7 @@ public struct OutlineLabel: View {
             .padding(.horizontal, 4)
             .padding(.vertical, 1)
             .overlay(
-                RoundedRectangle(cornerRadius: Tokens.Radius.chip).stroke(tint.opacity(0.6), lineWidth: 0.75)
+                RoundedRectangle(cornerRadius: Tokens.Radius.chip).stroke(tint.opacity(0.32), lineWidth: 0.75)
             )
             .fixedSize()
     }
