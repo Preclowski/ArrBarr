@@ -21,6 +21,11 @@ public struct SearchResult: Identifiable, Equatable, Sendable {
     let subtitle: String?        // nil for movies; "X seasons" for shows
     let year: Int?
     let rating: Double?          // primary score (TMDB for Radarr, value for Sonarr)
+    /// Vote count for the primary rating. Radarr-only — Sonarr's
+    /// lookup ratings object is just `{ value: Double }`. Nil for
+    /// sources that don't surface it, in which case the "Most votes"
+    /// sort drops these to the bottom.
+    let votes: Int?
     let imdb: Double?            // Radarr only
     let rottenTomatoes: Double?  // Radarr only
     let metacritic: Double?      // Radarr only
@@ -38,7 +43,8 @@ public struct SearchResult: Identifiable, Equatable, Sendable {
     let inLibraryArrId: Int?
 
     init(id: Int, foreignId: String, title: String, subtitle: String?,
-         year: Int?, rating: Double?, imdb: Double?, rottenTomatoes: Double?,
+         year: Int?, rating: Double?, votes: Int? = nil,
+         imdb: Double?, rottenTomatoes: Double?,
          metacritic: Double?, overview: String?, runtime: Int?,
          genres: [String], network: String?, certification: String?,
          posterURL: URL?, source: QueueItem.Source,
@@ -49,6 +55,7 @@ public struct SearchResult: Identifiable, Equatable, Sendable {
         self.subtitle = subtitle
         self.year = year
         self.rating = rating
+        self.votes = votes
         self.imdb = imdb
         self.rottenTomatoes = rottenTomatoes
         self.metacritic = metacritic
@@ -69,7 +76,7 @@ public struct SearchResult: Identifiable, Equatable, Sendable {
         SearchResult(
             id: self.id, foreignId: self.foreignId,
             title: self.title, subtitle: self.subtitle,
-            year: self.year, rating: self.rating,
+            year: self.year, rating: self.rating, votes: self.votes,
             imdb: self.imdb, rottenTomatoes: self.rottenTomatoes,
             metacritic: self.metacritic,
             overview: self.overview, runtime: self.runtime,

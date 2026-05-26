@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 /// Prefix-aware relevance scoring for search results. Replaces the
 /// previous "trust whatever order the arr's /lookup endpoint returned"
@@ -101,6 +102,61 @@ enum SearchRelevance {
         guard !q.isEmpty else { return results }
         return results.sorted { lhs, rhs in
             rank(lhs, normalizedQuery: q) > rank(rhs, normalizedQuery: q)
+        }
+    }
+
+    /// Apply a user-selected sort mode. Default `.relevance` falls
+    /// back to the prefix-aware scoring above. The other modes ignore
+    /// the query entirely — they're "show me everything that matched,
+    /// ordered by this attribute". Items missing the sort key (e.g.
+    /// no votes on a Sonarr result when sorting by votes) drop to
+    /// the bottom rather than being filtered out, so the user keeps
+    /// seeing every match regardless of sort choice.
+    static func sorted(_ results: [SearchResult], query: String, mode: SortMode) -> [SearchResult] {
+        switch mode {
+        case .relevance: return sortedByRelevance(results, query: query)
+        case .rating:    return results.sorted { (l, r) in (l.rating ?? -1) > (r.rating ?? -1) }
+        case .votes:     return results.sorted { (l, r) in (l.votes ?? -1) > (r.votes ?? -1) }
+        case .year:      return results.sorted { (l, r) in (l.year ?? 0) > (r.year ?? 0) }
+        case .title:     return results.sorted { (l, r) in
+            normalize(l.title) < normalize(r.title)
+        }
+        }
+    }
+}
+
+/// User-selectable sort order for the search header menu.
+///
+/// `.relevance` is the default — prefix-aware scoring against the
+/// typed query (see `SearchRelevance.rank`). The other modes are
+/// flat sorts that ignore the query, so the user can ask "show me
+/// the highest-rated matches" without re-typing.
+public enum SortMode: String, CaseIterable, Identifiable, Sendable {
+    case relevance
+    case rating
+    case votes
+    case year
+    case title
+
+    public var id: String { rawValue }
+
+    public var labelKey: LocalizedStringKey {
+        switch self {
+        case .relevance: return "Relevance"
+        case .rating:    return "Highest rated"
+        case .votes:     return "Most votes"
+        case .year:      return "Newest"
+        case .title:     return "Title A–Z"
+        }
+    }
+
+    public var symbol: String {
+        switch self {
+        case .relevance: return "sparkles"
+        case .rating:    return "star.fill"
+        case .votes:     return "person.2.fill"
+        case .year:      return "calendar"
+        case .title:     return "textformat.abc"
         }
     }
 }

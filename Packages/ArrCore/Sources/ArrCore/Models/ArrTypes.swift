@@ -339,6 +339,10 @@ public struct RadarrLookupRatings: Decodable {
 }
 public struct RadarrLookupRatingValue: Decodable {
     let value: Double?
+    /// Radarr's lookup endpoint returns the same Ratings sub-object as
+    /// the detail endpoint, including TMDB's vote_count. Surfacing it
+    /// drives the "Most votes" sort option on the search header.
+    let votes: Int?
 }
 
 public struct SonarrLookupRecord: Decodable {

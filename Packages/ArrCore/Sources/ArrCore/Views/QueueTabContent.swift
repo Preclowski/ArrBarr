@@ -14,6 +14,13 @@ struct QueueTabContent: View {
     @Binding var searchResult: SearchResult?
     @Binding var bannerCollapseTask: Task<Void, Never>?
 
+    /// User-selected sort order for the search-result list. Lives on
+    /// the tab content (not the SearchViewModel) so it resets to
+    /// `.relevance` whenever the user backs out of the search surface,
+    /// which is what they'd expect — leaving the popover and coming
+    /// back should not strand them in "Highest rated" from yesterday.
+    @State private var sortMode: SortMode = .relevance
+
     enum QueueResultType: Hashable, CaseIterable {
         case all
         case inQueue
@@ -76,6 +83,7 @@ struct QueueTabContent: View {
                                     .scaledFont(size: 15, weight: .semibold)
                                     .foregroundStyle(.primary)
                                 Spacer()
+                                sortMenu
                             }
                             .padding(.horizontal, 12)
                             .padding(.top, 8)
@@ -246,18 +254,12 @@ struct QueueTabContent: View {
         // query, so a strong Sonarr hit can sit above a marginal
         // Radarr one — the previous "Radarr always first because
         // it's case .radarr" cross-arr bias is gone.
-        let rawLibrary = SearchRelevance.sortedByRelevance(
-            scopedSources.flatMap { libraryResults(for: $0) },
-            query: queueFilter
-        )
+        let rawLibrary = SearchRelevance.sorted(scopedSources.flatMap { libraryResults(for: $0) }, query: queueFilter, mode: sortMode)
         let library = SearchResultDedup.removingQueueDuplicates(
             libraryResults: rawLibrary,
             queueRows: queueRows
         )
-        let newOnes = SearchRelevance.sortedByRelevance(
-            scopedSources.flatMap { newResults(for: $0) },
-            query: queueFilter
-        )
+        let newOnes = SearchRelevance.sorted(scopedSources.flatMap { newResults(for: $0) }, query: queueFilter, mode: sortMode)
 
         VStack(alignment: .leading, spacing: 0) {
             compactQueueRowsList(entries: queueRows)
@@ -276,19 +278,13 @@ struct QueueTabContent: View {
                 compactQueueRowsList(entries: scopedSources.flatMap { entries(for: $0) })
             case .inLibrary:
                 let queueRows = scopedSources.flatMap { entries(for: $0) }
-                let raw = SearchRelevance.sortedByRelevance(
-                    scopedSources.flatMap { libraryResults(for: $0) },
-                    query: queueFilter
-                )
+                let raw = SearchRelevance.sorted(scopedSources.flatMap { libraryResults(for: $0) }, query: queueFilter, mode: sortMode)
                 let lib = SearchResultDedup.removingQueueDuplicates(
                     libraryResults: raw, queueRows: queueRows
                 )
                 ForEach(lib) { r in searchResultRow(r) }
             case .new:
-                let new = SearchRelevance.sortedByRelevance(
-                    scopedSources.flatMap { newResults(for: $0) },
-                    query: queueFilter
-                )
+                let new = SearchRelevance.sorted(scopedSources.flatMap { newResults(for: $0) }, query: queueFilter, mode: sortMode)
                 ForEach(new) { r in searchResultRow(r) }
             case .all:
                 EmptyView()
@@ -310,19 +306,13 @@ struct QueueTabContent: View {
                 // Single-source path — no cross-source merge needed,
                 // but in-group relevance sort still applies so the
                 // user sees the strongest title match first.
-                let raw = SearchRelevance.sortedByRelevance(
-                    libraryResults(for: source),
-                    query: queueFilter
-                )
+                let raw = SearchRelevance.sorted(libraryResults(for: source), query: queueFilter, mode: sortMode)
                 let lib = SearchResultDedup.removingQueueDuplicates(
                     libraryResults: raw, queueRows: queueRows
                 )
                 ForEach(lib) { r in searchResultRow(r) }
             case .new:
-                let new = SearchRelevance.sortedByRelevance(
-                    newResults(for: source),
-                    query: queueFilter
-                )
+                let new = SearchRelevance.sorted(newResults(for: source), query: queueFilter, mode: sortMode)
                 ForEach(new) { r in searchResultRow(r) }
             case .all:
                 EmptyView()
@@ -408,6 +398,47 @@ struct QueueTabContent: View {
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
         .fixedSize()
+    }
+
+    /// Trailing sort selector in the "Searching" header. Compact glyph
+    /// + chevron menu — same visual weight as the typeFilterPill in
+    /// the filter bar below so the two controls read as siblings, not
+    /// a primary/secondary hierarchy. Showing the currently-selected
+    /// mode's symbol (sparkles for Relevance, star for Highest rated,
+    /// …) saves a redundant text label in the header while still
+    /// signalling "this is a sort affordance, click to change".
+    private var sortMenu: some View {
+        Menu {
+            Picker(selection: $sortMode) {
+                ForEach(SortMode.allCases) { mode in
+                    Label {
+                        Text(mode.labelKey, bundle: .module)
+                    } icon: {
+                        Image(systemName: mode.symbol)
+                    }
+                    .tag(mode)
+                }
+            } label: { EmptyView() }
+            .pickerStyle(.inline)
+        } label: {
+            HStack(spacing: 3) {
+                Image(systemName: sortMode.symbol)
+                    .scaledFont(size: 11, weight: .medium)
+                Text(sortMode.labelKey, bundle: .module)
+                    .scaledFont(size: 11, weight: .medium)
+                Image(systemName: "chevron.down")
+                    .scaledFont(size: 8, weight: .semibold)
+                    .foregroundStyle(.tertiary)
+            }
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .contentShape(Capsule())
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .accessibilityLabel(Text("Sort search results", bundle: .module))
     }
 
     private var queueFilterBar: some View {
