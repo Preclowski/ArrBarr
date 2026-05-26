@@ -246,7 +246,12 @@ extension LocalToolBackend {
             let year = r.year.map { " (\($0))" } ?? ""
             let rating = r.rating.map { String(format: " ★%.1f", $0) } ?? ""
             let owned = r.inLibraryArrId != nil ? " [OWNED]" : ""
-            out += "\n- \(r.title)\(year)\(rating)\(owned) — tmdbId: \(r.id == 0 ? "n/a" : String(r.id))"
+            // MediaRef url form ("tmdb:12345") matches what the user
+            // can type into the search bar verbatim, and what the
+            // deep-link layer expects — one canonical string scheme
+            // for external IDs across read and write paths.
+            let ref = r.id == 0 ? "n/a" : r.mediaRef.urlString
+            out += "\n- \(r.title)\(year)\(rating)\(owned) — \(ref)"
         }
         if results.count > 15 { out += "\n…and \(results.count - 15) more." }
         return out
