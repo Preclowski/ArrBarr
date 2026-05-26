@@ -367,10 +367,15 @@ public struct ExistingFileDiffRow: View {
 
 /// Chip-diff between new and existing custom-format sets. Renders
 /// added chips with a green `+` prefix, removed chips with a red `−`.
-/// Renders nothing when the sets are identical — the common case for
-/// repacks / resolution bumps where the release group keeps the same
-/// CF tags, so showing two identical chip strips was the visual
-/// confusion this diff was built to eliminate.
+/// Renders the removed-formats row of a CF diff: items the existing
+/// file has that the new release drops. The *added* side is encoded
+/// directly into the upstream `CustomFormatChips` strip — green chips
+/// in the new-spec row read as added without duplicating each tag
+/// across a separate "+" line (the previous design painted the same
+/// chip twice, which was the source of "if DV Boost was added why is
+/// it also in the white list?" confusion).
+///
+/// Renders nothing when nothing was removed.
 public struct CustomFormatDiff: View {
     let newFormats: [String]
     let existingFormats: [String]
@@ -381,32 +386,16 @@ public struct CustomFormatDiff: View {
     }
 
     public var body: some View {
-        let oldSet = Set(existingFormats)
         let newSet = Set(newFormats)
-        let added = newFormats.filter { !oldSet.contains($0) }
         let removed = existingFormats.filter { !newSet.contains($0) }
 
-        if !added.isEmpty || !removed.isEmpty {
-            VStack(alignment: .leading, spacing: 3) {
-                if !added.isEmpty {
-                    HStack(spacing: 4) {
-                        Text(verbatim: "+")
-                            .scaledFont(size: 10, weight: .semibold)
-                            .foregroundStyle(.green)
-                        TooltipFlowLayout(spacing: 3) {
-                            ForEach(added, id: \.self) { TagChip(text: $0, color: .green) }
-                        }
-                    }
-                }
-                if !removed.isEmpty {
-                    HStack(spacing: 4) {
-                        Text(verbatim: "−")
-                            .scaledFont(size: 10, weight: .semibold)
-                            .foregroundStyle(.red)
-                        TooltipFlowLayout(spacing: 3) {
-                            ForEach(removed, id: \.self) { TagChip(text: $0, color: .red) }
-                        }
-                    }
+        if !removed.isEmpty {
+            HStack(spacing: 4) {
+                Text(verbatim: "−")
+                    .scaledFont(size: 10, weight: .semibold)
+                    .foregroundStyle(.red)
+                TooltipFlowLayout(spacing: 3) {
+                    ForEach(removed, id: \.self) { TagChip(text: $0, color: .red) }
                 }
             }
         }

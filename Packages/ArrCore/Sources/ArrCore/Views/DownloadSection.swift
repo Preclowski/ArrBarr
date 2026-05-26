@@ -164,10 +164,17 @@ struct DownloadSection: View {
             if showCustomFormats, !item.customFormats.isEmpty {
                 // Score moved to `ProgressLine`'s status-row trailing
                 // edge — same right gutter as the queue list row uses.
-                // Strip carries format tags only.
-                CustomFormatChips(formats: item.customFormats, score: 0)
-                // Chip diff (added / removed) directly under the
-                // strip — mirrors the tooltip's pattern.
+                // Strip carries format tags only; on an upgrade, tags
+                // present in the new release but missing from the
+                // existing file render green inside this strip (added
+                // = green chip), so the "+ added" row that used to live
+                // under it became redundant. `CustomFormatDiff` now
+                // only paints the removed (red) row.
+                CustomFormatChips(
+                    formats: item.customFormats,
+                    score: 0,
+                    existingFormats: item.isUpgrade ? item.existingCustomFormats : nil
+                )
                 if item.isUpgrade {
                     CustomFormatDiff(
                         newFormats: item.customFormats,
