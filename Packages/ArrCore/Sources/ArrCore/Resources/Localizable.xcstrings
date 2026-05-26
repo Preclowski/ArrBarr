@@ -889,26 +889,26 @@
         },
         "pl": {
           "stringUnit": {
-            "state": "new",
-            "value": "ArrBarr will relaunch now to apply the change."
+            "state": "translated",
+            "value": "ArrBarr uruchomi się ponownie, aby zastosować zmianę."
           }
         },
         "es": {
           "stringUnit": {
-            "state": "new",
-            "value": "ArrBarr will relaunch now to apply the change."
+            "state": "translated",
+            "value": "ArrBarr se reiniciará ahora para aplicar el cambio."
           }
         },
         "fr": {
           "stringUnit": {
-            "state": "new",
-            "value": "ArrBarr will relaunch now to apply the change."
+            "state": "translated",
+            "value": "ArrBarr va redémarrer maintenant pour appliquer le changement."
           }
         },
         "de": {
           "stringUnit": {
-            "state": "new",
-            "value": "ArrBarr will relaunch now to apply the change."
+            "state": "translated",
+            "value": "ArrBarr wird jetzt neu gestartet, um die Änderung anzuwenden."
           }
         }
       }
@@ -1317,26 +1317,26 @@
         },
         "pl": {
           "stringUnit": {
-            "state": "new",
-            "value": "Clear filter"
+            "state": "translated",
+            "value": "Wyczyść filtr"
           }
         },
         "es": {
           "stringUnit": {
-            "state": "new",
-            "value": "Clear filter"
+            "state": "translated",
+            "value": "Borrar filtro"
           }
         },
         "fr": {
           "stringUnit": {
-            "state": "new",
-            "value": "Clear filter"
+            "state": "translated",
+            "value": "Effacer le filtre"
           }
         },
         "de": {
           "stringUnit": {
-            "state": "new",
-            "value": "Clear filter"
+            "state": "translated",
+            "value": "Filter löschen"
           }
         }
       }
@@ -1352,26 +1352,26 @@
         },
         "pl": {
           "stringUnit": {
-            "state": "new",
-            "value": "Clear search"
+            "state": "translated",
+            "value": "Wyczyść wyszukiwanie"
           }
         },
         "es": {
           "stringUnit": {
-            "state": "new",
-            "value": "Clear search"
+            "state": "translated",
+            "value": "Borrar búsqueda"
           }
         },
         "fr": {
           "stringUnit": {
-            "state": "new",
-            "value": "Clear search"
+            "state": "translated",
+            "value": "Effacer la recherche"
           }
         },
         "de": {
           "stringUnit": {
-            "state": "new",
-            "value": "Clear search"
+            "state": "translated",
+            "value": "Suche löschen"
           }
         }
       }
@@ -1528,26 +1528,26 @@
         },
         "pl": {
           "stringUnit": {
-            "state": "new",
-            "value": "Collapse section"
+            "state": "translated",
+            "value": "Zwiń sekcję"
           }
         },
         "es": {
           "stringUnit": {
-            "state": "new",
-            "value": "Collapse section"
+            "state": "translated",
+            "value": "Contraer sección"
           }
         },
         "fr": {
           "stringUnit": {
-            "state": "new",
-            "value": "Collapse section"
+            "state": "translated",
+            "value": "Réduire la section"
           }
         },
         "de": {
           "stringUnit": {
-            "state": "new",
-            "value": "Collapse section"
+            "state": "translated",
+            "value": "Abschnitt einklappen"
           }
         }
       }
@@ -1913,26 +1913,26 @@
         },
         "pl": {
           "stringUnit": {
-            "state": "new",
-            "value": "Demo mode disabled"
+            "state": "translated",
+            "value": "Tryb demo wyłączony"
           }
         },
         "es": {
           "stringUnit": {
-            "state": "new",
-            "value": "Demo mode disabled"
+            "state": "translated",
+            "value": "Modo de demostración desactivado"
           }
         },
         "fr": {
           "stringUnit": {
-            "state": "new",
-            "value": "Demo mode disabled"
+            "state": "translated",
+            "value": "Mode démo désactivé"
           }
         },
         "de": {
           "stringUnit": {
-            "state": "new",
-            "value": "Demo mode disabled"
+            "state": "translated",
+            "value": "Demomodus deaktiviert"
           }
         }
       }
@@ -2006,26 +2006,26 @@
         },
         "pl": {
           "stringUnit": {
-            "state": "new",
-            "value": "Developer options enabled"
+            "state": "translated",
+            "value": "Opcje programisty włączone"
           }
         },
         "es": {
           "stringUnit": {
-            "state": "new",
-            "value": "Developer options enabled"
+            "state": "translated",
+            "value": "Opciones de desarrollador activadas"
           }
         },
         "fr": {
           "stringUnit": {
-            "state": "new",
-            "value": "Developer options enabled"
+            "state": "translated",
+            "value": "Options développeur activées"
           }
         },
         "de": {
           "stringUnit": {
-            "state": "new",
-            "value": "Developer options enabled"
+            "state": "translated",
+            "value": "Entwickleroptionen aktiviert"
           }
         }
       }
@@ -2329,26 +2329,26 @@
         },
         "pl": {
           "stringUnit": {
-            "state": "new",
-            "value": "Episode %lld"
+            "state": "translated",
+            "value": "Odcinek %lld"
           }
         },
         "es": {
           "stringUnit": {
-            "state": "new",
-            "value": "Episode %lld"
+            "state": "translated",
+            "value": "Episodio %lld"
           }
         },
         "fr": {
           "stringUnit": {
-            "state": "new",
-            "value": "Episode %lld"
+            "state": "translated",
+            "value": "Épisode %lld"
           }
         },
         "de": {
           "stringUnit": {
-            "state": "new",
-            "value": "Episode %lld"
+            "state": "translated",
+            "value": "Folge %lld"
           }
         }
       }
@@ -2478,26 +2478,26 @@
         },
         "pl": {
           "stringUnit": {
-            "state": "new",
-            "value": "Expand section"
+            "state": "translated",
+            "value": "Rozwiń sekcję"
           }
         },
         "es": {
           "stringUnit": {
-            "state": "new",
-            "value": "Expand section"
+            "state": "translated",
+            "value": "Expandir sección"
           }
         },
         "fr": {
           "stringUnit": {
-            "state": "new",
-            "value": "Expand section"
+            "state": "translated",
+            "value": "Développer la section"
           }
         },
         "de": {
           "stringUnit": {
-            "state": "new",
-            "value": "Expand section"
+            "state": "translated",
+            "value": "Abschnitt ausklappen"
           }
         }
       }
@@ -2746,26 +2746,26 @@
         },
         "pl": {
           "stringUnit": {
-            "state": "new",
-            "value": "Here are %lld films you might enjoy."
+            "state": "translated",
+            "value": "Oto %lld filmów, które mogą Ci się spodobać."
           }
         },
         "es": {
           "stringUnit": {
-            "state": "new",
-            "value": "Here are %lld films you might enjoy."
+            "state": "translated",
+            "value": "Aquí tienes %lld películas que te pueden gustar."
           }
         },
         "fr": {
           "stringUnit": {
-            "state": "new",
-            "value": "Here are %lld films you might enjoy."
+            "state": "translated",
+            "value": "Voici %lld films qui pourraient vous plaire."
           }
         },
         "de": {
           "stringUnit": {
-            "state": "new",
-            "value": "Here are %lld films you might enjoy."
+            "state": "translated",
+            "value": "Hier sind %lld Filme, die dir gefallen könnten."
           }
         }
       }
@@ -2781,26 +2781,26 @@
         },
         "pl": {
           "stringUnit": {
-            "state": "new",
-            "value": "Here are %lld series you might enjoy."
+            "state": "translated",
+            "value": "Oto %lld seriali, które mogą Ci się spodobać."
           }
         },
         "es": {
           "stringUnit": {
-            "state": "new",
-            "value": "Here are %lld series you might enjoy."
+            "state": "translated",
+            "value": "Aquí tienes %lld series que te pueden gustar."
           }
         },
         "fr": {
           "stringUnit": {
-            "state": "new",
-            "value": "Here are %lld series you might enjoy."
+            "state": "translated",
+            "value": "Voici %lld séries qui pourraient vous plaire."
           }
         },
         "de": {
           "stringUnit": {
-            "state": "new",
-            "value": "Here are %lld series you might enjoy."
+            "state": "translated",
+            "value": "Hier sind %lld Serien, die dir gefallen könnten."
           }
         }
       }
@@ -3436,26 +3436,26 @@
         },
         "pl": {
           "stringUnit": {
-            "state": "new",
-            "value": "Manual import required"
+            "state": "translated",
+            "value": "Wymagany import ręczny"
           }
         },
         "es": {
           "stringUnit": {
-            "state": "new",
-            "value": "Manual import required"
+            "state": "translated",
+            "value": "Se requiere importación manual"
           }
         },
         "fr": {
           "stringUnit": {
-            "state": "new",
-            "value": "Manual import required"
+            "state": "translated",
+            "value": "Import manuel requis"
           }
         },
         "de": {
           "stringUnit": {
-            "state": "new",
-            "value": "Manual import required"
+            "state": "translated",
+            "value": "Manueller Import erforderlich"
           }
         }
       }
@@ -3499,26 +3499,26 @@
         },
         "pl": {
           "stringUnit": {
-            "state": "new",
-            "value": "Metadata Profile"
+            "state": "translated",
+            "value": "Profil metadanych"
           }
         },
         "es": {
           "stringUnit": {
-            "state": "new",
-            "value": "Metadata Profile"
+            "state": "translated",
+            "value": "Perfil de metadatos"
           }
         },
         "fr": {
           "stringUnit": {
-            "state": "new",
-            "value": "Metadata Profile"
+            "state": "translated",
+            "value": "Profil de métadonnées"
           }
         },
         "de": {
           "stringUnit": {
-            "state": "new",
-            "value": "Metadata Profile"
+            "state": "translated",
+            "value": "Metadaten-Profil"
           }
         }
       }
@@ -3563,26 +3563,26 @@
         },
         "pl": {
           "stringUnit": {
-            "state": "new",
-            "value": "Monitor"
+            "state": "translated",
+            "value": "Monitoruj"
           }
         },
         "es": {
           "stringUnit": {
-            "state": "new",
-            "value": "Monitor"
+            "state": "translated",
+            "value": "Monitorizar"
           }
         },
         "fr": {
           "stringUnit": {
-            "state": "new",
-            "value": "Monitor"
+            "state": "translated",
+            "value": "Surveiller"
           }
         },
         "de": {
           "stringUnit": {
-            "state": "new",
-            "value": "Monitor"
+            "state": "translated",
+            "value": "Überwachen"
           }
         }
       }
@@ -4247,26 +4247,26 @@
         },
         "pl": {
           "stringUnit": {
-            "state": "new",
-            "value": "Notify on new grabs"
+            "state": "translated",
+            "value": "Powiadom o nowych pobraniach"
           }
         },
         "es": {
           "stringUnit": {
-            "state": "new",
-            "value": "Notify on new grabs"
+            "state": "translated",
+            "value": "Notificar sobre nuevas capturas"
           }
         },
         "fr": {
           "stringUnit": {
-            "state": "new",
-            "value": "Notify on new grabs"
+            "state": "translated",
+            "value": "Notifier les nouvelles captures"
           }
         },
         "de": {
           "stringUnit": {
-            "state": "new",
-            "value": "Notify on new grabs"
+            "state": "translated",
+            "value": "Bei neuen Treffern benachrichtigen"
           }
         }
       }
@@ -4508,26 +4508,26 @@
         },
         "pl": {
           "stringUnit": {
-            "state": "new",
-            "value": "Pause download"
+            "state": "translated",
+            "value": "Wstrzymaj pobieranie"
           }
         },
         "es": {
           "stringUnit": {
-            "state": "new",
-            "value": "Pause download"
+            "state": "translated",
+            "value": "Pausar descarga"
           }
         },
         "fr": {
           "stringUnit": {
-            "state": "new",
-            "value": "Pause download"
+            "state": "translated",
+            "value": "Mettre en pause le téléchargement"
           }
         },
         "de": {
           "stringUnit": {
-            "state": "new",
-            "value": "Pause download"
+            "state": "translated",
+            "value": "Download pausieren"
           }
         }
       }
@@ -5300,26 +5300,26 @@
         },
         "pl": {
           "stringUnit": {
-            "state": "new",
-            "value": "Resume download"
+            "state": "translated",
+            "value": "Wznów pobieranie"
           }
         },
         "es": {
           "stringUnit": {
-            "state": "new",
-            "value": "Resume download"
+            "state": "translated",
+            "value": "Reanudar descarga"
           }
         },
         "fr": {
           "stringUnit": {
-            "state": "new",
-            "value": "Resume download"
+            "state": "translated",
+            "value": "Reprendre le téléchargement"
           }
         },
         "de": {
           "stringUnit": {
-            "state": "new",
-            "value": "Resume download"
+            "state": "translated",
+            "value": "Download fortsetzen"
           }
         }
       }
@@ -5723,26 +5723,26 @@
         },
         "pl": {
           "stringUnit": {
-            "state": "new",
-            "value": "Search queued"
+            "state": "translated",
+            "value": "Wyszukiwanie w kolejce"
           }
         },
         "es": {
           "stringUnit": {
-            "state": "new",
-            "value": "Search queued"
+            "state": "translated",
+            "value": "Búsqueda en cola"
           }
         },
         "fr": {
           "stringUnit": {
-            "state": "new",
-            "value": "Search queued"
+            "state": "translated",
+            "value": "Recherche en file d'attente"
           }
         },
         "de": {
           "stringUnit": {
-            "state": "new",
-            "value": "Search queued"
+            "state": "translated",
+            "value": "Suche in Warteschlange"
           }
         }
       }
@@ -6083,26 +6083,26 @@
         },
         "pl": {
           "stringUnit": {
-            "state": "new",
-            "value": "Send"
+            "state": "translated",
+            "value": "Wyślij"
           }
         },
         "es": {
           "stringUnit": {
-            "state": "new",
-            "value": "Send"
+            "state": "translated",
+            "value": "Enviar"
           }
         },
         "fr": {
           "stringUnit": {
-            "state": "new",
-            "value": "Send"
+            "state": "translated",
+            "value": "Envoyer"
           }
         },
         "de": {
           "stringUnit": {
-            "state": "new",
-            "value": "Send"
+            "state": "translated",
+            "value": "Senden"
           }
         }
       }
@@ -6176,26 +6176,26 @@
         },
         "pl": {
           "stringUnit": {
-            "state": "new",
-            "value": "Series Type"
+            "state": "translated",
+            "value": "Typ serialu"
           }
         },
         "es": {
           "stringUnit": {
-            "state": "new",
-            "value": "Series Type"
+            "state": "translated",
+            "value": "Tipo de serie"
           }
         },
         "fr": {
           "stringUnit": {
-            "state": "new",
-            "value": "Series Type"
+            "state": "translated",
+            "value": "Type de série"
           }
         },
         "de": {
           "stringUnit": {
-            "state": "new",
-            "value": "Series Type"
+            "state": "translated",
+            "value": "Serientyp"
           }
         }
       }
@@ -6275,26 +6275,26 @@
         },
         "pl": {
           "stringUnit": {
-            "state": "new",
-            "value": "Settings"
+            "state": "translated",
+            "value": "Ustawienia"
           }
         },
         "es": {
           "stringUnit": {
-            "state": "new",
-            "value": "Settings"
+            "state": "translated",
+            "value": "Ajustes"
           }
         },
         "fr": {
           "stringUnit": {
-            "state": "new",
-            "value": "Settings"
+            "state": "translated",
+            "value": "Réglages"
           }
         },
         "de": {
           "stringUnit": {
-            "state": "new",
-            "value": "Settings"
+            "state": "translated",
+            "value": "Einstellungen"
           }
         }
       }
@@ -6452,26 +6452,26 @@
         },
         "pl": {
           "stringUnit": {
-            "state": "new",
-            "value": "Show poster"
+            "state": "translated",
+            "value": "Pokaż plakat"
           }
         },
         "es": {
           "stringUnit": {
-            "state": "new",
-            "value": "Show poster"
+            "state": "translated",
+            "value": "Mostrar póster"
           }
         },
         "fr": {
           "stringUnit": {
-            "state": "new",
-            "value": "Show poster"
+            "state": "translated",
+            "value": "Afficher l'affiche"
           }
         },
         "de": {
           "stringUnit": {
-            "state": "new",
-            "value": "Show poster"
+            "state": "translated",
+            "value": "Poster anzeigen"
           }
         }
       }
@@ -6988,26 +6988,26 @@
         },
         "pl": {
           "stringUnit": {
-            "state": "new",
-            "value": "Thinking…"
+            "state": "translated",
+            "value": "Myślę…"
           }
         },
         "es": {
           "stringUnit": {
-            "state": "new",
-            "value": "Thinking…"
+            "state": "translated",
+            "value": "Pensando…"
           }
         },
         "fr": {
           "stringUnit": {
-            "state": "new",
-            "value": "Thinking…"
+            "state": "translated",
+            "value": "Réflexion…"
           }
         },
         "de": {
           "stringUnit": {
-            "state": "new",
-            "value": "Thinking…"
+            "state": "translated",
+            "value": "Denke nach…"
           }
         }
       }
@@ -7337,26 +7337,26 @@
         },
         "pl": {
           "stringUnit": {
-            "state": "new",
-            "value": "Unaired"
+            "state": "translated",
+            "value": "Nie wyemitowano"
           }
         },
         "es": {
           "stringUnit": {
-            "state": "new",
-            "value": "Unaired"
+            "state": "translated",
+            "value": "No emitido"
           }
         },
         "fr": {
           "stringUnit": {
-            "state": "new",
-            "value": "Unaired"
+            "state": "translated",
+            "value": "Non diffusé"
           }
         },
         "de": {
           "stringUnit": {
-            "state": "new",
-            "value": "Unaired"
+            "state": "translated",
+            "value": "Nicht ausgestrahlt"
           }
         }
       }
@@ -7598,26 +7598,26 @@
         },
         "pl": {
           "stringUnit": {
-            "state": "new",
-            "value": "View"
+            "state": "translated",
+            "value": "Widok"
           }
         },
         "es": {
           "stringUnit": {
-            "state": "new",
-            "value": "View"
+            "state": "translated",
+            "value": "Visualización"
           }
         },
         "fr": {
           "stringUnit": {
-            "state": "new",
-            "value": "View"
+            "state": "translated",
+            "value": "Présentation"
           }
         },
         "de": {
           "stringUnit": {
-            "state": "new",
-            "value": "View"
+            "state": "translated",
+            "value": "Darstellung"
           }
         }
       }
