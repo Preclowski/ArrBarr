@@ -997,12 +997,12 @@ public struct PopoverContentView: View {
             .padding(.horizontal, 10)
             .padding(.vertical, 4)
             .background(
-                Capsule().fill(queueResultType == .all
+                RoundedRectangle(cornerRadius: 5).fill(queueResultType == .all
                     ? AnyShapeStyle(Color.primary.opacity(0.08))
                     : AnyShapeStyle(Color.accentColor))
             )
             .overlay(
-                Capsule().stroke(queueResultType == .all
+                RoundedRectangle(cornerRadius: 5).stroke(queueResultType == .all
                     ? Color.clear
                     : Color.accentColor.opacity(0.4), lineWidth: 0.75)
             )
