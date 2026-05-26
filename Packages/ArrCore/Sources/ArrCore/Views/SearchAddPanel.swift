@@ -367,28 +367,36 @@ public struct SearchAddPanel: View {
     private var addButton: some View {
         Button {
             Task {
-                if result.source == .radarr {
-                    guard let pid = selectedProfileId ?? viewModel.qualityProfiles.first?.id,
-                          let folder = selectedRootFolder ?? viewModel.rootFolders.first?.path else { return }
+                guard let pid = selectedProfileId ?? viewModel.qualityProfiles.first?.id,
+                      let folder = selectedRootFolder ?? viewModel.rootFolders.first?.path else { return }
+                // Dispatch on the result's MediaRef rather than its
+                // `.source` enum — same outcome, but the ref kind
+                // makes the per-arr add-method choice the explicit
+                // axis (a `.tvdb` ref can only become an addSeries
+                // call; the type system pins it down). Whisparr +
+                // Radarr both carry `.tmdb` refs, so the inner
+                // source check stays to disambiguate the two movie-
+                // ID-using arrs.
+                switch result.mediaRef {
+                case .tmdb where result.source == .whisparr:
+                    await viewModel.addScene(result, qualityProfileId: pid,
+                                            rootFolderPath: folder, monitor: whisparrMonitor)
+                case .tmdb:
                     await viewModel.addMovie(result, qualityProfileId: pid,
                                             rootFolderPath: folder, monitor: radarrMonitor)
-                } else if result.source == .sonarr {
-                    guard let pid = selectedProfileId ?? viewModel.qualityProfiles.first?.id,
-                          let folder = selectedRootFolder ?? viewModel.rootFolders.first?.path else { return }
+                case .tvdb:
                     await viewModel.addSeries(result, qualityProfileId: pid,
                                              rootFolderPath: folder, monitor: sonarrMonitor,
                                              seriesType: seriesType, seasonFolder: seasonFolder)
-                } else if result.source == .whisparr {
-                    guard let pid = selectedProfileId ?? viewModel.qualityProfiles.first?.id,
-                          let folder = selectedRootFolder ?? viewModel.rootFolders.first?.path else { return }
-                    await viewModel.addScene(result, qualityProfileId: pid,
-                                            rootFolderPath: folder, monitor: whisparrMonitor)
-                } else {
-                    guard let pid = selectedProfileId ?? viewModel.qualityProfiles.first?.id,
-                          let folder = selectedRootFolder ?? viewModel.rootFolders.first?.path else { return }
+                case .musicBrainz:
                     let metaPid = selectedMetadataProfileId ?? viewModel.metadataProfiles.first?.id ?? 1
                     await viewModel.addArtist(result, qualityProfileId: pid,
                                              metadataProfileId: metaPid, rootFolderPath: folder)
+                case .imdb:
+                    // IMDB-only refs aren't directly addable — the search
+                    // pipeline should have resolved them to tmdb/tvdb
+                    // before reaching this UI. Log and bail.
+                    viewModel.addError = "Unsupported reference type — IMDB IDs must be resolved before adding."
                 }
                 if viewModel.addError == nil { onBack() }
             }

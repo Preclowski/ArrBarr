@@ -7,6 +7,13 @@ public enum HTTPError: LocalizedError {
     case decoding(Error)
     case notConfigured
     case missingApiKey
+    /// Boundary-check failure: caller tried to add a SearchResult to
+    /// a client whose source can't resolve the result's MediaRef
+    /// (e.g. a `.tvdb(_)` ref handed to a `.radarr` client). Used to
+    /// be silently allowed at the SDK layer and reported as a vague
+    /// HTTP 400 from the arr; this case surfaces the mismatch at the
+    /// SDK boundary instead.
+    case wrongSource(refKind: String, clientSource: String)
 
     public var errorDescription: String? {
         switch self {
@@ -16,6 +23,8 @@ public enum HTTPError: LocalizedError {
         case .decoding(let e): return "Decoding error: \(e.localizedDescription)"
         case .notConfigured: return "Service not configured"
         case .missingApiKey: return "API key is missing"
+        case .wrongSource(let ref, let src):
+            return "Can't add a \(ref) reference via \(src)."
         }
     }
 }

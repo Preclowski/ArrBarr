@@ -167,8 +167,23 @@ public actor SearchClient {
 
     // MARK: - Add
 
+    /// Boundary check: the caller's SearchResult must carry a MediaRef
+    /// this client can resolve. Centralised so the per-arr addX
+    /// methods all enforce the same invariant without each one
+    /// re-deriving it from `source` + `id`.
+    private func ensureRefCompatible(_ result: SearchResult) throws {
+        let ref = result.mediaRef
+        guard ref.compatibleSources.contains(source) else {
+            throw HTTPError.wrongSource(
+                refKind: String(describing: ref).split(separator: "(").first.map(String.init) ?? "ref",
+                clientSource: source.rawValue
+            )
+        }
+    }
+
     func addMovie(_ result: SearchResult, qualityProfileId: Int, rootFolderPath: String,
                   monitor: RadarrMonitorMode) async throws {
+        try ensureRefCompatible(result)
         if DemoMode.isActive {
             try? await Task.sleep(nanoseconds: 500_000_000)
             return
@@ -192,6 +207,7 @@ public actor SearchClient {
     func addSeries(_ result: SearchResult, qualityProfileId: Int, rootFolderPath: String,
                    monitor: SonarrMonitorMode, seriesType: SonarrSeriesType,
                    seasonFolder: Bool) async throws {
+        try ensureRefCompatible(result)
         if DemoMode.isActive {
             try? await Task.sleep(nanoseconds: 500_000_000)
             return
@@ -247,6 +263,7 @@ public actor SearchClient {
 
     func addScene(_ result: SearchResult, qualityProfileId: Int, rootFolderPath: String,
                   monitor: RadarrMonitorMode = .movieOnly) async throws {
+        try ensureRefCompatible(result)
         if DemoMode.isActive {
             try? await Task.sleep(nanoseconds: 500_000_000)
             return
@@ -275,6 +292,7 @@ public actor SearchClient {
 
     func addArtist(_ result: SearchResult, qualityProfileId: Int, metadataProfileId: Int,
                    rootFolderPath: String, monitor: String = "all") async throws {
+        try ensureRefCompatible(result)
         if DemoMode.isActive {
             try? await Task.sleep(nanoseconds: 500_000_000)
             return
