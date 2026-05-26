@@ -11,7 +11,6 @@ public final class DiscoverViewModel: ObservableObject {
     // MARK: - Persistence keys
 
     private static let hasPickedKindKey = "ArrBarr.discoverHasPickedKind"
-    private static let autoJumpEnabledKey = "ArrBarr.discoverAutoJumpEnabled"
 
     // MARK: - Published state
 
@@ -60,10 +59,11 @@ public final class DiscoverViewModel: ObservableObject {
     /// "N / total" progress chip. Doesn't shrink as the user swipes —
     /// progress is derived as `total - (queue.count + (current == nil ? 0 : 1))`.
     @Published public private(set) var sessionTotal: Int = 0
-    /// Increments every time the matched list crosses a 10-pick boundary
-    /// (10, 20, 30, …). View observes via .onChange to trigger an
-    /// auto-jump to the picks list.
-    @Published public private(set) var picksMilestoneTick: Int = 0
+    /// True when the user has matched new picks since they last viewed
+    /// the picks list inside the overlay. Drives the picks icon's pulse.
+    /// Set to true on every right-swipe; cleared when the user opens
+    /// the matched view.
+    @Published public private(set) var hasUnseenPicks: Bool = false
     /// Incremented only by user-driven actions (mood submit, filter chip
     /// taps, explicit reshuffle). The View's `task(id:)` keys on this so
     /// LLM-applied filter changes don't trigger an infinite reshuffle loop.
@@ -76,15 +76,6 @@ public final class DiscoverViewModel: ObservableObject {
     @Published public var mediaSelection: DiscoverMediaSelection {
         didSet {
             defaults.set(mediaSelection.rawValue, forKey: Self.mediaSelectionKey)
-        }
-    }
-
-    /// When true, every 10th right-swipe bumps `picksMilestoneTick` so the
-    /// view auto-jumps to the picks list. User-toggleable from the picks
-    /// header — persists across sessions.
-    @Published public var autoJumpEnabled: Bool {
-        didSet {
-            defaults.set(autoJumpEnabled, forKey: Self.autoJumpEnabledKey)
         }
     }
 
@@ -114,12 +105,6 @@ public final class DiscoverViewModel: ObservableObject {
             .flatMap { DiscoverMediaSelection(rawValue: $0) }
         self.mediaSelection = stored ?? .movie
         self.hasPickedKind = defaults.bool(forKey: Self.hasPickedKindKey)
-        // Default true — auto-jump is opt-out, not opt-in.
-        if defaults.object(forKey: Self.autoJumpEnabledKey) == nil {
-            self.autoJumpEnabled = true
-        } else {
-            self.autoJumpEnabled = defaults.bool(forKey: Self.autoJumpEnabledKey)
-        }
     }
 
     public func configure(tmdb: TMDBSource?, library: LibrarySource?, llm: LLMSource?) {
@@ -199,7 +184,7 @@ public final class DiscoverViewModel: ObservableObject {
     }
 
     /// Right swipe inserts the current card at index 0 of `matched` (newest
-    /// first) and fires a milestone tick every 10 picks. Left swipe discards.
+    /// first) and sets hasUnseenPicks. Left swipe discards.
     /// Either way the next card advances and a top-up may fire.
     public func swipe(right: Bool) async {
         startSwipe(right: right)
@@ -207,7 +192,7 @@ public final class DiscoverViewModel: ObservableObject {
     }
 
     /// First half of a swipe — records the outcome (matched insert,
-    /// milestone tick) but DOES NOT clear `current` or advance. The View
+    /// hasUnseenPicks set) but DOES NOT clear `current` or advance. The View
     /// calls this at the *start* of the fly-off animation. `current`
     /// stays as the still-flying card; the next card waits in the peek
     /// stack.
@@ -215,10 +200,8 @@ public final class DiscoverViewModel: ObservableObject {
         guard let item = current else { return }
         if right {
             matched.insert(item, at: 0)
-            if autoJumpEnabled, matched.count > 0, matched.count % 10 == 0 {
-                picksMilestoneTick &+= 1
-            }
             sessionMatched.append(item)
+            hasUnseenPicks = true
         } else {
             sessionSkipped.append(item)
         }
@@ -249,6 +232,12 @@ public final class DiscoverViewModel: ObservableObject {
     public var sessionConsumed: Int {
         let remaining = queue.count + (current == nil ? 0 : 1)
         return max(0, sessionTotal - remaining)
+    }
+
+    /// Called by the View when the user opens the matched picks list.
+    /// Clears the unseen-picks signal so the icon stops pulsing.
+    public func acknowledgeUnseenPicks() {
+        hasUnseenPicks = false
     }
 
     /// Second half of a swipe — actually clears `current` and pulls the

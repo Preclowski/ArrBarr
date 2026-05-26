@@ -178,34 +178,40 @@ final class DiscoverViewModelTests: XCTestCase {
         XCTAssertEqual(order, ["tmdb:100", "tmdb:200", "tmdb:101", "tmdb:201", "tmdb:102", "tmdb:202"])
     }
 
-    func test_swipeRight_milestoneTickBumps_everyTenPicks() async {
+    func test_swipeRight_setsHasUnseenPicks() async {
         let vm = freshVM()
         vm.configure(
-            tmdb: { _, _ in (1...30).map { self.makeItem($0, .tmdb) } },
+            tmdb: { _, _ in (1...5).map { self.makeItem($0, .tmdb) } },
             library: { _ in [] }, llm: nil
         )
         await vm.start()
-        let initialTick = vm.picksMilestoneTick
-        for _ in 0..<9 { await vm.swipe(right: true) }
-        XCTAssertEqual(vm.picksMilestoneTick, initialTick, "9 picks shouldn't trip the tick")
+        XCTAssertFalse(vm.hasUnseenPicks, "no unseen picks before any swipe")
         await vm.swipe(right: true)
-        XCTAssertEqual(vm.picksMilestoneTick, initialTick + 1, "10th pick trips the tick")
-        for _ in 0..<10 { await vm.swipe(right: true) }
-        XCTAssertEqual(vm.picksMilestoneTick, initialTick + 2, "20th pick trips it again")
+        XCTAssertTrue(vm.hasUnseenPicks, "right-swipe should set hasUnseenPicks")
     }
 
-    func test_autoJumpDisabled_suppressesMilestoneTick() async {
+    func test_swipeLeft_doesNotSetHasUnseenPicks() async {
         let vm = freshVM()
-        vm.autoJumpEnabled = false
         vm.configure(
-            tmdb: { _, _ in (1...20).map { self.makeItem($0, .tmdb) } },
+            tmdb: { _, _ in (1...5).map { self.makeItem($0, .tmdb) } },
             library: { _ in [] }, llm: nil
         )
         await vm.start()
-        let initial = vm.picksMilestoneTick
-        for _ in 0..<10 { await vm.swipe(right: true) }
-        XCTAssertEqual(vm.picksMilestoneTick, initial,
-                       "10 picks with auto-jump disabled shouldn't fire the tick")
+        await vm.swipe(right: false)
+        XCTAssertFalse(vm.hasUnseenPicks, "left-swipe should not set hasUnseenPicks")
+    }
+
+    func test_acknowledgeUnseenPicks_clearsFlag() async {
+        let vm = freshVM()
+        vm.configure(
+            tmdb: { _, _ in (1...5).map { self.makeItem($0, .tmdb) } },
+            library: { _ in [] }, llm: nil
+        )
+        await vm.start()
+        await vm.swipe(right: true)
+        XCTAssertTrue(vm.hasUnseenPicks)
+        vm.acknowledgeUnseenPicks()
+        XCTAssertFalse(vm.hasUnseenPicks, "acknowledgeUnseenPicks should clear the flag")
     }
 
     func test_sourceError_capturesMessageAndZeroCount() async {

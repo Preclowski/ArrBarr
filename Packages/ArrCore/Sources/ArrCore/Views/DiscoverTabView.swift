@@ -39,6 +39,7 @@ public struct DiscoverTabView: View {
                 withAnimation(.smooth(duration: 0.22)) {
                     showMatched = true
                 }
+                viewModel.acknowledgeUnseenPicks()
             }
     }
 
@@ -59,9 +60,6 @@ public struct DiscoverTabView: View {
                     ctaIsland
                 }
             }
-        }
-        .onChange(of: viewModel.picksMilestoneTick) { _, _ in
-            withAnimation(.smooth(duration: 0.4)) { showMatched = true }
         }
     }
 
@@ -110,10 +108,62 @@ public struct DiscoverTabView: View {
                 }
             }
             Spacer()
+            if !showMatched {
+                picksToggleButton
+            }
         }
         .padding(.horizontal, 12)
         .padding(.top, 10)
         .padding(.bottom, 4)
+    }
+
+    @State private var picksPulse: Bool = false
+
+    private var picksToggleButton: some View {
+        Button {
+            withAnimation(.smooth(duration: 0.22)) {
+                showMatched = true
+            }
+            viewModel.acknowledgeUnseenPicks()
+        } label: {
+            ZStack(alignment: .topTrailing) {
+                Image(systemName: viewModel.matched.isEmpty
+                      ? "list.star"
+                      : "list.star.rectangle.portrait.fill")
+                    .scaledFont(size: 13, weight: .semibold)
+                    .foregroundStyle(.secondary)
+                    .padding(8)
+                    .background(
+                        Circle()
+                            .fill(Color.primary.opacity(viewModel.hasUnseenPicks ? 0.15 : 0.06))
+                            .scaleEffect(viewModel.hasUnseenPicks && picksPulse ? 1.18 : 1.0)
+                            .opacity(viewModel.hasUnseenPicks && picksPulse ? 0.0 : 1.0)
+                    )
+                    .background(
+                        Circle().fill(Color.primary.opacity(0.06))
+                    )
+                if viewModel.hasUnseenPicks {
+                    Circle()
+                        .fill(Color.accentColor)
+                        .frame(width: 7, height: 7)
+                        .offset(x: 2, y: -2)
+                }
+            }
+        }
+        .buttonStyle(.plain)
+        .help(Text("Your picks", bundle: .module))
+        .onChange(of: viewModel.hasUnseenPicks) { _, newValue in
+            if newValue {
+                picksPulse = false
+                withAnimation(.easeOut(duration: 1.0).repeatForever(autoreverses: false)) {
+                    picksPulse = true
+                }
+            } else {
+                withAnimation(.smooth(duration: 0.2)) {
+                    picksPulse = false
+                }
+            }
+        }
     }
 
     private var filterSummaryChip: some View {
@@ -393,6 +443,7 @@ public struct DiscoverTabView: View {
             if viewModel.matched.count > 0 {
                 Button {
                     withAnimation(.smooth) { showMatched = true }
+                    viewModel.acknowledgeUnseenPicks()
                 } label: {
                     Text("Show your picks", bundle: .module)
                         .scaledFont(size: 11, weight: .semibold)
