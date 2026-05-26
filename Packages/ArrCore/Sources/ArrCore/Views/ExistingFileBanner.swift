@@ -13,24 +13,36 @@ struct ExistingFileBanner: View {
     let customFormatScore: Int?
     let customFormats: [String]
     let fileName: String?
+    /// When set, chips in `customFormats` that aren't in this list
+    /// render as removed (red outline) — they're the formats the
+    /// new download will strip. Nil for "no active upgrade, just
+    /// show what's on disk" callers, where every chip stays neutral.
+    /// Symmetric to `CustomFormatChips.existingFormats` which colours
+    /// chips green when they're net-new vs the existing file.
+    var newFormats: [String]?
 
     init(quality: String?, size: Int64?, customFormatScore: Int?,
-         customFormats: [String], fileName: String?) {
+         customFormats: [String], fileName: String?, newFormats: [String]? = nil) {
         self.quality = quality; self.size = size
         self.customFormatScore = customFormatScore
         self.customFormats = customFormats
         self.fileName = fileName
+        self.newFormats = newFormats
     }
 
     /// Build the banner from a queue row's `existing*` fields (upgrade-time
     /// metadata Radarr/Sonarr send when a download will replace something).
-    init(item: QueueItem) {
+    /// Pass `comparingTo: item.customFormats` to colour-code removed
+    /// chips red (the diff view); omit for a plain "this is on disk"
+    /// banner with all chips neutral.
+    init(item: QueueItem, comparingTo newFormats: [String]? = nil) {
         self.init(
             quality: item.existingQuality,
             size: item.existingSize,
             customFormatScore: item.existingCustomFormatScore,
             customFormats: item.existingCustomFormats,
-            fileName: item.existingFileName
+            fileName: item.existingFileName,
+            newFormats: newFormats
         )
     }
 
@@ -102,8 +114,18 @@ struct ExistingFileBanner: View {
                     .truncationMode(.middle)
             }
             if !customFormats.isEmpty {
+                let newSet: Set<String> = newFormats.map(Set.init) ?? []
+                let highlightRemoved = newFormats != nil
                 TooltipFlowLayout(spacing: 4) {
-                    ForEach(customFormats, id: \.self) { TagChip(text: $0) }
+                    ForEach(customFormats, id: \.self) { cf in
+                        // Mirror image of CustomFormatChips' green-for-
+                        // added: red-for-going-away. Chips kept across
+                        // the upgrade stay neutral. Without `newFormats`
+                        // (no diff context), all chips neutral — that's
+                        // the "in library, no active download" view.
+                        let isRemoved = highlightRemoved && !newSet.contains(cf)
+                        TagChip(text: cf, color: isRemoved ? .red : .primary)
+                    }
                 }
             }
         }

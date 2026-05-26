@@ -116,7 +116,12 @@ public struct DownloadProgressCard: View {
             if showHeader {
                 HStack(spacing: 6) {
                     StatusIconLabel(status: item.status)
-                    if let client = item.downloadClient {
+                    // Download-client chip lives in detail surfaces
+                    // only — `compactSpec` is the queue-row variant,
+                    // where the chip duplicates info that the detail
+                    // panel already surfaces and burns horizontal
+                    // space the title row needs more.
+                    if let client = item.downloadClient, !compactSpec {
                         DownloadClientLabel(name: client)
                     }
                     Spacer(minLength: 6)

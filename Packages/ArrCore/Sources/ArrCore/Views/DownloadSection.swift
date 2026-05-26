@@ -162,62 +162,40 @@ struct DownloadSection: View {
             // with the same tree-branch pattern every other surface
             // uses. One diff format, one source of truth.
             if showCustomFormats, !item.customFormats.isEmpty {
-                // Score moved to `ProgressLine`'s status-row trailing
-                // edge — same right gutter as the queue list row uses.
-                // Strip carries format tags only; on an upgrade, tags
-                // present in the new release but missing from the
-                // existing file render green inside this strip (added
-                // = green chip), so the "+ added" row that used to live
-                // under it became redundant. `CustomFormatDiff` now
-                // only paints the removed (red) row.
+                // New-spec strip — chips not in the existing file
+                // render green (added).
                 CustomFormatChips(
                     formats: item.customFormats,
                     score: 0,
                     existingFormats: item.isUpgrade ? item.existingCustomFormats : nil
                 )
-                if item.isUpgrade {
-                    CustomFormatDiff(
-                        newFormats: item.customFormats,
-                        existingFormats: item.existingCustomFormats
-                    )
-                }
             }
 
-            // Filename block — bumped from 10pt tertiary to 11pt
-            // secondary so the actual release name reads as content,
-            // not a footnote. When the row is an upgrade, the existing
-            // file's on-disk path follows on a `└─` sub-line, same
-            // tree-branch nesting the metadata diff uses one row up.
+            // Release filename — just the new file's path. The
+            // existing-file path used to ride on a `↳` sub-line under
+            // it, but now lives in the ExistingFileBanner below
+            // (uniform "EXISTING FILE" header + filename + chip strip
+            // styling across both the in-library view and the
+            // upgrade-in-progress view).
             if let release = item.releaseName, !release.isEmpty {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(release)
-                        .scaledFont(size: 11, design: .monospaced)
-                        .foregroundStyle(.primary)
-                        .lineLimit(2)
-                        .truncationMode(.middle)
-                    if item.isUpgrade,
-                       let existing = item.existingFileName, !existing.isEmpty,
-                       existing != release {
-                        // `↳` L-arrow — reads as "from this previous
-                        // file" branching off the release name above.
-                        // The straight ↑ we had before competed with
-                        // the indigo arrow.up.doc badge used as the
-                        // "Existing" header glyph elsewhere; the L
-                        // turn is unambiguous as a continuation marker.
-                        // Skip when existing matches the new release
-                        // name (re-grab, nothing to diff).
-                        HStack(alignment: .firstTextBaseline, spacing: 4) {
-                            Image(systemName: "arrow.turn.down.right")
-                                .scaledFont(size: 9, weight: .semibold)
-                                .foregroundStyle(.tertiary)
-                            Text(existing)
-                                .scaledFont(size: 11, design: .monospaced)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(2)
-                                .truncationMode(.middle)
-                        }
-                    }
-                }
+                Text(release)
+                    .scaledFont(size: 11, design: .monospaced)
+                    .foregroundStyle(.primary)
+                    .lineLimit(2)
+                    .truncationMode(.middle)
+            }
+
+            // Existing-file block. Same component used in the
+            // "already in library, no active download" path
+            // (RadarrDetailPanel uses it directly) — passing
+            // `comparingTo:` colour-codes removed chips red so the
+            // diff vs the new release becomes visible inside the
+            // same uniform chrome. When there's no existing metadata
+            // (fresh download, no replacement), nothing renders.
+            if item.isUpgrade,
+               item.existingFileName != nil || item.existingQuality != nil
+                   || !item.existingCustomFormats.isEmpty {
+                ExistingFileBanner(item: item, comparingTo: item.customFormats)
             }
         }
     }
