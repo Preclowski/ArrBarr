@@ -202,7 +202,14 @@ public struct PopoverContentView: View {
                         onClose: { self.historySource = nil }
                     )
                 } else if anyArrConfigured {
-                    tabBar
+                    // Tab bar hides while a queue-filter / search
+                    // query is live — search becomes a full-size
+                    // surface (back chevron in the top strip is the
+                    // only nav affordance you need). Tabs reappear
+                    // the moment the query clears.
+                    if !(selectedTab == .queue && isFiltering) {
+                        tabBar
+                    }
                     Group {
                         switch selectedTab {
                         case .queue: queueContent
