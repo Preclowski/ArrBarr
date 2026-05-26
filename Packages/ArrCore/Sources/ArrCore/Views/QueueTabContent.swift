@@ -239,12 +239,25 @@ struct QueueTabContent: View {
     @ViewBuilder
     private var statusGroupedSections: some View {
         let queueRows: [QueueRowEntry] = scopedSources.flatMap { entries(for: $0) }
-        let rawLibrary: [SearchResult] = scopedSources.flatMap { libraryResults(for: $0) }
+        // Cross-source merge + relevance sort. The `flatMap` lays
+        // Radarr + Sonarr + Lidarr + Whisparr end-to-end (enum
+        // order); the subsequent `sortedByRelevance` re-ranks the
+        // combined list by how well each title matches the typed
+        // query, so a strong Sonarr hit can sit above a marginal
+        // Radarr one — the previous "Radarr always first because
+        // it's case .radarr" cross-arr bias is gone.
+        let rawLibrary = SearchRelevance.sortedByRelevance(
+            scopedSources.flatMap { libraryResults(for: $0) },
+            query: queueFilter
+        )
         let library = SearchResultDedup.removingQueueDuplicates(
             libraryResults: rawLibrary,
             queueRows: queueRows
         )
-        let newOnes: [SearchResult] = scopedSources.flatMap { newResults(for: $0) }
+        let newOnes = SearchRelevance.sortedByRelevance(
+            scopedSources.flatMap { newResults(for: $0) },
+            query: queueFilter
+        )
 
         VStack(alignment: .leading, spacing: 0) {
             compactQueueRowsList(entries: queueRows)
@@ -263,13 +276,20 @@ struct QueueTabContent: View {
                 compactQueueRowsList(entries: scopedSources.flatMap { entries(for: $0) })
             case .inLibrary:
                 let queueRows = scopedSources.flatMap { entries(for: $0) }
-                let raw = scopedSources.flatMap { libraryResults(for: $0) }
+                let raw = SearchRelevance.sortedByRelevance(
+                    scopedSources.flatMap { libraryResults(for: $0) },
+                    query: queueFilter
+                )
                 let lib = SearchResultDedup.removingQueueDuplicates(
                     libraryResults: raw, queueRows: queueRows
                 )
                 ForEach(lib) { r in searchResultRow(r) }
             case .new:
-                ForEach(scopedSources.flatMap { newResults(for: $0) }) { r in searchResultRow(r) }
+                let new = SearchRelevance.sortedByRelevance(
+                    scopedSources.flatMap { newResults(for: $0) },
+                    query: queueFilter
+                )
+                ForEach(new) { r in searchResultRow(r) }
             case .all:
                 EmptyView()
             }
@@ -287,13 +307,23 @@ struct QueueTabContent: View {
                 compactQueueRowsList(entries: entries(for: source))
             case .inLibrary:
                 let queueRows = entries(for: source)
+                // Single-source path — no cross-source merge needed,
+                // but in-group relevance sort still applies so the
+                // user sees the strongest title match first.
+                let raw = SearchRelevance.sortedByRelevance(
+                    libraryResults(for: source),
+                    query: queueFilter
+                )
                 let lib = SearchResultDedup.removingQueueDuplicates(
-                    libraryResults: libraryResults(for: source),
-                    queueRows: queueRows
+                    libraryResults: raw, queueRows: queueRows
                 )
                 ForEach(lib) { r in searchResultRow(r) }
             case .new:
-                ForEach(newResults(for: source)) { r in searchResultRow(r) }
+                let new = SearchRelevance.sortedByRelevance(
+                    newResults(for: source),
+                    query: queueFilter
+                )
+                ForEach(new) { r in searchResultRow(r) }
             case .all:
                 EmptyView()
             }
