@@ -51,6 +51,10 @@ public final class DiscoverViewModel: ObservableObject {
     @Published public private(set) var sessionMatched: [DiscoverItem] = []
     /// Cards the user swiped left in the current session.
     @Published public private(set) var sessionSkipped: [DiscoverItem] = []
+    /// Cards the user explicitly marked "fewer like this" — stronger
+    /// negative signal than a regular left-swipe. Cleared when a new
+    /// session starts.
+    @Published public private(set) var sessionDisliked: [DiscoverItem] = []
     /// Total number of picks the agent seeded for the current session.
     /// Set by `seed(items:mood:)` and used by the View to render the
     /// "N / total" progress chip. Doesn't shrink as the user swipes —
@@ -166,6 +170,7 @@ public final class DiscoverViewModel: ObservableObject {
     public func seed(items: [DiscoverItem], mood: String) {
         sessionMatched.removeAll()
         sessionSkipped.removeAll()
+        sessionDisliked.removeAll()
         reset()
         moodText = mood
         sessionTotal = items.count
@@ -217,6 +222,18 @@ public final class DiscoverViewModel: ObservableObject {
         } else {
             sessionSkipped.append(item)
         }
+    }
+
+    /// Mark the current card as "fewer like this" and advance. Acts
+    /// like a left-swipe (item drops out of the deck, doesn't enter
+    /// matched), but is tagged separately so the "More picks" feedback
+    /// loop can emphasise avoiding similar items.
+    public func markDisliked() {
+        guard let item = current else { return }
+        sessionDisliked.append(item)
+        sessionSkipped.append(item)   // also counts as skipped — same drop semantics
+        current = nil
+        advanceIfNeeded()
     }
 
     /// True when the user has actually engaged with the deck this session.

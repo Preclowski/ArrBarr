@@ -319,11 +319,11 @@ public struct PopoverContentView: View {
                             showDiscoverOverlay = false
                         }
                     },
-                    onRequestMore: { mood, kept, skipped in
+                    onRequestMore: { mood, kept, skipped, disliked in
                         withAnimation(.smooth(duration: 0.22)) {
                             showDiscoverOverlay = false
                         }
-                        let prompt = Self.morePicksPrompt(mood: mood, kept: kept, skipped: skipped)
+                        let prompt = Self.morePicksPrompt(mood: mood, kept: kept, skipped: skipped, disliked: disliked)
                         Task { await chatHolder.vm.send(prompt) }
                     }
                 )
@@ -1628,11 +1628,13 @@ public struct PopoverContentView: View {
     /// `discover_in_quiz` with a refined pick set.
     private static func morePicksPrompt(mood: String,
                                         kept: [DiscoverItem],
-                                        skipped: [DiscoverItem]) -> String {
+                                        skipped: [DiscoverItem],
+                                        disliked: [DiscoverItem] = []) -> String {
         let trimmedMood = mood.trimmingCharacters(in: .whitespacesAndNewlines)
         let keptCapped = kept.prefix(10)
         let keptList = keptCapped.map(Self.titleYearLabel).joined(separator: ", ")
         let skippedList = skipped.prefix(10).map(Self.titleYearLabel).joined(separator: ", ")
+        let dislikedList = disliked.prefix(10).map(Self.titleYearLabel).joined(separator: ", ")
         // Pull tmdbIds from the kept items so the agent can pass them as
         // anchor_tmdb_ids — backend fans out TMDB Similar for each anchor.
         // Only movies have tmdbIds in result.id; series use tvdbId which
@@ -1649,6 +1651,9 @@ public struct PopoverContentView: View {
         if !keptList.isEmpty { lines.append("Kept: \(keptList).") }
         if !anchorListStr.isEmpty { lines.append("Kept TMDB IDs (for anchor_tmdb_ids): \(anchorListStr).") }
         if !skippedList.isEmpty { lines.append("Skipped: \(skippedList).") }
+        if !dislikedList.isEmpty {
+            lines.append("Specifically AVOID anything in the style of: \(dislikedList).")
+        }
         lines.append("Don't repeat any of those. Use discover_in_quiz with append: true, anchor_tmdb_ids: [the IDs above], and 12–20 fresh picks.")
         return lines.joined(separator: " ")
     }

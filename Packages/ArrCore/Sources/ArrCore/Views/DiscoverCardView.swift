@@ -25,16 +25,22 @@ public struct DiscoverCardView: View {
     var dragOffset: CGSize = .zero
     var credits: TMDBCredits?
 
+    /// Optional "fewer like this" action. When nil the button is hidden;
+    /// when set, the button renders as a discrete corner affordance.
+    var onMarkDisliked: (() -> Void)? = nil
+
     @State private var overviewExpanded: Bool = false
 
     public init(item: DiscoverItem,
                 isHovered: Binding<Bool>,
                 dragOffset: CGSize = .zero,
-                credits: TMDBCredits? = nil) {
+                credits: TMDBCredits? = nil,
+                onMarkDisliked: (() -> Void)? = nil) {
         self.item = item
         self._isHovered = isHovered
         self.dragOffset = dragOffset
         self.credits = credits
+        self.onMarkDisliked = onMarkDisliked
     }
 
     public var body: some View {
@@ -115,6 +121,29 @@ public struct DiscoverCardView: View {
             }
             .padding(14)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+
+            // "Fewer like this" — discrete bottom-trailing affordance,
+            // only shown on the top card (when onMarkDisliked is wired).
+            if let onMarkDisliked {
+                Button {
+                    onMarkDisliked()
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "hand.thumbsdown")
+                            .scaledFont(size: 10, weight: .semibold)
+                        Text("Fewer like this", bundle: .module)
+                            .scaledFont(size: 10, weight: .medium)
+                    }
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Capsule().fill(Color.black.opacity(0.55)))
+                }
+                .buttonStyle(.plain)
+                .help(Text("Mark this card to suppress similar picks next time", bundle: .module))
+                .padding(10)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+            }
         }
         .frame(width: w, height: h)
     }

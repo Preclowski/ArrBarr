@@ -9453,6 +9453,28 @@
         }
       }
     },
+    "Fewer like this": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Fewer like this"
+          }
+        }
+      }
+    },
+    "Mark this card to suppress similar picks next time": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Mark this card to suppress similar picks next time"
+          }
+        }
+      }
+    },
     "More picks like these": {
       "extractionState": "manual",
       "localizations": {

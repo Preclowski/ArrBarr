@@ -8,7 +8,7 @@ public struct DiscoverTabView: View {
     let onAddToSonarr: (SearchResult) -> Void
     let onOpenDetail: (DiscoverItem, QueueItem.Source, Int) -> Void
     let onClose: () -> Void
-    let onRequestMore: (_ mood: String, _ kept: [DiscoverItem], _ skipped: [DiscoverItem]) -> Void
+    let onRequestMore: (_ mood: String, _ kept: [DiscoverItem], _ skipped: [DiscoverItem], _ disliked: [DiscoverItem]) -> Void
 
     @State private var showMatched: Bool = false
     @State private var dragOffset: CGSize = .zero
@@ -22,7 +22,7 @@ public struct DiscoverTabView: View {
                 onAddToSonarr: @escaping (SearchResult) -> Void,
                 onOpenDetail: @escaping (DiscoverItem, QueueItem.Source, Int) -> Void,
                 onClose: @escaping () -> Void,
-                onRequestMore: @escaping (_ mood: String, _ kept: [DiscoverItem], _ skipped: [DiscoverItem]) -> Void = { _, _, _ in }) {
+                onRequestMore: @escaping (_ mood: String, _ kept: [DiscoverItem], _ skipped: [DiscoverItem], _ disliked: [DiscoverItem]) -> Void = { _, _, _, _ in }) {
         self.viewModel = viewModel
         self.llmAvailable = llmAvailable
         self.radarrAvailable = radarrAvailable
@@ -198,7 +198,8 @@ public struct DiscoverTabView: View {
                     DiscoverCardView(item: item,
                                      isHovered: isTop ? $isCardHovered : .constant(false),
                                      dragOffset: isTop ? dragOffset : .zero,
-                                     credits: isTop ? viewModel.creditsCache[tmdbId] : nil)
+                                     credits: isTop ? viewModel.creditsCache[tmdbId] : nil,
+                                     onMarkDisliked: isTop ? { handleMarkDisliked() } : nil)
                         .frame(width: w, height: h)
                         .scaleEffect(1.0 - CGFloat(idx) * 0.04, anchor: .top)
                         .offset(x: isTop ? dragOffset.width : 0,
@@ -275,6 +276,23 @@ public struct DiscoverTabView: View {
             await viewModel.swipe(right: right)
             dragOffset = .zero
             isDragging = false
+        }
+    }
+
+    private func handleMarkDisliked() {
+        // Same fly-off animation as a left-swipe so the gesture+button
+        // feedback are consistent.
+        let flyDistance: CGFloat = 1000
+        let target = CGSize(width: -flyDistance, height: 0)
+        withAnimation(.easeOut(duration: 0.45)) {
+            dragOffset = target
+        }
+        viewModel.markDisliked()
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 450_000_000)
+            withAnimation(.spring(response: 0.32, dampingFraction: 0.85)) {
+                dragOffset = .zero
+            }
         }
     }
 
@@ -394,7 +412,8 @@ public struct DiscoverTabView: View {
                 Button {
                     onRequestMore(viewModel.moodText,
                                   viewModel.sessionMatched,
-                                  viewModel.sessionSkipped)
+                                  viewModel.sessionSkipped,
+                                  viewModel.sessionDisliked)
                 } label: {
                     HStack(spacing: 6) {
                         Image(systemName: "sparkles")
