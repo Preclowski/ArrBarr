@@ -196,12 +196,12 @@ private struct SearchResultCard: View {
     private var cardContent: some View {
         VStack(alignment: .leading, spacing: 4) {
             ZStack(alignment: .bottomTrailing) {
-                PosterBlurContainer(blurred: blurred, cornerRadius: 6) {
+                PosterBlurContainer(blurred: blurred, cornerRadius: Tokens.Radius.card) {
                     RemotePoster(
                         url: result.posterURL,
                         apiKey: apiKey,
                         size: CGSize(width: 90, height: 135),
-                        cornerRadius: 6
+                        cornerRadius: Tokens.Radius.card
                     )
                 }
                 if isOwned {
@@ -295,12 +295,12 @@ private struct LibraryRecordCard: View {
     private var cardContent: some View {
         VStack(alignment: .leading, spacing: 4) {
             ZStack(alignment: .bottomTrailing) {
-                PosterBlurContainer(blurred: blurred, cornerRadius: 6) {
+                PosterBlurContainer(blurred: blurred, cornerRadius: Tokens.Radius.card) {
                     RemotePoster(
                         url: images?.posterURL(baseURL: baseURL).0,
                         apiKey: apiKey,
                         size: CGSize(width: 90, height: 135),
-                        cornerRadius: 6
+                        cornerRadius: Tokens.Radius.card
                     )
                 }
                 if let hasFile {
@@ -368,12 +368,12 @@ private struct CalendarRowView: View {
 
     private var rowContent: some View {
         HStack(alignment: .top, spacing: 8) {
-            PosterBlurContainer(blurred: effectivelyBlurred, cornerRadius: 4) {
+            PosterBlurContainer(blurred: effectivelyBlurred, cornerRadius: Tokens.Radius.chip) {
                 RemotePoster(
                     url: item.posterURL,
                     apiKey: item.posterRequiresAuth ? apiKey : nil,
                     size: CGSize(width: 40, height: 60),
-                    cornerRadius: 4
+                    cornerRadius: Tokens.Radius.chip
                 )
             }
             VStack(alignment: .leading, spacing: 2) {
@@ -394,7 +394,7 @@ private struct CalendarRowView: View {
         }
         .frame(width: 200, alignment: .leading)
         .padding(8)
-        .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 6))
+        .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: Tokens.Radius.card))
         .contentShape(Rectangle())
     }
 

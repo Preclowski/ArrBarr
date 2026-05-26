@@ -74,10 +74,9 @@ public struct SearchResultRow: View {
                 showTooltip = false
             }
         }
-        .popover(isPresented: $showTooltip, arrowEdge: .trailing) {
+        .tooltipPopover(isPresented: $showTooltip, arrowEdge: .trailing) {
             SearchResultTooltip(result: result)
                 .environmentObject(configStore)
-                .popoverBehavior(.applicationDefined)
         }
         #endif
     }

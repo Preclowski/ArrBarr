@@ -143,12 +143,12 @@ public struct MediaHeaderCard: View {
 
     @ViewBuilder
     private func posterView(width: CGFloat, height: CGFloat) -> some View {
-        let poster = PosterBlurContainer(blurred: blurred, cornerRadius: 6) {
+        let poster = PosterBlurContainer(blurred: blurred, cornerRadius: Tokens.Radius.card) {
             RemotePoster(
                 url: posterURL,
                 apiKey: posterRequiresAuth ? apiKey : nil,
                 size: CGSize(width: width, height: height),
-                cornerRadius: 6,
+                cornerRadius: Tokens.Radius.card,
                 fallbackSymbol: fallbackSymbol
             )
         }
@@ -229,7 +229,7 @@ public struct PosterLightbox: View {
                     url: url,
                     apiKey: apiKey,
                     size: CGSize(width: posterW, height: posterH),
-                    cornerRadius: 10,
+                    cornerRadius: Tokens.Radius.panel,
                     fallbackSymbol: "photo"
                 )
                 .frame(width: posterW, height: posterH)

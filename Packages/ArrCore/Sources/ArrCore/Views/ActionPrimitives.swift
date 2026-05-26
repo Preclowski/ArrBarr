@@ -49,12 +49,12 @@ public struct TooltipActionButton: View {
             .frame(maxWidth: fillsWidth ? .infinity : nil)
             .frame(height: 24)
             .background(
-                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                RoundedRectangle(cornerRadius: Tokens.Radius.card, style: .continuous)
                     .fill(Color.primary.opacity(isHovering ? 0.07 : 0.025))
             )
         }
         .buttonStyle(.plain)
-        .contentShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+        .contentShape(RoundedRectangle(cornerRadius: Tokens.Radius.card, style: .continuous))
         #if os(macOS)
         .onHover { hovering in
             withAnimation(.easeInOut(duration: 0.12)) { isHovering = hovering }

@@ -110,7 +110,7 @@ public struct PosterMetadataRow<TrailingAccessory: View>: View {
         // Padding-horizontal 6 insets the highlight from the row edge —
         // gives it a "selected card" feel rather than a full-bleed bar.
         .background(
-            RoundedRectangle(cornerRadius: 6)
+            RoundedRectangle(cornerRadius: Tokens.Radius.card)
                 .fill(isHovering && !disabled ? Color.primary.opacity(0.06) : Color.clear)
                 .padding(.horizontal, 6)
         )

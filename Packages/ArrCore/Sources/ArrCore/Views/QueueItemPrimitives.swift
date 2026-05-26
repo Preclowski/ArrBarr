@@ -236,9 +236,9 @@ public struct QueueStatusMessagesBanner: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 8)
         .padding(.vertical, 6)
-        .background(tint.opacity(0.12), in: RoundedRectangle(cornerRadius: 6))
+        .background(tint.opacity(0.12), in: RoundedRectangle(cornerRadius: Tokens.Radius.card))
         .overlay(
-            RoundedRectangle(cornerRadius: 6)
+            RoundedRectangle(cornerRadius: Tokens.Radius.card)
                 .stroke(tint.opacity(0.25), lineWidth: 0.5)
         )
     }
@@ -521,12 +521,12 @@ public struct MediaTooltipChrome<Content: View>: View {
 
     public var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            PosterBlurContainer(blurred: blurred, cornerRadius: 6) {
+            PosterBlurContainer(blurred: blurred, cornerRadius: Tokens.Radius.card) {
                 RemotePoster(
                     url: posterURL,
                     apiKey: posterRequiresAuth ? apiKey : nil,
                     size: posterSize,
-                    cornerRadius: 6,
+                    cornerRadius: Tokens.Radius.card,
                     fallbackSymbol: fallbackSymbol
                 )
             }

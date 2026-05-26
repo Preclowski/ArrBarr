@@ -145,11 +145,11 @@ public struct InlineConfirmCard: View {
         }
         .padding(10)
         .background(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
+            RoundedRectangle(cornerRadius: Tokens.Radius.panel, style: .continuous)
                 .fill(Color.orange.opacity(0.08))
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
+            RoundedRectangle(cornerRadius: Tokens.Radius.panel, style: .continuous)
                 .stroke(Color.orange.opacity(0.35), lineWidth: 0.75)
         )
     }

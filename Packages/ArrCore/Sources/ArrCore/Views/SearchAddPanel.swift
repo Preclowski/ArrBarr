@@ -348,9 +348,9 @@ public struct SearchAddPanel: View {
                             .background(sonarrMonitor == mode
                                 ? Color.accentColor.opacity(0.2)
                                 : Color.primary.opacity(0.07),
-                                in: RoundedRectangle(cornerRadius: 4))
+                                in: RoundedRectangle(cornerRadius: Tokens.Radius.chip))
                             .foregroundStyle(sonarrMonitor == mode ? Color.accentColor : .secondary)
-                            .overlay(RoundedRectangle(cornerRadius: 4)
+                            .overlay(RoundedRectangle(cornerRadius: Tokens.Radius.chip)
                                 .stroke(sonarrMonitor == mode ? Color.accentColor.opacity(0.4) : Color.clear,
                                         lineWidth: 1))
                     }
@@ -466,6 +466,6 @@ public struct SearchAddPanel: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
-        .background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 6))
+        .background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: Tokens.Radius.card))
     }
 }

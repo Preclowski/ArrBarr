@@ -42,7 +42,7 @@ struct MultiRow: View {
         // to read as part of the list, not stand out with a chrome
         // bar. Background tint stays (subtle hover/focus signal).
         .background(
-            RoundedRectangle(cornerRadius: 4)
+            RoundedRectangle(cornerRadius: Tokens.Radius.chip)
                 .fill(rowBackground)
         )
         .contentShape(Rectangle())
@@ -63,9 +63,8 @@ struct MultiRow: View {
                 showHoverPopover = false
             }
         }
-        .popover(isPresented: $showHoverPopover, arrowEdge: .leading) {
+        .tooltipPopover(isPresented: $showHoverPopover, arrowEdge: .leading) {
             QueueItemTooltip(item: item)
-                .popoverBehavior(.applicationDefined)
         }
         // Bare-icon action cluster — unified across surfaces, see
         // `rowActionBackdrop` for the chip styling.

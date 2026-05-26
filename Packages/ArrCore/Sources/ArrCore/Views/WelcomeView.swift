@@ -320,7 +320,7 @@ private struct MenuBarIllustration: View {
     public var body: some View {
         ZStack(alignment: .top) {
             // Background "screen" card
-            RoundedRectangle(cornerRadius: 10)
+            RoundedRectangle(cornerRadius: Tokens.Radius.panel)
                 .fill(
                     LinearGradient(
                         colors: [
@@ -332,7 +332,7 @@ private struct MenuBarIllustration: View {
                     )
                 )
                 .overlay(
-                    RoundedRectangle(cornerRadius: 10)
+                    RoundedRectangle(cornerRadius: Tokens.Radius.panel)
                         .strokeBorder(Color.secondary.opacity(0.18), lineWidth: 0.5)
                 )
                 .frame(width: 260, height: 130)
@@ -420,10 +420,10 @@ private struct MenuBarIllustration: View {
             .padding(7)
             .frame(maxWidth: .infinity)
             .background(
-                RoundedRectangle(cornerRadius: 6)
+                RoundedRectangle(cornerRadius: Tokens.Radius.card)
                     .fill(Color.platformWindowBackground)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 6)
+                        RoundedRectangle(cornerRadius: Tokens.Radius.card)
                             .strokeBorder(Color.secondary.opacity(0.30), lineWidth: 0.5)
                     )
                     .shadow(color: .black.opacity(0.18), radius: 3, y: 1)

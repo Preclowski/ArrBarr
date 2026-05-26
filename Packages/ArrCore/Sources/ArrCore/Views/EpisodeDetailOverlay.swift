@@ -328,12 +328,12 @@ public struct EpisodeDetailOverlay: View {
                 // chrome (110×165, 6pt corner, blur wrap) so episode
                 // detail looks like every other detail surface in the
                 // app instead of a custom one-off card.
-                let poster = PosterBlurContainer(blurred: false, cornerRadius: 6) {
+                let poster = PosterBlurContainer(blurred: false, cornerRadius: Tokens.Radius.card) {
                     RemotePoster(
                         url: posterURL,
                         apiKey: posterRequiresAuth ? apiKey : nil,
                         size: CGSize(width: 110, height: 165),
-                        cornerRadius: 6,
+                        cornerRadius: Tokens.Radius.card,
                         fallbackSymbol: "tv"
                     )
                 }

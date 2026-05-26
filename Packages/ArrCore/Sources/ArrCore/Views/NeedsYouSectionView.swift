@@ -28,6 +28,9 @@ public struct NeedsYouSectionView: View {
             .padding(.horizontal, 12)
             .contentShape(Rectangle())
             .onTapGesture { onToggleCollapse() }
+            .accessibilityElement(children: .combine)
+            .accessibilityAddTraits(.isButton)
+            .accessibilityHint(Text(isCollapsed ? "Expand section" : "Collapse section", bundle: .module))
 
             if !isCollapsed {
                 VStack(spacing: 4) {
@@ -81,7 +84,7 @@ public struct NeedsYouSectionView: View {
         .padding(.horizontal, 5)
         .padding(.vertical, 1)
         .background(
-            RoundedRectangle(cornerRadius: 4)
+            RoundedRectangle(cornerRadius: Tokens.Radius.chip)
                 .fill(Color.primary.opacity(0.07))
         )
         .padding(.top, 3)

@@ -81,7 +81,7 @@ struct LidarrDetailPanel: View {
             url: resolvedURL,
             apiKey: item.posterRequiresAuth ? configStore.lidarr.apiKey : nil,
             size: CGSize(width: 110, height: 110),
-            cornerRadius: 6,
+            cornerRadius: Tokens.Radius.card,
             fallbackSymbol: "music.note"
         )
         return HStack(alignment: .top, spacing: 12) {

@@ -66,12 +66,12 @@ public struct QueueRowView: View {
 
     public var body: some View {
         HStack(alignment: .top, spacing: 10) {
-            PosterBlurContainer(blurred: configStore.shouldBlurPoster(for: item.source), cornerRadius: 4) {
+            PosterBlurContainer(blurred: configStore.shouldBlurPoster(for: item.source), cornerRadius: Tokens.Radius.chip) {
                 RemotePoster(
                     url: item.posterURL,
                     apiKey: item.posterRequiresAuth ? apiKeyForSource : nil,
                     size: posterSize,
-                    cornerRadius: 4,
+                    cornerRadius: Tokens.Radius.chip,
                     fallbackSymbol: item.source.symbol
                 )
             }
@@ -118,7 +118,7 @@ public struct QueueRowView: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
         .background(
-            RoundedRectangle(cornerRadius: 6)
+            RoundedRectangle(cornerRadius: Tokens.Radius.card)
                 .fill(isHovering ? Color.primary.opacity(0.06) : Color.clear)
                 .padding(.horizontal, 6)
         )
@@ -161,15 +161,15 @@ public struct QueueRowView: View {
                 showTooltip = false
             }
         }
-        .popover(isPresented: $showTooltip, arrowEdge: .trailing) {
+        // .applicationDefined behaviour (baked into tooltipPopover) keeps
+        // the popover from being eaten by a stray first-click; we close it
+        // ourselves on row hover-out.
+        .tooltipPopover(isPresented: $showTooltip, arrowEdge: .trailing) {
             QueueItemTooltip(
                 item: item,
                 apiKey: item.posterRequiresAuth ? apiKeyForSource : nil,
                 locale: configStore.currentLocale
             )
-            // .applicationDefined keeps the popover from being eaten by
-            // a stray first-click; we close it ourselves on row hover-out.
-            .popoverBehavior(.applicationDefined)
         }
         #endif
         .confirmationDialog(
@@ -333,12 +333,12 @@ public struct QueueItemTooltip: View {
 
     public var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            PosterBlurContainer(blurred: configStore.shouldBlurPoster(for: item.source), cornerRadius: 6) {
+            PosterBlurContainer(blurred: configStore.shouldBlurPoster(for: item.source), cornerRadius: Tokens.Radius.card) {
                 RemotePoster(
                     url: item.posterURL,
                     apiKey: apiKey,
                     size: posterSize,
-                    cornerRadius: 6,
+                    cornerRadius: Tokens.Radius.card,
                     fallbackSymbol: item.source.symbol
                 )
             }

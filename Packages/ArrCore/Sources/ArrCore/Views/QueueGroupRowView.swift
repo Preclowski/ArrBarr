@@ -48,12 +48,12 @@ public struct QueueGroupRowView: View {
 
     public var body: some View {
         HStack(alignment: .top, spacing: 10) {
-            PosterBlurContainer(blurred: configStore.shouldBlurPoster(for: rep.source), cornerRadius: 4) {
+            PosterBlurContainer(blurred: configStore.shouldBlurPoster(for: rep.source), cornerRadius: Tokens.Radius.chip) {
                 RemotePoster(
                     url: rep.posterURL,
                     apiKey: rep.posterRequiresAuth ? configStore.sonarr.apiKey : nil,
                     size: CGSize(width: 40, height: 60),
-                    cornerRadius: 4,
+                    cornerRadius: Tokens.Radius.chip,
                     fallbackSymbol: "tv"
                 )
             }
@@ -95,7 +95,7 @@ public struct QueueGroupRowView: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
         .background(
-            RoundedRectangle(cornerRadius: 6)
+            RoundedRectangle(cornerRadius: Tokens.Radius.card)
                 .fill(isHovering ? Color.primary.opacity(0.06) : Color.clear)
                 .padding(.horizontal, 6)
         )
@@ -131,13 +131,12 @@ public struct QueueGroupRowView: View {
                 showTooltip = false
             }
         }
-        .popover(isPresented: $showTooltip, arrowEdge: .trailing) {
+        .tooltipPopover(isPresented: $showTooltip, arrowEdge: .trailing) {
             QueueGroupTooltip(
                 group: group,
                 apiKey: rep.posterRequiresAuth ? configStore.sonarr.apiKey : nil,
                 locale: configStore.currentLocale
             )
-            .popoverBehavior(.applicationDefined)
         }
         #endif
         .confirmationDialog(
@@ -305,12 +304,12 @@ public struct QueueGroupTooltip: View {
 
     public var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            PosterBlurContainer(blurred: configStore.shouldBlurPoster(for: rep.source), cornerRadius: 6) {
+            PosterBlurContainer(blurred: configStore.shouldBlurPoster(for: rep.source), cornerRadius: Tokens.Radius.card) {
                 RemotePoster(
                     url: rep.posterURL,
                     apiKey: apiKey,
                     size: CGSize(width: 110, height: 165),
-                    cornerRadius: 6,
+                    cornerRadius: Tokens.Radius.card,
                     fallbackSymbol: "tv"
                 )
             }
@@ -442,7 +441,7 @@ public struct QueueGroupTooltip: View {
         }
         .padding(8)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.indigo.opacity(0.08), in: RoundedRectangle(cornerRadius: 6))
+        .background(Color.indigo.opacity(0.08), in: RoundedRectangle(cornerRadius: Tokens.Radius.card))
     }
 
     /// Replaces the legacy episode list + heavy "existing files" block with
@@ -620,7 +619,7 @@ public struct TooltipQueueRow: View {
                             .frame(width: geo.size.width * max(0.02, min(1, item.progress)))
                     }
                 }
-                .clipShape(RoundedRectangle(cornerRadius: 4))
+                .clipShape(RoundedRectangle(cornerRadius: Tokens.Radius.chip))
             )
             if showNewFileMeta, !item.customFormats.isEmpty {
                 TooltipFlowLayout(spacing: 3) {

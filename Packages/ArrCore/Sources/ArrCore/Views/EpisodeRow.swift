@@ -181,7 +181,7 @@ struct EpisodeRow: View {
                         .fill(Color.primary.opacity(0.06))
                 }
             }
-            .clipShape(RoundedRectangle(cornerRadius: 4))
+            .clipShape(RoundedRectangle(cornerRadius: Tokens.Radius.chip))
         )
         // Bare-icon hover overlay — same gradient + glyph pattern as
         // QueueRowView's action cluster. Provides a search affordance
@@ -212,7 +212,7 @@ struct EpisodeRow: View {
                 showTooltip = false
             }
         }
-        .popover(isPresented: $showTooltip, arrowEdge: .leading) {
+        .tooltipPopover(isPresented: $showTooltip, arrowEdge: .leading) {
             EpisodeRowTooltip(
                 episode: episode,
                 queueItem: queueItem,
@@ -222,7 +222,6 @@ struct EpisodeRow: View {
                 seriesPosterRequiresAuth: seriesPosterRequiresAuth,
                 seriesPosterAPIKey: seriesPosterAPIKey
             )
-            .popoverBehavior(.applicationDefined)
         }
         #endif
         // Native macOS confirm sheet for destructive actions — same

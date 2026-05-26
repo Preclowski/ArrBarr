@@ -39,7 +39,7 @@ public struct InQueueBadge: View {
             .padding(.horizontal, 5)
             .padding(.vertical, 1)
             .overlay(
-                RoundedRectangle(cornerRadius: 4)
+                RoundedRectangle(cornerRadius: Tokens.Radius.chip)
                     .stroke(Color.orange.opacity(0.55), lineWidth: 1)
             )
     }
@@ -67,7 +67,7 @@ public struct SourceGlyphChip: View {
         .foregroundStyle(.secondary)
         .padding(.horizontal, 5)
         .padding(.vertical, 1)
-        .background(Color.primary.opacity(0.08), in: RoundedRectangle(cornerRadius: 4))
+        .background(Color.primary.opacity(0.08), in: RoundedRectangle(cornerRadius: Tokens.Radius.chip))
     }
 }
 
@@ -87,7 +87,7 @@ public struct InLibraryBadge: View {
             .padding(.horizontal, 5)
             .padding(.vertical, 1)
             .overlay(
-                RoundedRectangle(cornerRadius: 4)
+                RoundedRectangle(cornerRadius: Tokens.Radius.chip)
                     .stroke(Color.accentColor.opacity(0.55), lineWidth: 1)
             )
     }

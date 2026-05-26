@@ -469,7 +469,7 @@ public struct SettingsView: View {
             .frame(height: Self.arrRowHeight)
             .contentShape(Rectangle())
             .background(
-                RoundedRectangle(cornerRadius: 6)
+                RoundedRectangle(cornerRadius: Tokens.Radius.card)
                     .fill(isDragging ? Color.primary.opacity(0.08) : .clear)
                     .padding(.horizontal, -6)
             )

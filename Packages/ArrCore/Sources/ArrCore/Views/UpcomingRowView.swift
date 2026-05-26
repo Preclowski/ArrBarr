@@ -42,10 +42,9 @@ public struct UpcomingRowView: View {
                 showTooltip = false
             }
         }
-        .popover(isPresented: $showTooltip, arrowEdge: .trailing) {
+        .tooltipPopover(isPresented: $showTooltip, arrowEdge: .trailing) {
             UpcomingItemTooltip(item: item, apiKey: apiKeyForSource)
                 .environmentObject(configStore)
-                .popoverBehavior(.applicationDefined)
         }
         #endif
     }

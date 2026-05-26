@@ -50,7 +50,7 @@ struct TrackRow: View {
         // the full row width as one hover region.
         .contentShape(Rectangle())
         .background(
-            RoundedRectangle(cornerRadius: 4)
+            RoundedRectangle(cornerRadius: Tokens.Radius.chip)
                 .fill(rowBackground)
         )
         #if os(macOS)

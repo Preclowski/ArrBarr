@@ -26,6 +26,33 @@ public extension View {
         background(PopoverBehaviorAdjuster(behavior: behavior))
     }
 }
+#endif
+
+/// Hover-revealed informational tooltip popover. Centralises the
+/// "set NSPopover.behavior to .applicationDefined" contract — without
+/// it, clicking the underlying row would close the tooltip instead of
+/// firing the row's action (see `PopoverBehavior` above). Every
+/// in-app tooltip presenter (Queue / Search / Episode rows, season
+/// packs, upcoming items) routes through here so future tooltip
+/// additions can't accidentally inherit `.transient` and re-introduce
+/// the click-eaten-by-dismissal bug.
+public extension View {
+    func tooltipPopover<Content: View>(
+        isPresented: Binding<Bool>,
+        arrowEdge: Edge = .trailing,
+        @ViewBuilder content: @escaping () -> Content
+    ) -> some View {
+        popover(isPresented: isPresented, arrowEdge: arrowEdge) {
+            #if os(macOS)
+            content().popoverBehavior(.applicationDefined)
+            #else
+            content()
+            #endif
+        }
+    }
+}
+
+#if os(macOS)
 
 private struct PopoverBehaviorAdjuster: NSViewRepresentable {
     let behavior: NSPopover.Behavior

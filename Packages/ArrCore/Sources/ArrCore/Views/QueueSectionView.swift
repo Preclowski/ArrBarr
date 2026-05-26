@@ -80,6 +80,16 @@ public struct QueueSectionView: View {
         .padding(.horizontal, 12)
         .contentShape(Rectangle())
         .onTapGesture { onToggleCollapse?() }
+        // Whole HStack is tappable but isn't a Button — VoiceOver wouldn't
+        // know it's interactive without an explicit trait. Combine the
+        // children so VO reads the section as one element.
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(onToggleCollapse != nil ? .isButton : [])
+        .accessibilityHint(
+            onToggleCollapse != nil
+                ? Text(isCollapsed ? "Expand section" : "Collapse section", bundle: .module)
+                : Text(verbatim: "")
+        )
     }
 
     public var body: some View {
