@@ -75,7 +75,7 @@ struct LocalToolBackendTests {
             "lidarr_monitor_album",
             "lidarr_search_album",
             "suggest_titles",
-            "discover_in_tinder",
+            "discover_in_quiz",
             "arr_health",
         ]
         #expect(names == expected)
@@ -86,15 +86,15 @@ struct LocalToolBackendTests {
         let b = LocalToolBackend(sonarr: sonarrConfig(), radarr: .empty, lidarr: .empty)
         let tools = try await b.listTools()
         let names = Set(tools.map(\.name))
-        // Radarr/Lidarr tools absent; suggest_titles, discover_in_tinder, arr_health
+        // Radarr/Lidarr tools absent; suggest_titles, discover_in_quiz, arr_health
         // are included whenever sonarr or radarr is configured.
         #expect(!names.contains("radarr_search"))
         #expect(!names.contains("lidarr_search"))
         #expect(names.contains("sonarr_search"))
         #expect(names.contains("suggest_titles"))
-        #expect(names.contains("discover_in_tinder"))
+        #expect(names.contains("discover_in_quiz"))
         #expect(names.contains("arr_health"))
-        // sonarr(5) + suggest(1) + discover_in_tinder(1) + arr_health(1) = 8
+        // sonarr(5) + suggest(1) + discover_in_quiz(1) + arr_health(1) = 8
         #expect(tools.count == 8)
     }
 

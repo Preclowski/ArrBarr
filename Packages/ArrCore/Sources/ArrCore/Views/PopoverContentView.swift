@@ -70,12 +70,12 @@ public struct PopoverContentView: View {
     /// dropping the user on the Add tab they never asked to visit.
     @State private var searchAddFromChat = false
     /// Mirror of `searchAddFromChat` for Discover-origin opens. Set by
-    /// Discover tinder CTAs (`onAddToRadarr`/`onAddToSonarr`) and by
+    /// Discover quiz CTAs (`onAddToRadarr`/`onAddToSonarr`) and by
     /// the `arrBarrOpenSearchAdd` receiver when `showDiscoverOverlay == true`.
     /// `searchAddOverlay` reads this to route Back to the Discover overlay.
     @State private var searchAddFromDiscover = false
     /// True while the chat-triggered Discover overlay is visible. Set by
-    /// the `arrBarrOpenDiscoverInTinder` notification handler and cleared
+    /// the `arrBarrOpenDiscoverQuiz` notification handler and cleared
     /// by the overlay's own back-button (`onClose`).
     @State private var showDiscoverOverlay = false
     /// Auto-collapse timer for the "Next week" banner — the banner
@@ -119,7 +119,7 @@ public struct PopoverContentView: View {
         // typing → queue rows that match + library/add-new candidates
         // pulled via `SearchViewModel`. One surface, both jobs.
         // `.discover` removed — Discover is now a chat-triggered overlay
-        // opened by the `arrBarrOpenDiscoverInTinder` notification, not
+        // opened by the `arrBarrOpenDiscoverQuiz` notification, not
         // a persistent tab.
     }
 
@@ -195,7 +195,7 @@ public struct PopoverContentView: View {
                 }
                 searchResult = result
             }
-            .onReceive(NotificationCenter.default.publisher(for: .arrBarrOpenDiscoverInTinder)) { note in
+            .onReceive(NotificationCenter.default.publisher(for: .arrBarrOpenDiscoverQuiz)) { note in
                 // Resume path: tap on a chat resume card — just open the
                 // overlay; keep VM state intact.
                 if let resume = note.userInfo?["resume"] as? Bool, resume {
@@ -505,7 +505,7 @@ public struct PopoverContentView: View {
 
     // MARK: - Discover add-to-arr callbacks
 
-    /// Tinder card "Pick" → SearchAddPanel. Sets the origin flag so Back
+    /// Quiz card "Pick" → SearchAddPanel. Sets the origin flag so Back
     /// from the panel returns to Discover, not chat. Falls through to a
     /// TMDB URL open when no Radarr is configured.
     private func openDiscoverAddToRadarr(_ result: SearchResult) {
@@ -519,7 +519,7 @@ public struct PopoverContentView: View {
         }
     }
 
-    /// Tinder card "Pick" for shows. Mirrors the Radarr variant; the
+    /// Quiz card "Pick" for shows. Mirrors the Radarr variant; the
     /// SearchAddPanel itself routes based on `result.source`.
     private func openDiscoverAddToSonarr(_ result: SearchResult) {
         searchAddFromDiscover = true

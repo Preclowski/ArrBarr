@@ -448,7 +448,7 @@ private struct DiscoverSessionCard: View {
 
     private func tap() {
         NotificationCenter.default.post(
-            name: .arrBarrOpenDiscoverInTinder,
+            name: .arrBarrOpenDiscoverQuiz,
             object: nil,
             userInfo: ["resume": true]
         )

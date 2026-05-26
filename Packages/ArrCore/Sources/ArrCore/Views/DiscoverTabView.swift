@@ -31,14 +31,14 @@ public struct DiscoverTabView: View {
     }
 
     public var body: some View {
-        tinderMode
+        quizMode
     }
 
-    // MARK: - Tinder mode
+    // MARK: - Quiz mode
 
-    private var tinderMode: some View {
+    private var quizMode: some View {
         VStack(spacing: 0) {
-            tinderTopBar
+            quizTopBar
             if showMatched {
                 DiscoverMatchedListView(
                     items: viewModel.matched,
@@ -81,7 +81,7 @@ public struct DiscoverTabView: View {
         return mood.count > 40 ? String(mood.prefix(40)) + "\u{2026}" : mood
     }
 
-    private var tinderTopBar: some View {
+    private var quizTopBar: some View {
         HStack(spacing: 6) {
             FloatingBackButton(action: {
                 if showMatched {
@@ -149,7 +149,7 @@ public struct DiscoverTabView: View {
                 .padding(.top, 6)
                 .padding(.bottom, 28)
             // cardActionRow no longer sits here — it's pinned at the
-            // bottom of tinderMode as `ctaIsland` (thinMaterial strip,
+            // bottom of quizMode as `ctaIsland` (thinMaterial strip,
             // same pattern as DetailView's downloadCTAStrip).
         } else {
             emptyStackState

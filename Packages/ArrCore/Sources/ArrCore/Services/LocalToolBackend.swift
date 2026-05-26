@@ -74,7 +74,7 @@ public actor LocalToolBackend: ToolBackend {
         case "lidarr_get_artist_albums":    return try await lidarrGetArtistAlbums(arguments)
         case "lidarr_monitor_album":        return try await lidarrMonitorAlbum(arguments)
         case "lidarr_search_album":         return try await lidarrSearchAlbumTool(arguments)
-        case "discover_in_tinder":          return try await discoverInTinder(arguments)
+        case "discover_in_quiz":             return try await discoverInQuiz(arguments)
         default:
             throw LocalToolError.unknownTool(name)
         }
@@ -516,14 +516,14 @@ public actor LocalToolBackend: ToolBackend {
         }
     }
 
-    /// Switch to the Discover tab in tinder mode with a user-supplied mood.
+    /// Opens the Discover overlay in quiz mode with a user-supplied mood.
     /// Pre-resolves the model's picks into DiscoverItems server-side, then
     /// posts a notification carrying both the breadcrumb label and the
     /// resolved items so the overlay can seed synchronously — no second
     /// LLM round-trip on the way in.
-    private func discoverInTinder(_ arguments: JSONValue) async throws -> ToolCallOutput {
+    private func discoverInQuiz(_ arguments: JSONValue) async throws -> ToolCallOutput {
         guard case .object(let dict) = arguments else {
-            return ToolCallOutput(text: "ERROR: discover_in_tinder needs an object payload.")
+            return ToolCallOutput(text: "ERROR: discover_in_quiz needs an object payload.")
         }
         guard case .string(let mood) = dict["mood"] else {
             return ToolCallOutput(text: "ERROR: missing required 'mood' string.")
@@ -631,7 +631,7 @@ public actor LocalToolBackend: ToolBackend {
         let payload = resolved
         await MainActor.run {
             NotificationCenter.default.post(
-                name: .arrBarrOpenDiscoverInTinder,
+                name: .arrBarrOpenDiscoverQuiz,
                 object: nil,
                 userInfo: [
                     "mood": label,
@@ -639,7 +639,7 @@ public actor LocalToolBackend: ToolBackend {
                 ]
             )
         }
-        let summary = "Opened Discover tinder with \(payload.count) picks for: \(label)"
+        let summary = "Opened Discover quiz with \(payload.count) picks for: \(label)"
         return ToolCallOutput(text: summary, rich: .discoverSession(mood: label))
     }
 

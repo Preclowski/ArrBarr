@@ -60,10 +60,10 @@ public extension Notification.Name {
     /// overlay so the user gets the same rich add UI as the `+` flow.
     static let arrBarrOpenSearchAdd = Notification.Name("ArrBarrOpenSearchAdd")
 
-    /// Posted by the `discover_in_tinder` chat tool. `userInfo["mood"]` is a
-    /// non-empty String. PopoverContentView listens and switches to the
-    /// Discover tab in tinder mode with the given mood pre-loaded.
-    static let arrBarrOpenDiscoverInTinder = Notification.Name("ArrBarr.OpenDiscoverInTinder")
+    /// Posted by the `discover_in_quiz` chat tool. `userInfo["mood"]` is a
+    /// non-empty String. PopoverContentView listens and opens the Discover
+    /// overlay in quiz mode with the given mood pre-loaded.
+    static let arrBarrOpenDiscoverQuiz = Notification.Name("ArrBarr.OpenDiscoverQuiz")
 }
 
 public enum SearchAddRequest {

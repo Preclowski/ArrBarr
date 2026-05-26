@@ -27,14 +27,14 @@ public enum DiscoverLLMPrompt {
         switch kindHint {
         case .movie:
             lines.append(
-                "You recommend movies for a tinder-style picker. " +
+                "You recommend movies for a quiz-style picker. " +
                 "Reply with a single JSON object, no prose, no markdown: " +
                 "{ \"titles\": [ { \"title\": string, \"year\": int|null } ] }."
             )
             lines.append("Return only movies — no TV shows.")
         case .show:
             lines.append(
-                "You recommend TV shows for a tinder-style picker. " +
+                "You recommend TV shows for a quiz-style picker. " +
                 "Reply with a single JSON object, no prose, no markdown: " +
                 "{ \"titles\": [ { \"title\": string, \"year\": int|null } ] }."
             )

@@ -14,7 +14,7 @@ public enum DiscoverSources {
             // Library records don't carry cast info — we'd have to fetch
             // per-movie credits which would be N extra TMDB calls. When
             // the user has a person filter active, skip the library
-            // source entirely so the tinder deck only contains cards that
+            // source entirely so the quiz deck only contains cards that
             // genuinely match. TMDB + LLM both honor `personIds`
             // server-side / via prompt.
             if !filter.personIds.isEmpty { return [] }

@@ -33,10 +33,10 @@ public enum ChatToolCatalog {
         if includeSonarr || includeRadarr {
             arr.append(contentsOf: suggestTools)
         }
-        // discover_in_tinder requires at least one arr so the Discover
-        // tab is available.
+        // discover_in_quiz requires at least one arr so the Discover
+        // overlay is available.
         if includeSonarr || includeRadarr {
-            arr.append(contentsOf: discoverTinderTools)
+            arr.append(contentsOf: discoverQuizTools)
         }
         // arr_health needs at least one arr to query.
         if includeSonarr || includeRadarr || includeLidarr || includeWhisparr {
@@ -475,15 +475,15 @@ public enum ChatToolCatalog {
         ),
     ]
 
-    // MARK: - Discover tinder launcher
+    // MARK: - Discover quiz launcher
 
-    private static let discoverTinderTools: [MCPTool] = [
+    private static let discoverQuizTools: [MCPTool] = [
         MCPTool(
-            name: "discover_in_tinder",
+            name: "discover_in_quiz",
             description: """
-            Open the Discover tinder UI seeded with a curated list of titles you (the model) recommend. The user can then swipe to add or skip each one.
+            Open the Discover quiz UI seeded with a curated list of titles you (the model) recommend. The user can then swipe to add or skip each one.
 
-            USE THIS when the user wants an interactive picking session — "show me some 90s sci-fi to swipe through", "give me a tinder of cozy weekend films", "pick something for me to choose from". The seeded cards appear instantly (no extra LLM round-trip).
+            USE THIS when the user wants an interactive picking session — "show me some 90s sci-fi to swipe through", "give me a quiz of cozy weekend films", "pick something for me to choose from". The seeded cards appear instantly (no extra LLM round-trip).
 
             Pass `mood` as a short user-facing label describing the set ("cozy 90s comedy", "feel-good documentaries"). This shows as the breadcrumb chip in the overlay and the resume card in chat.
 
@@ -504,7 +504,7 @@ public enum ChatToolCatalog {
                     ]),
                     "items": .object([
                         "type": .string("array"),
-                        "description": .string("Ordered list of picks; order is preserved in the tinder deck."),
+                        "description": .string("Ordered list of picks; order is preserved in the quiz deck."),
                         "items": .object([
                             "type": .string("object"),
                             "properties": .object([
