@@ -139,7 +139,7 @@ struct ComputeNeedsYouTests {
         let lidarr = [item("l-ok", source: .lidarr, status: .completed)]
 
         let result = QueueViewModel.computeNeedsYou(
-            radarr: radarr, sonarr: sonarr, lidarr: lidarr,
+            queues: [.radarr: radarr, .sonarr: sonarr, .lidarr: lidarr],
             health: .empty
         )
         #expect(result.map(\.id) == ["needsyou.r-fail", "needsyou.s-warn"])
@@ -154,18 +154,14 @@ struct ComputeNeedsYouTests {
             sonarr: [],
             lidarr: []
         )
-        let result = QueueViewModel.computeNeedsYou(
-            radarr: [], sonarr: [], lidarr: [], health: health
-        )
+        let result = QueueViewModel.computeNeedsYou(queues: [:], health: health)
         #expect(result.isEmpty)
     }
 
     @Test("Empty inputs return empty")
     @MainActor
     func empty() {
-        let result = QueueViewModel.computeNeedsYou(
-            radarr: [], sonarr: [], lidarr: [], health: .empty
-        )
+        let result = QueueViewModel.computeNeedsYou(queues: [:], health: .empty)
         #expect(result.isEmpty)
     }
 
@@ -173,9 +169,11 @@ struct ComputeNeedsYouTests {
     @MainActor
     func subtitleByStatus() {
         let result = QueueViewModel.computeNeedsYou(
-            radarr: [item("warn", source: .radarr, status: .warning)],
-            sonarr: [item("fail", source: .sonarr, status: .failed)],
-            lidarr: [], health: .empty
+            queues: [
+                .radarr: [item("warn", source: .radarr, status: .warning)],
+                .sonarr: [item("fail", source: .sonarr, status: .failed)],
+            ],
+            health: .empty
         )
         #expect(result.count == 2)
         let warning = result.first { $0.id == "needsyou.warn" }
