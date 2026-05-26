@@ -770,8 +770,16 @@ public struct PopoverContentView: View {
     /// the type-grouped section headers when scope is narrowed.
     private func count(for kind: QueueResultType) -> Int {
         let queueCount = scopedSources.reduce(0) { $0 + filteredQueueItems(for: $1).count }
-        let libraryCount = scopedSources.reduce(0) { $0 + libraryResults(for: $1).count }
         let newCount = scopedSources.reduce(0) { $0 + newResults(for: $1).count }
+        let libraryCount: Int = {
+            let queueRows = scopedSources.flatMap { entries(for: $0) }
+            let rawLib = scopedSources.flatMap { libraryResults(for: $0) }
+            if queueRows.isEmpty { return rawLib.count }
+            return SearchResultDedup.removingQueueDuplicates(
+                libraryResults: rawLib,
+                queueRows: queueRows
+            ).count
+        }()
         switch kind {
         case .all:       return queueCount + libraryCount + newCount
         case .inQueue:   return queueCount
@@ -939,35 +947,6 @@ public struct PopoverContentView: View {
         .padding(.horizontal, 12)
         .padding(.top, 10)
         .padding(.bottom, 4)
-    }
-
-    @ViewBuilder
-    private func queueRowsList(entries: [QueueRowEntry]) -> some View {
-        // Stripped-down version of QueueSectionView's row stack —
-        // headerless, since the type-grouped header is provided by
-        // `typeSectionHeader` upstream.
-        VStack(spacing: 2) {
-            ForEach(entries) { entry in
-                switch entry {
-                case .single(let item):
-                    QueueRowView(
-                        item: item,
-                        onPause: { Task { await viewModel.pause(item) } },
-                        onResume: { Task { await viewModel.resume(item) } },
-                        onDelete: { Task { await viewModel.delete(item) } },
-                        onShowDetail: { detailItem = item }
-                    )
-                case .group(let group):
-                    QueueGroupRowView(
-                        group: group,
-                        onPause: { Task { await viewModel.pause(group.representative) } },
-                        onResume: { Task { await viewModel.resume(group.representative) } },
-                        onDelete: { Task { await viewModel.delete(group.representative) } },
-                        onShowDetail: { detailItem = group.representative }
-                    )
-                }
-            }
-        }
     }
 
     @ViewBuilder
