@@ -1,0 +1,353 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="780" viewBox="0 0 1240 780" font-family="-apple-system, 'SF Pro Text', 'Helvetica Neue', sans-serif">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#e9eaee"/>
+      <stop offset="100%" stop-color="#d7d9df"/>
+    </linearGradient>
+    <linearGradient id="popover" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#fbfbfd"/>
+    </linearGradient>
+    <linearGradient id="heroBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f4f1fb"/>
+      <stop offset="100%" stop-color="#eef0fb"/>
+    </linearGradient>
+    <linearGradient id="iconGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#7a5af8"/>
+      <stop offset="100%" stop-color="#4f46e5"/>
+    </linearGradient>
+    <linearGradient id="poster" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#2a2230"/>
+      <stop offset="60%" stop-color="#0e0b14"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </linearGradient>
+    <linearGradient id="sheetBg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f7f7fa"/>
+      <stop offset="100%" stop-color="#ffffff"/>
+    </linearGradient>
+    <filter id="popoverShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="12" stdDeviation="20" flood-color="#0b0c14" flood-opacity="0.18"/>
+    </filter>
+    <filter id="cardShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#0b0c14" flood-opacity="0.06"/>
+    </filter>
+    <filter id="sheetShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="-4" stdDeviation="12" flood-color="#0b0c14" flood-opacity="0.10"/>
+    </filter>
+  </defs>
+
+  <rect width="1240" height="780" fill="url(#bg)"/>
+
+  <!-- =========================================================
+       PANE 1 — empty state (lean hero)
+       ========================================================= -->
+  <g transform="translate(40,60)">
+    <rect width="360" height="660" rx="18" fill="url(#popover)" stroke="#d7d9df" stroke-width="0.5" filter="url(#popoverShadow)"/>
+
+    <!-- Tab bar -->
+    <g transform="translate(20,22)">
+      <text x="0"   y="14" font-size="13" font-weight="500" fill="#86868b">Queue</text>
+      <text x="65"  y="14" font-size="13" font-weight="500" fill="#86868b">Upcoming</text>
+      <text x="148" y="14" font-size="13" font-weight="600" fill="#1d1d1f">Chat</text>
+      <rect x="146" y="22" width="34" height="2" rx="1" fill="#1d1d1f"/>
+      <g transform="translate(298,4)" opacity="0.55">
+        <rect width="22" height="22" rx="6" fill="#f0f0f3"/>
+        <path d="M11 6 v10 M6 11 h10" stroke="#1d1d1f" stroke-width="1.4" stroke-linecap="round"/>
+      </g>
+    </g>
+    <line x1="0" y1="60" x2="360" y2="60" stroke="#ececef" stroke-width="0.5"/>
+
+    <!-- Greeting -->
+    <g transform="translate(24,96)">
+      <text font-size="22" font-weight="600" fill="#1d1d1f">Co dziś obejrzeć?</text>
+      <text y="22" font-size="13" fill="#86868b">Quiz, podpowiedź albo wpisz pytanie.</text>
+    </g>
+
+    <!-- Hero Quiz card (LEAN) -->
+    <g transform="translate(20,158)" filter="url(#cardShadow)">
+      <rect width="320" height="124" rx="16" fill="url(#heroBg)"/>
+      <g transform="translate(20,20)">
+        <rect width="44" height="44" rx="12" fill="url(#iconGrad)"/>
+        <path d="M14 14 l4 8 8 4 -8 4 -4 8 -4 -8 -8 -4 8 -4 z" fill="#ffffff" opacity="0.95"/>
+      </g>
+      <text x="78" y="36" font-size="17" font-weight="600" fill="#1d1d1f">Quiz</text>
+      <text x="78" y="56" font-size="12.5" fill="#5e5e63">Swipuj propozycje, dodawaj do biblioteki.</text>
+
+      <!-- CTA -->
+      <g transform="translate(20,82)">
+        <rect width="280" height="32" rx="16" fill="#1d1d1f"/>
+        <text x="20" y="20" font-size="13" font-weight="500" fill="#ffffff">Zaczynamy</text>
+        <text x="260" y="20" font-size="13" fill="#ffffff" text-anchor="end" opacity="0.7">popularne · nieobejrzane</text>
+      </g>
+    </g>
+
+    <!-- divider with label -->
+    <g transform="translate(0,314)">
+      <line x1="24"  y1="0" x2="142" y2="0" stroke="#ececef" stroke-width="0.5"/>
+      <text x="180" y="4" text-anchor="middle" font-size="11" fill="#a0a0a5" letter-spacing="0.5">ALBO ZAPYTAJ</text>
+      <line x1="218" y1="0" x2="336" y2="0" stroke="#ececef" stroke-width="0.5"/>
+    </g>
+
+    <!-- suggestion chips -->
+    <g transform="translate(20,342)" font-size="13" fill="#1d1d1f">
+      <g>
+        <rect width="320" height="40" rx="12" fill="#f5f5f7"/>
+        <text x="16" y="25">Co dziś wychodzi?</text>
+      </g>
+      <g transform="translate(0,50)">
+        <rect width="320" height="40" rx="12" fill="#f5f5f7"/>
+        <text x="16" y="25">Co się teraz ściąga?</text>
+      </g>
+      <g transform="translate(0,100)">
+        <rect width="320" height="40" rx="12" fill="#f5f5f7"/>
+        <text x="16" y="25">Polecisz coś jak Mr. Robot?</text>
+      </g>
+      <g transform="translate(0,150)">
+        <rect width="320" height="40" rx="12" fill="#f5f5f7"/>
+        <text x="16" y="25">Filmy z Tildą Swinton</text>
+      </g>
+    </g>
+
+    <!-- chat input -->
+    <g transform="translate(20,580)">
+      <rect width="320" height="44" rx="22" fill="#ffffff" stroke="#e2e2e6" stroke-width="0.5"/>
+      <text x="20" y="27" font-size="13.5" fill="#a0a0a5">Wpisz wiadomość…</text>
+      <g transform="translate(280,8)">
+        <circle cx="14" cy="14" r="14" fill="#1d1d1f"/>
+        <path d="M14 8 v12 M9 13 l5 -5 5 5" stroke="#ffffff" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+    </g>
+
+    <text x="180" y="648" text-anchor="middle" font-size="10.5" fill="#a0a0a5">Empty state — lean hero, CTA only</text>
+  </g>
+
+  <!-- =========================================================
+       PANE 2 — active quiz with filters pill
+       ========================================================= -->
+  <g transform="translate(440,60)">
+    <rect width="360" height="660" rx="18" fill="url(#popover)" stroke="#d7d9df" stroke-width="0.5" filter="url(#popoverShadow)"/>
+
+    <!-- header -->
+    <g transform="translate(20,22)">
+      <text font-size="13" font-weight="600" fill="#1d1d1f">Quiz</text>
+      <text x="44" font-size="13" fill="#86868b">· 3 / 10</text>
+      <g transform="translate(298,-2)">
+        <rect width="22" height="22" rx="6" fill="#f0f0f3"/>
+        <path d="M7 7 l8 8 M15 7 l-8 8" stroke="#1d1d1f" stroke-width="1.4" stroke-linecap="round"/>
+      </g>
+    </g>
+    <line x1="0" y1="60" x2="360" y2="60" stroke="#ececef" stroke-width="0.5"/>
+
+    <!-- Filters pill row -->
+    <g transform="translate(20,76)">
+      <rect width="320" height="36" rx="18" fill="#f5f5f7"/>
+      <g transform="translate(14,11)">
+        <path d="M0 2 h16 M3 8 h10 M6 14 h4" stroke="#1d1d1f" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+      </g>
+      <text x="42" y="23" font-size="13" font-weight="500" fill="#1d1d1f">Filmy · Popularne</text>
+      <text x="42" y="23" font-size="13" fill="#86868b" dx="120"> · nieobejrzane</text>
+      <path d="M298 14 l6 6 6 -6" stroke="#5e5e63" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+
+    <!-- progress dots -->
+    <g transform="translate(132,134)">
+      <circle cx="0"  cy="0" r="3" fill="#1d1d1f"/>
+      <circle cx="12" cy="0" r="3" fill="#1d1d1f"/>
+      <circle cx="24" cy="0" r="3" fill="#1d1d1f"/>
+      <circle cx="36" cy="0" r="3" fill="#d7d9df"/>
+      <circle cx="48" cy="0" r="3" fill="#d7d9df"/>
+      <circle cx="60" cy="0" r="3" fill="#d7d9df"/>
+      <circle cx="72" cy="0" r="3" fill="#d7d9df"/>
+      <circle cx="84" cy="0" r="3" fill="#d7d9df"/>
+      <circle cx="96" cy="0" r="3" fill="#d7d9df"/>
+    </g>
+
+    <!-- poster card -->
+    <g transform="translate(48,156)" filter="url(#cardShadow)">
+      <rect width="264" height="354" rx="16" fill="url(#poster)"/>
+      <rect width="264" height="264" rx="16" fill="url(#poster)"/>
+      <g opacity="0.55">
+        <path d="M132 80 l-50 180 100 0 z" fill="#f4e2c1" opacity="0.18"/>
+        <circle cx="132" cy="80" r="6" fill="#f4e2c1"/>
+      </g>
+      <g transform="translate(20,288)">
+        <text font-size="16" font-weight="600" fill="#ffffff">The Lighthouse</text>
+        <text y="22" font-size="12" fill="#a0a0a5">2019 · ★ 7.4 · Horror, Dramat</text>
+        <text y="42" font-size="12" fill="#a0a0a5">Robert Eggers · 109 min</text>
+      </g>
+    </g>
+
+    <!-- action buttons -->
+    <g transform="translate(48,540)">
+      <g>
+        <rect width="124" height="48" rx="24" fill="#ffffff" stroke="#e2e2e6" stroke-width="0.5"/>
+        <path d="M44 17 l16 14 M60 17 l-16 14" stroke="#1d1d1f" stroke-width="1.6" stroke-linecap="round"/>
+        <text x="74" y="30" font-size="13" font-weight="500" fill="#1d1d1f">Pomiń</text>
+      </g>
+      <g transform="translate(140,0)">
+        <rect width="124" height="48" rx="24" fill="#1d1d1f"/>
+        <path d="M40 26 c0 -8 12 -12 12 -4 c0 -8 12 -4 12 4 c0 6 -12 14 -12 14 c0 0 -12 -8 -12 -14 z" fill="#ffffff"/>
+        <text x="78" y="30" font-size="13" font-weight="500" fill="#ffffff">Dodaj</text>
+      </g>
+    </g>
+
+    <text x="180" y="630" text-anchor="middle" font-size="10.5" fill="#a0a0a5">Active quiz — jedna pigułka "filtry" u góry</text>
+  </g>
+
+  <!-- =========================================================
+       PANE 3 — filters bottom-sheet (over popover)
+       ========================================================= -->
+  <g transform="translate(840,60)">
+    <!-- popover dimmed behind -->
+    <rect width="360" height="660" rx="18" fill="url(#popover)" stroke="#d7d9df" stroke-width="0.5" filter="url(#popoverShadow)"/>
+    <rect width="360" height="660" rx="18" fill="#000000" opacity="0.18"/>
+
+    <!-- sheet -->
+    <g transform="translate(0,150)" filter="url(#sheetShadow)">
+      <rect width="360" height="510" rx="18" fill="url(#sheetBg)"/>
+      <!-- grabber -->
+      <rect x="170" y="10" width="40" height="4" rx="2" fill="#d7d9df"/>
+
+      <!-- header -->
+      <g transform="translate(24,34)">
+        <text font-size="17" font-weight="600" fill="#1d1d1f">Filtry</text>
+        <text x="288" font-size="13" fill="#7a5af8" text-anchor="end">Reset</text>
+      </g>
+
+      <!-- Co? -->
+      <g transform="translate(24,72)">
+        <text font-size="11" font-weight="600" fill="#86868b" letter-spacing="0.5">CO?</text>
+        <g transform="translate(0,12)" font-size="13" fill="#1d1d1f">
+          <g>
+            <rect width="92" height="32" rx="16" fill="#1d1d1f"/>
+            <text x="46" y="20" text-anchor="middle" fill="#ffffff">Filmy</text>
+          </g>
+          <g transform="translate(100,0)">
+            <rect width="92" height="32" rx="16" fill="#ffffff" stroke="#e2e2e6" stroke-width="0.5"/>
+            <text x="46" y="20" text-anchor="middle">Seriale</text>
+          </g>
+          <g transform="translate(200,0)">
+            <rect width="92" height="32" rx="16" fill="#ffffff" stroke="#e2e2e6" stroke-width="0.5"/>
+            <text x="46" y="20" text-anchor="middle">Oba</text>
+          </g>
+        </g>
+      </g>
+
+      <!-- Nastrój -->
+      <g transform="translate(24,142)">
+        <text font-size="11" font-weight="600" fill="#86868b" letter-spacing="0.5">NASTRÓJ</text>
+        <g transform="translate(0,12)" font-size="13" fill="#1d1d1f">
+          <g>
+            <rect width="92" height="30" rx="15" fill="#1d1d1f"/>
+            <text x="46" y="19" text-anchor="middle" fill="#ffffff">Cokolwiek</text>
+          </g>
+          <g transform="translate(100,0)">
+            <rect width="66" height="30" rx="15" fill="#ffffff" stroke="#e2e2e6" stroke-width="0.5"/>
+            <text x="33" y="19" text-anchor="middle">Akcja</text>
+          </g>
+          <g transform="translate(174,0)">
+            <rect width="78" height="30" rx="15" fill="#ffffff" stroke="#e2e2e6" stroke-width="0.5"/>
+            <text x="39" y="19" text-anchor="middle">Komedia</text>
+          </g>
+          <g transform="translate(260,0)">
+            <rect width="62" height="30" rx="15" fill="#ffffff" stroke="#e2e2e6" stroke-width="0.5"/>
+            <text x="31" y="19" text-anchor="middle">Horror</text>
+          </g>
+          <g transform="translate(0,38)">
+            <rect width="62" height="30" rx="15" fill="#ffffff" stroke="#e2e2e6" stroke-width="0.5"/>
+            <text x="31" y="19" text-anchor="middle">Sci-fi</text>
+          </g>
+          <g transform="translate(70,38)">
+            <rect width="68" height="30" rx="15" fill="#ffffff" stroke="#e2e2e6" stroke-width="0.5"/>
+            <text x="34" y="19" text-anchor="middle">Dramat</text>
+          </g>
+          <g transform="translate(146,38)">
+            <rect width="70" height="30" rx="15" fill="#ffffff" stroke="#e2e2e6" stroke-width="0.5"/>
+            <text x="35" y="19" text-anchor="middle">Romans</text>
+          </g>
+          <g transform="translate(224,38)">
+            <rect width="76" height="30" rx="15" fill="#ffffff" stroke="#e2e2e6" stroke-width="0.5"/>
+            <text x="38" y="19" text-anchor="middle">Thriller</text>
+          </g>
+        </g>
+      </g>
+
+      <!-- Lata -->
+      <g transform="translate(24,254)">
+        <text font-size="11" font-weight="600" fill="#86868b" letter-spacing="0.5">Z JAKICH LAT?</text>
+        <g transform="translate(0,12)" font-size="13" fill="#1d1d1f">
+          <g>
+            <rect width="92" height="30" rx="15" fill="#1d1d1f"/>
+            <text x="46" y="19" text-anchor="middle" fill="#ffffff">Cokolwiek</text>
+          </g>
+          <g transform="translate(100,0)">
+            <rect width="48" height="30" rx="15" fill="#ffffff" stroke="#e2e2e6" stroke-width="0.5"/>
+            <text x="24" y="19" text-anchor="middle">80s</text>
+          </g>
+          <g transform="translate(156,0)">
+            <rect width="48" height="30" rx="15" fill="#ffffff" stroke="#e2e2e6" stroke-width="0.5"/>
+            <text x="24" y="19" text-anchor="middle">90s</text>
+          </g>
+          <g transform="translate(212,0)">
+            <rect width="56" height="30" rx="15" fill="#ffffff" stroke="#e2e2e6" stroke-width="0.5"/>
+            <text x="28" y="19" text-anchor="middle">2000s</text>
+          </g>
+          <g transform="translate(276,0)">
+            <rect width="56" height="30" rx="15" fill="#ffffff" stroke="#e2e2e6" stroke-width="0.5"/>
+            <text x="28" y="19" text-anchor="middle">2020+</text>
+          </g>
+        </g>
+      </g>
+
+      <!-- Sortuj -->
+      <g transform="translate(24,324)">
+        <text font-size="11" font-weight="600" fill="#86868b" letter-spacing="0.5">SORTUJ</text>
+        <g transform="translate(0,12)" font-size="13" fill="#1d1d1f">
+          <g>
+            <rect width="100" height="30" rx="15" fill="#1d1d1f"/>
+            <text x="50" y="19" text-anchor="middle" fill="#ffffff">Popularne</text>
+          </g>
+          <g transform="translate(108,0)">
+            <rect width="124" height="30" rx="15" fill="#ffffff" stroke="#e2e2e6" stroke-width="0.5"/>
+            <text x="62" y="19" text-anchor="middle">Wysoko oceniane</text>
+          </g>
+          <g transform="translate(240,0)">
+            <rect width="80" height="30" rx="15" fill="#ffffff" stroke="#e2e2e6" stroke-width="0.5"/>
+            <text x="40" y="19" text-anchor="middle">Najnowsze</text>
+          </g>
+        </g>
+      </g>
+
+      <!-- Hide owned -->
+      <g transform="translate(24,386)">
+        <text y="14" font-size="13" fill="#1d1d1f">Pomiń to co mam</text>
+        <!-- toggle on -->
+        <g transform="translate(268,0)">
+          <rect width="44" height="24" rx="12" fill="#34c759"/>
+          <circle cx="32" cy="12" r="10" fill="#ffffff"/>
+        </g>
+      </g>
+
+      <!-- divider "lub" -->
+      <g transform="translate(0,422)">
+        <line x1="24"  y1="0" x2="156" y2="0" stroke="#ececef" stroke-width="0.5"/>
+        <text x="180" y="4" text-anchor="middle" font-size="11" fill="#a0a0a5" letter-spacing="0.5">LUB OPISZ</text>
+        <line x1="204" y1="0" x2="336" y2="0" stroke="#ececef" stroke-width="0.5"/>
+      </g>
+
+      <!-- free text -->
+      <g transform="translate(24,438)">
+        <rect width="312" height="36" rx="10" fill="#ffffff" stroke="#e2e2e6" stroke-width="0.5"/>
+        <text x="14" y="23" font-size="13" fill="#a0a0a5">np. „coś jak Drive ale lżejszego”</text>
+      </g>
+    </g>
+
+    <!-- CTA bar at bottom of sheet -->
+    <g transform="translate(24,612)">
+      <rect width="312" height="44" rx="22" fill="#1d1d1f"/>
+      <text x="156" y="28" font-size="14" font-weight="500" fill="#ffffff" text-anchor="middle">Zastosuj</text>
+    </g>
+
+    <text x="180" y="700" text-anchor="middle" font-size="10.5" fill="#a0a0a5">Bottom-sheet — pełna customization, schowana za pigułką</text>
+  </g>
+</svg>
