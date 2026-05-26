@@ -248,8 +248,7 @@ public struct DiscoverTabView: View {
                     DiscoverCardView(item: item,
                                      isHovered: isTop ? $isCardHovered : .constant(false),
                                      dragOffset: isTop ? dragOffset : .zero,
-                                     credits: isTop ? viewModel.creditsCache[tmdbId] : nil,
-                                     onMarkDisliked: isTop ? { handleMarkDisliked() } : nil)
+                                     credits: isTop ? viewModel.creditsCache[tmdbId] : nil)
                         .frame(width: w, height: h)
                         .scaleEffect(1.0 - CGFloat(idx) * 0.04, anchor: .top)
                         .offset(x: isTop ? dragOffset.width : 0,
@@ -354,6 +353,21 @@ public struct DiscoverTabView: View {
 
     private var cardActionRow: some View {
         HStack(spacing: 8) {
+            // "Fewer like this" — secondary negative signal. Drops the
+            // card like Skip but tags it so the next "More picks" prompt
+            // tells the agent to avoid similar items.
+            Button {
+                handleMarkDisliked()
+            } label: {
+                Image(systemName: "hand.thumbsdown")
+                    .scaledFont(size: 12, weight: .semibold)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 7)
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.regular)
+            .help(Text("Fewer like this", bundle: .module))
+
             Button {
                 completeSwipe(right: false, fromTranslation: .zero)
             } label: {
