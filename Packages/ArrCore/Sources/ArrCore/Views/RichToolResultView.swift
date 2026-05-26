@@ -330,11 +330,14 @@ private struct LibraryRecordCard: View {
 
 // MARK: - Discover session resume card
 
+// MARK: - Discover session resume card
+
 private struct DiscoverSessionCard: View {
     let mood: String
     let isResumable: Bool
 
-    // Stack geometry — poster aspect, small enough to fit in chat row.
+    @EnvironmentObject private var discoverViewModel: DiscoverViewModel
+
     private let frontWidth: CGFloat = 60
     private var frontHeight: CGFloat { frontWidth * 1.5 }
 
@@ -370,41 +373,72 @@ private struct DiscoverSessionCard: View {
         .contentShape(Rectangle())
     }
 
+    /// Up to three posters (current + next 2 in queue). Empty when the
+    /// session is non-resumable — older cards keep their silhouette.
+    private var posters: [URL?] {
+        guard isResumable else { return [] }
+        var out: [URL?] = []
+        if let current = discoverViewModel.current { out.append(current.result.posterURL) }
+        for item in discoverViewModel.queue.prefix(3 - out.count) {
+            out.append(item.result.posterURL)
+        }
+        return out
+    }
+
     private var stackVisual: some View {
         ZStack(alignment: .topLeading) {
-            cardShape
-                .frame(width: frontWidth, height: frontHeight)
-                .scaleEffect(0.92, anchor: .topLeading)
-                .offset(x: 12, y: 8)
-                .opacity(0.5)
-            cardShape
-                .frame(width: frontWidth, height: frontHeight)
-                .scaleEffect(0.96, anchor: .topLeading)
-                .offset(x: 6, y: 4)
-                .opacity(0.75)
-            cardShape
-                .frame(width: frontWidth, height: frontHeight)
-                .overlay(
-                    Image(systemName: isResumable
-                          ? "rectangle.stack.fill.badge.play"
-                          : "rectangle.stack.fill")
-                        .scaledFont(size: 18, weight: .semibold)
-                        .foregroundStyle(isResumable
-                                         ? Color.accentColor
-                                         : Color.secondary)
-                )
+            // Back peek
+            cardLayer(posterURL: posters.dropFirst(2).first ?? nil,
+                      scale: 0.92, offsetX: 12, offsetY: 8, opacity: 0.5)
+            // Middle peek
+            cardLayer(posterURL: posters.dropFirst(1).first ?? nil,
+                      scale: 0.96, offsetX: 6, offsetY: 4, opacity: 0.75)
+            // Front
+            cardLayer(posterURL: posters.first ?? nil,
+                      scale: 1.0, offsetX: 0, offsetY: 0, opacity: 1.0,
+                      showBadge: true)
         }
-        // Reserve space for the offset peek cards so the HStack doesn't clip.
         .frame(width: frontWidth + 14, height: frontHeight + 10, alignment: .topLeading)
     }
 
-    private var cardShape: some View {
-        RoundedRectangle(cornerRadius: 6, style: .continuous)
-            .fill(Color.primary.opacity(0.08))
-            .overlay(
+    private func cardLayer(posterURL: URL?,
+                           scale: CGFloat,
+                           offsetX: CGFloat,
+                           offsetY: CGFloat,
+                           opacity: Double,
+                           showBadge: Bool = false) -> some View {
+        ZStack {
+            if let posterURL {
+                RemotePoster(
+                    url: posterURL,
+                    apiKey: nil,
+                    size: CGSize(width: frontWidth, height: frontHeight),
+                    cornerRadius: 6
+                )
+            } else {
                 RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .stroke(Color.primary.opacity(0.18), lineWidth: 0.5)
-            )
+                    .fill(Color.primary.opacity(0.08))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .stroke(Color.primary.opacity(0.18), lineWidth: 0.5)
+                    )
+                    .frame(width: frontWidth, height: frontHeight)
+            }
+            if showBadge {
+                Image(systemName: isResumable
+                      ? "rectangle.stack.fill.badge.play"
+                      : "rectangle.stack.fill")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .padding(4)
+                    .background(Circle().fill(Color.black.opacity(0.5)))
+                    .padding(4)
+                    .frame(width: frontWidth, height: frontHeight, alignment: .bottomTrailing)
+            }
+        }
+        .scaleEffect(scale, anchor: .topLeading)
+        .offset(x: offsetX, y: offsetY)
+        .opacity(opacity)
     }
 
     private var truncatedMood: String {
@@ -412,9 +446,6 @@ private struct DiscoverSessionCard: View {
         return trimmed.count > 60 ? String(trimmed.prefix(60)) + "\u{2026}" : trimmed
     }
 
-    /// Resume tap signal. PopoverContentView listens on the same
-    /// notification but distinguishes resume from fresh by the
-    /// `resume` userInfo key.
     private func tap() {
         NotificationCenter.default.post(
             name: .arrBarrOpenDiscoverInTinder,

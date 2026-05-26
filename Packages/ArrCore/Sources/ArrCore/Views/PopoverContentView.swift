@@ -126,6 +126,7 @@ public struct PopoverContentView: View {
     public var body: some View {
         mainContent
             .environment(\.locale, configStore.currentLocale)
+            .environmentObject(discoverViewModel)
             .onAppear {
                 searchViewModel.setup(
                     radarrConfig: configStore.radarr,
