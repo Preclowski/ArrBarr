@@ -31,13 +31,20 @@ public struct SearchResultRow: View {
             posterBlurred: configStore.shouldBlurPoster(for: result.source),
             title: titleWithYear,
             metadataSegments: metadataSegments,
-            // Source identity lives in the title slot now — the
-            // queue-search status-grouped layout puts library/new
-            // status in the section header above each block, so the
-            // per-row badge becomes a tautology. The arr glyph here
-            // is what carries cross-source distinction inside a
-            // section.
-            titleBadge: AnyView(SourceGlyphChip(source: result.source)),
+            // Title slot carries both axes the user needs to scan
+            // search results: the arr identity ("Sonarr"/"Radarr")
+            // and the disposition ("In library" if already owned,
+            // "Download" if a fresh candidate). Status sections
+            // aren't headered anymore — these per-row badges are
+            // the only status signal.
+            titleBadge: AnyView(HStack(spacing: 4) {
+                SourceGlyphChip(source: result.source)
+                if isInLibrary {
+                    InLibraryBadge()
+                } else {
+                    DownloadBadge()
+                }
+            }),
             onTap: onTap
         ) {
             if isInLibrary {

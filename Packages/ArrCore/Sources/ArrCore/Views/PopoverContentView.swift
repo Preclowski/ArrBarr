@@ -59,7 +59,7 @@ public struct PopoverContentView: View {
             case .all: return "All"
             case .inQueue: return "In queue"
             case .inLibrary: return "In library"
-            case .new: return "New"
+            case .new: return "Download"
             }
         }
     }
@@ -834,10 +834,12 @@ public struct PopoverContentView: View {
         }
     }
 
-    /// IN QUEUE / IN LIBRARY / NEW renderer. Source-scope-agnostic
-    /// — pulls from `scopedSources` (single arr if `queueScope` set,
-    /// every configured arr otherwise). De-duplicates library hits
-    /// against rows that already appear in IN QUEUE.
+    /// Status-grouped renderer — IN QUEUE rows first, then IN LIBRARY
+    /// hits (de-duplicated against the queue), then DOWNLOAD candidates.
+    /// No section headers; each row carries its own status badge in
+    /// the title slot. Order is preserved so the user still scans
+    /// "what I have / what I'm getting / what I can grab" top to
+    /// bottom, but the chrome stays flat.
     @ViewBuilder
     private var statusGroupedSections: some View {
         let queueRows: [QueueRowEntry] = scopedSources.flatMap { entries(for: $0) }
@@ -849,23 +851,9 @@ public struct PopoverContentView: View {
         let newOnes: [SearchResult] = scopedSources.flatMap { newResults(for: $0) }
 
         VStack(alignment: .leading, spacing: 0) {
-            if !queueRows.isEmpty {
-                typeSectionHeader(.inQueue, count: queueRows.reduce(0) { sum, e in
-                    switch e {
-                    case .single: return sum + 1
-                    case .group(let g): return sum + g.memberCount
-                    }
-                })
-                compactQueueRowsList(entries: queueRows)
-            }
-            if !library.isEmpty {
-                typeSectionHeader(.inLibrary, count: library.count)
-                ForEach(library) { r in searchResultRow(r) }
-            }
-            if !newOnes.isEmpty {
-                typeSectionHeader(.new, count: newOnes.count)
-                ForEach(newOnes) { r in searchResultRow(r) }
-            }
+            compactQueueRowsList(entries: queueRows)
+            ForEach(library) { r in searchResultRow(r) }
+            ForEach(newOnes) { r in searchResultRow(r) }
         }
     }
 
@@ -931,28 +919,6 @@ public struct PopoverContentView: View {
                 }
             }
         }
-    }
-
-    /// Mini-header used in type-grouped mode — small uppercase label
-    /// + count, matches the "SEASONS" / "EPISODES" rhythm used in
-    /// detail-view section breaks so it doesn't compete with the
-    /// scope chips above as a navigation cue.
-    @ViewBuilder
-    private func typeSectionHeader(_ kind: QueueResultType, count: Int) -> some View {
-        HStack(spacing: 4) {
-            Text(kind.labelKey, bundle: .module)
-                .scaledFont(size: 10, weight: .semibold)
-                .foregroundStyle(.secondary)
-                .textCase(.uppercase)
-                .tracking(0.5)
-            Text("(\(count))")
-                .scaledFont(size: 10, weight: .medium)
-                .foregroundStyle(.tertiary)
-            Spacer()
-        }
-        .padding(.horizontal, 12)
-        .padding(.top, 10)
-        .padding(.bottom, 4)
     }
 
     @ViewBuilder

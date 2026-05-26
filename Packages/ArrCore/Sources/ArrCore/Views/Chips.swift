@@ -23,22 +23,40 @@ public func customFormatChipStrip(tags: [String], score: Int?) -> some View {
     }
 }
 
-/// "New" pill — complement to `InLibraryBadge`. Surfaces fresh search
-/// candidates (no `inLibraryArrId`) so the user sees at a glance
-/// whether a hit is something to drill into or something to add.
-/// Green tint (same vocabulary as score gains) reads as "actionable
-/// addition" rather than the accent-tinted "already exists" library
-/// chip.
-public struct NewBadge: View {
+/// "Download" pill — complement to `InLibraryBadge`. Surfaces search
+/// candidates the arr doesn't yet own so the user sees at a glance
+/// it's something to add rather than drill into. Green tint reads
+/// as actionable. Label says "Download" (not "New") — "new" in
+/// queue context means "first-time file" vs an upgrade, distinct
+/// from "available to add".
+public struct DownloadBadge: View {
     public init() {}
 
     public var body: some View {
-        Text("New", bundle: .module)
+        Text("Download", bundle: .module)
             .font(.system(size: 9, weight: .semibold))
             .foregroundStyle(Color.green)
             .padding(.horizontal, 5)
             .padding(.vertical, 1)
             .background(Color.green.opacity(0.18), in: Capsule())
+    }
+}
+
+/// "In queue" pill — sits on rows that are actively downloading or
+/// queued for download. Orange tint (the in-flight color used
+/// elsewhere for paused / processing states) reads as "in
+/// progress", distinct from the green "actionable add" downloads
+/// and the accent-tinted "already owned" library hits.
+public struct InQueueBadge: View {
+    public init() {}
+
+    public var body: some View {
+        Text("In queue", bundle: .module)
+            .font(.system(size: 9, weight: .semibold))
+            .foregroundStyle(Color.orange)
+            .padding(.horizontal, 5)
+            .padding(.vertical, 1)
+            .background(Color.orange.opacity(0.18), in: Capsule())
     }
 }
 

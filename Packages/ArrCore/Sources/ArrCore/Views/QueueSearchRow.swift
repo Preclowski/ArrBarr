@@ -26,7 +26,13 @@ public struct QueueSearchRow: View {
             posterBlurred: configStore.shouldBlurPoster(for: item.source),
             title: item.title,
             metadataSegments: metadataSegments,
-            titleBadge: AnyView(SourceGlyphChip(source: item.source)),
+            // Arr identity + "In queue" status badge — section
+            // headers were dropped, so each row carries its own
+            // disposition signal directly in the title slot.
+            titleBadge: AnyView(HStack(spacing: 4) {
+                SourceGlyphChip(source: item.source)
+                InQueueBadge()
+            }),
             onTap: onTap
         ) {
             Text(QueueSearchStatusLabel.label(for: item))
