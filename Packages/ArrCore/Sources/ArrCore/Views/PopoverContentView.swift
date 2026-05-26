@@ -46,7 +46,6 @@ public struct PopoverContentView: View {
     /// rows only (useful for "where's my Foo?" when the search would
     /// otherwise drown the list in add-new candidates). `.libraryOrNew`
     /// hides queue rows and surfaces only search results.
-    @State private var queueResultType: QueueTabContent.QueueResultType = .all
 
     /// `true` when the SearchAddPanel overlay was opened via a chat
     /// tap-to-add rather than the Add tab. Drives the Back behaviour in
@@ -198,7 +197,6 @@ public struct PopoverContentView: View {
                                 searchViewModel: searchViewModel,
                                 queueFilter: $queueFilter,
                                 queueScope: $queueScope,
-                                queueResultType: $queueResultType,
                                 queueFilterFocused: $queueFilterFocused,
                                 detailItem: $detailItem,
                                 historySource: $historySource,
@@ -381,11 +379,10 @@ public struct PopoverContentView: View {
                     // home" affordance that doesn't need its own
                     // chrome (Spotify / Apple Music tab-bar idiom).
                     if tab == .queue && selectedTab == .queue {
-                        if isFiltering || queueScope != nil || queueResultType != .all {
+                        if isFiltering || queueScope != nil {
                             withAnimation(.easeOut(duration: 0.18)) {
                                 queueFilter = ""
                                 queueScope = nil
-                                queueResultType = .all
                             }
                         }
                     }

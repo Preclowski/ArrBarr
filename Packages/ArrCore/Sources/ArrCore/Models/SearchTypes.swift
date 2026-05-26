@@ -22,9 +22,11 @@ public struct SearchResult: Identifiable, Equatable, Sendable {
     let year: Int?
     let rating: Double?          // primary score (TMDB for Radarr, value for Sonarr)
     /// Vote count for the primary rating. Radarr-only — Sonarr's
-    /// lookup ratings object is just `{ value: Double }`. Nil for
-    /// sources that don't surface it, in which case the "Most votes"
-    /// sort drops these to the bottom.
+    /// lookup ratings object is just `{ value: Double }`. Drives the
+    /// Bayesian-quality tie-breaker in `SearchRelevance` (a 9.9-rated
+    /// film with 5 votes gets pulled toward the global mean; an 8.0
+    /// with 20 000 stays put). Nil for sources without vote data,
+    /// where the relevance scorer falls back to the raw rating.
     let votes: Int?
     let imdb: Double?            // Radarr only
     let rottenTomatoes: Double?  // Radarr only

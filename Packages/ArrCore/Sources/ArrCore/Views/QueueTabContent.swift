@@ -7,35 +7,11 @@ struct QueueTabContent: View {
 
     @Binding var queueFilter: String
     @Binding var queueScope: QueueItem.Source?
-    @Binding var queueResultType: QueueResultType
     var queueFilterFocused: FocusState<Bool>.Binding
     @Binding var detailItem: QueueItem?
     @Binding var historySource: QueueItem.Source?
     @Binding var searchResult: SearchResult?
     @Binding var bannerCollapseTask: Task<Void, Never>?
-
-    /// User-selected sort order for the search-result list. Lives on
-    /// the tab content (not the SearchViewModel) so it resets to
-    /// `.relevance` whenever the user backs out of the search surface,
-    /// which is what they'd expect — leaving the popover and coming
-    /// back should not strand them in "Highest rated" from yesterday.
-    @State private var sortMode: SortMode = .relevance
-
-    enum QueueResultType: Hashable, CaseIterable {
-        case all
-        case inQueue
-        case inLibrary
-        case new
-
-        var labelKey: LocalizedStringKey {
-            switch self {
-            case .all: return "All"
-            case .inQueue: return "In queue"
-            case .inLibrary: return "In library"
-            case .new: return "Download"
-            }
-        }
-    }
 
     private var sonarrConfigured: Bool { configStore.sonarr.isVisible }
     private var radarrConfigured: Bool { configStore.radarr.isVisible }
@@ -83,7 +59,6 @@ struct QueueTabContent: View {
                                     .scaledFont(size: 15, weight: .semibold)
                                     .foregroundStyle(.primary)
                                 Spacer()
-                                sortMenu
                             }
                             .padding(.horizontal, 12)
                             .padding(.top, 8)
@@ -113,14 +88,6 @@ struct QueueTabContent: View {
             // queue filter.
             searchViewModel.query = new
             searchViewModel.onQueryChange()
-            // Clearing the search collapses the result-type axis —
-            // there's nothing to scope by library/new once the
-            // search is gone, and leaving the pill on a stale
-            // narrow value would hide the queue. Snap back to All.
-            if new.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-               queueResultType != .all {
-                queueResultType = .all
-            }
         }
         .onChange(of: queueScope) { _, _ in
             // Source-scope change doesn't reset the query — just
@@ -175,28 +142,6 @@ struct QueueTabContent: View {
         }
     }
 
-    /// Per-result-kind count scoped to the current source selection.
-    /// Used by the type-filter pill menu ("In library (16)") and by
-    /// the type-grouped section headers when scope is narrowed.
-    private func count(for kind: QueueResultType) -> Int {
-        let queueCount = scopedSources.reduce(0) { $0 + filteredQueueItems(for: $1).count }
-        let newCount = scopedSources.reduce(0) { $0 + newResults(for: $1).count }
-        let libraryCount: Int = {
-            let queueRows = scopedSources.flatMap { entries(for: $0) }
-            let rawLib = scopedSources.flatMap { libraryResults(for: $0) }
-            if queueRows.isEmpty { return rawLib.count }
-            return SearchResultDedup.removingQueueDuplicates(
-                libraryResults: rawLib,
-                queueRows: queueRows
-            ).count
-        }()
-        switch kind {
-        case .all:       return queueCount + libraryCount + newCount
-        case .inQueue:   return queueCount
-        case .inLibrary: return libraryCount
-        case .new:       return newCount
-        }
-    }
 
     @ViewBuilder
     private var queueBody: some View {
@@ -204,21 +149,14 @@ struct QueueTabContent: View {
             // Default surface — per-arr queue sections, tonight /
             // needsYou banners. No search axis to encode yet.
             queueSections
-        } else if queueResultType == .all {
-            // Status-grouped — IN QUEUE / IN LIBRARY / NEW headers
-            // are the only grouping level. Source axis demoted to
-            // the row's source-glyph chip. Works the same whether
-            // queueScope is nil (all configured arrs) or a single
-            // arr (scope chips above already labelled it).
-            statusGroupedSections
-        } else if let scope = queueScope {
-            // User narrowed to one kind via the type pill — flat
-            // list, no header (redundant with the pill).
-            flatList(for: scope)
         } else {
-            // queueScope == nil, type pill narrowed to one kind —
-            // flat list across all configured arrs.
-            flatListAcrossSources
+            // Search surface — queue rows that still match the
+            // substring filter, then a single merged block of
+            // library + new search hits sorted by relevance with
+            // Bayesian-quality tie-breaking. No type/sort knobs:
+            // search is keyword lookup with one right answer, the
+            // Discover tab is where listing-style filters live.
+            searchResults
         }
         // Centred loading state — fires whenever a search is in
         // flight. Same "Loading…" copy + spinner the dropped Search
@@ -238,95 +176,28 @@ struct QueueTabContent: View {
         }
     }
 
-    /// Status-grouped renderer — IN QUEUE rows first, then IN LIBRARY
-    /// hits (de-duplicated against the queue), then DOWNLOAD candidates.
-    /// No section headers; each row carries its own status badge in
-    /// the title slot. Order is preserved so the user still scans
-    /// "what I have / what I'm getting / what I can grab" top to
-    /// bottom, but the chrome stays flat.
+    /// The one search-results surface. Queue rows that still match
+    /// the substring filter sit at the top (live downloads with
+    /// progress + action chrome — they don't flatten well into a
+    /// search row), then a single merged + cross-source-sorted block
+    /// of library + new hits. The library/new distinction is read
+    /// per-row from the trailing affordance: chevron + InLibraryBadge
+    /// for already-owned, `+` for addable. No section divider; this
+    /// IS the search result list.
     @ViewBuilder
-    private var statusGroupedSections: some View {
+    private var searchResults: some View {
         let queueRows: [QueueRowEntry] = scopedSources.flatMap { entries(for: $0) }
-        // Search results = library + new merged into a single block,
-        // sorted together. The earlier split into separate sections
-        // ("In library" → "Download") was artificial chrome — each
-        // row already carries its own status signal (InLibraryBadge
-        // + chevron for owned, `+` for addable), so a category divider
-        // between them just fragmented the search surface for no
-        // reader-side gain. Combining them gives a true search-result
-        // list — the user types, sees every match ranked by their
-        // chosen sort mode, and tells library vs new from the row
-        // chrome rather than which section header sits above it.
-        //
-        // Cross-source merge happens naturally here: the flatMap
-        // concatenates Radarr + Sonarr + Lidarr + Whisparr per source
-        // enum order; the subsequent `SearchRelevance.sorted` re-ranks
-        // the whole pile by match quality + sort mode, so a strong
-        // Sonarr hit can sit above a marginal Radarr one. The previous
-        // "Radarr first because of enum order" bias stays gone.
         let rawLibrary = scopedSources.flatMap { libraryResults(for: $0) }
         let library = SearchResultDedup.removingQueueDuplicates(
             libraryResults: rawLibrary,
             queueRows: queueRows
         )
         let newOnes = scopedSources.flatMap { newResults(for: $0) }
-        let combined = SearchRelevance.sorted(library + newOnes, query: queueFilter, mode: sortMode)
+        let combined = SearchRelevance.sortedByRelevance(library + newOnes, query: queueFilter)
 
         VStack(alignment: .leading, spacing: 0) {
             compactQueueRowsList(entries: queueRows)
             ForEach(combined) { r in searchResultRow(r) }
-        }
-    }
-
-    /// Flat list when the type pill narrows to a single kind and the
-    /// scope is all configured arrs.
-    @ViewBuilder
-    private var flatListAcrossSources: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            switch queueResultType {
-            case .inQueue:
-                compactQueueRowsList(entries: scopedSources.flatMap { entries(for: $0) })
-            case .inLibrary:
-                let queueRows = scopedSources.flatMap { entries(for: $0) }
-                let raw = SearchRelevance.sorted(scopedSources.flatMap { libraryResults(for: $0) }, query: queueFilter, mode: sortMode)
-                let lib = SearchResultDedup.removingQueueDuplicates(
-                    libraryResults: raw, queueRows: queueRows
-                )
-                ForEach(lib) { r in searchResultRow(r) }
-            case .new:
-                let new = SearchRelevance.sorted(scopedSources.flatMap { newResults(for: $0) }, query: queueFilter, mode: sortMode)
-                ForEach(new) { r in searchResultRow(r) }
-            case .all:
-                EmptyView()
-            }
-        }
-    }
-
-    /// Single-source flat list — used when the user picked a scope
-    /// AND a narrowed type. IN QUEUE rows use the new compact row
-    /// for chrome consistency with library/new.
-    @ViewBuilder
-    private func flatList(for source: QueueItem.Source) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            switch queueResultType {
-            case .inQueue:
-                compactQueueRowsList(entries: entries(for: source))
-            case .inLibrary:
-                let queueRows = entries(for: source)
-                // Single-source path — no cross-source merge needed,
-                // but in-group relevance sort still applies so the
-                // user sees the strongest title match first.
-                let raw = SearchRelevance.sorted(libraryResults(for: source), query: queueFilter, mode: sortMode)
-                let lib = SearchResultDedup.removingQueueDuplicates(
-                    libraryResults: raw, queueRows: queueRows
-                )
-                ForEach(lib) { r in searchResultRow(r) }
-            case .new:
-                let new = SearchRelevance.sorted(newResults(for: source), query: queueFilter, mode: sortMode)
-                ForEach(new) { r in searchResultRow(r) }
-            case .all:
-                EmptyView()
-            }
         }
     }
 
@@ -366,91 +237,6 @@ struct QueueTabContent: View {
         }
     }
 
-    /// Result-type pill — single capsule that opens a select menu.
-    /// Sits to the right of the scope chips row when filtering;
-    /// reads as "additional scope narrowing" without taking a whole
-    /// second row of horizontal space (which the chips approach
-    /// would burn once lidarr / whisparr added their source chips).
-    private var typeFilterPill: some View {
-        Menu {
-            // Each pill option gets its scoped count appended —
-            // "In library (16)" reads as "16 items match this
-            // narrowing right now", saves a round-trip of picking
-            // just to discover the set is empty.
-            Picker(selection: $queueResultType) {
-                ForEach(QueueResultType.allCases, id: \.self) { kind in
-                    Text("\(Text(kind.labelKey, bundle: .module)) (\(count(for: kind)))")
-                        .tag(kind)
-                }
-            } label: { EmptyView() }
-            .pickerStyle(.inline)
-        } label: {
-            HStack(spacing: 3) {
-                Text(queueResultType.labelKey, bundle: .module)
-                    .scaledFont(size: 11, weight: queueResultType == .all ? .medium : .semibold)
-                Image(systemName: "chevron.down")
-                    .scaledFont(size: 8, weight: .bold)
-            }
-            .foregroundStyle(queueResultType == .all ? Color.secondary : Color.white)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 4)
-            .background(
-                RoundedRectangle(cornerRadius: 5).fill(queueResultType == .all
-                    ? AnyShapeStyle(Color.primary.opacity(0.08))
-                    : AnyShapeStyle(Color.accentColor))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 5).stroke(queueResultType == .all
-                    ? Color.clear
-                    : Color.accentColor.opacity(0.4), lineWidth: 0.75)
-            )
-        }
-        .menuStyle(.borderlessButton)
-        .menuIndicator(.hidden)
-        .fixedSize()
-    }
-
-    /// Trailing sort selector in the "Searching" header. Compact glyph
-    /// + chevron menu — same visual weight as the typeFilterPill in
-    /// the filter bar below so the two controls read as siblings, not
-    /// a primary/secondary hierarchy. Showing the currently-selected
-    /// mode's symbol (sparkles for Relevance, star for Highest rated,
-    /// …) saves a redundant text label in the header while still
-    /// signalling "this is a sort affordance, click to change".
-    private var sortMenu: some View {
-        Menu {
-            Picker(selection: $sortMode) {
-                ForEach(SortMode.allCases) { mode in
-                    Label {
-                        Text(mode.labelKey, bundle: .module)
-                    } icon: {
-                        Image(systemName: mode.symbol)
-                    }
-                    .tag(mode)
-                }
-            } label: { EmptyView() }
-            .pickerStyle(.inline)
-        } label: {
-            HStack(spacing: 3) {
-                Image(systemName: sortMode.symbol)
-                    .scaledFont(size: 11, weight: .medium)
-                Text(sortMode.labelKey, bundle: .module)
-                    .scaledFont(size: 11, weight: .medium)
-                Image(systemName: "chevron.down")
-                    .scaledFont(size: 8, weight: .semibold)
-                    .foregroundStyle(.tertiary)
-            }
-            .foregroundStyle(.secondary)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .contentShape(Capsule())
-        }
-        .menuStyle(.borderlessButton)
-        .menuIndicator(.hidden)
-        .fixedSize()
-        .accessibilityLabel(Text("Sort search results", bundle: .module))
-    }
-
     private var queueFilterBar: some View {
         // Clean glass capsule — same `.glassyFloatingBar()` chrome as
         // the tab cluster above, so the bar reads as the same control
@@ -480,14 +266,6 @@ struct QueueTabContent: View {
             .scaledFont(size: 14)
             .textFieldStyle(.plain)
             .focused(queueFilterFocused)
-            if isFiltering {
-                // Type pill rides inline in the search bar while a
-                // query is active — moved out of its old top-row
-                // perch so the user adjusts the kind axis right
-                // next to the input that triggered the search.
-                typeFilterPill
-                    .transition(.opacity.combined(with: .scale(scale: 0.9)))
-            }
             if !queueFilter.isEmpty {
                 Button { queueFilter = "" } label: {
                     Image(systemName: "xmark.circle.fill")

@@ -292,8 +292,10 @@ public actor SearchClient {
             id: tmdbId, foreignId: String(tmdbId),
             title: r.title, subtitle: nil,
             year: r.year, rating: r.ratings?.tmdb?.value,
-            // TMDB vote_count — drives the "Most votes" sort option.
-            // Falls back to IMDB votes when TMDB is missing (rare).
+            // TMDB vote_count — feeds the Bayesian tie-breaker in
+            // SearchRelevance so a 9.9 with 5 votes doesn't outrank
+            // an 8.0 with 20 000. Falls back to IMDB votes when TMDB
+            // is missing (rare).
             votes: r.ratings?.tmdb?.votes ?? r.ratings?.imdb?.votes,
             imdb: r.ratings?.imdb?.value,
             rottenTomatoes: r.ratings?.rottenTomatoes?.value,

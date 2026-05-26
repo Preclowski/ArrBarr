@@ -1,5 +1,4 @@
 import Foundation
-import SwiftUI
 
 /// Prefix-aware relevance scoring for search results. Replaces the
 /// previous "trust whatever order the arr's /lookup endpoint returned"
@@ -14,11 +13,11 @@ import SwiftUI
 ///     the arr's lookup order — usually fine for popular titles but
 ///     unpredictable for niche or partial matches.
 ///
-/// We score each result against the typed query, then sort the
-/// combined library/new lists by that score. Same scoring drives
-/// both per-group ordering AND the cross-source merge so the
-/// behaviour is consistent regardless of which result-type the
-/// user is currently scoped to.
+/// One sort, no menu — search is keyword lookup against titles, not a
+/// discovery surface. The Discover tab is where listing-style filters
+/// (newest / highest-rated / by-genre) live; here every query has a
+/// definite intent, and the right answer is "best title match,
+/// quality-broken ties".
 ///
 /// ## Scoring tiers (higher wins)
 ///
@@ -30,11 +29,14 @@ import SwiftUI
 ///    1_000+ — substring anywhere in title (earlier position wins)
 ///        0 — no match (filtered out before sorting in practice)
 ///
-/// **Tie-breaker** inside a band: TMDB/primary rating + a small
-/// recency bias on `year`. Without it, a 1972 release outscores a
-/// 2024 one of identical title quality just because both have a 7.5
-/// rating — most users searching for "Dune" expect 2021 first, not
-/// 1984.
+/// **Tie-breaker** inside a band: Bayesian-adjusted rating
+/// ("IMDB Top 250" style), which shrinks low-vote ratings toward
+/// the global mean so a 9.9-rated film with 5 votes doesn't outrank
+/// an 8.0 film with 20 000. See `bayesianQuality` for the formula
+/// and `m` / `C` constants. Sources that don't surface vote counts
+/// (Sonarr / Lidarr / Whisparr) fall back to the raw `rating` — TVDB
+/// / MusicBrainz scores are already aggregated upstream, so the
+/// shrinkage isn't needed there.
 ///
 /// Diacritic + case insensitive throughout to match the existing
 /// queue-filter behaviour ("Pożeracz" matches "pozeracz").
@@ -77,86 +79,54 @@ enum SearchRelevance {
         return 0
     }
 
-    /// Secondary signal: rating + tiny recency nudge. Returns a small
-    /// Double so it can safely be added to the integer score as a
-    /// continuous tie-breaker without overlapping band boundaries
-    /// (max ~1 + ~0.1 ≪ the 1000-step gap between bands).
-    static func tieBreaker(_ result: SearchResult) -> Double {
-        let rating = (result.rating ?? 0) / 10.0           // 0…1
-        let recency = max(0, Double((result.year ?? 1900) - 1900)) / 1000.0  // 0…~0.13
-        return rating + recency
+    /// Bayesian-adjusted rating, IMDB Top 250 style. Pulls low-vote
+    /// ratings toward the global mean so outliers like "9.9 with 5
+    /// votes" don't strafe the top of every list.
+    ///
+    ///     adjusted = (v / (v + m)) · R + (m / (v + m)) · C
+    ///
+    /// `m` is the minimum-votes threshold (votes-needed-before-we-
+    /// trust-this-rating) and `C` is the global mean rating. The two
+    /// constants are tuned to TMDB scale (0–10, popular films usually
+    /// in the 5k–100k votes range) — 500 / 6.5 give a meaningful pull
+    /// for films under ~1k votes and barely move popular ones.
+    ///
+    /// Examples (R = rating, v = votes → adjusted):
+    ///   - 9.9 / 5      → 6.53  (heavily pulled, was a low-trust outlier)
+    ///   - 7.0 / 1_000  → 6.83  (modest pull, still respected)
+    ///   - 8.0 / 20_000 → 7.96  (barely moves, plenty of data)
+    ///
+    /// Sources without vote counts (Sonarr / Lidarr / Whisparr) skip
+    /// the shrinkage and return the raw rating — those scores are
+    /// already aggregated upstream (TVDB / MusicBrainz), so applying
+    /// Bayesian shrinkage on top would punish every series-side hit
+    /// for not exposing what its rating system already encodes.
+    static func bayesianQuality(_ result: SearchResult) -> Double {
+        let R = result.rating ?? 0
+        guard let votes = result.votes, votes > 0 else { return R }
+        let v = Double(votes)
+        let m: Double = 500
+        let C: Double = 6.5
+        return (v / (v + m)) * R + (m / (v + m)) * C
     }
 
-    /// Combined sort key — higher is better. Use as a single
-    /// comparable value rather than a 2-tuple to keep call sites
-    /// readable (`sorted(by: { rank > rank })`).
+    /// Combined sort key — higher is better. Tier-band integer
+    /// dominates; bayesianQuality (0…10) breaks ties inside a band.
+    /// 10 is far below the 1 000-step gap between tiers so a strong
+    /// quality boost can't lift a substring match over a prefix match.
     static func rank(_ result: SearchResult, normalizedQuery q: String) -> Double {
-        Double(score(result, normalizedQuery: q)) + tieBreaker(result)
+        Double(score(result, normalizedQuery: q)) + bayesianQuality(result)
     }
 
     /// Sort + cross-source merge in one pass. Caller hands in the raw
-    /// per-source flatMap; we sort by relevance to the query. Stable
+    /// per-source flatMap; we sort by relevance to the query, with
+    /// Bayesian-adjusted rating as the in-tier tie-breaker. Stable
     /// w.r.t. equal-rank ties via Swift 5+'s stable `sorted(by:)`.
     static func sortedByRelevance(_ results: [SearchResult], query: String) -> [SearchResult] {
         let q = normalize(query)
         guard !q.isEmpty else { return results }
         return results.sorted { lhs, rhs in
             rank(lhs, normalizedQuery: q) > rank(rhs, normalizedQuery: q)
-        }
-    }
-
-    /// Apply a user-selected sort mode. Default `.relevance` falls
-    /// back to the prefix-aware scoring above. The other modes ignore
-    /// the query entirely — they're "show me everything that matched,
-    /// ordered by this attribute". Items missing the sort key (e.g.
-    /// no votes on a Sonarr result when sorting by votes) drop to
-    /// the bottom rather than being filtered out, so the user keeps
-    /// seeing every match regardless of sort choice.
-    static func sorted(_ results: [SearchResult], query: String, mode: SortMode) -> [SearchResult] {
-        switch mode {
-        case .relevance: return sortedByRelevance(results, query: query)
-        case .rating:    return results.sorted { (l, r) in (l.rating ?? -1) > (r.rating ?? -1) }
-        case .votes:     return results.sorted { (l, r) in (l.votes ?? -1) > (r.votes ?? -1) }
-        case .year:      return results.sorted { (l, r) in (l.year ?? 0) > (r.year ?? 0) }
-        case .title:     return results.sorted { (l, r) in
-            normalize(l.title) < normalize(r.title)
-        }
-        }
-    }
-}
-
-/// User-selectable sort order for the search header menu.
-///
-/// `.relevance` is the default — prefix-aware scoring against the
-/// typed query (see `SearchRelevance.rank`). The other modes are
-/// flat sorts that ignore the query, so the user can ask "show me
-/// the highest-rated matches" without re-typing.
-public enum SortMode: String, CaseIterable, Identifiable, Sendable {
-    case relevance
-    case rating
-    case votes
-    case year
-    case title
-
-    public var id: String { rawValue }
-
-    public var labelKey: LocalizedStringKey {
-        switch self {
-        case .relevance: return "Relevance"
-        case .rating:    return "Highest rated"
-        case .votes:     return "Most votes"
-        case .year:      return "Newest"
-        case .title:     return "Title A–Z"
-        }
-    }
-
-    public var symbol: String {
-        switch self {
-        case .relevance: return "sparkles"
-        case .rating:    return "star.fill"
-        case .votes:     return "person.2.fill"
-        case .year:      return "calendar"
-        case .title:     return "textformat.abc"
         }
     }
 }
