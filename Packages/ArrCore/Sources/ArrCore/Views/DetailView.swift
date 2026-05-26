@@ -440,6 +440,7 @@ public struct DetailView: View {
         }
         .buttonStyle(.bordered)
         .help(Text("Cancel download", bundle: .module))
+        .accessibilityLabel(Text("Cancel download", bundle: .module))
     }
 
     @ViewBuilder
@@ -472,6 +473,7 @@ public struct DetailView: View {
         }
         .buttonStyle(.bordered)
         .help(Text("Open in browser", bundle: .module))
+        .accessibilityLabel(Text("Open in browser", bundle: .module))
     }
 
     // MARK: - Content switch

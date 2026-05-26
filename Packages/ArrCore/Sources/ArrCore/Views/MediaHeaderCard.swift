@@ -156,6 +156,7 @@ public struct MediaHeaderCard: View {
             Button { onPosterTap(posterURL) } label: { poster }
                 .buttonStyle(.plain)
                 .help(Text("Show poster", bundle: .module))
+                .accessibilityLabel(Text("Show poster", bundle: .module))
         } else {
             poster
         }
@@ -260,6 +261,7 @@ public struct PosterLightbox: View {
             .padding(.top, 12)
             .padding(.trailing, 12)
             .help(Text("Close", bundle: .module))
+            .accessibilityLabel(Text("Close", bundle: .module))
             .keyboardShortcut(.cancelAction)
         }
     }
