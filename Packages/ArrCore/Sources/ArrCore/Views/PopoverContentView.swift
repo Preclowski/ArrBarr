@@ -59,7 +59,7 @@ public struct PopoverContentView: View {
             case .all: return "All"
             case .inQueue: return "In queue"
             case .inLibrary: return "In library"
-            case .new: return "New"
+            case .new: return "Download"
             }
         }
     }
@@ -202,7 +202,14 @@ public struct PopoverContentView: View {
                         onClose: { self.historySource = nil }
                     )
                 } else if anyArrConfigured {
-                    tabBar
+                    // Tab bar hides while a queue-filter / search
+                    // query is live — search becomes a full-size
+                    // surface (back chevron in the top strip is the
+                    // only nav affordance you need). Tabs reappear
+                    // the moment the query clears.
+                    if !(selectedTab == .queue && isFiltering) {
+                        tabBar
+                    }
                     Group {
                         switch selectedTab {
                         case .queue: queueContent
@@ -665,20 +672,25 @@ public struct PopoverContentView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 32)
                     } else {
-                        if configuredSources.count > 1 || isFiltering {
+                        // Search-mode header — back chevron + screen
+                        // title ("Wyszukiwanie" in PL). Mirrors the
+                        // DetailView header pattern so the user
+                        // reads the search surface as a navigation
+                        // level, not just a filtered queue.
+                        if isFiltering {
                             HStack(spacing: 6) {
-                                if configuredSources.count > 1 {
-                                    scopeChipsRow
+                                FloatingBackButton {
+                                    queueFilter = ""
                                 }
-                                Spacer(minLength: 6)
-                                if isFiltering {
-                                    typeFilterPill
-                                        .transition(.opacity.combined(with: .scale(scale: 0.9)))
-                                }
+                                Text("Searching", bundle: .module)
+                                    .scaledFont(size: 15, weight: .semibold)
+                                    .foregroundStyle(.primary)
+                                Spacer()
                             }
                             .padding(.horizontal, 12)
                             .padding(.top, 8)
                             .padding(.bottom, 2)
+                            .transition(.opacity.combined(with: .scale(scale: 0.95)))
                             .animation(.easeInOut(duration: 0.18), value: isFiltering)
                         }
                         queueBody
@@ -754,9 +766,8 @@ public struct PopoverContentView: View {
         rawSearchResults(for: source).filter { $0.inLibraryArrId == nil }
     }
 
-    /// Raw, unfiltered search results per source — `searchResults(for:)`
-    /// further narrows by `queueResultType` for the rendered section,
-    /// but counts need the un-narrowed pool.
+    /// Raw, unfiltered search results per source — counts need the
+    /// un-narrowed pool.
     private func rawSearchResults(for source: QueueItem.Source) -> [SearchResult] {
         switch source {
         case .radarr:   return searchViewModel.radarrResults
@@ -771,8 +782,16 @@ public struct PopoverContentView: View {
     /// the type-grouped section headers when scope is narrowed.
     private func count(for kind: QueueResultType) -> Int {
         let queueCount = scopedSources.reduce(0) { $0 + filteredQueueItems(for: $1).count }
-        let libraryCount = scopedSources.reduce(0) { $0 + libraryResults(for: $1).count }
         let newCount = scopedSources.reduce(0) { $0 + newResults(for: $1).count }
+        let libraryCount: Int = {
+            let queueRows = scopedSources.flatMap { entries(for: $0) }
+            let rawLib = scopedSources.flatMap { libraryResults(for: $0) }
+            if queueRows.isEmpty { return rawLib.count }
+            return SearchResultDedup.removingQueueDuplicates(
+                libraryResults: rawLib,
+                queueRows: queueRows
+            ).count
+        }()
         switch kind {
         case .all:       return queueCount + libraryCount + newCount
         case .inQueue:   return queueCount
@@ -781,35 +800,27 @@ public struct PopoverContentView: View {
         }
     }
 
-    /// Routes between three rendering modes:
-    ///   1. Scope = All → group by source (today's queueSections).
-    ///   2. Scope = single arr, type = All → group by result kind
-    ///      ("In queue (X)" / "In library (Y)" / "New (Z)" headers).
-    ///      The source header would be redundant — chip above already
-    ///      labels it.
-    ///   3. Scope = single arr, type = narrowed → flat list, no
-    ///      headers. Every header would be a one-line tautology of
-    ///      the chip + type pill combination already on screen.
     @ViewBuilder
     private var queueBody: some View {
-        if queueScope == nil {
-            // Mode 1 — source-grouped (default).
-            if queueResultType == .all || queueResultType == .inQueue {
-                queueSections
-            }
-            if isFiltering, searchAvailable,
-               queueResultType == .all
-                || queueResultType == .inLibrary
-                || queueResultType == .new {
-                queueSearchResults
-                    .padding(.top, 8)
-            }
-        } else if let scope = queueScope, queueResultType == .all {
-            // Mode 2 — type-grouped for the single picked source.
-            typeGroupedSections(for: scope)
+        if !isFiltering {
+            // Default surface — per-arr queue sections, tonight /
+            // needsYou banners. No search axis to encode yet.
+            queueSections
+        } else if queueResultType == .all {
+            // Status-grouped — IN QUEUE / IN LIBRARY / NEW headers
+            // are the only grouping level. Source axis demoted to
+            // the row's source-glyph chip. Works the same whether
+            // queueScope is nil (all configured arrs) or a single
+            // arr (scope chips above already labelled it).
+            statusGroupedSections
         } else if let scope = queueScope {
-            // Mode 3 — flat list for picked source + picked type.
+            // User narrowed to one kind via the type pill — flat
+            // list, no header (redundant with the pill).
             flatList(for: scope)
+        } else {
+            // queueScope == nil, type pill narrowed to one kind —
+            // flat list across all configured arrs.
+            flatListAcrossSources
         }
         // Centred loading state — fires whenever a search is in
         // flight. Same "Loading…" copy + spinner the dropped Search
@@ -829,95 +840,88 @@ public struct PopoverContentView: View {
         }
     }
 
+    /// Status-grouped renderer — IN QUEUE rows first, then IN LIBRARY
+    /// hits (de-duplicated against the queue), then DOWNLOAD candidates.
+    /// No section headers; each row carries its own status badge in
+    /// the title slot. Order is preserved so the user still scans
+    /// "what I have / what I'm getting / what I can grab" top to
+    /// bottom, but the chrome stays flat.
     @ViewBuilder
-    private func typeGroupedSections(for source: QueueItem.Source) -> some View {
-        let queueRows = entries(for: source)
-        let library = libraryResults(for: source)
-        let newOnes = newResults(for: source)
+    private var statusGroupedSections: some View {
+        let queueRows: [QueueRowEntry] = scopedSources.flatMap { entries(for: $0) }
+        let rawLibrary: [SearchResult] = scopedSources.flatMap { libraryResults(for: $0) }
+        let library = SearchResultDedup.removingQueueDuplicates(
+            libraryResults: rawLibrary,
+            queueRows: queueRows
+        )
+        let newOnes: [SearchResult] = scopedSources.flatMap { newResults(for: $0) }
 
         VStack(alignment: .leading, spacing: 0) {
-            if !queueRows.isEmpty {
-                typeSectionHeader(.inQueue, count: queueRows.reduce(0) { sum, e in
-                    switch e {
-                    case .single: return sum + 1
-                    case .group(let g): return sum + g.memberCount
-                    }
-                })
-                queueRowsList(entries: queueRows)
-            }
-            if isFiltering, !library.isEmpty {
-                typeSectionHeader(.inLibrary, count: library.count)
-                ForEach(library) { r in searchResultRow(r) }
-            }
-            if isFiltering, !newOnes.isEmpty {
-                typeSectionHeader(.new, count: newOnes.count)
-                ForEach(newOnes) { r in searchResultRow(r) }
+            compactQueueRowsList(entries: queueRows)
+            ForEach(library) { r in searchResultRow(r) }
+            ForEach(newOnes) { r in searchResultRow(r) }
+        }
+    }
+
+    /// Flat list when the type pill narrows to a single kind and the
+    /// scope is all configured arrs.
+    @ViewBuilder
+    private var flatListAcrossSources: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            switch queueResultType {
+            case .inQueue:
+                compactQueueRowsList(entries: scopedSources.flatMap { entries(for: $0) })
+            case .inLibrary:
+                let queueRows = scopedSources.flatMap { entries(for: $0) }
+                let raw = scopedSources.flatMap { libraryResults(for: $0) }
+                let lib = SearchResultDedup.removingQueueDuplicates(
+                    libraryResults: raw, queueRows: queueRows
+                )
+                ForEach(lib) { r in searchResultRow(r) }
+            case .new:
+                ForEach(scopedSources.flatMap { newResults(for: $0) }) { r in searchResultRow(r) }
+            case .all:
+                EmptyView()
             }
         }
     }
 
+    /// Single-source flat list — used when the user picked a scope
+    /// AND a narrowed type. IN QUEUE rows use the new compact row
+    /// for chrome consistency with library/new.
     @ViewBuilder
     private func flatList(for source: QueueItem.Source) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             switch queueResultType {
             case .inQueue:
-                queueRowsList(entries: entries(for: source))
+                compactQueueRowsList(entries: entries(for: source))
             case .inLibrary:
-                ForEach(libraryResults(for: source)) { r in searchResultRow(r) }
+                let queueRows = entries(for: source)
+                let lib = SearchResultDedup.removingQueueDuplicates(
+                    libraryResults: libraryResults(for: source),
+                    queueRows: queueRows
+                )
+                ForEach(lib) { r in searchResultRow(r) }
             case .new:
                 ForEach(newResults(for: source)) { r in searchResultRow(r) }
             case .all:
-                EmptyView() // handled in typeGroupedSections branch
+                EmptyView()
             }
         }
     }
 
-    /// Mini-header used in type-grouped mode — small uppercase label
-    /// + count, matches the "SEASONS" / "EPISODES" rhythm used in
-    /// detail-view section breaks so it doesn't compete with the
-    /// scope chips above as a navigation cue.
+    /// Compact-row variant of `queueRowsList` — emits `QueueSearchRow`
+    /// instead of `QueueRowView`. Used wherever queue rows show up
+    /// inside a search-driven layout.
     @ViewBuilder
-    private func typeSectionHeader(_ kind: QueueResultType, count: Int) -> some View {
-        HStack(spacing: 4) {
-            Text(kind.labelKey, bundle: .module)
-                .scaledFont(size: 10, weight: .semibold)
-                .foregroundStyle(.secondary)
-                .textCase(.uppercase)
-                .tracking(0.5)
-            Text("(\(count))")
-                .scaledFont(size: 10, weight: .medium)
-                .foregroundStyle(.tertiary)
-            Spacer()
-        }
-        .padding(.horizontal, 12)
-        .padding(.top, 10)
-        .padding(.bottom, 4)
-    }
-
-    @ViewBuilder
-    private func queueRowsList(entries: [QueueRowEntry]) -> some View {
-        // Stripped-down version of QueueSectionView's row stack —
-        // headerless, since the type-grouped header is provided by
-        // `typeSectionHeader` upstream.
+    private func compactQueueRowsList(entries: [QueueRowEntry]) -> some View {
         VStack(spacing: 2) {
             ForEach(entries) { entry in
                 switch entry {
                 case .single(let item):
-                    QueueRowView(
-                        item: item,
-                        onPause: { Task { await viewModel.pause(item) } },
-                        onResume: { Task { await viewModel.resume(item) } },
-                        onDelete: { Task { await viewModel.delete(item) } },
-                        onShowDetail: { detailItem = item }
-                    )
+                    QueueSearchRow(item: item) { detailItem = item }
                 case .group(let group):
-                    QueueGroupRowView(
-                        group: group,
-                        onPause: { Task { await viewModel.pause(group.representative) } },
-                        onResume: { Task { await viewModel.resume(group.representative) } },
-                        onDelete: { Task { await viewModel.delete(group.representative) } },
-                        onShowDetail: { detailItem = group.representative }
-                    )
+                    QueueSearchRow(item: group.representative) { detailItem = group.representative }
                 }
             }
         }
@@ -995,12 +999,12 @@ public struct PopoverContentView: View {
             .padding(.horizontal, 10)
             .padding(.vertical, 4)
             .background(
-                Capsule().fill(queueResultType == .all
+                RoundedRectangle(cornerRadius: 5).fill(queueResultType == .all
                     ? AnyShapeStyle(Color.primary.opacity(0.08))
                     : AnyShapeStyle(Color.accentColor))
             )
             .overlay(
-                Capsule().stroke(queueResultType == .all
+                RoundedRectangle(cornerRadius: 5).stroke(queueResultType == .all
                     ? Color.clear
                     : Color.accentColor.opacity(0.4), lineWidth: 0.75)
             )
@@ -1092,80 +1096,6 @@ public struct PopoverContentView: View {
         }
     }
 
-    /// In-queue search results section — library hits + add-new
-    /// candidates pulled from each configured arr. Reuses
-    /// `SearchResultRow` so visuals stay identical to the dropped
-    /// Search tab. Sources filtered by `queueScope` when set.
-    @ViewBuilder
-    private var queueSearchResults: some View {
-        let sources = queueScope.map { [$0] } ?? configuredSources
-        VStack(alignment: .leading, spacing: 0) {
-            ForEach(sources, id: \.self) { src in
-                let results = searchResults(for: src)
-                if !results.isEmpty {
-                    Divider().padding(.horizontal, 12)
-                    HStack(spacing: 6) {
-                        Image(systemName: src.symbol)
-                            .scaledFont(size: 11)
-                            .foregroundStyle(.secondary)
-                        Text(searchSectionTitle(for: src), bundle: .module)
-                            .scaledFont(size: 12, weight: .semibold)
-                            .foregroundStyle(.secondary)
-                        Text("\(results.count)")
-                            .scaledFont(size: 11)
-                            .foregroundStyle(.tertiary)
-                        Spacer()
-                    }
-                    .padding(.horizontal, 12)
-                    .padding(.top, 8)
-                    .padding(.bottom, 4)
-                    ForEach(results) { r in
-                        SearchResultRow(result: r) {
-                            if let arrId = r.inLibraryArrId {
-                                DetailRequest.post(
-                                    DetailRequest.syntheticItem(
-                                        source: r.source,
-                                        entityId: arrId,
-                                        title: r.title,
-                                        posterURL: r.posterURL,
-                                        posterRequiresAuth: false
-                                    )
-                                )
-                            } else {
-                                searchResult = r
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private func searchResults(for source: QueueItem.Source) -> [SearchResult] {
-        let raw: [SearchResult] = {
-            switch source {
-            case .radarr:   return searchViewModel.radarrResults
-            case .sonarr:   return searchViewModel.sonarrResults
-            case .lidarr:   return searchViewModel.lidarrResults
-            case .whisparr: return searchViewModel.whisparrResults
-            }
-        }()
-        switch queueResultType {
-        case .inLibrary: return raw.filter { $0.inLibraryArrId != nil }
-        case .new:       return raw.filter { $0.inLibraryArrId == nil }
-        default:         return raw
-        }
-    }
-
-    private func searchSectionTitle(for source: QueueItem.Source) -> LocalizedStringKey {
-        switch source {
-        case .radarr:   return "Movies"
-        case .sonarr:   return "Series"
-        case .lidarr:   return "Artists"
-        case .whisparr: return "Scenes"
-        }
-    }
-
     private var queueFilterBar: some View {
         // Clean glass capsule — same `.glassyFloatingBar()` chrome as
         // the tab cluster above, so the bar reads as the same control
@@ -1183,6 +1113,14 @@ public struct PopoverContentView: View {
             .scaledFont(size: 14)
             .textFieldStyle(.plain)
             .focused($queueFilterFocused)
+            if isFiltering {
+                // Type pill rides inline in the search bar while a
+                // query is active — moved out of its old top-row
+                // perch so the user adjusts the kind axis right
+                // next to the input that triggered the search.
+                typeFilterPill
+                    .transition(.opacity.combined(with: .scale(scale: 0.9)))
+            }
             if !queueFilter.isEmpty {
                 Button { queueFilter = "" } label: {
                     Image(systemName: "xmark.circle.fill")
@@ -1192,6 +1130,7 @@ public struct PopoverContentView: View {
                 .buttonStyle(.plain)
             }
         }
+        .animation(.easeInOut(duration: 0.18), value: isFiltering)
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
         .contentShape(Capsule())
@@ -1238,9 +1177,11 @@ public struct PopoverContentView: View {
                 // pick `All` (nil) or a specific arr.
                 if let scope = queueScope, scope != source { return nil }
                 // Hide arr sections that don't have a matching row.
-                // Showing an empty "Sonarr (0)" header during filter
-                // adds noise — the user only wants to see hits.
-                if filtering, entries(for: source).isEmpty { return nil }
+                // Showing an empty "Sonarr (0)" header — whether
+                // during a filter or in the default view — adds
+                // noise; the user wants to see only sources that
+                // actually have something queued right now.
+                if entries(for: source).isEmpty { return nil }
                 return .arr(source)
             }
             return nil

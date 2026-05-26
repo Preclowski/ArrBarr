@@ -23,40 +23,73 @@ public func customFormatChipStrip(tags: [String], score: Int?) -> some View {
     }
 }
 
-/// "New" pill — complement to `InLibraryBadge`. Surfaces fresh search
-/// candidates (no `inLibraryArrId`) so the user sees at a glance
-/// whether a hit is something to drill into or something to add.
-/// Green tint (same vocabulary as score gains) reads as "actionable
-/// addition" rather than the accent-tinted "already exists" library
-/// chip.
-public struct NewBadge: View {
+/// "queued" pill — sits on rows that are actively downloading or
+/// queued for download. Outline (stroke + clear fill) so it reads
+/// as a quieter status tag than the filled chips elsewhere on the
+/// row. Orange tint matches in-flight semantics used in the rest
+/// of the app for paused / processing states.
+public struct InQueueBadge: View {
     public init() {}
 
     public var body: some View {
-        Text("New", bundle: .module)
+        Text("Queued", bundle: .module)
             .font(.system(size: 9, weight: .semibold))
-            .foregroundStyle(Color.green)
+            .textCase(.lowercase)
+            .foregroundStyle(Color.orange)
             .padding(.horizontal, 5)
             .padding(.vertical, 1)
-            .background(Color.green.opacity(0.18), in: Capsule())
+            .overlay(
+                RoundedRectangle(cornerRadius: 4)
+                    .stroke(Color.orange.opacity(0.55), lineWidth: 1)
+            )
     }
 }
 
-/// "In library" pill rendered next to titles whenever the item is
-/// already on the user's arr. Same shape language as the genre /
-/// rating chips (semibold accent-tinted capsule). Lifted out of
-/// SearchResultRow so search rows, upcoming rows, and any future
-/// detail surface share the exact same visual.
+/// Source identity chip — capsule with the arr's SF Symbol plus its
+/// display name ("Radarr" / "Sonarr" / "Lidarr" / "Whisparr"). Used
+/// as the title-slot badge inside the queue-search status-grouped
+/// layout, replacing `InLibraryBadge` / `NewBadge` whose meaning is
+/// now encoded by the section header. The arr's name is spelled out
+/// (not just the glyph) so the chip carries the same identity the
+/// per-arr section headers use elsewhere in the app.
+public struct SourceGlyphChip: View {
+    let source: QueueItem.Source
+    public init(source: QueueItem.Source) {
+        self.source = source
+    }
+    public var body: some View {
+        HStack(spacing: 3) {
+            Image(systemName: source.symbol)
+                .scaledFont(size: 9, weight: .semibold)
+            Text(verbatim: source.displayName)
+                .scaledFont(size: 9, weight: .semibold)
+        }
+        .foregroundStyle(.secondary)
+        .padding(.horizontal, 5)
+        .padding(.vertical, 1)
+        .background(Color.primary.opacity(0.08), in: RoundedRectangle(cornerRadius: 4))
+    }
+}
+
+/// "library" pill rendered next to titles whenever the item is
+/// already on the user's arr. Outline-only — quieter than the
+/// solid-fill genre / rating chips so the badge reads as a status
+/// tag, not a content tag. Accent-tinted to match the chevron
+/// drill-in affordance these rows already use.
 public struct InLibraryBadge: View {
     public init() {}
 
     public var body: some View {
-        Text("In library", bundle: .module)
+        Text("Library", bundle: .module)
             .scaledFont(size: 9, weight: .semibold)
+            .textCase(.lowercase)
             .foregroundStyle(Color.accentColor)
             .padding(.horizontal, 5)
             .padding(.vertical, 1)
-            .background(Color.accentColor.opacity(0.18), in: Capsule())
+            .overlay(
+                RoundedRectangle(cornerRadius: 4)
+                    .stroke(Color.accentColor.opacity(0.55), lineWidth: 1)
+            )
     }
 }
 

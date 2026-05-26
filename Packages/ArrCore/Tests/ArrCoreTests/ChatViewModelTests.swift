@@ -130,7 +130,7 @@ struct ChatViewModelTests {
             spins += 1
         }
         #expect(vm.pendingConfirm != nil)
-        await vm.confirmPending(with: .object(["title": .string("X")]))
+        await vm.confirmPending()
         await task.value
         let assistantMsg = vm.messages.last(where: { $0.role == .assistant })
         #expect(assistantMsg?.content == "Added.")
@@ -195,7 +195,7 @@ struct ChatViewModelTests {
         await vm.send("ignored")
         #expect(vm.messages.count == messagesBefore, "send() must not append while gated")
 
-        await vm.confirmPending(with: .object(["title": .string("X")]))
+        await vm.confirmPending()
         await firstSend.value
     }
 
