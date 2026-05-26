@@ -91,15 +91,6 @@ public struct PopoverContentView: View {
         }
     }
 
-    @ViewBuilder
-    private var chatTabContent: some View {
-        if !chatHolder.vm.providerIsAvailable {
-            ChatUnavailableView(reason: .providerUnavailable)
-        } else {
-            ChatView(viewModel: chatHolder.vm)
-        }
-    }
-
     enum Tab: String, CaseIterable {
         case queue = "Queue"
         case upcoming = "Upcoming"
@@ -215,7 +206,7 @@ public struct PopoverContentView: View {
                         case .queue: queueContent
                         case .upcoming: upcomingContent
                         case .chat:
-                            chatTabContent
+                            ChatTabContent(chatHolder: chatHolder)
                         }
                     }
                 } else {
