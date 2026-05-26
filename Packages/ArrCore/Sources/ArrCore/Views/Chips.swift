@@ -42,6 +42,26 @@ public struct NewBadge: View {
     }
 }
 
+/// Source identity chip — small capsule wrapping the arr's SF Symbol
+/// (`film` / `tv` / `music.note` / `flame`). Used as the title-slot
+/// badge inside the queue-search status-grouped layout, replacing
+/// `InLibraryBadge` / `NewBadge` whose meaning is now encoded by the
+/// section header instead.
+public struct SourceGlyphChip: View {
+    let source: QueueItem.Source
+    public init(source: QueueItem.Source) {
+        self.source = source
+    }
+    public var body: some View {
+        Image(systemName: source.symbol)
+            .scaledFont(size: 9, weight: .semibold)
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 5)
+            .padding(.vertical, 1)
+            .background(Color.primary.opacity(0.08), in: Capsule())
+    }
+}
+
 /// "In library" pill rendered next to titles whenever the item is
 /// already on the user's arr. Same shape language as the genre /
 /// rating chips (semibold accent-tinted capsule). Lifted out of
