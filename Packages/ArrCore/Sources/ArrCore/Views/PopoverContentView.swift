@@ -204,7 +204,7 @@ public struct PopoverContentView: View {
                     Group {
                         switch selectedTab {
                         case .queue: queueContent
-                        case .upcoming: upcomingContent
+                        case .upcoming: UpcomingTabContent(viewModel: viewModel)
                         case .chat:
                             ChatTabContent(chatHolder: chatHolder)
                         }
@@ -317,6 +317,7 @@ public struct PopoverContentView: View {
             }
             .buttonStyle(.plain)
             .padding(.top, 3)
+            .accessibilityLabel(Text(collapsed ? "Expand section" : "Collapse section", bundle: .module))
             Image(systemName: "moon.stars.fill")
                 .scaledFont(size: 13)
                 .foregroundStyle(.purple)
@@ -1119,6 +1120,7 @@ public struct PopoverContentView: View {
                         .foregroundStyle(.tertiary)
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(Text("Clear filter", bundle: .module))
             }
         }
         .animation(.easeInOut(duration: 0.18), value: isFiltering)
@@ -1268,79 +1270,6 @@ public struct PopoverContentView: View {
         return viewModel.health.records(for: source)
     }
 
-    // MARK: - Upcoming content
-
-    private var upcomingContent: some View {
-        ScrollView {
-            Group {
-                if viewModel.upcoming.isEmpty {
-                    VStack(spacing: 8) {
-                        Image(systemName: "calendar")
-                            .scaledFont(size: 24, weight: .light)
-                            .foregroundStyle(.tertiary)
-                        Text("Nothing upcoming", bundle: .module)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 32)
-                } else {
-                    LazyVStack(alignment: .leading, spacing: 0) {
-                        ForEach(groupedUpcoming, id: \.date) { group in
-                            Text(group.label)
-                                .scaledFont(size: 11, weight: .semibold)
-                                .foregroundStyle(.secondary)
-                                .padding(.horizontal, 12)
-                                .padding(.top, group.isFirst ? 8 : 14)
-                                .padding(.bottom, 4)
-
-                            ForEach(group.items) { item in
-                                UpcomingRowView(item: item)
-                            }
-                        }
-                    }
-                    .padding(.bottom, 8)
-                }
-            }
-        }
-        .scrollBounceBehavior(.basedOnSize)
-        .frame(maxHeight: .infinity)
-    }
-
-    private var groupedUpcoming: [UpcomingGroup] {
-        let calendar = Calendar.current
-        var groups: [UpcomingGroup] = []
-        var current: (date: DateComponents, items: [UpcomingItem])?
-
-        for item in viewModel.upcoming {
-            let dc = calendar.dateComponents([.year, .month, .day], from: item.airDate)
-            if let c = current, c.date == dc {
-                current?.items.append(item)
-            } else {
-                if let c = current, let first = c.items.first {
-                    let y = c.date.year ?? 0, m = c.date.month ?? 0, d = c.date.day ?? 0
-                    groups.append(UpcomingGroup(
-                        date: "\(y)-\(m)-\(d)",
-                        label: first.airDateFormatted(locale: configStore.currentLocale),
-                        items: c.items,
-                        isFirst: groups.isEmpty
-                    ))
-                }
-                current = (dc, [item])
-            }
-        }
-        if let c = current, let first = c.items.first {
-            let y = c.date.year ?? 0, m = c.date.month ?? 0, d = c.date.day ?? 0
-            groups.append(UpcomingGroup(
-                date: "\(y)-\(m)-\(d)",
-                label: first.airDateFormatted(locale: configStore.currentLocale),
-                items: c.items,
-                isFirst: groups.isEmpty
-            ))
-        }
-        return groups
-    }
-
     // MARK: - Empty state
 
     private var emptyState: some View {
@@ -1394,13 +1323,6 @@ public struct PopoverContentView: View {
         }
     }
 
-}
-
-private struct UpcomingGroup {
-    let date: String
-    let label: String
-    let items: [UpcomingItem]
-    let isFirst: Bool
 }
 
 // MARK: - Tab pill background
