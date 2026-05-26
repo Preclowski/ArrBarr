@@ -161,41 +161,56 @@ struct DownloadSection: View {
             // `showUpgradeDiff: true`) handles the upgrade context
             // with the same tree-branch pattern every other surface
             // uses. One diff format, one source of truth.
-            if showCustomFormats, !item.customFormats.isEmpty {
-                // New-spec strip — chips not in the existing file
-                // render green (added).
-                CustomFormatChips(
-                    formats: item.customFormats,
-                    score: 0,
-                    existingFormats: item.isUpgrade ? item.existingCustomFormats : nil
+            // File / quality block. Wraps the format chips, the
+            // release filename, and the existing-file twin (when
+            // upgrading) in a single quiet container so the
+            // chrome-less inner content reads as a grouped section
+            // without needing a caption header. The container is
+            // shown whenever at least one of its children would
+            // render — otherwise the wrapper would paint an empty
+            // tinted card.
+            let hasFormats = showCustomFormats && !item.customFormats.isEmpty
+            let hasRelease = !(item.releaseName ?? "").isEmpty
+            let hasExisting = item.isUpgrade
+                && (item.existingFileName != nil || item.existingQuality != nil
+                    || !item.existingCustomFormats.isEmpty)
+            if hasFormats || hasRelease || hasExisting {
+                VStack(alignment: .leading, spacing: 6) {
+                    if hasFormats {
+                        // New-spec chip strip — chips not in the
+                        // existing file render green (added).
+                        CustomFormatChips(
+                            formats: item.customFormats,
+                            score: 0,
+                            existingFormats: item.isUpgrade ? item.existingCustomFormats : nil
+                        )
+                    }
+                    if hasRelease, let release = item.releaseName {
+                        // Release filename — just the new file's path.
+                        // Sibling to the existing-file block below;
+                        // both use monospace, distinguished only by
+                        // foregroundStyle (primary vs secondary).
+                        Text(release)
+                            .scaledFont(size: 11, design: .monospaced)
+                            .foregroundStyle(.primary)
+                            .lineLimit(2)
+                            .truncationMode(.middle)
+                    }
+                    if hasExisting {
+                        // Existing-file twin. Same component used by
+                        // the in-library detail path; passing
+                        // `comparingTo:` colour-codes removed chips
+                        // red against the new release.
+                        ExistingFileBanner(item: item, comparingTo: item.customFormats)
+                    }
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 8)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(
+                    Color.primary.opacity(0.05),
+                    in: RoundedRectangle(cornerRadius: Tokens.Radius.card)
                 )
-            }
-
-            // Release filename — just the new file's path. The
-            // existing-file path used to ride on a `↳` sub-line under
-            // it, but now lives in the ExistingFileBanner below
-            // (uniform "EXISTING FILE" header + filename + chip strip
-            // styling across both the in-library view and the
-            // upgrade-in-progress view).
-            if let release = item.releaseName, !release.isEmpty {
-                Text(release)
-                    .scaledFont(size: 11, design: .monospaced)
-                    .foregroundStyle(.primary)
-                    .lineLimit(2)
-                    .truncationMode(.middle)
-            }
-
-            // Existing-file block. Same component used in the
-            // "already in library, no active download" path
-            // (RadarrDetailPanel uses it directly) — passing
-            // `comparingTo:` colour-codes removed chips red so the
-            // diff vs the new release becomes visible inside the
-            // same uniform chrome. When there's no existing metadata
-            // (fresh download, no replacement), nothing renders.
-            if item.isUpgrade,
-               item.existingFileName != nil || item.existingQuality != nil
-                   || !item.existingCustomFormats.isEmpty {
-                ExistingFileBanner(item: item, comparingTo: item.customFormats)
             }
         }
     }
