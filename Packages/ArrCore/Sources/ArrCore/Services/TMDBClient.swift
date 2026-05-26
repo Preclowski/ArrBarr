@@ -300,6 +300,24 @@ public struct TMDBClient: Sendable {
         return resp.results
     }
 
+    public func similarMovies(movieId: Int, page: Int = 1) async throws -> [TMDBMovieSummary] {
+        struct Envelope: Decodable { let results: [TMDBMovieSummary] }
+        let env: Envelope = try await get(
+            path: "/movie/\(movieId)/similar",
+            query: [URLQueryItem(name: "page", value: String(page))]
+        )
+        return env.results
+    }
+
+    public func similarTV(seriesId: Int, page: Int = 1) async throws -> [TMDBTVSummary] {
+        struct Envelope: Decodable { let results: [TMDBTVSummary] }
+        let env: Envelope = try await get(
+            path: "/tv/\(seriesId)/similar",
+            query: [URLQueryItem(name: "page", value: String(page))]
+        )
+        return env.results
+    }
+
     // MARK: - Image URLs
 
     /// `path` is the `poster_path` / `profile_path` we get from TMDB —

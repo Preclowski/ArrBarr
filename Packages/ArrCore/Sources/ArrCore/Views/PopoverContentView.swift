@@ -1630,14 +1630,26 @@ public struct PopoverContentView: View {
                                         kept: [DiscoverItem],
                                         skipped: [DiscoverItem]) -> String {
         let trimmedMood = mood.trimmingCharacters(in: .whitespacesAndNewlines)
-        let keptList = kept.prefix(10).map(Self.titleYearLabel).joined(separator: ", ")
+        let keptCapped = kept.prefix(10)
+        let keptList = keptCapped.map(Self.titleYearLabel).joined(separator: ", ")
         let skippedList = skipped.prefix(10).map(Self.titleYearLabel).joined(separator: ", ")
+        // Pull tmdbIds from the kept items so the agent can pass them as
+        // anchor_tmdb_ids — backend fans out TMDB Similar for each anchor.
+        // Only movies have tmdbIds in result.id; series use tvdbId which
+        // TMDB Similar can't consume, so we skip them.
+        let anchorIds: [Int] = keptCapped.compactMap { item -> Int? in
+            guard item.kind == .movie else { return nil }
+            let id = item.result.id
+            return id > 0 ? id : nil
+        }
+        let anchorListStr = anchorIds.prefix(5).map(String.init).joined(separator: ", ")
         var lines: [String] = []
         lines.append("Give me more picks like the ones I kept and unlike the ones I skipped, " +
                      "in the same vibe: \"\(trimmedMood)\".")
         if !keptList.isEmpty { lines.append("Kept: \(keptList).") }
+        if !anchorListStr.isEmpty { lines.append("Kept TMDB IDs (for anchor_tmdb_ids): \(anchorListStr).") }
         if !skippedList.isEmpty { lines.append("Skipped: \(skippedList).") }
-        lines.append("Don't repeat any of those. Use discover_in_quiz with append: true and 12–20 fresh picks.")
+        lines.append("Don't repeat any of those. Use discover_in_quiz with append: true, anchor_tmdb_ids: [the IDs above], and 12–20 fresh picks.")
         return lines.joined(separator: " ")
     }
 

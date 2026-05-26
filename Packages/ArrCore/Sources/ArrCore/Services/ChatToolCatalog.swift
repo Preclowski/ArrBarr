@@ -493,6 +493,8 @@ public enum ChatToolCatalog {
 
             Use `library_mode: "none"` when the user explicitly asks for new/unseen content. Use `"many"` when they want to dig through what they already own. Default `"few"` for general taste-based quizzes.
 
+            When the user asks for MORE picks following an active session, pass `anchor_tmdb_ids` containing the TMDB IDs of titles they kept — the backend will fetch TMDB's similar-to graph for those anchors and merge it with your curated picks for stronger relevance.
+
             This is a single-shot session — there is no automatic top-up. When the user wants more, they'll ask explicitly via the chat.
 
             DO NOT use this for browsing curiosity without a swipe intent — use `suggest_titles` for that.
@@ -533,6 +535,13 @@ public enum ChatToolCatalog {
                     "library_mode": .object([
                         "type": .string("string"),
                         "description": .string("How to treat the user's existing library. 'none' = strictly exclude owned items (use when the user wants something NEW or HAVEN'T SEEN). 'few' (default) = include owned items if your picks happen to be in library, route to Open detail. 'many' = lean toward library items (use when the user wants to rediscover what they own). Defaults to 'few' if omitted."),
+                    ]),
+                    "anchor_tmdb_ids": .object([
+                        "type": .string("array"),
+                        "description": .string("TMDB IDs of titles the user has kept (right-swiped) in the current session. When provided, the backend fetches TMDB's similar-to graph for each anchor and merges those results with your curated picks. Pass this from the 'More picks' prompt context where the user's kept titles + their TMDB IDs are listed. Cap at 5 anchor IDs."),
+                        "items": .object([
+                            "type": .string("integer"),
+                        ]),
                     ]),
                 ]),
                 "required": .array([.string("mood"), .string("kind"), .string("items")]),
