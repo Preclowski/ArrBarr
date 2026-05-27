@@ -32,7 +32,11 @@ public struct RemotePoster: View {
     let apiKey: String?
     var size: CGSize = CGSize(width: 40, height: 60)
     var cornerRadius: CGFloat = 4
-    var fallbackSymbol: String = "photo"
+    var fallbackSymbol: String? = "photo"
+    /// When true the poster expands to fill its parent's available
+    /// rectangle (`maxWidth/Height: .infinity`) instead of clamping to
+    /// `size`. Default `false` preserves all existing call-site behaviour.
+    var fill: Bool = false
 
     @State private var image: PlatformImage?
     @State private var failed = false
@@ -47,13 +51,15 @@ public struct RemotePoster: View {
             } else {
                 ZStack {
                     Rectangle().fill(.quaternary)
-                    Image(systemName: fallbackSymbol)
-                        .font(.system(size: min(size.width, size.height) * 0.4, weight: .light))
-                        .foregroundStyle(.tertiary)
+                    if let fallbackSymbol {
+                        Image(systemName: fallbackSymbol)
+                            .font(.system(size: min(size.width, size.height) * 0.4, weight: .light))
+                            .foregroundStyle(.tertiary)
+                    }
                 }
             }
         }
-        .frame(width: size.width, height: size.height)
+        .modifier(RemotePosterFrame(fill: fill, size: size))
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
         .overlay(
             RoundedRectangle(cornerRadius: cornerRadius)
@@ -76,6 +82,22 @@ public struct RemotePoster: View {
         await MainActor.run {
             image = result
             failed = (result == nil)
+        }
+    }
+}
+
+private struct RemotePosterFrame: ViewModifier {
+    let fill: Bool
+    let size: CGSize
+
+    func body(content: Content) -> some View {
+        if fill {
+            content
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .clipped()
+        } else {
+            content
+                .frame(width: size.width, height: size.height)
         }
     }
 }

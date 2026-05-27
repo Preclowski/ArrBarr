@@ -90,6 +90,17 @@ public extension Notification.Name {
     /// chat. Popover/MainWindow listen and open the full `SearchAddPanel`
     /// overlay so the user gets the same rich add UI as the `+` flow.
     static let arrBarrOpenSearchAdd = Notification.Name("ArrBarrOpenSearchAdd")
+
+    /// Posted by the `discover_in_quiz` chat tool. `userInfo["mood"]` is a
+    /// non-empty String. PopoverContentView listens and opens the Discover
+    /// overlay in quiz mode with the given mood pre-loaded.
+    static let arrBarrOpenDiscoverQuiz = Notification.Name("ArrBarr.OpenDiscoverQuiz")
+
+    /// Posted by PopoverContentView after opening the Discover overlay via
+    /// the `openPicks: true` path (tapping the picks icon on a resume card).
+    /// DiscoverTabView listens and flips `showMatched = true` so the user
+    /// lands directly in the matched-picks list instead of the swipe deck.
+    static let arrBarrShowDiscoverPicks = Notification.Name("ArrBarr.ShowDiscoverPicks")
 }
 
 public enum SearchAddRequest {
