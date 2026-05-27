@@ -13,4 +13,8 @@ public enum ChatRichContent: Sendable, Equatable {
     case libraryArtists([LidarrLibraryRecord])
     case libraryScenes([WhisparrLibraryRecord])
     case calendar([UpcomingItem])
+    /// Resume card for the Discover quiz overlay. Shown in chat after a
+    /// `discover_in_quiz` tool call so the user can re-enter the just-opened
+    /// quiz without re-prompting the LLM.
+    case discoverSession(mood: String, posterURLs: [URL])
 }

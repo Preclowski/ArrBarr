@@ -67,6 +67,7 @@ public actor LocalToolBackend: ToolBackend {
         case "tmdb_discover_movies":        return try await tmdbDiscoverMovies(arguments)
         case "tmdb_discover_series":        return try await tmdbDiscoverSeries(arguments)
         case "suggest_titles":              return try await suggestTitles(arguments)
+        case "discover_in_quiz":            return try await discoverInQuiz(arguments)
         case "arr_health":                  return try await arrHealth()
         case "sonarr_monitor_season":       return try await sonarrMonitorSeason(arguments)
         case "sonarr_search_episodes":      return try await sonarrSearchEpisodesTool(arguments)

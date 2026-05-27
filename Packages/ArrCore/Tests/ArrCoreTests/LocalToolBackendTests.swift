@@ -93,6 +93,7 @@ struct LocalToolBackendTests {
             "lidarr_search_album",
             // Cross-cutting (any-arr-configured gates these on)
             "suggest_titles",
+            "discover_in_quiz",
             "arr_health",
         ]
         #expect(names == expected)
@@ -108,10 +109,10 @@ struct LocalToolBackendTests {
         // sonarr-or-radarr-configured) and `arr_health` (gated on
         // any-arr-configured). These last two aren't prefixed by an
         // arr name because they're catalog-cutting.
-        let crossCutting: Set<String> = ["suggest_titles", "arr_health"]
+        let crossCutting: Set<String> = ["suggest_titles", "discover_in_quiz", "arr_health"]
         #expect(names.subtracting(crossCutting).allSatisfy { $0.hasPrefix("sonarr_") })
-        // 5 sonarr + suggest_titles + arr_health = 7
-        #expect(tools.count == 7)
+        // 5 sonarr + suggest_titles + discover_in_quiz + arr_health = 8
+        #expect(tools.count == 8)
     }
 
     @Test("listTools includes TMDB tools when key set and matching arr configured")

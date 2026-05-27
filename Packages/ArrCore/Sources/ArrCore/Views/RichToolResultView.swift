@@ -152,6 +152,11 @@ public struct RichToolResultView: View {
                             visibleCount = min(visibleCount + Self.pageSize, items.count)
                         }
                     }
+                case .discoverSession:
+                    // Quiz overlay is the actual presentation surface; chat
+                    // doesn't need a duplicate card. (Discover branch's
+                    // resume-card UI not ported yet.)
+                    EmptyView()
                 }
             }
             .padding(.vertical, 4)

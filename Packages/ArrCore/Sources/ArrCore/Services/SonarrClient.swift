@@ -395,6 +395,21 @@ public actor SonarrClient: ArrAPIClient {
         return (try? JSONDecoder().decode([ArrHealthRecord].self, from: data)) ?? []
     }
 
+    /// LLM-suggested titles surface as cards. Mirrors Sonarr's
+    /// `/api/v3/series/lookup?term=…`.
+    func lookupSeries(term: String) async throws -> [SonarrLookupRecord] {
+        if DemoMode.isActive { return [] }
+        guard config.isConfigured else { throw HTTPError.notConfigured }
+        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
+        let url = try http.url(
+            base: config.baseURL,
+            path: "\(apiBase)/series/lookup",
+            query: [URLQueryItem(name: "term", value: term)]
+        )
+        let data = try await http.get(url, headers: apiHeaders)
+        return (try? JSONDecoder().decode([SonarrLookupRecord].self, from: data)) ?? []
+    }
+
     func fetchAllSeries() async throws -> [SonarrLibraryRecord] {
         if DemoMode.isActive { return [] }
         guard config.isConfigured else { throw HTTPError.notConfigured }

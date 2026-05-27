@@ -52,6 +52,12 @@ public struct PopoverContentView: View {
     /// `SearchAddPanel` — back returns straight to chat instead of
     /// dropping the user on the Add tab they never asked to visit.
     @State private var searchAddFromChat = false
+    /// Discover/Quiz overlay state. The view-model survives across opens
+    /// (so accept/skip counters and the deck persist) and the overlay
+    /// flag is flipped by the `arrBarrOpenDiscoverQuiz` notification
+    /// posted by the `discover_in_quiz` chat tool.
+    @StateObject private var discoverViewModel = DiscoverViewModel()
+    @State private var showDiscoverOverlay = false
     /// Auto-collapse timer for the "Next week" banner — the banner
     /// snaps back to the 4-item peek 30s after the user expands it.
     @State private var bannerCollapseTask: Task<Void, Never>?
@@ -151,6 +157,27 @@ public struct PopoverContentView: View {
                 searchAddFromChat = true
                 searchResult = result
             }
+            .onReceive(NotificationCenter.default.publisher(for: .arrBarrOpenDiscoverQuiz)) { note in
+                // Posted by the `discover_in_quiz` chat tool. userInfo carries
+                // mood label + pre-resolved items + optional `append` flag
+                // (extends an existing deck instead of replacing it).
+                guard let mood = note.userInfo?["mood"] as? String,
+                      let items = note.userInfo?["items"] as? [DiscoverItem] else { return }
+                let append = (note.userInfo?["append"] as? Bool) ?? false
+                let hasActiveSession = !discoverViewModel.sessionMatched.isEmpty
+                    || !discoverViewModel.sessionSkipped.isEmpty
+                    || discoverViewModel.current != nil
+                    || !discoverViewModel.queue.isEmpty
+                if append && hasActiveSession {
+                    discoverViewModel.extend(items: items)
+                } else {
+                    discoverViewModel.seed(items: items, mood: mood)
+                }
+                searchResult = nil
+                detailItem = nil
+                historySource = nil
+                showDiscoverOverlay = true
+            }
     }
 
     private var mainContent: some View {
@@ -217,8 +244,36 @@ public struct PopoverContentView: View {
             // other transient view-state survive a round-trip. Opacity-hide
             // keeps it visually out of the way; allowsHitTesting(false)
             // prevents stray clicks from leaking through to it.
-            .opacity((searchResult != nil || detailItem != nil) ? 0 : 1)
-            .allowsHitTesting(!(searchResult != nil || detailItem != nil))
+            .opacity((searchResult != nil || detailItem != nil || showDiscoverOverlay) ? 0 : 1)
+            .allowsHitTesting(!(searchResult != nil || detailItem != nil || showDiscoverOverlay))
+
+            if showDiscoverOverlay {
+                DiscoverTabView(
+                    viewModel: discoverViewModel,
+                    llmAvailable: chatAvailable,
+                    radarrAvailable: radarrConfigured,
+                    onAddToRadarr: { result in
+                        // Reuse the existing search-add flow: post the
+                        // tap-to-add notification and let SearchAddPanel
+                        // overlay handle profile / folder defaults.
+                        SearchAddRequest.post(result)
+                    },
+                    onAddToSonarr: { result in
+                        SearchAddRequest.post(result)
+                    },
+                    onOpenDetail: { _, source, arrId in
+                        DetailRequest.post(DetailRequest.syntheticItem(
+                            source: source,
+                            entityId: arrId,
+                            title: ""
+                        ))
+                    },
+                    onClose: {
+                        withAnimation(.smooth(duration: 0.22)) { showDiscoverOverlay = false }
+                    }
+                )
+                .transition(.opacity)
+            }
 
             if searchResult != nil {
                 searchAddOverlay

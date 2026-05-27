@@ -468,6 +468,75 @@ public enum ChatToolCatalog {
                 "required": .array([.string("kind"), .string("items")]),
             ])
         ),
+        MCPTool(
+            name: "discover_in_quiz",
+            description: """
+            Open the Discover quiz UI seeded with a curated list of titles you (the model) recommend. The user can then swipe to add or skip each one.
+
+            USE THIS when the user wants an interactive picking session — "show me some 90s sci-fi to swipe through", "give me a quiz of cozy weekend films", "pick something for me to choose from". The seeded cards appear instantly (no extra LLM round-trip).
+
+            Pass `mood` as a short user-facing label describing the set ("cozy 90s comedy", "feel-good documentaries"). This shows as the breadcrumb chip in the overlay and the resume card in chat.
+
+            Pass `items` as 10–25 picks — err toward the higher end so the user has a satisfying deck to swipe through. Include `year` whenever you can — disambiguates remakes. All picks share one `kind`.
+
+            Pass `append: true` when the user asks for MORE picks continuing the current vibe — that extends the active deck instead of starting over.
+
+            Use `library_mode: "none"` when the user explicitly asks for new/unseen content. Use `"many"` when they want to dig through what they already own. Default `"few"` for general taste-based quizzes.
+
+            When the user asks for MORE picks following an active session, pass `anchor_tmdb_ids` containing the TMDB IDs of titles they kept — the backend will fetch TMDB's similar-to graph for those anchors and merge it with your curated picks for stronger relevance.
+
+            This is a single-shot session — there is no automatic top-up. When the user wants more, they'll ask explicitly via the chat.
+
+            DO NOT use this for browsing curiosity without a swipe intent — use `suggest_titles` for that.
+            """,
+            inputSchema: .object([
+                "type": .string("object"),
+                "properties": .object([
+                    "mood": .object([
+                        "type": .string("string"),
+                        "description": .string("Short user-facing label for the set; shown as the breadcrumb chip and resume card title."),
+                    ]),
+                    "kind": .object([
+                        "type": .string("string"),
+                        "description": .string("'series' to resolve picks through Sonarr, 'movie' through Radarr. All items in one call must share a kind."),
+                    ]),
+                    "items": .object([
+                        "type": .string("array"),
+                        "description": .string("Ordered list of picks; order is preserved in the quiz deck."),
+                        "items": .object([
+                            "type": .string("object"),
+                            "properties": .object([
+                                "title": .object([
+                                    "type": .string("string"),
+                                    "description": .string("The work's title."),
+                                ]),
+                                "year": .object([
+                                    "type": .string("integer"),
+                                    "description": .string("Optional release year — disambiguates remakes."),
+                                ]),
+                            ]),
+                            "required": .array([.string("title")]),
+                        ]),
+                    ]),
+                    "append": .object([
+                        "type": .string("boolean"),
+                        "description": .string("When true, append these picks to the user's active quiz session instead of starting a fresh one. Use this when the user explicitly asked for MORE picks in the same vibe (continuing the existing session). Defaults to false (fresh session)."),
+                    ]),
+                    "library_mode": .object([
+                        "type": .string("string"),
+                        "description": .string("How to treat the user's existing library. 'none' = strictly exclude owned items (use when the user wants something NEW or HAVEN'T SEEN). 'few' (default) = include owned items if your picks happen to be in library, route to Open detail. 'many' = lean toward library items (use when the user wants to rediscover what they own). Defaults to 'few' if omitted."),
+                    ]),
+                    "anchor_tmdb_ids": .object([
+                        "type": .string("array"),
+                        "description": .string("TMDB IDs of titles the user has kept (right-swiped) in the current session. When provided, the backend fetches TMDB's similar-to graph for each anchor and merges those results with your curated picks. Pass this from the 'More picks' prompt context where the user's kept titles + their TMDB IDs are listed. Cap at 5 anchor IDs."),
+                        "items": .object([
+                            "type": .string("integer"),
+                        ]),
+                    ]),
+                ]),
+                "required": .array([.string("mood"), .string("kind"), .string("items")]),
+            ])
+        ),
     ]
 
     // MARK: - Cross-arr status / diagnostics

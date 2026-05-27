@@ -234,6 +234,21 @@ public actor RadarrClient: ArrAPIClient {
         _ = try await http.post(url, headers: apiHeaders.merging(["Content-Type": "application/json"]) { $1 }, body: data)
     }
 
+    /// LLM-suggested titles surface as cards. Mirrors Radarr's
+    /// `/api/v3/movie/lookup?term=…`.
+    func lookupMovies(term: String) async throws -> [RadarrLookupRecord] {
+        if DemoMode.isActive { return [] }
+        guard config.isConfigured else { throw HTTPError.notConfigured }
+        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
+        let url = try http.url(
+            base: config.baseURL,
+            path: "\(apiBase)/movie/lookup",
+            query: [URLQueryItem(name: "term", value: term)]
+        )
+        let data = try await http.get(url, headers: apiHeaders)
+        return (try? JSONDecoder().decode([RadarrLookupRecord].self, from: data)) ?? []
+    }
+
     func fetchAllMovies() async throws -> [RadarrLibraryRecord] {
         if DemoMode.isActive { return [] }
         guard config.isConfigured else { throw HTTPError.notConfigured }
