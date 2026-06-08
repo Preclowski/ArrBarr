@@ -184,6 +184,7 @@ public final class ConfigStore: ObservableObject {
     public static let backgroundIntervalOptions: [TimeInterval] = [0, 10, 30, 60, 120, 300]
 
     private var defaults: UserDefaults
+    private let secrets: SecretStore
     private var cancellables: Set<AnyCancellable> = []
 
     /// Backing store for `ConfigStore.shared`: the demo suite while demo is
@@ -247,30 +248,26 @@ public final class ConfigStore: ObservableObject {
     private static let welcomeSeenVersionKey = "ArrBarr.welcomeSeenVersion"
     private static let aiEnabledKey = "ArrBarr.aiEnabled"
     private static let chatProviderKey = "ArrBarr.chatProvider"
-    private static let openaiConfigKey = "ArrBarr.openai"
-    private static let tmdbApiKeyKey = "ArrBarr.tmdbApiKey"
+    nonisolated static let openaiConfigKey = "ArrBarr.openai"
+    nonisolated static let tmdbApiKeyKey = "ArrBarr.tmdbApiKey"
     private static let mcpEnabledKey = "ArrBarr.mcpEnabled"
     private static let mcpHostPortKey = "ArrBarr.mcpHostPort"
     private static let mcpRequireAuthKey = "ArrBarr.mcpRequireAuth"
     private static let mcpDisabledToolsKey = "ArrBarr.mcpDisabledTools"
-    private static let keychainMigrationDoneKey = "ArrBarr.keychainMigrationDone"
     // nonisolated: read from the nonisolated migration helpers below (and the
     // widget extension under Swift 6 strict concurrency), so it must not inherit
     // the class's @MainActor isolation.
     nonisolated private static let groupMigrationDoneKey = "ArrBarr.groupMigrationDone"
+    nonisolated private static let secretsMigratedKey = "ArrBarr.secretsMigratedToKeychain"
     /// Exposed for testing only — lets tests assert on the done-flag key name
     /// without making it fully public.
     nonisolated static var groupMigrationDoneKeyForTesting: String { groupMigrationDoneKey }
 
-    public init(defaults: UserDefaults = ConfigStore.resolveDefaults()) {
+    public init(defaults: UserDefaults = ConfigStore.resolveDefaults(),
+                secrets: SecretStore = KeychainSecretStore()) {
         self.defaults = defaults
-        // One-time migration: pull leftover Keychain secrets back into
-        // UserDefaults. See migrateLegacyKeychainSecrets for why. Runs against
-        // whichever store we boot with (demo suite has nothing to migrate).
-        if !defaults.bool(forKey: Self.keychainMigrationDoneKey) {
-            Self.migrateLegacyKeychainSecrets(defaults: defaults)
-            defaults.set(true, forKey: Self.keychainMigrationDoneKey)
-        }
+        self.secrets = secrets
+        Self.migrateSecretsToKeychain(defaults: defaults, secrets: secrets)
         applyValues(from: defaults)
         setupSinks()
     }
@@ -281,16 +278,16 @@ public final class ConfigStore: ObservableObject {
     /// (Exception: on iOS it normalizes the `AppleLanguages` key, a harmless
     /// write to the target store.)
     private func applyValues(from defaults: UserDefaults) {
-        self.radarr = Self.load(.radarr, from: defaults)
-        self.sonarr = Self.load(.sonarr, from: defaults)
-        self.lidarr = Self.load(.lidarr, from: defaults)
-        self.whisparr = Self.load(.whisparr, from: defaults)
-        self.sabnzbd = Self.load(.sabnzbd, from: defaults)
-        self.qbittorrent = Self.load(.qbittorrent, from: defaults)
-        self.nzbget = Self.load(.nzbget, from: defaults)
-        self.transmission = Self.load(.transmission, from: defaults)
-        self.rtorrent = Self.load(.rtorrent, from: defaults)
-        self.deluge = Self.load(.deluge, from: defaults)
+        self.radarr = loadService(.radarr)
+        self.sonarr = loadService(.sonarr)
+        self.lidarr = loadService(.lidarr)
+        self.whisparr = loadService(.whisparr)
+        self.sabnzbd = loadService(.sabnzbd)
+        self.qbittorrent = loadService(.qbittorrent)
+        self.nzbget = loadService(.nzbget)
+        self.transmission = loadService(.transmission)
+        self.rtorrent = loadService(.rtorrent)
+        self.deluge = loadService(.deluge)
         let fgKey = Self.foregroundIntervalKey
         self.foregroundInterval = defaults.object(forKey: fgKey) != nil ? defaults.double(forKey: fgKey) : 5
         let bgKey = Self.backgroundIntervalKey
@@ -353,7 +350,8 @@ public final class ConfigStore: ObservableObject {
         } else {
             self.openai = .empty
         }
-        self.tmdbApiKey = defaults.string(forKey: Self.tmdbApiKeyKey) ?? ""
+        self.openai.apiKey = secrets.read(.openAIKey) ?? self.openai.apiKey
+        self.tmdbApiKey = secrets.read(.tmdbKey) ?? (defaults.string(forKey: Self.tmdbApiKeyKey) ?? "")
         self.mcpEnabled = defaults.bool(forKey: Self.mcpEnabledKey)
         self.mcpHostPort = defaults.string(forKey: Self.mcpHostPortKey) ?? "127.0.0.1:8080"
         self.mcpRequireAuth = defaults.bool(forKey: Self.mcpRequireAuthKey)
@@ -449,12 +447,17 @@ public final class ConfigStore: ObservableObject {
             self?.defaults.set(val.rawValue, forKey: Self.chatProviderKey)
         }.store(in: &cancellables)
         $openai.dropFirst().sink { [weak self] cfg in
-            if let data = try? JSONEncoder().encode(cfg) {
-                self?.defaults.set(data, forKey: Self.openaiConfigKey)
+            guard let self else { return }
+            self.setOrDelete(cfg.apiKey, for: .openAIKey)
+            var stripped = cfg
+            stripped.apiKey = ""
+            if let data = try? JSONEncoder().encode(stripped) {
+                self.defaults.set(data, forKey: Self.openaiConfigKey)
             }
         }.store(in: &cancellables)
         $tmdbApiKey.dropFirst().sink { [weak self] val in
-            self?.defaults.set(val, forKey: Self.tmdbApiKeyKey)
+            self?.setOrDelete(val, for: .tmdbKey)
+            self?.defaults.removeObject(forKey: Self.tmdbApiKeyKey)
         }.store(in: &cancellables)
         $mcpEnabled.dropFirst().sink { [weak self] val in
             self?.defaults.set(val, forKey: Self.mcpEnabledKey)
@@ -498,6 +501,15 @@ public final class ConfigStore: ObservableObject {
         cancellables.removeAll()
         defaults = target
         applyValues(from: target)
+        setupSinks()
+    }
+
+    /// Reload all published values from the current backing store without
+    /// re-firing persistence writes. Used by `KVSyncCoordinator` after it applies
+    /// inbound iCloud changes into UserDefaults.
+    public func reloadFromDefaults() {
+        cancellables.removeAll()
+        applyValues(from: defaults)
         setupSinks()
     }
 
@@ -623,7 +635,7 @@ public final class ConfigStore: ObservableObject {
 
     // MARK: - Persistence
 
-    private nonisolated static func key(_ kind: ServiceKind) -> String { "ArrBarr.config.\(kind.rawValue)" }
+    nonisolated static func key(_ kind: ServiceKind) -> String { "ArrBarr.config.\(kind.rawValue)" }
 
     private nonisolated static func load(_ kind: ServiceKind, from defaults: UserDefaults) -> ServiceConfig {
         guard let data = defaults.data(forKey: key(kind)),
@@ -640,36 +652,69 @@ public final class ConfigStore: ObservableObject {
         load(kind, from: defaults)
     }
 
+    private func setOrDelete(_ value: String, for key: SecretKey) {
+        if value.isEmpty { secrets.delete(key) } else { secrets.set(value, for: key) }
+    }
+
     private func save(_ kind: ServiceKind, _ config: ServiceConfig) {
-        if let data = try? JSONEncoder().encode(config) {
+        setOrDelete(config.apiKey, for: .apiKey(for: kind))
+        setOrDelete(config.password, for: .password(for: kind))
+        var stripped = config
+        stripped.apiKey = ""
+        stripped.password = ""
+        if let data = try? JSONEncoder().encode(stripped) {
             defaults.set(data, forKey: Self.key(kind))
         }
     }
 
-    // MARK: - One-time migration from Keychain (0.6.0/0.6.1) back to UserDefaults
+    /// Load a service config from `defaults` and merge its secrets back in from
+    /// the secret store.
+    private func loadService(_ kind: ServiceKind) -> ServiceConfig {
+        var cfg = Self.load(kind, from: defaults)   // non-secret fields (secrets blank)
+        cfg.apiKey = secrets.read(.apiKey(for: kind)) ?? cfg.apiKey
+        cfg.password = secrets.read(.password(for: kind)) ?? cfg.password
+        return cfg
+    }
 
-    private static func migrateLegacyKeychainSecrets(defaults: UserDefaults) {
+    // MARK: - One-shot migration of plaintext secrets into the SecretStore
+
+    /// One-shot: pull secrets out of legacy plaintext config/openai/tmdb values
+    /// in `defaults` into `secrets`, then blank them in `defaults`. Idempotent.
+    nonisolated static func migrateSecretsToKeychain(defaults: UserDefaults, secrets: SecretStore) {
+        guard !defaults.bool(forKey: secretsMigratedKey) else { return }
+
         for kind in ServiceKind.allCases {
             guard let data = defaults.data(forKey: key(kind)),
                   var cfg = try? JSONDecoder().decode(ServiceConfig.self, from: data)
             else { continue }
-
             var changed = false
-            if cfg.apiKey.isEmpty,
-               let migrated = LegacyKeychain.read(account: "\(kind.rawValue).apiKey") {
-                cfg.apiKey = migrated
-                changed = true
+            if !cfg.apiKey.isEmpty {
+                secrets.set(cfg.apiKey, for: .apiKey(for: kind)); cfg.apiKey = ""; changed = true
             }
-            if cfg.password.isEmpty,
-               let migrated = LegacyKeychain.read(account: "\(kind.rawValue).password") {
-                cfg.password = migrated
-                changed = true
+            if !cfg.password.isEmpty {
+                secrets.set(cfg.password, for: .password(for: kind)); cfg.password = ""; changed = true
             }
             if changed, let updated = try? JSONEncoder().encode(cfg) {
                 defaults.set(updated, forKey: key(kind))
-                LegacyKeychain.delete(account: "\(kind.rawValue).apiKey")
-                LegacyKeychain.delete(account: "\(kind.rawValue).password")
             }
         }
+
+        if let data = defaults.data(forKey: openaiConfigKey),
+           var cfg = try? JSONDecoder().decode(OpenAIConfig.self, from: data),
+           !cfg.apiKey.isEmpty {
+            secrets.set(cfg.apiKey, for: .openAIKey)
+            cfg.apiKey = ""
+            if let updated = try? JSONEncoder().encode(cfg) {
+                defaults.set(updated, forKey: openaiConfigKey)
+            }
+        }
+
+        if let tmdb = defaults.string(forKey: tmdbApiKeyKey), !tmdb.isEmpty {
+            secrets.set(tmdb, for: .tmdbKey)
+            defaults.removeObject(forKey: tmdbApiKeyKey)
+        }
+
+        defaults.set(true, forKey: secretsMigratedKey)
     }
+
 }

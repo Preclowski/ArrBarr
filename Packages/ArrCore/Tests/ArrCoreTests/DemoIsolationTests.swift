@@ -34,7 +34,7 @@ struct DemoIsolationTests {
         let (suite, name) = makeSuite()
         defer { UserDefaults.standard.removePersistentDomain(forName: name) }
 
-        let store = ConfigStore(defaults: suite)
+        let store = ConfigStore(defaults: suite, secrets: InMemorySecretStore())
         store.seedDemoConfigsIfNeeded()
 
         #expect(store.radarr.enabled == true)
@@ -49,7 +49,7 @@ struct DemoIsolationTests {
         let (suite, name) = makeSuite()
         defer { UserDefaults.standard.removePersistentDomain(forName: name) }
 
-        let store = ConfigStore(defaults: suite)
+        let store = ConfigStore(defaults: suite, secrets: InMemorySecretStore())
         store.seedDemoConfigsIfNeeded()          // first seed: all three on
         store.radarr.enabled = false             // user turns radarr off
         store.seedDemoConfigsIfNeeded()          // should be a no-op now
@@ -66,13 +66,14 @@ struct DemoIsolationTests {
             UserDefaults.standard.removePersistentDomain(forName: demoName)
         }
 
-        let store = ConfigStore(defaults: real)
+        let secrets = InMemorySecretStore()
+        let store = ConfigStore(defaults: real, secrets: secrets)
         store.useStore(demo)                      // switch to "demo" backing store
         store.whisparr = ServiceConfig(enabled: true, baseURL: "", apiKey: "", username: "", password: "")
 
         // The write landed in demo, NOT in real.
-        let realReload = ConfigStore(defaults: real)
-        let demoReload = ConfigStore(defaults: demo)
+        let realReload = ConfigStore(defaults: real, secrets: InMemorySecretStore())
+        let demoReload = ConfigStore(defaults: demo, secrets: secrets)
         #expect(realReload.whisparr.enabled == false)
         #expect(demoReload.whisparr.enabled == true)
     }
@@ -85,7 +86,8 @@ struct DemoIsolationTests {
             UserDefaults.standard.removePersistentDomain(forName: an)
             UserDefaults.standard.removePersistentDomain(forName: bn)
         }
-        let store = ConfigStore(defaults: a)
+        let secrets = InMemorySecretStore()
+        let store = ConfigStore(defaults: a, secrets: secrets)
         store.radarr = ServiceConfig(enabled: true, baseURL: "", apiKey: "", username: "", password: "")
         store.useStore(b)
         store.sonarr = ServiceConfig(enabled: true, baseURL: "", apiKey: "", username: "", password: "")
@@ -93,7 +95,7 @@ struct DemoIsolationTests {
         // Back on `a`: radarr is the value we wrote to a; sonarr (written to b) is NOT here.
         #expect(store.radarr.enabled == true)
         #expect(store.sonarr.enabled == false)
-        let bReload = ConfigStore(defaults: b)
+        let bReload = ConfigStore(defaults: b, secrets: secrets)
         #expect(bReload.sonarr.enabled == true)
         #expect(bReload.radarr.enabled == false)
     }

@@ -2,45 +2,27 @@ import Foundation
 import Security
 
 /// Keychain-backed storage for the MCP server's bearer token. Device-only,
-/// unlocked-required — the one network-gating secret, kept out of UserDefaults
-/// (which the rest of the config currently uses).
+/// never synced. Thin wrapper over `SecretStore` so there is one Keychain code
+/// path; kept as a named type because several call sites read it as a static.
 public enum MCPTokenStore {
-    private static let service = "com.preclowski.ArrBarr.mcp"
-    private static let account = "bearer"
+    private static let store = KeychainSecretStore()
 
     public static func read() -> String? {
-        let q: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: account,
-            kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne,
-        ]
-        var item: CFTypeRef?
-        guard SecItemCopyMatching(q as CFDictionary, &item) == errSecSuccess,
-              let data = item as? Data else { return nil }
-        return String(data: data, encoding: .utf8)
+        if let token = store.read(.mcpBearer) { return token }
+        // Self-healing migration: tokens written by builds <= the SecretStore
+        // refactor lived at a different keychain location. Move it once.
+        if let legacy = readLegacy() {
+            store.set(legacy, for: .mcpBearer)
+            deleteLegacy()
+            return legacy
+        }
+        return nil
     }
 
-    public static func set(_ token: String) {
-        delete()
-        let q: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: account,
-            kSecValueData as String: Data(token.utf8),
-            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
-        ]
-        SecItemAdd(q as CFDictionary, nil)
-    }
-
+    public static func set(_ token: String) { store.set(token, for: .mcpBearer) }
     public static func delete() {
-        let q: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: account,
-        ]
-        SecItemDelete(q as CFDictionary)
+        store.delete(.mcpBearer)
+        deleteLegacy()
     }
 
     /// Generate a URL-safe random token (base64url, no padding).
@@ -51,5 +33,33 @@ public enum MCPTokenStore {
             .replacingOccurrences(of: "+", with: "-")
             .replacingOccurrences(of: "/", with: "_")
             .replacingOccurrences(of: "=", with: "")
+    }
+
+    // MARK: - Legacy location (service "com.preclowski.ArrBarr.mcp", account "bearer")
+
+    private static let legacyService = "com.preclowski.ArrBarr.mcp"
+    private static let legacyAccount = "bearer"
+
+    private static func readLegacy() -> String? {
+        let q: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: legacyService,
+            kSecAttrAccount as String: legacyAccount,
+            kSecReturnData as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne,
+        ]
+        var item: CFTypeRef?
+        guard SecItemCopyMatching(q as CFDictionary, &item) == errSecSuccess,
+              let data = item as? Data else { return nil }
+        return String(data: data, encoding: .utf8)
+    }
+
+    private static func deleteLegacy() {
+        let q: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: legacyService,
+            kSecAttrAccount as String: legacyAccount,
+        ]
+        SecItemDelete(q as CFDictionary)
     }
 }
