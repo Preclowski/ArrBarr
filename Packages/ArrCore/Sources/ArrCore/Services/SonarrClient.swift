@@ -505,17 +505,12 @@ public actor SonarrClient: ArrAPIClient {
                 seasonNumber = season
                 episodeNumber = number
                 episodeTitle = ep.title?.isEmpty == false ? ep.title : nil
-                // Unified Sonarr subtitle shape: "Season 02 · Episode 3 — Title".
-                // Single-episode rows now lead with the same "Season XX"
-                // anchor as the season-pack rows so the eye lands on the
-                // same column whichever row type it's reading.
-                let seasonText = String(format: String(localized: "Season %02lld", bundle: .module), season)
-                let episodeText = String(format: String(localized: "Episode %lld", bundle: .module), number)
-                if let t = episodeTitle {
-                    subtitle = "\(seasonText) · \(episodeText) — \(t)"
-                } else {
-                    subtitle = "\(seasonText) · \(episodeText)"
-                }
+                // Unified Sonarr subtitle shape: "S02E03 · Title" — matches
+                // unifyHistory and unifyCalendar so every Sonarr surface reads
+                // the same way (queue rows already group under a season header,
+                // so the verbose "Season XX" lead was redundant here).
+                let code = String(format: "S%02dE%02d", season, number)
+                subtitle = episodeTitle.map { "\(code) · \($0)" } ?? code
             } else {
                 seasonNumber = nil
                 episodeNumber = nil
