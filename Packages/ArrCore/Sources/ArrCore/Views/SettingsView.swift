@@ -166,6 +166,11 @@ public struct SettingsView: View {
                     } label: {
                         Text("Model", bundle: .module)
                     }
+                    if !configStore.openai.apiKey.isEmpty && !configStore.openai.baseURL.isEmpty {
+                        ApiKeyTestButton {
+                            try await OpenAIProvider(config: configStore.openai).testConnection()
+                        }
+                    }
                     if !configStore.openai.isConfigured {
                         Label {
                             Text("Add base URL, API key and model — AI stays off until then.", bundle: .module)
@@ -200,13 +205,18 @@ public struct SettingsView: View {
             }
             Section {
                 SecureField(text: $configStore.tmdbApiKey,
-                            prompt: Text(verbatim: "v3 read key")) {
-                    Text("TMDB API key", bundle: .module)
+                            prompt: Text(verbatim: "v4 Read Access Token")) {
+                    Text("TMDB Read Access Token", bundle: .module)
                 }
                 .apiKeyField()
+                if !configStore.tmdbApiKey.isEmpty {
+                    ApiKeyTestButton {
+                        try await TMDBClient(apiKey: configStore.tmdbApiKey).testConnection()
+                    }
+                }
                 if let url = URL(string: "https://www.themoviedb.org/settings/api") {
                     Link(destination: url) {
-                        Label { Text("Get a free TMDB key", bundle: .module) } icon: { Image(systemName: "link") }
+                        Label { Text("Get a free TMDB token", bundle: .module) } icon: { Image(systemName: "link") }
                             .font(.caption)
                     }
                 }

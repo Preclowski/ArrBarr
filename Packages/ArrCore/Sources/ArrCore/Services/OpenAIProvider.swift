@@ -15,6 +15,22 @@ public struct OpenAIProvider: LLMProvider {
 
     public var isAvailable: Bool { config.isConfigured }
 
+    /// Lightweight key/endpoint check: `GET {baseURL}/models` with the Bearer
+    /// key. 200 means the key + base URL are valid; throws otherwise. Used by the
+    /// Settings "Test key" button.
+    public func testConnection() async throws {
+        let base = config.baseURL.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        guard let url = URL(string: base + "/models") else { throw OpenAIError.empty }
+        var req = URLRequest(url: url)
+        req.setValue("Bearer \(config.apiKey)", forHTTPHeaderField: "Authorization")
+        req.timeoutInterval = 30
+        let (data, response) = try await session.data(for: req)
+        guard let http = response as? HTTPURLResponse else { throw OpenAIError.empty }
+        guard (200..<300).contains(http.statusCode) else {
+            throw OpenAIError.http(status: http.statusCode, body: String(data: data, encoding: .utf8) ?? "")
+        }
+    }
+
     public func respond(prompt: String, tools: [LLMTool], history: [ChatMessage]) async throws -> LLMResponse {
         let body = Self.buildRequestBody(
             model: config.model,

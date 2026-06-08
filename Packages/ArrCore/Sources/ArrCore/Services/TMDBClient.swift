@@ -326,17 +326,33 @@ public struct TMDBClient: Sendable {
     private struct TMDBConfigResponse: Decodable { let images: TMDBImages? }
     private struct TMDBImages: Decodable { let secure_base_url: String? }
 
+    /// The v4 "API Read Access Token" is a JWT (`header.payload.signature`,
+    /// usually `eyJ…`) sent as a Bearer header; the legacy v3 "API Key" is a
+    /// 32-char hex string passed as an `api_key` query param. We accept either —
+    /// detect which the user pasted so both keep working without a mode toggle.
+    public static func isReadAccessToken(_ s: String) -> Bool {
+        s.hasPrefix("eyJ") || s.split(separator: ".").count == 3
+    }
+
     private func get<T: Decodable>(path: String, query: [URLQueryItem]) async throws -> T {
         guard isConfigured else { throw HTTPError.missingApiKey }
         var components = URLComponents(string: "https://api.themoviedb.org/3\(path)")!
+        let useBearer = Self.isReadAccessToken(apiKey)
         var allQuery = query
-        allQuery.append(URLQueryItem(name: "api_key", value: apiKey))
-        components.queryItems = allQuery
+        if !useBearer {
+            allQuery.append(URLQueryItem(name: "api_key", value: apiKey))
+        }
+        components.queryItems = allQuery.isEmpty ? nil : allQuery
         guard let url = components.url else { throw HTTPError.badURL }
+
+        var request = URLRequest(url: url)
+        if useBearer {
+            request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        }
 
         let (data, resp): (Data, URLResponse)
         do {
-            (data, resp) = try await session.data(from: url)
+            (data, resp) = try await session.data(for: request)
         } catch {
             throw HTTPError.transport(error)
         }

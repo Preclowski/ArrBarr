@@ -252,7 +252,11 @@ private struct MessageBubble: View {
                 // inside an otherwise plain prose flow.
                 SpoilerProse(text: text, revealed: spoilersRevealed)
             } else {
-                Text(Self.attributed(text))
+                // Block-aware markdown (bold/italic/code + lists/headings) with
+                // explicit per-run fonts, so emphasis renders regardless of the
+                // enclosing font modifier. `Text(attributed:)` alone dropped block
+                // markdown and rendered bold unreliably under `.scaledFont`.
+                MarkdownMessage(text: text, baseSize: 13)
             }
         }
         .scaledFont(size: 13)
