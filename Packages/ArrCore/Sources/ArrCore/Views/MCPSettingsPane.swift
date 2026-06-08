@@ -1,12 +1,14 @@
 import SwiftUI
+#if canImport(AppKit)
+import AppKit
+#endif
 
-/// Settings → MCP pane (mock).
+/// Settings → MCP pane.
 ///
-/// Presents the intended Model-Context-Protocol server config — enable, bind
-/// `host:port`, basic auth, and a per-tool opt-out list grouped by service.
-/// Every control is wired to `ConfigStore` so the choices persist across
-/// relaunches, but nothing spins up an actual server yet; this is the UI half
-/// of the feature. Wiring a real transport later reads the same fields.
+/// Presents the MCP server config — enable, bind `host:port`, bearer-token auth,
+/// live status, and a per-tool opt-out list grouped by service. Controls are
+/// wired to `ConfigStore`; on macOS the app's `MCPServerController` starts/stops
+/// the real server in response and pushes status back into `mcpServerStatus`.
 struct MCPSettingsPane: View {
     @EnvironmentObject var configStore: ConfigStore
 
@@ -27,6 +29,7 @@ struct MCPSettingsPane: View {
             }
 
             if configStore.mcpEnabled {
+                statusSection
                 connectionSection
                 authSection
                 toolsSections
@@ -55,36 +58,82 @@ struct MCPSettingsPane: View {
         }
     }
 
+    // MARK: - Status
+
+    @ViewBuilder private var statusRow: some View {
+        switch configStore.mcpServerStatus {
+        case .stopped:
+            Label { Text("Stopped", bundle: .module) }
+            icon: { Circle().fill(.gray).frame(width: 8, height: 8) }
+        case .running(let url):
+            LabeledContent {
+                HStack(spacing: 8) {
+                    Text(verbatim: url).font(.callout.monospaced()).textSelection(.enabled)
+                    Button { copy(url) } label: { Image(systemName: "doc.on.doc") }
+                        .buttonStyle(.borderless)
+                }
+            } label: {
+                Label { Text("Running", bundle: .module) }
+                icon: { Circle().fill(.green).frame(width: 8, height: 8) }
+            }
+        case .failed(let message):
+            Label { Text(verbatim: message) }
+            icon: { Circle().fill(.red).frame(width: 8, height: 8) }
+                .foregroundStyle(.red)
+        }
+    }
+
+    private var statusSection: some View {
+        Section { statusRow } header: { Text("Status", bundle: .module) }
+    }
+
     // MARK: - Authentication
 
     private var authSection: some View {
         Section {
-            Toggle(isOn: $configStore.mcpRequireAuth) { Text("Require basic auth", bundle: .module) }
+            Toggle(isOn: $configStore.mcpRequireAuth) { Text("Require bearer token", bundle: .module) }
             if configStore.mcpRequireAuth {
-                TextField(text: $configStore.mcpAuthUsername,
-                          prompt: Text("Username", bundle: .module)) {
-                    Text("Username", bundle: .module)
+                LabeledContent {
+                    HStack(spacing: 8) {
+                        Text(verbatim: configStore.mcpAuthToken.isEmpty ? "—" : configStore.mcpAuthToken)
+                            .font(.callout.monospaced())
+                            .lineLimit(1).truncationMode(.middle)
+                            .textSelection(.enabled)
+                        Spacer(minLength: 8)
+                        Button { copy(configStore.mcpAuthToken) } label: { Image(systemName: "doc.on.doc") }
+                            .buttonStyle(.borderless)
+                            .disabled(configStore.mcpAuthToken.isEmpty)
+                        Button { configStore.mcpAuthToken = MCPTokenStore.generate() } label: {
+                            Text(configStore.mcpAuthToken.isEmpty ? "Generate" : "Regenerate", bundle: .module)
+                                .font(.caption)
+                        }
+                        .buttonStyle(.borderless)
+                    }
+                } label: {
+                    Text("Token", bundle: .module)
                 }
-                .technicalField()
-                SecureField(text: $configStore.mcpAuthPassword,
-                            prompt: Text("Password", bundle: .module)) {
-                    Text("Password", bundle: .module)
-                }
-                .apiKeyField()
             }
         } header: {
             Text("Authentication", bundle: .module)
         } footer: {
-            if configStore.mcpRequireAuth && (configStore.mcpAuthUsername.isEmpty || configStore.mcpAuthPassword.isEmpty) {
-                Label {
-                    Text("Set a username and password — auth stays off until both are filled.", bundle: .module)
-                } icon: {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                }
-                .font(.caption)
-                .foregroundStyle(.orange)
+            if configStore.mcpRequireAuth && configStore.mcpAuthToken.isEmpty {
+                warning("Generate a token — auth stays off until one is set.")
+            } else if !configStore.mcpRequireAuth && !configStore.mcpHostPort.hasPrefix("127.0.0.1") {
+                warning("Exposed on the network without authentication. Enable a bearer token.")
             }
         }
+    }
+
+    private func warning(_ key: LocalizedStringKey) -> some View {
+        Label { Text(key, bundle: .module) } icon: { Image(systemName: "exclamationmark.triangle.fill") }
+            .font(.caption).foregroundStyle(.orange)
+    }
+
+    private func copy(_ s: String) {
+        #if canImport(AppKit)
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(s, forType: .string)
+        #endif
     }
 
     // MARK: - Tools

@@ -110,11 +110,15 @@ public final class ConfigStore: ObservableObject {
     // up an actual server yet. The Settings "MCP" pane reads/writes these so
     // the choices survive relaunch; wiring a real server later is a drop-in.
     @Published public var mcpEnabled: Bool = false
-    /// Bind target as a single `host:port` string, e.g. `0.0.0.0:8080`.
-    @Published public var mcpHostPort: String = "0.0.0.0:8080"
+    /// Bind target as a single `host:port` string. Defaults to localhost only;
+    /// the user must opt into `0.0.0.0` to expose on the network.
+    @Published public var mcpHostPort: String = "127.0.0.1:8080"
     @Published public var mcpRequireAuth: Bool = false
-    @Published public var mcpAuthUsername: String = ""
-    @Published public var mcpAuthPassword: String = ""
+    /// Bearer token for the MCP server. Backed by the Keychain (the secret never
+    /// lives in UserDefaults); this property mirrors it for the Settings UI.
+    @Published public var mcpAuthToken: String = MCPTokenStore.read() ?? ""
+    /// Live server status, pushed in by the app (`MCPServerController`). Not persisted.
+    @Published public var mcpServerStatus: MCPServerStatus = .stopped
     /// Tool names the user has switched OFF. Empty = every catalog tool is
     /// exposed (the sensible default), so we only have to store the opt-outs.
     @Published public var mcpDisabledTools: Set<String> = []
@@ -248,8 +252,6 @@ public final class ConfigStore: ObservableObject {
     private static let mcpEnabledKey = "ArrBarr.mcpEnabled"
     private static let mcpHostPortKey = "ArrBarr.mcpHostPort"
     private static let mcpRequireAuthKey = "ArrBarr.mcpRequireAuth"
-    private static let mcpAuthUsernameKey = "ArrBarr.mcpAuthUsername"
-    private static let mcpAuthPasswordKey = "ArrBarr.mcpAuthPassword"
     private static let mcpDisabledToolsKey = "ArrBarr.mcpDisabledTools"
     private static let keychainMigrationDoneKey = "ArrBarr.keychainMigrationDone"
     // nonisolated: read from the nonisolated migration helpers below (and the
@@ -353,11 +355,13 @@ public final class ConfigStore: ObservableObject {
         }
         self.tmdbApiKey = defaults.string(forKey: Self.tmdbApiKeyKey) ?? ""
         self.mcpEnabled = defaults.bool(forKey: Self.mcpEnabledKey)
-        self.mcpHostPort = defaults.string(forKey: Self.mcpHostPortKey) ?? "0.0.0.0:8080"
+        self.mcpHostPort = defaults.string(forKey: Self.mcpHostPortKey) ?? "127.0.0.1:8080"
         self.mcpRequireAuth = defaults.bool(forKey: Self.mcpRequireAuthKey)
-        self.mcpAuthUsername = defaults.string(forKey: Self.mcpAuthUsernameKey) ?? ""
-        self.mcpAuthPassword = defaults.string(forKey: Self.mcpAuthPasswordKey) ?? ""
+        self.mcpAuthToken = MCPTokenStore.read() ?? ""
         self.mcpDisabledTools = Set(defaults.stringArray(forKey: Self.mcpDisabledToolsKey) ?? [])
+        // Drop legacy username/password keys (replaced by the Keychain token).
+        defaults.removeObject(forKey: "ArrBarr.mcpAuthUsername")
+        defaults.removeObject(forKey: "ArrBarr.mcpAuthPassword")
     }
 
     private func setupSinks() {
@@ -461,11 +465,8 @@ public final class ConfigStore: ObservableObject {
         $mcpRequireAuth.dropFirst().sink { [weak self] val in
             self?.defaults.set(val, forKey: Self.mcpRequireAuthKey)
         }.store(in: &cancellables)
-        $mcpAuthUsername.dropFirst().sink { [weak self] val in
-            self?.defaults.set(val, forKey: Self.mcpAuthUsernameKey)
-        }.store(in: &cancellables)
-        $mcpAuthPassword.dropFirst().sink { [weak self] val in
-            self?.defaults.set(val, forKey: Self.mcpAuthPasswordKey)
+        $mcpAuthToken.dropFirst().sink { val in
+            if val.isEmpty { MCPTokenStore.delete() } else { MCPTokenStore.set(val) }
         }.store(in: &cancellables)
         $mcpDisabledTools.dropFirst().sink { [weak self] val in
             self?.defaults.set(Array(val), forKey: Self.mcpDisabledToolsKey)
