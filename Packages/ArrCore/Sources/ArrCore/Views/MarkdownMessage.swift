@@ -13,14 +13,12 @@ struct MarkdownMessage: View {
 
     private var px: CGFloat { baseSize * scale }
 
-    /// `||spoiler||` markup is not Markdown — strip the markers so the inner text
-    /// renders as normal prose (the old tap-to-reveal blur is dropped in favour
-    /// of proper Markdown/table rendering).
-    private var source: String {
-        ChatSpoilerMarkup.parse(text).map {
-            switch $0 { case .text(let s): return s; case .spoiler(let s): return s }
-        }.joined()
-    }
+    /// Reveal state for `||spoiler||` spans — tapping the bubble toggles every
+    /// spoiler in the message at once (matches the previous behaviour).
+    @State private var spoilersRevealed = false
+
+    private var source: String { text.trimmingCharacters(in: .whitespacesAndNewlines) }
+    private var hasSpoilers: Bool { ChatSpoilerMarkup.containsSpoiler(source) }
 
     var body: some View {
         let doc = Document(parsing: source)
@@ -29,6 +27,11 @@ struct MarkdownMessage: View {
                 blockView(block)
             }
         }
+        // Tap to reveal/hide spoilers — only when the message has any, so normal
+        // messages keep their default tap/selection behaviour.
+        .modifier(SpoilerRevealTap(active: hasSpoilers) {
+            withAnimation(.easeInOut(duration: 0.25)) { spoilersRevealed.toggle() }
+        })
     }
 
     // MARK: - Block rendering
@@ -129,7 +132,7 @@ struct MarkdownMessage: View {
     private func renderInline(_ markup: Markup, size: CGFloat, bold: Bool, italic: Bool) -> AttributedString {
         switch markup {
         case let t as Markdown.Text:
-            return styled(t.string, size: size, bold: bold, italic: italic)
+            return styledText(t.string, size: size, bold: bold, italic: italic)
         case let code as InlineCode:
             var a = AttributedString(code.code)
             a.font = .system(size: size * scale, design: .monospaced)
@@ -173,5 +176,43 @@ struct MarkdownMessage: View {
         if italic { font = font.italic() }
         a.font = font
         return a
+    }
+
+    /// Like `styled`, but splits out `||spoiler||` spans and redacts them (text
+    /// hidden behind a solid bar) until the bubble is tapped to reveal. Keeps the
+    /// surrounding Markdown intact — spoilers no longer bypass the renderer.
+    private func styledText(_ s: String, size: CGFloat, bold: Bool, italic: Bool) -> AttributedString {
+        guard s.contains("||") else { return styled(s, size: size, bold: bold, italic: italic) }
+        var result = AttributedString()
+        for segment in ChatSpoilerMarkup.parse(s) {
+            switch segment {
+            case .text(let txt):
+                result += styled(txt, size: size, bold: bold, italic: italic)
+            case .spoiler(let txt):
+                var a = styled(txt, size: size, bold: bold, italic: italic)
+                if !spoilersRevealed {
+                    a.foregroundColor = .clear
+                    a.backgroundColor = .primary.opacity(0.85)
+                }
+                result += a
+            }
+        }
+        return result
+    }
+}
+
+/// Applies a reveal tap only when the message carries spoilers, so ordinary
+/// messages keep their default tap/selection behaviour.
+private struct SpoilerRevealTap: ViewModifier {
+    let active: Bool
+    let toggle: () -> Void
+    func body(content: Content) -> some View {
+        if active {
+            content
+                .contentShape(Rectangle())
+                .onTapGesture(perform: toggle)
+        } else {
+            content
+        }
     }
 }

@@ -124,15 +124,16 @@ public struct FoundationModelsProvider: LLMProvider {
             Otherwise, answer directly without calling a tool.
             Never invent tool names that are not listed above.
 
-            Format your replies as plain prose. Do NOT use:
-              • markdown tables
-              • emoji
-              • heading syntax (no #, ##, ###)
-              • bullet or numbered lists (no -, *, 1.)
-            You may use ONLY inline emphasis: **bold**, *italic*, `code`,
-            [link](url). Keep replies short — usually one short paragraph.
-            When listing several items, write them out as a sentence with
-            commas, or use em-dashes inline.
+            Replies render as GitHub-flavored Markdown, so format for clarity.
+            You MAY use:
+              • Markdown tables — ideal for comparing a few titles/specs
+                side by side (e.g. quality, size, score across releases)
+              • bullet or numbered lists
+              • inline emphasis: **bold**, *italic*, `code`, [link](url)
+              • headings sparingly (## only, for a longer structured answer)
+            Avoid emoji. Keep replies short — usually one short paragraph; reach
+            for a table or list only when it genuinely helps (comparisons or
+            multi-field data), not for one or two items.
 
             When you talk about a specific film or show you genuinely know
             (never guess, never invent facts), PROACTIVELY offer one short fun
