@@ -29,6 +29,34 @@ public struct SettingsView: View {
     /// `configStore.appLanguage` to decide whether the "restart required"
     /// footer should appear — `nil` until the view first appears.
     @State private var initialAppLanguage: String?
+    #if os(macOS)
+    /// Which sidebar row is selected in the macOS System-Settings-style layout.
+    @State private var macSelection: SettingsSection = .general
+    /// Sidebar search query. Non-empty collapses the structured list into a
+    /// flat, filtered set of matching rows.
+    @State private var macSearch: String = ""
+    /// Back/forward navigation history (like System Settings). `historyIndex`
+    /// points at the current entry; `isNavigatingHistory` suppresses recording
+    /// when a selection change came from the back/forward buttons themselves.
+    @State private var history: [SettingsSection] = [.general]
+    @State private var historyIndex: Int = 0
+    @State private var isNavigatingHistory: Bool = false
+
+    /// Sidebar rows for the macOS Settings window. Media Managers and Download
+    /// clients are hub rows that open a card list (iOS-style); tapping a card
+    /// drills into `.service(kind)`, a single-config page reached via history,
+    /// not a sidebar row of its own.
+    enum SettingsSection: Hashable {
+        case general
+        case mediaManagers
+        case downloadClients
+        case service(ServiceKind)
+        case assistant
+        case mcp
+        case siri
+        case about
+    }
+    #endif
 
     private var languageChanged: Bool {
         guard let initial = initialAppLanguage else { return false }
@@ -38,19 +66,7 @@ public struct SettingsView: View {
     public var body: some View {
         Group {
             #if os(macOS)
-            VStack(spacing: 0) {
-                TabView {
-                    generalPane
-                        .tabItem { Label { Text("General", bundle: .module) } icon: { Image(systemName: "gearshape") } }
-                    mediaManagersPane
-                        .tabItem { Label { Text("Media Managers", bundle: .module) } icon: { Image(systemName: "server.rack") } }
-                    downloadClientsPane
-                        .tabItem { Label { Text("Download clients", bundle: .module) } icon: { Image(systemName: "arrow.down.circle") } }
-                    aiPane
-                        .tabItem { Label { Text("Assistant", bundle: .module) } icon: { Image(systemName: "sparkles") } }
-                }
-                bottomBar
-            }
+            macSidebarLayout
             #else
             // iOS: a single Form with every section inline. The macOS
             // TabView paradigm fights with the bottom tab bar, and a
@@ -210,6 +226,391 @@ public struct SettingsView: View {
     private var aiPane: some View {
         Form {
             aiSection
+        }
+        .formStyle(.grouped)
+    }
+
+    // MARK: - macOS sidebar layout (System Settings style)
+
+    /// Window-vibrant material for the custom sidebar column, so it matches a
+    /// native sidebar (and the traffic-lights read on top of it).
+    private struct SidebarVibrancy: NSViewRepresentable {
+        func makeNSView(context: Context) -> NSVisualEffectView {
+            let v = NSVisualEffectView()
+            v.material = .sidebar
+            v.blendingMode = .behindWindow
+            v.state = .followsWindowActiveState
+            return v
+        }
+        func updateNSView(_ nsView: NSVisualEffectView, context: Context) {}
+    }
+
+
+    /// NavigationSplitView with a sidebar list of sections and a detail pane.
+    /// Replaces the old TabView + bottom "Close" bar — the window now closes
+    /// via ⌘W / the red traffic-light, like native System Settings.
+    private var macSidebarLayout: some View {
+        // Hand-built two columns. NavigationSplitView on macOS 26 (Tahoe)
+        // renders its sidebar as a floating "liquid glass" rounded card inset
+        // from the window edges — which leaves the traffic-lights stranded off
+        // the sidebar. A manual layout with our own vibrant material gives the
+        // classic flush sidebar (traffic-lights ON it) the design calls for.
+        HStack(spacing: 0) {
+            sidebarColumn
+                .frame(width: 232)
+                .background(SidebarVibrancy().ignoresSafeArea())
+            Divider()
+                .ignoresSafeArea()
+            detailColumn
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .ignoresSafeArea(.all)
+        .onChange(of: macSelection) { _, newValue in
+            recordHistory(newValue)
+        }
+    }
+
+    private var sidebarColumn: some View {
+        VStack(spacing: 0) {
+            // Clear the floating traffic-lights at the top of the column.
+            Color.clear.frame(height: 30)
+            sidebarSearchField
+                .padding(.horizontal, 10)
+                .padding(.bottom, 6)
+            List(selection: sidebarSelectionBinding) {
+                if macSearch.isEmpty {
+                    structuredSidebar
+                } else {
+                    ForEach(filteredSidebarEntries) { entry in sidebarEntryRow(entry) }
+                }
+            }
+            .listStyle(.sidebar)
+            .scrollContentBackground(.hidden)
+        }
+    }
+
+    private var detailColumn: some View {
+        VStack(spacing: 0) {
+            detailTopBar
+            detailPane(for: macSelection)
+        }
+    }
+
+    /// Top bar of the detail column: back/forward as a segmented pill (like
+    /// System Settings' `‹ | ›`) then the large section title — aligned with
+    /// the floating traffic-lights of the sidebar.
+    private var detailTopBar: some View {
+        HStack(spacing: 12) {
+            HStack(spacing: 0) {
+                Button { goBack() } label: {
+                    Image(systemName: "chevron.backward")
+                        .frame(width: 30, height: 24)
+                        .contentShape(Rectangle())
+                }
+                .disabled(!canGoBack)
+                .help(Text("Back", bundle: .module))
+                Divider().frame(height: 15)
+                Button { goForward() } label: {
+                    Image(systemName: "chevron.forward")
+                        .frame(width: 30, height: 24)
+                        .contentShape(Rectangle())
+                }
+                .disabled(!canGoForward)
+                .help(Text("Forward", bundle: .module))
+            }
+            .buttonStyle(.borderless)
+            .font(.body.weight(.medium))
+            .background(
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    .fill(.quaternary.opacity(0.5))
+            )
+
+            navTitle(for: macSelection)
+                .font(.title2.weight(.bold))
+
+            Spacer(minLength: 0)
+        }
+        .padding(.top, 8)
+        .padding(.horizontal, 18)
+        .frame(height: 52)
+    }
+
+    /// The List highlights a top-level row, but the *content* can be a service
+    /// page nested under a hub. Map the active service back to its hub so the
+    /// owning row (Media Managers / Download clients) stays selected while
+    /// you're inside Radarr etc. Setting it (a user click) drives `macSelection`.
+    private var sidebarSelectionBinding: Binding<SettingsSection?> {
+        Binding(
+            get: { sidebarParent(of: macSelection) },
+            set: { if let new = $0 { macSelection = new } }
+        )
+    }
+
+    private func sidebarParent(of section: SettingsSection) -> SettingsSection {
+        if case .service(let kind) = section {
+            return downloadClientSpecs.contains { $0.kind == kind } ? .downloadClients : .mediaManagers
+        }
+        return section
+    }
+
+    /// Apple-style search field living at the top of the sidebar body.
+    private var sidebarSearchField: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(.secondary)
+                .font(.system(size: 13))
+            TextField(text: $macSearch) { Text("Search", bundle: .module) }
+                .textFieldStyle(.plain)
+                .font(.system(size: 13))
+            if !macSearch.isEmpty {
+                Button { macSearch = "" } label: {
+                    Image(systemName: "xmark.circle.fill").foregroundStyle(.tertiary)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 8)
+        .frame(height: 28)
+        .background(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(.quaternary.opacity(0.7))
+        )
+    }
+
+    /// The normal (non-searching) sidebar: flat rows. Media Managers and
+    /// Download clients are hubs that open a card list in the detail.
+    @ViewBuilder
+    private var structuredSidebar: some View {
+        Label { Text("General", bundle: .module) } icon: { Image(systemName: "gearshape") }
+            .tag(SettingsSection.general)
+        Label { Text("Media Managers", bundle: .module) } icon: { Image(systemName: "server.rack") }
+            .tag(SettingsSection.mediaManagers)
+        Label { Text("Download clients", bundle: .module) } icon: { Image(systemName: "arrow.down.circle") }
+            .tag(SettingsSection.downloadClients)
+        Label { Text("Assistant", bundle: .module) } icon: { Image(systemName: "sparkles") }
+            .tag(SettingsSection.assistant)
+        Label { Text("MCP", bundle: .module) } icon: { Image(systemName: "point.3.connected.trianglepath.dotted") }
+            .tag(SettingsSection.mcp)
+        Label { Text("Siri & Shortcuts", bundle: .module) } icon: { Image(systemName: "mic.fill") }
+            .tag(SettingsSection.siri)
+        Label { Text("About", bundle: .module) } icon: { Image(systemName: "info.circle") }
+            .tag(SettingsSection.about)
+    }
+
+    // MARK: - Sidebar search
+
+    /// A flat, searchable directory of every sidebar destination. `kind` drives
+    /// a brand `ServiceIcon`; when nil the `systemImage` SF Symbol is used.
+    private struct SidebarEntry: Identifiable {
+        let section: SettingsSection
+        let title: String
+        let kind: ServiceKind?
+        let systemImage: String
+        var id: SettingsSection { section }
+    }
+
+    private var sidebarEntries: [SidebarEntry] {
+        var items: [SidebarEntry] = [
+            .init(section: .general, title: String(localized: "General", bundle: .module), kind: nil, systemImage: "gearshape"),
+            .init(section: .mediaManagers, title: String(localized: "Media Managers", bundle: .module), kind: nil, systemImage: "server.rack"),
+            .init(section: .downloadClients, title: String(localized: "Download clients", bundle: .module), kind: nil, systemImage: "arrow.down.circle"),
+        ]
+        items += (mediaManagerSpecs + downloadClientSpecs).map {
+            .init(section: .service($0.kind), title: $0.title, kind: $0.kind, systemImage: "")
+        }
+        items += [
+            .init(section: .assistant, title: String(localized: "Assistant", bundle: .module), kind: nil, systemImage: "sparkles"),
+            .init(section: .mcp, title: String(localized: "MCP", bundle: .module), kind: nil, systemImage: "point.3.connected.trianglepath.dotted"),
+            .init(section: .siri, title: String(localized: "Siri & Shortcuts", bundle: .module), kind: nil, systemImage: "mic.fill"),
+            .init(section: .about, title: String(localized: "About", bundle: .module), kind: nil, systemImage: "info.circle"),
+        ]
+        return items
+    }
+
+    private var filteredSidebarEntries: [SidebarEntry] {
+        let q = macSearch.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !q.isEmpty else { return [] }
+        return sidebarEntries.filter { $0.title.localizedCaseInsensitiveContains(q) }
+    }
+
+    private func sidebarEntryRow(_ entry: SidebarEntry) -> some View {
+        Label {
+            Text(verbatim: entry.title)
+        } icon: {
+            if let kind = entry.kind {
+                ServiceIcon(kind: kind, size: 14)
+            } else {
+                Image(systemName: entry.systemImage)
+            }
+        }
+        .tag(entry.section)
+    }
+
+    // MARK: - Back/forward history
+
+    private var canGoBack: Bool { historyIndex > 0 }
+    private var canGoForward: Bool { historyIndex < history.count - 1 }
+
+    /// Record a selection change in the history stack, unless it originated
+    /// from a back/forward button (which sets `isNavigatingHistory`).
+    private func recordHistory(_ section: SettingsSection) {
+        if isNavigatingHistory { isNavigatingHistory = false; return }
+        // Truncate any forward entries — a fresh navigation forks history.
+        if historyIndex < history.count - 1 {
+            history.removeSubrange((historyIndex + 1)...)
+        }
+        history.append(section)
+        historyIndex = history.count - 1
+    }
+
+    private func goBack() {
+        guard canGoBack else { return }
+        historyIndex -= 1
+        isNavigatingHistory = true
+        macSelection = history[historyIndex]
+    }
+
+    private func goForward() {
+        guard canGoForward else { return }
+        historyIndex += 1
+        isNavigatingHistory = true
+        macSelection = history[historyIndex]
+    }
+
+    /// Window title for the selected section.
+    private func navTitle(for section: SettingsSection) -> Text {
+        switch section {
+        case .general: return Text("General", bundle: .module)
+        case .mediaManagers: return Text("Media Managers", bundle: .module)
+        case .downloadClients: return Text("Download clients", bundle: .module)
+        case .service(let kind): return Text(verbatim: kind.displayName)
+        case .assistant: return Text("Assistant", bundle: .module)
+        case .mcp: return Text("MCP", bundle: .module)
+        case .siri: return Text("Siri & Shortcuts", bundle: .module)
+        case .about: return Text("About", bundle: .module)
+        }
+    }
+
+    @ViewBuilder
+    private func detailPane(for section: SettingsSection) -> some View {
+        switch section {
+        case .general: generalPane
+        case .mediaManagers: serviceHubPane(mediaManagerSpecs, locked: false)
+        case .downloadClients: serviceHubPane(downloadClientSpecs, locked: true)
+        case .service(let kind): singleServicePane(for: kind)
+        case .assistant: aiPane
+        case .mcp: MCPSettingsPane()
+        case .siri: siriPane
+        case .about: aboutPane
+        }
+    }
+
+    /// Hub page: a card list of services (iOS-style). Tapping a card drills
+    /// into that service's single-config page via `macSelection` (so the
+    /// back/forward arrows return here). Download clients stay Pro-gated.
+    private func serviceHubPane(_ specs: [ServiceSpec], locked: Bool) -> some View {
+        Form {
+            Section {
+                ForEach(specs) { spec in
+                    Button {
+                        macSelection = .service(spec.kind)
+                    } label: {
+                        HStack(spacing: 10) {
+                            ServiceIcon(kind: spec.kind, size: 18)
+                            Text(verbatim: spec.title)
+                                .foregroundStyle(.primary)
+                            Spacer()
+                            if spec.config.wrappedValue.isConfigured {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .font(.footnote)
+                                    .foregroundStyle(.green)
+                            }
+                            Image(systemName: "chevron.right")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.tertiary)
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .formStyle(.grouped)
+        .disabled(locked && !storeManager.isPro)
+        .overlay {
+            if locked && !storeManager.isPro {
+                ProLockOverlay(feature: .downloadClients)
+            }
+        }
+    }
+
+    /// One service's config on its own page (one configuration per page). The
+    /// roster (`mediaManagerSpecs` / `downloadClientSpecs`) is shared with iOS;
+    /// download clients stay Pro-gated, same as the old combined pane.
+    @ViewBuilder
+    private func singleServicePane(for kind: ServiceKind) -> some View {
+        if let spec = (mediaManagerSpecs + downloadClientSpecs).first(where: { $0.kind == kind }) {
+            let isDownloadClient = downloadClientSpecs.contains { $0.kind == kind }
+            Form {
+                Section {
+                    serviceFields(spec)
+                } header: { serviceSectionHeader(spec.kind, LocalizedStringKey(spec.title)) }
+            }
+            .formStyle(.grouped)
+            .disabled(isDownloadClient && !storeManager.isPro)
+            .overlay {
+                if isDownloadClient && !storeManager.isPro {
+                    ProLockOverlay(feature: .downloadClients)
+                }
+            }
+        }
+    }
+
+    /// Siri & Shortcuts on its own sidebar row (was inlined at the bottom of
+    /// the General pane under the TabView layout).
+    private var siriPane: some View {
+        Form {
+            if #available(macOS 13.0, *) {
+                SiriShortcutsSettingsContent()
+            }
+        }
+        .formStyle(.grouped)
+    }
+
+    /// About pane — version, project links, acknowledgements, and the
+    /// Developer/Demo controls (gated on Developer mode). Mirrors the iOS
+    /// About form; under the old macOS layout this content lived in the
+    /// native "About ArrBarr" panel + the General pane's demo section.
+    private var aboutPane: some View {
+        Form {
+            if DeveloperMode.isActive {
+                demoModeSection
+            }
+            Section {
+                LabeledContent {
+                    Text(Self.versionString).foregroundStyle(.secondary)
+                } label: {
+                    Text("Version", bundle: .module)
+                }
+                Link(destination: URL(string: "https://github.com/Preclowski/ArrBarr")!) {
+                    Label { Text(verbatim: "GitHub") } icon: { Image(systemName: "link") }
+                }
+                Link(destination: URL(string: "https://arrbarr.app")!) {
+                    Label { Text("Website", bundle: .module) } icon: { Image(systemName: "globe") }
+                }
+                Link(destination: URL(string: "https://arrbarr.app/privacy-policy")!) {
+                    Label { Text("Privacy Policy", bundle: .module) } icon: { Image(systemName: "hand.raised") }
+                }
+                Text(verbatim: "Made by 🥨")
+                    .foregroundStyle(.secondary)
+            } header: { Text("About", bundle: .module) }
+            Section {
+                Link(destination: URL(string: "https://dashboardicons.com")!) {
+                    Label { Text(verbatim: "Dashboard Icons — CC BY 4.0") } icon: { Image(systemName: "paintpalette") }
+                }
+            } header: { Text("Acknowledgements", bundle: .module) } footer: {
+                Text("Service icons by Dashboard Icons, licensed CC BY 4.0 (recoloured for the UI).", bundle: .module)
+            }
         }
         .formStyle(.grouped)
     }
@@ -485,29 +886,6 @@ public struct SettingsView: View {
 
     // MARK: - Panes
 
-    private var mediaManagersPane: some View { servicePane(mediaManagerSpecs) }
-    private var downloadClientsPane: some View {
-        servicePane(downloadClientSpecs)
-            .disabled(!storeManager.isPro)
-            .overlay {
-                if !storeManager.isPro {
-                    ProLockOverlay(feature: .downloadClients)
-                }
-            }
-    }
-
-    /// macOS chrome: one grouped `Section` per service, brand-icon header.
-    private func servicePane(_ specs: [ServiceSpec]) -> some View {
-        Form {
-            ForEach(specs) { spec in
-                Section {
-                    serviceFields(spec)
-                } header: { serviceSectionHeader(spec.kind, LocalizedStringKey(spec.title)) }
-            }
-        }
-        .formStyle(.grouped)
-    }
-
     /// Section header with the service's brand icon. Shared by the macOS panes
     /// and the iOS forms so every configured service is visually identifiable.
     @ViewBuilder
@@ -570,12 +948,8 @@ public struct SettingsView: View {
                     }
                 } label: { Text("Background", bundle: .module) }
             } header: { Text("Refresh Interval", bundle: .module) }
-            if DeveloperMode.isActive {
-                demoModeSection
-            }
-            if #available(macOS 13.0, *) {
-                SiriShortcutsSettingsContent()
-            }
+            // Developer/Demo controls moved to the About pane; Siri & Shortcuts
+            // is now its own sidebar row (see siriPane).
         }
         .formStyle(.grouped)
     }
@@ -695,29 +1069,6 @@ public struct SettingsView: View {
             return .init(title: LocalizedStringKey(source.displayName), symbol: source.symbol)
         }
         return nil
-    }
-
-    // MARK: - Bottom bar
-
-    private var bottomBar: some View {
-        // The footer's links and credits moved to the native "About ArrBarr"
-        // panel (reachable from the popover's "…" menu), leaving just the
-        // window's Close control here. Version still lives in the window title
-        // ("ArrBarr Settings vX.Y").
-        VStack(spacing: 0) {
-            HStack {
-                Spacer()
-                #if os(macOS)
-                Button { NSApp.keyWindow?.close() } label: { Text("Close", bundle: .module) }
-                    .keyboardShortcut("w", modifiers: .command)
-                    .modifier(GlassButtonStyle())
-                    .controlSize(.large)
-                #endif
-            }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 12)
-        }
-        .background(.bar)
     }
 
     private static var versionString: String {

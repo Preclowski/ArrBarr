@@ -103,6 +103,22 @@ public final class ConfigStore: ObservableObject {
     /// genre / decade.
     @Published public var tmdbApiKey: String = ""
 
+    // MARK: - MCP server (mock)
+    //
+    // UI-only for now: these persist the user's intended MCP-server config
+    // (enable, bind address, basic auth, per-tool opt-out) but nothing spins
+    // up an actual server yet. The Settings "MCP" pane reads/writes these so
+    // the choices survive relaunch; wiring a real server later is a drop-in.
+    @Published public var mcpEnabled: Bool = false
+    /// Bind target as a single `host:port` string, e.g. `0.0.0.0:8080`.
+    @Published public var mcpHostPort: String = "0.0.0.0:8080"
+    @Published public var mcpRequireAuth: Bool = false
+    @Published public var mcpAuthUsername: String = ""
+    @Published public var mcpAuthPassword: String = ""
+    /// Tool names the user has switched OFF. Empty = every catalog tool is
+    /// exposed (the sensible default), so we only have to store the opt-outs.
+    @Published public var mcpDisabledTools: Set<String> = []
+
     public static let needsYouOrderKey = "needsyou"
     public static let tonightOrderKey = "tonight"
     public static let defaultArrOrder = ["tonight", "needsyou", "radarr", "sonarr", "lidarr", "whisparr"]
@@ -229,6 +245,12 @@ public final class ConfigStore: ObservableObject {
     private static let chatProviderKey = "ArrBarr.chatProvider"
     private static let openaiConfigKey = "ArrBarr.openai"
     private static let tmdbApiKeyKey = "ArrBarr.tmdbApiKey"
+    private static let mcpEnabledKey = "ArrBarr.mcpEnabled"
+    private static let mcpHostPortKey = "ArrBarr.mcpHostPort"
+    private static let mcpRequireAuthKey = "ArrBarr.mcpRequireAuth"
+    private static let mcpAuthUsernameKey = "ArrBarr.mcpAuthUsername"
+    private static let mcpAuthPasswordKey = "ArrBarr.mcpAuthPassword"
+    private static let mcpDisabledToolsKey = "ArrBarr.mcpDisabledTools"
     private static let keychainMigrationDoneKey = "ArrBarr.keychainMigrationDone"
     // nonisolated: read from the nonisolated migration helpers below (and the
     // widget extension under Swift 6 strict concurrency), so it must not inherit
@@ -330,6 +352,12 @@ public final class ConfigStore: ObservableObject {
             self.openai = .empty
         }
         self.tmdbApiKey = defaults.string(forKey: Self.tmdbApiKeyKey) ?? ""
+        self.mcpEnabled = defaults.bool(forKey: Self.mcpEnabledKey)
+        self.mcpHostPort = defaults.string(forKey: Self.mcpHostPortKey) ?? "0.0.0.0:8080"
+        self.mcpRequireAuth = defaults.bool(forKey: Self.mcpRequireAuthKey)
+        self.mcpAuthUsername = defaults.string(forKey: Self.mcpAuthUsernameKey) ?? ""
+        self.mcpAuthPassword = defaults.string(forKey: Self.mcpAuthPasswordKey) ?? ""
+        self.mcpDisabledTools = Set(defaults.stringArray(forKey: Self.mcpDisabledToolsKey) ?? [])
     }
 
     private func setupSinks() {
@@ -423,6 +451,24 @@ public final class ConfigStore: ObservableObject {
         }.store(in: &cancellables)
         $tmdbApiKey.dropFirst().sink { [weak self] val in
             self?.defaults.set(val, forKey: Self.tmdbApiKeyKey)
+        }.store(in: &cancellables)
+        $mcpEnabled.dropFirst().sink { [weak self] val in
+            self?.defaults.set(val, forKey: Self.mcpEnabledKey)
+        }.store(in: &cancellables)
+        $mcpHostPort.dropFirst().sink { [weak self] val in
+            self?.defaults.set(val, forKey: Self.mcpHostPortKey)
+        }.store(in: &cancellables)
+        $mcpRequireAuth.dropFirst().sink { [weak self] val in
+            self?.defaults.set(val, forKey: Self.mcpRequireAuthKey)
+        }.store(in: &cancellables)
+        $mcpAuthUsername.dropFirst().sink { [weak self] val in
+            self?.defaults.set(val, forKey: Self.mcpAuthUsernameKey)
+        }.store(in: &cancellables)
+        $mcpAuthPassword.dropFirst().sink { [weak self] val in
+            self?.defaults.set(val, forKey: Self.mcpAuthPasswordKey)
+        }.store(in: &cancellables)
+        $mcpDisabledTools.dropFirst().sink { [weak self] val in
+            self?.defaults.set(Array(val), forKey: Self.mcpDisabledToolsKey)
         }.store(in: &cancellables)
     }
 
