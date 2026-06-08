@@ -101,6 +101,16 @@ public struct QueueRowView: View {
                     fallbackSymbol: item.source.symbol
                 )
             }
+            // macOS: pause/resume lives ON the poster (hover-revealed). The row
+            // has no delete button — cancelling a download is intentionally out
+            // of the glanceable queue list.
+            #if os(macOS)
+            .overlay {
+                if isHovering && canControl && canPauseResume {
+                    posterControl.transition(.opacity)
+                }
+            }
+            #endif
 
             VStack(alignment: .leading, spacing: 4) {
                 VStack(alignment: .leading, spacing: 1) {
@@ -186,20 +196,6 @@ public struct QueueRowView: View {
                 .fill(isHovering ? Color.primary.opacity(0.06) : Color.clear)
                 .padding(.horizontal, 6)
         )
-        // Bare-icon action cluster floats over the trailing edge of
-        // the row, vertically centred, on hover. No gradient backdrop
-        // — bare icons sit over the row's hover tint, matching
-        // Mail / Music row treatment.
-        #if os(macOS)
-        .overlay(alignment: .trailing) {
-            if isHovering && canControl {
-                inlineActionIcons
-                    .rowActionBackdrop()
-                    .padding(.trailing, 10)
-                    .transition(.opacity)
-            }
-        }
-        #endif
         // ContentShape + onTapGesture before the hover overlay so the
         // overlay's action icons keep their own hit-testing — without
         // this order the row-wide tap-gesture swallowed clicks on the
@@ -265,95 +261,27 @@ public struct QueueRowView: View {
     // MARK: - Actions
 
     #if os(macOS)
-    /// Bare-icon action cluster used in the row's hover overlay
-    /// (bottom-right). Distinct from `actionButtons` which is the
-    /// labeled TooltipActionButton cluster used inside the tooltip
-    /// popover. Two surfaces, two affordance weights: the row gets
-    /// bare glyphs that recede until you hover; the tooltip gets
-    /// proper labeled controls because the user is actively reading
-    /// it.
+    /// Pause/resume affordance overlaid on the poster (hover-revealed). The
+    /// queue row has no delete button on macOS — cancelling a download is
+    /// intentionally out of the glanceable list (use the detail view / the
+    /// *arr). iOS keeps swipe actions (see QueueListView).
     @ViewBuilder
-    private var inlineActionIcons: some View {
-        // Primary action (pause/resume — most-clicked toggle) + `⋯`
-        // menu carrying secondaries. Same row grammar as EpisodeRow
-        // and DownloadSection — see ActionPrimitives.
-        HStack(spacing: 2) {
-            if canControl && canPauseResume {
-                if item.isPaused {
-                    IconButton(symbol: "play.fill", helpKey: "Resume",
-                               accessibilityLabel: "Resume \(item.title)") { onResume() }
-                } else {
-                    IconButton(symbol: "pause.fill", helpKey: "Pause",
-                               accessibilityLabel: "Pause \(item.title)") { onPause() }
-                }
-            }
-            if canControl {
-                IconOverflowMenu(accessibilityLabel: "More actions") {
-                    Button(role: .destructive) {
-                        requestDeleteConfirm()
-                    } label: {
-                        Label(String(localized: "Cancel download", bundle: .module),
-                              systemImage: "trash")
-                    }
-                }
+    private var posterControl: some View {
+        Button {
+            if item.isPaused { onResume() } else { onPause() }
+        } label: {
+            ZStack {
+                RoundedRectangle(cornerRadius: Tokens.Radius.chip)
+                    .fill(.black.opacity(0.5))
+                Image(systemName: item.isPaused ? "play.fill" : "pause.fill")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(.white)
             }
         }
+        .buttonStyle(.plain)
+        .help(item.isPaused ? Text("Resume", bundle: .module) : Text("Pause", bundle: .module))
     }
     #endif
-
-    @ViewBuilder
-    private var actionButtons: some View {
-        #if os(macOS)
-        // Tooltip-resident cluster — labeled buttons stacked vertically
-        // under the poster. Recessive styling: the poster is the focal
-        // point, these are quiet support actions until you hover.
-        VStack(spacing: 4) {
-            if canControl && canPauseResume {
-                if item.isPaused {
-                    TooltipActionButton(symbol: "play.fill", labelKey: "Resume") {
-                        onResume()
-                    }
-                } else {
-                    TooltipActionButton(symbol: "pause.fill", labelKey: "Pause") {
-                        onPause()
-                    }
-                }
-            }
-            if canControl {
-                TooltipActionButton(symbol: "trash", labelKey: "Remove", tint: .red) {
-                    requestDeleteConfirm()
-                }
-            }
-        }
-        #else
-        // iOS still uses the inline-on-row cluster (no hover → no
-        // tooltip). Compact icons in a glass pill, matching the chat
-        // input bar's chrome.
-        HStack(spacing: 4) {
-            if canControl && canPauseResume {
-                if item.isPaused {
-                    IconButton(symbol: "play.fill", helpKey: "Resume", accessibilityLabel: "Resume \(item.title)") {
-                        onResume()
-                    }
-                } else {
-                    IconButton(symbol: "pause.fill", helpKey: "Pause", accessibilityLabel: "Pause \(item.title)") {
-                        onPause()
-                    }
-                }
-            }
-            if canControl {
-                IconButton(symbol: "trash", helpKey: "Remove from client",
-                           accessibilityLabel: "Remove \(item.title)",
-                           tint: .red) {
-                    requestDeleteConfirm()
-                }
-            }
-        }
-        .padding(.horizontal, 6)
-        .padding(.vertical, 4)
-        .glassPill()
-        #endif
-    }
 
     // MARK: - Custom format tags
 

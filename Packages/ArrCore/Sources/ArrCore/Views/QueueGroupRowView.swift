@@ -67,6 +67,15 @@ public struct QueueGroupRowView: View {
                     fallbackSymbol: "tv"
                 )
             }
+            // macOS: pause/resume on the poster (hover-revealed); no delete in
+            // the list — same treatment as QueueRowView.
+            #if os(macOS)
+            .overlay {
+                if isHovering && canControl && canPauseResume {
+                    posterControl.transition(.opacity)
+                }
+            }
+            #endif
 
             VStack(alignment: .leading, spacing: 4) {
                 VStack(alignment: .leading, spacing: 1) {
@@ -117,18 +126,6 @@ public struct QueueGroupRowView: View {
                 .fill(isHovering ? Color.primary.opacity(0.06) : Color.clear)
                 .padding(.horizontal, 6)
         )
-        // Bare-icon hover overlay — same as QueueRowView. No
-        // gradient backdrop; icons read over the row's hover tint.
-        #if os(macOS)
-        .overlay(alignment: .trailing) {
-            if isHovering && canControl {
-                inlineActionIcons
-                    .rowActionBackdrop()
-                    .padding(.trailing, 10)
-                    .transition(.opacity)
-            }
-        }
-        #endif
         // ContentShape/onTapGesture before the hover affordances so the
         // overlay's own buttons receive clicks instead of the row
         // tap-gesture swallowing them.
@@ -221,82 +218,26 @@ public struct QueueGroupRowView: View {
     // MARK: - Actions
 
     #if os(macOS)
-    /// Bare-icon action cluster used in the row's hover overlay. See
-    /// QueueRowView.inlineActionIcons for rationale.
+    /// Pause/resume overlaid on the poster (hover-revealed). No delete button in
+    /// the list — same treatment as QueueRowView.posterControl.
     @ViewBuilder
-    private var inlineActionIcons: some View {
-        HStack(spacing: 2) {
-            if canControl && canPauseResume {
-                if rep.isPaused {
-                    IconButton(symbol: "play.fill", helpKey: "Resume",
-                               accessibilityLabel: "Resume \(headerLabel)") { onResume() }
-                } else {
-                    IconButton(symbol: "pause.fill", helpKey: "Pause",
-                               accessibilityLabel: "Pause \(headerLabel)") { onPause() }
-                }
-            }
-            if canControl {
-                IconOverflowMenu(accessibilityLabel: "More actions") {
-                    Button(role: .destructive) {
-                        requestDeleteConfirm()
-                    } label: {
-                        Label(String(localized: "Cancel download", bundle: .module),
-                              systemImage: "trash")
-                    }
-                }
+    private var posterControl: some View {
+        Button {
+            if rep.isPaused { onResume() } else { onPause() }
+        } label: {
+            ZStack {
+                RoundedRectangle(cornerRadius: Tokens.Radius.chip)
+                    .fill(.black.opacity(0.5))
+                Image(systemName: rep.isPaused ? "play.fill" : "pause.fill")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(.white)
             }
         }
+        .buttonStyle(.plain)
+        .help(rep.isPaused ? Text("Resume", bundle: .module) : Text("Pause", bundle: .module))
     }
     #endif
 
-    @ViewBuilder
-    private var actionButtons: some View {
-        // Mirrors QueueRowView.actionButtons — see there for rationale.
-        #if os(macOS)
-        VStack(spacing: 4) {
-            if canControl && canPauseResume {
-                if rep.isPaused {
-                    TooltipActionButton(symbol: "play.fill", labelKey: "Resume") {
-                        onResume()
-                    }
-                } else {
-                    TooltipActionButton(symbol: "pause.fill", labelKey: "Pause") {
-                        onPause()
-                    }
-                }
-            }
-            if canControl {
-                TooltipActionButton(symbol: "trash", labelKey: "Remove", tint: .red) {
-                    requestDeleteConfirm()
-                }
-            }
-        }
-        #else
-        HStack(spacing: 4) {
-            if canControl && canPauseResume {
-                if rep.isPaused {
-                    IconButton(symbol: "play.fill", helpKey: "Resume", accessibilityLabel: "Resume \(headerLabel)") {
-                        onResume()
-                    }
-                } else {
-                    IconButton(symbol: "pause.fill", helpKey: "Pause", accessibilityLabel: "Pause \(headerLabel)") {
-                        onPause()
-                    }
-                }
-            }
-            if canControl {
-                IconButton(symbol: "trash", helpKey: "Remove from client",
-                           accessibilityLabel: "Remove \(headerLabel)",
-                           tint: .red) {
-                    requestDeleteConfirm()
-                }
-            }
-        }
-        .padding(.horizontal, 6)
-        .padding(.vertical, 4)
-        .glassPill()
-        #endif
-    }
 
 }
 
