@@ -38,6 +38,11 @@ public protocol SecretStore: Sendable {
 /// `SecretKey.account` distinguishes them.
 public struct KeychainSecretStore: SecretStore {
     public static let service = "com.preclowski.ArrBarr"
+    /// Shared Keychain access group (team-prefixed) so the app and its iOS widget
+    /// extension read the same items. Only applied under `#if APPSTORE`, where the
+    /// `keychain-access-groups` entitlement is present. The team prefix is fixed
+    /// for this developer account.
+    public static let accessGroup = "9M6DR2Z85Y.com.preclowski.ArrBarr.shared"
     private static let logger = Logger(category: "SecretStore")
 
     public init() {}
@@ -51,7 +56,7 @@ public struct KeychainSecretStore: SecretStore {
         #else
         let synchronizable = false
         #endif
-        return [
+        var q: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: key.account,
@@ -60,6 +65,11 @@ public struct KeychainSecretStore: SecretStore {
                 ? (kSecAttrAccessibleWhenUnlockedThisDeviceOnly as String)
                 : (kSecAttrAccessibleAfterFirstUnlock as String),
         ]
+        #if APPSTORE
+        q[kSecAttrAccessGroup as String] = Self.accessGroup
+        q[kSecUseDataProtectionKeychain as String] = true
+        #endif
+        return q
     }
 
     /// Query for read/delete. Matches the item regardless of its iCloud-sync

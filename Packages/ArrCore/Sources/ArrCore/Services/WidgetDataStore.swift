@@ -13,12 +13,17 @@ public enum WidgetDataStore {
         UserDefaults(suiteName: appGroupSuiteName)
     }
 
-    /// Reads a service config from the group suite. Returns an empty
+    /// Reads a service config from the group suite and merges secrets back in
+    /// from the Keychain (shared access group under APPSTORE). Returns an empty
     /// (unconfigured) config if the group suite is unavailable or the app
     /// hasn't migrated yet.
     public static func serviceConfig(_ kind: ServiceKind) -> ServiceConfig {
         guard let d = groupDefaults() else { return .empty }
-        return ConfigStore.decodeServiceConfig(kind, from: d)
+        var cfg = ConfigStore.decodeServiceConfig(kind, from: d)
+        let secrets = KeychainSecretStore()
+        cfg.apiKey = secrets.read(.apiKey(for: kind)) ?? cfg.apiKey
+        cfg.password = secrets.read(.password(for: kind)) ?? cfg.password
+        return cfg
     }
 
     // MARK: - Demo mirror

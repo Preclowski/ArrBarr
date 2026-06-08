@@ -56,6 +56,18 @@ struct SecretStoreSuite {
                 == (kSecAttrAccessibleWhenUnlockedThisDeviceOnly as String))
     }
 
+    @Test("Access group + data-protection keychain set only under APPSTORE")
+    func keychainAccessGroupGating() {
+        let q = KeychainSecretStore.baseQuery(for: .apiKey(for: .radarr))
+        #if APPSTORE
+        #expect(q[kSecAttrAccessGroup as String] as? String == KeychainSecretStore.accessGroup)
+        #expect(q[kSecUseDataProtectionKeychain as String] as? Bool == true)
+        #else
+        #expect(q[kSecAttrAccessGroup as String] == nil)
+        #expect(q[kSecUseDataProtectionKeychain as String] == nil)
+        #endif
+    }
+
     @Test("Real Keychain round-trips a non-conflicting key")
     func keychainRoundTrips() {
         // Use a synced key so this test does not share a Keychain entry with the

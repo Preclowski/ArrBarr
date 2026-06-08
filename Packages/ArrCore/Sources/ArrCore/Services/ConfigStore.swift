@@ -448,7 +448,7 @@ public final class ConfigStore: ObservableObject {
         }.store(in: &cancellables)
         $openai.dropFirst().sink { [weak self] cfg in
             guard let self else { return }
-            self.secrets.set(cfg.apiKey, for: .openAIKey)
+            self.setOrDelete(cfg.apiKey, for: .openAIKey)
             var stripped = cfg
             stripped.apiKey = ""
             if let data = try? JSONEncoder().encode(stripped) {
@@ -456,7 +456,7 @@ public final class ConfigStore: ObservableObject {
             }
         }.store(in: &cancellables)
         $tmdbApiKey.dropFirst().sink { [weak self] val in
-            self?.secrets.set(val, for: .tmdbKey)
+            self?.setOrDelete(val, for: .tmdbKey)
             self?.defaults.removeObject(forKey: Self.tmdbApiKeyKey)
         }.store(in: &cancellables)
         $mcpEnabled.dropFirst().sink { [weak self] val in
@@ -652,9 +652,13 @@ public final class ConfigStore: ObservableObject {
         load(kind, from: defaults)
     }
 
+    private func setOrDelete(_ value: String, for key: SecretKey) {
+        if value.isEmpty { secrets.delete(key) } else { secrets.set(value, for: key) }
+    }
+
     private func save(_ kind: ServiceKind, _ config: ServiceConfig) {
-        secrets.set(config.apiKey, for: .apiKey(for: kind))
-        secrets.set(config.password, for: .password(for: kind))
+        setOrDelete(config.apiKey, for: .apiKey(for: kind))
+        setOrDelete(config.password, for: .password(for: kind))
         var stripped = config
         stripped.apiKey = ""
         stripped.password = ""
