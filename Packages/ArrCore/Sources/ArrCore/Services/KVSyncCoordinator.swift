@@ -6,7 +6,6 @@ import os
 public protocol KeyValueSyncing: AnyObject {
     func object(forKey key: String) -> Any?
     func set(_ value: Any?, forKey key: String)
-    var dictionaryRepresentation: [String: Any] { get }
     @discardableResult func synchronize() -> Bool
 }
 
@@ -22,6 +21,7 @@ public final class KVSyncCoordinator {
     private let reload: () -> Void
     private var isApplyingRemote = false
     private let logger = Logger(category: "KVSync")
+    private var observers: [NSObjectProtocol] = []
 
     public init(defaults: UserDefaults, kv: KeyValueSyncing, reload: @escaping () -> Void) {
         self.defaults = defaults
@@ -32,12 +32,24 @@ public final class KVSyncCoordinator {
     /// Begin observing inbound KVS changes and outbound UserDefaults changes,
     /// and do an initial two-way reconcile (pull remote, then push local).
     public func start() {
-        NotificationCenter.default.addObserver(
-            self, selector: #selector(kvChanged(_:)),
-            name: NSUbiquitousKeyValueStore.didChangeExternallyNotification, object: kv as AnyObject)
-        NotificationCenter.default.addObserver(
-            self, selector: #selector(defaultsChanged),
-            name: UserDefaults.didChangeNotification, object: defaults)
+        let kvObs = NotificationCenter.default.addObserver(
+            forName: NSUbiquitousKeyValueStore.didChangeExternallyNotification,
+            object: kv as AnyObject, queue: .main
+        ) { [weak self] note in
+            let changed = (note.userInfo?[NSUbiquitousKeyValueStoreChangedKeysKey] as? [String])
+                ?? Array(SyncedKeys.all)
+            MainActor.assumeIsolated { self?.applyFromKV(keys: changed) }
+        }
+        let defObs = NotificationCenter.default.addObserver(
+            forName: UserDefaults.didChangeNotification,
+            object: defaults, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self, !self.isApplyingRemote else { return }
+                self.pushAllToKV()
+            }
+        }
+        observers = [kvObs, defObs]
         applyFromKV(keys: Array(SyncedKeys.all))
         pushAllToKV()
         kv.synchronize()
@@ -71,16 +83,5 @@ public final class KVSyncCoordinator {
         if let value = defaults.object(forKey: key) { kv.set(value, forKey: key) }
     }
 
-    @objc private func kvChanged(_ note: Notification) {
-        let changed = (note.userInfo?[NSUbiquitousKeyValueStoreChangedKeysKey] as? [String])
-            ?? Array(SyncedKeys.all)
-        applyFromKV(keys: changed)
-    }
-
-    @objc private func defaultsChanged() {
-        guard !isApplyingRemote else { return }
-        pushAllToKV()
-    }
-
-    deinit { NotificationCenter.default.removeObserver(self) }
+    deinit { observers.forEach { NotificationCenter.default.removeObserver($0) } }
 }
