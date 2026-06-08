@@ -1,162 +1,177 @@
 import SwiftUI
+import Markdown
 
-// Block-aware markdown renderer for chat bubbles.
-//
-// SwiftUI's `Text(AttributedString(markdown:))` only resolves *inline* markdown
-// (bold/italic/code/links) and even then leans on `inlinePresentationIntent`
-// composing with the surrounding `.font()` — which, with the app's custom
-// `.scaledFont(...)`, did not reliably render bold. Block markdown (lists,
-// headings, code fences) was dropped entirely.
-//
-// This view fixes both: it splits the message into blocks and renders each,
-// and for inline spans it resolves `inlinePresentationIntent` into an EXPLICIT
-// per-run `.font` (bold/italic/mono), so emphasis renders regardless of the
-// outer font modifier.
-
-enum MarkdownBlock: Equatable {
-    case heading(level: Int, text: String)
-    case bullet(text: String)
-    case numbered(label: String, text: String)
-    case paragraph(text: String)
-    case code(text: String)
-}
-
-enum MarkdownParser {
-    static func blocks(_ raw: String) -> [MarkdownBlock] {
-        var out: [MarkdownBlock] = []
-        var para: [String] = []
-        var code: [String] = []
-        var inCode = false
-
-        func flushPara() {
-            if !para.isEmpty { out.append(.paragraph(text: para.joined(separator: "\n"))); para = [] }
-        }
-
-        for rawLine in raw.split(separator: "\n", omittingEmptySubsequences: false) {
-            let line = String(rawLine)
-            let trimmed = line.trimmingCharacters(in: .whitespaces)
-
-            if trimmed.hasPrefix("```") {
-                if inCode {
-                    out.append(.code(text: code.joined(separator: "\n"))); code = []; inCode = false
-                } else {
-                    flushPara(); inCode = true
-                }
-                continue
-            }
-            if inCode { code.append(line); continue }
-
-            if trimmed.isEmpty { flushPara(); continue }
-
-            // Heading: leading #'s followed by a space.
-            if let hashes = headingLevel(trimmed) {
-                flushPara()
-                let text = String(trimmed.drop(while: { $0 == "#" })).trimmingCharacters(in: .whitespaces)
-                out.append(.heading(level: hashes, text: text))
-                continue
-            }
-            // Bullet: -, *, or • followed by a space.
-            if let marker = trimmed.first, "-*•".contains(marker),
-               trimmed.dropFirst().first == " " {
-                flushPara()
-                out.append(.bullet(text: String(trimmed.dropFirst(2)).trimmingCharacters(in: .whitespaces)))
-                continue
-            }
-            // Numbered: digits + '.' or ')' + space.
-            if let n = numberedPrefix(trimmed) {
-                flushPara()
-                out.append(.numbered(label: n.label, text: n.rest))
-                continue
-            }
-            para.append(trimmed)
-        }
-        flushPara()
-        if inCode, !code.isEmpty { out.append(.code(text: code.joined(separator: "\n"))) }
-        return out
-    }
-
-    private static func headingLevel(_ s: String) -> Int? {
-        var n = 0
-        for ch in s { if ch == "#" { n += 1 } else { break } }
-        guard n >= 1, n <= 6 else { return nil }
-        // Require a space after the #'s so "#1 pick" isn't a heading.
-        let after = s.index(s.startIndex, offsetBy: n)
-        guard after < s.endIndex, s[after] == " " else { return nil }
-        return n
-    }
-
-    private static func numberedPrefix(_ s: String) -> (label: String, rest: String)? {
-        var digits = ""
-        var idx = s.startIndex
-        while idx < s.endIndex, s[idx].isNumber { digits.append(s[idx]); idx = s.index(after: idx) }
-        guard !digits.isEmpty, idx < s.endIndex, s[idx] == "." || s[idx] == ")" else { return nil }
-        let sep = s[idx]
-        let afterSep = s.index(after: idx)
-        guard afterSep < s.endIndex, s[afterSep] == " " else { return nil }
-        let rest = String(s[s.index(after: afterSep)...]).trimmingCharacters(in: .whitespaces)
-        return ("\(digits)\(sep)", rest)
-    }
-}
-
+// Renders assistant chat messages from Markdown using the official swift-markdown
+// parser (cmark-gfm). Handles paragraphs, headings, bold/italic/strikethrough/
+// inline-code, links, bullet/numbered lists, code blocks, block quotes and GFM
+// tables. Inline emphasis is baked into per-run fonts so it renders correctly
+// under the app's custom `.scaledFont` environment.
 struct MarkdownMessage: View {
     let text: String
     var baseSize: CGFloat = 13
     @Environment(\.fontScale) private var scale
 
-    private var blocks: [MarkdownBlock] { MarkdownParser.blocks(text.trimmingCharacters(in: .whitespacesAndNewlines)) }
+    private var px: CGFloat { baseSize * scale }
+
+    /// `||spoiler||` markup is not Markdown — strip the markers so the inner text
+    /// renders as normal prose (the old tap-to-reveal blur is dropped in favour
+    /// of proper Markdown/table rendering).
+    private var source: String {
+        ChatSpoilerMarkup.parse(text).map {
+            switch $0 { case .text(let s): return s; case .spoiler(let s): return s }
+        }.joined()
+    }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            ForEach(Array(blocks.enumerated()), id: \.offset) { _, block in
+        let doc = Document(parsing: source)
+        VStack(alignment: .leading, spacing: 6) {
+            ForEach(Array(doc.blockChildren.enumerated()), id: \.offset) { _, block in
                 blockView(block)
             }
         }
     }
 
-    @ViewBuilder
-    private func blockView(_ block: MarkdownBlock) -> some View {
-        switch block {
-        case .heading(let level, let text):
-            // h1/h2 a touch larger; deeper headings just bold at body size.
-            let bump: CGFloat = level == 1 ? 3 : (level == 2 ? 1.5 : 0)
-            Text(inline(text, size: baseSize + bump, bold: true))
-                .fixedSize(horizontal: false, vertical: true)
-        case .bullet(let text):
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text(verbatim: "•").foregroundStyle(.secondary)
-                Text(inline(text, size: baseSize)).fixedSize(horizontal: false, vertical: true)
-            }
-        case .numbered(let label, let text):
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text(verbatim: label).foregroundStyle(.secondary)
-                Text(inline(text, size: baseSize)).fixedSize(horizontal: false, vertical: true)
-            }
-        case .paragraph(let text):
-            Text(inline(text, size: baseSize)).fixedSize(horizontal: false, vertical: true)
-        case .code(let text):
-            Text(verbatim: text)
-                .font(.system(size: baseSize * scale - 1, design: .monospaced))
+    // MARK: - Block rendering
+
+    // Returns AnyView because the block renderer recurses (block quotes, list
+    // items contain blocks) — a recursive `some View` defines its opaque type in
+    // terms of itself and won't compile.
+    private func blockView(_ markup: BlockMarkup) -> AnyView {
+        switch markup {
+        case let h as Heading:
+            let bump: CGFloat = h.level == 1 ? 3 : (h.level == 2 ? 1.5 : 0)
+            return AnyView(Text(inline(h, size: baseSize + bump, bold: true))
+                .fixedSize(horizontal: false, vertical: true))
+        case let p as Paragraph:
+            return AnyView(Text(inline(p, size: baseSize))
+                .fixedSize(horizontal: false, vertical: true))
+        case let list as UnorderedList:
+            return AnyView(listView(Array(list.listItems), ordered: false))
+        case let list as OrderedList:
+            return AnyView(listView(Array(list.listItems), ordered: true))
+        case let code as CodeBlock:
+            return AnyView(Text(verbatim: code.code.trimmingCharacters(in: .newlines))
+                .font(.system(size: px - 1, design: .monospaced))
                 .foregroundStyle(.primary)
                 .textSelection(.enabled)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(8)
-                .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 8))
+                .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 8)))
+        case let quote as BlockQuote:
+            return AnyView(HStack(spacing: 8) {
+                RoundedRectangle(cornerRadius: 1).fill(.secondary).frame(width: 2)
+                VStack(alignment: .leading, spacing: 4) {
+                    ForEach(Array(quote.blockChildren.enumerated()), id: \.offset) { _, b in
+                        blockView(b)
+                    }
+                }
+            })
+        case let table as Markdown.Table:
+            return AnyView(tableView(table))
+        case is ThematicBreak:
+            return AnyView(Divider())
+        default:
+            return AnyView(Text(verbatim: markup.format()).scaledFont(size: baseSize))
         }
     }
 
-    /// Inline markdown → AttributedString with EXPLICIT per-run fonts so emphasis
-    /// renders independently of the enclosing `.font()` modifier.
-    private func inline(_ s: String, size: CGFloat, bold: Bool = false) -> AttributedString {
-        let opts = AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace)
-        var attr = (try? AttributedString(markdown: s, options: opts)) ?? AttributedString(s)
-        let px = size * scale
-        for run in attr.runs {
-            let ip = run.inlinePresentationIntent
-            var font = Font.system(size: px, design: (ip?.contains(.code) == true) ? .monospaced : .default)
-            if bold || ip?.contains(.stronglyEmphasized) == true { font = font.bold() }
-            if ip?.contains(.emphasized) == true { font = font.italic() }
-            attr[run.range].font = font
+    @ViewBuilder
+    private func listView(_ items: [ListItem], ordered: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            ForEach(Array(items.enumerated()), id: \.offset) { idx, item in
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Text(verbatim: ordered ? "\(idx + 1)." : "•")
+                        .scaledFont(size: baseSize)
+                        .foregroundStyle(.secondary)
+                    VStack(alignment: .leading, spacing: 3) {
+                        ForEach(Array(item.blockChildren.enumerated()), id: \.offset) { _, b in
+                            blockView(b)
+                        }
+                    }
+                }
+            }
         }
-        return attr
+    }
+
+    @ViewBuilder
+    private func tableView(_ table: Markdown.Table) -> some View {
+        let head = Array(table.head.cells)
+        let rows = Array(table.body.rows)
+        Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 4) {
+            GridRow {
+                ForEach(Array(head.enumerated()), id: \.offset) { _, cell in
+                    Text(inline(cell, size: baseSize, bold: true))
+                }
+            }
+            Divider()
+            ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
+                GridRow {
+                    ForEach(Array(row.cells.enumerated()), id: \.offset) { _, cell in
+                        Text(inline(cell, size: baseSize))
+                    }
+                }
+            }
+        }
+        .padding(8)
+        .background(Color.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 8))
+    }
+
+    // MARK: - Inline rendering (explicit per-run fonts)
+
+    private func inline(_ markup: Markup, size: CGFloat, bold: Bool = false, italic: Bool = false) -> AttributedString {
+        var result = AttributedString()
+        for child in markup.children {
+            result += renderInline(child, size: size, bold: bold, italic: italic)
+        }
+        return result
+    }
+
+    private func renderInline(_ markup: Markup, size: CGFloat, bold: Bool, italic: Bool) -> AttributedString {
+        switch markup {
+        case let t as Markdown.Text:
+            return styled(t.string, size: size, bold: bold, italic: italic)
+        case let code as InlineCode:
+            var a = AttributedString(code.code)
+            a.font = .system(size: size * scale, design: .monospaced)
+            return a
+        case let strong as Strong:
+            return concat(strong, size: size, bold: true, italic: italic)
+        case let em as Emphasis:
+            return concat(em, size: size, bold: bold, italic: true)
+        case let strike as Strikethrough:
+            var inner = concat(strike, size: size, bold: bold, italic: italic)
+            inner.strikethroughStyle = .single
+            return inner
+        case let link as Markdown.Link:
+            var inner = concat(link, size: size, bold: bold, italic: italic)
+            if let dest = link.destination, let url = URL(string: dest) {
+                inner.link = url
+                inner.foregroundColor = .accentColor
+            }
+            return inner
+        case is SoftBreak:
+            return AttributedString(" ")
+        case is LineBreak:
+            return AttributedString("\n")
+        default:
+            return concat(markup, size: size, bold: bold, italic: italic)
+        }
+    }
+
+    private func concat(_ markup: Markup, size: CGFloat, bold: Bool, italic: Bool) -> AttributedString {
+        var result = AttributedString()
+        for child in markup.children {
+            result += renderInline(child, size: size, bold: bold, italic: italic)
+        }
+        return result
+    }
+
+    private func styled(_ s: String, size: CGFloat, bold: Bool, italic: Bool) -> AttributedString {
+        var a = AttributedString(s)
+        var font = Font.system(size: size * scale)
+        if bold { font = font.bold() }
+        if italic { font = font.italic() }
+        a.font = font
+        return a
     }
 }

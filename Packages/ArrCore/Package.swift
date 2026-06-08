@@ -11,9 +11,17 @@ let package = Package(
     products: [
         .library(name: "ArrCore", targets: ["ArrCore"]),
     ],
+    dependencies: [
+        // Official Swift Markdown parser (swiftlang), built on cmark-gfm — used
+        // to render assistant chat messages (incl. GFM tables) properly.
+        .package(url: "https://github.com/swiftlang/swift-markdown.git", branch: "main"),
+    ],
     targets: [
         .target(
             name: "ArrCore",
+            dependencies: [
+                .product(name: "Markdown", package: "swift-markdown"),
+            ],
             path: "Sources/ArrCore",
             resources: [
                 // Localizable.xcstrings ships inside the package so the

@@ -187,7 +187,6 @@ public struct ChatView: View {
 private struct MessageBubble: View {
     let message: ChatMessage
     @State private var expanded = false
-    @State private var spoilersRevealed = false
     @EnvironmentObject var configStore: ConfigStore
 
     /// iMessage-style routing: user prompts on the trailing edge in an accent
@@ -243,35 +242,19 @@ private struct MessageBubble: View {
             .background(Color.accentColor, in: RoundedRectangle(cornerRadius: 14))
     }
 
-    @ViewBuilder
     private func assistantBubble(_ text: String) -> some View {
-        let hasSpoiler = ChatSpoilerMarkup.containsSpoiler(text)
-        Group {
-            if hasSpoiler {
-                // iMessage invisible-ink: blurred, twinkling spoiler spans
-                // inside an otherwise plain prose flow.
-                SpoilerProse(text: text, revealed: spoilersRevealed)
-            } else {
-                // Block-aware markdown (bold/italic/code + lists/headings) with
-                // explicit per-run fonts, so emphasis renders regardless of the
-                // enclosing font modifier. `Text(attributed:)` alone dropped block
-                // markdown and rendered bold unreliably under `.scaledFont`.
-                MarkdownMessage(text: text, baseSize: 13)
-            }
-        }
-        .scaledFont(size: 13)
-        .foregroundStyle(.primary)
-        .fixedSize(horizontal: false, vertical: true)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background(Color.primary.opacity(0.07), in: RoundedRectangle(cornerRadius: 14))
-        .contentShape(Rectangle())
-        // Spoilers reveal on tap; the modifier also disables text selection
-        // there so the drag-to-select gesture doesn't swallow the tap.
-        .modifier(SpoilerTapModifier(enabled: hasSpoiler) {
-            withAnimation(.easeInOut(duration: 0.3)) { spoilersRevealed.toggle() }
-        })
-        .help(hasSpoiler ? Text("Spoiler", bundle: .module) : Text(verbatim: ""))
+        // Full Markdown via swift-markdown (bold/italic/code, lists, headings,
+        // block quotes and GFM tables). One path for every assistant message —
+        // the old `||spoiler||` blur is gone (its markers are stripped inside
+        // MarkdownMessage) so it can never bypass Markdown rendering.
+        MarkdownMessage(text: text, baseSize: 13)
+            .foregroundStyle(.primary)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(Color.primary.opacity(0.07), in: RoundedRectangle(cornerRadius: 14))
+            .contentShape(Rectangle())
+            .textSelection(.enabled)
     }
 
     @ViewBuilder
@@ -404,22 +387,6 @@ private struct MessageBubble: View {
         return AttributedString(s)
     }
 
-}
-
-/// Attaches a reveal tap to the bubble only when it carries spoilers, so a
-/// normal assistant bubble keeps its default (selectable, no tap) behaviour.
-private struct SpoilerTapModifier: ViewModifier {
-    let enabled: Bool
-    let action: () -> Void
-    func body(content: Content) -> some View {
-        if enabled {
-            content
-                .textSelection(.disabled)
-                .onTapGesture(perform: action)
-        } else {
-            content.textSelection(.enabled)
-        }
-    }
 }
 
 private struct ThinkingRow: View {
