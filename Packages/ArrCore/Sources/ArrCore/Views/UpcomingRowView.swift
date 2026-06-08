@@ -70,6 +70,17 @@ public struct UpcomingRowView: View {
 
     private func openDetail() {
         guard let entityId = item.entityId else { return }
+        // If this title is already downloading/importing, open the LIVE queue
+        // item's detail — it carries the real status + the file being grabbed,
+        // whereas a synthetic "upcoming" shell reads as unknown/new with no file.
+        // Movies only: a series' entityId (seriesId) maps to many episodes, so we
+        // can't pick the right queue row here.
+        if item.source == .radarr || item.source == .whisparr,
+           let active = QueueViewModel.shared.items(for: item.source)
+            .first(where: { $0.entityId == entityId }) {
+            DetailRequest.post(active)
+            return
+        }
         DetailRequest.post(
             DetailRequest.syntheticItem(
                 source: item.source,
