@@ -31,7 +31,7 @@ public final class QueueAggregator: QueueDataProviding {
         }
     }
 
-    enum Action { case pause, resume, delete }
+    enum Action { case pause, resume, delete, continueDownload }
 
     private let configStore: ConfigStore
     private var cachedRadarrClient: RadarrClient?
@@ -335,28 +335,31 @@ public final class QueueAggregator: QueueDataProviding {
         return client
     }
 
+    // `.continueDownload` maps to qBittorrent's force-start (bypass the queue +
+    // begin downloading). The other clients have no distinct force-start, so it
+    // falls back to a plain resume — still the right intent ("start this now").
     private func sabAction(_ a: Action) -> SabnzbdClient.Action {
-        switch a { case .pause: .pause; case .resume: .resume; case .delete: .delete }
+        switch a { case .pause: .pause; case .resume, .continueDownload: .resume; case .delete: .delete }
     }
 
     private func qbitAction(_ a: Action) -> QbittorrentClient.Action {
-        switch a { case .pause: .pause; case .resume: .resume; case .delete: .delete }
+        switch a { case .pause: .pause; case .resume: .resume; case .delete: .delete; case .continueDownload: .forceStart }
     }
 
     private func nzbgetAction(_ a: Action) -> NzbgetClient.Action {
-        switch a { case .pause: .pause; case .resume: .resume; case .delete: .delete }
+        switch a { case .pause: .pause; case .resume, .continueDownload: .resume; case .delete: .delete }
     }
 
     private func transmissionAction(_ a: Action) -> TransmissionClient.Action {
-        switch a { case .pause: .pause; case .resume: .resume; case .delete: .delete }
+        switch a { case .pause: .pause; case .resume, .continueDownload: .resume; case .delete: .delete }
     }
 
     private func rtorrentAction(_ a: Action) -> RtorrentClient.Action {
-        switch a { case .pause: .pause; case .resume: .resume; case .delete: .delete }
+        switch a { case .pause: .pause; case .resume, .continueDownload: .resume; case .delete: .delete }
     }
 
     private func delugeAction(_ a: Action) -> DelugeClient.Action {
-        switch a { case .pause: .pause; case .resume: .resume; case .delete: .delete }
+        switch a { case .pause: .pause; case .resume, .continueDownload: .resume; case .delete: .delete }
     }
 }
 

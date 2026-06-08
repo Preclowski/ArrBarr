@@ -2,13 +2,16 @@ import Foundation
 
 public actor QbittorrentClient {
     enum Action {
-        case pause, resume, delete
+        case pause, resume, delete, forceStart
 
         var path: String {
             switch self {
             case .pause: return "/api/v2/torrents/stop"
             case .resume: return "/api/v2/torrents/start"
             case .delete: return "/api/v2/torrents/delete"
+            // Force-start bypasses qBittorrent's own queueing limit and begins
+            // downloading immediately — the "continue" action for a queued torrent.
+            case .forceStart: return "/api/v2/torrents/setForceStart"
             }
         }
     }
@@ -49,6 +52,9 @@ public actor QbittorrentClient {
         var form: [String: String] = ["hashes": hash]
         if action == .delete {
             form["deleteFiles"] = "false"
+        }
+        if action == .forceStart {
+            form["value"] = "true"
         }
         _ = try await http.post(url, headers: authHeaders(), formBody: form)
     }

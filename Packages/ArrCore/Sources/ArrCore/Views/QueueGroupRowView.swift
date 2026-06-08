@@ -53,7 +53,11 @@ public struct QueueGroupRowView: View {
     }
 
     private var canPauseResume: Bool {
-        rep.status == .downloading || rep.status == .paused
+        rep.status == .downloading || rep.status == .paused || rep.status == .queued
+    }
+
+    private var showsPlay: Bool {
+        rep.isPaused || rep.status == .queued
     }
 
     public var body: some View {
@@ -219,18 +223,20 @@ public struct QueueGroupRowView: View {
     @ViewBuilder
     private var posterControl: some View {
         Button {
-            if rep.isPaused { onResume() } else { onPause() }
+            if showsPlay { onResume() } else { onPause() }
         } label: {
             ZStack {
                 RoundedRectangle(cornerRadius: Tokens.Radius.chip)
                     .fill(.black.opacity(0.5))
-                Image(systemName: rep.isPaused ? "play.fill" : "pause.fill")
+                Image(systemName: showsPlay ? "play.fill" : "pause.fill")
                     .font(.system(size: 14, weight: .bold))
                     .foregroundStyle(.white)
             }
         }
         .buttonStyle(.plain)
-        .help(rep.isPaused ? Text("Resume", bundle: .module) : Text("Pause", bundle: .module))
+        .help(rep.status == .queued
+              ? Text("Start now", bundle: .module)
+              : (rep.isPaused ? Text("Resume", bundle: .module) : Text("Pause", bundle: .module)))
     }
     #endif
 

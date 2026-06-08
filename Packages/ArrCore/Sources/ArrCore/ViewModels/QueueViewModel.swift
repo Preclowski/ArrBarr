@@ -561,7 +561,10 @@ public final class QueueViewModel {
         await runAction(.pause, on: item)
     }
     public func resume(_ item: QueueItem) async {
-        await runAction(.resume, on: item)
+        // A queued/deferred item isn't paused — it's waiting behind the client's
+        // queue limit. "Continue" force-starts it (adds to the active queue AND
+        // begins downloading); a genuinely paused item just resumes.
+        await runAction(item.status == .queued ? .continueDownload : .resume, on: item)
     }
     public func delete(_ item: QueueItem) async {
         await runAction(.delete, on: item)
@@ -600,7 +603,7 @@ public final class QueueViewModel {
     private func applyOptimisticUpdate(_ action: QueueAggregator.Action, on item: QueueItem) {
         let overrideKind: OptimisticOverride.Kind = switch action {
         case .pause: .status(.paused)
-        case .resume: .status(.downloading)
+        case .resume, .continueDownload: .status(.downloading)
         case .delete: .deleted
         }
 

@@ -87,7 +87,13 @@ public struct QueueRowView: View {
     }
 
     private var canPauseResume: Bool {
-        item.status == .downloading || item.status == .paused
+        item.status == .downloading || item.status == .paused || item.status == .queued
+    }
+
+    /// A queued (deferred / behind the client's queue limit) item or a paused
+    /// one both get the "play" affordance — for queued it force-starts.
+    private var showsPlay: Bool {
+        item.isPaused || item.status == .queued
     }
 
     public var body: some View {
@@ -265,18 +271,20 @@ public struct QueueRowView: View {
     @ViewBuilder
     private var posterControl: some View {
         Button {
-            if item.isPaused { onResume() } else { onPause() }
+            if showsPlay { onResume() } else { onPause() }
         } label: {
             ZStack {
                 RoundedRectangle(cornerRadius: Tokens.Radius.chip)
                     .fill(.black.opacity(0.5))
-                Image(systemName: item.isPaused ? "play.fill" : "pause.fill")
+                Image(systemName: showsPlay ? "play.fill" : "pause.fill")
                     .font(.system(size: 14, weight: .bold))
                     .foregroundStyle(.white)
             }
         }
         .buttonStyle(.plain)
-        .help(item.isPaused ? Text("Resume", bundle: .module) : Text("Pause", bundle: .module))
+        .help(item.status == .queued
+              ? Text("Start now", bundle: .module)
+              : (item.isPaused ? Text("Resume", bundle: .module) : Text("Pause", bundle: .module)))
     }
     #endif
 
