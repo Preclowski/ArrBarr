@@ -56,10 +56,13 @@ struct SecretStoreSuite {
                 == (kSecAttrAccessibleWhenUnlockedThisDeviceOnly as String))
     }
 
-    @Test("Real Keychain round-trips the MCP token")
+    @Test("Real Keychain round-trips a non-conflicting key")
     func keychainRoundTrips() {
+        // Use a synced key so this test does not share a Keychain entry with the
+        // MCPTokenStore tests (which also write to SecretKey.mcpBearer) and
+        // cause race-condition failures when the suite runs in parallel.
         let store = KeychainSecretStore()
-        let key = SecretKey.mcpBearer
+        let key = SecretKey.tmdbKey
         defer { store.delete(key) }
         store.set("kc-token", for: key)
         #expect(store.read(key) == "kc-token")
