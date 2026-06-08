@@ -18,18 +18,18 @@ public enum MCPToolWhitelist {
     /// this list and the tool catalog in lockstep; new tools picking
     /// up these conventions are gated automatically.
     public static func isDestructive(_ name: String) -> Bool {
-        // Action words that gate. We match each both as an infix segment
-        // (`sonarr_search_episodes`) and as a bare trailing suffix
-        // (`sonarr_search`) — catalog tools like `sonarr_search` /
-        // `radarr_search` put the action last with no following segment,
-        // so an infix-only check would let them slip through un-gated.
-        for action in ["search", "monitor", "add", "delete", "remove"] {
-            // Search tools query indexers and often start a grab; monitor
-            // tools flip monitored state and fire an immediate
-            // SeasonSearch / AlbumSearch when state=true; add/delete/remove
-            // mutate arr state. We gate regardless of arg values to keep
-            // the check simple — the confirm card surfaces the raw
-            // arguments so the user sees exactly what's about to happen.
+        // Indexer searches grab releases — but ONLY the infix form
+        // (`sonarr_search_episodes`, `radarr_search_movie`, `lidarr_search_album`).
+        // The bare `<arr>_search` tools are metadata LOOKUPS that surface add
+        // candidates (the user taps a card to add); they query no indexer and
+        // start no grab, so they are read-only and deliberately NOT gated.
+        if name.contains("_search_") { return true }
+
+        // Monitor / add / delete / remove mutate arr state wherever the action
+        // word sits (monitor fires an immediate SeasonSearch/AlbumSearch when
+        // state=true). Gate both the infix (`_action_`) and the bare trailing
+        // suffix (`_action`) so a future bare `sonarr_delete` is caught too.
+        for action in ["monitor", "add", "delete", "remove"] {
             if name.contains("_\(action)_") || name.hasSuffix("_\(action)") {
                 return true
             }
