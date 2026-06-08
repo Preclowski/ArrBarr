@@ -143,18 +143,4 @@ struct ConfigStoreTests {
         #expect(reloaded.notifyLidarr == true)
     }
 
-    // NOTE: Legacy keychain migration was removed from init in Task 3 (secrets
-    // now flow through an injected SecretStore). This test previously asserted
-    // that init set the keychainMigrationDone flag; that behavior no longer
-    // exists. The flag constant and migration helper remain until Task 5 cleans
-    // them up. Test updated to reflect the new init contract.
-    @Test("Migration flag is not set by init (migration removed in Task 3)")
-    @MainActor func migrationFlagNotSetByInit() {
-        let (defaults, name) = makeDefaults()
-        defer { UserDefaults.standard.removePersistentDomain(forName: name) }
-
-        _ = ConfigStore(defaults: defaults, secrets: InMemorySecretStore())
-        // init no longer runs the legacy migration, so the flag stays false
-        #expect(defaults.bool(forKey: "ArrBarr.keychainMigrationDone") == false)
-    }
 }

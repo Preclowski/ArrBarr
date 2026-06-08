@@ -254,7 +254,6 @@ public final class ConfigStore: ObservableObject {
     private static let mcpHostPortKey = "ArrBarr.mcpHostPort"
     private static let mcpRequireAuthKey = "ArrBarr.mcpRequireAuth"
     private static let mcpDisabledToolsKey = "ArrBarr.mcpDisabledTools"
-    private static let keychainMigrationDoneKey = "ArrBarr.keychainMigrationDone"
     // nonisolated: read from the nonisolated migration helpers below (and the
     // widget extension under Swift 6 strict concurrency), so it must not inherit
     // the class's @MainActor isolation.
@@ -668,7 +667,7 @@ public final class ConfigStore: ObservableObject {
 
     /// One-shot: pull secrets out of legacy plaintext config/openai/tmdb values
     /// in `defaults` into `secrets`, then blank them in `defaults`. Idempotent.
-    nonisolated public static func migrateSecretsToKeychain(defaults: UserDefaults, secrets: SecretStore) {
+    nonisolated static func migrateSecretsToKeychain(defaults: UserDefaults, secrets: SecretStore) {
         guard !defaults.bool(forKey: secretsMigratedKey) else { return }
 
         for kind in ServiceKind.allCases {
@@ -705,30 +704,4 @@ public final class ConfigStore: ObservableObject {
         defaults.set(true, forKey: secretsMigratedKey)
     }
 
-    // MARK: - One-time migration from Keychain (0.6.0/0.6.1) back to UserDefaults
-
-    private static func migrateLegacyKeychainSecrets(defaults: UserDefaults) {
-        for kind in ServiceKind.allCases {
-            guard let data = defaults.data(forKey: key(kind)),
-                  var cfg = try? JSONDecoder().decode(ServiceConfig.self, from: data)
-            else { continue }
-
-            var changed = false
-            if cfg.apiKey.isEmpty,
-               let migrated = LegacyKeychain.read(account: "\(kind.rawValue).apiKey") {
-                cfg.apiKey = migrated
-                changed = true
-            }
-            if cfg.password.isEmpty,
-               let migrated = LegacyKeychain.read(account: "\(kind.rawValue).password") {
-                cfg.password = migrated
-                changed = true
-            }
-            if changed, let updated = try? JSONEncoder().encode(cfg) {
-                defaults.set(updated, forKey: key(kind))
-                LegacyKeychain.delete(account: "\(kind.rawValue).apiKey")
-                LegacyKeychain.delete(account: "\(kind.rawValue).password")
-            }
-        }
-    }
 }
