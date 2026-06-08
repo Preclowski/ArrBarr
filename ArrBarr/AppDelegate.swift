@@ -4,6 +4,7 @@ import Combine
 import UserNotifications
 import CoreSpotlight
 import ArrCore
+import ArrMCPServer
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -12,6 +13,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var paywallWindow: NSWindow?
     private let configStore = ConfigStore.shared
     private let queueVM = QueueViewModel.shared
+    private let mcpController = MCPServerController()
     private var cancellables = Set<AnyCancellable>()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -41,6 +43,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 if feature != nil { self?.showPaywall() } else { self?.closePaywall() }
             }
             .store(in: &cancellables)
+
+        wireMCPServer()
 
         showWelcomeIfNeeded()
 
@@ -115,6 +119,50 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         UNUserNotificationCenter.current().setNotificationCategories([
             batchCategory, downloadingCategory, pausedCategory,
         ])
+    }
+
+    // MARK: - MCP server
+
+    /// Mirror the server's live status into ConfigStore (for the Settings pane)
+    /// and (re)start/stop it whenever the relevant config changes.
+    private func wireMCPServer() {
+        Task {
+            await mcpController.setStatusHandler { [weak self] status in
+                Task { @MainActor in self?.configStore.mcpServerStatus = MCPServerStatus(status) }
+            }
+        }
+        let cs = configStore
+        let triggers: [AnyPublisher<Void, Never>] = [
+            cs.$mcpEnabled.map { _ in () }.eraseToAnyPublisher(),
+            cs.$mcpHostPort.map { _ in () }.eraseToAnyPublisher(),
+            cs.$mcpRequireAuth.map { _ in () }.eraseToAnyPublisher(),
+            cs.$mcpAuthToken.map { _ in () }.eraseToAnyPublisher(),
+            cs.$mcpDisabledTools.map { _ in () }.eraseToAnyPublisher(),
+            cs.$sonarr.map { _ in () }.eraseToAnyPublisher(),
+            cs.$radarr.map { _ in () }.eraseToAnyPublisher(),
+            cs.$lidarr.map { _ in () }.eraseToAnyPublisher(),
+            cs.$whisparr.map { _ in () }.eraseToAnyPublisher(),
+        ]
+        Publishers.MergeMany(triggers)
+            .debounce(for: .milliseconds(400), scheduler: RunLoop.main)
+            .sink { [weak self] in self?.applyMCPConfig() }
+            .store(in: &cancellables)
+        applyMCPConfig()
+    }
+
+    private func applyMCPConfig() {
+        let cs = configStore
+        guard cs.mcpEnabled else { Task { await mcpController.stop() }; return }
+        let inputs = MCPServerController.BackendInputs(
+            sonarr: cs.sonarr, radarr: cs.radarr, lidarr: cs.lidarr, whisparr: cs.whisparr,
+            aiKnowsAboutWhisparr: cs.aiKnowsAboutWhisparr, tmdbApiKey: cs.tmdbApiKey,
+            downloadClients: DownloadClientConfigs(
+                qbittorrent: cs.qbittorrent, transmission: cs.transmission, nzbget: cs.nzbget,
+                sabnzbd: cs.sabnzbd, rtorrent: cs.rtorrent, deluge: cs.deluge))
+        let config = MCPServerController.Config(
+            hostPort: cs.mcpHostPort, requireAuth: cs.mcpRequireAuth, token: cs.mcpAuthToken,
+            disabledTools: cs.mcpDisabledTools, backendInputs: inputs)
+        Task { await mcpController.restart(with: config) }
     }
 
     private func applyAppearance(_ pref: String) {
@@ -533,5 +581,17 @@ extension AppDelegate: @preconcurrency UNUserNotificationCenterDelegate {
 
     private func findItem(source: QueueItem.Source, arrQueueId: Int) -> QueueItem? {
         queueVM.items(for: source).first { $0.arrQueueId == arrQueueId }
+    }
+}
+
+private extension MCPServerStatus {
+    /// Bridge the server controller's status (ArrMCPServer) into ArrCore's
+    /// display enum — identical shapes, different modules.
+    init(_ s: MCPServerController.Status) {
+        switch s {
+        case .stopped: self = .stopped
+        case .running(let url): self = .running(url: url)
+        case .failed(let message): self = .failed(message: message)
+        }
     }
 }
