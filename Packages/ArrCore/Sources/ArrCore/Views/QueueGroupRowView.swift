@@ -133,6 +133,26 @@ public struct QueueGroupRowView: View {
         .onTapGesture {
             onShowDetail?()
         }
+        .contextMenu {
+            if canControl && canPauseResume {
+                Button {
+                    if showsPlay { onResume() } else { onPause() }
+                } label: {
+                    if rep.status == .queued {
+                        Label { Text("Start now", bundle: .module) } icon: { Image(systemName: "play.fill") }
+                    } else if rep.isPaused {
+                        Label { Text("Resume", bundle: .module) } icon: { Image(systemName: "play.fill") }
+                    } else {
+                        Label { Text("Pause", bundle: .module) } icon: { Image(systemName: "pause.fill") }
+                    }
+                }
+            }
+            Button(role: .destructive) {
+                requestDeleteConfirm()
+            } label: {
+                Label { Text("Remove from queue", bundle: .module) } icon: { Image(systemName: "trash") }
+            }
+        }
         // macOS-only hover affordances: row tint + 600 ms delayed tooltip.
         // iOS users tap the row to drill into the detail view, which
         // surfaces the same content as the macOS tooltip.

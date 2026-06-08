@@ -210,6 +210,26 @@ public struct QueueRowView: View {
         .onTapGesture {
             onShowDetail?()
         }
+        .contextMenu {
+            if canControl && canPauseResume {
+                Button {
+                    if showsPlay { onResume() } else { onPause() }
+                } label: {
+                    if item.status == .queued {
+                        Label { Text("Start now", bundle: .module) } icon: { Image(systemName: "play.fill") }
+                    } else if item.isPaused {
+                        Label { Text("Resume", bundle: .module) } icon: { Image(systemName: "play.fill") }
+                    } else {
+                        Label { Text("Pause", bundle: .module) } icon: { Image(systemName: "pause.fill") }
+                    }
+                }
+            }
+            Button(role: .destructive) {
+                requestDeleteConfirm()
+            } label: {
+                Label { Text("Remove from queue", bundle: .module) } icon: { Image(systemName: "trash") }
+            }
+        }
         // Hover-only affordances live on macOS. On iOS the same information
         // is available by tapping into the detail view, and the floating
         // tooltip popover would render as a sheet — wrong UX for a brief

@@ -203,6 +203,9 @@ struct MCPSettingsPane: View {
                 Text(verbatim: "+\(overflow)")
                     .font(.caption2.weight(.medium))
                     .foregroundStyle(.secondary)
+                    // Hovering "+N" lists the apps that didn't fit.
+                    .help(Text(verbatim: services.dropFirst(Self.maxVisibleIcons)
+                        .map(\.displayName).joined(separator: ", ")))
             }
         }
     }

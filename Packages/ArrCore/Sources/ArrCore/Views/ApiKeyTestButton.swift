@@ -1,8 +1,8 @@
 import SwiftUI
 
-/// A "Test key" button for Settings that runs an async validation closure and
-/// shows the result inline: spinner while testing, a green check on success, a
-/// red message on failure. Used to verify the OpenAI and TMDB credentials.
+/// "Test Connection" button for Settings (OpenAI / TMDB). Same chrome and label
+/// as the arr / download-client test in `ServiceFields` so every credential
+/// field tests the same way: a `GlassButtonStyle` button + an inline ✓ / ✗.
 struct ApiKeyTestButton: View {
     /// Validation work — throws on an invalid key / unreachable endpoint.
     let test: () async throws -> Void
@@ -10,17 +10,17 @@ struct ApiKeyTestButton: View {
     @State private var state: TestState = .idle
 
     enum TestState: Equatable {
-        case idle, testing, ok
-        case fail(String)
+        case idle, testing, success
+        case failure(String)
     }
 
     var body: some View {
         HStack(spacing: 8) {
-            Button {
-                Task { await run() }
-            } label: {
-                Text("Test key", bundle: .module)
+            Button { Task { await run() } } label: {
+                Text("Test Connection", bundle: .module)
             }
+            .modifier(GlassButtonStyle())
+            .controlSize(.small)
             .disabled(state == .testing)
 
             switch state {
@@ -28,15 +28,17 @@ struct ApiKeyTestButton: View {
                 EmptyView()
             case .testing:
                 ProgressView().controlSize(.small)
-            case .ok:
-                Label { Text("Works", bundle: .module) } icon: { Image(systemName: "checkmark.circle.fill") }
+            case .success:
+                Label { Text("Connected", bundle: .module) } icon: { Image(systemName: "checkmark.circle.fill") }
+                    .font(.caption)
                     .foregroundStyle(.green)
-                    .font(.caption)
-            case .fail(let msg):
+                    .lineLimit(1)
+            case .failure(let msg):
                 Label { Text(verbatim: msg) } icon: { Image(systemName: "xmark.circle.fill") }
-                    .foregroundStyle(.red)
                     .font(.caption)
+                    .foregroundStyle(.red)
                     .lineLimit(2)
+                    .help(msg)
             }
         }
     }
@@ -46,9 +48,9 @@ struct ApiKeyTestButton: View {
         state = .testing
         do {
             try await test()
-            state = .ok
+            state = .success
         } catch {
-            state = .fail(message(for: error))
+            state = .failure(message(for: error))
         }
     }
 
