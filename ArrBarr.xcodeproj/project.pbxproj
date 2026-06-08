@@ -611,7 +611,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_ENTITLEMENTS = ArrBarr/ArrBarr.entitlements;
+				CODE_SIGN_ENTITLEMENTS = ArrBarr/ArrBarr-AppStore.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = ArrBarr/Info.plist;
@@ -631,7 +631,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = ArrBarriOS/ArrBarriOS.entitlements;
+				CODE_SIGN_ENTITLEMENTS = ArrBarriOS/ArrBarriOS-AppStore.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;

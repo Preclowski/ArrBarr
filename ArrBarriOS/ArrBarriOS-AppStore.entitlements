@@ -6,6 +6,8 @@
 	<array>
 		<string>group.com.preclowski.ArrBarr</string>
 	</array>
+	<key>com.apple.developer.ubiquity-kvstore-identifier</key>
+	<string>$(TeamIdentifierPrefix)$(CFBundleIdentifier)</string>
 	<key>keychain-access-groups</key>
 	<array>
 		<string>$(AppIdentifierPrefix)com.preclowski.ArrBarr.shared</string>
