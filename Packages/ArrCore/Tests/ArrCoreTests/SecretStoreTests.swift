@@ -60,6 +60,7 @@ struct SecretStoreSuite {
     func keychainRoundTrips() {
         let store = KeychainSecretStore()
         let key = SecretKey.mcpBearer
+        defer { store.delete(key) }
         store.set("kc-token", for: key)
         #expect(store.read(key) == "kc-token")
         store.delete(key)

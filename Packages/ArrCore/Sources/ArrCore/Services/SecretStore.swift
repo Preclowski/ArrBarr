@@ -1,5 +1,6 @@
 import Foundation
 import Security
+import os
 
 /// A single secret (one Keychain generic-password account) plus the policy for
 /// how it is stored: whether it should sync via iCloud Keychain (`synced`, only
@@ -36,7 +37,8 @@ public protocol SecretStore: Sendable {
 /// Keychain-backed `SecretStore`. All items share the `service` namespace; the
 /// `SecretKey.account` distinguishes them.
 public struct KeychainSecretStore: SecretStore {
-    static let service = "com.preclowski.ArrBarr"
+    public static let service = "com.preclowski.ArrBarr"
+    private static let logger = Logger(category: "SecretStore")
 
     public init() {}
 
@@ -60,8 +62,18 @@ public struct KeychainSecretStore: SecretStore {
         ]
     }
 
+    /// Query for read/delete. Matches the item regardless of its iCloud-sync
+    /// state (`SecItemCopyMatching`/`SecItemDelete` treat every attribute as a
+    /// match predicate, so a fixed synchronizable value would miss items written
+    /// under the other build flavor). Use `baseQuery` only for adds.
+    public static func matchQuery(for key: SecretKey) -> [String: Any] {
+        var q = baseQuery(for: key)
+        q[kSecAttrSynchronizable as String] = kSecAttrSynchronizableAny
+        return q
+    }
+
     public func read(_ key: SecretKey) -> String? {
-        var q = Self.baseQuery(for: key)
+        var q = Self.matchQuery(for: key)
         q[kSecReturnData as String] = true
         q[kSecMatchLimit as String] = kSecMatchLimitOne
         var item: CFTypeRef?
@@ -74,11 +86,14 @@ public struct KeychainSecretStore: SecretStore {
         delete(key)
         var q = Self.baseQuery(for: key)
         q[kSecValueData as String] = Data(value.utf8)
-        SecItemAdd(q as CFDictionary, nil)
+        let status = SecItemAdd(q as CFDictionary, nil)
+        if status != errSecSuccess && status != errSecDuplicateItem {
+            Self.logger.error("Keychain add failed for \(key.account, privacy: .public): \(status)")
+        }
     }
 
     public func delete(_ key: SecretKey) {
-        SecItemDelete(Self.baseQuery(for: key) as CFDictionary)
+        SecItemDelete(Self.matchQuery(for: key) as CFDictionary)
     }
 }
 
