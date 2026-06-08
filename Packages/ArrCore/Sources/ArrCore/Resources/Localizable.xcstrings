@@ -5551,6 +5551,62 @@
         }
       }
     },
+    "Exposed on the network without authentication. Enable a bearer token.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wystawione w sieci bez uwierzytelniania. Włącz token bearer."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ohne Authentifizierung im Netzwerk freigegeben. Aktivieren Sie ein Bearer-Token."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Expuesto en la red sin autenticación. Activa un token bearer."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exposé sur le réseau sans authentification. Activez un jeton bearer."
+          }
+        }
+      }
+    },
+    "Exposes ArrBarr's tools over the Model Context Protocol so an external client (e.g. Claude Desktop) can drive your media stack. This is separate from the built-in AI assistant — changing these settings does not affect the in-app chat.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Udostępnia narzędzia ArrBarr przez Model Context Protocol, aby zewnętrzny klient (np. Claude Desktop) mógł sterować Twoim stosem mediów. To jest oddzielne od wbudowanego asystenta AI — zmiana tych ustawień nie wpływa na czat w aplikacji."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stellt die Tools von ArrBarr über das Model Context Protocol bereit, damit ein externer Client (z. B. Claude Desktop) deinen Medien-Stack steuern kann. Das ist getrennt vom integrierten KI-Assistenten — das Ändern dieser Einstellungen wirkt sich nicht auf den In-App-Chat aus."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Expone las herramientas de ArrBarr a través del Model Context Protocol para que un cliente externo (p. ej. Claude Desktop) pueda controlar tu stack multimedia. Es independiente del asistente de IA integrado: cambiar estos ajustes no afecta al chat de la app."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Expose les outils d’ArrBarr via le Model Context Protocol afin qu’un client externe (par ex. Claude Desktop) puisse piloter votre pile multimédia. C’est distinct de l’assistant IA intégré — modifier ces réglages n’affecte pas le chat de l’app."
+          }
+        }
+      }
+    },
     "External MCP server": {
       "extractionState": "manual",
       "localizations": {
@@ -6106,6 +6162,62 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ogólne"
+          }
+        }
+      }
+    },
+    "Generate": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Generuj"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Generieren"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Generar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Générer"
+          }
+        }
+      }
+    },
+    "Generate a token — auth stays off until one is set.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wygeneruj token — uwierzytelnianie pozostaje wyłączone, dopóki go nie ustawisz."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Generieren Sie ein Token — die Authentifizierung bleibt aus, bis eines gesetzt ist."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Genera un token: la autenticación permanece desactivada hasta que se establezca uno."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Générez un jeton — l’authentification reste désactivée tant qu’aucun n’est défini."
           }
         }
       }
@@ -10452,6 +10564,34 @@
         }
       }
     },
+    "Regenerate": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wygeneruj ponownie"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neu generieren"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Regenerar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Régénérer"
+          }
+        }
+      }
+    },
     "Relaunch": {
       "extractionState": "manual",
       "localizations": {
@@ -10876,6 +11016,34 @@
     "Reports warnings/errors across your arrs and whether download clients are reachable.": {
       "comment": "Description of the \"Check ARR Health\" intent.",
       "isCommentAutoGenerated": true
+    },
+    "Require bearer token": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wymagaj tokena bearer"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bearer-Token erforderlich"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Requerir token bearer"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exiger un jeton bearer"
+          }
+        }
+      }
     },
     "Restart ArrBarr to apply language change.": {
       "extractionState": "stale",
@@ -11315,6 +11483,34 @@
           "stringUnit": {
             "state": "translated",
             "value": "Uruchom %@."
+          }
+        }
+      }
+    },
+    "Running": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Działa"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktiv"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En ejecución"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En cours"
           }
         }
       }
@@ -13714,6 +13910,34 @@
         }
       }
     },
+    "Stopped": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zatrzymany"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gestoppt"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Detenido"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arrêté"
+          }
+        }
+      }
+    },
     "Subscribes this calendar in Apple Calendar. The server must be reachable when Calendar refreshes (home network or VPN).": {
       "localizations": {
         "de": {
@@ -14431,6 +14655,34 @@
         }
       }
     },
+    "Token": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Token"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Token"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Token"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jeton"
+          }
+        }
+      }
+    },
     "Tomorrow": {
       "localizations": {
         "de": {
@@ -14570,6 +14822,34 @@
           "stringUnit": {
             "state": "translated",
             "value": "Narzędzia"
+          }
+        }
+      }
+    },
+    "Tools are only registered for services you have configured — with no Sonarr/Radarr set up, the server exposes none.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Narzędzia są rejestrowane tylko dla skonfigurowanych usług — bez ustawionego Sonarr/Radarr serwer nie udostępnia żadnych."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tools werden nur für konfigurierte Dienste registriert — ohne eingerichtetes Sonarr/Radarr stellt der Server keine bereit."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Las herramientas solo se registran para los servicios que has configurado: sin Sonarr/Radarr configurado, el servidor no expone ninguna."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les outils ne sont enregistrés que pour les services que vous avez configurés — sans Sonarr/Radarr configuré, le serveur n’en expose aucun."
           }
         }
       }

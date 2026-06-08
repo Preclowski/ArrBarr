@@ -70,6 +70,12 @@ public actor MCPServerController {
             includeTMDBSeries: tmdbEnabled && i.sonarr.isConfigured)
         let router = MCPCallRouter(backend: backend, catalog: catalog,
                                    disabled: config.disabledTools, logger: logger)
+        let exposed = catalog.filter { !config.disabledTools.contains($0.name) }.count
+        if exposed == 0 {
+            logger.notice("0 tools to expose — no Sonarr/Radarr/etc. is configured in this profile")
+        } else {
+            logger.notice("exposing \(exposed) tools", metadata: ["count": .stringConvertible(exposed)])
+        }
 
         var validators: [any HTTPRequestValidator] = [
             OriginValidator.localhost(port: port),

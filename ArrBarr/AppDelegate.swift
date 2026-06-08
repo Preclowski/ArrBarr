@@ -5,6 +5,7 @@ import UserNotifications
 import CoreSpotlight
 import ArrCore
 import ArrMCPServer
+import Logging
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -13,8 +14,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var paywallWindow: NSWindow?
     private let configStore = ConfigStore.shared
     private let queueVM = QueueViewModel.shared
-    private let mcpController = MCPServerController()
+    private lazy var mcpController = MCPServerController()
     private var cancellables = Set<AnyCancellable>()
+
+    /// Route swift-log (MCP server, NIO) into os.Logger. Runs exactly once;
+    /// must happen before the first `Logger` is created (hence `mcpController`
+    /// is lazy and first touched in `wireMCPServer`).
+    private static let bootstrapLogging: Void = {
+        LoggingSystem.bootstrap { OSLogForwardingHandler(label: $0) }
+    }()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         registerNotificationCategories()
@@ -44,6 +52,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
             .store(in: &cancellables)
 
+        _ = Self.bootstrapLogging
         wireMCPServer()
 
         showWelcomeIfNeeded()

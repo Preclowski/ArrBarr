@@ -23,7 +23,7 @@ struct MCPSettingsPane: View {
             } header: {
                 Text("MCP Server", bundle: .module)
             } footer: {
-                Text("Exposes ArrBarr's tools over the Model Context Protocol so an external client can drive your media stack. Not yet active — these settings are saved but no server runs.", bundle: .module)
+                Text("Exposes ArrBarr's tools over the Model Context Protocol so an external client (e.g. Claude Desktop) can drive your media stack. This is separate from the built-in AI assistant — changing these settings does not affect the in-app chat.", bundle: .module)
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -156,10 +156,13 @@ struct MCPSettingsPane: View {
                 .foregroundStyle(.tint)
             }
         } footer: {
-            Text(String(format: String(localized: "%1$lld of %2$lld tools exposed", bundle: .module),
-                        enabledToolCount, ChatToolCatalog.allToolNames.count))
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(String(format: String(localized: "%1$lld of %2$lld tools exposed", bundle: .module),
+                            enabledToolCount, ChatToolCatalog.allToolNames.count))
+                Text("Tools are only registered for services you have configured — with no Sonarr/Radarr set up, the server exposes none.", bundle: .module)
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
         }
     }
 
