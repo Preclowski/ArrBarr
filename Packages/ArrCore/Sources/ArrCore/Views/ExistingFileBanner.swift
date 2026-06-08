@@ -92,15 +92,23 @@ struct ExistingFileBanner: View {
         // siblings: one block for the incoming release, one for the
         // one on disk, both styled identically.
         VStack(alignment: .leading, spacing: 5) {
-            if showMetadata, let q = quality, !q.isEmpty {
+            if showMetadata, (quality?.isEmpty == false) || size != nil || (customFormatScore ?? 0) != 0 {
                 HStack(spacing: 6) {
-                    Text(q)
-                        .scaledFont(size: 12, weight: .semibold)
-                        .foregroundStyle(.primary)
+                    if let q = quality, !q.isEmpty {
+                        Text(q)
+                            .scaledFont(size: 12, weight: .semibold)
+                            .foregroundStyle(.primary)
+                    }
                     if let s = size, s > 0 {
                         Text(ByteCountFormatter.string(fromByteCount: s, countStyle: .file))
                             .scaledFont(size: 11)
                             .foregroundStyle(.secondary)
+                    }
+                    if let score = customFormatScore, score != 0 {
+                        Text(verbatim: score > 0 ? "+\(score)" : "\(score)")
+                            .scaledFont(size: 11, weight: .medium)
+                            .foregroundStyle(score > 0 ? .green : .red)
+                            .help(Text("Custom format score", bundle: .module))
                     }
                 }
             }

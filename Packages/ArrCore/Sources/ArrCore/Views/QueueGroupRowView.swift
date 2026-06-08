@@ -121,11 +121,7 @@ public struct QueueGroupRowView: View {
         }
         .padding(.horizontal, Tokens.Spacing.queueRowH)
         .padding(.vertical, 6)
-        .background(
-            RoundedRectangle(cornerRadius: Tokens.Radius.card)
-                .fill(isHovering ? Color.primary.opacity(0.06) : Color.clear)
-                .padding(.horizontal, 6)
-        )
+        // No row hover-tint background (poster reveals pause/resume on hover).
         // ContentShape/onTapGesture before the hover affordances so the
         // overlay's own buttons receive clicks instead of the row
         // tap-gesture swallowing them.

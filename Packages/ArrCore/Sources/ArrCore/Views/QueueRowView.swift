@@ -191,11 +191,8 @@ public struct QueueRowView: View {
         }
         .padding(.horizontal, Tokens.Spacing.queueRowH)
         .padding(.vertical, 6)
-        .background(
-            RoundedRectangle(cornerRadius: Tokens.Radius.card)
-                .fill(isHovering ? Color.primary.opacity(0.06) : Color.clear)
-                .padding(.horizontal, 6)
-        )
+        // No row hover-tint background — only the chevron reacts to hover; the
+        // poster reveals its pause/resume control on hover instead.
         // ContentShape + onTapGesture before the hover overlay so the
         // overlay's action icons keep their own hit-testing — without
         // this order the row-wide tap-gesture swallowed clicks on the
