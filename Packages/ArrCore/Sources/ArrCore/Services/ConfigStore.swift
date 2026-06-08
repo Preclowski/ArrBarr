@@ -504,6 +504,15 @@ public final class ConfigStore: ObservableObject {
         setupSinks()
     }
 
+    /// Reload all published values from the current backing store without
+    /// re-firing persistence writes. Used by `KVSyncCoordinator` after it applies
+    /// inbound iCloud changes into UserDefaults.
+    public func reloadFromDefaults() {
+        cancellables.removeAll()
+        applyValues(from: defaults)
+        setupSinks()
+    }
+
     /// Seed demo configs once. Enables Radarr/Sonarr/Lidarr; leaves Whisparr off
     /// (opt-in, age gated). The seed-done flag lives in the current backing
     /// store, so wiping the demo suite re-arms it. Caller guards on demo being
