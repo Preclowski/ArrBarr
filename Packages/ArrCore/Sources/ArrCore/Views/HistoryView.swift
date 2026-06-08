@@ -1,11 +1,19 @@
 import SwiftUI
 
 public struct HistoryView: View {
-    let source: QueueItem.Source
-    @ObservedObject var viewModel: QueueViewModel
+    /// nil = "All" — merge history across every configured arr (iOS filter).
+    /// macOS passes a concrete source (per-arr "Show history").
+    let source: QueueItem.Source?
+    var viewModel: QueueViewModel
     @EnvironmentObject var configStore: ConfigStore
     let refreshNonce: Int
     let onClose: () -> Void
+    /// macOS panel / popover shows its own back-button header; the iOS
+    /// History tab supplies a nav bar + source filter instead, so it hides it.
+    var showHeader: Bool = true
+    /// Optional event-type filter (nil = all types). Driven by the iOS
+    /// History tab's second filter menu.
+    var typeFilter: HistoryItem.EventType? = nil
 
     @State private var items: [HistoryItem] = []
     @State private var error: String?
@@ -13,10 +21,23 @@ public struct HistoryView: View {
 
     public var body: some View {
         VStack(spacing: 0) {
-            header
+            if showHeader { header }
             content
         }
-        .task(id: refreshNonce) { await load() }
+        // Re-load when the selected source changes too (the iOS tab swaps
+        // `source` in place), not only on an explicit refresh nonce.
+        .task(id: "\(source?.rawValue ?? "all")#\(refreshNonce)") { await load() }
+    }
+
+    /// Arrs the user has configured — used to fan out the "All" load.
+    private var availableSources: [QueueItem.Source] {
+        QueueItem.Source.allCases.filter { configStore.config(for: $0.serviceKind).isVisible }
+    }
+
+    /// Loaded items after the optional event-type filter.
+    private var shownItems: [HistoryItem] {
+        guard let typeFilter else { return items }
+        return items.filter { $0.eventType == typeFilter }
     }
 
     private var header: some View {
@@ -32,9 +53,10 @@ public struct HistoryView: View {
                 .scaledFont(size: 15, weight: .semibold)
                 .foregroundStyle(.primary)
             Spacer()
-            Image(systemName: sourceSymbol)
-                .scaledFont(size: 11)
-                .foregroundStyle(.tertiary)
+            if let source {
+                ServiceIcon(source: source, size: 11)
+                    .foregroundStyle(.tertiary)
+            }
             Text(LocalizedStringKey(sourceTitle))
                 .scaledFont(size: 11)
                 .foregroundStyle(.tertiary)
@@ -61,7 +83,7 @@ public struct HistoryView: View {
                 .scaledFont(size: 11)
                 .foregroundStyle(.orange)
                 .padding(12)
-        } else if items.isEmpty {
+        } else if shownItems.isEmpty {
             Text("No history", bundle: .module)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
@@ -74,8 +96,8 @@ public struct HistoryView: View {
             // spacing for a flush header→content transition.
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
-                    ForEach(items) { item in
-                        HistoryRowView(item: item)
+                    ForEach(shownItems) { item in
+                        HistoryRowView(item: item, showSourceBadge: source == nil)
                         Divider().padding(.horizontal, 12).opacity(0.5)
                     }
                 }
@@ -85,37 +107,45 @@ public struct HistoryView: View {
         }
     }
 
-    private var sourceSymbol: String {
-        switch source {
-        case .radarr: return "film"
-        case .sonarr: return "tv"
-        case .lidarr: return "music.note"
-        case .whisparr: return "flame"
-        }
-    }
-
     private var sourceTitle: String {
         switch source {
         case .radarr: return "Radarr"
         case .sonarr: return "Sonarr"
         case .lidarr: return "Lidarr"
         case .whisparr: return "Whisparr"
+        case nil: return "All"
         }
     }
 
     private func load() async {
         isLoading = true
         error = nil
-        let result = await viewModel.fetchHistory(for: source)
-        self.items = result.items
-        self.error = result.error
+        if let source {
+            let result = await viewModel.fetchHistory(for: source)
+            self.items = result.items
+            self.error = result.error
+        } else {
+            // "All" — fan out across every configured arr, merge, newest first.
+            var merged: [HistoryItem] = []
+            var errors: [String] = []
+            for s in availableSources {
+                let r = await viewModel.fetchHistory(for: s)
+                merged.append(contentsOf: r.items)
+                if let e = r.error { errors.append(e) }
+            }
+            self.items = merged.sorted { $0.date > $1.date }
+            // Only surface an error when nothing loaded at all.
+            self.error = (merged.isEmpty && !errors.isEmpty) ? errors.joined(separator: " · ") : nil
+        }
         isLoading = false
     }
 
-    init(source: QueueItem.Source, viewModel: QueueViewModel, refreshNonce: Int, onClose: @escaping () -> Void) {
+    init(source: QueueItem.Source?, viewModel: QueueViewModel, refreshNonce: Int, showHeader: Bool = true, typeFilter: HistoryItem.EventType? = nil, onClose: @escaping () -> Void) {
         self.source = source
         self.viewModel = viewModel
         self.refreshNonce = refreshNonce
+        self.showHeader = showHeader
+        self.typeFilter = typeFilter
         self.onClose = onClose
     }
 }
@@ -129,6 +159,9 @@ public struct HistoryHeightKey: PreferenceKey {
 
 public struct HistoryRowView: View {
     let item: HistoryItem
+    /// Show the item's arr icon (used by the "All" history filter where rows
+    /// from different services are interleaved).
+    var showSourceBadge: Bool = false
 
     public var body: some View {
         HStack(alignment: .top, spacing: 8) {
@@ -169,6 +202,13 @@ public struct HistoryRowView: View {
                 .lineLimit(1)
             }
             Spacer(minLength: 4)
+            // Arr icon on the trailing edge (All-filter view) — tells you
+            // which service the row came from without leading clutter.
+            if showSourceBadge {
+                ServiceIcon(source: item.source, size: 13)
+                    .foregroundStyle(.secondary)
+                    .padding(.top, 2)
+            }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)

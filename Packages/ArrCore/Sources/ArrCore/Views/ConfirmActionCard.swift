@@ -37,12 +37,13 @@ public struct ConfirmActionCard: View {
     private var humanDescription: String {
         switch call.name {
         case "sonarr_monitor_season":
-            let season = intArg("seasonNumber") ?? 0
+            let seasons = seasonNumbers()
+            let joined = ListFormatter.localizedString(byJoining: seasons.map { String($0) })
             let state = boolArg("state") ?? true
             if state {
-                return String(format: String(localized: "Monitor season %lld and start search.", bundle: .module), season)
+                return String(format: String(localized: "Monitor season(s) %@ and start search.", bundle: .module), joined)
             } else {
-                return String(format: String(localized: "Stop monitoring season %lld.", bundle: .module), season)
+                return String(format: String(localized: "Stop monitoring season(s) %@.", bundle: .module), joined)
             }
         case "sonarr_search_episodes":
             let count = arrayArgCount("episodeIds")
@@ -64,6 +65,26 @@ public struct ConfirmActionCard: View {
     }
 
     // MARK: - Arg accessors
+
+    /// Seasons targeted by `sonarr_monitor_season`. Reads the
+    /// `seasonNumbers` array, falling back to a legacy single
+    /// `seasonNumber`, so the gate copy lists every season the model
+    /// is about to grab ("season(s) 10 and 11") instead of just one.
+    private func seasonNumbers() -> [Int] {
+        guard case .object(let dict) = call.arguments else { return [] }
+        if case .array(let arr)? = dict["seasonNumbers"] {
+            let xs = arr.compactMap { v -> Int? in
+                switch v {
+                case .number(let n): return Int(n)
+                case .string(let s): return Int(s)
+                default: return nil
+                }
+            }
+            if !xs.isEmpty { return xs.sorted() }
+        }
+        if let single = intArg("seasonNumber") { return [single] }
+        return []
+    }
 
     private func intArg(_ key: String) -> Int? {
         guard case .object(let dict) = call.arguments, let v = dict[key] else { return nil }
@@ -98,12 +119,18 @@ public struct ConfirmActionCard: View {
 /// in season/episode rows pass "Search" / "Remove" to mirror the verb in
 /// their alert message.
 public struct InlineConfirmCard: View {
-    let message: String
+    /// Optional headline above the message. nil keeps the legacy
+    /// "single line message + buttons" chat-tool-gate shape.
+    let title: LocalizedStringKey?
+    let message: Text
     let confirmLabelKey: LocalizedStringKey
+    let cancelLabelKey: LocalizedStringKey
     let destructive: Bool
     let onConfirm: () -> Void
     let onCancel: () -> Void
 
+    /// Verbatim message — used by chat for tool-call descriptions
+    /// (already localized strings, no key lookup).
     public init(
         message: String,
         confirmLabelKey: LocalizedStringKey = "Confirm",
@@ -111,8 +138,30 @@ public struct InlineConfirmCard: View {
         onConfirm: @escaping () -> Void,
         onCancel: @escaping () -> Void
     ) {
-        self.message = message
+        self.title = nil
+        self.message = Text(verbatim: message)
         self.confirmLabelKey = confirmLabelKey
+        self.cancelLabelKey = "Cancel"
+        self.destructive = destructive
+        self.onConfirm = onConfirm
+        self.onCancel = onCancel
+    }
+
+    /// Localized title + message — used by `ConfirmCenter`-driven
+    /// flows (queue trash, settings reset, etc).
+    public init(
+        title: LocalizedStringKey,
+        message: LocalizedStringKey,
+        confirmLabelKey: LocalizedStringKey = "Confirm",
+        cancelLabelKey: LocalizedStringKey = "Cancel",
+        destructive: Bool = true,
+        onConfirm: @escaping () -> Void,
+        onCancel: @escaping () -> Void
+    ) {
+        self.title = title
+        self.message = Text(message, bundle: .module)
+        self.confirmLabelKey = confirmLabelKey
+        self.cancelLabelKey = cancelLabelKey
         self.destructive = destructive
         self.onConfirm = onConfirm
         self.onCancel = onCancel
@@ -121,18 +170,23 @@ public struct InlineConfirmCard: View {
     public var body: some View {
         HStack(alignment: .top, spacing: 10) {
             Image(systemName: "exclamationmark.shield.fill")
-                .scaledFont(size: 14)
+                .scaledFont(size: 16)
                 .foregroundStyle(.orange)
-                .padding(.top, 1)
+                .padding(.top, 2)
             VStack(alignment: .leading, spacing: 6) {
-                Text(message)
+                if let title {
+                    Text(title, bundle: .module)
+                        .scaledFont(size: 13, weight: .semibold)
+                        .foregroundStyle(.primary)
+                }
+                message
                     .scaledFont(size: 12)
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                 HStack(spacing: 8) {
                     Spacer()
                     Button(role: .cancel, action: onCancel) {
-                        Text("Cancel", bundle: .module)
+                        Text(cancelLabelKey, bundle: .module)
                     }
                     .keyboardShortcut(.escape, modifiers: [])
                     Button(role: destructive ? .destructive : nil, action: onConfirm) {
@@ -143,7 +197,7 @@ public struct InlineConfirmCard: View {
                 }
             }
         }
-        .padding(10)
+        .padding(12)
         .background(
             RoundedRectangle(cornerRadius: Tokens.Radius.panel, style: .continuous)
                 .fill(Color.orange.opacity(0.08))
@@ -152,5 +206,68 @@ public struct InlineConfirmCard: View {
             RoundedRectangle(cornerRadius: Tokens.Radius.panel, style: .continuous)
                 .stroke(Color.orange.opacity(0.35), lineWidth: 0.75)
         )
+    }
+}
+
+/// Modal confirmation — scrim + bottom-pinned sheet card. Distinct
+/// styling from the chat-inline `InlineConfirmCard` (which uses
+/// orange-tinted bg because it lives inside chat content): the modal
+/// gets a SOLID material card so it visually separates from whatever
+/// row / text it overlays.
+public struct ModalConfirmOverlay: View {
+    let title: LocalizedStringKey
+    let message: LocalizedStringKey
+    let confirmLabelKey: LocalizedStringKey
+    let cancelLabelKey: LocalizedStringKey
+    let destructive: Bool
+    let onConfirm: () -> Void
+    let onCancel: () -> Void
+
+    public init(
+        title: LocalizedStringKey,
+        message: LocalizedStringKey,
+        confirmLabelKey: LocalizedStringKey = "Confirm",
+        cancelLabelKey: LocalizedStringKey = "Cancel",
+        destructive: Bool = true,
+        onConfirm: @escaping () -> Void,
+        onCancel: @escaping () -> Void
+    ) {
+        self.title = title
+        self.message = message
+        self.confirmLabelKey = confirmLabelKey
+        self.cancelLabelKey = cancelLabelKey
+        self.destructive = destructive
+        self.onConfirm = onConfirm
+        self.onCancel = onCancel
+    }
+
+    public var body: some View {
+        ZStack(alignment: .bottom) {
+            // Strong scrim — separates the card from content behind.
+            // Chat usage shows the same card without scrim (inline).
+            Rectangle()
+                .fill(.black.opacity(0.55))
+                .contentShape(Rectangle())
+                .onTapGesture { onCancel() }
+                .ignoresSafeArea()
+
+            // Re-use the chat-tool-gate card verbatim. One component,
+            // one visual language. The card's orange-tint + shield
+            // already reads as "attention" inline; over a scrim it
+            // reads as "modal".
+            InlineConfirmCard(
+                title: title,
+                message: message,
+                confirmLabelKey: confirmLabelKey,
+                cancelLabelKey: cancelLabelKey,
+                destructive: destructive,
+                onConfirm: onConfirm,
+                onCancel: onCancel
+            )
+            .shadow(color: .black.opacity(0.30), radius: 16, y: -2)
+            .padding(.horizontal, 14)
+            .padding(.bottom, 14)
+        }
+        .transition(.opacity.combined(with: .move(edge: .bottom)))
     }
 }

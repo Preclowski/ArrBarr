@@ -1,34 +1,40 @@
 import SwiftUI
 
 public struct PopoverContentView: View {
-    @ObservedObject var viewModel: QueueViewModel
+    var viewModel: QueueViewModel
     @EnvironmentObject var configStore: ConfigStore
+    @ObservedObject private var storeManager = StoreManager.shared
     let onOpenSettings: () -> Void
+    let onShowAbout: () -> Void
     let onQuit: () -> Void
-    /// Optional. When provided, the footer "More" menu shows an "Open Window…"
-    /// item that hands off to a richer NSWindow-hosted view. Nil for the iOS
-    /// build (no separate window concept) and the early macOS scaffold.
-    let onOpenWindow: (() -> Void)?
 
     public init(
         viewModel: QueueViewModel,
         onOpenSettings: @escaping () -> Void,
-        onQuit: @escaping () -> Void,
-        onOpenWindow: (() -> Void)? = nil
+        onShowAbout: @escaping () -> Void = {},
+        onQuit: @escaping () -> Void
     ) {
         self.viewModel = viewModel
         self.onOpenSettings = onOpenSettings
+        self.onShowAbout = onShowAbout
         self.onQuit = onQuit
-        self.onOpenWindow = onOpenWindow
     }
 
     @State private var selectedTab: Tab = .queue
     @State private var historySource: QueueItem.Source?
     @State private var historyRefreshNonce = 0
-    @StateObject private var searchViewModel = SearchViewModel()
-    @StateObject private var chatHolder = ChatViewModelHolder()
+    @State private var searchViewModel = SearchViewModel()
+    @State private var chatHolder = ChatViewModelHolder()
     @State private var searchResult: SearchResult?
     @State private var detailItem: QueueItem?
+    /// Pending confirmation payload — set by `.onReceive` listening
+    /// for `arrBarrConfirmRequest`. Rendered as a panel-wide overlay
+    /// at the end of body.
+    @State private var pendingConfirm: PendingConfirm?
+    /// Push-target for "open the series view" from inside an
+    /// EpisodeQuickDetail. Registered as a sibling navigationDestination
+    /// on the root NavigationStack so SwiftUI doesn't get confused
+    /// about insertion order when the binding fires from a deeper view.
     /// Queue tab filter — substring match against item titles. Mirrors
     /// the search view's floating bar (same `.glassyFloatingBar()`
     /// chrome). When non-empty, tonight/needsYou sections collapse out
@@ -56,7 +62,7 @@ public struct PopoverContentView: View {
     /// (so accept/skip counters and the deck persist) and the overlay
     /// flag is flipped by the `arrBarrOpenDiscoverQuiz` notification
     /// posted by the `discover_in_quiz` chat tool.
-    @StateObject private var discoverViewModel = DiscoverViewModel()
+    @State private var discoverViewModel = DiscoverViewModel.shared
     @State private var showDiscoverOverlay = false
     /// Auto-collapse timer for the "Next week" banner — the banner
     /// snaps back to the 4-item peek 30s after the user expands it.
@@ -74,8 +80,22 @@ public struct PopoverContentView: View {
         !queueFilter.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
+    /// Queue rows that are for a specific Sonarr episode (season pack
+    /// items have `episodeNumber == nil`). These bypass DetailView's
+    /// series chrome and push the episode directly via
+    /// `EpisodeQuickDetail` — the series view is reachable from the
+    /// episode hero's series-title tap.
+    private func isSonarrEpisodeRow(_ item: QueueItem) -> Bool {
+        item.source == .sonarr
+            && (item.episodeNumber ?? 0) > 0
+            && item.entityId != nil
+    }
+
     private var chatAvailable: Bool {
         guard configStore.aiEnabled else { return false }
+        // Demo mode uses DemoChatProvider, so the chat works without a key or
+        // Apple Intelligence — show the tab regardless of provider/OS.
+        if DemoMode.isActive { return true }
         switch configStore.chatProvider {
         case .foundationModels:
             if #available(macOS 26.0, iOS 26.0, *) { return true }
@@ -98,6 +118,12 @@ public struct PopoverContentView: View {
     public var body: some View {
         mainContent
             .environment(\.locale, configStore.currentLocale)
+            // The menu-bar popover is its own scene root — without this every
+            // `.scaledFont` in the popover falls back to 1.0 and the Text-size
+            // preset has no effect here (it only worked in Settings, which
+            // self-injects). See `appFontScale`.
+            .appFontScale(configStore)
+            .preferredColorScheme(configStore.preferredColorScheme)
             .onAppear {
                 searchViewModel.setup(
                     radarrConfig: configStore.radarr,
@@ -133,12 +159,26 @@ public struct PopoverContentView: View {
                 .keyboardShortcut("n", modifiers: .command)
                 .opacity(0)
                 .frame(width: 0, height: 0)
+                // ⌘R — manual refresh. The popover (the primary surface) had
+                // no refresh affordance at all, so the only way to refresh was
+                // to wait for the next poll.
+                Button("") { Task { await viewModel.refresh() } }
+                    .keyboardShortcut("r", modifiers: .command)
+                    .opacity(0)
+                    .frame(width: 0, height: 0)
             }
             .onReceive(NotificationCenter.default.publisher(for: .arrBarrTriggerAdd)) { _ in
                 withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
                     selectedTab = .queue
                 }
                 queueFilterFocused = true
+            }
+            // Search-to-add App Intent. The menu-bar popover can't be opened
+            // programmatically, so this stages the query for whenever it opens.
+            .onReceive(NotificationCenter.default.publisher(for: .arrBarrSearchQuery)) { note in
+                guard let q = note.userInfo?["query"] as? String else { return }
+                selectedTab = .queue
+                queueFilter = q
             }
             .onReceive(NotificationCenter.default.publisher(for: .arrBarrOpenDetail)) { note in
                 guard let item = note.userInfo?["item"] as? QueueItem else { return }
@@ -178,6 +218,34 @@ public struct PopoverContentView: View {
                 historySource = nil
                 showDiscoverOverlay = true
             }
+            .onReceive(NotificationCenter.default.publisher(for: .arrBarrConfirmRequest)) { note in
+                if let payload = note.userInfo?["payload"] as? PendingConfirm {
+                    pendingConfirm = payload
+                }
+            }
+            .overlay {
+                if let pending = pendingConfirm {
+                    ModalConfirmOverlay(
+                        title: pending.title,
+                        message: pending.message ?? "",
+                        confirmLabelKey: pending.confirmLabel,
+                        cancelLabelKey: pending.cancelLabel,
+                        destructive: pending.isDestructive,
+                        onConfirm: {
+                            pending.onConfirm()
+                            pendingConfirm = nil
+                        },
+                        onCancel: { pendingConfirm = nil }
+                    )
+                }
+            }
+            // NOTE: the paywall is intentionally NOT presented here. This view
+            // lives inside the MenuBarExtra panel, which auto-dismisses when it
+            // resigns key (i.e. the instant StoreKit's purchase UI appears),
+            // which would abort the purchase. On macOS the paywall is hosted in
+            // a dedicated NSWindow by AppDelegate (observing
+            // StoreManager.gatedFeature). `storeManager` is still observed here
+            // for the Chat-tab lock badge + gate.
     }
 
     private var mainContent: some View {
@@ -198,6 +266,7 @@ public struct PopoverContentView: View {
         // don't need an opaque background on the overlay itself — the
         // popover's native chrome shines through, matching the rest of the
         // app.
+        NavigationStack {
         ZStack {
             VStack(spacing: 0) {
                 if let historySource {
@@ -272,6 +341,12 @@ public struct PopoverContentView: View {
                         withAnimation(.smooth(duration: 0.22)) { showDiscoverOverlay = false }
                     }
                 )
+                // Hide (but keep mounted) when SearchAddPanel or
+                // DetailView opens on top — otherwise the picks list
+                // bleeds through under the detail surface, which has
+                // no opaque background of its own.
+                .opacity((searchResult != nil || detailItem != nil) ? 0 : 1)
+                .allowsHitTesting(!(searchResult != nil || detailItem != nil))
                 .transition(.opacity)
             }
 
@@ -280,27 +355,31 @@ public struct PopoverContentView: View {
                     .transition(.opacity)
             }
 
-            if let detailItem {
-                // No opaque background here — chat / queue / upcoming
-                // underneath are hidden via the opacity gate above, so
-                // the popover's native chrome shows through and the
-                // detail view feels tonally consistent with the rest of
-                // the app instead of a flat dark rectangle pasted on top.
+        }
+        .navigationDestination(item: $detailItem) { item in
+            // Sonarr queue rows that target a specific episode skip the
+            // Series view and land the user on the episode directly.
+            // The series view is reachable from the episode hero's
+            // "series name >" tap which fires `seriesPushRequest`
+            // (sibling destination below).
+            if isSonarrEpisodeRow(item) {
+                // EpisodeQuickDetail owns its own series-drill push, so
+                // the series detail nests under the episode and "back"
+                // returns to the episode (not straight to the queue).
+                EpisodeQuickDetail(
+                    item: item,
+                    viewModel: viewModel,
+                    originLabel: LocalizedStringKey(selectedTab.rawValue)
+                )
+            } else {
                 DetailView(
-                    item: detailItem,
-                    onBack: {
-                        withAnimation(.smooth(duration: 0.22)) { self.detailItem = nil }
-                    },
-                    // Origin label = whichever tab the user was on
-                    // when they drilled into the detail. Reads as a
-                    // breadcrumb in the header ("Nadchodzące",
-                    // "Kolejka", etc.) instead of duplicating the
-                    // item's own title.
+                    item: item,
+                    onBack: { self.detailItem = nil },
                     originLabel: LocalizedStringKey(selectedTab.rawValue),
                     viewModel: viewModel
                 )
-                .transition(.opacity)
             }
+        }
         }
         .frame(width: 400, height: 600)
         // Transparent background lets NSPopover's native chrome show
@@ -377,11 +456,6 @@ public struct PopoverContentView: View {
                 searchResult = result
             }
         }
-        .environmentObject(configStore)
-        // Globally scale every `.scaledFont(size:)` site by the user's
-        // preference (Default / Larger / Largest). Injected once at the
-        // root so individual views just read `@Environment(\.fontScale)`.
-        .environment(\.fontScale, configStore.fontScale)
     }
 
     private var tabBar: some View {
@@ -429,6 +503,10 @@ public struct PopoverContentView: View {
             Spacer(minLength: 0)
             ForEach(Array(visibleTabs.enumerated()), id: \.element) { _, tab in
                 Button {
+                    if tab == .chat && !storeManager.isPro {
+                        storeManager.gate(.chat)
+                        return
+                    }
                     // Re-tapping the active queue tab clears the
                     // filter + scope — gives the user a "reset to
                     // home" affordance that doesn't need its own
@@ -459,14 +537,21 @@ public struct PopoverContentView: View {
                     // Text(LocalizedStringKey) without bundle defaults to
                     // Bundle.main, where the package's pl/de/es/fr
                     // translations don't live.
-                    ZStack {
-                        Text(LocalizedStringKey(tab.rawValue), bundle: .module)
-                            .scaledFont(size: 12, weight: .semibold)
-                            .opacity(0)
-                            .accessibilityHidden(true)
-                        Text(LocalizedStringKey(tab.rawValue), bundle: .module)
-                            .scaledFont(size: 12, weight: selectedTab == tab ? .semibold : .regular)
-                            .foregroundStyle(selectedTab == tab ? .primary : .secondary)
+                    HStack(spacing: 3) {
+                        ZStack {
+                            Text(LocalizedStringKey(tab.rawValue), bundle: .module)
+                                .scaledFont(size: 12, weight: .semibold)
+                                .opacity(0)
+                                .accessibilityHidden(true)
+                            Text(LocalizedStringKey(tab.rawValue), bundle: .module)
+                                .scaledFont(size: 12, weight: selectedTab == tab ? .semibold : .regular)
+                                .foregroundStyle(selectedTab == tab ? .primary : .secondary)
+                        }
+                        if tab == .chat && !storeManager.isPro {
+                            Image(systemName: "lock.fill")
+                                .scaledFont(size: 9, weight: .semibold)
+                                .foregroundStyle(.secondary)
+                        }
                     }
                     .fixedSize(horizontal: true, vertical: false)
                     // Horizontal/vertical padding sets the breathing
@@ -507,8 +592,15 @@ public struct PopoverContentView: View {
             // inside an explicit GeometryReader removes that ambiguity.
             GeometryReader { _ in
                 if let frame = tabFrames[selectedTab] {
+                    // Indicator pill spreads past the tab's text + padding
+                    // box — `+ 18` on each side — so it reads as a real
+                    // tab slot rather than a tight chip hugging the text.
+                    // Vertical only loses 2pt so the pill keeps its
+                    // capsule shape against the surrounding glass bar.
                     TabPillBackground()
-                        .frame(width: max(0, frame.width - 6), height: max(0, frame.height - 6))
+                        // Fill the whole tab button (it was insetting slightly):
+                        // a touch wider than the label+padding box, full height.
+                        .frame(width: max(0, frame.width + 24), height: max(0, frame.height + 4))
                         .position(x: frame.midX, y: frame.midY)
                 }
             }
@@ -532,13 +624,17 @@ public struct PopoverContentView: View {
     /// circle to wrap.
     private var moreMenu: some View {
         Menu {
-            if let onOpenWindow {
-                Button { onOpenWindow() } label: { Text("Open Window…", bundle: .module) }
-                    .keyboardShortcut("n", modifiers: [.command, .shift])
-                Divider()
-            }
+            // Manual refresh — mirrors the hidden ⌘R button above so the
+            // shortcut is also discoverable in the menu (same dual-
+            // registration pattern as Settings' ⌘,).
+            Button { Task { await viewModel.refresh() } } label: { Text("Refresh", bundle: .module) }
+                .keyboardShortcut("r", modifiers: .command)
+            Divider()
             Button { onOpenSettings() } label: { Text("Settings…", bundle: .module) }
                 .keyboardShortcut(",", modifiers: .command)
+            #if os(macOS)
+            Button { onShowAbout() } label: { Text("About ArrBarr", bundle: .module) }
+            #endif
             Divider()
             Button { onQuit() } label: { Text("Quit ArrBarr", bundle: .module) }
                 .keyboardShortcut("q", modifiers: .command)

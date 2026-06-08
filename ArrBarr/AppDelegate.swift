@@ -2,77 +2,45 @@ import AppKit
 import SwiftUI
 import Combine
 import UserNotifications
+import CoreSpotlight
 import ArrCore
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    private var statusItem: NSStatusItem!
-    private var popover: NSPopover!
     private var settingsWindow: NSWindow?
     private var welcomeWindow: NSWindow?
-    /// Optional desktop window. Hidden by default — opened on demand via the
-    /// status-item right-click menu, the popover footer "Open Window…" item,
-    /// or ⌘N. While the window is alive the app flips its activation policy
-    /// to `.regular` so Dock + ⌘⇥ work; when it closes we revert to
-    /// `.accessory` so we're back to a pure menu-bar utility.
-    private var mainWindow: NSWindow?
-    private var escMonitor: Any?
-    private var outsideClickMonitor: Any?
-
+    private var paywallWindow: NSWindow?
     private let configStore = ConfigStore.shared
-    private let queueVM = QueueViewModel()
-    private var badgeObserver: AnyCancellable?
+    private let queueVM = QueueViewModel.shared
+    private var cancellables = Set<AnyCancellable>()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        if let button = statusItem.button {
-            button.action = #selector(statusItemClicked(_:))
-            button.target = self
-            button.sendAction(on: [.leftMouseUp, .rightMouseUp])
-        }
-        updateStatusBarTitle(active: queueVM.activeCount)
         registerNotificationCategories()
         UNUserNotificationCenter.current().delegate = self
 
-        popover = NSPopover()
-        popover.behavior = .transient
-        popover.animates = false
-        popover.delegate = self
-
-        let root = PopoverContentView(
-            viewModel: queueVM,
-            onOpenSettings: { [weak self] in self?.openSettings() },
-            onQuit: { NSApp.terminate(nil) },
-            onOpenWindow: { [weak self] in self?.openMainWindow() }
-        )
-        .environmentObject(configStore)
-
-        // Don't enable any sizingOptions on the hosting controller. With
-        // .preferredContentSize / .intrinsicContentSize, NSHostingController
-        // pushes a fresh size to NSPopover on every SwiftUI body invalidation
-        // — and a refresh fires several @Published changes per cycle, which
-        // causes NSPopover to repaint its window each time. That repaint is
-        // the popover-wide blink the user keeps reporting. Instead, we
-        // measure the SwiftUI content's preferred size once when the popover
-        // opens (see togglePopover) and pin the popover to that size for the
-        // duration the popover is shown.
-        let hosting = NSHostingController(rootView: root)
-        popover.contentSize = NSSize(width: 400, height: 600)
-        // On macOS 26 NSPopover natively paints Liquid Glass for its own
-        // frame (the rounded tile, arrow, and shadow). Earlier we wrapped
-        // the host in our own NSVisualEffectView, but that *fought* the
-        // system chrome instead of helping — the popover ended up looking
-        // like a flat HUD rectangle layered on top of the real glass.
-        //
-        // The correct path: hand NSPopover the host directly, then make
-        // the hosting view transparent so NSPopover's own glass shows
-        // through. NSHostingController paints windowBackgroundColor by
-        // default, which is exactly what was blocking the system glass.
-        hosting.view.wantsLayer = true
-        hosting.view.layer?.backgroundColor = .clear
-        popover.contentViewController = hosting
-
         DemoMode.seedConfigsIfNeeded(configStore)
+
+        // Drive the whole app's appearance from the preset. On macOS the
+        // per-scene `.preferredColorScheme` doesn't reach the menu-bar popover
+        // or the NSHostingController-backed windows; `NSApp.appearance` does,
+        // and applies to every window at once.
+        applyAppearance(configStore.appearance)
+        configStore.$appearance
+            .sink { [weak self] in self?.applyAppearance($0) }
+            .store(in: &cancellables)
+
+        // Paywall presentation (App Store builds). The gate lives in ArrCore as
+        // a published `gatedFeature`. We deliberately do NOT present it as a
+        // sheet inside the MenuBarExtra panel — that panel auto-dismisses the
+        // instant it resigns key, which happens the moment StoreKit's purchase
+        // UI takes focus. So mirror the Settings/About pattern and host the
+        // paywall in a real NSWindow that survives focus changes.
+        StoreManager.shared.$gatedFeature
+            .receive(on: RunLoop.main)
+            .sink { [weak self] feature in
+                if feature != nil { self?.showPaywall() } else { self?.closePaywall() }
+            }
+            .store(in: &cancellables)
 
         showWelcomeIfNeeded()
 
@@ -80,62 +48,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         Task.detached { await ImageCache.shared.purgeOlderThan(30) }
 
-        badgeObserver = queueVM.$queues
-            .sink { [weak self] queues in
-                // Whisparr excluded from the badge count by design — it has
-                // no "notify on new grabs" setting either; keep the menu
-                // bar focused on the standard arrs.
-                let active = [QueueItem.Source.radarr, .sonarr, .lidarr]
-                    .compactMap { queues[$0] }
-                    .flatMap { $0 }
-                    .filter { $0.status != .completed }
-                    .count
-                self?.updateStatusBarTitle(active: active)
-            }
+        // Index the library into Spotlight (search "american pie" → result).
+        SpotlightIndexer.reindex(configStore: configStore)
 
         // Wake handler — WebSockets don't survive a Mac sleep cycle
         // reliably; the OS can take 30-90 s to surface the dead socket,
         // during which SignalR pushes silently drop. Force a tear-and-
         // rebuild of every realtime connection right after wake so the
-        // data the user sees on the first popover open is current.
+        // data the user sees on the next panel open is current.
         NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didWakeNotification,
             object: nil,
             queue: .main
         ) { [weak self] _ in
             Task { @MainActor in self?.queueVM.systemDidWake() }
-        }
-    }
-
-    // MARK: - Status item
-
-    private func updateStatusBarTitle(active: Int) {
-        guard let button = statusItem.button else { return }
-
-        let a11yLabel = active > 0
-            ? "ArrBarr — \(active) active download\(active == 1 ? "" : "s")"
-            : "ArrBarr — no active downloads"
-        let symbolName = active > 0 ? "arrow.down.circle.fill" : "arrow.down.circle"
-        let icon = NSImage(systemSymbolName: symbolName, accessibilityDescription: a11yLabel)
-        icon?.isTemplate = true
-
-        if active > 0 {
-            let attachment = NSTextAttachment()
-            attachment.image = icon
-            attachment.bounds = CGRect(x: 0, y: -3, width: 16, height: 16)
-            let mutable = NSMutableAttributedString()
-            mutable.append(NSAttributedString(attachment: attachment))
-            mutable.append(NSAttributedString(
-                string: " \(active)",
-                attributes: [
-                    .font: NSFont.monospacedDigitSystemFont(ofSize: NSFont.systemFontSize, weight: .medium)
-                ]
-            ))
-            button.attributedTitle = mutable
-            button.image = nil
-        } else {
-            button.image = icon
-            button.attributedTitle = NSAttributedString(string: "")
         }
     }
 
@@ -191,101 +117,146 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ])
     }
 
-    // MARK: - Popover
-
-    @objc private func statusItemClicked(_ sender: AnyObject?) {
-        guard let event = NSApp.currentEvent else { return }
-        if event.type == .rightMouseUp || event.modifierFlags.contains(.option) {
-            showStatusMenu()
-        } else {
-            togglePopover(sender)
+    private func applyAppearance(_ pref: String) {
+        switch pref {
+        case "light": NSApp.appearance = NSAppearance(named: .aqua)
+        case "dark":  NSApp.appearance = NSAppearance(named: .darkAqua)
+        default:      NSApp.appearance = nil
         }
     }
 
-    private func togglePopover(_ sender: AnyObject?) {
-        if popover.isShown {
-            popover.performClose(sender)
-        } else {
-            openPopover()
+    // MARK: - Spotlight
+
+    /// Re-index when the app is re-activated so posters cached while browsing
+    /// get picked up (cached-only thumbnails). Throttled inside `reindex`.
+    func applicationDidBecomeActive(_ notification: Notification) {
+        SpotlightIndexer.reindex(configStore: configStore)
+    }
+
+    /// A Spotlight result was clicked. The menu-bar app has no window to host
+    /// a detail view, so open the item in the arr's web UI instead.
+    func application(_ application: NSApplication,
+                     continue userActivity: NSUserActivity,
+                     restorationHandler: @escaping ([any NSUserActivityRestoring]) -> Void) -> Bool {
+        guard userActivity.activityType == CSSearchableItemActionType,
+              let id = userActivity.userInfo?[CSSearchableItemActivityIdentifier] as? String else {
+            return false
         }
-    }
-
-    private func openPopover() {
-        guard let button = statusItem.button else { return }
-        popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
-        popover.contentViewController?.view.window?.makeKey()
-        queueVM.startForegroundPolling()
-        installEscMonitor()
-        // Popover stays pinned at 400x600 (set once at init). We deliberately
-        // don't re-measure or push intrinsic sizes from SwiftUI — that caused
-        // the popover to resize when swapping views (queue → detail → back),
-        // and it wouldn't always return to the previous height.
-    }
-
-    private func installEscMonitor() {
-        escMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            if event.keyCode == 53, self?.popover.isShown == true {
-                self?.popover.performClose(nil)
-                return nil
+        Task { @MainActor in
+            if let url = await SpotlightIndexer.browserURL(forIdentifier: id, configStore: configStore) {
+                NSWorkspace.shared.open(url)
             }
-            return event
         }
-        outsideClickMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
-            guard let self, self.popover.isShown else { return }
-            self.popover.performClose(nil)
-        }
+        return true
     }
 
-    private func removeEscMonitor() {
-        if let monitor = escMonitor {
-            NSEvent.removeMonitor(monitor)
-            escMonitor = nil
+    // MARK: - Paywall
+
+    /// Host the paywall in a real, focus-stable NSWindow. Presenting it inside
+    /// the MenuBarExtra panel breaks: the panel resigns key (and self-closes)
+    /// the moment StoreKit's purchase sheet appears, aborting the purchase.
+    private func showPaywall() {
+        if let win = paywallWindow {
+            win.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
         }
-        if let monitor = outsideClickMonitor {
-            NSEvent.removeMonitor(monitor)
-            outsideClickMonitor = nil
+        let view = PaywallView(context: StoreManager.shared.gatedFeature) {
+            StoreManager.shared.dismissPaywall()
         }
+        .environmentObject(configStore)
+        let hosting = NSHostingController(rootView: view)
+        let win = NSWindow(contentViewController: hosting)
+        win.title = String(localized: "Control", bundle: .arrCore)
+        win.styleMask = [.titled, .closable]
+        win.setContentSize(NSSize(width: 400, height: 560))
+        win.isReleasedWhenClosed = false
+        win.center()
+        NotificationCenter.default.addObserver(
+            forName: NSWindow.willCloseNotification,
+            object: win,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.paywallWindow = nil
+                // Closing the window cancels the gate so state stays consistent.
+                StoreManager.shared.dismissPaywall()
+            }
+        }
+        paywallWindow = win
+        win.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
     }
 
-    private func showStatusMenu() {
-        let menu = NSMenu()
-        menu.addItem(withTitle: String(localized: "Refresh", bundle: .arrCore), action: #selector(menuRefresh), keyEquivalent: "r").target = self
-        let addItem = menu.addItem(withTitle: String(localized: "Add", bundle: .arrCore), action: #selector(menuAdd), keyEquivalent: "n")
-        addItem.target = self
-        menu.addItem(.separator())
-        let openWindowItem = menu.addItem(withTitle: String(localized: "Open Window…", bundle: .arrCore), action: #selector(menuOpenWindow), keyEquivalent: "n")
-        openWindowItem.keyEquivalentModifierMask = [.command, .shift]
-        openWindowItem.target = self
-        menu.addItem(withTitle: String(localized: "Settings…", bundle: .arrCore), action: #selector(menuSettings), keyEquivalent: ",").target = self
-        menu.addItem(.separator())
-        menu.addItem(withTitle: String(localized: "Quit ArrBarr", bundle: .arrCore), action: #selector(menuQuit), keyEquivalent: "q").target = self
-        statusItem.menu = menu
-        statusItem.button?.performClick(nil)
-        statusItem.menu = nil
+    private func closePaywall() {
+        guard let win = paywallWindow else { return }
+        paywallWindow = nil
+        win.close()
     }
 
-    @objc private func menuRefresh() { Task { await queueVM.refresh() } }
-    @objc private func menuOpenWindow() { openMainWindow() }
-    @objc private func menuAdd() {
-        // Show the popover (if not already) then ask PopoverContentView to
-        // flip into the search overlay.
-        if !popover.isShown, let button = statusItem.button {
-            popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+    // MARK: - About
+
+    /// Native macOS About window. The standard panel renders the app icon,
+    /// name, version and copyright automatically; we supply a `.credits`
+    /// attributed string for the "Made by" line plus the clickable links
+    /// (GitHub / Website / Privacy Policy / icon attribution) that used to
+    /// live in the Settings footer.
+    func showAbout() {
+        var options: [NSApplication.AboutPanelOptionKey: Any] = [
+            .credits: Self.aboutCredits
+        ]
+        // The standard panel's default icon comes from Launch Services, which
+        // can serve a stale cached icon. Load the current compiled AppIcon
+        // straight from the asset catalog so the panel always matches the
+        // shipped icon.
+        if let icon = NSImage(named: "AppIcon") {
+            options[.applicationIcon] = icon
         }
-        // Defer one runloop tick so onAppear has wired the notification listener
-        // before we post.
-        DispatchQueue.main.async {
-            NotificationCenter.default.post(name: .arrBarrTriggerAdd, object: nil)
-        }
+        NSApp.orderFrontStandardAboutPanel(options: options)
+        NSApp.activate(ignoringOtherApps: true)
     }
-    @objc private func menuSettings() { openSettings() }
-    @objc private func menuQuit() { NSApp.terminate(nil) }
+
+    private static var aboutCredits: NSAttributedString {
+        let bundle = Bundle.arrCore
+        let result = NSMutableAttributedString()
+
+        func appendLine(_ title: String, _ urlString: String) {
+            let attrs: [NSAttributedString.Key: Any] = [
+                .font: NSFont.systemFont(ofSize: 12, weight: .medium),
+                .link: URL(string: urlString)!,
+            ]
+            result.append(NSAttributedString(string: title + "\n", attributes: attrs))
+        }
+        func appendPlain(_ text: String, size: CGFloat = 11, color: NSColor = .secondaryLabelColor) {
+            result.append(NSAttributedString(string: text, attributes: [
+                .font: NSFont.systemFont(ofSize: size),
+                .foregroundColor: color,
+            ]))
+        }
+
+        appendPlain("Made by 🥨\n\n", size: 12, color: .labelColor)
+        // Order: app first, then privacy, then source.
+        appendLine(String(localized: "Website", bundle: bundle), "https://arrbarr.app")
+        appendLine(String(localized: "Privacy Policy", bundle: bundle), "https://arrbarr.app/privacy-policy")
+        appendLine("GitHub", "https://github.com/Preclowski/ArrBarr")
+        appendPlain("\n")
+        result.append(NSAttributedString(string: "Dashboard Icons · CC BY 4.0", attributes: [
+            .font: NSFont.systemFont(ofSize: 10),
+            .link: URL(string: "https://dashboardicons.com")!,
+        ]))
+
+        // Centre everything so the credits read as a tidy block under the
+        // auto-rendered icon / name / version.
+        let paragraph = NSMutableParagraphStyle()
+        paragraph.alignment = .center
+        paragraph.paragraphSpacing = 3
+        result.addAttribute(.paragraphStyle, value: paragraph, range: NSRange(location: 0, length: result.length))
+        return result
+    }
 
     // MARK: - Settings
 
-    private func openSettings() {
-        if popover.isShown { popover.performClose(nil) }
-
+    func openSettings() {
         if let win = settingsWindow {
             win.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
@@ -299,10 +270,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ).environmentObject(configStore)
         let hosting = NSHostingController(rootView: view)
         let win = NSWindow(contentViewController: hosting)
-        win.title = String(localized: "ArrBarr Settings", bundle: .arrCore)
-        win.styleMask = [.titled]
+        let shortVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""
+        win.title = String(localized: "ArrBarr Settings", bundle: .arrCore) + (shortVersion.isEmpty ? "" : " v\(shortVersion)")
+        // `.closable` shows the standard traffic-light cluster with the red
+        // close button active; minimize + zoom render greyed-out (no
+        // `.miniaturizable` / `.resizable`), matching "three buttons, only
+        // close enabled".
+        win.styleMask = [.titled, .closable]
         win.setContentSize(NSSize(width: 520, height: 460))
         win.isReleasedWhenClosed = false
+        // Centre the title. macOS left-aligns standard titles, so hide the
+        // native one and host a centred label as a full-width titlebar
+        // accessory.
+        win.titleVisibility = .hidden
+        installCenteredTitle(win.title, in: win)
         win.center()
 
         NotificationCenter.default.addObserver(
@@ -318,74 +299,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.activate(ignoringOtherApps: true)
     }
 
-    // MARK: - Main Window
-    //
-    // Opens the desktop-window mode of the app. The window is a transient
-    // power-user surface — clicking the status item still pops the popover
-    // (the primary, lightweight interaction). Only when the user explicitly
-    // chooses "Open Window…" (right-click menu, popover footer, or ⌘N) do we
-    // promote the process to a regular Dock app for the duration of the
-    // window's lifetime.
-    //
-    // Lifecycle:
-    //   open  → setActivationPolicy(.regular) + makeKeyAndOrderFront
-    //   close → setActivationPolicy(.accessory), nil out reference
-    //
-    // The window's content is currently the existing PopoverContentView,
-    // simply allowed to grow to a desktop size. This is the scaffold; the
-    // next phase will swap the body for a proper NavigationSplitView
-    // (LibraryRoot) shared with iPad landscape.
-
-    private func openMainWindow() {
-        if popover.isShown { popover.performClose(nil) }
-
-        if let win = mainWindow {
-            NSApp.setActivationPolicy(.regular)
-            NSApp.activate(ignoringOtherApps: true)
-            win.makeKeyAndOrderFront(nil)
-            return
-        }
-
-        let view = MainWindowView(
-            viewModel: queueVM,
-            onOpenSettings: { [weak self] in self?.openSettings() }
-        ).environmentObject(configStore)
-
-        let hosting = NSHostingController(rootView: view)
-        let win = NSWindow(contentViewController: hosting)
-        win.title = "ArrBarr"
-        win.styleMask = [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView]
-        // Generous default — three-pane split needs space.
-        win.setContentSize(NSSize(width: 1100, height: 720))
-        win.minSize = NSSize(width: 760, height: 520)
-        win.isReleasedWhenClosed = false
-        win.center()
-
-        NotificationCenter.default.addObserver(
-            forName: NSWindow.willCloseNotification,
-            object: win,
-            queue: .main
-        ) { [weak self] _ in
-            Task { @MainActor in
-                guard let self else { return }
-                self.mainWindow = nil
-                // Pop back to accessory: Dock icon vanishes, the app is
-                // a pure menu-bar utility again. The status item stays put.
-                NSApp.setActivationPolicy(.accessory)
-                // Polling can stop unless the popover is currently showing.
-                if !self.popover.isShown {
-                    self.queueVM.stopForegroundPolling()
-                }
-            }
-        }
-
-        mainWindow = win
-        // Promote to regular so Dock + ⌘⇥ work while the window is up.
-        NSApp.setActivationPolicy(.regular)
-        NSApp.activate(ignoringOtherApps: true)
-        win.makeKeyAndOrderFront(nil)
-        // Foreground polling — the window is the primary surface while open.
-        queueVM.startForegroundPolling()
+    /// Pin a centred title label into the window's titlebar container. macOS
+    /// has no API to centre the native title (it's left-aligned after the
+    /// traffic lights), so with `titleVisibility = .hidden` we add our own
+    /// label centred to the titlebar's full width.
+    private func installCenteredTitle(_ title: String, in win: NSWindow) {
+        guard let titlebar = win.standardWindowButton(.closeButton)?.superview else { return }
+        let label = NSTextField(labelWithString: title)
+        label.font = .systemFont(ofSize: 13, weight: .semibold)
+        label.textColor = .labelColor
+        label.alignment = .center
+        label.lineBreakMode = .byTruncatingTail
+        label.translatesAutoresizingMaskIntoConstraints = false
+        titlebar.addSubview(label)
+        NSLayoutConstraint.activate([
+            label.centerXAnchor.constraint(equalTo: titlebar.centerXAnchor),
+            label.centerYAnchor.constraint(equalTo: titlebar.centerYAnchor),
+        ])
     }
 
     // MARK: - Welcome
@@ -439,11 +369,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             },
             onTryDemo: { [weak self] in self?.enableDeveloperModeAndRelaunch() },
             onFinish: { [weak self] in
-                // Done at the end of the tour: close welcome, then pop the
-                // status-bar popover so the user lands on the thing they
-                // just learned about.
+                // Close welcome. The MenuBarExtra icon is already
+                // visible — user clicks it themselves to land on the
+                // panel they just learned about.
                 self?.welcomeWindow?.performClose(nil)
-                self?.openPopover()
             }
         ).environmentObject(configStore)
 
@@ -518,9 +447,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard response == .alertFirstButtonReturn else { return false }
 
         UserDefaults.standard.set(enabled, forKey: DemoMode.key)
+        // Re-point the live store now (belt-and-suspenders before relaunch).
+        configStore.useDemoStore(enabled)
         if !enabled {
-            // Re-arm the seed so re-enabling later flips configs back on.
-            UserDefaults.standard.removeObject(forKey: "ArrBarr.demoSeedDone")
+            // Wipe the demo profile entirely (configs + seed flag) so the next
+            // enable re-seeds a clean demo. Targets ONLY the demo suite — the
+            // real profile in `.standard` is never touched.
+            DemoMode.resetDemoStore()
         }
         relaunchSelf()
         return true
@@ -533,18 +466,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         task.arguments = ["-n", url.path]
         try? task.run()
         NSApp.terminate(nil)
-    }
-}
-
-extension AppDelegate: NSPopoverDelegate {
-    func popoverDidClose(_ notification: Notification) {
-        // Keep polling alive if the desktop window is still showing — it's
-        // the primary surface in that case.
-        if mainWindow == nil {
-            queueVM.stopForegroundPolling()
-        }
-        queueVM.setTonightExpanded(false)
-        removeEscMonitor()
     }
 }
 
@@ -572,10 +493,10 @@ extension AppDelegate: @preconcurrency UNUserNotificationCenterDelegate {
 
         switch action {
         case UNNotificationDefaultActionIdentifier:
-            // Tapping the banner body opens the menu-bar popover —
-            // that's the app's primary surface and likely what the user
-            // expects after seeing a status update.
-            Task { @MainActor in self.openPopover() }
+            // Tapping the banner body is a no-op now that MenuBarExtra
+            // owns the panel — there's no public API to open it
+            // programmatically. The user clicks the menu-bar icon.
+            break
         case NotificationCoalescer.openActionIdentifier:
             openArrQueue(from: userInfo)
         case NotificationCoalescer.pauseActionIdentifier:

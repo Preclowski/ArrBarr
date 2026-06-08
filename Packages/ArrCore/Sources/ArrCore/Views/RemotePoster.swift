@@ -37,9 +37,14 @@ public struct RemotePoster: View {
     /// rectangle (`maxWidth/Height: .infinity`) instead of clamping to
     /// `size`. Default `false` preserves all existing call-site behaviour.
     var fill: Bool = false
+    /// Opt-in: show a spinner while the image is in flight instead of the
+    /// fallback symbol. Off by default so existing call sites are unchanged;
+    /// used where load latency is visible (e.g. the Quiz card's poster deck).
+    var showsLoadingIndicator: Bool = false
 
     @State private var image: PlatformImage?
     @State private var failed = false
+    @State private var isLoading = true
 
     public var body: some View {
         Group {
@@ -51,7 +56,10 @@ public struct RemotePoster: View {
             } else {
                 ZStack {
                     Rectangle().fill(.quaternary)
-                    if let fallbackSymbol {
+                    if showsLoadingIndicator && isLoading {
+                        ProgressView()
+                            .controlSize(.small)
+                    } else if let fallbackSymbol {
                         Image(systemName: fallbackSymbol)
                             .font(.system(size: min(size.width, size.height) * 0.4, weight: .light))
                             .foregroundStyle(.tertiary)
@@ -75,13 +83,16 @@ public struct RemotePoster: View {
         guard let url else {
             image = nil
             failed = false
+            isLoading = false
             return
         }
+        isLoading = true
         let key = apiKey
         let result = await ImageCache.shared.image(for: url, apiKey: key)
         await MainActor.run {
             image = result
             failed = (result == nil)
+            isLoading = false
         }
     }
 }

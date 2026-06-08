@@ -161,41 +161,19 @@ struct DownloadSection: View {
             // `showUpgradeDiff: true`) handles the upgrade context
             // with the same tree-branch pattern every other surface
             // uses. One diff format, one source of truth.
-            if showCustomFormats, !item.customFormats.isEmpty {
-                // New-spec strip — chips not in the existing file
-                // render green (added).
-                CustomFormatChips(
-                    formats: item.customFormats,
-                    score: 0,
-                    existingFormats: item.isUpgrade ? item.existingCustomFormats : nil
-                )
-            }
-
-            // Release filename — just the new file's path. The
-            // existing-file path used to ride on a `↳` sub-line under
-            // it, but now lives in the ExistingFileBanner below
-            // (uniform "EXISTING FILE" header + filename + chip strip
-            // styling across both the in-library view and the
-            // upgrade-in-progress view).
-            if let release = item.releaseName, !release.isEmpty {
-                Text(release)
-                    .scaledFont(size: 11, design: .monospaced)
-                    .foregroundStyle(.primary)
-                    .lineLimit(2)
-                    .truncationMode(.middle)
-            }
-
-            // Existing-file block. Same component used in the
-            // "already in library, no active download" path
-            // (RadarrDetailPanel uses it directly) — passing
-            // `comparingTo:` colour-codes removed chips red so the
-            // diff vs the new release becomes visible inside the
-            // same uniform chrome. When there's no existing metadata
-            // (fresh download, no replacement), nothing renders.
-            if item.isUpgrade,
-               item.existingFileName != nil || item.existingQuality != nil
-                   || !item.existingCustomFormats.isEmpty {
-                ExistingFileBanner(item: item, comparingTo: item.customFormats)
+            // Upgrade context — formats + filenames live inside the
+            // grid above (`UpgradeDiffTable` extends to render
+            // "Formaty" and "Plik" rows under Jakość/Rozmiar/Score).
+            // So we just render the standalone strip + filename when
+            // there's NO active upgrade, to avoid double-rendering.
+            if !item.isUpgrade {
+                if showCustomFormats, !item.customFormats.isEmpty {
+                    CustomFormatChips(
+                        formats: item.customFormats,
+                        score: 0
+                    )
+                }
+                ReleaseNameBlock(release: item.releaseName)
             }
         }
     }

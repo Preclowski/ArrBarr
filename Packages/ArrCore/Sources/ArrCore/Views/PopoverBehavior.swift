@@ -42,13 +42,16 @@ public extension View {
         arrowEdge: Edge = .trailing,
         @ViewBuilder content: @escaping () -> Content
     ) -> some View {
+        #if os(macOS)
         popover(isPresented: isPresented, arrowEdge: arrowEdge) {
-            #if os(macOS)
             content().popoverBehavior(.applicationDefined)
-            #else
-            content()
-            #endif
         }
+        #else
+        // iOS has no hover — SwiftUI would render this as a modal sheet,
+        // which is wrong UX for a tooltip. Tap on the row already opens
+        // DetailView with the same (and more) information.
+        self
+        #endif
     }
 }
 

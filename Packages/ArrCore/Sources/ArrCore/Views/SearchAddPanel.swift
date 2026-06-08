@@ -5,8 +5,10 @@ public struct SearchAddPanel: View {
     /// chat result built from a TMDB summary (no IMDB / RT / runtime).
     /// `+`-flow results already arrive enriched and the swap is a no-op.
     @State private var result: SearchResult
-    @ObservedObject var viewModel: SearchViewModel
+    var viewModel: SearchViewModel
     let onBack: () -> Void
+
+    @ObservedObject private var storeManager = StoreManager.shared
 
     public init(result: SearchResult, viewModel: SearchViewModel,
                 onBack: @escaping () -> Void) {
@@ -62,6 +64,10 @@ public struct SearchAddPanel: View {
                 .zIndex(10)
             }
         }
+        .navigationTitle(navTitleString)
+        #if os(iOS)
+        .navigationBarTitleDisplayMode(.inline)
+        #endif
     }
 
     private var mainContent: some View {
@@ -154,28 +160,33 @@ public struct SearchAddPanel: View {
     // MARK: - Header chrome (matches DetailView)
 
     private var header: some View {
-        // Variant A — back + page title leading, source tag trailing.
-        // Same shape as HistoryView and DetailView so all three back-
-        // navigable screens read consistently.
+        // SearchAddPanel is presented as an *overlay* (from the Add tab and
+        // from chat rich cards), not a NavigationStack push, so there's no
+        // system `<` chevron. Render our own leading back button + title —
+        // without it the chat → "add new movie" flow had no way back (the
+        // reported bug). Mirrors EpisodeDetailOverlay's floating header.
         HStack(spacing: 6) {
             FloatingBackButton(action: onBack)
-
-            Text("Add", bundle: .module)
+                .keyboardShortcut(.cancelAction)
+            Text(verbatim: navTitleString)
                 .scaledFont(size: 15, weight: .semibold)
                 .foregroundStyle(.primary)
-
-            Spacer()
-
-            Image(systemName: result.source.symbol)
-                .scaledFont(size: 11)
-                .foregroundStyle(.tertiary)
-            Text(result.source.displayName)
-                .scaledFont(size: 11)
-                .foregroundStyle(.tertiary)
+                .lineLimit(1)
+                .truncationMode(.tail)
+            Spacer(minLength: 0)
         }
         .padding(.horizontal, 12)
         .padding(.top, 10)
         .padding(.bottom, 8)
+    }
+
+    /// Toolbar title — "The Boys (2019)" / "Inception (2010)". Falls
+    /// back to bare title when year is unknown.
+    private var navTitleString: String {
+        if let y = result.year, y > 0 {
+            return "\(result.title) (\(y))"
+        }
+        return result.title
     }
 
     // MARK: - Hero
@@ -198,7 +209,11 @@ public struct SearchAddPanel: View {
                     withAnimation(.smooth(duration: 0.22)) {
                         enlargedPoster = url ?? result.posterURL
                     }
-                }
+                },
+                // Title + year live in the nav-bar title now; hero
+                // hides its in-card title to avoid duplication —
+                // matches DetailView's pattern.
+                showTitle: false
             )
             if let ov = result.overview, !ov.isEmpty {
                 ExpandableOverview(text: ov)
@@ -418,8 +433,10 @@ public struct SearchAddPanel: View {
                     // and queue rows for this arr. Makes the CTA read at
                     // a glance which service it'll hit.
                     HStack(spacing: 6) {
-                        Image(systemName: result.source.symbol)
-                            .scaledFont(size: 11, weight: .semibold)
+                        if !storeManager.isPro {
+                            Image(systemName: "lock.fill")
+                        }
+                        ServiceIcon(source: result.source, size: 11)
                         Text(addLabel)
                             .scaledFont(size: 12, weight: .semibold)
                     }

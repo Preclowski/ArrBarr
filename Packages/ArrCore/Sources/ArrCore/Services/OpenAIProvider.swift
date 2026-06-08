@@ -3,10 +3,14 @@ import Foundation
 public struct OpenAIProvider: LLMProvider {
     private let config: OpenAIConfig
     private let session: URLSession
+    /// Human-readable language the assistant should reply in by default
+    /// (e.g. "Polish"). Sourced from the app's language setting.
+    private let replyLanguage: String
 
-    public init(config: OpenAIConfig, session: URLSession = .shared) {
+    public init(config: OpenAIConfig, session: URLSession = .shared, replyLanguage: String = "English") {
         self.config = config
         self.session = session
+        self.replyLanguage = replyLanguage
     }
 
     public var isAvailable: Bool { config.isConfigured }
@@ -16,7 +20,8 @@ public struct OpenAIProvider: LLMProvider {
             model: config.model,
             prompt: prompt,
             tools: tools,
-            history: history
+            history: history,
+            replyLanguage: replyLanguage
         )
         let url = URL(string: config.baseURL.trimmingCharacters(in: CharacterSet(charactersIn: "/")) + "/chat/completions")!
         var req = URLRequest(url: url)
@@ -25,6 +30,10 @@ public struct OpenAIProvider: LLMProvider {
         req.setValue("Bearer \(config.apiKey)", forHTTPHeaderField: "Authorization")
         req.setValue("https://github.com/Preclowski/ArrBarr", forHTTPHeaderField: "HTTP-Referer")
         req.setValue("ArrBarr", forHTTPHeaderField: "X-Title")
+        // LLM completions can take a while (slow/free endpoints, reasoning
+        // models, multi-round tool loops). The 60s URLSession default was too
+        // tight and surfaced as "chat timed out"; give it generous headroom.
+        req.timeoutInterval = 120
         let encoder = JSONEncoder()
         encoder.outputFormatting = .withoutEscapingSlashes
         req.httpBody = try encoder.encode(body)
@@ -58,12 +67,14 @@ public struct OpenAIProvider: LLMProvider {
 
     // MARK: - Request building (pure — tested independently)
 
-    static func buildRequestBody(model: String, prompt: String, tools: [LLMTool], history: [ChatMessage]) -> ChatCompletionsRequest {
+    static func buildRequestBody(model: String, prompt: String, tools: [LLMTool], history: [ChatMessage], replyLanguage: String = "English") -> ChatCompletionsRequest {
+        let arrs = SystemPromptComposer.arrsClause(tools: tools)
         let systemMessage = ChatCompletionsRequest.Message(
             role: "system",
             content: """
-            You are ArrBarr's in-app assistant for Sonarr (TV) and Radarr (movies).
-            Reply in English, in a short, friendly tone. The user may be Polish — keep titles as the user wrote them.
+            You are ArrBarr's in-app assistant for \(arrs) — and a film buff at heart.
+            You speak concisely but with real passion for film and TV. You run your own homelab on the same *arr stack, so you talk to the user as a fellow self-hoster: when it helps, you share a hard-won tip on quality profiles, custom formats or release groups — never lecturing. Passion shows in your word choice, not your length: keep it short.
+            Reply in \(replyLanguage) by default, but if the user writes in another language, match them. Keep media titles exactly as the user wrote them.
             Call a tool when the request needs server data or an action. Otherwise just answer.
             Only use tools from the provided list.
 
@@ -76,6 +87,22 @@ public struct OpenAIProvider: LLMProvider {
             [link](url). Keep replies short — usually one short paragraph.
             When listing several items, write them out as a sentence with
             commas, or use em-dashes inline.
+
+            When you talk about a specific film or show you genuinely know
+            (never guess, never invent facts), PROACTIVELY offer one short fun
+            fact or behind-the-scenes tidbit — don't wait to be asked. Wrap
+            ANY words that reveal a plot point (a twist, an ending, a death,
+            who did it) in double pipes: ||like this||. The app blurs whatever
+            is inside the pipes behind a tap-to-reveal cloud, so wrapping is
+            always safe — the reader chooses whether to peek. Because it's
+            safe, lean toward wrapping rather than staying silent: a hidden
+            spoiler is better than no tidbit. Wrap only the revealing words,
+            not the whole sentence. Examples:
+              • "Great practical effects — and ||the shark is barely shown
+                because the mechanical one kept breaking||."
+              • "Loved the ending. ||Bruce Willis was dead the whole time.||"
+            Don't pipe ordinary, non-spoiler trivia (release year, cast,
+            budget) — those stay in the open.
             """,
             tool_calls: nil,
             tool_call_id: nil

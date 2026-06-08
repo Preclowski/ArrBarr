@@ -121,14 +121,20 @@ extension LocalToolBackend {
     /// disk, etc. The model gets a per-arr one-line summary; full-detail
     /// messages are inlined only when there's something to report so the
     /// output stays compact when everything's green.
-    func arrHealth() async throws -> ToolCallOutput {
+    func healthCheck() async throws -> ToolCallOutput {
         let configured: [(QueueItem.Source, ServiceConfig)] = [
             (.sonarr, sonarr), (.radarr, radarr),
             (.lidarr, lidarr), (.whisparr, whisparr),
         ].filter { $0.1.isConfigured }
 
+        let clientLines = await downloadClientHealthLines()
+
         guard !configured.isEmpty else {
-            return ToolCallOutput(text: "No arr services are configured.")
+            // No arrs, but download clients might still be set up.
+            if clientLines.isEmpty {
+                return ToolCallOutput(text: "No services are configured.")
+            }
+            return ToolCallOutput(text: (["Download clients:"] + clientLines).joined(separator: "\n"))
         }
 
         // Each fetch is one HTTP — fan out in parallel.
@@ -187,7 +193,58 @@ extension LocalToolBackend {
                 lines.append("  • [\(kind)] \(msg)")
             }
         }
+        if !clientLines.isEmpty {
+            lines.append("Download clients:")
+            lines.append(contentsOf: clientLines)
+        }
         return ToolCallOutput(text: lines.joined(separator: "\n"))
+    }
+
+    /// Probe every configured download client's connection in parallel.
+    /// `testConnection()` returns a version/status string on success or
+    /// throws when unreachable / auth-failed. Returns one summary line per
+    /// configured client; empty array when none are set up.
+    private func downloadClientHealthLines() async -> [String] {
+        let dc = downloadClients
+        let probes: [(String, DownloadClientKind, ServiceConfig)] = [
+            ("qBittorrent", .qbittorrent, dc.qbittorrent),
+            ("Transmission", .transmission, dc.transmission),
+            ("NZBGet", .nzbget, dc.nzbget),
+            ("SABnzbd", .sabnzbd, dc.sabnzbd),
+            ("rTorrent", .rtorrent, dc.rtorrent),
+            ("Deluge", .deluge, dc.deluge),
+        ].filter { $0.2.isConfigured }
+
+        guard !probes.isEmpty else { return [] }
+
+        var results: [(String, String)] = []
+        await withTaskGroup(of: (String, String).self) { group in
+            for (label, kind, cfg) in probes {
+                group.addTask { [cfg] in
+                    do {
+                        let status = try await Self.probeDownloadClient(kind, cfg)
+                        let detail = status.isEmpty ? "" : " (\(status))"
+                        return (label, "reachable\(detail)")
+                    } catch {
+                        return (label, "unreachable — \(error.localizedDescription)")
+                    }
+                }
+            }
+            for await r in group { results.append(r) }
+        }
+        results.sort { $0.0 < $1.0 }
+        return results.map { "  • \($0.0): \($0.1)" }
+    }
+
+    private static func probeDownloadClient(_ kind: DownloadClientKind, _ cfg: ServiceConfig) async throws -> String {
+        switch kind {
+        case .qbittorrent:  return try await QbittorrentClient(config: cfg).testConnection()
+        case .transmission: return try await TransmissionClient(config: cfg).testConnection()
+        case .nzbget:       return try await NzbgetClient(config: cfg).testConnection()
+        case .sabnzbd:      return try await SabnzbdClient(config: cfg).testConnection()
+        case .rtorrent:     return try await RtorrentClient(config: cfg).testConnection()
+        case .deluge:       return try await DelugeClient(config: cfg).testConnection()
+        }
     }
 
     // MARK: - Lifecycle control tools (monitor + search)
@@ -202,8 +259,18 @@ extension LocalToolBackend {
     /// can't fabricate success.
     func sonarrMonitorSeason(_ args: JSONValue) async throws -> ToolCallOutput {
         let seriesId = Self.intArg(args, key: "seriesId")
-        guard let seasonNumber = Self.optionalIntArg(args, key: "seasonNumber") else {
-            return ToolCallOutput(text: "Need seasonNumber (integer).")
+        // Accept either a `seasonNumbers` array (multi) or a legacy
+        // single `seasonNumber`. Chat requests like "pobierz 10 i 11
+        // sezon" name MORE THAN ONE season; the old single-int schema
+        // silently dropped every season past the first. Sonarr's
+        // SeasonSearch command is per-season, so we loop one call each.
+        var seasons = Self.intArrayArg(args, key: "seasonNumbers")
+        if seasons.isEmpty, let single = Self.optionalIntArg(args, key: "seasonNumber") {
+            seasons = [single]
+        }
+        seasons = Array(Set(seasons)).sorted()
+        guard !seasons.isEmpty else {
+            return ToolCallOutput(text: "Need seasonNumbers (non-empty integer array) or a single seasonNumber.")
         }
         let state = Self.optionalBoolArg(args, key: "state") ?? true
         guard seriesId > 0 else {
@@ -213,22 +280,59 @@ extension LocalToolBackend {
             return ToolCallOutput(text: "Sonarr is not configured.")
         }
         let client = SonarrClient(config: sonarr)
-        do {
-            try await client.setSeasonMonitored(seriesId: seriesId, seasonNumber: seasonNumber, monitored: state)
-        } catch {
-            return ToolCallOutput(text: "FAILED to update monitoring: \(error.localizedDescription)")
+
+        func list(_ xs: [Int]) -> String { xs.map(String.init).joined(separator: ", ") }
+
+        // Step 1: flip monitoring on each season, recording per-season
+        // success so a single rejected season doesn't sink the rest.
+        var monitored: [Int] = []
+        var monitorFailed: [Int] = []
+        var lastMonitorError = ""
+        for s in seasons {
+            do {
+                try await client.setSeasonMonitored(seriesId: seriesId, seasonNumber: s, monitored: state)
+                monitored.append(s)
+            } catch {
+                monitorFailed.append(s)
+                lastMonitorError = error.localizedDescription
+            }
         }
+
         guard state else {
-            return ToolCallOutput(text: "OK: stopped monitoring season \(seasonNumber) of seriesId=\(seriesId). No search triggered.")
+            if monitorFailed.isEmpty {
+                return ToolCallOutput(text: "OK: stopped monitoring season(s) \(list(monitored)) of seriesId=\(seriesId). No search triggered.")
+            }
+            if monitored.isEmpty {
+                return ToolCallOutput(text: "FAILED to stop monitoring season(s) \(list(monitorFailed)): \(lastMonitorError).")
+            }
+            return ToolCallOutput(text: "PARTIAL: stopped monitoring season(s) \(list(monitored)); FAILED for \(list(monitorFailed)) (\(lastMonitorError)). No search triggered.")
         }
-        // Monitor flipped on → kick the search. Report the outcome
-        // explicitly so the model can't paper over a failure.
-        do {
-            try await client.searchSeason(seriesId: seriesId, seasonNumber: seasonNumber)
-            return ToolCallOutput(text: "OK: season \(seasonNumber) of seriesId=\(seriesId) is now monitored, and SeasonSearch command was POST'd to Sonarr. Indexer results will land in the queue when releases match — typically within ~30 seconds, longer if indexers are slow.")
-        } catch {
-            return ToolCallOutput(text: "PARTIAL: monitoring on, but Sonarr rejected the search command (\(error.localizedDescription)). Tell the user the season is monitored but they should retry shortly or use the season's search button in DetailView. DO NOT call sonarr_search_episodes as a workaround — it grabs per-episode releases instead of a season pack.")
+
+        // Step 2: fire a SeasonSearch for each season that's now
+        // monitored. Report the actual per-season outcome explicitly so
+        // the model can't paper over a partial failure.
+        var searched: [Int] = []
+        var searchFailed: [Int] = []
+        var lastSearchError = ""
+        for s in monitored {
+            do {
+                try await client.searchSeason(seriesId: seriesId, seasonNumber: s)
+                searched.append(s)
+            } catch {
+                searchFailed.append(s)
+                lastSearchError = error.localizedDescription
+            }
         }
+
+        if monitorFailed.isEmpty && searchFailed.isEmpty {
+            return ToolCallOutput(text: "OK: season(s) \(list(searched)) of seriesId=\(seriesId) now monitored, and a SeasonSearch command was POST'd to Sonarr for each. Indexer results will land in the queue when releases match — typically within ~30 seconds, longer if indexers are slow.")
+        }
+
+        var parts: [String] = []
+        if !searched.isEmpty { parts.append("monitored + searching season(s) \(list(searched))") }
+        if !searchFailed.isEmpty { parts.append("monitored but Sonarr REJECTED the search for season(s) \(list(searchFailed)) (\(lastSearchError))") }
+        if !monitorFailed.isEmpty { parts.append("FAILED to even monitor season(s) \(list(monitorFailed)) (\(lastMonitorError))") }
+        return ToolCallOutput(text: "PARTIAL: " + parts.joined(separator: "; ") + ". Tell the user EXACTLY which seasons worked and which didn't — do not claim full success. For rejected searches they should retry shortly or use the season's search button in DetailView. DO NOT call sonarr_search_episodes as a workaround — it grabs per-episode releases instead of a season pack.")
     }
 
     /// Manual indexer search for one or more episodes by id. Mirrors
@@ -526,7 +630,11 @@ extension LocalToolBackend {
             line: { r in
                 let title = r.title ?? "(untitled)"
                 let yearPart = r.year.map { " (\($0))" } ?? ""
-                let idPart = r.tmdbId.map { " · tmdbId=\($0)" } ?? ""
+                let idParts: [String] = [
+                    r.id.map { "movieId=\($0)" },     // internal id — for get_title_details / radarr_search_movie
+                    r.tmdbId.map { "tmdbId=\($0)" },
+                ].compactMap { $0 }
+                let idPart = idParts.isEmpty ? "" : " · " + idParts.joined(separator: ", ")
                 let fileMark = (r.hasFile ?? false) ? " · downloaded" : " · missing"
                 return "• \(title)\(yearPart)\(idPart)\(fileMark)"
             },
@@ -534,15 +642,72 @@ extension LocalToolBackend {
         )
     }
 
-    func sonarrCalendar() async throws -> ToolCallOutput {
-        try await runCalendar(source: .sonarr, config: sonarr) {
-            try await SonarrClient(config: self.sonarr).fetchCalendar()
+    /// Unified calendar across every configured arr (or one, via the
+    /// optional `service` arg). Replaces the four per-arr calendar tools —
+    /// fans out the fetches in parallel, merges, sorts by air date.
+    func getCalendar(_ args: JSONValue) async throws -> ToolCallOutput {
+        let requested = Self.stringArg(args, key: "service").lowercased()
+
+        // Resolve which (source, config) pairs to query. Whisparr only
+        // participates when the AI-access toggle is on (matches the guard
+        // every other whisparr tool uses).
+        let all: [(QueueItem.Source, ServiceConfig)] = [
+            (.sonarr, sonarr), (.radarr, radarr),
+            (.lidarr, lidarr), (.whisparr, whisparr),
+        ]
+        let targets: [(QueueItem.Source, ServiceConfig)]
+        if !requested.isEmpty {
+            guard let src = QueueItem.Source(rawValue: requested) else {
+                return ToolCallOutput(text: "Unknown service '\(requested)'. Use sonarr, radarr, lidarr or whisparr.")
+            }
+            if src == .whisparr && !aiKnowsAboutWhisparr {
+                return ToolCallOutput(text: "Whisparr AI access is disabled in Settings.")
+            }
+            let cfg = all.first { $0.0 == src }!.1
+            guard cfg.isConfigured else {
+                return ToolCallOutput(text: "\(src.displayName) is not configured.")
+            }
+            targets = [(src, cfg)]
+        } else {
+            targets = all.filter { src, cfg in
+                cfg.isConfigured && (src != .whisparr || aiKnowsAboutWhisparr)
+            }
         }
+        guard !targets.isEmpty else {
+            return ToolCallOutput(text: "No services are configured.")
+        }
+
+        var merged: [UpcomingItem] = []
+        var failures: [String] = []
+        await withTaskGroup(of: (QueueItem.Source, Result<[UpcomingItem], Error>).self) { group in
+            for (source, cfg) in targets {
+                group.addTask { [cfg] in
+                    do { return (source, .success(try await Self.fetchCalendar(source, cfg))) }
+                    catch { return (source, .failure(error)) }
+                }
+            }
+            for await (source, outcome) in group {
+                switch outcome {
+                case .success(let items): merged.append(contentsOf: items)
+                case .failure(let err): failures.append("\(source.displayName) calendar unreachable — \(err.localizedDescription)")
+                }
+            }
+        }
+        merged.sort { $0.airDate < $1.airDate }
+
+        var text = Self.formatCalendarCondensed(merged)
+        if !failures.isEmpty {
+            text += "\n" + failures.map { "⚠️ \($0)" }.joined(separator: "\n")
+        }
+        return ToolCallOutput(text: text, rich: .calendar(merged))
     }
 
-    func radarrCalendar() async throws -> ToolCallOutput {
-        try await runCalendar(source: .radarr, config: radarr) {
-            try await RadarrClient(config: self.radarr).fetchCalendar()
+    private static func fetchCalendar(_ source: QueueItem.Source, _ cfg: ServiceConfig) async throws -> [UpcomingItem] {
+        switch source {
+        case .sonarr:   return try await SonarrClient(config: cfg).fetchCalendar()
+        case .radarr:   return try await RadarrClient(config: cfg).fetchCalendar()
+        case .lidarr:   return try await LidarrClient(config: cfg).fetchCalendar()
+        case .whisparr: return try await WhisparrClient(config: cfg).fetchCalendar()
         }
     }
 
@@ -568,13 +733,6 @@ extension LocalToolBackend {
         )
     }
 
-    func lidarrCalendar() async throws -> ToolCallOutput {
-        try await runCalendar(source: .lidarr, config: lidarr) {
-            try await LidarrClient(config: self.lidarr).fetchCalendar()
-        }
-    }
-
-
     // MARK: - Whisparr tool implementations
 
     func searchScene(_ args: JSONValue) async throws -> ToolCallOutput {
@@ -598,12 +756,6 @@ extension LocalToolBackend {
         )
     }
 
-    func whisparrCalendar() async throws -> ToolCallOutput {
-        try await runCalendar(source: .whisparr, config: whisparr) {
-            try await WhisparrClient(config: self.whisparr).fetchCalendar()
-        }
-    }
-
     static func formatCalendarCondensed(_ items: [UpcomingItem]) -> String {
         guard !items.isEmpty else { return "Nothing upcoming." }
         let fmt = DateFormatter()
@@ -622,6 +774,134 @@ extension LocalToolBackend {
             out += "\n(\(items.count - top.count) more not shown)"
         }
         return out
+    }
+
+    // MARK: - Download queue
+
+    /// Lists the active Sonarr + Radarr download queue. Items already carry
+    /// both the incoming release's quality/format metadata AND the existing
+    /// library file's (`existing*` fields, populated during queue unification),
+    /// so the model gets everything it needs to explain an upgrade in a single
+    /// call — no extra API round-trips beyond `fetchQueue()`.
+    func listDownloadQueue(_ args: JSONValue) async throws -> ToolCallOutput {
+        let configured: [(QueueItem.Source, ServiceConfig)] = [
+            (.sonarr, sonarr), (.radarr, radarr),
+        ].filter { $0.1.isConfigured }
+
+        guard !configured.isEmpty else {
+            return ToolCallOutput(text: "Sonarr and Radarr are not configured.")
+        }
+
+        // One HTTP per arr — fan out in parallel, tolerate one side failing.
+        var items: [QueueItem] = []
+        var failures: [String] = []
+        await withTaskGroup(of: (QueueItem.Source, Result<[QueueItem], Error>).self) { group in
+            for (source, cfg) in configured {
+                group.addTask { [cfg] in
+                    do {
+                        let queue: [QueueItem]
+                        switch source {
+                        case .sonarr: queue = try await SonarrClient(config: cfg).fetchQueue()
+                        case .radarr: queue = try await RadarrClient(config: cfg).fetchQueue()
+                        default:      queue = []
+                        }
+                        return (source, .success(queue))
+                    } catch {
+                        return (source, .failure(error))
+                    }
+                }
+            }
+            for await (source, outcome) in group {
+                switch outcome {
+                case .success(let queue): items.append(contentsOf: queue)
+                case .failure(let err):
+                    failures.append("\(source.displayName) queue unreachable — \(err.localizedDescription)")
+                }
+            }
+        }
+
+        let filter = Self.stringArg(args, key: "query").lowercased()
+        if !filter.isEmpty {
+            items = items.filter { $0.title.lowercased().contains(filter) }
+        }
+        // Stable order: upgrades first, then by title.
+        items.sort { lhs, rhs in
+            if lhs.isUpgrade != rhs.isUpgrade { return lhs.isUpgrade }
+            return lhs.title.localizedCaseInsensitiveCompare(rhs.title) == .orderedAscending
+        }
+
+        let text = Self.formatQueueCondensed(items, failures: failures)
+        return ToolCallOutput(text: text, rich: .downloadQueue(items))
+    }
+
+    /// Pure, unit-tested formatter: one line per queue item, with an
+    /// `UPGRADE: old → new` diff fragment for upgrade rows.
+    static func formatQueueCondensed(_ items: [QueueItem], failures: [String] = []) -> String {
+        var sections: [String] = []
+
+        if items.isEmpty {
+            sections.append(failures.isEmpty
+                ? "Nothing is downloading right now."
+                : "Nothing is downloading right now (some services were unreachable).")
+        } else {
+            let top = items.prefix(25)
+            var lines: [String] = []
+            for item in top {
+                let pct = Int((item.progress * 100).rounded())
+                let tag = item.source == .sonarr ? "[Sonarr]" : "[Radarr]"
+                var line = "• \(tag) \(item.title) — \(item.status.displayName) \(pct)%"
+                if item.isUpgrade, let diff = upgradeDiffFragment(item) {
+                    line += "\n    \(diff)"
+                }
+                lines.append(line)
+            }
+            var out = "Download queue — \(items.count) item\(items.count == 1 ? "" : "s"):"
+            out += "\n" + lines.joined(separator: "\n")
+            if items.count > top.count {
+                out += "\n(\(items.count - top.count) more not shown)"
+            }
+            sections.append(out)
+        }
+
+        if !failures.isEmpty {
+            sections.append(failures.map { "⚠️ \($0)" }.joined(separator: "\n"))
+        }
+        return sections.joined(separator: "\n\n")
+    }
+
+    /// Builds the `UPGRADE: 1080p → 2160p · score 50→120 · +DV -X · 8.1GB→24.3GB`
+    /// fragment for an upgrade row. Returns nil if there's no meaningful diff.
+    static func upgradeDiffFragment(_ item: QueueItem) -> String? {
+        var parts: [String] = []
+
+        let oldQ = item.existingQuality ?? "?"
+        let newQ = item.quality ?? "?"
+        if oldQ != newQ {
+            parts.append("\(oldQ) → \(newQ)")
+        }
+
+        if let oldScore = item.existingCustomFormatScore, oldScore != item.customFormatScore {
+            parts.append("score \(oldScore)→\(item.customFormatScore)")
+        }
+
+        let oldFormats = Set(item.existingCustomFormats)
+        let newFormats = Set(item.customFormats)
+        let gained = newFormats.subtracting(oldFormats).sorted()
+        let lost = oldFormats.subtracting(newFormats).sorted()
+        var formatBits = gained.map { "+\($0)" }
+        formatBits += lost.map { "-\($0)" }
+        if !formatBits.isEmpty {
+            parts.append(formatBits.joined(separator: " "))
+        }
+
+        if let oldSize = item.existingSize, oldSize > 0 {
+            let oldStr = ByteCountFormatter.string(fromByteCount: oldSize, countStyle: .file)
+            let newStr = ByteCountFormatter.string(fromByteCount: item.sizeTotal, countStyle: .file)
+            parts.append("\(oldStr)→\(newStr)")
+        }
+
+        guard !parts.isEmpty else { return nil }
+        return "UPGRADE: " + parts.joined(separator: " · ")
     }
 
 }

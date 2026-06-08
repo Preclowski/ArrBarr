@@ -553,4 +553,93 @@ struct DownloadClientTests {
             }
         }
     }
+
+    // MARK: - qBittorrent
+
+    @Suite("QbittorrentClient")
+    struct QbittorrentClientTests {
+        private static let loginConfig = ServiceConfig(
+            enabled: true, baseURL: "http://localhost:8080",
+            apiKey: "", username: "admin", password: "secret"
+        )
+        private static let apiKeyConfig = ServiceConfig(
+            enabled: true, baseURL: "http://localhost:8080",
+            apiKey: "", username: "", password: "mykey"
+        )
+
+        private final class RequestLog: @unchecked Sendable {
+            var entries: [(path: String, auth: String?)] = []
+        }
+
+        /// Records (path, Authorization) per request; answers the login
+        /// endpoint with "Ok." and everything else with an empty body.
+        private func installHandler(_ log: RequestLog) {
+            MockURLProtocol.handler = { request in
+                log.entries.append((request.url!.path, request.value(forHTTPHeaderField: "Authorization")))
+                if request.url!.path == "/api/v2/auth/login" {
+                    return textResponse(url: request.url!, text: "Ok.")
+                }
+                return textResponse(url: request.url!, text: "")
+            }
+        }
+
+        @Test("Username set → posts credentials to /api/v2/auth/login, no Bearer header")
+        func loginMode() async throws {
+            let log = RequestLog()
+            installHandler(log)
+
+            let client = QbittorrentClient(config: Self.loginConfig, session: mockSessionWithCookies())
+            try await client.perform(.pause, hash: "abc")
+
+            #expect(log.entries.contains { $0.path == "/api/v2/auth/login" })
+            #expect(log.entries.allSatisfy { $0.auth == nil })
+        }
+
+        @Test("Empty username → skips login and sends password as Bearer API key")
+        func apiKeyMode() async throws {
+            let log = RequestLog()
+            installHandler(log)
+
+            let client = QbittorrentClient(config: Self.apiKeyConfig, session: mockSessionWithCookies())
+            try await client.perform(.pause, hash: "abc")
+
+            #expect(!log.entries.contains { $0.path == "/api/v2/auth/login" })
+            let action = log.entries.first { $0.path == "/api/v2/torrents/stop" }
+            #expect(action?.auth == "Bearer mykey")
+        }
+
+        @Test("Disabled config throws notConfigured")
+        func notConfigured() async throws {
+            let client = QbittorrentClient(config: disabledConfig, session: mockSessionWithCookies())
+            await #expect(throws: HTTPError.self) {
+                try await client.perform(.pause, hash: "abc")
+            }
+        }
+    }
+
+    // MARK: - HTTPClient
+
+    // Nested inside the serialized DownloadClientTests so it shares the
+    // serialization — the global MockURLProtocol.handler is process-wide, and
+    // a sibling top-level suite would race it (handler overwritten mid-test).
+    @Suite("HTTPClient")
+    struct HTTPClientTests {
+        /// A hung arr (accepts the connection but stalls) must not block a
+        /// refresh for the URLSession default of 60s — every request carries a
+        /// bounded timeout instead. Without this, one stalled arr freezes the
+        /// whole `QueueAggregator.fetch()` (it awaits all four arrs together)
+        /// and the app can't recover for minutes.
+        @Test("Every request carries a bounded timeout, not the 60s default")
+        func boundedRequestTimeout() async throws {
+            var captured: TimeInterval?
+            MockURLProtocol.handler = { request in
+                captured = request.timeoutInterval
+                return textResponse(url: request.url!, text: "ok")
+            }
+            let client = HTTPClient(session: mockSession())
+            _ = try await client.get(URL(string: "http://localhost:7878/api/v3/queue")!)
+            #expect(captured == HTTPClient.requestTimeout)
+            #expect((captured ?? .infinity) < 60)
+        }
+    }
 }

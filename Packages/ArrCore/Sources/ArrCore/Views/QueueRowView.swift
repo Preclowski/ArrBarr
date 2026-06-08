@@ -27,6 +27,18 @@ public extension QueueItem.Status {
 
 public struct QueueRowView: View {
     let item: QueueItem
+
+    /// Compound title: `Show · S03E04 · Episode title` for series rows,
+    /// plain title for movies. Lets every row stay one title line tall
+    /// regardless of source so the diff line below sits flush with the
+    /// poster bottom.
+    private var rowTitle: String {
+        if let sub = item.subtitle, !sub.isEmpty {
+            return "\(item.title) · \(sub)"
+        }
+        return item.title
+    }
+
     /// Action callbacks instead of an `@ObservedObject viewModel` so the row
     /// re-renders only when its own `item` value changes — not on every
     /// QueueViewModel publish. Closures are wrapped in `Equatable` checks at
@@ -41,9 +53,23 @@ public struct QueueRowView: View {
     /// menu-bar popover leaves it false.
     @Environment(\.suppressRowTooltip) private var suppressRowTooltip
     @State private var isHovering = false
-    @State private var showDeleteConfirmation = false
     @State private var showTooltip = false
     @State private var hoverTask: Task<Void, Never>?
+
+    /// Posts the trash request to the shared ConfirmCenter so the
+    /// overlay can render at panel-full width — `.overlay` rendered
+    /// inline on this row clips the card to row bounds and the button
+    /// labels truncate.
+    private func requestDeleteConfirm() {
+        ConfirmCenter.request(PendingConfirm(
+            title: "Cancel this download?",
+            message: "This will remove the download from the client.",
+            confirmLabel: "Cancel download",
+            cancelLabel: "Keep download",
+            isDestructive: true,
+            onConfirm: onDelete
+        ))
+    }
 
     private var canControl: Bool {
         switch item.downloadProtocol {
@@ -79,24 +105,27 @@ public struct QueueRowView: View {
             VStack(alignment: .leading, spacing: 4) {
                 VStack(alignment: .leading, spacing: 1) {
                     HStack(spacing: 4) {
-                        Text(item.title)
+                        // Title row carries the full identity — for
+                        // series it's "Show · S03E04 · Episode title"
+                        // (instead of a separate subtitle line) so
+                        // series and movie rows share the same height
+                        // and the diff line below isn't pushed past
+                        // the poster.
+                        Text(rowTitle)
                             .scaledFont(size: 12)
                             .lineLimit(1)
                             .truncationMode(.tail)
 
-                        MediaBadgeCluster(isUpgrade: item.isUpgrade)
-                        Spacer(minLength: 4)
-                        // Download client moved into the
-                        // `DownloadProgressCard` header below, next
-                        // to the status pill — keeps the title row
-                        // focused on title + upgrade badge.
-                    }
+                        // Chevron next to title telegraphs "this drills
+                        // into a detail view" without relying on hover.
+                        LinkChevron(size: 9)
 
-                    if let sub = item.subtitle {
-                        Text(sub)
-                            .scaledFont(size: 11)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
+                        Spacer(minLength: 4)
+
+                        // Upgrade/New badge lives here on the title row's
+                        // trailing edge (moved out of the progress card's
+                        // header below).
+                        MediaBadgeCluster(isUpgrade: item.isUpgrade)
                     }
 
                     // Status + meta + score row dropped — same info
@@ -111,11 +140,46 @@ public struct QueueRowView: View {
                     fadeTrailing: !(isHovering && canControl),
                     showUpgradeDiff: false,
                     showHeader: true,
+                    showBadge: false,
                     compactSpec: true
                 )
+
+                // Custom-format strip replaces the old release-name line:
+                // the incoming file's custom formats as muted chips (TagChip,
+                // like the diff view). Kept to a SINGLE line — overflow fades
+                // out under a trailing transparency gradient instead of
+                // wrapping or hard-clipping.
+                if !item.customFormats.isEmpty {
+                    // A horizontal ScrollView takes the PROPOSED width and
+                    // clips overflow, so it never widens the row (the prior
+                    // `.fixedSize()` propagated the chips' full intrinsic
+                    // width up, making each row as wide as its tag count).
+                    // Scrolling is disabled — the trailing gradient just
+                    // fades the overflow into transparency.
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 3) {
+                            ForEach(item.customFormats, id: \.self) { tag in
+                                TagChip(text: tag, color: .secondary)
+                            }
+                        }
+                    }
+                    .scrollDisabled(true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .mask(
+                        LinearGradient(
+                            gradient: Gradient(stops: [
+                                .init(color: .black, location: 0),
+                                .init(color: .black, location: 0.85),
+                                .init(color: .clear, location: 1.0),
+                            ]),
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                }
             }
         }
-        .padding(.horizontal, 12)
+        .padding(.horizontal, Tokens.Spacing.queueRowH)
         .padding(.vertical, 6)
         .background(
             RoundedRectangle(cornerRadius: Tokens.Radius.card)
@@ -136,6 +200,10 @@ public struct QueueRowView: View {
             }
         }
         #endif
+        // ContentShape + onTapGesture before the hover overlay so the
+        // overlay's action icons keep their own hit-testing — without
+        // this order the row-wide tap-gesture swallowed clicks on the
+        // trash icon and the action never fired.
         .contentShape(Rectangle())
         .onTapGesture {
             onShowDetail?()
@@ -172,18 +240,13 @@ public struct QueueRowView: View {
             )
         }
         #endif
-        .confirmationDialog(
-            Text("Cancel this download?", bundle: .module),
-            isPresented: $showDeleteConfirmation,
-            titleVisibility: .visible
-        ) {
-            Button(role: .destructive) { onDelete() } label: {
-                Text("Cancel download", bundle: .module)
-            }
-            Button(role: .cancel) {} label: { Text("Keep download", bundle: .module) }
-        } message: {
-            Text(String(format: String(localized: "This will remove \"%@\" from the download client.", bundle: .module), item.title))
-        }
+        // Light up the drill-in LinkChevron whenever the row is hovered
+        // (reuses the existing isHovering, no extra onHover).
+        .environment(\.linkRowHovering, isHovering)
+        // No local overlay — trash button now posts to
+        // `ConfirmCenter.shared` (see requestDeleteConfirm) so the
+        // confirmation renders at panel-full width from
+        // PopoverContentView's body.
     }
 
     // MARK: - Poster helpers
@@ -227,7 +290,7 @@ public struct QueueRowView: View {
             if canControl {
                 IconOverflowMenu(accessibilityLabel: "More actions") {
                     Button(role: .destructive) {
-                        showDeleteConfirmation = true
+                        requestDeleteConfirm()
                     } label: {
                         Label(String(localized: "Cancel download", bundle: .module),
                               systemImage: "trash")
@@ -258,7 +321,7 @@ public struct QueueRowView: View {
             }
             if canControl {
                 TooltipActionButton(symbol: "trash", labelKey: "Remove", tint: .red) {
-                    showDeleteConfirmation = true
+                    requestDeleteConfirm()
                 }
             }
         }
@@ -282,7 +345,7 @@ public struct QueueRowView: View {
                 IconButton(symbol: "trash", helpKey: "Remove from client",
                            accessibilityLabel: "Remove \(item.title)",
                            tint: .red) {
-                    showDeleteConfirmation = true
+                    requestDeleteConfirm()
                 }
             }
         }
@@ -363,24 +426,24 @@ public struct QueueItemTooltip: View {
     private var tooltipContent: some View {
         VStack(alignment: .leading, spacing: 6) {
             header
-            Divider().opacity(0.5)
-            // infoGrid now interleaves the upgrade diff inline: the
-            // "↑ replaces" line sits *under* the Quality row in the
-            // same grid, so the eye reads "new quality / old quality"
-            // as a vertical comparison instead of jumping to a
-            // separate block down the tooltip.
+            // Experiment: upgrades now use the extracted side-by-side
+            // `UpgradeDiffView` (current file → incoming, with gained/lost
+            // format chips) instead of the inline grid diff. The grid then
+            // only carries the contextual extras the diff view doesn't cover
+            // (indexer, release file name, replaced on-disk path).
+            if item.isUpgrade {
+                UpgradeDiffView(item: item, showFilenames: true)
+            }
             infoGrid
 
-            if !item.customFormats.isEmpty || item.customFormatScore != 0 {
+            // For non-upgrades the side-by-side doesn't apply, so keep the
+            // plain custom-format chip strip. Upgrades get their gained/lost
+            // chips from `UpgradeDiffView` above.
+            if !item.isUpgrade, !item.customFormats.isEmpty || item.customFormatScore != 0 {
                 customFormatChipStrip(
                     tags: item.customFormats,
                     score: item.customFormatScore != 0 ? item.customFormatScore : nil
                 )
-                // Chip diff sits directly under the chip strip — same
-                // logic as Quality: parallel-comparison pairing.
-                if item.isUpgrade {
-                    cfChipDiff
-                }
             }
         }
     }
@@ -423,10 +486,14 @@ public struct QueueItemTooltip: View {
     @ViewBuilder
     private var infoGrid: some View {
         Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 10, verticalSpacing: 3) {
-            if let q = item.quality, !q.isEmpty {
-                row("Quality", value: "\(q) · \(sizeString)")
-            } else {
-                row("Size", value: sizeString)
+            // Quality / Size only for non-upgrades — for upgrades the incoming
+            // quality and size already live in `UpgradeDiffView` above.
+            if !item.isUpgrade {
+                if let q = item.quality, !q.isEmpty {
+                    row("Quality", value: "\(q) · \(sizeString)")
+                } else {
+                    row("Size", value: sizeString)
+                }
             }
             // "↑ replaces …" sits inside the grid as a sibling row of
             // Quality / Size so it shares the value-column alignment
@@ -438,7 +505,10 @@ public struct QueueItemTooltip: View {
             if let indexer = item.indexer, !indexer.isEmpty {
                 row("Indexer", value: indexer)
             }
-            if let file = item.releaseName, !file.isEmpty {
+            // Release file name + the replaced on-disk path: only for
+            // non-upgrades here. Upgrades render both (untruncated) inside
+            // `UpgradeDiffView` above, so repeating them would double up.
+            if !item.isUpgrade, let file = item.releaseName, !file.isEmpty {
                 row("File", value: file, mono: true, wraps: true)
             }
             // Existing file's on-disk path as a `└─` sub-row of File,

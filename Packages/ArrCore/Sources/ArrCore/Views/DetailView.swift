@@ -12,18 +12,27 @@ public struct DetailView: View {
     /// Using a context label (where they came from) rather than the
     /// item title avoids title duplication with the hero card below.
     var originLabel: LocalizedStringKey = "Details"
-    @ObservedObject var viewModel: QueueViewModel
+    /// When `true` (default — legacy behaviour) and the item carries an
+    /// episodeNumber, `load()` auto-pushes the matching episode via
+    /// `selectedEpisode`. The new EpisodeQuickDetail flow disables this
+    /// when DetailView is pushed from the episode hero's series-tap
+    /// (user already saw the episode and explicitly asked for the
+    /// series), otherwise we'd bounce them right back to the episode.
+    var autoDrillToEpisode: Bool = true
+    var viewModel: QueueViewModel
     @EnvironmentObject var configStore: ConfigStore
 
     public init(
         item: QueueItem,
         onBack: @escaping () -> Void,
         originLabel: LocalizedStringKey = "Details",
+        autoDrillToEpisode: Bool = true,
         viewModel: QueueViewModel
     ) {
         self.item = item
         self.onBack = onBack
         self.originLabel = originLabel
+        self.autoDrillToEpisode = autoDrillToEpisode
         self.viewModel = viewModel
     }
 
@@ -75,6 +84,10 @@ public struct DetailView: View {
     @State private var sonarrEpisodeFiles: [Int: SonarrEpisodeFile] = [:]
     @State private var lidarrAlbum: LidarrAlbumDetail?
     @State private var lidarrTracks: [LidarrTrackDetail] = []
+    /// Cast strip. Movies pull from Radarr's `/credit` (no key needed);
+    /// series from TMDB (Sonarr has no cast endpoint) and only when a TMDB
+    /// key is set. Empty = unavailable; the row just doesn't render.
+    @State private var cast: [CastMember] = []
     @State private var loading = true
     @State private var loadError: String?
 
@@ -87,6 +100,11 @@ public struct DetailView: View {
     /// expanded list. Renders `EpisodeDetailOverlay` on top of the
     /// series detail.
     @State private var selectedEpisode: SonarrEpisodeDetail?
+    /// Auto-drill fires exactly once per detail instance. Without this,
+    /// popping back from the episode re-runs the drill (selectedEpisode is
+    /// nil again) and the episode immediately re-pushes — trapping the user
+    /// so they can never reach the series view / queue.
+    @State private var didAutoDrill = false
     /// Lazily-fetched episode-file payload. Driven off
     /// Currently-shown season number for Sonarr detail. Drives the
     /// pill bar — only one season's episode list is rendered at a
@@ -148,30 +166,27 @@ public struct DetailView: View {
                 // hidden behind. Only renders when there's a
                 // controllable active download (see `downloadCTAStrip`).
                 .safeAreaInset(edge: .bottom, spacing: 0) {
-                    let hasCTA = (hasActiveDownloads && canControl)
-                        || arrWebURL(for: item, in: configStore) != nil
+                    // Strip only renders when pause/resume is actionable —
+                    // Trash and Safari live in the toolbar now, so the
+                    // bar would otherwise be empty.
+                    let hasCTA = hasActiveDownloads && canControl && canPauseResume
                     if hasCTA {
+                        // Floating CTA — no material backdrop / divider
+                        // so the glass pill reads as an island on top of
+                        // the content (chat-input pattern).
                         downloadCTAStrip
                             .padding(.horizontal, 14)
                             .padding(.vertical, 10)
                             .frame(maxWidth: .infinity)
-                            .background(
-                                Rectangle()
-                                    .fill(.thinMaterial)
-                                    .overlay(alignment: .top) {
-                                        Divider().opacity(0.4)
-                                    }
-                                    .ignoresSafeArea(edges: .bottom)
-                            )
                     }
                 }
             }
-            // Hide the series detail when an overlay is active so we
-            // don't need a solid scrim on top — the popover's
-            // translucent chrome stays visible (Apple "Liquid Glass"
-            // feel), the user just sees the focused view.
-            .opacity((selectedEpisode != nil || enlargedPoster != nil) ? 0 : 1)
-            .allowsHitTesting(selectedEpisode == nil && enlargedPoster == nil)
+            // Lightbox still gets the overlay treatment — it's a transient
+            // zoom-in, not a navigation level. Episode drill-down moved
+            // to a NavigationStack push (see `.navigationDestination`
+            // below) so the system renders `<` + series title for free.
+            .opacity(enlargedPoster != nil ? 0 : 1)
+            .allowsHitTesting(enlargedPoster == nil)
             .onAppear {
                 // Seed the pill bar with the *clicked* queue item's
                 // season when the user drilled in from a season-3
@@ -183,59 +198,104 @@ public struct DetailView: View {
                 }
             }
 
-            // Episode drill-down. Layered above the series detail so
-            // it covers the back chevron / source pill / overview —
-            // the user sees a focused episode surface, dismisses with
-            // its own back button to return to the series.
-            if let ep = selectedEpisode {
-                let activeQueueItem = siblings.first {
-                    $0.seasonNumber == ep.seasonNumber
-                        && $0.episodeNumber == ep.episodeNumber
-                        && $0.arrQueueId != 0
-                }
-                EpisodeDetailOverlay(
-                    episode: ep,
-                    seriesTitle: sonarrDetail?.title ?? item.title,
-                    originLabel: originLabel,
-                    posterURL: arrPosterURL(images: sonarrDetail?.images, for: item, in: configStore) ?? item.posterURL,
-                    posterRequiresAuth: item.posterRequiresAuth,
-                    apiKey: configStore.sonarr.apiKey,
-                    episodeFile: ep.episodeFileId.flatMap { sonarrEpisodeFiles[$0] },
-                    queueItem: activeQueueItem,
-                    onPosterTap: { url in
-                        withAnimation(.smooth(duration: 0.22)) {
-                            enlargedPoster = url ?? item.posterURL
-                        }
-                    },
-                    onClose: {
-                        withAnimation(.smooth(duration: 0.22)) {
-                            selectedEpisode = nil
-                        }
-                    },
-                    onSearch: { episodeId in
-                        let client = SonarrClient(config: configStore.sonarr)
-                        try? await client.searchEpisodes(episodeIds: [episodeId])
-                    },
-                    warningActionURL: activeQueueItem.flatMap { arrWebURL(for: $0, in: configStore) },
-                    onPauseEpisode: { q in Task { await viewModel.pause(q) } },
-                    onResumeEpisode: { q in Task { await viewModel.resume(q) } },
-                    onDeleteEpisode: { q in Task { await viewModel.delete(q) } }
-                )
-                .transition(.opacity)
-            }
-
-            // Poster lightbox — rendered LAST in the ZStack so it
-            // sits on top of every other overlay (series detail AND
-            // episode overlay). User can tap an episode-detail
-            // poster and the lightbox covers the episode view.
-            if let url = enlargedPoster {
-                posterLightbox(url: url)
-                    .transition(.opacity)
-                    .zIndex(10)
-            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        // Full-screen poster: iOS covers all chrome (no header/back, tap to
+        // close); macOS overlays inside the popover.
+        .posterLightbox(
+            url: $enlargedPoster,
+            apiKey: item.posterRequiresAuth ? arrAPIKey(for: item, in: configStore) : nil,
+            aspectRatio: item.source == .lidarr ? 1.0 : 2.0 / 3.0
+        )
         .task(id: item.id) { await load() }
+        // Secondary actions live in the system toolbar — destructive
+        // cancel + open-in-browser. Primary action (pause/resume) stays
+        // on the sticky bottom CTA so the main verb sits under the
+        // thumb / cursor where users expect it.
+        // Trash + Safari go in the trailing toolbar cluster. Upgrade/New
+        // badge stays in the hero (see headerCard's titleBadge param)
+        // because macOS NavigationStack toolbar refuses to render non-
+        // interactive views — we ran the experiment three times.
+        .toolbar {
+            ToolbarItemGroup(placement: .primaryAction) {
+                if let url = arrWebURL(for: item, in: configStore) {
+                    Button { PlatformURLOpener.open(url) } label: {
+                        Image(systemName: "safari")
+                    }
+                    .help(Text("Open in browser", bundle: .module))
+                }
+                // iOS keeps delete in the toolbar (to the RIGHT of Safari).
+                // macOS surfaces it next to the Resume CTA instead.
+                #if os(iOS)
+                if hasActiveDownloads && canControl {
+                    Button { PanelActivation.bringForward(); ctaPendingDelete = true } label: {
+                        Image(systemName: "trash")
+                    }
+                    .tint(.red)
+                    .help(Text("Cancel download", bundle: .module))
+                }
+                #endif
+            }
+        }
+        // Toolbar title carries the *item* identity — title + year —
+        // instead of the generic source name, so the user always sees
+        // what they're looking at in the chevron header. The hero card
+        // below drops its own title/year duplication to stay clean.
+        .navigationTitle(navTitleString)
+        #if os(iOS)
+        .navigationBarTitleDisplayMode(.inline)
+        #endif
+        // Episode drill-down — push EpisodeDetailOverlay as another
+        // NavigationStack level so the user gets a native `< Sonarr`
+        // back chevron and the series view is visibly waiting below.
+        .navigationDestination(item: $selectedEpisode) { ep in
+            let activeQueueItem = siblings.first {
+                $0.seasonNumber == ep.seasonNumber
+                    && $0.episodeNumber == ep.episodeNumber
+                    && $0.arrQueueId != 0
+            }
+            EpisodeDetailOverlay(
+                episode: ep,
+                seriesTitle: sonarrDetail?.title ?? item.title,
+                originLabel: originLabel,
+                posterURL: arrPosterURL(images: sonarrDetail?.images, for: item, in: configStore) ?? item.posterURL,
+                posterRequiresAuth: item.posterRequiresAuth,
+                apiKey: configStore.sonarr.apiKey,
+                episodeFile: ep.episodeFileId.flatMap { sonarrEpisodeFiles[$0] },
+                queueItem: activeQueueItem,
+                onClose: { selectedEpisode = nil },
+                onSearch: { episodeId in
+                    let client = SonarrClient(config: configStore.sonarr)
+                    try? await client.searchEpisodes(episodeIds: [episodeId])
+                },
+                warningActionURL: activeQueueItem.flatMap { arrWebURL(for: $0, in: configStore) },
+                // Gate pause/resume/delete on a configured download client —
+                // same rule the movie CTA uses. Without it the episode would
+                // show a Resume button that can't actually do anything.
+                onPauseEpisode: canControl ? { q in Task { await viewModel.pause(q) } } : nil,
+                onResumeEpisode: canControl ? { q in Task { await viewModel.resume(q) } } : nil,
+                onDeleteEpisode: canControl ? { q in Task { await viewModel.delete(q) } } : nil,
+                seriesYear: sonarrDetail?.year ?? splitTitleAndYear(item.title).year
+            )
+        }
+        // Inline confirmation — replaces `.confirmationDialog` because
+        // the system dialog steals focus from MenuBarExtra(.window),
+        // which auto-dismisses the panel. The inline overlay renders
+        // inside the panel so the panel keeps focus.
+        .inlineConfirm(
+            isPresented: $ctaPendingDelete,
+            title: "Cancel this download?",
+            message: LocalizedStringKey("This will remove the download from the client."),
+            confirmLabel: "Cancel download",
+            cancelLabel: "Keep download",
+            isDestructive: true,
+            onConfirm: {
+                Task {
+                    await viewModel.delete(item)
+                    await MainActor.run { onBack() }
+                }
+            }
+        )
     }
 
     /// Content-type title — "Movie details" / "Series details" /
@@ -254,42 +314,39 @@ public struct DetailView: View {
         }
     }
 
+    /// Item-level title for the system toolbar — "{title} ({year})" when
+    /// year is known, otherwise just title. Falls back to the queue-row
+    /// title (which already includes "(YYYY)" most of the time) until
+    /// the arr fetch lands.
+    private var navTitleString: String {
+        let fallback = splitTitleAndYear(item.title)
+        let title: String
+        let year: Int?
+        switch item.source {
+        case .radarr, .whisparr:
+            title = radarrDetail?.title ?? fallback.title
+            year = radarrDetail?.year ?? fallback.year
+        case .sonarr:
+            title = sonarrDetail?.title ?? fallback.title
+            year = sonarrDetail?.year ?? fallback.year
+        case .lidarr:
+            title = lidarrAlbum?.title ?? fallback.title
+            year = fallback.year
+        }
+        if let year { return "\(title) (\(year))" }
+        return title
+    }
+
     // MARK: - Header (floating glass back + source info)
 
     private var header: some View {
-        // Title is now the *content type* (Movie / Series / Album
-        // details) rather than the origin tab — the user already knows
-        // which tab they came from, what they don't yet know is what
-        // this surface *is*. When there's an actionable download, the
-        // title doubles as the overflow menu (▾ indicator + Apple
-        // dropdown-title pattern from Finder / Safari): one tap opens
-        // Pause/Resume/Remove. No actionable download → plain text.
-        HStack(spacing: 6) {
-            FloatingBackButton(action: onBack)
-
-            Text(detailTitleKey, bundle: .module)
-                .scaledFont(size: 15, weight: .semibold)
-                .foregroundStyle(.primary)
-                .lineLimit(1)
-
-            Spacer()
-
-            Image(systemName: item.source.symbol)
-                .scaledFont(size: 11)
-                .foregroundStyle(.tertiary)
-            Text(item.source.displayName)
-                .scaledFont(size: 11)
-                .foregroundStyle(.tertiary)
-
-            // Header is plain — back + title + source tag. Every
-            // action (Safari, Pause/Resume, Cancel) lives in the
-            // sticky bottom CTA strip (`downloadCTAStrip`), so the
-            // toolbar reads as one coherent surface instead of
-            // splitting affordances across two ends of the popover.
-        }
-        .padding(.horizontal, 12)
-        .padding(.top, 10)
-        .padding(.bottom, 8)
+        // Inline header removed in the MenuBarExtra(.window) migration —
+        // both macOS popover (now window-backed) and iOS push DetailView
+        // into a NavigationStack, so the system renders `<` + title for
+        // us. Source identity lives in `.navigationTitle(...)` on body.
+        // Kept as `EmptyView` rather than deleted so the call site in
+        // body's VStack doesn't have to be touched.
+        EmptyView()
     }
 
     // MARK: - Download CTA strip
@@ -308,49 +365,28 @@ public struct DetailView: View {
     /// AND `viewModel.refresh()` pulls the fresh status — only then
     /// does the CTA flip colour/label, so users don't see a stale
     /// "Pause" sitting on a paused item.
-    @State private var ctaInFlight = false
 
     @ViewBuilder
     private var downloadCTAStrip: some View {
         let hasDownloadControls = hasActiveDownloads && canControl
-        let url = arrWebURL(for: item, in: configStore)
-        if hasDownloadControls || url != nil {
-            // Strip always promotes exactly one action to the prominent
-            // full-width slot. Destructive actions never lead — Cancel
-            // is always a secondary, since promoting "remove" to the
-            // primary CTA reads as "the page wants you to delete this".
-            // Priority: pause/resume → safari → cancel (last resort,
-            // only when no pause/resume AND no URL, otherwise the
-            // strip would have no leader at all).
+        // Bottom strip is now reserved for the single primary action
+        // (pause/resume). Trash + Safari moved to the toolbar so this
+        // bar reads as "the verb" rather than a strip of competing
+        // affordances. When there's no pause/resume to surface, the
+        // strip collapses and the toolbar carries the whole load.
+        if hasDownloadControls, canPauseResume {
             HStack(spacing: 8) {
-                if hasDownloadControls, canPauseResume {
-                    pauseResumeProminent
-                    cancelSecondary
-                    if let url { safariSecondary(url: url) }
-                } else if let url {
-                    safariProminent(url: url)
-                    if hasDownloadControls { cancelSecondary }
-                } else if hasDownloadControls {
-                    // No URL AND no pause/resume — Cancel is the only
-                    // affordance left, so it has to lead. Edge case.
-                    cancelProminent
-                }
+                pauseResumeProminent
+                #if os(macOS)
+                // macOS: delete sits next to Resume as a matching glass
+                // capsule. iOS keeps delete in the nav toolbar instead.
+                cancelGlassCompact
+                #endif
             }
-            .confirmationDialog(
-                Text("Cancel this download?", bundle: .module),
-                isPresented: $ctaPendingDelete,
-                titleVisibility: .visible
-            ) {
-                Button(role: .destructive) {
-                    Task {
-                        await viewModel.delete(item)
-                        await MainActor.run { onBack() }
-                    }
-                } label: { Text("Cancel download", bundle: .module) }
-                Button(role: .cancel) {} label: { Text("Keep download", bundle: .module) }
-            } message: {
-                Text(String(format: String(localized: "This will remove \"%@\" from the download client.", bundle: .module), item.title))
-            }
+            // Inline-confirm attached to body instead of here so the
+            // overlay fires regardless of whether the bottom CTA strip
+            // is visible — toolbar trash button uses the same
+            // `ctaPendingDelete` state.
         }
     }
 
@@ -366,53 +402,28 @@ public struct DetailView: View {
     @ViewBuilder
     private var pauseResumeProminent: some View {
         let f = focused
-        Button {
-            guard !ctaInFlight else { return }
-            Task {
-                ctaInFlight = true
-                if f.isPaused {
-                    await viewModel.resume(f)
-                } else {
-                    await viewModel.pause(f)
-                }
-                // Force a queue poll so the status flip lands in
-                // `viewModel.items` before we release the spinner —
-                // otherwise the button reverts to the old label for
-                // a couple seconds until the next scheduled refresh.
-                await viewModel.refresh()
-                ctaInFlight = false
-            }
-        } label: {
-            HStack(spacing: 6) {
-                if ctaInFlight {
-                    ProgressView()
-                        .controlSize(.small)
-                        .tint(.white)
-                } else {
-                    Image(systemName: f.isPaused ? "play.fill" : "pause.fill")
-                        .scaledFont(size: 11, weight: .semibold)
-                    Text(f.isPaused
-                            ? String(localized: "Resume download", bundle: .module)
-                            : String(localized: "Pause download", bundle: .module))
-                        .scaledFont(size: 12, weight: .semibold)
-                }
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 7)
-        }
-        .disabled(ctaInFlight)
-        .tint(f.status.tint)
-        .progressFillCTA(
+        PauseResumeButton(
+            isPaused: f.isPaused,
             progress: f.source == .sonarr ? 1 : f.progress,
             tint: f.status.tint
-        )
-        .modifier(GlassProminentButtonStyle())
+        ) {
+            if f.isPaused {
+                await viewModel.resume(f)
+            } else {
+                await viewModel.pause(f)
+            }
+            // Force a queue poll so the status flip lands in
+            // `viewModel.items` before the button releases its spinner —
+            // otherwise the label reverts to the old state for a couple
+            // seconds until the next scheduled refresh.
+            await viewModel.refresh()
+        }
     }
 
     @ViewBuilder
     private var cancelProminent: some View {
         Button {
-            ctaPendingDelete = true
+            PanelActivation.bringForward(); ctaPendingDelete = true
         } label: {
             HStack(spacing: 6) {
                 Image(systemName: "trash")
@@ -427,21 +438,26 @@ public struct DetailView: View {
         .tint(.red)
     }
 
+    #if os(macOS)
+    /// Compact glass-capsule trash that matches the Resume/Pause CTA shape
+    /// (same height + capsule + glass), so the two read as a pair instead of
+    /// a round button next to a square one.
     @ViewBuilder
-    private var cancelSecondary: some View {
+    private var cancelGlassCompact: some View {
         Button {
-            ctaPendingDelete = true
+            PanelActivation.bringForward(); ctaPendingDelete = true
         } label: {
             Image(systemName: "trash")
-                .scaledFont(size: 13, weight: .medium)
-                .foregroundStyle(.red)
-                .padding(.horizontal, 4)
-                .padding(.vertical, 7)
+                .scaledFont(size: 12, weight: .semibold)
+                .padding(.vertical, 10)
+                .padding(.horizontal, 16)
         }
-        .buttonStyle(.bordered)
+        .buttonStyle(.plain)
+        .liquidGlassProgressCTA(progress: 0, tint: .red)
         .help(Text("Cancel download", bundle: .module))
         .accessibilityLabel(Text("Cancel download", bundle: .module))
     }
+    #endif
 
     @ViewBuilder
     private func safariProminent(url: URL) -> some View {
@@ -486,23 +502,23 @@ public struct DetailView: View {
         } else {
             switch item.source {
             case .radarr, .whisparr:
-                let movieHeader = AnyView(
-                    headerCard(
-                        title: radarrDetail?.title ?? item.title,
-                        year: radarrDetail?.year,
-                        runtime: radarrDetail?.runtime,
-                        genres: radarrDetail?.genres ?? [],
-                        certification: radarrDetail?.certification,
-                        ratings: movieRatingChipsFor(radarrDetail),
-                        // Upgrade badge now lives inline next to the title (via
-                        // `titleBadge`). Trailing slot is empty for movies; the
-                        // download client / score have their own gutter inside
-                        // the download section.
-                        existingTrailer: nil,
-                        posterUrl: arrPosterURL(images: radarrDetail?.images, for: item, in: configStore),
-                        fallbackSymbol: "film",
-                        posterAspect: 2.0/3.0
-                    )
+                let titleFallback = splitTitleAndYear(item.title)
+                let movieHeader = headerCard(
+                    title: radarrDetail?.title ?? titleFallback.title,
+                    year: radarrDetail?.year ?? titleFallback.year,
+                    runtime: radarrDetail?.runtime,
+                    genres: radarrDetail?.genres ?? [],
+                    certification: radarrDetail?.certification,
+                    ratings: movieRatingChipsFor(radarrDetail),
+                    overview: radarrDetail?.overview,
+                    // Upgrade badge now lives inline next to the title (via
+                    // `titleBadge`). Trailing slot is empty for movies; the
+                    // download client / score have their own gutter inside
+                    // the download section.
+                    existingTrailer: nil,
+                    posterUrl: arrPosterURL(images: radarrDetail?.images, for: item, in: configStore),
+                    fallbackSymbol: "film",
+                    posterAspect: 2.0/3.0
                 )
                 RadarrDetailPanel(
                     item: item,
@@ -513,35 +529,46 @@ public struct DetailView: View {
                     hasActiveDownloads: hasActiveDownloads,
                     loadError: loadError,
                     header: movieHeader,
+                    cast: cast,
                     arrWebURLForItem: { q in arrWebURL(for: q, in: configStore) }
                 )
             case .sonarr:
-                let seriesHeader = AnyView(
-                    headerCard(
-                        title: sonarrDetail?.title ?? item.title,
-                        year: sonarrDetail?.year,
+                // While an episode is pushed (incl. the auto-drill from a queue
+                // tap), keep the series body a spinner so the season list
+                // doesn't flash behind the push. Back from the episode clears
+                // `selectedEpisode` → the season view renders.
+                if selectedEpisode != nil {
+                    HStack { Spacer(); ProgressView().controlSize(.small); Spacer() }
+                        .padding(.vertical, 60)
+                } else {
+                    let titleFallback = splitTitleAndYear(item.title)
+                    let seriesHeader = headerCard(
+                        title: sonarrDetail?.title ?? titleFallback.title,
+                        year: sonarrDetail?.year ?? titleFallback.year,
                         runtime: sonarrDetail?.runtime,
                         genres: sonarrDetail?.genres ?? [],
                         certification: sonarrDetail?.network,
                         ratings: sonarrRatingChipsFor(sonarrDetail),
+                        overview: sonarrDetail?.overview,
                         existingTrailer: nil,
                         posterUrl: arrPosterURL(images: sonarrDetail?.images, for: item, in: configStore),
                         fallbackSymbol: "tv",
                         posterAspect: 2.0/3.0
                     )
-                )
-                SonarrDetailPanel(
-                    item: item,
-                    viewModel: viewModel,
-                    siblings: siblings,
-                    loadError: loadError,
-                    header: seriesHeader,
-                    sonarrDetail: $sonarrDetail,
-                    sonarrEpisodes: sonarrEpisodes,
-                    sonarrEpisodeFiles: sonarrEpisodeFiles,
-                    selectedSeasonNumber: $selectedSeasonNumber,
-                    selectedEpisode: $selectedEpisode
-                )
+                    SonarrDetailPanel(
+                        item: item,
+                        viewModel: viewModel,
+                        siblings: siblings,
+                        loadError: loadError,
+                        header: seriesHeader,
+                        cast: cast,
+                        sonarrDetail: $sonarrDetail,
+                        sonarrEpisodes: sonarrEpisodes,
+                        sonarrEpisodeFiles: sonarrEpisodeFiles,
+                        selectedSeasonNumber: $selectedSeasonNumber,
+                        selectedEpisode: $selectedEpisode
+                    )
+                }
             case .lidarr:
                 LidarrDetailPanel(
                     item: item,
@@ -584,6 +611,7 @@ public struct DetailView: View {
         genres: [String],
         certification: String?,
         ratings: [RatingChip],
+        overview: String?,
         /// Anything that should sit in the header's right column under the
         /// rating chips. Used for the listing badges (Upgrade/New + download
         /// client) on movie rows. `nil` leaves the area empty.
@@ -600,6 +628,7 @@ public struct DetailView: View {
             certification: certification,
             genres: genres,
             ratings: ratings,
+            overview: overview,
             posterURL: posterUrl ?? item.posterURL,
             posterRequiresAuth: item.posterRequiresAuth,
             apiKey: arrAPIKey(for: item, in: configStore),
@@ -607,33 +636,19 @@ public struct DetailView: View {
             posterAspect: posterAspect,
             blurred: configStore.shouldBlurPoster(for: item.source),
             trailing: existingTrailer,
-            titleBadge: hasActiveDownloads ? AnyView(titleBadges) : nil,
+            // Badge moved next to the status pill in
+            // DownloadProgressCard — one consistent location across
+            // list rows + detail surfaces.
+            titleBadge: nil,
             onPosterTap: { url in
                 withAnimation(.smooth(duration: 0.22)) {
                     enlargedPoster = url ?? item.posterURL
                 }
-            }
+            },
+            // Title + year live in the nav-bar title now; hero hides
+            // its in-card title to avoid duplication.
+            showTitle: false
         )
-    }
-
-    /// Full-popover poster preview — delegates to the shared
-    /// `PosterLightbox` so DetailView and SearchAddPanel render the
-    /// same chrome (frosted scrim + Apple xmark + tap-anywhere
-    /// dismiss).
-    @ViewBuilder
-    private func posterLightbox(url: URL) -> some View {
-        PosterLightbox(
-            url: url,
-            apiKey: item.posterRequiresAuth ? arrAPIKey(for: item, in: configStore) : nil,
-            aspectRatio: item.source == .lidarr ? 1.0 : 2.0 / 3.0,
-            onDismiss: { dismissPoster() }
-        )
-    }
-
-    private func dismissPoster() {
-        withAnimation(.smooth(duration: 0.22)) {
-            enlargedPoster = nil
-        }
     }
 
     /// Title-adjacent badge cluster. See `MediaBadgeCluster`.
@@ -666,6 +681,7 @@ public struct DetailView: View {
                 async let file = (try? client.fetchMovieFile(movieId: entityId)) ?? nil
                 radarrDetail = try await detail
                 radarrMovieFile = await file
+                await fetchMovieCast(movieId: entityId)
             case .sonarr:
                 let client = SonarrClient(config: configStore.sonarr)
                 async let d = client.fetchSeriesDetails(id: entityId)
@@ -674,17 +690,21 @@ public struct DetailView: View {
                 sonarrDetail = try await d
                 sonarrEpisodes = try await eps
                 sonarrEpisodeFiles = await files
+                await fetchSeriesCast(seriesId: entityId, tmdbId: sonarrDetail?.tmdbId)
                 // Auto-drill straight to the episode overlay when
                 // the incoming queue item identifies a specific
                 // episode. Clicking "Foo S02E04" in queue should
                 // land on that episode's detail, not the series
                 // splash — the user already picked a specific row.
-                if selectedEpisode == nil,
+                if autoDrillToEpisode,
+                   !didAutoDrill,
+                   selectedEpisode == nil,
                    let sn = item.seasonNumber, sn > 0,
                    let en = item.episodeNumber,
                    let ep = sonarrEpisodes.first(where: {
                        $0.seasonNumber == sn && $0.episodeNumber == en
                    }) {
+                    didAutoDrill = true
                     selectedEpisode = ep
                 }
             case .lidarr:
@@ -701,4 +721,30 @@ public struct DetailView: View {
             loadError = "Couldn't load details: \(error.localizedDescription)"
         }
     }
+
+    /// Movie cast straight from Radarr's `/credit` endpoint — Radarr stores
+    /// it, so NO TMDB key is required (resolves the "key is AI-only" mismatch
+    /// for movies).
+    private func fetchMovieCast(movieId: Int) async {
+        // Demo Radarr is enabled but has a blank baseURL (mocks, no real host),
+        // so isConfigured is false — gate on demo too or demo movies show no cast.
+        guard DemoMode.isActive || configStore.radarr.isConfigured else { return }
+        let credits = (try? await RadarrClient(config: configStore.radarr).fetchCredits(movieId: movieId)) ?? []
+        cast = CastMember.from(radarrCredits: credits)
+    }
+
+    /// Series cast from TMDB — Sonarr has no `/credit` endpoint, so this is
+    /// the only source and it needs a configured TMDB key + the series'
+    /// tmdbId. No-op otherwise (row stays hidden).
+    private func fetchSeriesCast(seriesId: Int, tmdbId: Int?) async {
+        if DemoMode.isActive {
+            cast = DemoMocks.sonarrSeriesCast(seriesId: seriesId)
+            return
+        }
+        let key = configStore.tmdbApiKey
+        guard !key.isEmpty, let tmdbId, tmdbId > 0 else { return }
+        guard let credits = try? await TMDBClient(apiKey: key).tvCredits(tvId: tmdbId) else { return }
+        cast = CastMember.from(tmdbCast: credits.cast)
+    }
 }
+

@@ -1,0 +1,156 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="1020" viewBox="0 0 900 1020" font-family="-apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif">
+  <defs>
+    <linearGradient id="poster" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#e0822f"/>
+      <stop offset="1" stop-color="#7a1f12"/>
+    </linearGradient>
+    <clipPath id="pillFillA"><rect x="104" y="285" width="61" height="22" rx="11"/></clipPath>
+  </defs>
+
+  <!-- canvas -->
+  <rect width="900" height="1020" fill="#0e0e10"/>
+
+  <!-- header -->
+  <text x="32" y="42" fill="#f2f2f7" font-size="22" font-weight="700">Progress indicator — exploration</text>
+  <text x="32" y="64" fill="#8e8e93" font-size="13">The full-width 3pt track is the only undesigned element. Each option is shown downloading (47%) and paused (0%).</text>
+
+  <!-- ============ PROBLEM ============ -->
+  <rect x="32" y="86" width="836" height="150" rx="14" fill="#1a1a1c" stroke="#2a2a2c"/>
+  <text x="52" y="112" fill="#636366" font-size="11" font-weight="700" letter-spacing="1">CURRENT — THE PROBLEM</text>
+  <!-- poster -->
+  <rect x="52" y="124" width="46" height="68" rx="6" fill="url(#poster)"/>
+  <text x="112" y="146" fill="#f2f2f7" font-size="15" font-weight="600">The Next Karate Kid (1994)</text>
+  <text x="372" y="146" fill="#636366" font-size="13">›</text>
+  <!-- empty track -->
+  <rect x="112" y="160" width="610" height="3" rx="1.5" fill="#ffffff" fill-opacity="0.12"/>
+  <text x="736" y="164" fill="#FF453A" font-size="11">← empty 0% track</text>
+  <text x="736" y="178" fill="#FF453A" font-size="11">reads as a stray divider</text>
+  <!-- pills -->
+  <g>
+    <rect x="112" y="174" width="80" height="22" rx="11" fill="#FF9F0A" fill-opacity="0.15" stroke="#FF9F0A" stroke-opacity="0.5"/>
+    <rect x="123" y="181" width="3" height="8" rx="1" fill="#FF9F0A"/><rect x="128" y="181" width="3" height="8" rx="1" fill="#FF9F0A"/>
+    <text x="135" y="189" fill="#FF9F0A" font-size="12" font-weight="600">Paused</text>
+    <rect x="200" y="174" width="74" height="22" rx="11" fill="#5E5CE6" fill-opacity="0.15" stroke="#5E5CE6" stroke-opacity="0.55"/>
+    <text x="211" y="189" fill="#5E5CE6" font-size="12" font-weight="600">Upgrade</text>
+  </g>
+  <text x="722" y="208" text-anchor="end" fill="#8e8e93" font-size="12">Remux-2160p · 79,25 GB · </text>
+  <text x="722" y="208" text-anchor="end" fill="#30D158" font-size="12" font-weight="600">                          +8652</text>
+
+  <!-- ============ OPTIONS HEADER ============ -->
+  <text x="32" y="268" fill="#636366" font-size="11" font-weight="700" letter-spacing="1">OPTIONS</text>
+  <line x1="450" y1="262" x2="450" y2="978" stroke="#2a2a2c" stroke-dasharray="3 4"/>
+  <text x="60" y="268" fill="#8e8e93" font-size="11">downloading · 47%</text>
+  <text x="478" y="268" fill="#8e8e93" font-size="11">paused · 0%</text>
+
+  <!-- ========== OPTION A: progress inside the status pill ========== -->
+  <rect x="32" y="280" width="836" height="118" rx="14" fill="#1a1a1c" stroke="#2a2a2c"/>
+  <text x="52" y="306" fill="#f2f2f7" font-size="14" font-weight="600">A · Progress lives in the status pill</text>
+  <text x="52" y="324" fill="#8e8e93" font-size="11.5">No full-width line ever. Same language as the detail's Resume button (a filled glass pill).</text>
+
+  <!-- A downloading -->
+  <text x="60" y="356" fill="#f2f2f7" font-size="13" font-weight="600">The Next Karate Kid</text>
+  <g>
+    <rect x="60" y="366" width="150" height="22" rx="11" fill="#0A84FF" fill-opacity="0.18" stroke="#0A84FF" stroke-opacity="0.5"/>
+    <clipPath id="fA"><rect x="60" y="366" width="70.5" height="22" rx="11"/></clipPath>
+    <rect x="60" y="366" width="150" height="22" rx="11" fill="#0A84FF" fill-opacity="0.35" clip-path="url(#fA)"/>
+    <text x="75" y="381" fill="#ffffff" font-size="12" font-weight="600">▾ Downloading · 47%</text>
+  </g>
+
+  <!-- A paused -->
+  <text x="478" y="356" fill="#f2f2f7" font-size="13" font-weight="600">The Next Karate Kid</text>
+  <g>
+    <rect x="478" y="366" width="80" height="22" rx="11" fill="#FF9F0A" fill-opacity="0.15" stroke="#FF9F0A" stroke-opacity="0.5"/>
+    <rect x="489" y="373" width="3" height="8" rx="1" fill="#FF9F0A"/><rect x="494" y="373" width="3" height="8" rx="1" fill="#FF9F0A"/>
+    <text x="501" y="381" fill="#FF9F0A" font-size="12" font-weight="600">Paused</text>
+    <rect x="566" y="366" width="74" height="22" rx="11" fill="#5E5CE6" fill-opacity="0.15" stroke="#5E5CE6" stroke-opacity="0.55"/>
+    <text x="577" y="381" fill="#5E5CE6" font-size="12" font-weight="600">Upgrade</text>
+  </g>
+
+  <!-- ========== OPTION B: ambient background fill ========== -->
+  <rect x="32" y="410" width="836" height="118" rx="14" fill="#1a1a1c" stroke="#2a2a2c"/>
+  <text x="52" y="436" fill="#f2f2f7" font-size="14" font-weight="600">B · Ambient row background fill</text>
+  <text x="52" y="454" fill="#8e8e93" font-size="11.5">Progress is a faint tinted wash behind the row, left→right. No line, no extra element.</text>
+
+  <!-- B downloading: wash behind row -->
+  <clipPath id="washB"><rect x="56" y="468" width="180" height="48" rx="8"/></clipPath>
+  <rect x="56" y="468" width="380" height="48" rx="8" fill="#0A84FF" fill-opacity="0.14" clip-path="url(#washB)"/>
+  <text x="68" y="492" fill="#f2f2f7" font-size="13" font-weight="600">The Next Karate Kid</text>
+  <g>
+    <rect x="68" y="500" width="118" height="20" rx="10" fill="#0A84FF" fill-opacity="0.15" stroke="#0A84FF" stroke-opacity="0.5"/>
+    <text x="80" y="514" fill="#0A84FF" font-size="11.5" font-weight="600">▾ Downloading 47%</text>
+  </g>
+
+  <!-- B paused: no wash -->
+  <text x="490" y="492" fill="#f2f2f7" font-size="13" font-weight="600">The Next Karate Kid</text>
+  <g>
+    <rect x="490" y="500" width="80" height="20" rx="10" fill="#FF9F0A" fill-opacity="0.15" stroke="#FF9F0A" stroke-opacity="0.5"/>
+    <rect x="501" y="506" width="3" height="8" rx="1" fill="#FF9F0A"/><rect x="506" y="506" width="3" height="8" rx="1" fill="#FF9F0A"/>
+    <text x="513" y="514" fill="#FF9F0A" font-size="11.5" font-weight="600">Paused</text>
+  </g>
+
+  <!-- ========== OPTION C: conditional thin bar ========== -->
+  <rect x="32" y="540" width="836" height="118" rx="14" fill="#1a1a1c" stroke="#2a2a2c"/>
+  <text x="52" y="566" fill="#f2f2f7" font-size="14" font-weight="600">C · Conditional bar — only the filled part, only when &gt; 0%</text>
+  <text x="52" y="584" fill="#8e8e93" font-size="11.5">Keeps the bar, drops the empty track. A short rounded accent tucked under the title.</text>
+
+  <!-- C downloading: short filled bar, no track -->
+  <text x="60" y="614" fill="#f2f2f7" font-size="13" font-weight="600">The Next Karate Kid</text>
+  <rect x="60" y="622" width="170" height="3" rx="1.5" fill="#0A84FF"/>
+  <g>
+    <rect x="60" y="632" width="80" height="20" rx="10" fill="#FF9F0A" fill-opacity="0" stroke="#0A84FF" stroke-opacity="0"/>
+    <text x="60" y="646" fill="#8e8e93" font-size="11.5">Downloading · 47%</text>
+  </g>
+
+  <!-- C paused: no bar at all -->
+  <text x="478" y="614" fill="#f2f2f7" font-size="13" font-weight="600">The Next Karate Kid</text>
+  <g>
+    <rect x="478" y="624" width="80" height="20" rx="10" fill="#FF9F0A" fill-opacity="0.15" stroke="#FF9F0A" stroke-opacity="0.5"/>
+    <rect x="489" y="630" width="3" height="8" rx="1" fill="#FF9F0A"/><rect x="494" y="630" width="3" height="8" rx="1" fill="#FF9F0A"/>
+    <text x="501" y="638" fill="#FF9F0A" font-size="11.5" font-weight="600">Paused</text>
+  </g>
+  <text x="478" y="650" fill="#636366" font-size="11">(nothing under the title — clean)</text>
+
+  <!-- ============ DETAIL ============ -->
+  <text x="32" y="700" fill="#636366" font-size="11" font-weight="700" letter-spacing="1">DETAIL HEADER</text>
+
+  <!-- detail current -->
+  <rect x="32" y="712" width="408" height="250" rx="14" fill="#1a1a1c" stroke="#2a2a2c"/>
+  <text x="52" y="736" fill="#8e8e93" font-size="11.5">Current — stray line above status</text>
+  <rect x="52" y="752" width="368" height="3" rx="1.5" fill="#ffffff" fill-opacity="0.12"/>
+  <text x="424" y="756" text-anchor="end" fill="#FF453A" font-size="10">redundant</text>
+  <g>
+    <rect x="52" y="766" width="80" height="22" rx="11" fill="#FF9F0A" fill-opacity="0.15" stroke="#FF9F0A" stroke-opacity="0.5"/>
+    <rect x="63" y="773" width="3" height="8" rx="1" fill="#FF9F0A"/><rect x="68" y="773" width="3" height="8" rx="1" fill="#FF9F0A"/>
+    <text x="75" y="781" fill="#FF9F0A" font-size="12" font-weight="600">Paused</text>
+    <rect x="140" y="766" width="74" height="22" rx="11" fill="#5E5CE6" fill-opacity="0.15" stroke="#5E5CE6" stroke-opacity="0.55"/>
+    <text x="151" y="781" fill="#5E5CE6" font-size="12" font-weight="600">Upgrade</text>
+  </g>
+  <text x="52" y="812" fill="#636366" font-size="11">Current file → Incoming …</text>
+  <!-- CTA already shows progress -->
+  <rect x="52" y="910" width="368" height="38" rx="12" fill="#5a4633"/>
+  <clipPath id="ctaCur"><rect x="52" y="910" width="173" height="38" rx="12"/></clipPath>
+  <rect x="52" y="910" width="368" height="38" rx="12" fill="#FF9F0A" fill-opacity="0.25" clip-path="url(#ctaCur)"/>
+  <text x="236" y="934" text-anchor="middle" fill="#f2f2f7" font-size="13" font-weight="600">▶ Resume download</text>
+  <text x="236" y="894" text-anchor="middle" fill="#636366" font-size="10">progress already lives here (47% fill)</text>
+
+  <!-- detail proposed -->
+  <rect x="460" y="712" width="408" height="250" rx="14" fill="#1a1a1c" stroke="#2a2a2c"/>
+  <text x="480" y="736" fill="#30D158" font-size="11.5">Proposed — drop the top bar entirely</text>
+  <g>
+    <rect x="480" y="758" width="80" height="22" rx="11" fill="#FF9F0A" fill-opacity="0.15" stroke="#FF9F0A" stroke-opacity="0.5"/>
+    <rect x="491" y="765" width="3" height="8" rx="1" fill="#FF9F0A"/><rect x="496" y="765" width="3" height="8" rx="1" fill="#FF9F0A"/>
+    <text x="503" y="773" fill="#FF9F0A" font-size="12" font-weight="600">Paused</text>
+    <rect x="568" y="758" width="74" height="22" rx="11" fill="#5E5CE6" fill-opacity="0.15" stroke="#5E5CE6" stroke-opacity="0.55"/>
+    <text x="579" y="773" fill="#5E5CE6" font-size="12" font-weight="600">Upgrade</text>
+    <rect x="650" y="758" width="78" height="22" rx="11" fill="#ffffff" fill-opacity="0.06" stroke="#ffffff" stroke-opacity="0.12"/>
+    <text x="661" y="773" fill="#8e8e93" font-size="12">SABnzbd</text>
+  </g>
+  <text x="480" y="812" fill="#636366" font-size="11">Current file → Incoming …</text>
+  <rect x="480" y="910" width="368" height="38" rx="12" fill="#5a4633"/>
+  <clipPath id="ctaNew"><rect x="480" y="910" width="173" height="38" rx="12"/></clipPath>
+  <rect x="480" y="910" width="368" height="38" rx="12" fill="#FF9F0A" fill-opacity="0.25" clip-path="url(#ctaNew)"/>
+  <text x="664" y="934" text-anchor="middle" fill="#f2f2f7" font-size="13" font-weight="600">▶ Resume download</text>
+  <text x="664" y="894" text-anchor="middle" fill="#30D158" font-size="10">single source of progress truth</text>
+
+  <text x="32" y="1004" fill="#636366" font-size="11">Recommendation: A for the queue (progress in the pill), and drop the top bar in detail (CTA already carries it).</text>
+</svg>

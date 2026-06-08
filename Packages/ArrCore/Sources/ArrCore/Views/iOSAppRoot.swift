@@ -1,5 +1,6 @@
 #if os(iOS)
 import SwiftUI
+import CoreSpotlight
 
 /// Root view for the iOS app target.
 ///
@@ -14,13 +15,15 @@ import SwiftUI
 /// QueueSectionView, etc.) without us having to expose every
 /// internal initialiser publicly.
 public struct iOSAppRoot: View {
-    @StateObject private var viewModel: QueueViewModel
+    @State private var viewModel: QueueViewModel
     @ObservedObject private var configStore: ConfigStore
+    @ObservedObject private var storeManager = StoreManager.shared
+    @Environment(\.scenePhase) private var scenePhase
 
     public init(viewModel: QueueViewModel? = nil, configStore: ConfigStore? = nil) {
         let vm = viewModel ?? QueueViewModel()
         let cs = configStore ?? .shared
-        self._viewModel = StateObject(wrappedValue: vm)
+        self._viewModel = State(initialValue: vm)
         self._configStore = ObservedObject(wrappedValue: cs)
     }
 
@@ -32,165 +35,199 @@ public struct iOSAppRoot: View {
             NavigationStack { UpcomingTab(viewModel: viewModel) }
                 .tabItem { Label { Text("Upcoming", bundle: .module) } icon: { Image(systemName: "calendar") } }
 
-            NavigationStack { SearchTab(viewModel: viewModel) }
-                .tabItem { Label { Text("Search", bundle: .module) } icon: { Image(systemName: "magnifyingglass") } }
+            NavigationStack { HistoryTab(viewModel: viewModel) }
+                .tabItem { Label { Text("History", bundle: .module) } icon: { Image(systemName: "clock.arrow.circlepath") } }
+
+            if configStore.aiConfigured {
+                NavigationStack {
+                    if storeManager.isPro {
+                        ChatTab()
+                    } else {
+                        ChatLockedPlaceholder { storeManager.gate(.chat) }
+                    }
+                }
+                .tabItem {
+                    Label {
+                        Text("Chat", bundle: .module)
+                    } icon: {
+                        Image(systemName: storeManager.isPro ? "sparkles" : "lock.fill")
+                    }
+                }
+            }
 
             NavigationStack { SettingsTab(viewModel: viewModel) }
                 .tabItem { Label { Text("Settings", bundle: .module) } icon: { Image(systemName: "gearshape") } }
         }
         .environmentObject(configStore)
-        .task { await viewModel.refresh() }
+        .fullScreenCover(isPresented: Binding(
+            get: { storeManager.gatedFeature != nil },
+            set: { if !$0 { storeManager.dismissPaywall() } }
+        )) {
+            PaywallView(context: storeManager.gatedFeature) {
+                storeManager.dismissPaywall()
+            }
+        }
+        // Slightly larger baseline type on iOS — the shared sizes read small
+        // on phone. (macOS uses the preset unchanged.) `effectiveFontScale`
+        // applies the iOS bump; see `appFontScale`.
+        .appFontScale(configStore)
+        .preferredColorScheme(configStore.preferredColorScheme)
+        // Foreground polling while the app is open (fixed 5s — see
+        // ConfigStore). startForegroundPolling() also fires an immediate
+        // refresh. Stopped when backgrounded; iOS suspends the timer anyway,
+        // but stopping avoids a stale burst the instant we resume.
+        .onAppear {
+            viewModel.startForegroundPolling()
+            // Index the library into Spotlight (fire-and-forget, batched).
+            SpotlightIndexer.reindex(configStore: configStore)
+        }
+        .onChange(of: scenePhase) { _, phase in
+            switch phase {
+            case .active:
+                viewModel.startForegroundPolling()
+                // Re-index on foreground so posters cached while browsing get
+                // picked up (cached-only thumbnails). Throttled inside reindex.
+                SpotlightIndexer.reindex(configStore: configStore)
+            case .inactive, .background: viewModel.stopForegroundPolling()
+            @unknown default: break
+            }
+        }
+        // Tapping a Spotlight result opens the item's detail in the app.
+        .onContinueUserActivity(CSSearchableItemActionType) { activity in
+            guard let id = activity.userInfo?[CSSearchableItemActivityIdentifier] as? String,
+                  let ref = SpotlightIndexer.parse(id) else { return }
+            // Small delay so the (cold-launched) Queue tab's detail listener is
+            // mounted before we post — otherwise the notification is missed.
+            Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 400_000_000)
+                DetailRequest.post(DetailRequest.syntheticItem(source: ref.source, entityId: ref.id, title: ""))
+            }
+        }
+    }
+}
+
+// MARK: - Chat locked placeholder
+
+private struct ChatLockedPlaceholder: View {
+    let onUnlock: () -> Void
+    var body: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "lock.fill").font(.largeTitle).foregroundStyle(.secondary)
+            Text("Chat is a Pro feature", bundle: .module).font(.headline)
+            Button { onUnlock() } label: { Text("Unlock ArrBarr Pro", bundle: .module) }
+                .buttonStyle(.borderedProminent)
+        }
+        .padding()
+        .onAppear { onUnlock() }
     }
 }
 
 // MARK: - Queue tab
 
 private struct QueueTab: View {
-    @ObservedObject var viewModel: QueueViewModel
+    var viewModel: QueueViewModel
     @EnvironmentObject var configStore: ConfigStore
     @State private var detailItem: QueueItem?
+    @State private var searchVM = SearchViewModel()
+    @State private var searchResult: SearchResult?
+
+    private var searchConfigured: Bool {
+        configStore.sonarr.isVisible || configStore.radarr.isVisible ||
+        configStore.lidarr.isVisible || configStore.whisparr.isVisible
+    }
+
+    private var isSearching: Bool { !searchVM.query.trimmingCharacters(in: .whitespaces).isEmpty }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
-                ForEach(visibleSections, id: \.self) { entry in
-                    sectionView(for: entry)
-                    Divider().padding(.horizontal, 14)
+        Group {
+            if let result = searchResult {
+                // A result was tapped — show the add/configure panel, same
+                // flow the floating "+" sheet used to drive.
+                SearchAddPanel(result: result, viewModel: searchVM) {
+                    searchResult = nil
                 }
-                if visibleSections.isEmpty {
-                    emptyState
+            } else {
+                ZStack {
+                    queueList
+                    // Typing the top search bar shows the same unified surface
+                    // as macOS: live queue rows that still match the filter on
+                    // top, arr library / add-new hits below.
+                    if isSearching {
+                        ScrollView {
+                            QueueSearchResultsView(
+                                viewModel: viewModel,
+                                searchViewModel: searchVM,
+                                scope: nil,
+                                onSelectQueueItem: { detailItem = $0 },
+                                onSelectAddResult: { searchResult = $0 }
+                            )
+                            .padding(.vertical, 8)
+                            if searchVM.isSearching {
+                                ProgressView()
+                                    .controlSize(.small)
+                                    .padding(.vertical, 16)
+                            }
+                        }
+                        .background(Color(.systemBackground))
+                    }
                 }
             }
-            .padding(.vertical, 8)
         }
         .refreshable { await viewModel.refresh() }
-        .navigationTitle(Text("Queue", bundle: .module))
+        // No nav-bar title — it only duplicated the tab-bar label below.
+        .navigationBarTitleDisplayMode(.inline)
+        // Search-to-add now lives in a persistent top search bar instead of
+        // a floating "+" button.
+        .searchable(
+            text: $searchVM.query,
+            placement: .navigationBarDrawer(displayMode: .always),
+            prompt: Text("Search movies and TV series", bundle: .module)
+        )
+        .autocorrectionDisabled(true)
+        // Fire the arr lookups when the query changes — same trigger macOS
+        // wires from its filter bar.
+        .onChange(of: searchVM.query) { _, _ in searchVM.onQueryChange() }
         .navigationDestination(item: $detailItem) { item in
             DetailView(item: item, onBack: { detailItem = nil }, viewModel: viewModel)
-                .navigationBarBackButtonHidden(true)
         }
-    }
-
-    private enum SectionEntry: Hashable {
-        case needsYou
-        case arr(QueueItem.Source)
-    }
-
-    private var visibleSections: [SectionEntry] {
-        configStore.arrOrder.compactMap { key in
-            if key == ConfigStore.needsYouOrderKey {
-                guard configStore.showNeedsYou && !viewModel.needsYou.isEmpty else { return nil }
-                return .needsYou
-            }
-            if key == ConfigStore.tonightOrderKey { return nil } // Tonight folded into Upcoming on iOS
-            if let source = QueueItem.Source(rawValue: key), isConfigured(source) {
-                return .arr(source)
-            }
-            return nil
+        // In-library search hits route through DetailRequest — listen for it
+        // here so they push the detail (Upcoming tab does the same).
+        .onReceive(NotificationCenter.default.publisher(for: .arrBarrOpenDetail)) { note in
+            guard let item = note.userInfo?["item"] as? QueueItem else { return }
+            detailItem = item
         }
-    }
-
-    @ViewBuilder
-    private func sectionView(for entry: SectionEntry) -> some View {
-        switch entry {
-        case .needsYou:
-            NeedsYouSectionView(
-                items: viewModel.needsYou,
-                isCollapsed: configStore.isCollapsed(ConfigStore.needsYouOrderKey),
-                onToggleCollapse: {
-                    withAnimation(.smooth(duration: 0.22)) {
-                        configStore.toggleCollapsed(ConfigStore.needsYouOrderKey)
-                    }
-                },
-                onItemTap: { needs in
-                    let match = QueueItem.Source.allCases
-                        .lazy
-                        .compactMap { viewModel.items(for: $0).first(where: { $0.id == needs.item.id }) }
-                        .first
-                    if let match { detailItem = match }
-                }
+        // Search-to-add App Intent → run the search here.
+        .onReceive(NotificationCenter.default.publisher(for: .arrBarrSearchQuery)) { note in
+            guard let q = note.userInfo?["query"] as? String else { return }
+            searchResult = nil
+            searchVM.query = q
+            searchVM.onQueryChange()
+        }
+        .onAppear {
+            searchVM.setup(
+                radarrConfig: configStore.radarr,
+                sonarrConfig: configStore.sonarr,
+                lidarrConfig: configStore.lidarr,
+                whisparrConfig: configStore.whisparr
             )
-            .padding(.vertical, 12)
-        case .arr(let source):
-            let arrError = error(for: source)
-            QueueSectionView(
-                title: source.displayName,
-                symbol: source.symbol,
-                entries: entries(for: source),
-                error: arrError,
-                health: health(for: source),
-                isCollapsed: arrError == nil ? configStore.isCollapsed(source) : false,
-                onToggleCollapse: arrError == nil ? {
-                    withAnimation(.smooth(duration: 0.22)) {
-                        configStore.toggleCollapsed(source)
-                    }
-                } : nil,
-                viewModel: viewModel,
-                onShowHistory: nil,
-                onShowDetail: { item in detailItem = item }
-            )
-            .padding(.vertical, 12)
         }
     }
 
-    private var emptyState: some View {
-        VStack(spacing: 14) {
-            Image(systemName: "gearshape.2")
-                .scaledFont(size: 36, weight: .light)
-                .foregroundStyle(.secondary)
-            Text("ArrBarr is not configured", bundle: .module)
-                .font(.headline)
-            Text("Connect Radarr, Sonarr or Lidarr in Settings to get started.", bundle: .module)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.horizontal, 24)
-        .padding(.vertical, 60)
-    }
-
-    private func isConfigured(_ source: QueueItem.Source) -> Bool {
-        let cfg = configStore.config(for: source.serviceKind)
-        // Demo mode seeds `enabled = true` without ever filling in a base
-        // URL, so the strict `isConfigured` check (which requires a valid
-        // http/https URL) hides every section. Mirror PopoverContentView's
-        // `isVisible` helper: in demo mode, "enabled" is enough.
-        return DemoMode.isActive ? cfg.enabled : cfg.isConfigured
-    }
-
-    private func items(for source: QueueItem.Source) -> [QueueItem] {
-        viewModel.items(for: source)
-    }
-
-    private func entries(for source: QueueItem.Source) -> [QueueRowEntry] {
-        let raw = items(for: source)
-        switch source {
-        case .sonarr: return QueueGrouping.group(raw)
-        default:      return raw.map { .single($0) }
-        }
-    }
-
-    private func error(for source: QueueItem.Source) -> String? {
-        viewModel.error(for: source)
-    }
-
-    private func health(for source: QueueItem.Source) -> [ArrHealthRecord] {
-        guard configStore.showIndexerIssues else { return [] }
-        switch source {
-        case .sonarr: return viewModel.health.sonarr
-        case .radarr: return viewModel.health.radarr
-        case .lidarr: return viewModel.health.lidarr
-        case .whisparr: return viewModel.health.whisparr
-        }
+    private var queueList: some View {
+        QueueListView(
+            viewModel: viewModel,
+            scope: nil,
+            onShowDetail: { detailItem = $0 }
+        )
     }
 }
 
 // MARK: - Upcoming tab
 
 private struct UpcomingTab: View {
-    @ObservedObject var viewModel: QueueViewModel
+    var viewModel: QueueViewModel
     @EnvironmentObject var configStore: ConfigStore
+    @State private var detailItem: QueueItem?
 
     var body: some View {
         Group {
@@ -210,8 +247,18 @@ private struct UpcomingTab: View {
                 .listStyle(.insetGrouped)
             }
         }
-        .navigationTitle(Text("Upcoming", bundle: .module))
+        .navigationBarTitleDisplayMode(.inline)
         .refreshable { await viewModel.refresh() }
+        .navigationDestination(item: $detailItem) { item in
+            DetailView(item: item, onBack: { detailItem = nil }, viewModel: viewModel)
+        }
+        // UpcomingRowView's `openDetail()` posts a DetailRequest
+        // notification — wire it to push DetailView, same pattern as
+        // MainWindowView on macOS.
+        .onReceive(NotificationCenter.default.publisher(for: .arrBarrOpenDetail)) { note in
+            guard let item = note.userInfo?["item"] as? QueueItem else { return }
+            detailItem = item
+        }
     }
 
     private struct UpcomingGroup {
@@ -259,74 +306,190 @@ private struct UpcomingTab: View {
     }
 }
 
-// MARK: - Search tab
+// MARK: - Chat tab
 
-private struct SearchTab: View {
-    @ObservedObject var viewModel: QueueViewModel
+private struct ChatTab: View {
     @EnvironmentObject var configStore: ConfigStore
-    @StateObject private var searchVM = SearchViewModel()
-    @State private var searchResult: SearchResult?
+    @State private var chatHolder = ChatViewModelHolder()
 
     var body: some View {
         Group {
-            if let result = searchResult {
-                SearchAddPanel(result: result, viewModel: searchVM) {
-                    searchResult = nil
-                }
+            if !chatHolder.vm.providerIsAvailable {
+                ChatUnavailableView(reason: .providerUnavailable)
             } else {
-                SearchView(
-                    viewModel: searchVM,
-                    configuredSources: searchSources,
-                    onSelectResult: { result in searchResult = result }
-                )
+                ChatView(viewModel: chatHolder.vm)
             }
         }
-        .navigationTitle(Text("Search", bundle: .module))
-        .onAppear {
-            searchVM.setup(
-                radarrConfig: configStore.radarr,
-                sonarrConfig: configStore.sonarr,
-                lidarrConfig: configStore.lidarr,
-                whisparrConfig: configStore.whisparr
-            )
+        .navigationBarTitleDisplayMode(.inline)
+        .onAppear { chatHolder.reconfigure(store: configStore) }
+        .onChange(of: ChatViewModelHolder.signature(store: configStore)) { _, _ in
+            chatHolder.reconfigure(store: configStore)
         }
-    }
-
-    private var searchSources: [QueueItem.Source] {
-        var s: [QueueItem.Source] = []
-        let sonarrVisible = DemoMode.isActive ? configStore.sonarr.enabled : configStore.sonarr.isConfigured
-        let radarrVisible = DemoMode.isActive ? configStore.radarr.enabled : configStore.radarr.isConfigured
-        let lidarrVisible = DemoMode.isActive ? configStore.lidarr.enabled : configStore.lidarr.isConfigured
-        let whisparrVisible = DemoMode.isActive ? configStore.whisparr.enabled : configStore.whisparr.isConfigured
-        if sonarrVisible { s.append(.sonarr) }
-        if radarrVisible { s.append(.radarr) }
-        if lidarrVisible { s.append(.lidarr) }
-        if whisparrVisible { s.append(.whisparr) }
-        return s
     }
 }
 
 // MARK: - Settings tab
 
 private struct SettingsTab: View {
-    @ObservedObject var viewModel: QueueViewModel
+    var viewModel: QueueViewModel
     @EnvironmentObject var configStore: ConfigStore
 
     var body: some View {
         SettingsView(
             onSetDemoMode: { enable in
-                // iOS can't relaunch itself the way the macOS AppDelegate
-                // can. Instead, just persist the flag — `DemoMode.isActive`
-                // is a live read of UserDefaults, so the queue's next
-                // refresh sees demo data immediately. Seed the configs on
-                // enable so the queue isn't empty on first toggle.
+                // iOS can't relaunch itself. Persist the flag, re-point the
+                // ConfigStore to the demo suite (so demo edits never reach the
+                // real profile), seed on enable, wipe the demo suite on disable.
                 UserDefaults.standard.set(enable, forKey: DemoMode.key)
-                if enable { DemoMode.seedConfigsIfNeeded(configStore) }
+                configStore.useDemoStore(enable)
+                if enable {
+                    DemoMode.seedConfigsIfNeeded(configStore)
+                } else {
+                    DemoMode.resetDemoStore()
+                }
                 Task { await viewModel.refresh() }
                 return true
             }
         )
-        .navigationTitle(Text("Settings", bundle: .module))
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+// MARK: - History tab
+
+private struct HistoryTab: View {
+    var viewModel: QueueViewModel
+    @EnvironmentObject var configStore: ConfigStore
+    @State private var selected: QueueItem.Source?
+    /// Event-type filter (nil = all). Types are unified across arrs
+    /// (HistoryItem.EventType.parse maps both Sonarr + Radarr the same way),
+    /// so one filter list works for every service.
+    @State private var selectedType: HistoryItem.EventType?
+
+    /// Event types offered in the filter (skip `.other`, the catch-all).
+    private let filterableTypes: [HistoryItem.EventType] = [.grabbed, .imported, .failed, .deleted]
+
+    /// Only arrs the user has actually set up can have history.
+    private var available: [QueueItem.Source] {
+        QueueItem.Source.allCases.filter { configStore.config(for: $0.serviceKind).isVisible }
+    }
+
+    var body: some View {
+        Group {
+            if available.isEmpty {
+                Text("No history", bundle: .module)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                // `selected == nil` → All (merged across configured arrs).
+                HistoryView(
+                    source: selected,
+                    viewModel: viewModel,
+                    refreshNonce: 0,
+                    showHeader: false,
+                    typeFilter: selectedType,
+                    onClose: {}
+                )
+            }
+        }
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if available.count > 1 {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
+                        Button {
+                            selected = nil
+                        } label: {
+                            Label {
+                                Text("All", bundle: .module)
+                            } icon: {
+                                Image(systemName: selected == nil ? "checkmark" : "square.stack")
+                            }
+                        }
+                        ForEach(available, id: \.self) { src in
+                            Button {
+                                selected = src
+                            } label: {
+                                Label {
+                                    Text(src.displayName)
+                                } icon: {
+                                    if selected == src {
+                                        Image(systemName: "checkmark")
+                                    } else {
+                                        // Plain template Image (not ServiceIcon) — a Menu only
+                                        // renders an `Image` for its item icon, not an arbitrary view.
+                                        Image(src.brandIconName, bundle: .module)
+                                            .renderingMode(.template)
+                                    }
+                                }
+                            }
+                        }
+                    } label: {
+                        // Show the active filter (icon + name) as the dropdown
+                        // label instead of a bare filter glyph — a lone filter
+                        // icon didn't say what it filtered or what's selected.
+                        HStack(spacing: 4) {
+                            if let current = selected {
+                                // ServiceIcon (vs a raw template Image) sizes
+                                // the vector asset — a bare Image rendered at
+                                // its intrinsic SVG size and blew up to fill
+                                // the bar.
+                                ServiceIcon(source: current, size: 15)
+                                Text(verbatim: current.displayName)
+                            } else {
+                                Image(systemName: "square.stack")
+                                Text("All", bundle: .module)
+                            }
+                            Image(systemName: "chevron.down")
+                                .font(.caption2)
+                        }
+                        .font(.subheadline)
+                    }
+                    .accessibilityLabel(Text("Filter", bundle: .module))
+                }
+            }
+            // Second filter: event type (Grabbed / Imported / Failed /
+            // Deleted). Compact — icon-only when "All", icon + name when a
+            // specific type is picked.
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    Button {
+                        selectedType = nil
+                    } label: {
+                        Label {
+                            Text("All", bundle: .module)
+                        } icon: {
+                            Image(systemName: selectedType == nil ? "checkmark" : "line.3.horizontal.decrease")
+                        }
+                    }
+                    ForEach(filterableTypes, id: \.self) { type in
+                        Button {
+                            selectedType = type
+                        } label: {
+                            Label {
+                                Text(verbatim: type.displayName)
+                            } icon: {
+                                Image(systemName: selectedType == type ? "checkmark" : type.symbol)
+                            }
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 4) {
+                        if let t = selectedType {
+                            Image(systemName: t.symbol)
+                            Text(verbatim: t.displayName)
+                        } else {
+                            Image(systemName: "line.3.horizontal.decrease.circle")
+                        }
+                        Image(systemName: "chevron.down")
+                            .font(.caption2)
+                    }
+                    .font(.subheadline)
+                }
+                .accessibilityLabel(Text("Filter", bundle: .module))
+            }
+        }
     }
 }
 #endif

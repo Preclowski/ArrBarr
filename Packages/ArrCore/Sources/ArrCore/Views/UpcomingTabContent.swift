@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct UpcomingTabContent: View {
-    @ObservedObject var viewModel: QueueViewModel
+    var viewModel: QueueViewModel
     @EnvironmentObject var configStore: ConfigStore
 
     var body: some View {

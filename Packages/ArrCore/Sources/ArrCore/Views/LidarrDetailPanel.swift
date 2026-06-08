@@ -2,7 +2,7 @@ import SwiftUI
 
 struct LidarrDetailPanel: View {
     let item: QueueItem
-    @ObservedObject var viewModel: QueueViewModel
+    var viewModel: QueueViewModel
     @EnvironmentObject var configStore: ConfigStore
     let lidarrAlbum: LidarrAlbumDetail?
     let lidarrTracks: [LidarrTrackDetail]
@@ -65,9 +65,7 @@ struct LidarrDetailPanel: View {
                 }
             }
             if let err = loadError {
-                Text(err)
-                    .scaledFont(size: 11)
-                    .foregroundStyle(.tertiary)
+                LoadErrorLine(message: err)
             }
         }
     }

@@ -59,8 +59,7 @@ public struct SourceGlyphChip: View {
     }
     public var body: some View {
         HStack(spacing: 3) {
-            Image(systemName: source.symbol)
-                .scaledFont(size: 9, weight: .semibold)
+            ServiceIcon(source: source, size: 9)
             Text(verbatim: source.displayName)
                 .scaledFont(size: 9, weight: .semibold)
         }
@@ -222,19 +221,25 @@ public struct CustomFormatStrip: View {
             }
             .clipped()
 
-        let view: AnyView = fadeTrailing
-            ? AnyView(strip.mask(
-                LinearGradient(
-                    stops: [
+        // Always mask with a gradient; when not fading, the stops are solid
+        // black end-to-end (a no-op mask). Keeps one concrete view type, so no
+        // AnyView erasure is needed for the ternary.
+        let view = strip.mask(
+            LinearGradient(
+                stops: fadeTrailing
+                    ? [
                         .init(color: .black, location: 0),
                         .init(color: .black, location: 0.85),
                         .init(color: .clear, location: 1.0),
+                    ]
+                    : [
+                        .init(color: .black, location: 0),
+                        .init(color: .black, location: 1.0),
                     ],
-                    startPoint: .leading,
-                    endPoint: .trailing
-                )
-            ))
-            : AnyView(strip)
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+        )
 
         if let help {
             view.help(Text(verbatim: help))

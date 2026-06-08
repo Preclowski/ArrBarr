@@ -19,8 +19,7 @@ public struct SettingsView: View {
     }
 
     @EnvironmentObject var configStore: ConfigStore
-    @State private var draggingKey: String?
-    @State private var dragOffset: CGFloat = 0
+    @ObservedObject private var storeManager = StoreManager.shared
     @State private var demoModeOn: Bool = DemoMode.isActive
     /// iOS: 7-tap on the Version row enables Developer mode, since iOS
     /// users can't pass `--demo` on launch.
@@ -45,12 +44,10 @@ public struct SettingsView: View {
                         .tabItem { Label { Text("General", bundle: .module) } icon: { Image(systemName: "gearshape") } }
                     mediaManagersPane
                         .tabItem { Label { Text("Media Managers", bundle: .module) } icon: { Image(systemName: "server.rack") } }
-                    usenetPane
-                        .tabItem { Label { Text("Usenet", bundle: .module) } icon: { Image(systemName: "doc.zipper") } }
-                    torrentsPane
-                        .tabItem { Label { Text("Torrents", bundle: .module) } icon: { Image(systemName: "arrow.triangle.2.circlepath") } }
+                    downloadClientsPane
+                        .tabItem { Label { Text("Download clients", bundle: .module) } icon: { Image(systemName: "arrow.down.circle") } }
                     aiPane
-                        .tabItem { Label { Text("AI", bundle: .module) } icon: { Image(systemName: "sparkles") } }
+                        .tabItem { Label { Text("Assistant", bundle: .module) } icon: { Image(systemName: "sparkles") } }
                 }
                 bottomBar
             }
@@ -69,17 +66,24 @@ public struct SettingsView: View {
         // the Text-size picker had no effect on Settings itself (the most
         // visible place where the user *previews* the change). Inject the
         // env right here; observing configStore re-renders on every step.
-        .environment(\.fontScale, configStore.fontScale)
+        .appFontScale(configStore)
+        .preferredColorScheme(configStore.preferredColorScheme)
         .onAppear {
             if initialAppLanguage == nil { initialAppLanguage = configStore.appLanguage }
         }
+        // Paywall presentation is handled centrally (iOS: a sheet on
+        // iOSAppRoot's TabView; macOS: a dedicated NSWindow opened by
+        // AppDelegate observing StoreManager.gatedFeature). The Download
+        // Clients lock here just calls `gate(...)`, which sets gatedFeature and
+        // lets those owners present. `storeManager` is still observed for the
+        // `.disabled`/overlay lock state.
     }
 
     /// Section content for the language picker. Shared between the macOS
     /// General pane and the iOS combined form so the "restart required"
     /// affordance behaves identically on both platforms.
     /// Text-size preset picker — three discrete steps (Default / Larger /
-    /// Largest = 1.0 / 1.20 / 1.45). Affects every `.scaledFont(size:)`
+    /// Largest = 1.0 / 1.10 / 1.20). Affects every `.scaledFont(size:)`
     /// site in the app via the `\.fontScale` env value injected at root.
     @ViewBuilder
     private var textSizePicker: some View {
@@ -89,32 +93,20 @@ public struct SettingsView: View {
         // (no compile error, no runtime warning, just nothing changes).
         Picker(selection: $configStore.fontScale) {
             Text("Default", bundle: .module).tag(1.0 as Double)
-            Text("Larger", bundle: .module).tag(1.20 as Double)
-            Text("Largest", bundle: .module).tag(1.45 as Double)
+            Text("Larger", bundle: .module).tag(1.10 as Double)
+            Text("Largest", bundle: .module).tag(1.20 as Double)
         } label: { Text("Text size", bundle: .module) }
     }
 
+    /// Light / Dark / System appearance preset. Applied via
+    /// `.preferredColorScheme` at every scene root.
     @ViewBuilder
-    private var languageSection: some View {
-        Section {
-            Picker(selection: $configStore.appLanguage) {
-                ForEach(ConfigStore.appLanguageOptions, id: \.code) { opt in
-                    Text(LocalizedStringKey(opt.label)).tag(opt.code)
-                }
-            } label: { Text("Language", bundle: .module) }
-        } footer: {
-            if languageChanged {
-                #if os(macOS)
-                HStack(spacing: 8) {
-                    Text("Restart required to apply the new language.", bundle: .module)
-                    Button { relaunchApp() } label: { Text("Relaunch", bundle: .module) }
-                        .controlSize(.small)
-                }
-                #else
-                Text("Quit and reopen the app to apply the new language.", bundle: .module)
-                #endif
-            }
-        }
+    private var themePicker: some View {
+        Picker(selection: $configStore.appearance) {
+            Text("System", bundle: .module).tag("system")
+            Text("Light", bundle: .module).tag("light")
+            Text("Dark", bundle: .module).tag("dark")
+        } label: { Text("Theme", bundle: .module) }
     }
 
     /// Shared "AI" section. One master toggle at the top kills the whole
@@ -123,11 +115,14 @@ public struct SettingsView: View {
     private var aiSection: some View {
         Section {
             Toggle(isOn: $configStore.aiEnabled) { Text("Enable AI", bundle: .module) }
-        } header: { Text("AI", bundle: .module) }
+        } header: { Text("Assistant", bundle: .module) }
         if configStore.aiEnabled {
             Section {
                 Picker(selection: $configStore.chatProvider) {
-                    ForEach(ChatProvider.allCases) { p in
+                    // Hide Apple Intelligence on devices that don't support it.
+                    ForEach(ChatProvider.allCases.filter {
+                        $0 != .foundationModels || FoundationModelsAvailability.isSupported
+                    }) { p in
                         Text(p.displayName).tag(p)
                     }
                 } label: { Text("AI provider", bundle: .module) }
@@ -136,11 +131,37 @@ public struct SettingsView: View {
                               prompt: Text(verbatim: "https://api.openai.com/v1")) {
                         Text("API base URL", bundle: .module)
                     }
+                    .urlField()
                     SecureField(text: $configStore.openai.apiKey) { Text("API key", bundle: .module) }
-                    TextField(text: $configStore.openai.model,
-                              prompt: Text(verbatim: "gpt-4o-mini")) {
+                        .apiKeyField()
+                    // LabeledContent keeps the "Model" label visible next to
+                    // the value — a bare Form TextField hides its label once
+                    // it has a value, leaving just a cryptic "gpt-4o-mini".
+                    LabeledContent {
+                        // Empty title — the LabeledContent `label:` below is
+                        // the visible "Model" label; giving the TextField its
+                        // own label too rendered "Model … Model … value".
+                        TextField("", text: $configStore.openai.model,
+                                  prompt: Text(verbatim: "gpt-4o-mini"))
+                        #if os(iOS)
+                        .multilineTextAlignment(.trailing)
+                        #endif
+                        .technicalField()
+                    } label: {
                         Text("Model", bundle: .module)
                     }
+                    if !configStore.openai.isConfigured {
+                        Label {
+                            Text("Add base URL, API key and model — AI stays off until then.", bundle: .module)
+                        } icon: {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                        }
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                    }
+                    Text("The model must support tool calling, and results vary by model. Library items may be sent to the model to tailor recommendations. Tip: free models on OpenRouter work well.", bundle: .module)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
                 if configStore.chatProvider == .foundationModels {
                     #if os(macOS)
@@ -160,12 +181,13 @@ public struct SettingsView: View {
                 if configStore.whisparr.isConfigured {
                     Toggle(isOn: $configStore.aiKnowsAboutWhisparr) { Text("AI knows about Whisparr", bundle: .module) }
                 }
-            } header: { Text("Model", bundle: .module) }
+            }
             Section {
                 SecureField(text: $configStore.tmdbApiKey,
                             prompt: Text(verbatim: "v3 read key")) {
                     Text("TMDB API key", bundle: .module)
                 }
+                .apiKeyField()
                 if let url = URL(string: "https://www.themoviedb.org/settings/api") {
                     Link(destination: url) {
                         Label { Text("Get a free TMDB key", bundle: .module) } icon: { Image(systemName: "link") }
@@ -205,86 +227,142 @@ public struct SettingsView: View {
     #endif
 
     #if os(iOS)
+    /// Root settings list — each row drills into its own sub-form, the
+    /// iOS-native (Settings.app) pattern. Replaces the one long combined
+    /// Form so each concern lives on its own screen.
     private var iOSCombinedForm: some View {
+        List {
+            iosSettingsLink("General", systemImage: "gearshape") { iosGeneralForm }
+            iosSettingsLink("Media managers", systemImage: "server.rack") { iosMediaManagersForm }
+            iosSettingsLink("Download clients", systemImage: "arrow.down.circle") { iosDownloadClientsForm }
+            iosSettingsLink("Assistant", systemImage: "sparkles") { iosAIForm }
+            iosSettingsLink("Siri & Shortcuts", systemImage: "mic.fill") { iosSiriForm }
+            iosSettingsLink("About", systemImage: "info.circle") { iosAboutForm }
+        }
+    }
+
+    @ViewBuilder
+    private var iosSiriForm: some View {
         Form {
-            Section {
-                ServiceFields(config: $configStore.radarr, kind: .radarr,
-                              notifyBinding: $configStore.notifyRadarr)
-            } header: { Text("Radarr", bundle: .module) }
-            Section {
-                ServiceFields(config: $configStore.sonarr, kind: .sonarr,
-                              notifyBinding: $configStore.notifySonarr)
-            } header: { Text("Sonarr", bundle: .module) }
-            Section {
-                ServiceFields(config: $configStore.lidarr, kind: .lidarr,
-                              notifyBinding: $configStore.notifyLidarr)
-            } header: { Text("Lidarr", bundle: .module) }
-            Section {
-                ServiceFields(config: $configStore.whisparr, kind: .whisparr)
-                if configStore.whisparr.enabled {
-                    Toggle(isOn: $configStore.blurWhisparrPosters) { Text("Blur posters #nsfw", bundle: .module) }
+            if #available(iOS 16.0, *) {
+                SiriShortcutsSettingsContent()
+            }
+        }
+        .navigationTitle(Text("Siri & Shortcuts", bundle: .module))
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private func iosSettingsLink<Destination: View>(
+        _ titleKey: LocalizedStringKey,
+        systemImage: String,
+        @ViewBuilder destination: @escaping () -> Destination
+    ) -> some View {
+        NavigationLink {
+            destination()
+        } label: {
+            Label { Text(titleKey, bundle: .module) } icon: { Image(systemName: systemImage) }
+        }
+    }
+
+    /// One row in the Media-managers / Download-clients submenu: brand icon +
+    /// name + a green check when configured, pushing a dedicated per-service
+    /// screen. Replaces the old single long form (every service stacked) —
+    /// each service now lives on its own screen one tap deep.
+    private func iosServiceLink<Content: View>(
+        kind: ServiceKind,
+        title: String,
+        configured: Bool,
+        @ViewBuilder fields: @escaping () -> Content
+    ) -> some View {
+        NavigationLink {
+            Form { Section { fields() } }
+                .navigationTitle(Text(verbatim: title))
+                .navigationBarTitleDisplayMode(.inline)
+        } label: {
+            HStack(spacing: 10) {
+                ServiceIcon(kind: kind, size: 18)
+                    .foregroundStyle(.primary)
+                Text(verbatim: title)
+                Spacer()
+                if configured {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.footnote)
+                        .foregroundStyle(.green)
                 }
-            } header: { Text("Whisparr", bundle: .module) }
-            Section {
-                ServiceFields(config: $configStore.sabnzbd, kind: .sabnzbd)
-            } header: { Text("SABnzbd", bundle: .module) }
-            Section {
-                ServiceFields(config: $configStore.nzbget, kind: .nzbget)
-            } header: { Text("NZBGet", bundle: .module) }
-            Section {
-                ServiceFields(config: $configStore.qbittorrent, kind: .qbittorrent)
-            } header: { Text("qBittorrent", bundle: .module) }
-            Section {
-                ServiceFields(config: $configStore.transmission, kind: .transmission)
-            } header: { Text("Transmission", bundle: .module) }
-            Section {
-                ServiceFields(config: $configStore.rtorrent, kind: .rtorrent)
-            } header: { Text("rTorrent", bundle: .module) }
-            Section {
-                ServiceFields(config: $configStore.deluge, kind: .deluge)
-            } header: { Text("Deluge", bundle: .module) }
-            languageSection
+            }
+        }
+    }
+
+    private var iosMediaManagersForm: some View {
+        iosServiceList(mediaManagerSpecs, title: "Media managers")
+    }
+
+    private var iosDownloadClientsForm: some View {
+        iosServiceList(downloadClientSpecs, title: "Download clients")
+            .disabled(!storeManager.isPro)
+            .overlay {
+                if !storeManager.isPro {
+                    ProLockOverlay(feature: .downloadClients)
+                }
+            }
+    }
+
+    /// iOS chrome: each service is a `NavigationLink` row drilling into its
+    /// own screen — same roster as macOS, different presentation.
+    private func iosServiceList(_ specs: [ServiceSpec], title: LocalizedStringKey) -> some View {
+        List {
+            ForEach(specs) { spec in
+                iosServiceLink(kind: spec.kind, title: spec.title,
+                               configured: spec.config.wrappedValue.isConfigured) {
+                    serviceFields(spec)
+                }
+            }
+        }
+        .navigationTitle(Text(title, bundle: .module))
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private var iosAIForm: some View {
+        Form { aiSection }
+            .navigationTitle(Text("Assistant", bundle: .module))
+            .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private var iosGeneralForm: some View {
+        Form {
+            // No language picker on iOS — it always follows the system
+            // language (see ConfigStore: appLanguage is forced to "system"
+            // on iOS).
             Section {
                 ForEach(configStore.arrOrder, id: \.self) { key in
                     arrOrderRow(key: key)
                 }
-            } header: { Text("Section order", bundle: .module) }
-            Section {
-                textSizePicker
-                Toggle(isOn: $configStore.showIndexerIssues) { Text("Show indexer issues warning", bundle: .module) }
-                // "Upcoming window" picker removed — banner is now
-                // hard-locked to 7 days.
-            } header: { Text("Display", bundle: .module) }
-            Section {
-                // iOS only: foreground (= "while app is open") interval.
-                // Background polling is gone here — iOS suspends apps shortly
-                // after backgrounding so a periodic timer can't survive.
-                Picker(selection: $configStore.foregroundInterval) {
-                    ForEach(ConfigStore.foregroundIntervalOptions, id: \.self) { interval in
-                        Text(Self.formatInterval(interval)).tag(interval)
-                    }
-                } label: { Text("While open", bundle: .module) }
-            } header: { Text("Refresh", bundle: .module) }
-            aiSection
+                .onMove(perform: moveArrOrder)
+            } header: {
+                HStack {
+                    Text("Section order", bundle: .module)
+                    Spacer()
+                    EditButton()
+                        .textCase(nil)
+                        .font(.caption)
+                }
+            }
+            // No theme picker on iOS — it always follows the system
+            // appearance (forced in ConfigStore).
+            // iOS has no "Show indexer issues" toggle and no refresh-interval
+            // picker: indexer warnings are off, and foreground polling is a
+            // fixed 5s while the app is open (iOS suspends apps in the
+            // background, so there's no configurable background interval).
+            // Both are forced in ConfigStore for iOS.
+        }
+        .navigationTitle(Text("General", bundle: .module))
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private var iosAboutForm: some View {
+        Form {
             if devModeRevealed {
-                Section {
-                    Toggle(isOn: Binding(
-                        get: { demoModeOn },
-                        set: { newValue in
-                            guard newValue != demoModeOn else { return }
-                            let committed = onSetDemoMode?(newValue) ?? false
-                            if committed { demoModeOn = newValue }
-                        }
-                    )) { Text("Demo mode", bundle: .module) }
-                    if demoModeOn {
-                        if let onTestNotification {
-                            Button { onTestNotification() } label: { Text("Send test notification", bundle: .module) }
-                        }
-                        if let onShowWelcome {
-                            Button { onShowWelcome() } label: { Text("Show welcome screen", bundle: .module) }
-                        }
-                    }
-                } header: { Text("Developer options", bundle: .module) }
+                demoModeSection
             }
             Section {
                 // Classic iOS Settings.app trick: tap Version 7 times to
@@ -310,67 +388,135 @@ public struct SettingsView: View {
                 Link(destination: URL(string: "https://github.com/Preclowski/ArrBarr")!) {
                     Label { Text(verbatim: "GitHub") } icon: { Image(systemName: "link") }
                 }
-                Text(verbatim: "Made with 🥨")
+                Link(destination: URL(string: "https://arrbarr.app")!) {
+                    Label { Text("Website", bundle: .module) } icon: { Image(systemName: "globe") }
+                }
+                Link(destination: URL(string: "https://arrbarr.app/privacy-policy")!) {
+                    Label { Text("Privacy Policy", bundle: .module) } icon: { Image(systemName: "hand.raised") }
+                }
+                Text(verbatim: "Made by 🥨")
                     .foregroundStyle(.secondary)
             } header: { Text("About", bundle: .module) }
+            Section {
+                Link(destination: URL(string: "https://dashboardicons.com")!) {
+                    Label { Text(verbatim: "Dashboard Icons — CC BY 4.0") } icon: { Image(systemName: "paintpalette") }
+                }
+            } header: { Text("Acknowledgements", bundle: .module) } footer: {
+                Text("Service icons by Dashboard Icons, licensed CC BY 4.0 (recoloured for the UI).", bundle: .module)
+            }
         }
+        .navigationTitle(Text("About", bundle: .module))
+        .navigationBarTitleDisplayMode(.inline)
     }
     #endif
 
+    /// Developer "Demo mode" controls — identical on both platforms; only the
+    /// visibility condition differs (macOS keys off `DeveloperMode.isActive`,
+    /// iOS off the 7-tap-revealed `devModeRevealed`), so callers wrap it.
+    @ViewBuilder
+    private var demoModeSection: some View {
+        Section {
+            Toggle(isOn: Binding(
+                get: { demoModeOn },
+                set: { newValue in
+                    guard newValue != demoModeOn else { return }
+                    // Confirm via the callback BEFORE flipping local state — if
+                    // the user cancels the relaunch, the toggle stays in sync.
+                    let committed = onSetDemoMode?(newValue) ?? false
+                    if committed { demoModeOn = newValue }
+                }
+            )) { Text("Demo mode", bundle: .module) }
+            if demoModeOn {
+                if let onTestNotification {
+                    Button { onTestNotification() } label: { Text("Send test notification", bundle: .module) }
+                }
+                if let onShowWelcome {
+                    Button { onShowWelcome() } label: { Text("Show welcome screen", bundle: .module) }
+                }
+            }
+        } header: { Text("Developer options", bundle: .module) }
+    }
+
+    // MARK: - Service roster (shared data)
+
+    /// One configurable service row. Both the macOS panes and the iOS forms
+    /// render the *same* roster from this data — the only difference is the
+    /// chrome (a `Section` vs a `NavigationLink`). Adding a service, or wiring
+    /// a new per-service binding, happens in one place.
+    private struct ServiceSpec: Identifiable {
+        let kind: ServiceKind
+        let title: String
+        let config: Binding<ServiceConfig>
+        var notify: Binding<Bool>? = nil
+        var ageConfirmed: Binding<Bool>? = nil
+        var nsfwFilter: Binding<Bool>? = nil
+        var id: String { kind.rawValue }
+    }
+
+    private var mediaManagerSpecs: [ServiceSpec] {
+        [
+            .init(kind: .radarr, title: "Radarr", config: $configStore.radarr, notify: $configStore.notifyRadarr),
+            .init(kind: .sonarr, title: "Sonarr", config: $configStore.sonarr, notify: $configStore.notifySonarr),
+            .init(kind: .lidarr, title: "Lidarr", config: $configStore.lidarr, notify: $configStore.notifyLidarr),
+            .init(kind: .whisparr, title: "Whisparr", config: $configStore.whisparr,
+                  ageConfirmed: $configStore.whisparrAgeConfirmed, nsfwFilter: $configStore.blurWhisparrPosters),
+        ]
+    }
+
+    private var downloadClientSpecs: [ServiceSpec] {
+        [
+            .init(kind: .sabnzbd, title: "SABnzbd", config: $configStore.sabnzbd),
+            .init(kind: .nzbget, title: "NZBGet", config: $configStore.nzbget),
+            .init(kind: .qbittorrent, title: "qBittorrent", config: $configStore.qbittorrent),
+            .init(kind: .transmission, title: "Transmission", config: $configStore.transmission),
+            .init(kind: .rtorrent, title: "rTorrent", config: $configStore.rtorrent),
+            .init(kind: .deluge, title: "Deluge", config: $configStore.deluge),
+        ]
+    }
+
+    /// The actual fields for one service — single wiring point for every spec
+    /// binding, so neither platform repeats the argument list.
+    private func serviceFields(_ spec: ServiceSpec) -> some View {
+        ServiceFields(config: spec.config, kind: spec.kind,
+                      notifyBinding: spec.notify,
+                      ageConfirmedBinding: spec.ageConfirmed,
+                      nsfwFilterBinding: spec.nsfwFilter)
+    }
+
     // MARK: - Panes
 
-    private var mediaManagersPane: some View {
-        Form {
-            Section {
-                ServiceFields(config: $configStore.radarr, kind: .radarr,
-                              notifyBinding: $configStore.notifyRadarr)
-            } header: { Text("Radarr", bundle: .module) }
-            Section {
-                ServiceFields(config: $configStore.sonarr, kind: .sonarr,
-                              notifyBinding: $configStore.notifySonarr)
-            } header: { Text("Sonarr", bundle: .module) }
-            Section {
-                ServiceFields(config: $configStore.lidarr, kind: .lidarr,
-                              notifyBinding: $configStore.notifyLidarr)
-            } header: { Text("Lidarr", bundle: .module) }
-            Section {
-                ServiceFields(config: $configStore.whisparr, kind: .whisparr)
-                if configStore.whisparr.enabled {
-                    Toggle(isOn: $configStore.blurWhisparrPosters) { Text("Blur posters #nsfw", bundle: .module) }
+    private var mediaManagersPane: some View { servicePane(mediaManagerSpecs) }
+    private var downloadClientsPane: some View {
+        servicePane(downloadClientSpecs)
+            .disabled(!storeManager.isPro)
+            .overlay {
+                if !storeManager.isPro {
+                    ProLockOverlay(feature: .downloadClients)
                 }
-            } header: { Text("Whisparr", bundle: .module) }
+            }
+    }
+
+    /// macOS chrome: one grouped `Section` per service, brand-icon header.
+    private func servicePane(_ specs: [ServiceSpec]) -> some View {
+        Form {
+            ForEach(specs) { spec in
+                Section {
+                    serviceFields(spec)
+                } header: { serviceSectionHeader(spec.kind, LocalizedStringKey(spec.title)) }
+            }
         }
         .formStyle(.grouped)
     }
 
-    private var usenetPane: some View {
-        Form {
-            Section {
-                ServiceFields(config: $configStore.sabnzbd, kind: .sabnzbd)
-            } header: { Text("SABnzbd", bundle: .module) }
-            Section {
-                ServiceFields(config: $configStore.nzbget, kind: .nzbget)
-            } header: { Text("NZBGet", bundle: .module) }
+    /// Section header with the service's brand icon. Shared by the macOS panes
+    /// and the iOS forms so every configured service is visually identifiable.
+    @ViewBuilder
+    private func serviceSectionHeader(_ kind: ServiceKind, _ title: LocalizedStringKey) -> some View {
+        HStack(spacing: 6) {
+            ServiceIcon(kind: kind, size: 12)
+                .foregroundStyle(.secondary)
+            Text(title, bundle: .module)
         }
-        .formStyle(.grouped)
-    }
-
-    private var torrentsPane: some View {
-        Form {
-            Section {
-                ServiceFields(config: $configStore.qbittorrent, kind: .qbittorrent)
-            } header: { Text("qBittorrent", bundle: .module) }
-            Section {
-                ServiceFields(config: $configStore.transmission, kind: .transmission)
-            } header: { Text("Transmission", bundle: .module) }
-            Section {
-                ServiceFields(config: $configStore.rtorrent, kind: .rtorrent)
-            } header: { Text("rTorrent", bundle: .module) }
-            Section {
-                ServiceFields(config: $configStore.deluge, kind: .deluge)
-            } header: { Text("Deluge", bundle: .module) }
-        }
-        .formStyle(.grouped)
     }
 
     private var generalPane: some View {
@@ -382,7 +528,9 @@ public struct SettingsView: View {
                         Text(LocalizedStringKey(opt.label)).tag(opt.code)
                     }
                 } label: { Text("Language", bundle: .module) }
+                themePicker
                 textSizePicker
+                notificationSoundPicker
                 // Popover-display toggle merged in here — used to
                 // live in its own "Popover" section but with the
                 // upcoming-window picker gone there was only one
@@ -393,17 +541,22 @@ public struct SettingsView: View {
                 Text("Application", bundle: .module)
             } footer: {
                 if languageChanged {
+                    #if os(macOS)
                     HStack(spacing: 8) {
                         Text("Restart required to apply the new language.", bundle: .module)
                         Button { relaunchApp() } label: { Text("Relaunch", bundle: .module) }
                             .controlSize(.small)
                     }
+                    #else
+                    Text("Quit and reopen the app to apply the new language.", bundle: .module)
+                    #endif
                 }
             }
             Section {
                 ForEach(configStore.arrOrder, id: \.self) { key in
                     arrOrderRow(key: key)
                 }
+                .onMove(perform: moveArrOrder)
             } header: { Text("Section order", bundle: .module) }
             Section {
                 Picker(selection: $configStore.foregroundInterval) {
@@ -418,45 +571,89 @@ public struct SettingsView: View {
                 } label: { Text("Background", bundle: .module) }
             } header: { Text("Refresh Interval", bundle: .module) }
             if DeveloperMode.isActive {
-                Section {
-                    Toggle(isOn: Binding(
-                        get: { demoModeOn },
-                        set: { newValue in
-                            guard newValue != demoModeOn else { return }
-                            // Confirm via the callback BEFORE flipping local
-                            // state — if the user cancels the relaunch, the
-                            // toggle stays in sync with reality.
-                            let committed = onSetDemoMode?(newValue) ?? false
-                            if committed { demoModeOn = newValue }
-                        }
-                    )) { Text("Demo mode", bundle: .module) }
-                    if demoModeOn {
-                        if let onTestNotification {
-                            Button { onTestNotification() } label: { Text("Send test notification", bundle: .module) }
-                        }
-                        if let onShowWelcome {
-                            Button { onShowWelcome() } label: { Text("Show welcome screen", bundle: .module) }
-                        }
-                    }
-                } header: { Text("Developer options", bundle: .module) }
+                demoModeSection
+            }
+            if #available(macOS 13.0, *) {
+                SiriShortcutsSettingsContent()
             }
         }
         .formStyle(.grouped)
     }
+
+    /// Global notification-sound picker, inlined into the Application section.
+    /// One setting for every queue banner, so it lives with the other
+    /// app-level toggles rather than per-arr. Selecting a named sound previews
+    /// it immediately — same affordance as macOS Sound preferences. iOS gets
+    /// nothing (no `/System/Library/Sounds` enumeration); the default stays.
+    @ViewBuilder
+    private var notificationSoundPicker: some View {
+        #if os(macOS)
+        Picker(selection: $configStore.notificationSoundName) {
+            Text("Default", bundle: .module).tag("")
+            Text("None", bundle: .module).tag(ConfigStore.silentSoundName)
+            Divider()
+            ForEach(Self.systemSoundNames, id: \.self) { name in
+                Text(name).tag(name)
+            }
+        } label: {
+            HStack(spacing: 6) {
+                Text("Notification sound", bundle: .module)
+                Button { Self.previewSound(named: configStore.notificationSoundName) } label: {
+                    Image(systemName: "play.circle")
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+                .help(Text("Play", bundle: .module))
+            }
+        }
+        .onChange(of: configStore.notificationSoundName) { _, newValue in
+            Self.previewSound(named: newValue)
+        }
+        #endif
+    }
+
+    #if os(macOS)
+    /// Sound files shipped in `/System/Library/Sounds`, sans extension and
+    /// sorted. These are exactly the names `NSSound(named:)` and
+    /// `UNNotificationSound(named: "<name>.aiff")` resolve.
+    private static let systemSoundNames: [String] = {
+        let dir = "/System/Library/Sounds"
+        let files = (try? FileManager.default.contentsOfDirectory(atPath: dir)) ?? []
+        return files
+            .filter { $0.hasSuffix(".aiff") }
+            .map { ($0 as NSString).deletingPathExtension }
+            .sorted()
+    }()
+
+    /// Plays a named system sound as a preview. No-op for the "Default" and
+    /// "None" sentinels — neither maps to a previewable `NSSound`.
+    private static func previewSound(named name: String) {
+        guard !name.isEmpty, name != ConfigStore.silentSoundName else { return }
+        NSSound(named: NSSound.Name(name))?.play()
+    }
+    #endif
 
     private static let arrRowHeight: CGFloat = 24
 
     @ViewBuilder
     private func arrOrderRow(key: String) -> some View {
         if let spec = orderRowSpec(for: key) {
-            let isDragging = draggingKey == key
+            // Reordering is native (`.onMove`). Keep a grip glyph as the
+            // "you can drag this" affordance (the iOS native grip only shows
+            // in edit mode; macOS has none), but the actual drag is `.onMove`.
             HStack(spacing: 8) {
                 Image(systemName: "line.3.horizontal")
                     .foregroundStyle(.tertiary)
                     .scaledFont(size: 11)
-                Image(systemName: spec.symbol)
-                    .foregroundStyle(.secondary)
-                    .frame(width: 16)
+                Group {
+                    if let source = QueueItem.Source(rawValue: key) {
+                        ServiceIcon(source: source, size: 13)
+                    } else {
+                        Image(systemName: spec.symbol)
+                    }
+                }
+                .foregroundStyle(.secondary)
+                .frame(width: 16)
                 Text(spec.title)
                 Spacer()
                 if let toggle = visibilityToggle(for: key) {
@@ -468,16 +665,12 @@ public struct SettingsView: View {
             }
             .frame(height: Self.arrRowHeight)
             .contentShape(Rectangle())
-            .background(
-                RoundedRectangle(cornerRadius: Tokens.Radius.card)
-                    .fill(isDragging ? Color.primary.opacity(0.08) : .clear)
-                    .padding(.horizontal, -6)
-            )
-            .offset(y: isDragging ? dragOffset : 0)
-            .zIndex(isDragging ? 1 : 0)
-            .animation(.interactiveSpring(response: 0.25, dampingFraction: 0.85), value: configStore.arrOrder)
-            .gesture(arrDragGesture(key: key))
         }
+    }
+
+    /// Native reorder applied to the "Section order" ForEach.
+    private func moveArrOrder(from: IndexSet, to: Int) {
+        configStore.arrOrder.move(fromOffsets: from, toOffset: to)
     }
 
     private struct OrderRowSpec {
@@ -504,64 +697,15 @@ public struct SettingsView: View {
         return nil
     }
 
-    private func arrDragGesture(key: String) -> some Gesture {
-        DragGesture(minimumDistance: 2)
-            .onChanged { value in
-                if draggingKey != key { draggingKey = key }
-                dragOffset = value.translation.height
-
-                guard let from = configStore.arrOrder.firstIndex(of: key) else { return }
-                let steps = Int((dragOffset / Self.arrRowHeight).rounded())
-                let target = max(0, min(configStore.arrOrder.count - 1, from + steps))
-                if target != from {
-                    var newOrder = configStore.arrOrder
-                    let item = newOrder.remove(at: from)
-                    newOrder.insert(item, at: target)
-                    configStore.arrOrder = newOrder
-                    dragOffset -= CGFloat(target - from) * Self.arrRowHeight
-                }
-            }
-            .onEnded { _ in
-                withAnimation(.spring(response: 0.28, dampingFraction: 0.85)) {
-                    draggingKey = nil
-                    dragOffset = 0
-                }
-            }
-    }
-
     // MARK: - Bottom bar
 
     private var bottomBar: some View {
+        // The footer's links and credits moved to the native "About ArrBarr"
+        // panel (reachable from the popover's "…" menu), leaving just the
+        // window's Close control here. Version still lives in the window title
+        // ("ArrBarr Settings vX.Y").
         VStack(spacing: 0) {
             HStack {
-                Text(Self.versionString)
-                    .scaledFont(size: 11)
-                    .foregroundStyle(.secondary)
-                    .textSelection(.enabled)
-                    .help(Text(verbatim: "ArrBarr \(Self.versionString)"))
-                SeparatorDot()
-                    .scaledFont(size: 11)
-                Text(verbatim: "Made with 🥨")
-                    .scaledFont(size: 11)
-                    .foregroundStyle(.secondary)
-                SeparatorDot()
-                    .scaledFont(size: 11)
-                Link(destination: URL(string: "https://github.com/Preclowski/ArrBarr")!) {
-                    HStack(spacing: 3) {
-                        Image(systemName: "link")
-                            .scaledFont(size: 10, weight: .semibold)
-                        Text(verbatim: "GitHub")
-                            .scaledFont(size: 11)
-                    }
-                    .foregroundStyle(.secondary)
-                }
-                .buttonStyle(.plain)
-                #if os(macOS)
-                .onHover { hovering in
-                    if hovering { NSCursor.pointingHand.push() } else { NSCursor.pop() }
-                }
-                #endif
-                .help(Text(verbatim: "github.com/Preclowski/ArrBarr"))
                 Spacer()
                 #if os(macOS)
                 Button { NSApp.keyWindow?.close() } label: { Text("Close", bundle: .module) }
@@ -603,108 +747,21 @@ public struct SettingsView: View {
     }
 }
 
-private struct ServiceFields: View {
-    @Binding var config: ServiceConfig
-    let kind: ServiceKind
-    var notifyBinding: Binding<Bool>? = nil
-
-    @State private var testState: TestState = .idle
-
-    private enum TestState: Equatable {
-        case idle
-        case testing
-        case success(String)
-        case failure(String)
-    }
-
-    public var body: some View {
-        Toggle(isOn: $config.enabled.animation()) { Text("Enabled", bundle: .module) }
-
-        if config.enabled, let notifyBinding {
-            Toggle(isOn: notifyBinding) { Text("Notify on new grabs", bundle: .module) }
-        }
-
-        if config.enabled {
-            TextField(text: $config.baseURL, prompt: Text(verbatim: kind.urlPlaceholder)) {
-                Text("URL", bundle: .module)
-            }
-            .autocorrectionDisabled(true)
-
-            if kind.requiresApiKey {
-                SecureField(text: $config.apiKey, prompt: Text("Paste your API key", bundle: .module)) {
-                    Text("API Key", bundle: .module)
+private struct ProLockOverlay: View {
+    @ObservedObject private var store = StoreManager.shared
+    let feature: ProFeature
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.04)
+            VStack(spacing: 8) {
+                Image(systemName: "lock.fill").font(.title2).foregroundStyle(.secondary)
+                Button { store.gate(feature) } label: {
+                    Text("Unlock ArrBarr Pro", bundle: .module)
                 }
-            }
-
-            if kind.requiresLogin {
-                TextField(text: $config.username, prompt: Text("admin", bundle: .module)) {
-                    Text("Username", bundle: .module)
-                }
-                .autocorrectionDisabled(true)
-                SecureField(text: $config.password, prompt: Text("Password", bundle: .module)) {
-                    Text("Password", bundle: .module)
-                }
-            }
-
-            HStack(spacing: 8) {
-                Button { runTest() } label: { Text("Test Connection", bundle: .module) }
-                    .modifier(GlassButtonStyle())
-                    .controlSize(.small)
-                    .disabled(testState == .testing || !config.isConfigured)
-
-                switch testState {
-                case .idle:
-                    EmptyView()
-                case .testing:
-                    ProgressView().controlSize(.small)
-                case .success(let msg):
-                    Label(msg, systemImage: "checkmark.circle.fill")
-                        .font(.caption)
-                        .foregroundStyle(.green)
-                        .lineLimit(1)
-                case .failure(let msg):
-                    Label(msg, systemImage: "xmark.circle.fill")
-                        .font(.caption)
-                        .foregroundStyle(.red)
-                        .lineLimit(2)
-                        .help(msg)
-                }
-            }
-            .onChange(of: config) { _, _ in
-                if testState != .idle && testState != .testing { testState = .idle }
+                .buttonStyle(.borderedProminent)
             }
         }
-    }
-
-    private func runTest() {
-        testState = .testing
-        let snapshot = config
-        let kind = self.kind
-        Task {
-            do {
-                let result = try await ConnectionTester.test(kind: kind, config: snapshot)
-                await MainActor.run { testState = .success(result) }
-            } catch {
-                let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
-                await MainActor.run { testState = .failure(message) }
-            }
-        }
-    }
-}
-
-private enum ConnectionTester {
-    static func test(kind: ServiceKind, config: ServiceConfig) async throws -> String {
-        switch kind {
-        case .radarr:       return try await RadarrClient(config: config).testConnection()
-        case .sonarr:       return try await SonarrClient(config: config).testConnection()
-        case .lidarr:       return try await LidarrClient(config: config).testConnection()
-        case .whisparr:     return try await WhisparrClient(config: config).testConnection()
-        case .sabnzbd:      return try await SabnzbdClient(config: config).testConnection()
-        case .nzbget:       return try await NzbgetClient(config: config).testConnection()
-        case .qbittorrent:  return try await QbittorrentClient(config: config).testConnection()
-        case .transmission: return try await TransmissionClient(config: config).testConnection()
-        case .rtorrent:     return try await RtorrentClient(config: config).testConnection()
-        case .deluge:       return try await DelugeClient(config: config).testConnection()
-        }
+        .contentShape(Rectangle())
+        .onTapGesture { store.gate(feature) }
     }
 }

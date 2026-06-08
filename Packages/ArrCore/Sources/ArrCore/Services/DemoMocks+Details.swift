@@ -147,8 +147,8 @@ extension DemoMocks {
                 titleSlug: "pioneerone",
                 seasons: [
                     SonarrSeasonInfo(seasonNumber: 1, monitored: true, statistics: SonarrSeasonStats(
-                        episodeFileCount: 4, episodeCount: 6, totalEpisodeCount: 6,
-                        sizeOnDisk: 2_400_000_000, percentOfEpisodes: 66.6
+                        episodeFileCount: 3, episodeCount: 6, totalEpisodeCount: 6,
+                        sizeOnDisk: 1_800_000_000, percentOfEpisodes: 50
                     )),
                     SonarrSeasonInfo(seasonNumber: 2, monitored: true, statistics: SonarrSeasonStats(
                         episodeFileCount: 0, episodeCount: 4, totalEpisodeCount: 4,
@@ -161,7 +161,7 @@ extension DemoMocks {
                 id: 102,
                 title: "Caminandes",
                 year: 2013,
-                overview: "Koro, a wide-eyed Patagonian llama, just wants to live his life — but the trail keeps giving him reasons not to. Three short episodes of Blender Foundation slapstick that became a tutorial pipeline for character rigging, eye shading, and snow simulation.",
+                overview: "Koro, a wide-eyed Patagonian llama, just wants to live his life — but the trail keeps giving him reasons not to. Short episodes of Blender Foundation slapstick that became a tutorial pipeline for character rigging, eye shading, and snow simulation.",
                 genres: ["Animation", "Comedy", "Family"],
                 runtime: 5,
                 ratings: SonarrDetailRatings(value: 7.6, votes: 2_300),
@@ -171,95 +171,11 @@ extension DemoMocks {
                 titleSlug: "caminandes",
                 seasons: [
                     SonarrSeasonInfo(seasonNumber: 1, monitored: true, statistics: SonarrSeasonStats(
-                        episodeFileCount: 3, episodeCount: 5, totalEpisodeCount: 5,
-                        sizeOnDisk: 1_400_000_000, percentOfEpisodes: 60
+                        episodeFileCount: 1, episodeCount: 4, totalEpisodeCount: 4,
+                        sizeOnDisk: 450_000_000, percentOfEpisodes: 25
                     )),
                 ],
                 firstAired: "2013-04-13"
-            ),
-            103: SonarrSeriesDetail(
-                id: 103,
-                title: "Tears of Steel",
-                year: 2012,
-                overview: "A serialised continuation of the Blender short — the same Amsterdam crew, episode-by-episode, exploring the years between the robot uprising and the human resistance. Demo placeholder for a sci-fi season pack.",
-                genres: ["Sci-Fi", "Action", "Drama"],
-                runtime: 28,
-                ratings: SonarrDetailRatings(value: 7.1, votes: 980),
-                network: "Blender Foundation",
-                status: "continuing",
-                images: [image(seed: "tearsofsteel")],
-                titleSlug: "tearsofsteel-series",
-                seasons: [
-                    SonarrSeasonInfo(seasonNumber: 1, monitored: true, statistics: SonarrSeasonStats(
-                        episodeFileCount: 0, episodeCount: 3, totalEpisodeCount: 3,
-                        sizeOnDisk: 0, percentOfEpisodes: 0
-                    )),
-                ],
-                firstAired: "2012-09-26"
-            ),
-            104: SonarrSeriesDetail(
-                id: 104,
-                title: "Cosmos Laundromat",
-                year: 2015,
-                overview: "Franck the suicidal sheep meets a multiversal salesman who promises any life he can imagine — for a price. The Blender Foundation's experimental open-movie pilot; demo content for a half-hour adult-animation drama.",
-                genres: ["Animation", "Drama", "Fantasy"],
-                runtime: 12,
-                ratings: SonarrDetailRatings(value: 7.5, votes: 1_400),
-                network: "Blender Foundation",
-                status: "ended",
-                images: [image(seed: "cosmoslaundromat")],
-                titleSlug: "cosmoslaundromat-series",
-                seasons: [
-                    SonarrSeasonInfo(seasonNumber: 1, monitored: true, statistics: SonarrSeasonStats(
-                        episodeFileCount: 0, episodeCount: 1, totalEpisodeCount: 1,
-                        sizeOnDisk: 0, percentOfEpisodes: 0
-                    )),
-                ],
-                firstAired: "2015-08-10"
-            ),
-            105: SonarrSeriesDetail(
-                id: 105,
-                title: "Northern Cascade",
-                year: 2023,
-                overview: "A team of glaciologists, climbers, and a reluctant journalist disappear in the Cascade range. Each season unwinds the timeline differently — what they took with them, what they left behind, and what was already there before they arrived. (Demo placeholder.)",
-                genres: ["Drama", "Mystery", "Thriller"],
-                runtime: 52,
-                ratings: SonarrDetailRatings(value: 8.4, votes: 12_500),
-                network: "Demo Streaming",
-                status: "continuing",
-                images: [image(seed: "northerncascade")],
-                titleSlug: "northerncascade",
-                seasons: [
-                    SonarrSeasonInfo(seasonNumber: 1, monitored: true, statistics: SonarrSeasonStats(
-                        episodeFileCount: 8, episodeCount: 8, totalEpisodeCount: 8,
-                        sizeOnDisk: 36_000_000_000, percentOfEpisodes: 100
-                    )),
-                    SonarrSeasonInfo(seasonNumber: 2, monitored: true, statistics: SonarrSeasonStats(
-                        episodeFileCount: 3, episodeCount: 8, totalEpisodeCount: 8,
-                        sizeOnDisk: 14_500_000_000, percentOfEpisodes: 37.5
-                    )),
-                ],
-                firstAired: "2023-02-09"
-            ),
-            106: SonarrSeriesDetail(
-                id: 106,
-                title: "Spring Tales",
-                year: 2019,
-                overview: "An animated anthology of folklore retold from the perspective of small things — a bee on a stalk, a frog in a puddle, a salamander under a stone. A spiritual descendant of Blender's `Spring` short, expanded into a season of slow-paced visual storytelling. (Demo placeholder.)",
-                genres: ["Animation", "Family", "Drama"],
-                runtime: 22,
-                ratings: SonarrDetailRatings(value: 8.0, votes: 3_200),
-                network: "Blender Foundation",
-                status: "continuing",
-                images: [image(seed: "spring")],
-                titleSlug: "springtales",
-                seasons: [
-                    SonarrSeasonInfo(seasonNumber: 1, monitored: true, statistics: SonarrSeasonStats(
-                        episodeFileCount: 0, episodeCount: 4, totalEpisodeCount: 4,
-                        sizeOnDisk: 0, percentOfEpisodes: 0
-                    )),
-                ],
-                firstAired: "2019-04-04"
             ),
         ]
     }
@@ -280,43 +196,10 @@ extension DemoMocks {
             ],
             102: [ // Caminandes
                 episode(301, 1, 1, "Llama Drama", "Koro meets a fence.", daysAgo: 1100, hasFile: true),
-                episode(302, 1, 2, "Gran Dillama", "Koro meets a llama-vending machine.", daysAgo: 950, hasFile: true),
+                episode(302, 1, 2, "Gran Dillama", "Koro meets a llama-vending machine.", daysAgo: 950, hasFile: false),
                 episode(303, 1, 3, "Llamigos", "Koro meets a penguin.", daysAgo: 800, hasFile: false),
-                episode(304, 1, 4, "Mountain Pass", "Koro climbs.", daysAgo: 600, hasFile: true),
-                episode(305, 1, 5, "Frozen Lake", "Koro slips.", daysAgo: 400, hasFile: false),
+                episode(304, 1, 4, "Snow Day", "Koro climbs.", daysAhead: 2, hasFile: false),
             ],
-            105: [ // Northern Cascade
-                episode(701, 2, 1, "First Tracks", "A return to the range.", daysAgo: 70, hasFile: true),
-                episode(702, 2, 2, "Approach", "The team splits.", daysAgo: 63, hasFile: true),
-                episode(703, 2, 3, "Whiteout", "Visibility drops to zero.", daysAgo: 56, hasFile: true),
-                episode(704, 2, 4, "Cold Start", "Equipment fails.", daysAgo: 49, hasFile: false),
-                episode(705, 2, 5, "Bivouac", "A long night.", daysAgo: 42, hasFile: false),
-                episode(706, 2, 6, "Crevasse", "Someone goes down.", daysAhead: 0, hasFile: false),
-                episode(707, 2, 7, "Recovery", "Helicopter on standby.", daysAhead: 7, hasFile: false),
-                episode(708, 2, 8, "Aftermath", "Press conference.", daysAhead: 14, hasFile: false),
-            ],
-            106: sprintTalesEpisodes,
-            103: tosSeriesEpisodes,
-            104: [
-                episode(901, 1, 1, "The Beginning", "Franck negotiates.", daysAhead: 0, hasFile: false),
-            ],
-        ]
-    }
-
-    static var sprintTalesEpisodes: [SonarrEpisodeDetail] {
-        [
-            episode(801, 1, 1, "Bloom", "A flower opens.", daysAgo: 0, hasFile: false),
-            episode(802, 1, 2, "Petals", "A breeze picks up.", daysAhead: 7, hasFile: false),
-            episode(803, 1, 3, "Pollen", "A bee visits.", daysAhead: 14, hasFile: false),
-            episode(804, 1, 4, "Wilt", "Autumn arrives.", daysAhead: 21, hasFile: false),
-        ]
-    }
-
-    static var tosSeriesEpisodes: [SonarrEpisodeDetail] {
-        [
-            episode(401, 1, 1, "First Light", "The team gathers.", daysAgo: 30, hasFile: false),
-            episode(402, 1, 2, "Mecha", "An old enemy returns.", daysAgo: 23, hasFile: false),
-            episode(403, 1, 3, "Reunion", "Decisions made.", daysAgo: 16, hasFile: false),
         ]
     }
 
@@ -370,8 +253,8 @@ extension DemoMocks {
             302: LidarrAlbumDetail(
                 id: 302,
                 title: "Out of It",
-                overview: "Brad Sucks's third self-released album of cynical, hooky DIY rock. Made in his basement, released for free, distributed via direct downloads and CC licensing — a poster child for the open-music movement Lidarr was built to track.",
-                releaseDate: "2017-04-04",
+                overview: "Brad Sucks's second self-released album of cynical, hooky DIY rock. Made in his basement, released for free, distributed via direct downloads and CC licensing — a poster child for the open-music movement Lidarr was built to track.",
+                releaseDate: "2008-09-08",
                 genres: ["Indie Rock", "Alternative", "DIY"],
                 ratings: LidarrDetailRatings(value: 7.6, votes: 320),
                 images: [image(seed: "bradsucks", kind: "cover")],
@@ -386,6 +269,27 @@ extension DemoMocks {
                 statistics: LidarrAlbumStats(
                     trackCount: 11, trackFileCount: 11, totalTrackCount: 11,
                     sizeOnDisk: 95_000_000
+                )
+            ),
+            303: LidarrAlbumDetail(
+                id: 303,
+                title: "I Don't Know What I'm Doing",
+                overview: "Brad Sucks's 2003 debut — the bedroom-pop record he gave away for free on the early web while figuring out how to make a living without a label. \"Making Me Nervous\" became an unlikely viral hit, and the whole album stayed Creative Commons: the original blueprint for the artist-direct, open-music distribution Lidarr exists to follow.",
+                releaseDate: "2003-04-22",
+                genres: ["Indie Rock", "Power Pop", "DIY"],
+                ratings: LidarrDetailRatings(value: 7.9, votes: 540),
+                images: [image(seed: "bradsucks-debut", kind: "cover")],
+                artist: LidarrArtist(
+                    id: 302, artistName: "Brad Sucks",
+                    foreignArtistId: "1ce18a52-ca5f-4f34-9bc6-5f2af0d33f5e",
+                    images: [image(seed: "bradsucks", kind: "poster")]
+                ),
+                foreignAlbumId: "i-dont-know-what-im-doing-2003",
+                albumType: "Album",
+                duration: 2_395_000, // ~40 min
+                statistics: LidarrAlbumStats(
+                    trackCount: 12, trackFileCount: 12, totalTrackCount: 12,
+                    sizeOnDisk: 110_000_000
                 )
             ),
         ]
@@ -426,6 +330,20 @@ extension DemoMocks {
                 track(4010, "10", 10, "Dive Light",     duration_ms: 191_000, hasFile: true),
                 track(4011, "11", 11, "Surfacing",      duration_ms: 195_000, hasFile: true),
             ],
+            303: [
+                track(4101, "1",  1,  "Making Me Nervous",           duration_ms: 210_000, hasFile: true),
+                track(4102, "2",  2,  "Fixing My Brain",             duration_ms: 190_000, hasFile: true),
+                track(4103, "3",  3,  "Dropping out of School",      duration_ms: 170_000, hasFile: true),
+                track(4104, "4",  4,  "Bad Sign",                    duration_ms: 220_000, hasFile: true),
+                track(4105, "5",  5,  "Look and Feel Years Younger", duration_ms: 200_000, hasFile: true),
+                track(4106, "6",  6,  "Borderline",                  duration_ms: 185_000, hasFile: true),
+                track(4107, "7",  7,  "Total Breakdown",             duration_ms: 195_000, hasFile: true),
+                track(4108, "8",  8,  "Certain Death",               duration_ms: 175_000, hasFile: true),
+                track(4109, "9",  9,  "Gonna Be Alright",            duration_ms: 205_000, hasFile: true),
+                track(4110, "10", 10, "T-Shirt",                     duration_ms: 180_000, hasFile: true),
+                track(4111, "11", 11, "Overreacting",                duration_ms: 215_000, hasFile: true),
+                track(4112, "12", 12, "Understood",                  duration_ms: 250_000, hasFile: true),
+            ],
         ]
     }
 
@@ -436,6 +354,78 @@ extension DemoMocks {
         LidarrTrackDetail(
             id: id, trackNumber: trackNumber, absoluteTrackNumber: absolute,
             title: title, duration: duration_ms, mediumNumber: 1, hasFile: hasFile
+        )
+    }
+
+    // MARK: - Cast fixtures
+    //
+    // Cast strips for the two live-action titles in the demo universe:
+    // Tears of Steel (Radarr movie) and Pioneer One (Sonarr series). The
+    // animated Blender shorts have no on-screen cast, so they return empty and
+    // the cast row hides itself. Names, characters, order, and headshots are
+    // the real TMDB credits (movie 133701 / tv 33050); headshots come straight
+    // off TMDB's no-auth image CDN, so members without a TMDB portrait fall back
+    // to the person glyph.
+
+    /// TMDB profile image on the no-auth CDN. w185 is ample for the 52px circle.
+    static func tmdbProfileURL(_ path: String) -> String {
+        "https://image.tmdb.org/t/p/w185\(path)"
+    }
+
+    /// Movie cast, keyed by demo movie entityId. Backs the demo branch of
+    /// `RadarrClient.fetchCredits`.
+    public static func radarrMovieCredits(movieId: Int) -> [ArrCredit] {
+        radarrCredits[movieId] ?? []
+    }
+
+    static var radarrCredits: [Int: [ArrCredit]] {
+        [
+            203: [ // Tears of Steel — live-action / VFX hybrid (TMDB 133701)
+                castCredit("Derek de Lint",      "Old Thom",  0, "/8fRRmh8EYZBlUtu1Wlop0j22QcP.jpg"),
+                castCredit("Sergio Hasselbaink", "Barly",     1, "/6xjL2LqOEURISAzzFLtYsIVmGT1.jpg"),
+                castCredit("Vanja Rukavina",     "Thom",      2, "/4zzhALIIwYvBFmem3dm6nOZg8py.jpg"),
+                castCredit("Denise Rebergen",    "Celia",     3, "/hBJjiMZsz5WaEgCpkUsw7Z0lekD.jpg"),
+                castCredit("Rogier Schippers",   "Kapitän",   4, "/fUeXGTjkNZPwHK1JZwtiK6SUYmT.jpg"),
+                castCredit("Chris Haley",        "Tech head", 5, nil),
+                castCredit("Jody Bhe",           "Djenghis",  6, nil),
+            ],
+        ]
+    }
+
+    static func castCredit(_ name: String, _ character: String, _ order: Int, _ profilePath: String?) -> ArrCredit {
+        let images = profilePath.map {
+            [ArrCredit.Image(coverType: "headshot", url: nil, remoteUrl: tmdbProfileURL($0))]
+        }
+        return ArrCredit(
+            personName: name, personTmdbId: nil,
+            character: character, order: order,
+            type: "cast", images: images
+        )
+    }
+
+    /// Series cast, keyed by demo series entityId. Backs the demo branch of
+    /// `DetailView.fetchSeriesCast` (Sonarr has no `/credit` endpoint, so this
+    /// stands in for the TMDB lookup the live app would do).
+    public static func sonarrSeriesCast(seriesId: Int) -> [CastMember] {
+        sonarrCast[seriesId] ?? []
+    }
+
+    static var sonarrCast: [Int: [CastMember]] {
+        [
+            101: [ // Pioneer One — BitTorrent-funded live-action drama (TMDB 33050)
+                seriesCast("po-0", "Alexandra Blatt", "Sofie Larson",        nil),
+                seriesCast("po-1", "Laura Graham",    "Jane",                nil),
+                seriesCast("po-2", "James Rich",      "Tom Taylor",          "/oF7kZnQ0HgqXVCPFmU1t03quHr2.jpg"),
+                seriesCast("po-3", "Einar Gunn",      "Secretary McClellan", "/eV7WLsX07KLND9ZwpqHHEqG8iUl.jpg"),
+                seriesCast("po-4", "Jack Haley",      "Dr. Zachary Walzer",  "/mnH1MyyWZOogI5X6JHMnoEAkxyq.jpg"),
+            ],
+        ]
+    }
+
+    static func seriesCast(_ id: String, _ name: String, _ role: String, _ profilePath: String?) -> CastMember {
+        CastMember(
+            id: id, name: name, role: role,
+            imageURL: profilePath.flatMap { URL(string: tmdbProfileURL($0)) }
         )
     }
 

@@ -8,7 +8,7 @@ public struct QueueSectionView: View {
     var health: [ArrHealthRecord] = []
     var isCollapsed: Bool = false
     var onToggleCollapse: (() -> Void)? = nil
-    @ObservedObject var viewModel: QueueViewModel
+    var viewModel: QueueViewModel
     @EnvironmentObject var configStore: ConfigStore
     var onShowHistory: (() -> Void)? = nil
     var onShowDetail: ((QueueItem) -> Void)? = nil
@@ -107,7 +107,8 @@ public struct QueueSectionView: View {
                 } else {
                     VStack(spacing: 2) {
                         ForEach(entries) { entry in
-                            row(for: entry)
+                            rowView(for: entry)
+                                .queueSwipeToDelete(onDelete: deleteClosure(for: entry))
                         }
                     }
                 }
@@ -116,14 +117,14 @@ public struct QueueSectionView: View {
     }
 
     @ViewBuilder
-    private func row(for entry: QueueRowEntry) -> some View {
+    private func rowView(for entry: QueueRowEntry) -> some View {
         switch entry {
         case .single(let item):
             QueueRowView(
                 item: item,
                 onPause: { [weak viewModel] in Task { await viewModel?.pause(item) } },
                 onResume: { [weak viewModel] in Task { await viewModel?.resume(item) } },
-                onDelete: { [weak viewModel] in Task { await viewModel?.delete(item) } },
+                onDelete: deleteClosure(for: entry),
                 onShowDetail: onShowDetail.map { cb in { cb(item) } }
             )
         case .group(let group):
@@ -132,15 +133,24 @@ public struct QueueSectionView: View {
             // affects every sibling at the arr level. Delete still goes
             // through `deleteAll(_:)` because the aggregator wants the
             // member list to figure out per-call `removeFromClient`.
-            let items = group.items
             let rep = group.representative
             QueueGroupRowView(
                 group: group,
                 onPause: { [weak viewModel] in Task { await viewModel?.pause(rep) } },
                 onResume: { [weak viewModel] in Task { await viewModel?.resume(rep) } },
-                onDelete: { [weak viewModel] in Task { await viewModel?.deleteAll(items) } },
+                onDelete: deleteClosure(for: entry),
                 onShowDetail: onShowDetail.map { cb in { cb(rep) } }
             )
+        }
+    }
+
+    private func deleteClosure(for entry: QueueRowEntry) -> () -> Void {
+        switch entry {
+        case .single(let item):
+            return { [weak viewModel] in Task { await viewModel?.delete(item) } }
+        case .group(let group):
+            let items = group.items
+            return { [weak viewModel] in Task { await viewModel?.deleteAll(items) } }
         }
     }
 

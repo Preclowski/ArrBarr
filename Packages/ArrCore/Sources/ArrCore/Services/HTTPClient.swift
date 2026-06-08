@@ -30,10 +30,22 @@ public enum HTTPError: LocalizedError {
 }
 
 public struct HTTPClient {
-    let session: URLSession
+    /// Per-request timeout. arr endpoints return small JSON over the LAN, so
+    /// 15s of inactivity is generous — but it bounds how long a hung/restarting
+    /// arr can stall a refresh. Without it, requests inherit URLSession's 60s
+    /// default and one stalled arr freezes the whole queue refresh (the
+    /// aggregator awaits all four arrs together) for a minute-plus.
+    public static let requestTimeout: TimeInterval = 15
 
-    init(session: URLSession = .shared) {
+    let session: URLSession
+    /// Per-request timeout for this client. Defaults to the short
+    /// refresh-safe `requestTimeout`; the chat-tool / search clients raise it
+    /// (indexer searches legitimately take longer than the refresh budget).
+    let timeout: TimeInterval
+
+    init(session: URLSession = .shared, timeout: TimeInterval = HTTPClient.requestTimeout) {
         self.session = session
+        self.timeout = timeout
     }
 
     func url(base: String, path: String, query: [URLQueryItem] = []) throws -> URL {
@@ -91,9 +103,20 @@ public struct HTTPClient {
     }
 
     private func perform(_ req: URLRequest) async throws -> Data {
+        var req = req
+        // Bound every request so a hung/restarting arr can't stall a refresh
+        // for URLSession's 60s default. See `timeout` / `requestTimeout`.
+        req.timeoutInterval = timeout
         let (data, response): (Data, URLResponse)
         do {
             (data, response) = try await session.data(for: req)
+        } catch is CancellationError {
+            // Don't wrap cancellation as a transport "error" — it's a normal
+            // task teardown (pull-to-refresh released, overlapping refresh).
+            // Rethrown bare so callers can recognise and ignore it.
+            throw CancellationError()
+        } catch let error as URLError where error.code == .cancelled {
+            throw error
         } catch {
             throw HTTPError.transport(error)
         }

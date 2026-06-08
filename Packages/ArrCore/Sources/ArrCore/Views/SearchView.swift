@@ -1,7 +1,7 @@
 import SwiftUI
 
 public struct SearchView: View {
-    @ObservedObject var viewModel: SearchViewModel
+    @Bindable var viewModel: SearchViewModel
     @EnvironmentObject var configStore: ConfigStore
     let onSelectResult: (SearchResult) -> Void
 
@@ -40,13 +40,14 @@ public struct SearchView: View {
     }
 
     public var body: some View {
-        // Search bar floats at the bottom (Apple's recent search/Spotlight
-        // direction). Implemented as a ZStack overlay — `safeAreaInset` lost
-        // the TextField's focus on every keystroke because `Group`'s
-        // `_ConditionalContent` branch switches between the three states
-        // (empty hint / loading / results) re-created the inset's underlying
-        // view identity, which in turn re-mounted the TextField inside. The
-        // ZStack keeps the bar as a stable sibling of the swapping content.
+        // On macOS the search field floats at the bottom (Apple's recent
+        // Spotlight direction — also a popover-friendly anchor since there's
+        // no nav bar). On iOS the shell sets `.searchable(...)` on its
+        // NavigationStack, which puts the field in the nav bar — the
+        // expected iOS pattern (Mail / Notes / App Store / Files all do
+        // this). The ZStack keeps the bar a stable sibling on macOS so
+        // focus survives the empty-vs-loading-vs-results swap.
+        #if os(macOS)
         ZStack(alignment: .bottom) {
             content
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -55,8 +56,6 @@ public struct SearchView: View {
                 .padding(.bottom, 10)
         }
         .onChange(of: viewModel.query) { _, oldValue in
-            // Reset "show all" toggles whenever the query changes — new
-            // results, fresh 5-item view.
             if oldValue != viewModel.query {
                 radarrShowAll = false
                 sonarrShowAll = false
@@ -65,10 +64,20 @@ public struct SearchView: View {
             }
             viewModel.onQueryChange()
         }
-        .task {
-            // Autofocus the search field when the overlay opens.
-            queryFocused = true
-        }
+        .task { queryFocused = true }
+        #else
+        content
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .onChange(of: viewModel.query) { _, oldValue in
+                if oldValue != viewModel.query {
+                    radarrShowAll = false
+                    sonarrShowAll = false
+                    lidarrShowAll = false
+                    whisparrShowAll = false
+                }
+                viewModel.onQueryChange()
+            }
+        #endif
     }
 
     @ViewBuilder
@@ -129,8 +138,7 @@ public struct SearchView: View {
                     // Source glyph (tv / film / music.note / etc) —
                     // matches the queue-section header so users see the
                     // same arr-source visual on both surfaces.
-                    Image(systemName: source.symbol)
-                        .scaledFont(size: 11)
+                    ServiceIcon(source: source, size: 11)
                         .foregroundStyle(.secondary)
                     Text(title, bundle: .module)
                         .scaledFont(size: 12, weight: .semibold)

@@ -29,7 +29,7 @@ public actor TransmissionClient {
         guard config.isConfigured else { throw HTTPError.notConfigured }
 
         let url = try http.url(base: config.baseURL, path: "/transmission/rpc")
-        let body = rpcBody(action: action, hash: hash)
+        let body = try rpcBody(action: action, hash: hash)
         let data = try await rpcRequest(url: url, body: body)
 
         if let resp = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
@@ -97,7 +97,7 @@ public actor TransmissionClient {
         return data
     }
 
-    private func rpcBody(action: Action, hash: String) -> Data {
+    private func rpcBody(action: Action, hash: String) throws -> Data {
         let method: String
         var arguments: [String: Any] = ["ids": [hash]]
 
@@ -110,6 +110,6 @@ public actor TransmissionClient {
         }
 
         let body: [String: Any] = ["method": method, "arguments": arguments]
-        return try! JSONSerialization.data(withJSONObject: body)
+        return try JSONSerialization.data(withJSONObject: body)
     }
 }

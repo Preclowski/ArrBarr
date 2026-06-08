@@ -100,23 +100,23 @@ struct ConfigStoreTests {
         }
     }
 
-    @Test("Notification settings default to false and persist")
+    @Test("Notification settings default to true and persist")
     @MainActor func notificationSettings() {
         let (defaults, name) = makeDefaults()
         defer { UserDefaults.standard.removePersistentDomain(forName: name) }
 
         let store = ConfigStore(defaults: defaults)
-        #expect(store.notifyRadarr == false)
-        #expect(store.notifySonarr == false)
-        #expect(store.notifyLidarr == false)
+        #expect(store.notifyRadarr == true)
+        #expect(store.notifySonarr == true)
+        #expect(store.notifyLidarr == true)
 
-        store.notifyRadarr = true
-        store.notifySonarr = true
+        store.notifyRadarr = false
+        store.notifySonarr = false
 
         let reloaded = ConfigStore(defaults: defaults)
-        #expect(reloaded.notifyRadarr == true)
-        #expect(reloaded.notifySonarr == true)
-        #expect(reloaded.notifyLidarr == false)
+        #expect(reloaded.notifyRadarr == false)
+        #expect(reloaded.notifySonarr == false)
+        #expect(reloaded.notifyLidarr == true)
     }
 
     @Test("Migration flag prevents repeated keychain probing")

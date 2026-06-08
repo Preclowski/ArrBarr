@@ -24,6 +24,14 @@ public enum Tokens {
         public static let regular: CGFloat = 8
         /// 12 pt — section-level horizontal inset for popover content.
         public static let section: CGFloat = 12
+        /// Horizontal inset for queue rows + arr section headers. Tighter on
+        /// the narrow macOS popover (12 pt read as oversized side gaps there)
+        /// than on the full-width iOS list.
+        #if os(macOS)
+        public static let queueRowH: CGFloat = 7
+        #else
+        public static let queueRowH: CGFloat = 12
+        #endif
         /// 14 pt — outer page gutter (settings forms, welcome panels).
         public static let page: CGFloat = 14
     }
@@ -35,5 +43,9 @@ public enum Tokens {
         public static let chip: CGFloat = 4
         public static let card: CGFloat = 6
         public static let panel: CGFloat = 10
+        /// 12 pt — full-width suggestion / prompt rows in the chat empty state.
+        public static let suggestionRow: CGFloat = 12
+        /// 14 pt — filter chips and filter pills.
+        public static let filterPill: CGFloat = 14
     }
 }

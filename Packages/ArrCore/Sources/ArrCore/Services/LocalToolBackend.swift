@@ -9,16 +9,21 @@ public actor LocalToolBackend: ToolBackend {
     let whisparr: ServiceConfig
     let aiKnowsAboutWhisparr: Bool
     let tmdbApiKey: String
+    /// Download-client connection configs, used by the `health` tool to
+    /// report reachability of qBittorrent/Transmission/etc. Empty configs
+    /// are skipped. Not needed by any other tool, so it defaults to none.
+    let downloadClients: DownloadClientConfigs
 
     public init(sonarr: ServiceConfig, radarr: ServiceConfig, lidarr: ServiceConfig = .empty,
                 whisparr: ServiceConfig = .empty, aiKnowsAboutWhisparr: Bool = false,
-                tmdbApiKey: String = "") {
+                tmdbApiKey: String = "", downloadClients: DownloadClientConfigs = .init()) {
         self.sonarr = sonarr
         self.radarr = radarr
         self.lidarr = lidarr
         self.whisparr = whisparr
         self.aiKnowsAboutWhisparr = aiKnowsAboutWhisparr
         self.tmdbApiKey = tmdbApiKey
+        self.downloadClients = downloadClients
     }
 
     var tmdbEnabled: Bool { !tmdbApiKey.isEmpty }
@@ -48,8 +53,7 @@ public actor LocalToolBackend: ToolBackend {
         case "radarr_search":       return try await searchMovie(arguments)
         case "sonarr_get_series":   return try await listSeries(arguments)
         case "radarr_get_movies":   return try await listMovies(arguments)
-        case "sonarr_get_calendar": return try await sonarrCalendar()
-        case "radarr_get_calendar": return try await radarrCalendar()
+        case "get_calendar":        return try await getCalendar(arguments)
         // `*_add_*` tools used to live here. Removed in favour of "model
         // surfaces, user adds via the SearchAddPanel card flow" — see
         // ChatToolCatalog for the rationale. The model now drops the user
@@ -57,10 +61,8 @@ public actor LocalToolBackend: ToolBackend {
         // with profile/folder/quality pickers and a single confirm button.
         case "lidarr_search":       return try await searchArtist(arguments)
         case "lidarr_get_artists":  return try await listArtists(arguments)
-        case "lidarr_get_calendar": return try await lidarrCalendar()
         case "whisparr_search":     return try await searchScene(arguments)
         case "whisparr_get_movies": return try await listScenes(arguments)
-        case "whisparr_get_calendar": return try await whisparrCalendar()
         case "tmdb_search_person":          return try await tmdbSearchPerson(arguments)
         case "tmdb_person_movie_credits":   return try await tmdbPersonMovieCredits(arguments)
         case "tmdb_person_tv_credits":      return try await tmdbPersonTVCredits(arguments)
@@ -68,7 +70,10 @@ public actor LocalToolBackend: ToolBackend {
         case "tmdb_discover_series":        return try await tmdbDiscoverSeries(arguments)
         case "suggest_titles":              return try await suggestTitles(arguments)
         case "discover_in_quiz":            return try await discoverInQuiz(arguments)
-        case "arr_health":                  return try await arrHealth()
+        case "health":                      return try await healthCheck()
+        case "get_title_details":           return try await getTitleDetails(arguments)
+        case "custom_formats":              return try await customFormats(arguments)
+        case "list_download_queue":         return try await listDownloadQueue(arguments)
         case "sonarr_monitor_season":       return try await sonarrMonitorSeason(arguments)
         case "sonarr_search_episodes":      return try await sonarrSearchEpisodesTool(arguments)
         case "radarr_search_movie":         return try await radarrSearchMovieTool(arguments)
@@ -154,20 +159,6 @@ public actor LocalToolBackend: ToolBackend {
         return ToolCallOutput(text: text, rich: rich(matched))
     }
 
-    /// Standard `*_get_calendar` shape: configured check, fetch, format.
-    /// All four calendar handlers reduce to a one-line call to this.
-    func runCalendar(
-        source: QueueItem.Source,
-        config: ServiceConfig,
-        fetch: () async throws -> [UpcomingItem]
-    ) async throws -> ToolCallOutput {
-        guard config.isConfigured else {
-            return ToolCallOutput(text: "\(source.displayName) is not configured.")
-        }
-        let items = try await fetch()
-        let text = Self.formatCalendarCondensed(items)
-        return ToolCallOutput(text: text, rich: .calendar(items))
-    }
 
     // MARK: - Formatting helpers
 
@@ -287,6 +278,39 @@ public actor LocalToolBackend: ToolBackend {
         return out
     }
 
+}
+
+/// Which download client a health probe targets. Plain Sendable enum so it
+/// can cross the `health` tool's parallel task group without closures.
+enum DownloadClientKind: Sendable {
+    case qbittorrent, transmission, nzbget, sabnzbd, rtorrent, deluge
+}
+
+/// The six download-client connection configs the `health` tool can probe.
+/// Each defaults to `.empty` (skipped) so callers only fill what's set up.
+public struct DownloadClientConfigs: Sendable {
+    public var qbittorrent: ServiceConfig
+    public var transmission: ServiceConfig
+    public var nzbget: ServiceConfig
+    public var sabnzbd: ServiceConfig
+    public var rtorrent: ServiceConfig
+    public var deluge: ServiceConfig
+
+    public init(
+        qbittorrent: ServiceConfig = .empty,
+        transmission: ServiceConfig = .empty,
+        nzbget: ServiceConfig = .empty,
+        sabnzbd: ServiceConfig = .empty,
+        rtorrent: ServiceConfig = .empty,
+        deluge: ServiceConfig = .empty
+    ) {
+        self.qbittorrent = qbittorrent
+        self.transmission = transmission
+        self.nzbget = nzbget
+        self.sabnzbd = sabnzbd
+        self.rtorrent = rtorrent
+        self.deluge = deluge
+    }
 }
 
 public enum LocalToolError: Error, Equatable, Sendable, LocalizedError {

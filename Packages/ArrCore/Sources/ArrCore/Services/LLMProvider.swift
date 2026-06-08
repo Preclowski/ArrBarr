@@ -28,6 +28,32 @@ public struct LLMResponse: Sendable {
     }
 }
 
+/// Shared bits for composing the chat system prompt across providers, so the
+/// OpenAI and Foundation Models prompts stay in sync.
+public enum SystemPromptComposer {
+    /// Human-readable clause naming the arrs currently exposed to the model.
+    /// Derived from the gated tool list (`sonarr_*`, `radarr_*`, …) so it always
+    /// reflects exactly what's enabled — no separate config to keep in step.
+    public static func arrsClause(tools: [LLMTool]) -> String {
+        let known: [(prefix: String, label: String)] = [
+            ("sonarr_", "Sonarr (TV)"),
+            ("radarr_", "Radarr (movies)"),
+            ("lidarr_", "Lidarr (music)"),
+            ("whisparr_", "Whisparr (adult content)"),
+        ]
+        let present = known
+            .filter { entry in tools.contains { $0.name.hasPrefix(entry.prefix) } }
+            .map(\.label)
+        // Join "a, b and c" style.
+        switch present.count {
+        case 0: return "your self-hosted *arr media stack"
+        case 1: return present[0]
+        case 2: return "\(present[0]) and \(present[1])"
+        default: return present.dropLast().joined(separator: ", ") + " and " + present[present.count - 1]
+        }
+    }
+}
+
 public protocol LLMProvider: Sendable {
     /// Whether the provider is usable at runtime (e.g. Foundation Models requires macOS 26 + AI on).
     var isAvailable: Bool { get }

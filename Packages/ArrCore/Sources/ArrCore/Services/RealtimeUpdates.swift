@@ -1,4 +1,12 @@
 import Foundation
+import os
+
+/// One logger for the whole realtime subsystem. Errors in the connection loop
+/// used to be swallowed silently ("polling is the safety net"), which made a
+/// non-working SignalR impossible to diagnose. Boundary logs here turn that
+/// into observable evidence: filter Console.app on subsystem
+/// `com.preclowski.ArrBarr`, category `Realtime`.
+private let realtimeLog = Logger(subsystem: "com.preclowski.ArrBarr", category: "Realtime")
 
 // MARK: - Realtime push updates over Sonarr/Radarr's SignalR endpoint
 //
@@ -25,7 +33,7 @@ import Foundation
 /// Body parsing is deliberately not exposed; the polling pipeline already
 /// owns the canonical data fetch and the SignalR side is just a faster
 /// trigger.
-public enum RealtimeEvent: Sendable {
+public enum RealtimeEvent: Sendable, Equatable {
     /// Queue item added/updated/removed/etc. — caller should refresh
     /// the queue snapshot for the named source.
     case queueChanged(source: QueueItem.Source)
@@ -56,7 +64,16 @@ public actor RealtimeManager {
     private var lastPushedAt: Date?
     public func lastEventAt() -> Date? { lastPushedAt }
 
-    public init(onEvent: @escaping @Sendable (RealtimeEvent) async -> Void = { _ in }) {
+    /// Transport for every connection's negotiate + WebSocket. Injectable so
+    /// tests can drive negotiate against a `URLProtocol` stub instead of the
+    /// network; production uses `.shared`.
+    private let urlSession: URLSession
+
+    public init(
+        urlSession: URLSession = .shared,
+        onEvent: @escaping @Sendable (RealtimeEvent) async -> Void = { _ in }
+    ) {
+        self.urlSession = urlSession
         self.onEvent = onEvent
     }
 
@@ -93,6 +110,7 @@ public actor RealtimeManager {
         for (source, cfg) in desired {
             let want = cfg.isConfigured && !cfg.apiKey.isEmpty && !DemoMode.isActive
             let have = connections[source] != nil
+            realtimeLog.debug("reconfigure \(source.rawValue, privacy: .public): want=\(want, privacy: .public) have=\(have, privacy: .public)")
             switch (want, have) {
             case (true, false):
                 let conn = makeConnection(source: source, config: cfg)
@@ -123,7 +141,7 @@ public actor RealtimeManager {
     /// Lets `setHandler` updates apply to live connections without
     /// tearing them down.
     private func makeConnection(source: QueueItem.Source, config: ServiceConfig) -> SignalRConnection {
-        SignalRConnection(source: source, config: config) { [weak self] event in
+        SignalRConnection(source: source, config: config, session: urlSession) { [weak self] event in
             await self?.dispatch(event)
         }
     }
@@ -171,6 +189,7 @@ actor SignalRConnection {
     private let source: QueueItem.Source
     private let baseURL: String
     private let apiKey: String
+    private let session: URLSession
     private let onEvent: @Sendable (RealtimeEvent) async -> Void
 
     private var task: Task<Void, Never>?
@@ -190,11 +209,13 @@ actor SignalRConnection {
     init(
         source: QueueItem.Source,
         config: ServiceConfig,
+        session: URLSession = .shared,
         onEvent: @escaping @Sendable (RealtimeEvent) async -> Void
     ) {
         self.source = source
         self.baseURL = config.baseURL
         self.apiKey = config.apiKey
+        self.session = session
         self.onEvent = onEvent
     }
 
@@ -241,7 +262,11 @@ actor SignalRConnection {
                 return
             } catch {
                 // Network blip / negotiate failed / proxy refused upgrade.
-                // Stay silent — polling is the safety net.
+                // Polling is the safety net, but log so a genuinely-broken
+                // SignalR (auth, proxy stripping WS upgrade, wrong endpoint)
+                // is diagnosable instead of failing invisibly. `reachedListen`
+                // tells us whether we died before or after the handshake.
+                realtimeLog.error("[\(self.source.rawValue, privacy: .public)] cycle failed (reachedHandshake=\(self.lastReachedListen, privacy: .public)): \(error.localizedDescription, privacy: .public)")
             }
             if lastReachedListen {
                 // We did real work — connection ran for a while. Reset.
@@ -282,6 +307,7 @@ actor SignalRConnection {
         // We're past the protocol handshake. Mark the cycle as
         // "real" so backoff resets when listen eventually exits.
         lastReachedListen = true
+        realtimeLog.debug("[\(self.source.rawValue, privacy: .public)] handshake ok — listening (pending=\(pending.count, privacy: .public))")
         startPingPump(ws: ws)
         try await listen(ws: ws, pending: pending)
     }
@@ -314,10 +340,14 @@ actor SignalRConnection {
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.httpBody = Data("{}".utf8)
 
-        let (data, response) = try await URLSession.shared.data(for: req)
+        realtimeLog.debug("[\(self.source.rawValue, privacy: .public)] negotiate POST \(url.absoluteString, privacy: .public)")
+        let (data, response) = try await session.data(for: req)
+        let status = (response as? HTTPURLResponse)?.statusCode ?? -1
         guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            realtimeLog.error("[\(self.source.rawValue, privacy: .public)] negotiate failed, HTTP \(status, privacy: .public)")
             throw URLError(.badServerResponse)
         }
+        realtimeLog.debug("[\(self.source.rawValue, privacy: .public)] negotiate ok (HTTP \(status, privacy: .public))")
         guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
             throw URLError(.cannotParseResponse)
         }
@@ -348,7 +378,9 @@ actor SignalRConnection {
         components.queryItems = items
         guard let url = components.url else { throw URLError(.badURL) }
 
-        let task = URLSession.shared.webSocketTask(with: url)
+        // Log the host/scheme/path but not the query — it carries the API key.
+        realtimeLog.debug("[\(self.source.rawValue, privacy: .public)] WS connect \(components.scheme ?? "?", privacy: .public)://\(components.host ?? "?", privacy: .public)\(components.path, privacy: .public)")
+        let task = session.webSocketTask(with: url)
         task.resume()
         return task
     }
@@ -387,7 +419,8 @@ actor SignalRConnection {
                   let firstJson = try? JSONSerialization.jsonObject(with: firstData) as? [String: Any] else {
                 throw URLError(.badServerResponse)
             }
-            if firstJson["error"] != nil {
+            if let handshakeErr = firstJson["error"] {
+                realtimeLog.error("[\(self.source.rawValue, privacy: .public)] handshake rejected: \(String(describing: handshakeErr), privacy: .public)")
                 throw URLError(.userAuthenticationRequired)
             }
 
@@ -457,57 +490,75 @@ actor SignalRConnection {
     /// Anything else (StreamItem, Completion, …) is irrelevant for
     /// Servarr's one-way push model.
     private func handleFrame(_ frame: String, ws: URLSessionWebSocketTask) async throws {
-        guard let data = frame.data(using: .utf8),
-              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let type = json["type"] as? Int else {
-            return
-        }
-        switch type {
-        case 1:  // Invocation: { type:1, target:"...", arguments:[{...}] }
-            let target = (json["target"] as? String) ?? ""
-            // The "standard" Servarr envelope is `arguments:[{name,
-            // body, action}]`, but older Sonarr v3 / Lidarr's command
-            // channel ship plain payloads with no wrapper. If the
-            // wrapper isn't there, dispatch the event tagged with the
-            // hub method (`target`) so callers can still see *something
-            // changed* — better than dropping it on the floor.
-            if let args = json["arguments"] as? [[String: Any]],
-               let payload = args.first,
-               let name = payload["name"] as? String,
-               let action = payload["action"] as? String {
-                await dispatch(name: name, action: action)
-            } else if !target.isEmpty {
-                await dispatch(name: target, action: "raw")
-            }
-        case 6:  // Ping — server's heartbeat. No reply needed (we run
-                 // our own ping pump in `startPingPump`); just keep
-                 // reading so the receive loop counts as activity.
-            break
-        case 7:  // Close — server is hanging up
+        switch Self.parse(frame: frame, source: source) {
+        case .close:
+            // Server sent a Close (type 7) — break out so reconnect retries.
             throw URLError(.cancelled)
-        default:
+        case .ignored:
             break
+        case .events(let events):
+            for event in events {
+                realtimeLog.debug("[\(self.source.rawValue, privacy: .public)] event \(String(describing: event), privacy: .public)")
+                await onEvent(event)
+            }
         }
     }
 
-    /// Map Servarr message names to our event surface. We only fire
-    /// events for changes the user cares about — queue progress and
-    /// file imports drive notifications and refresh; other resource
-    /// updates (series metadata, calendar, etc.) come along for the
-    /// ride but rarely matter at this layer.
-    private func dispatch(name: String, action: String) async {
+    /// Outcome of parsing one Hub Protocol frame. Pure + synchronous so the
+    /// Servarr envelope parsing — the part that had the bug — is unit-testable
+    /// against captured frames, independent of the live WebSocket.
+    enum FrameOutcome: Equatable {
+        case events([RealtimeEvent])
+        case close       // server sent Close (type 7) — caller breaks the loop
+        case ignored     // ping / unparseable / nothing actionable
+    }
+
+    /// Parse one frame into the events it implies. Servarr's Invocation
+    /// envelope is `{type:1, target:"receiveMessage",
+    /// arguments:[{name:"queue", body:{action:"sync"}}]}` — the resource
+    /// `name` sits at `arguments[0].name` and `action` is nested inside
+    /// `body`. The original parser required `action` at the *top level* of
+    /// the argument, so its guard failed on every real frame and each event
+    /// fell through to a `target`-tagged `.other` that the view-model ignored
+    /// — i.e. SignalR connected and received, but nothing ever refreshed.
+    static func parse(frame: String, source: QueueItem.Source) -> FrameOutcome {
+        guard let data = frame.data(using: .utf8),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let type = json["type"] as? Int else {
+            return .ignored
+        }
+        switch type {
+        case 1:  // Invocation
+            guard let args = json["arguments"] as? [[String: Any]],
+                  let payload = args.first,
+                  let name = payload["name"] as? String else {
+                // No standard envelope — tag with the hub method so a change
+                // still surfaces rather than being dropped on the floor.
+                if let target = json["target"] as? String, !target.isEmpty {
+                    return .events([.other(source: source, name: target, action: "raw")])
+                }
+                return .ignored
+            }
+            let action = (payload["body"] as? [String: Any])?["action"] as? String ?? ""
+            return .events(events(forName: name, action: action, source: source))
+        case 7:  // Close
+            return .close
+        default:  // 6 = ping (our pump keeps the socket alive); rest irrelevant
+            return .ignored
+        }
+    }
+
+    /// Map a Servarr resource name to our event surface. Queue + file-import
+    /// changes drive refresh/notifications; everything else surfaces as
+    /// `.other` for any future listener.
+    static func events(forName name: String, action: String, source: QueueItem.Source) -> [RealtimeEvent] {
         switch name {
         case "queue":
-            await onEvent(.queueChanged(source: source))
+            return [.queueChanged(source: source)]
         case "episodeFile", "movieFile", "trackFile":
-            await onEvent(.fileImported(source: source))
-            await onEvent(.queueChanged(source: source))
-        case "health":
-            // Health changes — interesting for the health pill someday.
-            // For now treat as "other" so the UI can listen if it wants.
-            await onEvent(.other(source: source, name: name, action: action))
+            return [.fileImported(source: source), .queueChanged(source: source)]
         default:
-            await onEvent(.other(source: source, name: name, action: action))
+            return [.other(source: source, name: name, action: action)]
         }
     }
 }

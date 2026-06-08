@@ -11,6 +11,21 @@ public extension Notification.Name {
     /// detail). PopoverContentView and MainWindowView listen and set their
     /// detail target.
     static let arrBarrOpenDetail = Notification.Name("ArrBarrOpenDetail")
+    /// Posted by deep-tree views that need a confirmation modal.
+    /// `userInfo["payload"]` is the `PendingConfirm` instance.
+    /// `PopoverContentView` listens and renders the overlay at panel
+    /// width.
+    static let arrBarrConfirmRequest = Notification.Name("ArrBarrConfirmRequest")
+
+    /// Posted after a successful "Test Connection" in Settings. The
+    /// QueueViewModel listens and refreshes immediately so a freshly-entered
+    /// API key clears the stale "missing API key" banner without waiting for
+    /// the next scheduled poll.
+    static let arrBarrConfigValidated = Notification.Name("ArrBarr.ConfigValidated")
+
+    /// Posted by the `SearchToAddIntent` App Intent. `userInfo["query"]` is the
+    /// search string; the queue/search surface picks it up and runs the search.
+    static let arrBarrSearchQuery = Notification.Name("ArrBarr.SearchQuery")
 }
 
 public enum DetailRequest {

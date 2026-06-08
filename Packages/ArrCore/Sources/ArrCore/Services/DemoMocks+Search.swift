@@ -108,6 +108,20 @@ extension DemoMocks {
                 posterURL: poster(label: "Coffee Run", seed: "coffeerun", w: 200, h: 300),
                 source: .radarr
             ),
+            SearchResult(
+                id: 10009, foreignId: "10009",
+                title: "Cosmos Laundromat", subtitle: nil,
+                year: 2015,
+                rating: 7.5,
+                imdb: 7.3, rottenTomatoes: nil, metacritic: nil,
+                overview: "Franck the suicidal sheep meets a multiversal salesman who promises any life he can imagine — for a price. Blender's experimental open-movie pilot, and a showcase for its character-animation and hair-shading pipelines.",
+                runtime: 12,
+                genres: ["Animation", "Drama", "Fantasy"],
+                network: "Blender Foundation",
+                certification: "PG",
+                posterURL: poster(label: "Cosmos Laundromat", seed: "cosmoslaundromat", w: 200, h: 300),
+                source: .radarr
+            ),
         ]
     }
 
@@ -323,48 +337,6 @@ extension DemoMocks {
                 network: "Blender Foundation",
                 certification: nil,
                 posterURL: poster(label: "Caminandes", seed: "caminandes", w: 200, h: 300),
-                source: .sonarr
-            ),
-            SearchResult(
-                id: 20003, foreignId: "20003",
-                title: "Northern Cascade", subtitle: "2 seasons",
-                year: 2023,
-                rating: 8.4,
-                imdb: nil, rottenTomatoes: nil, metacritic: nil,
-                overview: "A team of glaciologists, climbers, and a reluctant journalist disappear in the Cascade range. Each season unwinds the timeline differently — what they took with them, what they left behind, and what was already there before they arrived.",
-                runtime: 52,
-                genres: ["Drama", "Mystery", "Thriller"],
-                network: "Demo Streaming",
-                certification: nil,
-                posterURL: poster(label: "Northern Cascade", seed: "northerncascade", w: 200, h: 300),
-                source: .sonarr
-            ),
-            SearchResult(
-                id: 20004, foreignId: "20004",
-                title: "Spring Tales", subtitle: "1 season",
-                year: 2019,
-                rating: 8.0,
-                imdb: nil, rottenTomatoes: nil, metacritic: nil,
-                overview: "Animated anthology of folklore from the perspective of small things. Pollen-cam.",
-                runtime: 22,
-                genres: ["Animation", "Family", "Drama"],
-                network: "Blender Foundation",
-                certification: nil,
-                posterURL: poster(label: "Spring Tales", seed: "spring", w: 200, h: 300),
-                source: .sonarr
-            ),
-            SearchResult(
-                id: 20005, foreignId: "20005",
-                title: "Cosmos Laundromat", subtitle: "Pilot",
-                year: 2015,
-                rating: 7.5,
-                imdb: nil, rottenTomatoes: nil, metacritic: nil,
-                overview: "A multiversal salesman makes a pitch to a suicidal sheep. Open-movie pilot.",
-                runtime: 12,
-                genres: ["Animation", "Drama", "Fantasy"],
-                network: "Blender Foundation",
-                certification: nil,
-                posterURL: poster(label: "Cosmos Laundromat", seed: "cosmoslaundromat", w: 200, h: 300),
                 source: .sonarr
             ),
         ]

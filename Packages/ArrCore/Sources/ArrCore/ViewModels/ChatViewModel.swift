@@ -1,12 +1,13 @@
 import Foundation
-import Combine
+import Observation
 
 @MainActor
-public final class ChatViewModel: ObservableObject {
-    @Published public private(set) var messages: [ChatMessage] = []
-    @Published public private(set) var isThinking: Bool = false
-    @Published public private(set) var pendingConfirm: ToolCall?
-    @Published public private(set) var lastError: String?
+@Observable
+public final class ChatViewModel {
+    public private(set) var messages: [ChatMessage] = []
+    public private(set) var isThinking: Bool = false
+    public private(set) var pendingConfirm: ToolCall?
+    public private(set) var lastError: String?
 
     private let provider: LLMProvider
     private let tools: [LLMTool]

@@ -4,6 +4,11 @@ import Foundation
 
 public struct RadarrMovieDetail: Decodable {
     public let id: Int
+    /// TMDB movie id — used to fetch cast/credits (TMDB-only data). `var`
+    /// (not `let`) with a default so it still DECODES from JSON while the
+    /// memberwise init stays optional for demo mocks — a `let … = nil` would
+    /// be silently dropped from Decodable's synthesized keys.
+    var tmdbId: Int? = nil
     let title: String
     let year: Int?
     let overview: String?
@@ -35,6 +40,10 @@ public struct RadarrRatingValue: Decodable {
 
 public struct SonarrSeriesDetail: Decodable {
     public let id: Int
+    /// TMDB series id — Sonarr v3 ships it; used for TMDB cast/credits.
+    /// `var` (not `let`) with a default so it still DECODES while the
+    /// memberwise init stays optional for demo mocks.
+    var tmdbId: Int? = nil
     let title: String
     let year: Int?
     let overview: String?
@@ -68,7 +77,7 @@ public struct SonarrSeasonStats: Decodable {
     let percentOfEpisodes: Double?
 }
 
-public struct SonarrEpisodeDetail: Decodable, Identifiable {
+public struct SonarrEpisodeDetail: Decodable, Identifiable, Hashable {
     public let id: Int
     let seasonNumber: Int?
     let episodeNumber: Int?

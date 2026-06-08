@@ -28,10 +28,6 @@ public struct EpisodeDetailOverlay: View {
     /// Powers the "new file" section that sits alongside the existing
     /// file — both can be present (upgrade in progress).
     let queueItem: QueueItem?
-    /// Lightbox handler — fires when the user taps the poster.
-    /// Parent (`DetailView`) raises its own poster lightbox in
-    /// response.
-    let onPosterTap: ((URL?) -> Void)?
     let onClose: () -> Void
     let onSearch: ((Int) async -> Void)?
     /// Pause/Resume/Cancel closures for the active queueItem — wired
@@ -41,6 +37,14 @@ public struct EpisodeDetailOverlay: View {
     let onPauseEpisode: ((QueueItem) -> Void)?
     let onResumeEpisode: ((QueueItem) -> Void)?
     let onDeleteEpisode: ((QueueItem) -> Void)?
+    /// Set when this episode was opened directly from queue (no series
+    /// view in the back stack). Tap on the series title fires this so
+    /// the caller can push a series DetailView. `nil` = series title is
+    /// inert text (matches the "opened from inside Series" flow).
+    let onTapSeries: (() -> Void)?
+    /// Optional series year for the nav-bar title (`Series (2019) · S03E04`).
+    /// Falls back to bare `Series · S03E04` when unknown.
+    let seriesYear: Int?
     /// URL of the arr's web UI for the active queue item — surfaced
     /// as a CTA on the warning banner. Most `statusMessages` are only
     /// actionable inside the arr's own UI (manual import, blocklist,
@@ -51,6 +55,8 @@ public struct EpisodeDetailOverlay: View {
     @State private var ctaPendingDelete = false
     @State private var didSearch = false
     @State private var showSearchConfirm = false
+    /// Own poster lightbox — set when the user taps the hero poster.
+    @State private var enlargedPoster: URL?
 
     private var hasAired: Bool {
         guard let air = episode.airDateUtc.flatMap(parseArrDate) else { return true }
@@ -63,6 +69,25 @@ public struct EpisodeDetailOverlay: View {
                episode.episodeNumber ?? 0)
     }
 
+    /// Nav-bar title carries the season/episode number in long form —
+    /// `Season 3 · Episode 5` (localized "Sezon 3 · Odcinek 5"). The
+    /// episode NAME lives in the content hero; the series identity is
+    /// the year-bearing drill-in link.
+    private var navTitleString: String {
+        let seasonText = String(format: String(localized: "Season pill %lld", bundle: .module),
+                                episode.seasonNumber ?? 0)
+        let episodeText = String(format: String(localized: "Episode %lld", bundle: .module),
+                                 episode.episodeNumber ?? 0)
+        return "\(seasonText) · \(episodeText)"
+    }
+
+    /// Series title with year for the content drill-in link —
+    /// `Series (2019)`. Year dropped when unknown.
+    private var seriesTitleWithYear: String {
+        if let year = seriesYear { return "\(seriesTitle) (\(year))" }
+        return seriesTitle
+    }
+
     public init(
         episode: SonarrEpisodeDetail,
         seriesTitle: String,
@@ -72,13 +97,14 @@ public struct EpisodeDetailOverlay: View {
         apiKey: String?,
         episodeFile: SonarrEpisodeFile? = nil,
         queueItem: QueueItem? = nil,
-        onPosterTap: ((URL?) -> Void)? = nil,
         onClose: @escaping () -> Void,
         onSearch: ((Int) async -> Void)?,
         warningActionURL: URL? = nil,
         onPauseEpisode: ((QueueItem) -> Void)? = nil,
         onResumeEpisode: ((QueueItem) -> Void)? = nil,
-        onDeleteEpisode: ((QueueItem) -> Void)? = nil
+        onDeleteEpisode: ((QueueItem) -> Void)? = nil,
+        onTapSeries: (() -> Void)? = nil,
+        seriesYear: Int? = nil
     ) {
         self.episode = episode
         self.seriesTitle = seriesTitle
@@ -88,13 +114,14 @@ public struct EpisodeDetailOverlay: View {
         self.apiKey = apiKey
         self.episodeFile = episodeFile
         self.queueItem = queueItem
-        self.onPosterTap = onPosterTap
         self.onClose = onClose
         self.onSearch = onSearch
         self.warningActionURL = warningActionURL
         self.onPauseEpisode = onPauseEpisode
         self.onResumeEpisode = onResumeEpisode
         self.onDeleteEpisode = onDeleteEpisode
+        self.onTapSeries = onTapSeries
+        self.seriesYear = seriesYear
     }
 
     public var body: some View {
@@ -104,7 +131,10 @@ public struct EpisodeDetailOverlay: View {
         // need to mask it ourselves. The view fills the popover, lets
         // glass shine through.
         VStack(spacing: 0) {
-            header
+            // Inline header removed — EpisodeDetailOverlay is now pushed
+            // onto a NavigationStack so the system provides `<` + title.
+            // `seriesTitle` becomes the nav title via `.navigationTitle`
+            // on body so the user sees which series this episode is in.
             ScrollView {
                 content
                     .padding(.horizontal, 14)
@@ -117,53 +147,85 @@ public struct EpisodeDetailOverlay: View {
             // Search when missing+aired, Safari as fallback / secondary.
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 if shouldShowCTAStrip {
+                    // Same floating-island treatment as DetailView's
+                    // strip — no material backdrop / top divider.
                     episodeCTAStrip
                         .padding(.horizontal, 14)
                         .padding(.vertical, 10)
                         .frame(maxWidth: .infinity)
-                        .background(
-                            Rectangle()
-                                .fill(.thinMaterial)
-                                .overlay(alignment: .top) {
-                                    Divider().opacity(0.4)
-                                }
-                                .ignoresSafeArea(edges: .bottom)
-                        )
                 }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .confirmationDialog(
-            Text("Search this episode?", bundle: .module),
+        // Full-screen poster: iOS covers all chrome (no header/back, tap to
+        // close); macOS overlays inside the popover.
+        .posterLightbox(
+            url: $enlargedPoster,
+            apiKey: posterRequiresAuth ? apiKey : nil,
+            aspectRatio: 2.0 / 3.0
+        )
+        .navigationTitle(navTitleString)
+        #if os(iOS)
+        .navigationBarTitleDisplayMode(.inline)
+        #endif
+        // Secondary actions (Trash, Safari) lifted to the system
+        // toolbar — matches the DetailView pattern so the user finds
+        // them in the same place regardless of drill-down depth.
+        // `ToolbarItemGroup(placement: .primaryAction)` — same workaround
+        // as DetailView for the macOS multi-`.automatic`-item hides
+        // bug. Single placement, cluster ordered left-to-right.
+        .toolbar {
+            ToolbarItemGroup(placement: .primaryAction) {
+                if let url = warningActionURL {
+                    Button { PlatformURLOpener.open(url) } label: {
+                        Image(systemName: "safari")
+                    }
+                    .help(Text("Open in browser", bundle: .module))
+                }
+                // iOS: delete in the toolbar, to the RIGHT of Safari.
+                // macOS surfaces it next to the Resume CTA instead.
+                #if os(iOS)
+                if queueItem != nil, onDeleteEpisode != nil {
+                    Button { PanelActivation.bringForward(); ctaPendingDelete = true } label: {
+                        Image(systemName: "trash")
+                    }
+                    .tint(.red)
+                    .help(Text("Cancel download", bundle: .module))
+                }
+                #endif
+            }
+        }
+        // Inline confirmations — see InlineConfirm.swift for why we
+        // can't use `.confirmationDialog` inside MenuBarExtra panels.
+        .inlineConfirm(
             isPresented: $showSearchConfirm,
-            titleVisibility: .visible
-        ) {
-            Button { performSearch() } label: { Text("Search", bundle: .module) }
-            Button(role: .cancel) {} label: { Text("Cancel", bundle: .module) }
-        } message: {
-            Text("Will query your indexers and start a download if a release matches.", bundle: .module)
-        }
-        .confirmationDialog(
-            Text("Cancel this download?", bundle: .module),
+            title: "Search this episode?",
+            message: LocalizedStringKey("Will query your indexers and start a download if a release matches."),
+            confirmLabel: "Search",
+            onConfirm: { performSearch() }
+        )
+        .inlineConfirm(
             isPresented: $ctaPendingDelete,
-            titleVisibility: .visible
-        ) {
-            Button(role: .destructive) {
+            title: "Cancel this download?",
+            message: LocalizedStringKey("This will remove the download from the client."),
+            confirmLabel: "Cancel download",
+            cancelLabel: "Keep download",
+            isDestructive: true,
+            onConfirm: {
                 if let q = queueItem { onDeleteEpisode?(q); onClose() }
-            } label: { Text("Cancel download", bundle: .module) }
-            Button(role: .cancel) {} label: { Text("Keep download", bundle: .module) }
-        } message: {
-            Text(String(format: String(localized: "This will remove \"%@\" from the download client.", bundle: .module), queueItem?.title ?? episode.title ?? ""))
-        }
+            }
+        )
     }
 
     private var shouldShowCTAStrip: Bool {
         let canPauseResume = (queueItem?.status == .downloading || queueItem?.status == .paused)
             && ((queueItem?.isPaused == true && onResumeEpisode != nil)
                 || (queueItem?.isPaused == false && onPauseEpisode != nil))
-        let canDelete = queueItem != nil && onDeleteEpisode != nil
         let canSearch = onSearch != nil && episode.hasFile != true && hasAired
-        return canPauseResume || canDelete || canSearch || warningActionURL != nil
+        // Trash + Safari moved to the toolbar; bottom strip only
+        // renders if the primary verb (pause/resume or search) needs a
+        // place.
+        return canPauseResume || canSearch
     }
 
     @ViewBuilder
@@ -171,64 +233,53 @@ public struct EpisodeDetailOverlay: View {
         let canPauseResume = (queueItem?.status == .downloading || queueItem?.status == .paused)
             && ((queueItem?.isPaused == true && onResumeEpisode != nil)
                 || (queueItem?.isPaused == false && onPauseEpisode != nil))
-        let canDelete = queueItem != nil && onDeleteEpisode != nil
         let canSearch = onSearch != nil && episode.hasFile != true && hasAired
+        // Bottom strip is now reserved for the single primary verb
+        // (pause/resume or search). Trash + Safari live in the toolbar —
+        // no more competing affordances stacked into the same row.
         HStack(spacing: 8) {
             if canPauseResume, let q = queueItem {
                 ctaPauseResume(q: q)
-                if canDelete { ctaTrash }
-                if let url = warningActionURL { ctaSafariSecondary(url: url) }
+                #if os(macOS)
+                // macOS: delete next to Resume as a matching glass capsule.
+                // iOS keeps it in the nav toolbar (right of Safari).
+                if onDeleteEpisode != nil {
+                    ctaTrash
+                }
+                #endif
             } else if canSearch {
                 ctaSearch
-                if let url = warningActionURL { ctaSafariSecondary(url: url) }
-            } else if canDelete {
-                ctaCancelProminent
-                if let url = warningActionURL { ctaSafariSecondary(url: url) }
-            } else if let url = warningActionURL {
-                ctaSafariProminent(url: url)
             }
         }
     }
 
     @ViewBuilder
     private func ctaPauseResume(q: QueueItem) -> some View {
-        Button {
+        PauseResumeButton(isPaused: q.isPaused, progress: q.progress, tint: q.status.tint) {
             if q.isPaused { onResumeEpisode?(q) } else { onPauseEpisode?(q) }
-        } label: {
-            HStack(spacing: 6) {
-                Image(systemName: q.isPaused ? "play.fill" : "pause.fill")
-                    .scaledFont(size: 11, weight: .semibold)
-                Text(q.isPaused
-                        ? String(localized: "Resume download", bundle: .module)
-                        : String(localized: "Pause download", bundle: .module))
-                    .scaledFont(size: 12, weight: .semibold)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 7)
         }
-        .tint(q.status.tint)
-        .progressFillCTA(progress: q.progress, tint: q.status.tint)
-        .modifier(GlassProminentButtonStyle())
     }
 
     @ViewBuilder
     private var ctaTrash: some View {
+        // Glass capsule matching the Resume/Pause CTA height + shape.
         Button {
-            ctaPendingDelete = true
+            PanelActivation.bringForward(); ctaPendingDelete = true
         } label: {
             Image(systemName: "trash")
-                .scaledFont(size: 13, weight: .medium)
-                .foregroundStyle(.red)
-                .padding(.horizontal, 4)
-                .padding(.vertical, 7)
+                .scaledFont(size: 12, weight: .semibold)
+                .padding(.vertical, 10)
+                .padding(.horizontal, 16)
         }
-        .buttonStyle(.bordered)
+        .buttonStyle(.plain)
+        .liquidGlassProgressCTA(progress: 0, tint: .red)
         .help(Text("Cancel download", bundle: .module))
+        .accessibilityLabel(Text("Cancel download", bundle: .module))
     }
 
     @ViewBuilder
     private var ctaCancelProminent: some View {
-        Button { ctaPendingDelete = true } label: {
+        Button { PanelActivation.bringForward(); ctaPendingDelete = true } label: {
             HStack(spacing: 6) {
                 Image(systemName: "trash")
                     .scaledFont(size: 11, weight: .semibold)
@@ -337,62 +388,73 @@ public struct EpisodeDetailOverlay: View {
                         fallbackSymbol: "tv"
                     )
                 }
-                if let onPosterTap {
-                    Button { onPosterTap(posterURL) } label: { poster }
-                        .buttonStyle(.plain)
-                        .help(Text("Show poster", bundle: .module))
-                } else {
-                    poster
-                }
+                // Self-contained lightbox: this overlay is a NavigationStack
+                // push, so a host-owned lightbox (DetailView's) renders
+                // BELOW it and never shows. Tapping raises our own
+                // `enlargedPoster` overlay instead — works in both the
+                // from-queue (EpisodeQuickDetail) and from-series flows.
+                Button {
+                    withAnimation(.smooth(duration: 0.22)) { enlargedPoster = posterURL }
+                } label: { poster }
+                    .buttonStyle(.plain)
+                    .disabled(posterURL == nil)
+                    .help(Text("Show poster", bundle: .module))
                 VStack(alignment: .leading, spacing: 6) {
-                    // Series title is the *context* (which show this
-                    // episode belongs to), subordinate to the episode
-                    // title below. 12pt medium .secondary — readable
-                    // but stays under the 17pt episode title in
-                    // hierarchy.
-                    Text(seriesTitle)
-                        .scaledFont(size: 12, weight: .medium)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
-                    HStack(spacing: 6) {
-                        Text(episodeCode)
-                            .scaledFont(size: 12, weight: .semibold, monospacedDigit: true)
+                    // Series title (with year) shows in content as a
+                    // drill-in link — the episode's series context. Only
+                    // when `onTapSeries` is set (episode opened straight
+                    // from queue, series not yet in the stack); when
+                    // opened from inside the series there's nothing to
+                    // drill to, so it's dropped.
+                    if let onTapSeries {
+                        Button(action: onTapSeries) {
+                            HStack(spacing: 4) {
+                                Text(seriesTitleWithYear)
+                                    .scaledFont(size: 12, weight: .medium)
+                                    .lineLimit(2)
+                                LinkChevron(size: 9)
+                            }
                             .foregroundStyle(.secondary)
-                        // "On disk" badge dropped — was a custom
-                        // status invented only for this surface. The
-                        // EXISTING FILE section below + the file's
-                        // metadata convey the same thing with the
-                        // canonical chrome used everywhere else.
-                        // "Unaired" stays because it's a real
-                        // schedule state not implied by other UI.
-                        if !hasAired {
-                            Text("Unaired", bundle: .module)
-                                .scaledFont(size: 9, weight: .semibold)
-                                .foregroundStyle(Color.orange)
-                                .padding(.horizontal, 5)
-                                .padding(.vertical, 1)
-                                .overlay(RoundedRectangle(cornerRadius: Tokens.Radius.chip).stroke(Color.orange.opacity(0.30), lineWidth: 0.75))
                         }
+                        .buttonStyle(.plain)
+                        // Series-link chevron brightens when the cursor
+                        // is over the title button, not just the glyph.
+                        .linkRowHover()
                     }
+                    // SxxExx moved to the nav-bar title. "Unaired" only
+                    // renders when relevant — no empty row left behind.
+                    if !hasAired {
+                        Text("Unaired", bundle: .module)
+                            .scaledFont(size: 9, weight: .semibold)
+                            .foregroundStyle(Color.orange)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 1)
+                            .overlay(RoundedRectangle(cornerRadius: Tokens.Radius.chip).stroke(Color.orange.opacity(0.30), lineWidth: 0.75))
+                    }
+                    // Episode name as the in-content hero, under the
+                    // series link. The season/episode number lives in the
+                    // nav-bar header now.
                     Text(episode.title ?? "—")
                         .scaledFont(size: 17, weight: .semibold)
                         .lineLimit(3)
-                    if let air = episode.airDateUtc.flatMap(parseArrDate) {
-                        Text(EpisodeDetailOverlay.airFormatter.string(from: air))
-                            .scaledFont(size: 11)
-                            .foregroundStyle(.secondary)
-                    }
                     if let runtime = episode.runtime, runtime > 0 {
                         Text(verbatim: "\(runtime) min")
                             .scaledFont(size: 11)
                             .foregroundStyle(.secondary)
                     }
+                    // Air date directly above the overview, both beside the
+                    // poster (tooltip layout) so the synopsis starts next to
+                    // the artwork — matching movie / series detail.
+                    if let air = episode.airDateUtc.flatMap(parseArrDate) {
+                        Text(EpisodeDetailOverlay.airFormatter.string(from: air))
+                            .scaledFont(size: 11)
+                            .foregroundStyle(.secondary)
+                    }
+                    if let overview = episode.overview, !overview.isEmpty {
+                        ExpandableOverview(text: overview)
+                    }
                 }
                 Spacer(minLength: 0)
-            }
-
-            if let overview = episode.overview, !overview.isEmpty {
-                ExpandableOverview(text: overview)
             }
 
             // Combined file view — three modes:
@@ -456,7 +518,8 @@ public struct EpisodeDetailOverlay: View {
                     quality: existing.quality?.name,
                     size: existing.size,
                     score: existing.customFormatScore,
-                    formats: existingTags
+                    formats: existingTags,
+                    filename: existing.relativePath
                 )
             )
             if !q.statusMessages.isEmpty {
@@ -466,39 +529,10 @@ public struct EpisodeDetailOverlay: View {
                     actionURL: warningActionURL
                 )
             }
-            if !q.customFormats.isEmpty {
-                CustomFormatChips(formats: q.customFormats, score: 0)
-                CustomFormatDiff(
-                    newFormats: q.customFormats,
-                    existingFormats: existingTags
-                )
-            }
-            releaseNameBlock(release: q.releaseName, existing: existing.relativePath)
-        }
-    }
-
-    @ViewBuilder
-    private func releaseNameBlock(release: String?, existing: String?) -> some View {
-        if let release, !release.isEmpty {
-            VStack(alignment: .leading, spacing: 3) {
-                Text(release)
-                    .scaledFont(size: 11, design: .monospaced)
-                    .foregroundStyle(.primary)
-                    .lineLimit(2)
-                    .truncationMode(.middle)
-                if let existing, !existing.isEmpty, existing != release {
-                    HStack(alignment: .firstTextBaseline, spacing: 4) {
-                        Image(systemName: "arrow.turn.down.right")
-                            .scaledFont(size: 9, weight: .semibold)
-                            .foregroundStyle(.tertiary)
-                        Text(existing)
-                            .scaledFont(size: 11, design: .monospaced)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(2)
-                            .truncationMode(.middle)
-                    }
-                }
-            }
+            // CF chips + diff AND the release-name block used to live here.
+            // The card's `UpgradeDiffView` now renders both the gained/lost
+            // format chips and the (untruncated) incoming + replaced file
+            // names, so repeating them here would just double up.
         }
     }
 
@@ -521,7 +555,7 @@ public struct EpisodeDetailOverlay: View {
             if !q.customFormats.isEmpty {
                 CustomFormatChips(formats: q.customFormats, score: 0)
             }
-            releaseNameBlock(release: q.releaseName, existing: nil)
+            ReleaseNameBlock(release: q.releaseName)
         }
     }
 

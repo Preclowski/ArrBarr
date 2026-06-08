@@ -17,13 +17,16 @@ public enum ChatViewModelFactory {
         whisparr: ServiceConfig = .empty,
         aiKnowsAboutWhisparr: Bool = false,
         tmdbApiKey: String = "",
+        downloadClients: DownloadClientConfigs = .init(),
         chatProvider: ChatProvider,
-        openai: OpenAIConfig
+        openai: OpenAIConfig,
+        appLanguage: String = "system"
     ) -> ChatViewModel {
+        let replyLanguage = replyLanguageName(appLanguage: appLanguage)
         let backend: ToolBackend = LocalToolBackend(
             sonarr: sonarr, radarr: radarr, lidarr: lidarr,
             whisparr: whisparr, aiKnowsAboutWhisparr: aiKnowsAboutWhisparr,
-            tmdbApiKey: tmdbApiKey
+            tmdbApiKey: tmdbApiKey, downloadClients: downloadClients
         )
 
         let tmdbEnabled = !tmdbApiKey.isEmpty
@@ -76,7 +79,7 @@ public enum ChatViewModelFactory {
             }
         case .openai:
             if openai.isConfigured {
-                provider = OpenAIProvider(config: openai)
+                provider = OpenAIProvider(config: openai, replyLanguage: replyLanguage)
             } else {
                 provider = UnavailableLLMProvider()
             }
@@ -89,5 +92,21 @@ public enum ChatViewModelFactory {
         )
         vmRef = vm
         return vm
+    }
+
+    /// Maps the app's language setting to an English language name for the
+    /// system prompt (e.g. "pl" → "Polish"). For "system", resolves the OS's
+    /// current preferred language; falls back gracefully when unknown.
+    nonisolated static func replyLanguageName(appLanguage: String) -> String {
+        let english = Locale(identifier: "en")
+        if appLanguage == "system" {
+            if let pref = Locale.preferredLanguages.first,
+               let code = Locale(identifier: pref).language.languageCode?.identifier,
+               let name = english.localizedString(forLanguageCode: code) {
+                return name
+            }
+            return "the user's system language"
+        }
+        return english.localizedString(forLanguageCode: appLanguage) ?? "English"
     }
 }

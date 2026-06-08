@@ -76,25 +76,26 @@ struct LocalToolBackendTests {
             // Sonarr
             "sonarr_search",
             "sonarr_get_series",
-            "sonarr_get_calendar",
             "sonarr_monitor_season",
             "sonarr_search_episodes",
             // Radarr
             "radarr_search",
             "radarr_get_movies",
-            "radarr_get_calendar",
             "radarr_search_movie",
             // Lidarr
             "lidarr_search",
             "lidarr_get_artists",
-            "lidarr_get_calendar",
             "lidarr_get_artist_albums",
             "lidarr_monitor_album",
             "lidarr_search_album",
-            // Cross-cutting (any-arr-configured gates these on)
+            // Cross-cutting (gated on configured arrs)
             "suggest_titles",
             "discover_in_quiz",
-            "arr_health",
+            "get_calendar",         // unified calendar (was per-arr *_get_calendar)
+            "health",               // was arr_health, now incl. download clients
+            "list_download_queue",
+            "get_title_details",    // single-title overview + optional cast
+            "custom_formats",       // merged list_custom_formats + describe_format
         ]
         #expect(names == expected)
         #expect(tools.count == expected.count)
@@ -109,10 +110,13 @@ struct LocalToolBackendTests {
         // sonarr-or-radarr-configured) and `arr_health` (gated on
         // any-arr-configured). These last two aren't prefixed by an
         // arr name because they're catalog-cutting.
-        let crossCutting: Set<String> = ["suggest_titles", "discover_in_quiz", "arr_health"]
+        let crossCutting: Set<String> = ["suggest_titles", "discover_in_quiz", "get_calendar",
+                                         "health", "list_download_queue", "get_title_details", "custom_formats"]
         #expect(names.subtracting(crossCutting).allSatisfy { $0.hasPrefix("sonarr_") })
-        // 5 sonarr + suggest_titles + discover_in_quiz + arr_health = 8
-        #expect(tools.count == 8)
+        // 4 sonarr (calendar merged out) + suggest_titles + discover_in_quiz
+        // + get_calendar + health + list_download_queue + get_title_details
+        // + custom_formats = 11
+        #expect(tools.count == 11)
     }
 
     @Test("listTools includes TMDB tools when key set and matching arr configured")
@@ -154,6 +158,52 @@ struct LocalToolBackendTests {
         let output = try await b.callTool(name: "radarr_search", arguments: .object(["query": .string("Dune")]))
         #expect(output.text == "Radarr is not configured.")
         #expect(output.rich == nil)
+    }
+
+    @Test("callTool sonarr_monitor_season grabs EVERY season in seasonNumbers, not just the first")
+    func sonarrMonitorMultipleSeasons() async throws {
+        URLProtocol.registerClass(LocalStubProtocol.self)
+        defer {
+            URLProtocol.unregisterClass(LocalStubProtocol.self)
+            LocalStubProtocol.reset()
+        }
+        // V5 season-monitor PUT + command POST both accepted.
+        LocalStubProtocol.handlers["/api/v5/series"] = (200, Data("{}".utf8))
+        LocalStubProtocol.handlers["/api/v3/command"] = (201, Data("{\"id\":1}".utf8))
+
+        let output = try await backend().callTool(
+            name: "sonarr_monitor_season",
+            arguments: .object([
+                "seriesId": .number(241),
+                "seasonNumbers": .array([.number(10), .number(11)]),
+            ])
+        )
+        #expect(output.text.hasPrefix("OK"))
+        // Both requested seasons must be reported — the old single-int
+        // schema silently dropped season 11.
+        #expect(output.text.contains("10"))
+        #expect(output.text.contains("11"))
+    }
+
+    @Test("callTool sonarr_monitor_season still accepts a legacy single seasonNumber")
+    func sonarrMonitorSingleSeasonLegacy() async throws {
+        URLProtocol.registerClass(LocalStubProtocol.self)
+        defer {
+            URLProtocol.unregisterClass(LocalStubProtocol.self)
+            LocalStubProtocol.reset()
+        }
+        LocalStubProtocol.handlers["/api/v5/series"] = (200, Data("{}".utf8))
+        LocalStubProtocol.handlers["/api/v3/command"] = (201, Data("{\"id\":1}".utf8))
+
+        let output = try await backend().callTool(
+            name: "sonarr_monitor_season",
+            arguments: .object([
+                "seriesId": .number(241),
+                "seasonNumber": .number(3),
+            ])
+        )
+        #expect(output.text.hasPrefix("OK"))
+        #expect(output.text.contains("3"))
     }
 
     @Test("callTool sonarr_search empty query returns prompt string")
@@ -218,7 +268,7 @@ struct LocalToolBackendTests {
         }
     }
 
-    @Test("callTool sonarr_get_calendar stubs HTTP and returns formatted calendar with rich payload")
+    @Test("callTool get_calendar(service:sonarr) stubs HTTP and returns formatted calendar with rich payload")
     func sonarrCalendarFormatted() async throws {
         URLProtocol.registerClass(LocalStubProtocol.self)
         defer {
@@ -233,7 +283,10 @@ struct LocalToolBackendTests {
         """.data(using: .utf8)!
         LocalStubProtocol.handlers["/api/v3/calendar"] = (200, json)
 
-        let output = try await backend().callTool(name: "sonarr_get_calendar", arguments: .object([:]))
+        let output = try await backend().callTool(
+            name: "get_calendar",
+            arguments: .object(["service": .string("sonarr")])
+        )
         #expect(output.text.contains("My Show"))
         #expect(output.text.hasPrefix("Upcoming releases:"))
         if case .calendar(let items) = output.rich {
@@ -398,5 +451,261 @@ struct LocalToolBackendTests {
         let output = try await b.callTool(name: "lidarr_get_artists", arguments: .object([:]))
         #expect(output.text == "Lidarr is not configured.")
         #expect(output.rich == nil)
+    }
+
+    // MARK: - Title details
+
+    @Test("get_title_details(radarr) returns overview + metadata, no cast by default")
+    func titleDetailsMovie() async throws {
+        URLProtocol.registerClass(LocalStubProtocol.self)
+        defer {
+            URLProtocol.unregisterClass(LocalStubProtocol.self)
+            LocalStubProtocol.reset()
+        }
+        LocalStubProtocol.handlers["/api/v3/movie/55"] = (200, Data("""
+        {"id":55,"tmdbId":603,"title":"The Matrix","year":1999,"runtime":136,
+         "genres":["Action","Sci-Fi"],"overview":"A hacker learns the truth.","status":"released"}
+        """.utf8))
+
+        let output = try await backend().callTool(
+            name: "get_title_details",
+            arguments: .object(["service": .string("radarr"), "id": .number(55)])
+        )
+        #expect(output.text.contains("The Matrix (1999)"))
+        #expect(output.text.contains("A hacker learns the truth."))
+        #expect(output.text.contains("136 min"))
+        // No include_cast → no Cast section.
+        #expect(!output.text.contains("Cast"))
+    }
+
+    @Test("get_title_details movie cast comes from Radarr /credit (no TMDB key)")
+    func titleDetailsMovieCast() async throws {
+        URLProtocol.registerClass(LocalStubProtocol.self)
+        defer {
+            URLProtocol.unregisterClass(LocalStubProtocol.self)
+            LocalStubProtocol.reset()
+        }
+        LocalStubProtocol.handlers["/api/v3/movie/55"] = (200, Data("""
+        {"id":55,"tmdbId":603,"title":"The Matrix","year":1999,"overview":"x"}
+        """.utf8))
+        // Radarr's native credit endpoint — no TMDB key involved.
+        LocalStubProtocol.handlers["/api/v3/credit"] = (200, Data("""
+        [{"personName":"Keanu Reeves","character":"Neo","order":0,"type":"cast"},
+         {"personName":"Lana Wachowski","department":"Directing","job":"Director","type":"crew"}]
+        """.utf8))
+
+        // backend() has NO tmdbApiKey — movie cast must still work.
+        let output = try await backend().callTool(
+            name: "get_title_details",
+            arguments: .object(["service": .string("radarr"), "id": .number(55), "include_cast": .bool(true)])
+        )
+        #expect(output.text.contains("Keanu Reeves — Neo"))
+        // Crew is excluded from the cast list.
+        #expect(!output.text.contains("Lana Wachowski"))
+    }
+
+    @Test("get_title_details series cast needs a TMDB key (Sonarr has no cast API)")
+    func titleDetailsSeriesCastNoKey() async throws {
+        URLProtocol.registerClass(LocalStubProtocol.self)
+        defer {
+            URLProtocol.unregisterClass(LocalStubProtocol.self)
+            LocalStubProtocol.reset()
+        }
+        LocalStubProtocol.handlers["/api/v3/series/9"] = (200, Data("""
+        {"id":9,"tmdbId":1399,"title":"Game of Thrones","year":2011,"overview":"x"}
+        """.utf8))
+
+        // No tmdbApiKey configured.
+        let output = try await backend().callTool(
+            name: "get_title_details",
+            arguments: .object(["service": .string("sonarr"), "id": .number(9), "include_cast": .bool(true)])
+        )
+        #expect(output.text.contains("Cast: unavailable"))
+        #expect(output.text.contains("TMDB key"))
+    }
+
+    @Test("get_title_details without id prompts for one")
+    func titleDetailsMissingId() async throws {
+        let output = try await backend().callTool(
+            name: "get_title_details",
+            arguments: .object(["service": .string("radarr")])
+        )
+        #expect(output.text.contains("seriesId") || output.text.contains("movieId"))
+    }
+
+    // MARK: - Health
+
+    @Test("health with nothing configured reports no services")
+    func healthNothingConfigured() async throws {
+        let b = LocalToolBackend(sonarr: .empty, radarr: .empty, lidarr: .empty)
+        let output = try await b.callTool(name: "health", arguments: .object([:]))
+        #expect(output.text == "No services are configured.")
+    }
+
+    // MARK: - Custom formats
+
+    @Test("custom_formats with no service arg prompts for one")
+    func customFormatsMissingService() async throws {
+        let output = try await backend().callTool(name: "custom_formats", arguments: .object([:]))
+        #expect(output.text.contains("sonarr"))
+        #expect(output.text.contains("radarr"))
+    }
+
+    @Test("custom_formats when service not configured returns informative string")
+    func customFormatsNotConfigured() async throws {
+        let b = LocalToolBackend(sonarr: .empty, radarr: radarrConfig())
+        let output = try await b.callTool(
+            name: "custom_formats",
+            arguments: .object(["service": .string("sonarr")])
+        )
+        #expect(output.text == "Sonarr is not configured.")
+    }
+
+    @Test("custom_formats (no name) stubs HTTP and lists id + name + condition count")
+    func customFormatsListed() async throws {
+        URLProtocol.registerClass(LocalStubProtocol.self)
+        defer {
+            URLProtocol.unregisterClass(LocalStubProtocol.self)
+            LocalStubProtocol.reset()
+        }
+        let json = """
+        [
+          {"id":7,"name":"x265 (HD)","specifications":[
+             {"name":"x265","implementation":"ReleaseTitleSpecification","negate":false,"required":false,
+              "fields":[{"name":"value","value":"(x|h)\\\\.?265"}]}]},
+          {"id":3,"name":"LQ","specifications":[]}
+        ]
+        """.data(using: .utf8)!
+        LocalStubProtocol.handlers["/api/v3/customformat"] = (200, json)
+
+        let output = try await backend().callTool(
+            name: "custom_formats",
+            arguments: .object(["service": .string("radarr")])
+        )
+        #expect(output.text.contains("x265 (HD)"))
+        #expect(output.text.contains("[7]"))
+        #expect(output.text.contains("LQ"))
+        #expect(output.text.contains("1 condition"))
+    }
+
+    @Test("describe_format stubs HTTP and reports conditions + per-profile scores")
+    func describeFormatScores() async throws {
+        URLProtocol.registerClass(LocalStubProtocol.self)
+        defer {
+            URLProtocol.unregisterClass(LocalStubProtocol.self)
+            LocalStubProtocol.reset()
+        }
+        let formats = """
+        [{"id":7,"name":"x265 (HD)","specifications":[
+            {"name":"x265","implementation":"ReleaseTitleSpecification","implementationName":"Release Title",
+             "negate":false,"required":false,"fields":[{"name":"value","value":"(x|h)\\\\.?265"}]}]}]
+        """.data(using: .utf8)!
+        let profiles = """
+        [
+          {"id":1,"name":"HD-1080p","formatItems":[{"format":7,"name":"x265 (HD)","score":-10000}]},
+          {"id":2,"name":"Any","formatItems":[{"format":7,"name":"x265 (HD)","score":0}]}
+        ]
+        """.data(using: .utf8)!
+        LocalStubProtocol.handlers["/api/v3/customformat"] = (200, formats)
+        LocalStubProtocol.handlers["/api/v3/qualityprofile"] = (200, profiles)
+
+        let output = try await backend().callTool(
+            name: "custom_formats",
+            arguments: .object(["service": .string("radarr"), "name": .string("x265")])
+        )
+        #expect(output.text.contains("x265 (HD)"))
+        #expect(output.text.contains("Release Title"))
+        #expect(output.text.contains("(x|h)"))         // the matched regex value
+        #expect(output.text.contains("HD-1080p"))
+        #expect(output.text.contains("-10000"))
+        // Any profile scores 0 → excluded from the explicit list, rolled into the "(N other)" tail
+        #expect(!output.text.contains("Any: 0"))
+    }
+
+    @Test("describe_format reports a helpful miss when the name isn't found")
+    func describeFormatNotFound() async throws {
+        URLProtocol.registerClass(LocalStubProtocol.self)
+        defer {
+            URLProtocol.unregisterClass(LocalStubProtocol.self)
+            LocalStubProtocol.reset()
+        }
+        LocalStubProtocol.handlers["/api/v3/customformat"] = (200, Data("""
+        [{"id":7,"name":"x265 (HD)","specifications":[]}]
+        """.utf8))
+
+        let output = try await backend().callTool(
+            name: "custom_formats",
+            arguments: .object(["service": .string("radarr"), "name": .string("Bluray Tier 99")])
+        )
+        #expect(output.text.contains("No custom format"))
+        #expect(output.text.contains("x265 (HD)"))   // lists what IS available
+    }
+
+    // MARK: - Download queue
+
+    @Test("list_download_queue not configured returns informative string")
+    func listQueueNotConfigured() async throws {
+        let b = LocalToolBackend(sonarr: .empty, radarr: .empty)
+        let output = try await b.callTool(name: "list_download_queue", arguments: .object([:]))
+        #expect(output.text == "Sonarr and Radarr are not configured.")
+        #expect(output.rich == nil)
+    }
+
+    private func upgradeItem() -> QueueItem {
+        QueueItem(
+            id: "sonarr-1", source: .sonarr, arrQueueId: 1,
+            downloadId: nil, downloadProtocol: .usenet, downloadClient: "SAB",
+            title: "The Wire", subtitle: "S01E01",
+            releaseName: "The.Wire.S01E01.2160p.Remux", status: .downloading,
+            progress: 0.5, sizeTotal: 24_300_000_000, sizeLeft: 12_000_000_000, timeLeft: "1h",
+            customFormats: ["DV", "HDR10", "Remux"], customFormatScore: 120,
+            quality: "2160p Remux", isUpgrade: true,
+            existingCustomFormats: ["HDR10"], existingCustomFormatScore: 50, existingQuality: "1080p Bluray",
+            existingSize: 8_100_000_000, existingFileName: "old.mkv",
+            contentSlug: nil
+        )
+    }
+
+    private func plainItem() -> QueueItem {
+        QueueItem(
+            id: "radarr-2", source: .radarr, arrQueueId: 2,
+            downloadId: nil, downloadProtocol: .torrent, downloadClient: "qbit",
+            title: "Dune", subtitle: nil, status: .queued,
+            progress: 0.0, sizeTotal: 10_000_000_000, sizeLeft: 10_000_000_000, timeLeft: nil,
+            customFormats: [], customFormatScore: 0, quality: "2160p", isUpgrade: false,
+            contentSlug: nil
+        )
+    }
+
+    @Test("formatQueueCondensed emits an UPGRADE diff fragment for upgrade rows")
+    func queueUpgradeDiff() {
+        let text = LocalToolBackend.formatQueueCondensed([upgradeItem()])
+        #expect(text.contains("The Wire"))
+        #expect(text.contains("UPGRADE:"))
+        #expect(text.contains("1080p Bluray → 2160p Remux"))
+        #expect(text.contains("score 50→120"))
+        #expect(text.contains("+DV"))      // gained
+        #expect(text.contains("+Remux"))   // gained
+        #expect(!text.contains("-HDR10"))  // kept on both sides — not lost
+    }
+
+    @Test("formatQueueCondensed omits diff for plain (non-upgrade) rows")
+    func queuePlainNoDiff() {
+        let text = LocalToolBackend.formatQueueCondensed([plainItem()])
+        #expect(text.contains("Dune"))
+        #expect(!text.contains("UPGRADE:"))
+    }
+
+    @Test("formatQueueCondensed reports empty queue")
+    func queueEmpty() {
+        let text = LocalToolBackend.formatQueueCondensed([])
+        #expect(text == "Nothing is downloading right now.")
+    }
+
+    @Test("formatQueueCondensed appends unreachable-service warnings")
+    func queueWithFailures() {
+        let text = LocalToolBackend.formatQueueCondensed([plainItem()], failures: ["Radarr queue unreachable — timeout"])
+        #expect(text.contains("Dune"))
+        #expect(text.contains("⚠️ Radarr queue unreachable"))
     }
 }

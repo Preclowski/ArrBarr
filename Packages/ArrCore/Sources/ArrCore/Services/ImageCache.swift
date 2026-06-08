@@ -112,4 +112,18 @@ public actor ImageCache {
         let digest = SHA256.hash(data: Data(url.absoluteString.utf8))
         return digest.map { String(format: "%02x", $0) }.joined()
     }
+
+    /// The on-disk cache file for `url` IF it's already downloaded — else nil.
+    /// Lets Spotlight indexing attach poster thumbnails for items the user has
+    /// already seen WITHOUT triggering thousands of fresh downloads. Recomputes
+    /// the cache dir (same scheme as `init`) so it can stay `nonisolated`.
+    public nonisolated static func posterCacheFileURL(for url: URL) -> URL? {
+        let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first
+            ?? URL(fileURLWithPath: NSTemporaryDirectory())
+        let bundleId = Bundle.main.bundleIdentifier ?? "com.preclowski.ArrBarr"
+        let dir = caches.appendingPathComponent(bundleId, isDirectory: true)
+            .appendingPathComponent("posters", isDirectory: true)
+        let file = dir.appendingPathComponent(cacheKey(for: url))
+        return FileManager.default.fileExists(atPath: file.path) ? file : nil
+    }
 }

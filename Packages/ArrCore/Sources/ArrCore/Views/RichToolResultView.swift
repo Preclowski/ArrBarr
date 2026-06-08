@@ -152,11 +152,21 @@ public struct RichToolResultView: View {
                             visibleCount = min(visibleCount + Self.pageSize, items.count)
                         }
                     }
-                case .discoverSession:
-                    // Quiz overlay is the actual presentation surface; chat
-                    // doesn't need a duplicate card. (Discover branch's
-                    // resume-card UI not ported yet.)
-                    EmptyView()
+                case .downloadQueue(let items):
+                    let visible = Array(items.prefix(visibleCount))
+                    ForEach(visible) { item in
+                        QueueComparisonCard(item: item)
+                    }
+                    if visible.count < items.count {
+                        LoadMoreSentinel {
+                            visibleCount = min(visibleCount + Self.pageSize, items.count)
+                        }
+                    }
+                case .discoverSession(let mood, let posterURLs):
+                    // Stacked-poster resume widget — tap reopens the
+                    // Quiz overlay (live `sessionMatched` count shows
+                    // as a "Picked: N" chip).
+                    QuizResumeCard(mood: mood, posterURLs: posterURLs)
                 }
             }
             .padding(.vertical, 4)

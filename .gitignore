@@ -2,6 +2,8 @@
 xcuserdata/
 DerivedData/
 build/
+build-ios/
+build-appstore/
 *.xcworkspace/
 
 # Swift Package Manager
@@ -15,6 +17,8 @@ Package.resolved
 # Claude Code workspace
 .claude/
 .worktrees/
+CLAUDE.md
+docs/superpowers/
 
 # Logs / crash reports
 *.log
@@ -23,3 +27,7 @@ Package.resolved
 # Temporary icon layers (source is AppIcon.icon)
 IconLayers/
 .superpowers/
+
+# Design source originals (build uses ServiceIcons.xcassets, not these)
+appicons/
+appicon-concepts/

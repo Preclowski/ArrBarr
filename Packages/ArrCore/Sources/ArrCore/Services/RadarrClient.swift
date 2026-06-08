@@ -206,6 +206,13 @@ public actor RadarrClient: ArrAPIClient {
         return files.first
     }
 
+    /// Cast + crew for a movie via `/api/v3/credit?movieId=`. Radarr stores
+    /// these from its metadata provider, so this needs no app-side TMDB key.
+    func fetchCredits(movieId: Int) async throws -> [ArrCredit] {
+        if DemoMode.isActive { return DemoMocks.radarrMovieCredits(movieId: movieId) }
+        return try await get("/credit", query: [URLQueryItem(name: "movieId", value: String(movieId))])
+    }
+
     func fetchHealth() async throws -> [ArrHealthRecord] {
         guard config.isConfigured else { throw HTTPError.notConfigured }
         guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }

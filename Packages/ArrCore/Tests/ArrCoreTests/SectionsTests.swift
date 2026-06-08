@@ -140,28 +140,83 @@ struct ComputeNeedsYouTests {
 
         let result = QueueViewModel.computeNeedsYou(
             queues: [.radarr: radarr, .sonarr: sonarr, .lidarr: lidarr],
+            errors: [:],
             health: .empty
         )
         #expect(result.map(\.id) == ["needsyou.r-fail", "needsyou.s-warn"])
     }
 
-    @Test("Indexer-down health records are NOT included (failed import + warning only)")
+    @Test("Warning/notice health records are NOT surfaced (only error-level)")
     @MainActor
-    func indexerHealthIgnored() {
+    func benignHealthIgnored() {
         let health = HealthResult(
             radarr: [ArrHealthRecord(source: "IndexerStatusCheck", type: "warning",
                                      message: "Indexer X is down", wikiUrl: nil)],
             sonarr: [],
             lidarr: []
         )
-        let result = QueueViewModel.computeNeedsYou(queues: [:], health: health)
+        let result = QueueViewModel.computeNeedsYou(queues: [:], errors: [:], health: health)
         #expect(result.isEmpty)
+    }
+
+    @Test("Error-level health records ARE surfaced as an arr issue")
+    @MainActor
+    func errorHealthSurfaced() {
+        let health = HealthResult(
+            radarr: [ArrHealthRecord(source: "DownloadClientCheck", type: "error",
+                                     message: "Download clients unavailable", wikiUrl: nil)],
+            sonarr: [],
+            lidarr: []
+        )
+        let result = QueueViewModel.computeNeedsYou(queues: [:], errors: [:], health: health)
+        #expect(result.count == 1)
+        #expect(result.first?.item == nil)
+        #expect(result.first?.source == .radarr)
+        #expect(result.first?.detailLines == ["Download clients unavailable"])
+    }
+
+    @Test("A per-arr fetch error is surfaced as an arr issue so an empty queue is explained")
+    @MainActor
+    func fetchErrorSurfaced() {
+        let result = QueueViewModel.computeNeedsYou(
+            queues: [:],
+            errors: [.radarr: "HTTP 500"],
+            health: .empty
+        )
+        #expect(result.count == 1)
+        #expect(result.first?.item == nil)
+        #expect(result.first?.source == .radarr)
+        #expect(result.first?.detailLines == ["HTTP 500"])
+    }
+
+    @Test("Multiple problems for one arr group into a single entry, stacked")
+    @MainActor
+    func arrIssuesGroupedPerSource() {
+        let health = HealthResult(
+            radarr: [],
+            sonarr: [
+                ArrHealthRecord(source: "DownloadClientCheck", type: "error",
+                                message: "Download clients unavailable", wikiUrl: nil),
+                ArrHealthRecord(source: "ImportListCheck", type: "error",
+                                message: "Lists unavailable", wikiUrl: nil),
+            ],
+            lidarr: []
+        )
+        let result = QueueViewModel.computeNeedsYou(
+            queues: [:],
+            errors: [.sonarr: "HTTP 500"],
+            health: health
+        )
+        // One grouped Sonarr entry, all three problems stacked beneath it.
+        #expect(result.count == 1)
+        #expect(result.first?.source == .sonarr)
+        #expect(result.first?.detailLines == ["HTTP 500", "Download clients unavailable", "Lists unavailable"])
     }
 
     @Test("Empty inputs return empty")
     @MainActor
     func empty() {
-        let result = QueueViewModel.computeNeedsYou(queues: [:], health: .empty)
+        let result = QueueViewModel.computeNeedsYou(queues: [:], errors: [:], health: .empty)
         #expect(result.isEmpty)
     }
 
@@ -173,6 +228,7 @@ struct ComputeNeedsYouTests {
                 .radarr: [item("warn", source: .radarr, status: .warning)],
                 .sonarr: [item("fail", source: .sonarr, status: .failed)],
             ],
+            errors: [:],
             health: .empty
         )
         #expect(result.count == 2)

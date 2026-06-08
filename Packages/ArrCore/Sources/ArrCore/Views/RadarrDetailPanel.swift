@@ -3,23 +3,27 @@ import SwiftUI
 // MARK: - Movie (Radarr + Whisparr share the same layout since Whisparr
 //          is a Radarr fork operating on the same RadarrMovieDetail type)
 
-struct RadarrDetailPanel: View {
+struct RadarrDetailPanel<Header: View>: View {
     let item: QueueItem
-    @ObservedObject var viewModel: QueueViewModel
+    var viewModel: QueueViewModel
     let radarrDetail: RadarrMovieDetail?
     let radarrMovieFile: ArrFile?
     let siblings: [QueueItem]
     let hasActiveDownloads: Bool
     let loadError: String?
-    let header: AnyView
+    let header: Header
+    /// Cast (from Radarr `/credit`) — horizontal headshot strip under header.
+    var cast: [CastMember] = []
     let arrWebURLForItem: (QueueItem) -> URL?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
+            // Synopsis now renders inside the header card's right column
+            // (beside the poster) — see MediaHeaderCard.overview.
             header
 
-            if let overview = radarrDetail?.overview, !overview.isEmpty {
-                ExpandableOverview(text: overview)
+            if !cast.isEmpty {
+                CastRow(cast: cast)
             }
 
             // Active downloads first; the existing-file banner reads like a
@@ -56,9 +60,7 @@ struct RadarrDetailPanel: View {
             }
 
             if let err = loadError {
-                Text(err)
-                    .scaledFont(size: 11)
-                    .foregroundStyle(.tertiary)
+                LoadErrorLine(message: err)
             }
         }
     }

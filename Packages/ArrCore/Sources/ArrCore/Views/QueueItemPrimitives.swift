@@ -43,13 +43,14 @@ public struct MediaBadgeCluster: View {
     }
 
     public var body: some View {
-        // Delegates to the shared `OutlineLabel` so every compact
-        // chip in the app wears identical chrome (border + tinted
-        // text, no fill). Upgrade → indigo, New → accent.
-        OutlineLabel(
+        // Match TagChip's chrome exactly (9pt medium, 5/1 padding, 30%
+        // stroke) so Upgrade / New chips and custom-format chips align
+        // pixel-for-pixel when they sit in the same row — no jarring
+        // "this one is taller" mismatch.
+        TagChip(
             text: NSLocalizedString(isUpgrade ? "Upgrade" : "New",
                                     bundle: .module, comment: ""),
-            tint: isUpgrade ? .indigo : .accentColor
+            color: isUpgrade ? .indigo : .accentColor
         )
     }
 }
@@ -250,6 +251,38 @@ public struct QueueStatusMessagesBanner: View {
 /// silence; if everything's identical, the whole line falls back to
 /// a single muted "Same spec, retagged" / "Re-downloading identical
 /// release" message. The principle: equality is silence.
+/// Wraps a NEW/OLD diff section in a labeled column — small uppercase
+/// caption above the content, a vertical tint-coloured rail down the
+/// left side, and dimmed-secondary content treatment. Used on the
+/// EXISTING half of upgrade diffs so the user can tell which side is
+/// the file being replaced at a glance.
+public struct DiffSection<Content: View>: View {
+    let captionKey: LocalizedStringKey
+    let tint: Color
+    let content: () -> Content
+
+    public init(captionKey: LocalizedStringKey, tint: Color = .orange, @ViewBuilder content: @escaping () -> Content) {
+        self.captionKey = captionKey
+        self.tint = tint
+        self.content = content
+    }
+
+    public var body: some View {
+        HStack(alignment: .top, spacing: 8) {
+            Capsule()
+                .fill(tint.opacity(0.55))
+                .frame(width: 2)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(captionKey, bundle: .module)
+                    .scaledFont(size: 9, weight: .semibold)
+                    .foregroundStyle(tint.opacity(0.85))
+                    .tracking(0.6)
+                content()
+            }
+        }
+    }
+}
+
 public struct ExistingFileDiffRow: View {
     let existingQuality: String?
     let existingSize: Int64?
@@ -531,11 +564,11 @@ public struct MediaTooltipChrome<Content: View>: View {
                             .lineLimit(1)
                     }
                 }
-                let custom = content()
-                if shouldShowDivider {
-                    Divider().opacity(0.5)
-                }
-                custom
+                // Decorative divider between header and content
+                // dropped — tooltip's typographic hierarchy (semibold
+                // title vs. body text) already separates the two
+                // visually, and an explicit hairline added noise.
+                content()
                 if let overview, !overview.isEmpty {
                     Text(overview)
                         .scaledFont(size: 11)
@@ -573,25 +606,46 @@ public struct StatusIconLabel: View {
     var iconSize: CGFloat
     var labelSize: CGFloat
     var labelWeight: Font.Weight
+    /// When false, drop the tinted-outline chip chrome and render just the
+    /// icon + text inline. Queue rows use this — the bordered "pill" read as
+    /// a redundant label there; the icon + coloured word carry the status.
+    var bordered: Bool
 
     public init(status: QueueItem.Status,
-                iconSize: CGFloat = 8,
-                labelSize: CGFloat = 10,
-                labelWeight: Font.Weight = .regular) {
+                iconSize: CGFloat = 9,
+                labelSize: CGFloat = 9,
+                labelWeight: Font.Weight = .medium,
+                bordered: Bool = true) {
         self.status = status
         self.iconSize = iconSize
         self.labelSize = labelSize
         self.labelWeight = labelWeight
+        self.bordered = bordered
     }
 
     public var body: some View {
+        // Badge-styled to match TagChip / MediaBadgeCluster — icon +
+        // text on a single tinted-outline chip. Single visual idiom
+        // across "status pill", "upgrade chip", "custom format" so the
+        // status row reads as one cohesive strip of chips instead of
+        // free-floating text next to bordered pills.
         HStack(spacing: 3) {
             Image(systemName: status.symbol)
                 .scaledFont(size: iconSize)
-                .foregroundStyle(status.tint)
             Text(LocalizedStringKey(status.displayName))
                 .scaledFont(size: labelSize, weight: labelWeight)
-                .foregroundStyle(status.tint)
         }
+        .foregroundStyle(status.tint)
+        .padding(.horizontal, bordered ? 5 : 0)
+        .padding(.vertical, bordered ? 1 : 0)
+        .overlay(
+            Group {
+                if bordered {
+                    RoundedRectangle(cornerRadius: Tokens.Radius.chip)
+                        .stroke(status.tint.opacity(0.30), lineWidth: 0.75)
+                }
+            }
+        )
+        .fixedSize()
     }
 }

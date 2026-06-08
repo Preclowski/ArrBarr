@@ -48,6 +48,16 @@ struct LocalizationCatalogTests {
         "Restart required to apply the new language.",
         "Quit and reopen the app to apply the new language.",
         "Relaunch",
+        "Login (leave empty for API key)",
+        "Password or API key",
+        "Service problem",
+        "Spoiler",
+        "Adult content",
+        "Confirm (18+)",
+        "Whisparr may provide 18+ content. Confirm that you are 18 or older.",
+        "Website",
+        "Privacy Policy",
+        "NSFW filter",
     ]
 
     private static let catalog: [String: Any] = {

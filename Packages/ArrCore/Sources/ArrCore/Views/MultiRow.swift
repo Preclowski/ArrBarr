@@ -24,7 +24,18 @@ struct MultiRow: View {
     @State private var isHovering = false
     @State private var showHoverPopover = false
     @State private var hoverTask: Task<Void, Never>?
-    @State private var showDeleteConfirmation = false
+
+    private func requestDeleteConfirm() {
+        guard let onDelete else { return }
+        ConfirmCenter.request(PendingConfirm(
+            title: "Cancel this download?",
+            message: "This will remove the download from the client.",
+            confirmLabel: "Cancel download",
+            cancelLabel: "Keep download",
+            isDestructive: true,
+            onConfirm: onDelete
+        ))
+    }
 
     private var canPauseResume: Bool {
         item.status == .downloading || item.status == .paused
@@ -77,18 +88,7 @@ struct MultiRow: View {
             }
         }
         #endif
-        .confirmationDialog(
-            Text("Cancel this download?", bundle: .module),
-            isPresented: $showDeleteConfirmation,
-            titleVisibility: .visible
-        ) {
-            Button(role: .destructive) { onDelete?() } label: {
-                Text("Cancel download", bundle: .module)
-            }
-            Button(role: .cancel) {} label: { Text("Keep download", bundle: .module) }
-        } message: {
-            Text(String(format: String(localized: "This will remove \"%@\" from the download client.", bundle: .module), item.title))
-        }
+        // Confirmation via ConfirmCenter.shared (see requestDeleteConfirm).
     }
 
     @ViewBuilder
@@ -121,7 +121,7 @@ struct MultiRow: View {
                 }
                 ScoreLabel(score: item.customFormatScore)
             }
-            ThinProgressBar(progress: item.progress, tint: item.status.tint)
+            ThinProgressBar(progress: item.progress, tint: item.status.tint, height: 6)
             if showCustomFormats, !item.customFormats.isEmpty {
                 CustomFormatChips(formats: item.customFormats, score: 0)
                     .padding(.top, 1)
@@ -155,13 +155,11 @@ struct MultiRow: View {
                 }
             }
             if onDelete != nil {
-                IconOverflowMenu(accessibilityLabel: "More actions") {
-                    Button(role: .destructive) {
-                        showDeleteConfirmation = true
-                    } label: {
-                        Label(String(localized: "Cancel download", bundle: .module),
-                              systemImage: "trash")
-                    }
+                IconButton(symbol: "trash",
+                           helpKey: "Cancel download",
+                           accessibilityLabel: "Cancel \(item.title)",
+                           tint: .red) {
+                    requestDeleteConfirm()
                 }
             }
         }

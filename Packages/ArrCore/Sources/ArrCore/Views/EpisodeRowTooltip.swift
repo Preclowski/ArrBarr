@@ -49,7 +49,6 @@ struct EpisodeRowTooltip: View {
     private var tooltipContent: some View {
         VStack(alignment: .leading, spacing: 6) {
             header
-            Divider().opacity(0.5)
             infoGrid
             if let formats = primaryFormats, !formats.isEmpty {
                 customFormatChipStrip(
@@ -136,25 +135,21 @@ struct EpisodeRowTooltip: View {
     private var infoGrid: some View {
         Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 10, verticalSpacing: 3) {
             if let q = queueItem {
-                gridRow(
-                    label: "Status",
-                    value: AnyView(
-                        HStack(spacing: 4) {
-                            StatusIconLabel(status: q.status,
-                                            iconSize: 10,
-                                            labelSize: 11,
-                                            labelWeight: .semibold)
-                        }
-                    )
-                )
-                gridRow(
-                    label: "Quality",
-                    value: AnyView(qualitySizeScore(
+                gridRow(label: "Status") {
+                    HStack(spacing: 4) {
+                        StatusIconLabel(status: q.status,
+                                        iconSize: 10,
+                                        labelSize: 11,
+                                        labelWeight: .semibold)
+                    }
+                }
+                gridRow(label: "Quality") {
+                    qualitySizeScore(
                         quality: q.quality,
                         size: q.sizeTotal,
                         score: q.customFormatScore
-                    ))
-                )
+                    )
+                }
                 if let file = episodeFile, q.isUpgrade {
                     GridRow(alignment: .firstTextBaseline) {
                         Color.clear.frame(width: 0, height: 0)
@@ -170,22 +165,24 @@ struct EpisodeRowTooltip: View {
                     }
                 }
                 if let client = q.downloadClient {
-                    gridRow(label: "Client", value: AnyView(
+                    gridRow(label: "Client") {
                         Text(client).scaledFont(size: 11).foregroundStyle(.secondary)
-                    ))
+                    }
                 }
             } else if let file = episodeFile {
-                gridRow(label: "On disk", value: AnyView(qualitySizeScore(
-                    quality: file.quality?.name,
-                    size: file.size ?? 0,
-                    score: file.customFormatScore ?? 0
-                )))
+                gridRow(label: "On disk") {
+                    qualitySizeScore(
+                        quality: file.quality?.name,
+                        size: file.size ?? 0,
+                        score: file.customFormatScore ?? 0
+                    )
+                }
             }
         }
     }
 
     @ViewBuilder
-    private func gridRow(label: LocalizedStringKey, value: AnyView) -> some View {
+    private func gridRow<Value: View>(label: LocalizedStringKey, @ViewBuilder value: () -> Value) -> some View {
         GridRow(alignment: .firstTextBaseline) {
             Text(label, bundle: .module)
                 .scaledFont(size: 10, weight: .semibold)
@@ -193,7 +190,7 @@ struct EpisodeRowTooltip: View {
                 .textCase(.uppercase)
                 .tracking(0.4)
                 .gridColumnAlignment(.leading)
-            value
+            value()
         }
     }
 

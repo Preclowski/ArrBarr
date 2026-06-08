@@ -1,0 +1,27 @@
+{
+  "identifier" : "ARRBARR_STOREKIT_TEST",
+  "nonRenewingSubscriptions" : [],
+  "products" : [
+    {
+      "displayPrice" : "9.99",
+      "familyShareable" : false,
+      "internalID" : "ARRBARR_PRO",
+      "localizations" : [
+        {
+          "description" : "Unlock all ArrBarr features forever.",
+          "displayName" : "ArrBarr Pro",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "app.arrbarr.pro",
+      "referenceName" : "ArrBarr Pro",
+      "type" : "NonConsumable"
+    }
+  ],
+  "settings" : {},
+  "subscriptionGroups" : [],
+  "version" : {
+    "major" : 1,
+    "minor" : 0
+  }
+}

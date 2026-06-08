@@ -51,6 +51,20 @@ extension ArrAPIClient {
         )
     }
 
+    /// All custom formats defined on this arr (`/customformat`). Shared by
+    /// Sonarr + Radarr (both v3); powers the chat `list_custom_formats` /
+    /// `describe_format` tools.
+    func fetchCustomFormats() async throws -> [ArrCustomFormatDetail] {
+        try await get("/customformat")
+    }
+
+    /// All quality profiles (`/qualityprofile`). Decoded down to the
+    /// per-format score table so `describe_format` can report where a
+    /// custom format earns or loses points.
+    func fetchQualityProfiles() async throws -> [ArrQualityProfile] {
+        try await get("/qualityprofile")
+    }
+
     /// DELETE <apiBase><path>?key=val&...
     func delete(_ path: String, query: [URLQueryItem] = []) async throws {
         guard config.isConfigured else { throw HTTPError.notConfigured }

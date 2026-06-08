@@ -30,6 +30,9 @@ public struct DownloadProgressCard: View {
     /// the bar. Queue-row variants set `false` because the row
     /// already shows status info inline above the card.
     let showHeader: Bool
+    /// Show the Upgrade/New badge in the header. Queue rows pass `false`
+    /// because they render the badge up in the title row instead.
+    var showBadge: Bool = true
     /// Legacy flag — kept for source-compat with existing call sites
     /// but no longer affects rendering. The progress bar now always
     /// sits at the top of the card (with the percent rendered on
@@ -52,11 +55,13 @@ public struct DownloadProgressCard: View {
         public let size: Int64?
         public let score: Int?
         public let formats: [String]
-        public init(quality: String?, size: Int64?, score: Int?, formats: [String]) {
+        public let filename: String?
+        public init(quality: String?, size: Int64?, score: Int?, formats: [String], filename: String? = nil) {
             self.quality = quality
             self.size = size
             self.score = score
             self.formats = formats
+            self.filename = filename
         }
     }
 
@@ -66,6 +71,7 @@ public struct DownloadProgressCard: View {
         fadeTrailing: Bool = false,
         showUpgradeDiff: Bool = true,
         showHeader: Bool = false,
+        showBadge: Bool = true,
         showProgressFill: Bool = true,
         compactSpec: Bool = false,
         existingOverride: ExistingFileSnapshot? = nil
@@ -75,6 +81,7 @@ public struct DownloadProgressCard: View {
         self.fadeTrailing = fadeTrailing
         self.showUpgradeDiff = showUpgradeDiff
         self.showHeader = showHeader
+        self.showBadge = showBadge
         self.showProgressFill = showProgressFill
         self.compactSpec = compactSpec
         self.existingOverride = existingOverride
@@ -94,6 +101,9 @@ public struct DownloadProgressCard: View {
     private var effectiveExistingFormats: [String] {
         existingOverride?.formats ?? item.existingCustomFormats
     }
+    private var effectiveExistingFilename: String? {
+        existingOverride?.filename ?? item.existingFileName
+    }
     private var willShowDiff: Bool {
         guard showUpgradeDiff else { return false }
         // With an explicit override we trust the caller to pass it
@@ -108,67 +118,106 @@ public struct DownloadProgressCard: View {
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            // Progress bar always on top — `percent` centered as
-            // overlay on the bar itself so the user reads "47%"
-            // and the bar's fill simultaneously, no separate %
-            // label hunting for space in the status row.
-            progressBarWithPercent
+            // Status + spec row sits ABOVE the progress bar (per user
+            // direction) so the row reads top-down: what/quality, then the
+            // bar. The detail variant (`!compactSpec`) has no bar — its diff
+            // grid is part of this header block.
             if showHeader {
                 HStack(spacing: 6) {
-                    StatusIconLabel(status: item.status)
-                    // Download-client chip lives in detail surfaces
-                    // only — `compactSpec` is the queue-row variant,
-                    // where the chip duplicates info that the detail
-                    // panel already surfaces and burns horizontal
-                    // space the title row needs more.
+                    // Queue rows (compactSpec) drop the bordered "pill" — the
+                    // icon + coloured word are enough; the border read as a
+                    // redundant label there.
+                    StatusIconLabel(status: item.status, bordered: !compactSpec)
+                    if showBadge {
+                        MediaBadgeCluster(isUpgrade: item.isUpgrade)
+                    }
                     if let client = item.downloadClient, !compactSpec {
                         DownloadClientLabel(name: client)
                     }
                     Spacer(minLength: 6)
+                    // List variant always shows the inline spec —
+                    // upgrade context lives in detail (one screen up).
                     if compactSpec {
-                        // Queue-row variant: spec inline on the
-                        // trailing edge, score still left of size
-                        // for left-to-right reading "quality · size
-                        // · +score".
                         inlineSpec
                     }
                 }
                 if !compactSpec {
-                    specLine(
-                        quality: item.quality,
-                        size: item.sizeTotal > 0 ? item.sizeTotal : nil,
-                        score: item.customFormatScore,
-                        isExisting: false
-                    )
+                    // Detail variant — one row per dimension
+                    // (Quality / Size / Score) in an aligned grid. For
+                    // a real upgrade we also pass the OLD values +
+                    // Formaty / Plik so the table renders the full diff
+                    // (arrows, second version, deltas). For a plain
+                    // "new" download we pass no OLD data and let the
+                    // table degrade to a label+value spec — same grid,
+                    // no arrows, no second version. Formats / filename
+                    // stay nil in that case because the surrounding
+                    // detail section renders its own CF-chip strip and
+                    // release-name block for non-upgrades.
+                    // Experiment: a real upgrade renders the extracted
+                    // side-by-side `UpgradeDiffView` (current file → incoming,
+                    // gained/lost format chips). Built from the `effective*`
+                    // values so Sonarr's side-channel `existingOverride` is
+                    // honoured. A plain "new" download (no OLD data) keeps the
+                    // degraded `UpgradeDiffTable` spec grid.
+                    Group {
+                        if willShowDiff {
+                            UpgradeDiffView(
+                                current: .init(
+                                    quality: effectiveExistingQuality,
+                                    score: effectiveExistingScore,
+                                    size: effectiveExistingSize,
+                                    formats: effectiveExistingFormats,
+                                    filename: effectiveExistingFilename
+                                ),
+                                incoming: .init(
+                                    quality: item.quality,
+                                    score: item.customFormatScore,
+                                    size: item.sizeTotal > 0 ? item.sizeTotal : nil,
+                                    formats: item.customFormats,
+                                    filename: item.releaseName
+                                ),
+                                showFilenames: true
+                            )
+                        } else {
+                            UpgradeDiffTable(
+                                newQuality: item.quality,
+                                newSize: item.sizeTotal > 0 ? item.sizeTotal : nil,
+                                newScore: item.customFormatScore,
+                                oldQuality: nil,
+                                oldSize: nil,
+                                oldScore: nil,
+                                newFormats: [],
+                                oldFormats: [],
+                                newFilename: nil,
+                                oldFilename: nil,
+                                tint: tint
+                            )
+                        }
+                    }
+                    // Nudge the facts grid down off the progress-bar
+                    // block so it doesn't read as glued to the bar.
+                    .padding(.top, 5)
                 }
             }
-            if willShowDiff {
-                ExistingFileDiffRow(
-                    existingQuality: effectiveExistingQuality,
-                    existingSize: effectiveExistingSize,
-                    existingScore: effectiveExistingScore,
-                    newScore: item.customFormatScore,
-                    newQuality: item.quality,
-                    newSize: item.sizeTotal > 0 ? item.sizeTotal : nil,
-                    tagsDiffer: tagsDiffer
-                )
-            }
+            // Progress bar BELOW the status/spec row (compact / queue
+            // variant only — detail surfaces show progress in their CTA).
+            progressBarWithPercent
         }
     }
 
     @ViewBuilder
     private var progressBarWithPercent: some View {
-        // No outer height padding — the bar's intrinsic 3pt is enough
-        // now that the % overlay is gone. The 18pt frame existed so
-        // the centred percent label had a vertical band to sit in;
-        // without the label it was just a thick whitespace cushion
-        // around a thin bar.
-        ThinProgressBar(progress: progress, tint: tint)
+        // Queue rows keep the full-width track bar, doubled to 6pt so it
+        // reads as a deliberate progress bar rather than a hairline. The
+        // detail drops it entirely — progress shows in the Resume/Pause CTA.
+        if compactSpec {
+            ThinProgressBar(progress: progress, tint: tint, height: 6)
+        }
     }
 
-    /// Trailing-edge spec for the compact queue-row variant. Same
-    /// content as `specLine` but condensed to fit next to the
-    /// status pill / client label on a single row.
+    /// Trailing-edge spec for the compact queue-row variant —
+    /// `quality · size · score` condensed to fit next to the status
+    /// pill / client label on a single row.
     @ViewBuilder
     private var inlineSpec: some View {
         HStack(spacing: 3) {
@@ -192,36 +241,6 @@ public struct DownloadProgressCard: View {
         }
         .lineLimit(1)
         .fixedSize()
-    }
-
-    /// `quality · size · score` row used both for the NEW spec line
-    /// in the card header and conceptually mirrored by
-    /// `ExistingFileDiffRow` for the OLD line. `isExisting` controls
-    /// the foreground weight — primary for the active download,
-    /// secondary for the existing file (rendered separately by
-    /// `ExistingFileDiffRow`; this helper is the NEW path only).
-    @ViewBuilder
-    private func specLine(quality: String?, size: Int64?, score: Int, isExisting: Bool) -> some View {
-        HStack(spacing: 4) {
-            if let q = quality, !q.isEmpty {
-                Text(q)
-                    .scaledFont(size: 11, weight: isExisting ? .regular : .medium)
-                    .foregroundStyle(isExisting ? AnyShapeStyle(.secondary) : AnyShapeStyle(.primary))
-            }
-            if let size, size > 0 {
-                if quality?.isEmpty == false {
-                    SeparatorDot()
-                }
-                Text(ByteCountFormatter.string(fromByteCount: size, countStyle: .file))
-                    .scaledFont(size: 11)
-                    .foregroundStyle(.secondary)
-            }
-            if score != 0 {
-                SeparatorDot()
-                ScoreLabel(score: score, size: 11)
-            }
-            Spacer(minLength: 0)
-        }
     }
 
     private var hasExistingMetadata: Bool {

@@ -38,7 +38,6 @@ public struct PosterMetadataRow<TrailingAccessory: View>: View {
     /// nothing meaningful to drill into.
     let disabled: Bool
 
-    @State private var isHovering = false
 
     public init(
         posterURL: URL?,
@@ -89,6 +88,13 @@ public struct PosterMetadataRow<TrailingAccessory: View>: View {
                         if let titleBadge {
                             titleBadge
                         }
+                        // Chevron telegraphs "tap to drill in" without
+                        // depending on hover — works on iOS (no hover)
+                        // and clarifies macOS rows too. Skipped on
+                        // disabled rows (no tap target).
+                        if !disabled {
+                            LinkChevron(size: 9)
+                        }
                     }
                     if !metadataSegments.isEmpty {
                         metadataLine
@@ -105,19 +111,13 @@ public struct PosterMetadataRow<TrailingAccessory: View>: View {
         }
         .buttonStyle(.plain)
         .disabled(disabled)
-        #if os(macOS)
-        // Same hover-tint signal both rows used to roll independently.
-        // Padding-horizontal 6 insets the highlight from the row edge —
-        // gives it a "selected card" feel rather than a full-bleed bar.
-        .background(
-            RoundedRectangle(cornerRadius: Tokens.Radius.card)
-                .fill(isHovering && !disabled ? Color.primary.opacity(0.06) : Color.clear)
-                .padding(.horizontal, 6)
-        )
-        .onHover { hovering in
-            withAnimation(.easeInOut(duration: 0.15)) { isHovering = hovering }
-        }
-        #endif
+        // Publish the row's hover state to the drill-in LinkChevron(s)
+        // inside (the title chevron + any trailing accessory chevron)
+        // so they light up on row hover, not on glyph hover.
+        .linkRowHover()
+        // Hover-tint dropped — chevron after the title now signals
+        // "tap to drill in" without depending on cursor state. Works
+        // identically on macOS (mouse) and iOS (touch).
     }
 
     @ViewBuilder

@@ -4,14 +4,15 @@ import SwiftUI
 import UserNotifications
 
 @MainActor
-public final class QueueViewModel: ObservableObject {
+@Observable
+public final class QueueViewModel {
     /// Per-source queue snapshot. Single source of truth; replaces the four
     /// `@Published var radarr/sonarr/lidarr/whisparr` properties we used to
     /// keep in sync by hand at every assignment site. Source.allCases lets
     /// loops iterate without naming each arr individually.
-    @Published public private(set) var queues: [QueueItem.Source: [QueueItem]] = [:]
+    public private(set) var queues: [QueueItem.Source: [QueueItem]] = [:]
     /// Per-source last-error string. Same shape as `queues`.
-    @Published public private(set) var errors: [QueueItem.Source: String] = [:]
+    public private(set) var errors: [QueueItem.Source: String] = [:]
 
     // Back-compat named accessors. Existing consumers (DetailView, status-bar
     // badge, history lookup) read these. Keep them as computed so the dict
@@ -24,12 +25,12 @@ public final class QueueViewModel: ObservableObject {
     public var sonarrError: String?   { errors[.sonarr] }
     public var lidarrError: String?   { errors[.lidarr] }
     public var whisparrError: String? { errors[.whisparr] }
-    @Published public private(set) var upcoming: [UpcomingItem] = []
-    @Published public private(set) var tonight: [UpcomingItem] = []
-    @Published public private(set) var needsYou: [NeedsYouItem] = []
-    @Published public private(set) var unreachableArrs: Set<QueueItem.Source> = []
+    public private(set) var upcoming: [UpcomingItem] = []
+    public private(set) var tonight: [UpcomingItem] = []
+    public private(set) var needsYou: [NeedsYouItem] = []
+    public private(set) var unreachableArrs: Set<QueueItem.Source> = []
     /// User clicked "+N more" on the Tonight banner. Reset every time the popover closes.
-    @Published public private(set) var tonightExpanded: Bool = false
+    public private(set) var tonightExpanded: Bool = false
 
     public func setTonightExpanded(_ expanded: Bool) { tonightExpanded = expanded }
 
@@ -51,32 +52,54 @@ public final class QueueViewModel: ObservableObject {
         queues.values.allSatisfy { $0.isEmpty }
     }
 
-    @Published public private(set) var health: HealthResult = .empty
-    @Published public private(set) var isLoading = false
+    public private(set) var health: HealthResult = .empty
+    public private(set) var isLoading = false
     /// Set once after the very first `refresh()` settles. The UI uses this to
     /// suppress the loading spinner on every subsequent poll — the previous
     /// rule (`!hasExistingData`) flashed the spinner whenever the queue
     /// happened to be empty, which on a healthy idle library was every
     /// background tick. Once true, we trust the existing rows to redraw with
     /// fresh values rather than tearing the surface down.
-    @Published public private(set) var hasLoadedOnce = false
-    @Published public private(set) var lastError: String?
+    public private(set) var hasLoadedOnce = false
+    public private(set) var lastError: String?
 
-    private let aggregator: QueueAggregator
+    private let aggregator: QueueDataProviding
     private let configStore: ConfigStore
     private let coalescer: NotificationCoalescer
     private var foregroundTimer: Timer?
     private var backgroundTimer: Timer?
     private var intervalObservers: Set<AnyCancellable> = []
     private var optimisticOverrides: [String: OptimisticOverride] = [:]
-    @Published public private(set) var isRefreshing = false
+    public private(set) var isRefreshing = false
     /// Set when `refresh()` is called while another refresh is mid-flight.
     /// The in-flight refresh's `defer` reads this and re-runs once so we
     /// never silently drop a trigger (the previous code's `guard !isRefreshing
     /// else { return }` was eating SignalR pushes that landed inside the
     /// ~half-second polling refreshes were taking).
     private var pendingRefresh = false
-    private var knownItemIDs: Set<String>?
+    /// Tracks which queue items have already been announced. Resilient to
+    /// transient per-arr fetch failures, unstable queue record ids, and — via
+    /// `loadNotificationTracker()` / `persistNotificationTracker()` —
+    /// **app relaunches**. See `QueueNotificationTracker`.
+    @ObservationIgnored
+    private lazy var notificationTracker = Self.loadNotificationTracker(from: notificationDefaults)
+
+    /// Where the notification cache is persisted. Defaults to `.standard`,
+    /// matching `ConfigStore`'s sandbox-container store.
+    private let notificationDefaults: UserDefaults
+    private static let notificationTrackerKey = "ArrBarr.notificationTrackerState"
+
+    private static func loadNotificationTracker(from defaults: UserDefaults) -> QueueNotificationTracker {
+        guard let data = defaults.data(forKey: notificationTrackerKey),
+              let tracker = try? JSONDecoder().decode(QueueNotificationTracker.self, from: data)
+        else { return QueueNotificationTracker() }
+        return tracker
+    }
+
+    private func persistNotificationTracker() {
+        guard let data = try? JSONEncoder().encode(notificationTracker) else { return }
+        notificationDefaults.set(data, forKey: Self.notificationTrackerKey)
+    }
 
     /// Per-arr counter of consecutive refresh cycles where the queue fetch failed.
     /// We mark an arr as "unreachable" only after 3 in a row to ride out single-cycle
@@ -107,23 +130,59 @@ public final class QueueViewModel: ObservableObject {
     /// into a debounced refresh. Polling stays as fallback.
     private let realtime: RealtimeManager
 
-    public init(configStore: ConfigStore = .shared) {
+    /// Process-wide shared view-model. Used by both the AppDelegate (status
+    /// bar badge updates) and the SwiftUI `MenuBarExtra` scene so they see
+    /// the same queue snapshot and don't double-poll.
+    public static let shared = QueueViewModel()
+
+    public init(
+        configStore: ConfigStore = .shared,
+        notificationDefaults: UserDefaults = .standard
+    ) {
         self.configStore = configStore
+        self.notificationDefaults = notificationDefaults
         self.aggregator = QueueAggregator(configStore: configStore)
         self.coalescer = NotificationCoalescer(configStore: configStore)
-
-        // Hold off setting `realtime`'s callback until `self` exists —
-        // we capture weakly to avoid the manager retaining the
-        // view-model. Coalesce bursts of queue events (Sonarr can
-        // emit several within milliseconds during an import) so we
-        // don't fan out N near-simultaneous HTTP refreshes.
+        // Hold off setting `realtime`'s callback until `self` exists — we
+        // capture weakly to avoid the manager retaining the view-model.
         let placeholder: @Sendable (RealtimeEvent) async -> Void = { _ in }
         self.realtime = RealtimeManager(onEvent: placeholder)
+        commonSetup(autostart: true)
+    }
 
-        startBackgroundPolling()
+    /// Test seam. Injects a fake `aggregator` and, with `autostart: false`,
+    /// suppresses the polling timers + realtime bootstrap so `refresh()` can be
+    /// driven deterministically without background fetches racing the test.
+    /// Production goes through the public `init` above.
+    init(
+        configStore: ConfigStore,
+        notificationDefaults: UserDefaults,
+        aggregator: QueueDataProviding,
+        autostart: Bool
+    ) {
+        self.configStore = configStore
+        self.notificationDefaults = notificationDefaults
+        self.aggregator = aggregator
+        self.coalescer = NotificationCoalescer(configStore: configStore)
+        let placeholder: @Sendable (RealtimeEvent) async -> Void = { _ in }
+        self.realtime = RealtimeManager(onEvent: placeholder)
+        commonSetup(autostart: autostart)
+    }
 
-        Task { [weak self] in
-            await self?.bootstrapRealtime()
+    /// Wires polling, realtime bootstrap and config-change observers shared by
+    /// both initializers. Split out so the public `init` stays *designated* —
+    /// its `.shared` default argument keeps MainActor isolation, which a
+    /// `convenience` delegation would lose.
+    private func commonSetup(autostart: Bool) {
+        // Coalesce bursts of queue events (Sonarr can emit several within
+        // milliseconds during an import) so we don't fan out N near-
+        // simultaneous HTTP refreshes.
+        if autostart {
+            startBackgroundPolling()
+
+            Task { [weak self] in
+                await self?.bootstrapRealtime()
+            }
         }
 
         configStore.$backgroundInterval
@@ -165,6 +224,14 @@ public final class QueueViewModel: ObservableObject {
             }
         }
         .store(in: &intervalObservers)
+
+        // A successful "Test Connection" in Settings posts this — refresh now
+        // so a freshly-saved key clears any stale per-arr error immediately.
+        NotificationCenter.default.publisher(for: .arrBarrConfigValidated)
+            .sink { [weak self] _ in
+                Task { [weak self] in await self?.refresh() }
+            }
+            .store(in: &intervalObservers)
     }
 
     deinit {
@@ -309,7 +376,7 @@ public final class QueueViewModel: ObservableObject {
             self.health = DemoMocks.health
             self.errors = [:]
             self.unreachableArrs = []
-            self.needsYou = Self.computeNeedsYou(queues: self.queues, health: DemoMocks.health)
+            self.needsYou = Self.computeNeedsYou(queues: self.queues, errors: [:], health: DemoMocks.health)
             self.lastError = nil
             return
         }
@@ -317,12 +384,11 @@ public final class QueueViewModel: ObservableObject {
         async let upcomingResult = aggregator.fetchUpcoming()
         async let healthResult = aggregator.fetchHealth()
         let (queue, upcoming, health) = await (queueResult, upcomingResult, healthResult)
-        let newQueues: [QueueItem.Source: [QueueItem]] = [
-            .radarr:   applyOverrides(to: queue.radarr),
-            .sonarr:   applyOverrides(to: queue.sonarr),
-            .lidarr:   applyOverrides(to: queue.lidarr),
-            .whisparr: applyOverrides(to: queue.whisparr),
-        ]
+        // If this refresh's task was cancelled (e.g. pull-to-refresh released,
+        // view torn down), the per-source fetches came back empty-with-no-error.
+        // Committing that would blank the queue — bail and keep all current
+        // state instead. The `defer` still resets the in-flight flags.
+        if Task.isCancelled { return }
         let newErrors: [QueueItem.Source: String] = Dictionary(uniqueKeysWithValues:
             [
                 (QueueItem.Source.radarr,   queue.radarrError),
@@ -331,14 +397,33 @@ public final class QueueViewModel: ObservableObject {
                 (.whisparr,                 queue.whisparrError),
             ].compactMap { source, msg in msg.map { (source, $0) } }
         )
-        notifyNewItems(queues: newQueues)
+        // Don't wipe a source's queue on a failed fetch: a flaky pull-to-
+        // refresh (or any transient network error) returns an empty list +
+        // an error string, which would otherwise blank the whole queue.
+        // Keep the last good data for any errored source and let the error
+        // surface separately (banner / unreachable state).
+        func freshOrKept(_ source: QueueItem.Source, _ fresh: [QueueItem]) -> [QueueItem] {
+            if newErrors[source] != nil { return self.queues[source] ?? [] }
+            return applyOverrides(to: fresh)
+        }
+        let newQueues: [QueueItem.Source: [QueueItem]] = [
+            .radarr:   freshOrKept(.radarr, queue.radarr),
+            .sonarr:   freshOrKept(.sonarr, queue.sonarr),
+            .lidarr:   freshOrKept(.lidarr, queue.lidarr),
+            .whisparr: freshOrKept(.whisparr, queue.whisparr),
+        ]
+        notifyNewItems(queues: newQueues, errors: newErrors)
         self.queues = newQueues
         self.errors = newErrors
-        self.upcoming = upcoming
-        self.tonight = Self.tonightSlice(from: upcoming, hours: configStore.tonightHours)
+        // Same keep-last-good guard for upcoming: a failed refresh returns an
+        // empty list, which would otherwise blank the Upcoming tab.
+        if !(upcoming.isEmpty && !newErrors.isEmpty) {
+            self.upcoming = upcoming
+            self.tonight = Self.tonightSlice(from: upcoming, hours: configStore.tonightHours)
+        }
         self.health = health
         self.unreachableArrs = updateUnreachable(errors: newErrors)
-        self.needsYou = Self.computeNeedsYou(queues: newQueues, health: health)
+        self.needsYou = Self.computeNeedsYou(queues: newQueues, errors: newErrors, health: health)
         self.lastError = nil
     }
 
@@ -352,17 +437,51 @@ public final class QueueViewModel: ObservableObject {
 
     static func computeNeedsYou(
         queues: [QueueItem.Source: [QueueItem]],
+        errors: [QueueItem.Source: String],
         health: HealthResult
     ) -> [NeedsYouItem] {
         // Iterate per Source.allCases (enum-declaration order) instead
         // of `queues.values` so the rendered "Needs you" list keeps a
         // stable Radarr → Sonarr → Lidarr → Whisparr order regardless
         // of dict hash order. Same content, deterministic surface.
-        QueueItem.Source.allCases
-            .lazy
-            .flatMap { queues[$0] ?? [] }
-            .filter { $0.status == .failed || $0.status == .warning }
-            .map(NeedsYouItem.init)
+        //
+        // Written as an explicit loop rather than a `.lazy.flatMap.filter
+        // .map(NeedsYouItem.init)` chain: that chain was the single most
+        // expensive expression to type-check in the whole package
+        // (~250 ms). The loop is equivalent and effectively free.
+        let problemLabel = String(localized: "Service problem", bundle: .module)
+        var result: [NeedsYouItem] = []
+        for source in QueueItem.Source.allCases {
+            // Queue items that need manual intervention.
+            for item in queues[source] ?? [] where item.status == .failed || item.status == .warning {
+                result.append(NeedsYouItem(item))
+            }
+            // Arr-level problems, grouped into ONE entry per source so an arr
+            // with several issues shows them stacked under a single row (e.g.
+            // "Sonarr" once, both problems beneath) instead of repeating the
+            // app name. Includes:
+            //  • a fetch error (ArrBarr couldn't reach the arr — explains a
+            //    stale/empty queue; unconfigured arrs don't reach here since
+            //    QueueAggregator swallows notConfigured/missingApiKey), and
+            //  • error-level health checks the arr itself reports (e.g.
+            //    "Download clients unavailable"). Benign notices/warnings stay
+            //    on the header badge so this list isn't drowned in noise.
+            var problems: [String] = []
+            if let error = errors[source] { problems.append(error) }
+            for record in health.records(for: source) where record.type?.lowercased() == "error" {
+                if let message = record.message, !message.isEmpty { problems.append(message) }
+            }
+            if !problems.isEmpty {
+                result.append(NeedsYouItem(
+                    arrIssue: source,
+                    id: "needsyou.issues.\(source.rawValue)",
+                    title: source.displayName,
+                    subtitle: problemLabel,
+                    detailLines: problems
+                ))
+            }
+        }
+        return result
     }
 
     /// Returns the set of arrs that have failed at least `unreachableThreshold` consecutive
@@ -411,18 +530,20 @@ public final class QueueViewModel: ObservableObject {
 
     // MARK: - Notifications
 
-    private func notifyNewItems(queues: [QueueItem.Source: [QueueItem]]) {
-        let allItems = Array(queues.values.joined())
-        let currentIDs = Set(allItems.map(\.id))
-
-        guard let known = knownItemIDs else {
-            knownItemIDs = currentIDs
-            return
-        }
-
-        let newItems = allItems.filter { !known.contains($0.id) }
-        knownItemIDs = currentIDs
-
+    /// Decides which newly-seen items warrant a banner. Errored arrs are passed
+    /// through so a transient empty result never re-notifies a still-queued
+    /// item — see `QueueNotificationTracker` for the full rationale.
+    private func notifyNewItems(
+        queues: [QueueItem.Source: [QueueItem]],
+        errors: [QueueItem.Source: String]
+    ) {
+        let newItems = notificationTracker.newItems(
+            perSource: queues,
+            errored: Set(errors.keys)
+        )
+        // Persist the updated cache so relaunches don't re-announce items that
+        // are still in the queue.
+        persistNotificationTracker()
         for item in newItems {
             let allowed: Bool = switch item.source {
             case .radarr: configStore.notifyRadarr
@@ -455,6 +576,7 @@ public final class QueueViewModel: ObservableObject {
     /// from the items' downloadIds.
     public func deleteAll(_ items: [QueueItem]) async {
         guard !items.isEmpty else { return }
+        guard StoreManager.shared.requirePro(.queueAction) else { return }
         do {
             try await aggregator.deleteAll(items)
             lastError = nil
@@ -465,6 +587,7 @@ public final class QueueViewModel: ObservableObject {
     }
 
     private func runAction(_ action: QueueAggregator.Action, on item: QueueItem) async {
+        guard StoreManager.shared.requirePro(.queueAction) else { return }
         do {
             try await aggregator.perform(action, on: item)
             lastError = nil
@@ -500,16 +623,46 @@ public final class QueueViewModel: ObservableObject {
 }
 
 public struct NeedsYouItem: Identifiable, Equatable {
-    public let item: QueueItem
+    public let id: String
+    public let source: QueueItem.Source
+    public let title: String
+    /// Short headline pill — for a queue item the status name (Failed /
+    /// Manual import required); for an arr-level issue a generic label.
+    public let subtitle: String
+    /// The *why* rendered under the headline so the user can act without
+    /// drilling in — the arr's status messages, or the error/health text.
+    public let detailLines: [String]
+    /// The underlying queue item when this row represents one; `nil` for
+    /// arr-level issues (connection / health problems) that have no queue row.
+    /// Consumers use it to drill into the item's detail — arr-issue rows fall
+    /// back to opening the arr's queue page instead.
+    public let item: QueueItem?
 
-    public init(_ item: QueueItem) { self.item = item }
-
-    public var id: String { "needsyou.\(item.id)" }
-    public var source: QueueItem.Source { item.source }
-    public var title: String { item.title }
-    public var subtitle: String {
-        item.status == .warning
+    public init(_ item: QueueItem) {
+        self.item = item
+        self.id = "needsyou.\(item.id)"
+        self.source = item.source
+        self.title = item.title
+        self.subtitle = item.status == .warning
             ? String(localized: "Manual import required", bundle: .module)
             : item.status.displayName
+        self.detailLines = item.statusMessages
+    }
+
+    /// An arr-level problem (couldn't reach the service, or the arr reports an
+    /// error-level health check) rather than a single stuck download.
+    public init(
+        arrIssue source: QueueItem.Source,
+        id: String,
+        title: String,
+        subtitle: String,
+        detailLines: [String]
+    ) {
+        self.item = nil
+        self.id = id
+        self.source = source
+        self.title = title
+        self.subtitle = subtitle
+        self.detailLines = detailLines
     }
 }

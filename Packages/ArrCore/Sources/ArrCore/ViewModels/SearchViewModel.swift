@@ -1,13 +1,14 @@
 import Foundation
-import Combine
+import Observation
 
 @MainActor
-public final class SearchViewModel: ObservableObject {
-    @Published var query = ""
-    @Published var radarrResults: [SearchResult] = []
-    @Published var sonarrResults: [SearchResult] = []
-    @Published var lidarrResults: [SearchResult] = []
-    @Published var whisparrResults: [SearchResult] = []
+@Observable
+public final class SearchViewModel {
+    var query = ""
+    var radarrResults: [SearchResult] = []
+    var sonarrResults: [SearchResult] = []
+    var lidarrResults: [SearchResult] = []
+    var whisparrResults: [SearchResult] = []
     /// Single sticky flag — true from the first keystroke until the
     /// final fetch (the one matching the latest query) returns. While
     /// the user keeps typing, in-flight fetches get superseded and
@@ -15,14 +16,14 @@ public final class SearchViewModel: ObservableObject {
     /// this stays `true` continuously and the view shows ONE stable
     /// loader instead of flickering between partial results and
     /// spinner per keystroke.
-    @Published var isSearching = false
-    @Published var errorMessage: String?
+    var isSearching = false
+    var errorMessage: String?
     /// Parsed form of `query` — `.ref(_:)` when the user typed an
     /// external-id prefix (`tmdb:N`, `imdb:ttN`, …), `.text(_)`
     /// otherwise. Owned by the VM so the sorter and the per-source
     /// clients all see the same interpretation; parsed once per
     /// `onQueryChange`.
-    @Published private(set) var parsedInput: SearchInput = .text("")
+    private(set) var parsedInput: SearchInput = .text("")
 
     /// Bumped on every `onQueryChange`. The async search task carries
     /// the generation it was launched with; only the task whose
@@ -33,12 +34,12 @@ public final class SearchViewModel: ObservableObject {
     private var searchGeneration: Int = 0
 
     // Add panel state
-    @Published var qualityProfiles: [QualityProfile] = []
-    @Published var metadataProfiles: [MetadataProfile] = []
-    @Published var rootFolders: [RootFolder] = []
-    @Published var isLoadingOptions = false
-    @Published var addError: String?
-    @Published var isAdding = false
+    var qualityProfiles: [QualityProfile] = []
+    var metadataProfiles: [MetadataProfile] = []
+    var rootFolders: [RootFolder] = []
+    var isLoadingOptions = false
+    var addError: String?
+    var isAdding = false
 
     private var searchTask: Task<Void, Never>?
     private var radarrClient: SearchClient?
@@ -231,6 +232,7 @@ public final class SearchViewModel: ObservableObject {
 
     func addScene(_ result: SearchResult, qualityProfileId: Int, rootFolderPath: String,
                   monitor: RadarrMonitorMode = .movieOnly) async {
+        guard StoreManager.shared.requirePro(.addTitle) else { return }
         guard let client = whisparrClient else { return }
         isAdding = true; addError = nil
         defer { isAdding = false }
@@ -245,6 +247,7 @@ public final class SearchViewModel: ObservableObject {
 
     func addMovie(_ result: SearchResult, qualityProfileId: Int, rootFolderPath: String,
                   monitor: RadarrMonitorMode) async {
+        guard StoreManager.shared.requirePro(.addTitle) else { return }
         guard let client = radarrClient else { return }
         isAdding = true; addError = nil
         defer { isAdding = false }
@@ -260,6 +263,7 @@ public final class SearchViewModel: ObservableObject {
     func addSeries(_ result: SearchResult, qualityProfileId: Int, rootFolderPath: String,
                    monitor: SonarrMonitorMode, seriesType: SonarrSeriesType,
                    seasonFolder: Bool) async {
+        guard StoreManager.shared.requirePro(.addTitle) else { return }
         guard let client = sonarrClient else { return }
         isAdding = true; addError = nil
         defer { isAdding = false }
@@ -275,6 +279,7 @@ public final class SearchViewModel: ObservableObject {
 
     func addArtist(_ result: SearchResult, qualityProfileId: Int, metadataProfileId: Int,
                    rootFolderPath: String) async {
+        guard StoreManager.shared.requirePro(.addTitle) else { return }
         guard let client = lidarrClient else { return }
         isAdding = true; addError = nil
         defer { isAdding = false }

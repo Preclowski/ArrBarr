@@ -1,8 +1,8 @@
 import SwiftUI
 
 struct QueueTabContent: View {
-    @ObservedObject var viewModel: QueueViewModel
-    @ObservedObject var searchViewModel: SearchViewModel
+    var viewModel: QueueViewModel
+    var searchViewModel: SearchViewModel
     @EnvironmentObject var configStore: ConfigStore
 
     @Binding var queueFilter: String
@@ -32,52 +32,7 @@ struct QueueTabContent: View {
         // arr search for library / add-new hits (rendered as separate
         // sections below the queue when the filter is non-empty).
         ZStack(alignment: .bottom) {
-            ScrollView {
-                Group {
-                    if viewModel.isLoading {
-                        VStack(spacing: 10) {
-                            ProgressView()
-                                .controlSize(.small)
-                            Text("Loading…", bundle: .module)
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 32)
-                    } else {
-                        // Search-mode header — back chevron + screen
-                        // title ("Wyszukiwanie" in PL). Mirrors the
-                        // DetailView header pattern so the user
-                        // reads the search surface as a navigation
-                        // level, not just a filtered queue.
-                        if isFiltering {
-                            HStack(spacing: 6) {
-                                FloatingBackButton {
-                                    queueFilter = ""
-                                }
-                                Text("Searching", bundle: .module)
-                                    .scaledFont(size: 15, weight: .semibold)
-                                    .foregroundStyle(.primary)
-                                Spacer()
-                            }
-                            .padding(.horizontal, 12)
-                            .padding(.top, 8)
-                            .padding(.bottom, 2)
-                            .transition(.opacity.combined(with: .scale(scale: 0.95)))
-                            .animation(.easeInOut(duration: 0.18), value: isFiltering)
-                        }
-                        queueBody
-                    }
-                }
-                // Leave room for the floating bar so the last row
-                // doesn't sit under it. ~58pt = bar (~38pt) + padding
-                // (~20pt). Filters live INSIDE the bar now (right
-                // gutter), so no extra reserved height for chips.
-                .padding(.bottom, 58)
-            }
-            .scrollBounceBehavior(.basedOnSize)
-            .frame(maxHeight: .infinity)
-
+            queueOrSearch
             queueFilterBar
                 .padding(.horizontal, 10)
                 .padding(.bottom, 10)
@@ -101,79 +56,87 @@ struct QueueTabContent: View {
         !queueFilter.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
-    private var configuredSources: [QueueItem.Source] {
-        QueueItem.Source.allCases.filter { isConfigured($0) }
-    }
-
-    /// Sources covered by the current scope — narrowed to a single
-    /// arr when the user picked one, otherwise every configured arr.
-    /// Drives both the per-kind counts and the type-grouped rendering.
-    private var scopedSources: [QueueItem.Source] {
-        queueScope.map { [$0] } ?? configuredSources
-    }
-
-    /// Raw queue rows for a source matching the substring filter,
-    /// pre-grouping. Used for both rendering (`entries(for:)` groups
-    /// these for Sonarr packs) and per-kind counts.
-    private func filteredQueueItems(for source: QueueItem.Source) -> [QueueItem] {
-        viewModel.items(for: source).filter(matchesFilter)
-    }
-
-    /// Library hits for a source — search results that the arr
-    /// already owns. Empty when the search hasn't fired yet.
-    private func libraryResults(for source: QueueItem.Source) -> [SearchResult] {
-        rawSearchResults(for: source).filter { $0.inLibraryArrId != nil }
-    }
-
-    /// Add-new candidates for a source — search results NOT in the
-    /// arr's library.
-    private func newResults(for source: QueueItem.Source) -> [SearchResult] {
-        rawSearchResults(for: source).filter { $0.inLibraryArrId == nil }
-    }
-
-    /// Raw, unfiltered search results per source — counts need the
-    /// un-narrowed pool.
-    private func rawSearchResults(for source: QueueItem.Source) -> [SearchResult] {
-        switch source {
-        case .radarr:   return searchViewModel.radarrResults
-        case .sonarr:   return searchViewModel.sonarrResults
-        case .lidarr:   return searchViewModel.lidarrResults
-        case .whisparr: return searchViewModel.whisparrResults
+    /// Non-filtering → native `List` (QueueListView, native swipe). Filtering →
+    /// search surface in a ScrollView. Initial load → spinner.
+    @ViewBuilder
+    private var queueOrSearch: some View {
+        if viewModel.isLoading {
+            ScrollView {
+                loadingIndicator
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 32)
+                    .padding(.bottom, 58)
+            }
+            .scrollBounceBehavior(.basedOnSize)
+            .frame(maxHeight: .infinity)
+        } else if isFiltering {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    searchModeHeader
+                    searchResults
+                    if searchAvailable, searchViewModel.isSearching {
+                        loadingIndicator
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 24)
+                    }
+                }
+                .padding(.bottom, 58)
+            }
+            .scrollBounceBehavior(.basedOnSize)
+            .frame(maxHeight: .infinity)
+        } else {
+            VStack(spacing: 0) {
+                // "Next week" banner pinned above the List (full-width — it's a
+                // normal view, not a List row, so no macOS row-inset margins).
+                if queueScope == nil, configStore.showTonight, !viewModel.tonight.isEmpty {
+                    tonightBanner
+                        .padding(.vertical, 6)
+                }
+                QueueListView(
+                    viewModel: viewModel,
+                    scope: queueScope,
+                    onShowDetail: { item in
+                        withAnimation(.smooth(duration: 0.22)) { detailItem = item }
+                    },
+                    onNeedsYouTap: { needs in openNeedsYouQueue(needs) },
+                    onShowHistory: { source in historySource = source }
+                )
+                // Keep the last row clear of the floating filter bar.
+                .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 58) }
+            }
         }
     }
 
+    private var loadingIndicator: some View {
+        VStack(spacing: 10) {
+            ProgressView().controlSize(.small)
+            Text("Loading…", bundle: .module)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+    }
 
     @ViewBuilder
-    private var queueBody: some View {
-        if !isFiltering {
-            // Default surface — per-arr queue sections, tonight /
-            // needsYou banners. No search axis to encode yet.
-            queueSections
-        } else {
-            // Search surface — queue rows that still match the
-            // substring filter, then a single merged block of
-            // library + new search hits sorted by relevance with
-            // Bayesian-quality tie-breaking. No type/sort knobs:
-            // search is keyword lookup with one right answer, the
-            // Discover tab is where listing-style filters live.
-            searchResults
+    private var searchModeHeader: some View {
+        HStack(spacing: 6) {
+            FloatingBackButton { queueFilter = "" }
+            Text("Searching", bundle: .module)
+                .scaledFont(size: 15, weight: .semibold)
+                .foregroundStyle(.primary)
+            Spacer()
         }
-        // Centred loading state — fires whenever a search is in
-        // flight. Same "Loading…" copy + spinner the dropped Search
-        // tab used; keeps the in-window feedback (not just a tiny
-        // spinner in the bar) so the user knows arr lookups are
-        // actually running.
-        if isFiltering, searchAvailable, searchViewModel.isSearching {
-            VStack(spacing: 10) {
-                ProgressView()
-                    .controlSize(.small)
-                Text("Loading…", bundle: .module)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 24)
-        }
+        .padding(.horizontal, 12)
+        .padding(.top, 8)
+        .padding(.bottom, 2)
+    }
+
+    private func openNeedsYouQueue(_ needs: NeedsYouItem) {
+        let cfg = configStore.config(for: needs.source.serviceKind)
+        guard let url = ArrActivityURLBuilder.queueURL(forBase: cfg.baseURL),
+              let scheme = url.scheme?.lowercased(),
+              scheme == "http" || scheme == "https"
+        else { return }
+        PlatformURLOpener.open(url)
     }
 
     /// The one search-results surface. Queue rows that still match
@@ -186,55 +149,15 @@ struct QueueTabContent: View {
     /// IS the search result list.
     @ViewBuilder
     private var searchResults: some View {
-        let queueRows: [QueueRowEntry] = scopedSources.flatMap { entries(for: $0) }
-        let rawLibrary = scopedSources.flatMap { libraryResults(for: $0) }
-        let library = SearchResultDedup.removingQueueDuplicates(
-            libraryResults: rawLibrary,
-            queueRows: queueRows
+        // Delegates to the shared surface so macOS and iOS render search
+        // identically. Scope chips still narrow via `queueScope`.
+        QueueSearchResultsView(
+            viewModel: viewModel,
+            searchViewModel: searchViewModel,
+            scope: queueScope,
+            onSelectQueueItem: { detailItem = $0 },
+            onSelectAddResult: { searchResult = $0 }
         )
-        let newOnes = scopedSources.flatMap { newResults(for: $0) }
-        // Use the VM's parsed input — recognises `tmdb:N` / `imdb:ttN`
-        // refs end-to-end. For plain-text queries this is equivalent
-        // to `.text(queueFilter)`, but routing through the VM keeps
-        // the sorter and the per-source clients on the same input.
-        let combined = SearchRelevance.sortedByRelevance(library + newOnes, input: searchViewModel.parsedInput)
-
-        VStack(alignment: .leading, spacing: 0) {
-            compactQueueRowsList(entries: queueRows)
-            ForEach(combined) { r in searchResultRow(r) }
-        }
-    }
-
-    /// Compact-row variant of `queueRowsList` — emits `QueueSearchRow`
-    /// instead of `QueueRowView`. Used wherever queue rows show up
-    /// inside a search-driven layout.
-    @ViewBuilder
-    private func compactQueueRowsList(entries: [QueueRowEntry]) -> some View {
-        VStack(spacing: 2) {
-            ForEach(entries) { entry in
-                switch entry {
-                case .single(let item):
-                    QueueSearchRow(item: item) { detailItem = item }
-                case .group(let group):
-                    QueueSearchRow(item: group.representative) { detailItem = group.representative }
-                }
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func searchResultRow(_ r: SearchResult) -> some View {
-        SearchResultRow(result: r) {
-            // Tap routing: in-library → detail, not-in-library →
-            // local add-panel overlay (which is the queue-tab's own
-            // override — chat / library cards route via
-            // SearchAddRequest instead).
-            if r.inLibraryArrId != nil {
-                DetailRequest.tap(r)
-            } else {
-                searchResult = r
-            }
-        }
     }
 
     private var queueFilterBar: some View {
@@ -291,145 +214,6 @@ struct QueueTabContent: View {
         .glassyFloatingBar()
     }
 
-    /// Substring-match helper — case-insensitive, diacritic-insensitive
-    /// (so „Pożeracz" matches „pozeracz"). Applied to title + episode
-    /// title so an episode-specific filter still catches season packs.
-    private func matchesFilter(_ item: QueueItem) -> Bool {
-        let q = queueFilter.trimmingCharacters(in: .whitespacesAndNewlines)
-        if q.isEmpty { return true }
-        let haystack = [item.title, item.episodeTitle ?? "", item.subtitle ?? ""]
-            .joined(separator: " ")
-        return haystack.range(of: q, options: [.caseInsensitive, .diacriticInsensitive]) != nil
-    }
-
-    private enum SectionEntry: Hashable {
-        case tonight
-        case needsYou
-        case arr(QueueItem.Source)
-    }
-
-    private var visibleSections: [SectionEntry] {
-        let filtering = !queueFilter.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        return configStore.arrOrder.compactMap { key in
-            // Tonight / Needs-You are status-curated sections — they
-            // don't read as "search results" when the user is typing.
-            // Hide them while a filter is active so the surface
-            // collapses to just the matching queue rows.
-            if key == ConfigStore.tonightOrderKey {
-                guard !filtering, queueScope == nil,
-                      configStore.showTonight && !viewModel.tonight.isEmpty else { return nil }
-                return .tonight
-            }
-            if key == ConfigStore.needsYouOrderKey {
-                guard !filtering, queueScope == nil,
-                      configStore.showNeedsYou && !viewModel.needsYou.isEmpty else { return nil }
-                return .needsYou
-            }
-            if let source = QueueItem.Source(rawValue: key), isConfigured(source) {
-                // Scope chip in the filter bar narrows the sections —
-                // pick `All` (nil) or a specific arr.
-                if let scope = queueScope, scope != source { return nil }
-                // Hide arr sections that don't have a matching row.
-                // Showing an empty "Sonarr (0)" header — whether
-                // during a filter or in the default view — adds
-                // noise; the user wants to see only sources that
-                // actually have something queued right now.
-                if entries(for: source).isEmpty { return nil }
-                return .arr(source)
-            }
-            return nil
-        }
-    }
-
-    private var queueSections: some View {
-        let entries = visibleSections
-        return VStack(alignment: .leading, spacing: 0) {
-            ForEach(Array(entries.enumerated()), id: \.element) { index, entry in
-                if index > 0 {
-                    Divider().padding(.horizontal, 12)
-                }
-                sectionView(for: entry)
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func sectionView(for entry: SectionEntry) -> some View {
-        switch entry {
-        case .tonight:
-            tonightBanner
-        case .needsYou:
-            NeedsYouSectionView(
-                items: viewModel.needsYou,
-                isCollapsed: configStore.isCollapsed(ConfigStore.needsYouOrderKey),
-                onToggleCollapse: {
-                    withAnimation(.smooth(duration: 0.22)) {
-                        configStore.toggleCollapsed(ConfigStore.needsYouOrderKey)
-                    }
-                },
-                onItemTap: { needs in
-                    let cfg = configStore.config(for: needs.source.serviceKind)
-                    guard let url = ArrActivityURLBuilder.queueURL(forBase: cfg.baseURL),
-                          let scheme = url.scheme?.lowercased(),
-                          scheme == "http" || scheme == "https"
-                    else { return }
-                    PlatformURLOpener.open(url)
-                }
-            )
-            .padding(.vertical, 12)
-        case .arr(let source):
-            let arrError = viewModel.error(for: source)
-            QueueSectionView(
-                title: source.displayName,
-                symbol: source.symbol,
-                entries: entries(for: source),
-                error: arrError,
-                health: health(for: source),
-                isCollapsed: arrError == nil ? configStore.isCollapsed(source) : false,
-                onToggleCollapse: arrError == nil ? {
-                    withAnimation(.smooth(duration: 0.22)) {
-                        configStore.toggleCollapsed(source)
-                    }
-                } : nil,
-                viewModel: viewModel,
-                onShowHistory: arrError == nil ? { historySource = source } : nil,
-                onShowDetail: { item in
-                    withAnimation(.smooth(duration: 0.22)) { detailItem = item }
-                },
-                // Skip the duplicate "Sonarr" header when the user
-                // has explicitly scoped to this source via the chip
-                // above — the chip already labels it.
-                hideHeader: queueScope == source
-            )
-            .padding(.vertical, 12)
-        }
-    }
-
-    private func isConfigured(_ source: QueueItem.Source) -> Bool {
-        switch source {
-        case .sonarr: return sonarrConfigured
-        case .radarr: return radarrConfigured
-        case .lidarr: return lidarrConfigured
-        case .whisparr: return whisparrConfigured
-        }
-    }
-
-    /// Sonarr items get bucketed by downloadId so a season pack collapses
-    /// into one row matching the underlying download. Radarr / Lidarr stay
-    /// one-row-per-item; grouping is sonarr-only for now.
-    private func entries(for source: QueueItem.Source) -> [QueueRowEntry] {
-        let raw = viewModel.items(for: source).filter(matchesFilter)
-        switch source {
-        case .sonarr: return QueueGrouping.group(raw)
-        default:      return raw.map { .single($0) }
-        }
-    }
-
-    private func health(for source: QueueItem.Source) -> [ArrHealthRecord] {
-        guard configStore.showIndexerIssues else { return [] }
-        return viewModel.health.records(for: source)
-    }
-
     // MARK: - Tonight banner
 
     private var tonightBanner: some View {
@@ -443,92 +227,95 @@ struct QueueTabContent: View {
         let visible = viewModel.tonightExpanded ? items : Array(items.prefix(4))
         let overflow = items.count - visible.count
         let collapsed = configStore.isCollapsed(ConfigStore.tonightOrderKey)
-        return HStack(alignment: .top, spacing: 8) {
+        return HStack(alignment: .top, spacing: 6) {
             // Section chevron mirroring QueueSectionView — keeps the
             // banner aligned with the rest of the popover's collapsible
             // sections (Sonarr / Radarr / Needs you) instead of being
             // the one panel you can't tuck away.
-            Button {
-                withAnimation(.smooth(duration: 0.22)) {
-                    configStore.toggleCollapsed(ConfigStore.tonightOrderKey)
-                }
-            } label: {
-                Image(systemName: "chevron.right")
-                    .scaledFont(size: 9, weight: .semibold)
-                    .foregroundStyle(.tertiary)
-                    .rotationEffect(.degrees(collapsed ? 0 : 90))
-                    .frame(width: 10, height: 10)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .padding(.top, 3)
-            .accessibilityLabel(Text(collapsed ? "Expand section" : "Collapse section", bundle: .module))
-            Image(systemName: "moon.stars.fill")
-                .scaledFont(size: 13)
-                .foregroundStyle(.purple)
-                .padding(.top, 1)
+            tonightChevron(collapsed: collapsed)
             VStack(alignment: .leading, spacing: 2) {
-                Text("Next week", bundle: .module)
-                    .scaledFont(size: 11, weight: .semibold)
-                    .foregroundStyle(.secondary)
-                    .onTapGesture {
-                        withAnimation(.smooth(duration: 0.22)) {
-                            configStore.toggleCollapsed(ConfigStore.tonightOrderKey)
-                        }
-                    }
+                // Moon glyph inlined with the header text instead of a
+                // separate left-column icon — content rows now start
+                // right after the chevron, matching the indent in
+                // Needs You / queue sections.
+                tonightHeaderLabel
                 if !collapsed {
-                ForEach(visible) { item in
-                    Button {
-                        openUpcomingDetail(item)
-                    } label: {
-                        HStack(spacing: 4) {
-                            Text(Self.tonightTimeFormatter.string(from: item.airDate))
-                                .scaledFont(size: 11, weight: .medium, monospacedDigit: true)
-                                .foregroundStyle(.secondary)
-                            Image(systemName: item.source.symbol)
-                                .scaledFont(size: 10)
-                                .foregroundStyle(.secondary)
-                            Text(item.title)
-                                .scaledFont(size: 12, weight: .medium)
-                                .lineLimit(1)
-                            if let subtitle = item.subtitle, !subtitle.isEmpty {
-                                Text(subtitle)
-                                    .scaledFont(size: 11)
-                                    .foregroundStyle(.tertiary)
-                                    .lineLimit(1)
-                            }
-                            Spacer(minLength: 0)
-                        }
-                        .contentShape(Rectangle())
+                    ForEach(visible) { item in
+                        TonightBannerRow(
+                            item: item,
+                            timeString: Self.tonightTimeFormatter.string(from: item.airDate),
+                            onTap: { openUpcomingDetail(item) }
+                        )
                     }
-                    .buttonStyle(.plain)
-                    .disabled(item.entityId == nil)
-                }
-                if overflow > 0 && !viewModel.tonightExpanded {
-                    Button {
-                        withAnimation(.smooth(duration: 0.22)) {
-                            viewModel.setTonightExpanded(true)
-                        }
-                        scheduleBannerCollapse()
-                    } label: {
-                        HStack(spacing: 3) {
-                            Text("Show more", bundle: .module)
-                                .scaledFont(size: 10)
-                            Image(systemName: "chevron.down")
-                                .scaledFont(size: 9, weight: .medium)
-                        }
-                        .foregroundStyle(.tertiary)
+                    if overflow > 0 && !viewModel.tonightExpanded {
+                        tonightShowMoreButton
                     }
-                    .buttonStyle(.plain)
-                    .padding(.top, 2)
                 }
-                } // !collapsed
             }
             Spacer()
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
         .background(Color.purple.opacity(0.06))
+    }
+
+    /// Collapse/expand chevron for the banner — rotates 0°→90° on expand,
+    /// mirroring QueueSectionView's section headers.
+    private func tonightChevron(collapsed: Bool) -> some View {
+        Button {
+            withAnimation(.smooth(duration: 0.22)) {
+                configStore.toggleCollapsed(ConfigStore.tonightOrderKey)
+            }
+        } label: {
+            Image(systemName: "chevron.right")
+                .scaledFont(size: 9, weight: .semibold)
+                .foregroundStyle(.tertiary)
+                .rotationEffect(.degrees(collapsed ? 0 : 90))
+                .frame(width: 10, height: 10)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .padding(.top, 3)
+        .accessibilityLabel(Text(collapsed ? "Expand section" : "Collapse section", bundle: .module))
+    }
+
+    /// "🌙 Next week" header — tapping it toggles collapse, same as the chevron.
+    private var tonightHeaderLabel: some View {
+        HStack(spacing: 5) {
+            Image(systemName: "moon.stars.fill")
+                .scaledFont(size: 11)
+                .foregroundStyle(.purple)
+            Text("Next week", bundle: .module)
+                .scaledFont(size: 11, weight: .semibold)
+                .foregroundStyle(.secondary)
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            withAnimation(.smooth(duration: 0.22)) {
+                configStore.toggleCollapsed(ConfigStore.tonightOrderKey)
+            }
+        }
+    }
+
+    /// Overflow expander — reveals the hidden upcoming rows and arms the
+    /// 30s auto-collapse timer.
+    private var tonightShowMoreButton: some View {
+        Button {
+            withAnimation(.smooth(duration: 0.22)) {
+                viewModel.setTonightExpanded(true)
+            }
+            scheduleBannerCollapse()
+        } label: {
+            HStack(spacing: 3) {
+                Text("Show more", bundle: .module)
+                    .scaledFont(size: 10)
+                Image(systemName: "chevron.down")
+                    .scaledFont(size: 9, weight: .medium)
+            }
+            .foregroundStyle(.tertiary)
+        }
+        .buttonStyle(.plain)
+        .padding(.top, 2)
     }
 
     /// Sends the tonight-banner item into the detail-view pipeline.
@@ -569,4 +356,38 @@ struct QueueTabContent: View {
         f.timeStyle = .short
         return f
     }()
+}
+
+/// A single row in the "Next week" banner: air time, source glyph, title,
+/// optional subtitle. Extracted from `tonightBanner`'s `ForEach` closure so
+/// the banner getter stays under the 100ms type-check warn threshold.
+private struct TonightBannerRow: View {
+    let item: UpcomingItem
+    let timeString: String
+    let onTap: () -> Void
+
+    var body: some View {
+        Button(action: onTap) {
+            HStack(spacing: 4) {
+                Text(timeString)
+                    .scaledFont(size: 11, weight: .medium, monospacedDigit: true)
+                    .foregroundStyle(.secondary)
+                ServiceIcon(source: item.source, size: 10)
+                    .foregroundStyle(.secondary)
+                Text(item.title)
+                    .scaledFont(size: 12, weight: .medium)
+                    .lineLimit(1)
+                if let subtitle = item.subtitle, !subtitle.isEmpty {
+                    Text(subtitle)
+                        .scaledFont(size: 11)
+                        .foregroundStyle(.tertiary)
+                        .lineLimit(1)
+                }
+                Spacer(minLength: 0)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(item.entityId == nil)
+    }
 }

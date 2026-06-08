@@ -44,7 +44,7 @@ public struct TooltipActionButton: View {
                 Text(LocalizedStringKey(labelKey), bundle: .module)
                     .scaledFont(size: 11, weight: .medium)
             }
-            .foregroundStyle(tint.opacity(isHovering ? 1.0 : 0.65))
+            .foregroundStyle(tint.opacity(isHovering ? 1.0 : 0.82))
             .padding(.horizontal, fillsWidth ? 0 : 10)
             .frame(maxWidth: fillsWidth ? .infinity : nil)
             .frame(height: 24)
@@ -95,8 +95,16 @@ public struct IconButton: View {
         Button(action: action) {
             Image(systemName: symbol)
                 .scaledFont(size: 13, weight: .medium)
-                .foregroundStyle(isHovering ? (tint ?? .primary) : .secondary)
+                // Resting `.secondary` read too dim/muddy — a light primary
+                // tint is clearly visible without shouting; hover goes full.
+                .foregroundStyle(isHovering ? (tint ?? .primary) : Color.primary.opacity(0.72))
                 .frame(width: 22, height: 22)
+                // Clear hover affordance — a subtle rounded highlight behind
+                // the glyph (the colour delta alone was too faint to read).
+                .background(
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill((tint ?? Color.primary).opacity(isHovering ? 0.14 : 0))
+                )
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -176,6 +184,48 @@ public extension View {
             )
     }
 }
+
+// MARK: - Poster play/pause control (macOS queue rows)
+
+#if os(macOS)
+/// Circular pause/resume control centered over a queue row's poster. The
+/// macOS queue row dropped its trailing icon cluster (and Delete entirely) —
+/// pause/resume is now the single inline action and lives on the poster, the
+/// most direct target for "stop/continue this thing".
+public struct PosterPlayPauseButton: View {
+    let isPaused: Bool
+    let onPause: () -> Void
+    let onResume: () -> Void
+    var diameter: CGFloat
+
+    public init(isPaused: Bool, diameter: CGFloat = 26,
+                onPause: @escaping () -> Void, onResume: @escaping () -> Void) {
+        self.isPaused = isPaused
+        self.diameter = diameter
+        self.onPause = onPause
+        self.onResume = onResume
+    }
+
+    public var body: some View {
+        Button(action: isPaused ? onResume : onPause) {
+            ZStack {
+                Circle().fill(Color.black.opacity(0.55))
+                Circle().stroke(Color.white.opacity(0.25), lineWidth: 0.5)
+                Image(systemName: isPaused ? "play.fill" : "pause.fill")
+                    .font(.system(size: diameter * 0.42, weight: .bold))
+                    .foregroundStyle(.white)
+                    // Nudge the play triangle to its optical centre.
+                    .offset(x: isPaused ? diameter * 0.04 : 0)
+            }
+            .frame(width: diameter, height: diameter)
+            .shadow(color: .black.opacity(0.35), radius: 3, y: 1)
+            .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .help(isPaused ? Text("Resume", bundle: .module) : Text("Pause", bundle: .module))
+    }
+}
+#endif
 
 // MARK: - Action overflow menu
 

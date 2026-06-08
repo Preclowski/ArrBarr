@@ -12,6 +12,14 @@
 	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>en</string>
+		<string>de</string>
+		<string>es</string>
+		<string>fr</string>
+		<string>pl</string>
+	</array>
 	<key>CFBundleName</key>
 	<string>ArrBarr</string>
 	<key>CFBundlePackageType</key>
@@ -26,19 +34,13 @@
 	<true/>
 	<key>NSAppTransportSecurity</key>
 	<dict>
-		<!-- ArrBarr connects to user-configured self-hosted services
-		     (Sonarr/Radarr/Lidarr/MCP/etc.) which often run over plain HTTP
-		     on LAN IPs (192.168.x.x, 10.x.x.x). NSAllowsLocalNetworking
-		     only covers .local hostnames and loopback; LAN IP literals are
-		     not. Since the user explicitly types each URL into Settings,
-		     they own the trust decision — we don't gain anything by also
-		     enforcing ATS on top. Not App Store distributed. -->
-		<key>NSAllowsArbitraryLoads</key>
-		<true/>
+		<!-- Allow plain-HTTP only to local/private hosts (LAN, .local,
+		     RFC1918 IPs, VPN). Public HTTPS still works; public plain-HTTP
+		     servers are intentionally unsupported to satisfy App Store ATS. -->
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
 	<key>NSHumanReadableCopyright</key>
-	<string>© 2026 Konrad</string>
+	<string>© 2026 ArrBarr</string>
 </dict>
 </plist>

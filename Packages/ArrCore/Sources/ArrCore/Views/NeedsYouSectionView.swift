@@ -5,7 +5,6 @@ public struct NeedsYouSectionView: View {
     let isCollapsed: Bool
     let onToggleCollapse: () -> Void
     var onItemTap: ((NeedsYouItem) -> Void)? = nil
-    @State private var hoveredID: String?
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -40,6 +39,10 @@ public struct NeedsYouSectionView: View {
                                 Text(needs.title)
                                     .scaledFont(size: 12, weight: .medium)
                                     .lineLimit(2)
+                                // Chevron telegraphs the drill-in
+                                // affordance — same pattern queue /
+                                // upcoming rows use.
+                                LinkChevron(size: 9)
                                 Spacer(minLength: 4)
                                 sourceChip(needs.source)
                             }
@@ -47,26 +50,38 @@ public struct NeedsYouSectionView: View {
                                 .scaledFont(size: 11)
                                 .foregroundStyle(.secondary)
                                 .lineLimit(1)
+                            // Surface the arr's own warning descriptions
+                            // — `statusMessages` already comes back as
+                            // "Title — Message" lines, ready to render.
+                            // Cap at 2 lines so a chatty arr (Sonarr's
+                            // import warnings can pile up) doesn't
+                            // dominate the popover.
+                            ForEach(Array(needs.detailLines.prefix(2).enumerated()), id: \.offset) { _, line in
+                                Text(line)
+                                    .scaledFont(size: 10)
+                                    .foregroundStyle(.tertiary)
+                                    .lineLimit(2)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
                         }
-                        .padding(.leading, 28)
-                        .padding(.trailing, 12)
+                        // Match the queue / upcoming row indent (12pt
+                        // horizontal) — the previous 28pt leading hung
+                        // items under the section icon, which read as
+                        // inconsistent next to the other sections.
+                        .padding(.horizontal, 12)
                         .padding(.vertical, 4)
-                        .background(
-                            hoveredID == needs.id
-                                ? Color.primary.opacity(0.06)
-                                : Color.clear
-                        )
                         .contentShape(Rectangle())
                         .onTapGesture { onItemTap?(needs) }
+                        #if os(macOS)
                         .onHover { hovering in
-                            hoveredID = hovering ? needs.id : nil
-                            #if os(macOS)
                             if onItemTap != nil {
                                 if hovering { NSCursor.pointingHand.push() } else { NSCursor.pop() }
                             }
-                            #endif
                         }
+                        #endif
                         .help(Text("Open in browser", bundle: .module))
+                        // Drill-in chevron brightens on row hover.
+                        .linkRowHover()
                     }
                 }
             }
@@ -75,8 +90,7 @@ public struct NeedsYouSectionView: View {
 
     private func sourceChip(_ source: QueueItem.Source) -> some View {
         HStack(spacing: 3) {
-            Image(systemName: source.symbol)
-                .scaledFont(size: 9, weight: .semibold)
+            ServiceIcon(source: source, size: 9)
             Text(source.displayName)
                 .scaledFont(size: 10, weight: .medium)
         }

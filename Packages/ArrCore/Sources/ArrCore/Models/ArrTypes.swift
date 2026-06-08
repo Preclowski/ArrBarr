@@ -19,6 +19,79 @@ public struct ArrCustomFormat: Decodable, Equatable {
     let name: String
 }
 
+/// Full custom-format payload from `/api/v3/customformat` — carries the
+/// matching `specifications` (the conditions that make a release match
+/// this format) on top of the bare id/name in `ArrCustomFormat`. Used by
+/// the chat `describe_format` tool to explain what a format actually does.
+public struct ArrCustomFormatDetail: Decodable, Equatable, Sendable {
+    public let id: Int
+    public let name: String
+    public let specifications: [Specification]?
+
+    public struct Specification: Decodable, Equatable, Sendable {
+        let name: String?
+        /// Raw implementation key, e.g. "ReleaseTitleSpecification".
+        let implementation: String?
+        /// Human label, e.g. "Release Title". Falls back to `implementation`.
+        let implementationName: String?
+        let negate: Bool?
+        let required: Bool?
+        let fields: [Field]?
+    }
+
+    public struct Field: Decodable, Equatable, Sendable {
+        let name: String?
+        /// Polymorphic — a regex string, an enum int, an array of ints, …
+        /// Kept as `JSONValue` so the describe tool can stringify whatever
+        /// the spec carries without a per-implementation schema.
+        let value: JSONValue?
+    }
+}
+
+/// Quality profile from `/api/v3/qualityprofile`. We only decode the bits
+/// the `describe_format` tool needs: the per-format score table so we can
+/// report "this format scores +50 in profile HD-1080p".
+public struct ArrQualityProfile: Decodable, Equatable, Sendable {
+    public let id: Int
+    public let name: String
+    public let formatItems: [FormatItem]?
+
+    public struct FormatItem: Decodable, Equatable, Sendable {
+        let format: Int
+        let name: String?
+        let score: Int
+    }
+}
+
+/// One entry from Radarr's `/api/v3/credit?movieId=` endpoint — Radarr DOES
+/// store cast/crew (sourced from TMDB on its side), so movie cast needs no
+/// app-side TMDB key. Sonarr has no equivalent endpoint, so series cast still
+/// comes from TMDB.
+public struct ArrCredit: Decodable, Equatable, Sendable {
+    let personName: String?
+    let personTmdbId: Int?
+    let character: String?
+    let order: Int?
+    /// "cast" or "crew".
+    let type: String?
+    let images: [Image]?
+
+    public struct Image: Decodable, Equatable, Sendable {
+        let coverType: String?
+        /// Local Radarr proxy path (needs api key). Prefer `remoteUrl`.
+        let url: String?
+        /// Absolute TMDB image URL — usable without auth.
+        let remoteUrl: String?
+    }
+
+    /// Headshot URL for display — the TMDB `remoteUrl` (no auth) of the
+    /// headshot cover, falling back to any image's remoteUrl.
+    var headshotURL: URL? {
+        let pick = images?.first { ($0.coverType ?? "").lowercased() == "headshot" } ?? images?.first
+        return pick?.remoteUrl.flatMap(URL.init(string:))
+    }
+}
+
 public struct ArrQuality: Decodable {
     let quality: ArrQualityName?
     struct ArrQualityName: Decodable { let name: String? }
@@ -382,6 +455,7 @@ public struct LidarrLibraryStatistics: Decodable, Sendable, Equatable {
     public let albumCount: Int?
     public let trackCount: Int?
     public let trackFileCount: Int?
+    public let sizeOnDisk: Int64?
 }
 
 public struct LidarrLookupRecord: Decodable {
@@ -417,6 +491,7 @@ public struct RadarrLibraryRecord: Decodable, Sendable, Equatable {
     let ratings: RadarrLookupRatings?
     let certification: String?
     let studio: String?
+    let sizeOnDisk: Int64?
 }
 public struct SonarrLibraryRecord: Decodable, Sendable, Equatable {
     let id: Int?
@@ -438,6 +513,7 @@ public struct SonarrLibraryStatistics: Decodable, Sendable, Equatable {
     let episodeCount: Int?
     let episodeFileCount: Int?
     let seasonCount: Int?
+    let sizeOnDisk: Int64?
 }
 public struct SonarrLibrarySeason: Decodable, Sendable, Equatable {
     let seasonNumber: Int
@@ -524,6 +600,7 @@ public struct WhisparrLibraryRecord: Decodable, Sendable, Equatable {
     public let hasFile: Bool?
     public let monitored: Bool?
     public let images: [ArrImage]?
+    public let sizeOnDisk: Int64?
 }
 
 public struct WhisparrLookupRecord: Decodable {

@@ -1,9 +1,10 @@
 import SwiftUI
 
 public struct ChatView: View {
-    @ObservedObject var viewModel: ChatViewModel
+    var viewModel: ChatViewModel
     @EnvironmentObject var configStore: ConfigStore
     @State private var draft: String = ""
+    @State private var quizPosterURLs: [URL] = LibraryPosterSampler.cached ?? []
     @FocusState private var inputFocused: Bool
 
     public init(viewModel: ChatViewModel) {
@@ -48,8 +49,33 @@ public struct ChatView: View {
         ScrollViewReader { proxy in
             ScrollView {
                 if viewModel.messages.isEmpty && !viewModel.isThinking {
-                    emptyHint
-                        .frame(maxWidth: .infinity, minHeight: 380)
+                    ChatEmptyStateView(
+                        quizPosterURLs: quizPosterURLs,
+                        onQuizStart: { kind in
+                            // Synthesised chat message that the LLM routes
+                            // through `discover_in_quiz`. We name a SINGLE
+                            // kind so the model opens one deck (it used to
+                            // fire a movie session *and* a series session
+                            // when the prompt said "movies and shows") and
+                            // ask for a dozen-plus so the deck isn't thin.
+                            let prompt = kind == .movies
+                                ? "Zrób mi quiz z filmów — kilkanaście popularnych filmów, których jeszcze nie mam w bibliotece."
+                                : "Zrób mi quiz z seriali — kilkanaście popularnych seriali, których jeszcze nie mam w bibliotece."
+                            Task { await viewModel.send(prompt) }
+                        },
+                        onSuggestionTap: { prompt in
+                            draft = ""
+                            Task { await viewModel.send(prompt) }
+                        }
+                    )
+                    .frame(maxWidth: .infinity, minHeight: 380)
+                    // Sample a few library posters for the Quiz deck on first
+                    // appearance; cached process-wide so re-entry is instant.
+                    .task {
+                        if quizPosterURLs.isEmpty {
+                            quizPosterURLs = await LibraryPosterSampler.sample(configStore: configStore)
+                        }
+                    }
                 } else {
                     LazyVStack(alignment: .leading, spacing: 8) {
                         ForEach(viewModel.messages.filter { !Self.shouldHide($0) }) { msg in
@@ -59,18 +85,26 @@ public struct ChatView: View {
                             ThinkingRow()
                         }
                         // Bottom reservation so the floating input bar /
-                        // confirm card don't cover the last message.
-                        Color.clear.frame(height: 56)
+                        // confirm card don't cover the last message after
+                        // autoscroll. Sized to clear the glass input bar +
+                        // its bottom padding (56 was too short — the newest
+                        // bubble landed behind the bar).
+                        Color.clear.frame(height: 84).id("chatBottom")
                     }
-                    .padding(12)
+                    .padding(.horizontal, 12)
+                    .padding(.bottom, 12)
+                    // Extra top inset so the floating "New chat" pill doesn't
+                    // sit on the first bubble at rest (it may still overlap
+                    // mid-scroll, which is fine).
+                    .padding(.top, 44)
                 }
             }
             .onChange(of: viewModel.messages.count) { _, _ in
-                if let last = viewModel.messages.last {
-                    withAnimation(.easeOut(duration: 0.18)) {
-                        proxy.scrollTo(last.id, anchor: .bottom)
-                    }
-                }
+                withAnimation(.easeOut(duration: 0.18)) { proxy.scrollTo("chatBottom", anchor: .bottom) }
+            }
+            // Also follow the thinking indicator + the growing last reply.
+            .onChange(of: viewModel.isThinking) { _, _ in
+                withAnimation(.easeOut(duration: 0.18)) { proxy.scrollTo("chatBottom", anchor: .bottom) }
             }
             // "New chat" sits top-leading so it doesn't fight the user's
             // trailing-aligned message bubble. Floating glass pill matching
@@ -107,76 +141,6 @@ public struct ChatView: View {
         }
     }
 
-    /// Curated mix exercising each tool family the chat has:
-    /// - taste-based suggestions (suggest_titles, both kinds)
-    /// - person credits (tmdb_search_person → tmdb_person_*_credits)
-    /// - calendar (whats-on-this-week)
-    /// - discover-style filters (tmdb_discover_*)
-    /// — so a fresh user sees the breadth, not just "find a movie".
-    /// Locale-aware list of currently-visible *arr services. Empty
-    /// state falls back to the canonical trio so the hint never reads
-    /// as a placeholder.
-    private var configuredArrsLabel: String {
-        var names: [String] = []
-        if configStore.sonarr.isVisible { names.append("Sonarr") }
-        if configStore.radarr.isVisible { names.append("Radarr") }
-        if configStore.lidarr.isVisible { names.append("Lidarr") }
-        if configStore.whisparr.isVisible { names.append("Whisparr") }
-        if names.isEmpty { names = ["Sonarr", "Radarr", "Lidarr"] }
-        let formatter = ListFormatter()
-        formatter.locale = configStore.currentLocale
-        return formatter.string(from: names) ?? names.joined(separator: ", ")
-    }
-
-    private static let suggestions: [String] = [
-        "Suggest a series like Mr. Robot",
-        "Films in the style of Wes Anderson",
-        "Movies with Adam Sandler",
-        "What's coming this week?",
-        "Sci-fi films from the 90s",
-        "Best comedies of the last 5 years",
-    ]
-
-    private var emptyHint: some View {
-        VStack(spacing: 14) {
-            Spacer(minLength: 0)
-            Image(systemName: "sparkles")
-                .scaledFont(size: 28, weight: .light)
-                .foregroundStyle(.tertiary)
-                .padding(.bottom, 2)
-            // Dynamic hint: lists only the *arrs the user actually has
-            // configured. Was a hardcoded "Sonarr, Radarr or Lidarr"
-            // which was both untranslated and lying — if the user only
-            // has Radarr configured, suggesting Sonarr was noise.
-            // ListFormatter handles locale-aware joining (PL "Sonarra,
-            // Radarra i Lidarra", EN "Sonarr, Radarr, and Lidarr").
-            Text(String(format: String(localized: "Ask about %@", bundle: .module), configuredArrsLabel))
-                .scaledFont(size: 12, weight: .regular)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-            VStack(spacing: 6) {
-                ForEach(Self.suggestions, id: \.self) { suggestion in
-                    Button {
-                        draft = ""
-                        Task { await viewModel.send(suggestion) }
-                    } label: {
-                        Text(suggestion)
-                            .scaledFont(size: 12)
-                            .foregroundStyle(.primary)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(Color.primary.opacity(0.06), in: Capsule())
-                            .contentShape(Capsule())
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .padding(.top, 4)
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, 24)
-    }
-
     private var inputBar: some View {
         HStack(spacing: 8) {
             TextField(text: $draft, prompt: Text("Ask anything…", bundle: .module), axis: .vertical) {
@@ -200,7 +164,11 @@ public struct ChatView: View {
     }
 
     private func send() {
-        let text = draft
+        // Guard here too — the Send button is `.disabled` while thinking, but
+        // the TextField's `.onSubmit` (Return key) bypasses that, so without
+        // this a second prompt could fire mid-response.
+        let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty, !viewModel.isThinking else { return }
         draft = ""
         Task { await viewModel.send(text) }
     }
@@ -219,6 +187,7 @@ public struct ChatView: View {
 private struct MessageBubble: View {
     let message: ChatMessage
     @State private var expanded = false
+    @State private var spoilersRevealed = false
     @EnvironmentObject var configStore: ConfigStore
 
     /// iMessage-style routing: user prompts on the trailing edge in an accent
@@ -274,15 +243,31 @@ private struct MessageBubble: View {
             .background(Color.accentColor, in: RoundedRectangle(cornerRadius: 14))
     }
 
+    @ViewBuilder
     private func assistantBubble(_ text: String) -> some View {
-        Text(Self.attributed(text))
-            .scaledFont(size: 13)
-            .foregroundStyle(.primary)
-            .textSelection(.enabled)
-            .fixedSize(horizontal: false, vertical: true)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .background(Color.primary.opacity(0.07), in: RoundedRectangle(cornerRadius: 14))
+        let hasSpoiler = ChatSpoilerMarkup.containsSpoiler(text)
+        Group {
+            if hasSpoiler {
+                // iMessage invisible-ink: blurred, twinkling spoiler spans
+                // inside an otherwise plain prose flow.
+                SpoilerProse(text: text, revealed: spoilersRevealed)
+            } else {
+                Text(Self.attributed(text))
+            }
+        }
+        .scaledFont(size: 13)
+        .foregroundStyle(.primary)
+        .fixedSize(horizontal: false, vertical: true)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(Color.primary.opacity(0.07), in: RoundedRectangle(cornerRadius: 14))
+        .contentShape(Rectangle())
+        // Spoilers reveal on tap; the modifier also disables text selection
+        // there so the drag-to-select gesture doesn't swallow the tap.
+        .modifier(SpoilerTapModifier(enabled: hasSpoiler) {
+            withAnimation(.easeInOut(duration: 0.3)) { spoilersRevealed.toggle() }
+        })
+        .help(hasSpoiler ? Text("Spoiler", bundle: .module) : Text(verbatim: ""))
     }
 
     @ViewBuilder
@@ -400,30 +385,69 @@ private struct MessageBubble: View {
     /// bubble. The trim is leaf-only so legitimate intra-message
     /// whitespace (mid-paragraph line breaks) stays put.
     static func attributed(_ raw: String) -> AttributedString {
-        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        inlineMarkdown(raw.trimmingCharacters(in: .whitespacesAndNewlines))
+    }
+
+    /// Inline-markdown parse without edge-trimming — used per spoiler segment
+    /// so the whitespace adjoining `||markers||` survives reassembly.
+    static func inlineMarkdown(_ s: String) -> AttributedString {
         let opts = AttributedString.MarkdownParsingOptions(
             interpretedSyntax: .inlineOnlyPreservingWhitespace
         )
-        if let attr = try? AttributedString(markdown: trimmed, options: opts) {
+        if let attr = try? AttributedString(markdown: s, options: opts) {
             return attr
         }
-        return AttributedString(trimmed)
+        return AttributedString(s)
+    }
+
+}
+
+/// Attaches a reveal tap to the bubble only when it carries spoilers, so a
+/// normal assistant bubble keeps its default (selectable, no tap) behaviour.
+private struct SpoilerTapModifier: ViewModifier {
+    let enabled: Bool
+    let action: () -> Void
+    func body(content: Content) -> some View {
+        if enabled {
+            content
+                .textSelection(.disabled)
+                .onTapGesture(perform: action)
+        } else {
+            content.textSelection(.enabled)
+        }
     }
 }
 
 private struct ThinkingRow: View {
+    // Cycle a few verbs so a long tool round doesn't read as "stuck on
+    // Thinking…". Crossfades every ~1.8s.
+    private static let phrases: [LocalizedStringKey] = ["Thinking…", "Working…", "Almost there…"]
+    @State private var phase = 0
+
     var body: some View {
         // Match MessageBubble's icon-column layout (18pt frame + 8pt spacing)
         // so the spinner sits exactly where a message's sparkles/wrench icon
-        // would, and the "Thinking…" label aligns with bubble text.
+        // would, and the label aligns with bubble text.
         HStack(alignment: .firstTextBaseline, spacing: 8) {
             ProgressView()
                 .controlSize(.small)
                 .frame(width: 18, alignment: .center)
-            Text("Thinking…", bundle: .module)
+            Text(Self.phrases[phase], bundle: .module)
                 .scaledFont(size: 13)
                 .foregroundStyle(.secondary)
+                .id(phase)
+                .transition(.opacity)
             Spacer(minLength: 0)
+        }
+        .task {
+            // Hold on the first phrase, then advance only while still shown.
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 1_800_000_000)
+                if Task.isCancelled { break }
+                withAnimation(.easeInOut(duration: 0.35)) {
+                    phase = (phase + 1) % Self.phrases.count
+                }
+            }
         }
     }
 }

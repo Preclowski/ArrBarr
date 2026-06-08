@@ -33,9 +33,30 @@ public enum ChatToolCatalog {
         if includeSonarr || includeRadarr {
             arr.append(contentsOf: suggestTools)
         }
-        // arr_health needs at least one arr to query.
+        // list_download_queue spans Sonarr + Radarr; expose it whenever
+        // either is configured.
+        if includeSonarr || includeRadarr {
+            arr.append(contentsOf: queueTools)
+        }
+        // Unified calendar spans every configured arr; expose it whenever
+        // at least one is configured (the tool's optional `service` arg
+        // narrows it).
+        if includeSonarr || includeRadarr || includeLidarr || includeWhisparr {
+            arr.append(contentsOf: calendarTools)
+        }
+        // `health` checks arrs AND download clients; surface whenever any
+        // arr is configured (download clients ride along inside).
         if includeSonarr || includeRadarr || includeLidarr || includeWhisparr {
             arr.append(contentsOf: healthTools)
+        }
+        // Single-title detail lookup (overview + optional cast) for movies /
+        // series.
+        if includeSonarr || includeRadarr {
+            arr.append(contentsOf: titleDetailsTools)
+        }
+        // Custom-format tool targets Sonarr / Radarr (both v3 customformat API).
+        if includeSonarr || includeRadarr {
+            arr.append(contentsOf: customFormatTools)
         }
         return arr
     }
@@ -74,11 +95,6 @@ public enum ChatToolCatalog {
             ])
         ),
         MCPTool(
-            name: "sonarr_get_calendar",
-            description: "Get upcoming TV episode releases from Sonarr (next ~7 days, items already monitored).",
-            inputSchema: .object(["type": .string("object"), "properties": .object([:])])
-        ),
-        MCPTool(
             name: "sonarr_get_series",
             description: "List TV series in the Sonarr library by TITLE — also returns each series' `seriesId` plus per-season monitor state and have/total episode counts (`S1 ✓ 10/10, S2 ✗ 0/10`). USE this to answer 'do I have season N monitored?', 'which seasons of X am I tracking?', 'find seriesId for X'. The seriesId returned here is what `sonarr_monitor_season` and `sonarr_search_episodes` expect. With `seasonNumber` argument the output zooms in on one season so you don't pay for the whole list. DO NOT use this for person / genre queries — that's tmdb_*. DO NOT use this for service health — that's `arr_health`.",
             inputSchema: .object([
@@ -97,7 +113,7 @@ public enum ChatToolCatalog {
         ),
         MCPTool(
             name: "sonarr_monitor_season",
-            description: "Flip monitoring on a single season. When state=true, ALSO fires a SeasonSearch automatically — there is no opt-out, because chat requests like 'pobierz mi 3 sezon' / 'monitor S3' always mean 'and grab it'. When state=false, no search runs. The result text REPORTS THE ACTUAL OUTCOME ('OK', 'PARTIAL', or 'FAILED'); relay that to the user faithfully — do not claim success if the result says PARTIAL or FAILED.",
+            description: "Flip monitoring on one or MORE whole seasons in a single call. When state=true, ALSO fires a SeasonSearch for each season automatically — there is no opt-out, because chat requests like 'pobierz mi 3 sezon' / 'monitor S3' always mean 'and grab it'. When state=false, no search runs. Pass EVERY season the user named in seasonNumbers — 'pobierz 10 i 11 sezon' → seasonNumbers:[10,11]; do NOT make a separate call per season. The result text REPORTS THE ACTUAL OUTCOME ('OK', 'PARTIAL', or 'FAILED') and lists exactly which seasons worked; relay that to the user faithfully — do not claim success if the result says PARTIAL or FAILED.",
             inputSchema: .object([
                 "type": .string("object"),
                 "properties": .object([
@@ -105,16 +121,17 @@ public enum ChatToolCatalog {
                         "type": .string("integer"),
                         "description": .string("Sonarr series id. Get via sonarr_get_series."),
                     ]),
-                    "seasonNumber": .object([
-                        "type": .string("integer"),
-                        "description": .string("Season number (1-based, ignore season 0 specials)."),
+                    "seasonNumbers": .object([
+                        "type": .string("array"),
+                        "items": .object(["type": .string("integer")]),
+                        "description": .string("One or more season numbers (1-based, ignore season 0 specials). Include EVERY season the user requested in this one array, e.g. [10, 11] for 'sezon 10 i 11'."),
                     ]),
                     "state": .object([
                         "type": .string("boolean"),
                         "description": .string("true = monitor + search, false = unmonitor (no search). Defaults to true."),
                     ]),
                 ]),
-                "required": .array([.string("seriesId"), .string("seasonNumber")]),
+                "required": .array([.string("seriesId"), .string("seasonNumbers")]),
             ])
         ),
         MCPTool(
@@ -150,11 +167,6 @@ public enum ChatToolCatalog {
                 ]),
                 "required": .array([.string("query")]),
             ])
-        ),
-        MCPTool(
-            name: "radarr_get_calendar",
-            description: "Get upcoming movie releases from Radarr (next ~7 days, items already monitored).",
-            inputSchema: .object(["type": .string("object"), "properties": .object([:])])
         ),
         MCPTool(
             name: "radarr_get_movies",
@@ -214,11 +226,6 @@ public enum ChatToolCatalog {
                     ]),
                 ]),
             ])
-        ),
-        MCPTool(
-            name: "lidarr_get_calendar",
-            description: "Get upcoming album releases from Lidarr (next ~30 days, items already monitored).",
-            inputSchema: .object(["type": .string("object"), "properties": .object([:])])
         ),
         MCPTool(
             name: "lidarr_get_artist_albums",
@@ -301,11 +308,6 @@ public enum ChatToolCatalog {
                     ]),
                 ]),
             ])
-        ),
-        MCPTool(
-            name: "whisparr_get_calendar",
-            description: "Get upcoming scene releases from Whisparr (next ~30 days, items already monitored).",
-            inputSchema: .object(["type": .string("object"), "properties": .object([:])])
         ),
     ]
 
@@ -539,19 +541,138 @@ public enum ChatToolCatalog {
         ),
     ]
 
+    // MARK: - Unified calendar (all arrs)
+
+    private static let calendarTools: [MCPTool] = [
+        MCPTool(
+            name: "get_calendar",
+            description: """
+            Upcoming releases from every configured arr in one list — TV episodes (Sonarr), movies (Radarr), albums (Lidarr), scenes (Whisparr) — already-monitored items, sorted by air date. Surfaces as calendar cards in the chat.
+
+            USE THIS for "what's coming up?", "what's releasing this week?", "anything new soon?". Pass the optional `service` to narrow to one arr (e.g. service='sonarr' for just upcoming episodes); omit it to see everything across all configured services.
+            """,
+            inputSchema: .object([
+                "type": .string("object"),
+                "properties": .object([
+                    "service": .object([
+                        "type": .string("string"),
+                        "enum": .array([.string("sonarr"), .string("radarr"), .string("lidarr"), .string("whisparr")]),
+                        "description": .string("Optional. Narrow to one arr: 'sonarr' (episodes), 'radarr' (movies), 'lidarr' (albums), 'whisparr' (scenes). Omit to merge all configured services."),
+                    ]),
+                ]),
+            ])
+        ),
+    ]
+
     // MARK: - Cross-arr status / diagnostics
 
     private static let healthTools: [MCPTool] = [
         MCPTool(
-            name: "arr_health",
+            name: "health",
             description: """
-            Aggregated health check across every configured arr (Sonarr, Radarr, Lidarr, Whisparr). Returns each service's warnings + errors — disconnected indexers, missing root folders, full disk, queue stuck, etc. Same bell-icon data each arr's own UI surfaces.
+            Whole-stack health check: every configured arr (Sonarr, Radarr, Lidarr, Whisparr) AND every configured download client (qBittorrent, Transmission, NZBGet, SABnzbd, rTorrent, Deluge). For arrs it returns the bell-icon warnings + errors (disconnected indexers, missing root folders, full disk, stuck queue). For download clients it reports whether ArrBarr can actually reach and authenticate with each one.
 
-            USE THIS for "what's the state of my arrs", "is everything working", "are there any issues", "any problems with Sonarr". DO NOT use `sonarr_get_series` / `radarr_get_movies` for status questions — those list library contents and tell you nothing about whether the service is healthy.
+            USE THIS for "is everything working", "what's the state of my setup", "are there any issues", "any problems with Sonarr / qBittorrent", "is my download client connected". DO NOT use `sonarr_get_series` / `radarr_get_movies` for status questions — those list library contents and say nothing about health.
 
-            Output is plain text (no cards). Relay the per-service summary to the user briefly. Inline the most actionable warnings if any.
+            Output is plain text (no cards). Relay the per-service summary briefly. Inline the most actionable warnings if any.
             """,
             inputSchema: .object(["type": .string("object"), "properties": .object([:])])
+        ),
+    ]
+
+    // MARK: - Single-title details (+ optional cast)
+
+    private static let titleDetailsTools: [MCPTool] = [
+        MCPTool(
+            name: "get_title_details",
+            description: """
+            Fetch full details for ONE movie (Radarr) or series (Sonarr) already in the library: overview/synopsis, year, runtime, genres, rating, status — and OPTIONALLY the cast.
+
+            USE THIS to answer "tell me about X", "what's the plot of X", "who's in X?", "give me the cast of X". For the plot alone, leave `include_cast` off. Set `include_cast: true` ONLY when the user actually asks about actors/cast (it costs an extra TMDB call and tokens). Cast comes from TMDB, so it needs a TMDB key configured — without one the tool says so.
+
+            Resolve `id` first: `seriesId` from `sonarr_get_series`, `movieId` from `radarr_get_movies`. Output is plain text (no cards).
+            """,
+            inputSchema: .object([
+                "type": .string("object"),
+                "properties": .object([
+                    "service": .object([
+                        "type": .string("string"),
+                        "enum": .array([.string("sonarr"), .string("radarr")]),
+                        "description": .string("'sonarr' for a series, 'radarr' for a movie."),
+                    ]),
+                    "id": .object([
+                        "type": .string("integer"),
+                        "description": .string("The arr's internal id: seriesId (sonarr_get_series) or movieId (radarr_get_movies). NOT the tmdbId."),
+                    ]),
+                    "include_cast": .object([
+                        "type": .string("boolean"),
+                        "description": .string("Set true to also fetch the cast from TMDB. Defaults to false — only enable when the user asks about actors/cast (extra call + tokens, needs a TMDB key)."),
+                    ]),
+                ]),
+                "required": .array([.string("service"), .string("id")]),
+            ])
+        ),
+    ]
+
+    // MARK: - Custom formats (TRaSH-style quality scoring)
+
+    private static let customFormatTools: [MCPTool] = [
+        MCPTool(
+            name: "custom_formats",
+            description: """
+            Inspect the custom formats on Sonarr or Radarr — the named release-matching rules (e.g. 'Bluray Tier 01', 'x265 (HD)', 'Repack/Proper', 'LQ') that drive TRaSH-style quality scoring. TWO MODES:
+            • Omit `name`/`id` → LIST every format (id, name, condition count). USE for "what custom formats do I have?", "list my Radarr formats".
+            • Pass `name` or `id` → DESCRIBE that one in detail: the conditions it matches (release-title regex, source, resolution, language, release group, with negate/required flags) AND the score it carries in each quality profile (e.g. '+100 in HD Bluray, 0 in Any'). USE for "what does 'LQ' match?", "how is x265 scored?", "what does 'Bluray Tier 01' do?".
+
+            CRUCIAL for "why did Sonarr/Radarr grab this upgrade when my existing file looks better / is higher resolution?": an *arr upgrade is decided by total CUSTOM-FORMAT SCORE plus the quality-profile's quality ranking — NOT by what looks better to a human. A 1080p release can legitimately replace a 2160p one if it scores higher (better release group, repack/proper, preferred audio, no unwanted format, etc.). After `list_download_queue` shows the old→new score delta, describe the custom format(s) that differ between the two files to name exactly which rule earned (or cost) the points.
+
+            The `service` argument is required. Output is plain text (no cards).
+            """,
+            inputSchema: .object([
+                "type": .string("object"),
+                "properties": .object([
+                    "service": .object([
+                        "type": .string("string"),
+                        "enum": .array([.string("sonarr"), .string("radarr")]),
+                        "description": .string("Which arr to query: 'sonarr' or 'radarr'."),
+                    ]),
+                    "name": .object([
+                        "type": .string("string"),
+                        "description": .string("Optional. A custom format name (case-insensitive, partial match allowed), e.g. 'Bluray Tier 01' or 'x265' — switches to describe-one mode. Omit (with no `id`) to list all."),
+                    ]),
+                    "id": .object([
+                        "type": .string("integer"),
+                        "description": .string("Optional. A custom format id (from the list mode) — switches to describe-one mode. Omit (with no `name`) to list all."),
+                    ]),
+                ]),
+                "required": .array([.string("service")]),
+            ])
+        ),
+    ]
+
+    // MARK: - Queue
+
+    private static let queueTools: [MCPTool] = [
+        MCPTool(
+            name: "list_download_queue",
+            description: """
+            List the active Sonarr/Radarr download queue — what is currently downloading, queued, importing, or stalled. Each item shows its status and progress.
+
+            When an item is an UPGRADE of a file already in the library, the result ALSO reports the existing file's quality / custom formats / score / size alongside the incoming release's (rendered as `UPGRADE: <old> → <new>`). USE that diff to explain to the user how the two differ and WHY the new release is better — higher resolution, better source (e.g. Bluray/Remux over WEB), added HDR/Dolby Vision, higher custom-format score, etc.
+
+            If the user is SURPRISED an upgrade happened ("why did it replace my file, the old one looks better / is higher resolution?"), remember *arr upgrades are driven by the quality-profile's custom-format SCORE and quality ranking, not by what looks better to a human. When the score is what differs, follow up with `custom_formats` (passing the format name) on the custom format(s) that changed between old and new to name exactly which rule tipped the decision.
+
+            USE THIS for "what's downloading?", "what's in the queue?", "what upgrades are pending?", "why is this upgrade better?", "why was this upgraded?". Results also surface as comparison cards in the chat. Optional `query` filters by title substring (case-insensitive).
+            """,
+            inputSchema: .object([
+                "type": .string("object"),
+                "properties": .object([
+                    "query": .object([
+                        "type": .string("string"),
+                        "description": .string("Optional title substring (case-insensitive) to filter the queue, e.g. 'Dune' or 'The Wire'. Omit to list the whole queue."),
+                    ]),
+                ]),
+            ])
         ),
     ]
 }

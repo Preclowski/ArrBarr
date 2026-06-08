@@ -123,4 +123,36 @@ struct OpenAIProviderTests {
         #expect(body.contains("sonarr_search"))
         #expect(body.contains("\"tool_choice\":\"auto\""))
     }
+
+    // MARK: - Dynamic arr clause + reply language
+
+    @Test("system prompt names only the arrs whose tools are present")
+    func systemPromptArrsAreDynamic() {
+        let tools = [
+            LLMTool(name: "radarr_search", description: "", inputSchema: .object([:])),
+            LLMTool(name: "lidarr_search", description: "", inputSchema: .object([:])),
+        ]
+        let body = OpenAIProvider.buildRequestBody(model: "m", prompt: "hi", tools: tools, history: [], replyLanguage: "Polish")
+        let system = body.messages.first { $0.role == "system" }?.content ?? ""
+        #expect(system.contains("Radarr (movies) and Lidarr (music)"))
+        #expect(!system.contains("Sonarr"))
+        #expect(system.contains("Reply in Polish"))
+    }
+
+    @Test("SystemPromptComposer.arrsClause joins present arrs, falls back when none")
+    func arrsClause() {
+        let all = [
+            LLMTool(name: "sonarr_search", description: "", inputSchema: .object([:])),
+            LLMTool(name: "radarr_search", description: "", inputSchema: .object([:])),
+            LLMTool(name: "whisparr_search", description: "", inputSchema: .object([:])),
+        ]
+        #expect(SystemPromptComposer.arrsClause(tools: all) == "Sonarr (TV), Radarr (movies) and Whisparr (adult content)")
+        #expect(SystemPromptComposer.arrsClause(tools: []) == "your self-hosted *arr media stack")
+    }
+
+    @Test("replyLanguageName maps codes to English names")
+    func replyLanguageName() {
+        #expect(ChatViewModelFactory.replyLanguageName(appLanguage: "pl") == "Polish")
+        #expect(ChatViewModelFactory.replyLanguageName(appLanguage: "de") == "German")
+    }
 }

@@ -224,6 +224,21 @@ public final class NotificationCoalescer {
         UNUserNotificationCenter.current().add(req)
     }
 
+    /// Maps the user's `notificationSoundName` preference onto a
+    /// `UNNotificationSound`:
+    ///   - `""`            → system default
+    ///   - `silentSoundName` → no sound (`nil`)
+    ///   - otherwise        → the named sound. macOS resolves bare names
+    ///     against `/System/Library/Sounds` when suffixed with `.aiff`.
+    private var configuredSound: UNNotificationSound? {
+        let name = configStore.notificationSoundName
+        switch name {
+        case "": return .default
+        case ConfigStore.silentSoundName: return nil
+        default: return UNNotificationSound(named: UNNotificationSoundName("\(name).aiff"))
+        }
+    }
+
     // MARK: - Content builders
 
     private func makeSingleItemContent(item: QueueItem, baseURL: String) -> UNMutableNotificationContent {
@@ -231,7 +246,7 @@ public final class NotificationCoalescer {
         content.title = titleText(for: item)
         content.subtitle = subtitleText(for: item)
         content.body = bodyText(for: item)
-        content.sound = .default
+        content.sound = configuredSound
         content.categoryIdentifier = item.isPaused
             ? Self.pausedCategoryIdentifier
             : Self.downloadingCategoryIdentifier
@@ -253,7 +268,7 @@ public final class NotificationCoalescer {
         let titles = items.prefix(3).map(\.title).joined(separator: ", ")
         let format = String(localized: "%lld items: %@", bundle: .module)
         content.body = String(format: format, items.count, titles)
-        content.sound = .default
+        content.sound = configuredSound
         content.categoryIdentifier = Self.categoryIdentifier
         content.threadIdentifier = "arrbarr.\(source.rawValue)"
         if !baseURL.isEmpty {

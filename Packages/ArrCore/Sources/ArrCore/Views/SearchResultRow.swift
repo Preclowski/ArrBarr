@@ -48,9 +48,7 @@ public struct SearchResultRow: View {
             if isInLibrary {
                 // Apple-standard "drill in" affordance — same chevron
                 // the system uses in Settings, Music, App Store.
-                Image(systemName: "chevron.right")
-                    .scaledFont(size: 10, weight: .semibold)
-                    .foregroundStyle(.tertiary)
+                LinkChevron(size: 10)
             } else {
                 Image(systemName: "plus")
                     .scaledFont(size: 11, weight: .medium)

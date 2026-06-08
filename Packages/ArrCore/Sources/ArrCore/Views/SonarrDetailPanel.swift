@@ -2,13 +2,15 @@ import SwiftUI
 
 // MARK: - Sonarr
 
-struct SonarrDetailPanel: View {
+struct SonarrDetailPanel<Header: View>: View {
     let item: QueueItem
-    @ObservedObject var viewModel: QueueViewModel
+    var viewModel: QueueViewModel
     @EnvironmentObject var configStore: ConfigStore
     let siblings: [QueueItem]
     let loadError: String?
-    let header: AnyView
+    let header: Header
+    /// Cast (TMDB — Sonarr has no cast endpoint) — horizontal headshot strip.
+    var cast: [CastMember] = []
     @Binding var sonarrDetail: SonarrSeriesDetail?
     let sonarrEpisodes: [SonarrEpisodeDetail]
     let sonarrEpisodeFiles: [Int: SonarrEpisodeFile]
@@ -17,10 +19,12 @@ struct SonarrDetailPanel: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
+            // Synopsis now renders inside the header card's right column
+            // (beside the poster) — see MediaHeaderCard.overview.
             header
 
-            if let overview = sonarrDetail?.overview, !overview.isEmpty {
-                ExpandableOverview(text: overview)
+            if !cast.isEmpty {
+                CastRow(cast: cast)
             }
 
             if let seasons = sonarrDetail?.seasons {
@@ -70,9 +74,7 @@ struct SonarrDetailPanel: View {
             // for the action buttons to land out of reach.
 
             if let err = loadError {
-                Text(err)
-                    .scaledFont(size: 11)
-                    .foregroundStyle(.tertiary)
+                LoadErrorLine(message: err)
             }
         }
     }
@@ -116,27 +118,50 @@ struct SonarrDetailPanel: View {
     @ViewBuilder
     private func seasonPillBar(_ seasons: [SonarrSeasonInfo]) -> some View {
         let activeNumber = effectiveSeasonNumber(in: seasons)
+        #if os(iOS)
+        // iOS: a single scrollable row of larger, tab-strip-style pills
+        // (instead of the wrapping flow layout used in the compact macOS
+        // popover). Auto-scrolls to keep the active season in view.
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(seasons, id: \.seasonNumber) { season in
+                        seasonPill(season, isActive: season.seasonNumber == activeNumber, large: true)
+                            .id(season.seasonNumber)
+                    }
+                }
+                .padding(.horizontal, 2)
+                .padding(.vertical, 2)
+            }
+            .onChange(of: activeNumber) { _, new in
+                withAnimation(.smooth(duration: 0.2)) { proxy.scrollTo(new, anchor: .center) }
+            }
+            .onAppear { proxy.scrollTo(activeNumber, anchor: .center) }
+        }
+        #else
         TooltipFlowLayout(spacing: 6) {
             ForEach(seasons, id: \.seasonNumber) { season in
                 seasonPill(season, isActive: season.seasonNumber == activeNumber)
             }
         }
+        #endif
     }
 
     @ViewBuilder
-    private func seasonPill(_ season: SonarrSeasonInfo, isActive: Bool) -> some View {
+    private func seasonPill(_ season: SonarrSeasonInfo, isActive: Bool, large: Bool = false) -> some View {
         let have = season.statistics?.episodeFileCount ?? 0
         let total = season.statistics?.totalEpisodeCount ?? season.statistics?.episodeCount ?? 0
         let complete = total > 0 && have >= total
         let queueStatus = dominantQueueStatus(forSeason: season.seasonNumber)
+        let dot: CGFloat = large ? 5 : 4
         Button {
             withAnimation(.smooth(duration: 0.2)) {
                 selectedSeasonNumber = season.seasonNumber
             }
         } label: {
-            HStack(spacing: 4) {
+            HStack(spacing: large ? 5 : 4) {
                 Text(String(format: String(localized: "Season pill %lld", bundle: .module), season.seasonNumber))
-                    .scaledFont(size: 10, weight: isActive ? .semibold : .medium)
+                    .scaledFont(size: large ? 13 : 10, weight: isActive ? .semibold : .medium)
                     .foregroundStyle(isActive ? .primary : .secondary)
                 // Dot colour reflects what the user will see when
                 // they open the season: blue if anything's actively
@@ -146,15 +171,15 @@ struct SonarrDetailPanel: View {
                 if let s = queueStatus {
                     Circle()
                         .fill(isActive ? s.tint : s.tint.opacity(0.75))
-                        .frame(width: 4, height: 4)
+                        .frame(width: dot, height: dot)
                 } else if complete {
                     Circle()
                         .fill(isActive ? Color.green : Color.green.opacity(0.7))
-                        .frame(width: 4, height: 4)
+                        .frame(width: dot, height: dot)
                 }
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 3)
+            .padding(.horizontal, large ? 14 : 8)
+            .padding(.vertical, large ? 7 : 3)
             .background(
                 Capsule()
                     .fill(isActive ? Color.primary.opacity(0.12) : Color.clear)

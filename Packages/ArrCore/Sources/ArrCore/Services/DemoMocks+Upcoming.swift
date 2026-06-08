@@ -1,46 +1,56 @@
 import Foundation
 
-// Upcoming-episodes and health-check fixtures for demo mode.
+// Upcoming-episodes and health-check fixtures for demo mode. Calendar uses only
+// curated entities; health is all-green.
 
 extension DemoMocks {
     // MARK: - Upcoming
 
-    static var upcoming: [UpcomingItem] {
+    public static var upcoming: [UpcomingItem] {
         [
+            // Tonight: next Pioneer One episode (S02 -> shows multi-season).
             upcomingItem(
                 source: .sonarr, id: "demo-cal-tonight-1",
                 title: "Pioneer One (2010)",
-                subtitle: "S01E06 · Tomorrow Belongs to Us",
+                subtitle: "S02E01 · Reentry",
                 hoursAhead: 3, releaseType: "Airing", hasFile: false,
                 posterSeed: "pioneerone", aspect: .portrait,
                 entityId: 101
             ),
+            // Tonight: a movie digital release.
             upcomingItem(
                 source: .radarr, id: "demo-cal-tonight-2",
-                title: "Spring (2019)",
+                title: "Sintel (2010)",
                 hoursAhead: 8, releaseType: "Digital", hasFile: false,
-                posterSeed: "spring", aspect: .portrait
+                posterSeed: "sintel", aspect: .portrait,
+                entityId: 202
             ),
+            // This week: Caminandes future episode.
             upcomingItem(
                 source: .sonarr, id: "demo-cal-2",
-                title: "Pioneer One (2010)",
-                subtitle: "S02E01 · Reentry",
-                daysAhead: 1, releaseType: "Airing", hasFile: false,
-                posterSeed: "pioneerone", aspect: .portrait,
-                entityId: 101
+                title: "Caminandes (2013)",
+                subtitle: "S01E04 · Snow Day",
+                daysAhead: 2, releaseType: "Airing", hasFile: false,
+                posterSeed: "caminandes", aspect: .portrait,
+                entityId: 102
             ),
+            // This week: album release.
             upcomingItem(
-                source: .radarr, id: "demo-cal-3",
-                title: "Charge (2018)",
-                daysAhead: 3, releaseType: "Physical", hasFile: false,
-                posterSeed: "charge", aspect: .portrait
+                source: .lidarr, id: "demo-cal-3",
+                title: "Brad Sucks — Out of It",
+                daysAhead: 4, releaseType: "Album", hasFile: false,
+                posterSeed: "bradsucks", aspect: .square,
+                entityId: 302
             ),
+            // This week: movie physical release.
             upcomingItem(
-                source: .lidarr, id: "demo-cal-4",
-                title: "Jonathan Coulton — Some Guys",
-                daysAhead: 5, releaseType: "Album", hasFile: false,
-                posterSeed: "coultonsomeguys", aspect: .square
+                source: .radarr, id: "demo-cal-4",
+                title: "Big Buck Bunny (2008)",
+                daysAhead: 5, releaseType: "Physical", hasFile: false,
+                posterSeed: "bigbuckbunny", aspect: .portrait,
+                entityId: 201
             ),
+            // Next week: Pioneer One S02E02.
             upcomingItem(
                 source: .sonarr, id: "demo-cal-5",
                 title: "Pioneer One (2010)",
@@ -49,39 +59,13 @@ extension DemoMocks {
                 posterSeed: "pioneerone", aspect: .portrait,
                 entityId: 101
             ),
-            upcomingItem(
-                source: .whisparr, id: "demo-cal-whisparr-1",
-                title: "Garage Cat Files (2024)",
-                daysAhead: 4, releaseType: "Digital", hasFile: false,
-                posterSeed: "kitten:poppy", aspect: .portrait
-            ),
-            upcomingItem(
-                source: .whisparr, id: "demo-cal-whisparr-2",
-                title: "Whiskers & Whispers Vol. II",
-                daysAhead: 9, releaseType: "Digital", hasFile: false,
-                posterSeed: "kitten:bella", aspect: .portrait
-            ),
         ]
         .sorted { $0.airDate < $1.airDate }
     }
 
-    // MARK: - Health
+    // MARK: - Health (all green)
 
     static var health: HealthResult {
-        HealthResult(
-            radarr: [],
-            sonarr: [
-                ArrHealthRecord(source: "IndexerStatusCheck", type: "warning",
-                                message: "Indexer 'Demo Tracker' is unavailable due to errors for more than 6 hours",
-                                wikiUrl: nil),
-            ],
-            lidarr: [],
-            whisparr: [
-                ArrHealthRecord(source: "ImportCheck", type: "warning",
-                                message: "Whisparr remote storage at 87% capacity",
-                                wikiUrl: nil),
-            ]
-        )
+        HealthResult(radarr: [], sonarr: [], lidarr: [], whisparr: [])
     }
-
 }

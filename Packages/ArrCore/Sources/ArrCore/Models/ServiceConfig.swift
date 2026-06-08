@@ -24,12 +24,14 @@ public struct ServiceConfig: Codable, Equatable, Sendable {
         return true
     }
 
-    /// `isConfigured` requires a real URL; demo mode runs entirely on mocks
-    /// so the URL field stays blank but we still want the arr to render in
-    /// the UI as long as the user has flipped `enabled`. Both PopoverContentView
-    /// and MainWindowView gate their rendering on this property.
+    /// Arr visibility gate (Radarr/Sonarr/Lidarr/Whisparr — every caller of
+    /// this is an arr, and they all need an API key). An arr that's enabled
+    /// with a URL but no key is treated as NOT visible: it would only emit a
+    /// "missing API key" error in the queue. Settings surfaces that error
+    /// instead. Demo mode runs on mocks, so the URL/key fields stay blank and
+    /// we render as long as `enabled`.
     public var isVisible: Bool {
-        DemoMode.isActive ? enabled : isConfigured
+        DemoMode.isActive ? enabled : (isConfigured && !apiKey.isEmpty)
     }
 
     public static let empty = ServiceConfig(enabled: false, baseURL: "", apiKey: "", username: "", password: "")
@@ -63,6 +65,9 @@ public enum ServiceKind: String, CaseIterable, Identifiable {
 
     public var requiresLogin: Bool {
         switch self {
+        // qBittorrent's WebUI API authenticates with username/password via
+        // `/api/v2/auth/login` (returns a SID session cookie) — it has no
+        // API key. Same login shape as the other download clients.
         case .qbittorrent, .nzbget, .transmission, .rtorrent, .deluge: return true
         default: return false
         }

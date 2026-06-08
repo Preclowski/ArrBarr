@@ -1,6 +1,6 @@
 import Foundation
 
-public struct QueueItem: Identifiable, Equatable, Hashable {
+public struct QueueItem: Identifiable, Equatable, Hashable, Sendable {
     public enum Source: String, CaseIterable, Sendable { case radarr, sonarr, lidarr, whisparr
 
         public var displayName: String {
@@ -21,8 +21,8 @@ public struct QueueItem: Identifiable, Equatable, Hashable {
             }
         }
     }
-    public enum DownloadProtocol: String { case usenet, torrent, unknown }
-    public enum Status: String {
+    public enum DownloadProtocol: String, Sendable { case usenet, torrent, unknown }
+    public enum Status: String, Sendable {
         case downloading, paused, queued, importing, completed, warning, failed, unknown
 
         public var displayName: String {
@@ -127,4 +127,29 @@ public struct QueueItem: Identifiable, Equatable, Hashable {
 
     public var isPaused: Bool { status == .paused }
     public var isCompleted: Bool { status == .completed }
+
+    /// Copy with the episode coordinates cleared. A detail view auto-drills to
+    /// a specific episode only when `episodeNumber` is set — season-pack rows
+    /// pass this so the detail opens the SEASON instead.
+    public func seasonContext() -> QueueItem {
+        QueueItem(
+            id: id, source: source, arrQueueId: arrQueueId,
+            downloadId: downloadId, downloadProtocol: downloadProtocol,
+            downloadClient: downloadClient, indexer: indexer,
+            title: title, subtitle: subtitle,
+            seasonNumber: seasonNumber, episodeNumber: nil, episodeTitle: episodeTitle,
+            releaseName: releaseName,
+            status: status, progress: progress, sizeTotal: sizeTotal,
+            sizeLeft: sizeLeft, timeLeft: timeLeft,
+            customFormats: customFormats, customFormatScore: customFormatScore,
+            quality: quality, releaseGroup: releaseGroup, isUpgrade: isUpgrade,
+            existingCustomFormats: existingCustomFormats,
+            existingCustomFormatScore: existingCustomFormatScore,
+            existingQuality: existingQuality, existingSize: existingSize,
+            existingFileName: existingFileName,
+            contentSlug: contentSlug, entityId: entityId,
+            posterURL: posterURL, posterRequiresAuth: posterRequiresAuth,
+            statusMessages: statusMessages
+        )
+    }
 }

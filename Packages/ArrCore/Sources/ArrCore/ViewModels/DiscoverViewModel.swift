@@ -2,7 +2,8 @@ import Foundation
 import SwiftUI
 
 @MainActor
-public final class DiscoverViewModel: ObservableObject {
+@Observable
+public final class DiscoverViewModel {
 
     public enum Source: Hashable, CaseIterable, Sendable {
         case tmdb, library, llm
@@ -14,66 +15,66 @@ public final class DiscoverViewModel: ObservableObject {
 
     // MARK: - Published state
 
-    @Published public var hasPickedKind: Bool {
+    public var hasPickedKind: Bool {
         didSet {
             defaults.set(hasPickedKind, forKey: Self.hasPickedKindKey)
         }
     }
-    @Published public private(set) var current: DiscoverItem?
-    @Published public private(set) var queue: [DiscoverItem] = []
-    @Published public var filter = DiscoverFilter()
-    @Published public var moodText: String = ""
-    @Published public private(set) var failedSources: Set<Source> = []
+    public private(set) var current: DiscoverItem?
+    public private(set) var queue: [DiscoverItem] = []
+    public var filter = DiscoverFilter()
+    public var moodText: String = ""
+    public private(set) var failedSources: Set<Source> = []
     /// Per-source item counts from the most recent fetch batch.
     /// Visible in the empty-stack state so the user can diagnose why
     /// no cards appeared, without needing the console.
-    @Published public private(set) var lastFetchedCounts: [Source: Int] = [:]
+    public private(set) var lastFetchedCounts: [Source: Int] = [:]
     /// Per-source error message captured from the most recent fetch.
     /// Surfaces the actual failure reason (URL / status / decode error) in
     /// the empty-stack state — without this the user only sees "TMDB
     /// unavailable" with no clue why.
-    @Published public private(set) var sourceErrors: [Source: String] = [:]
+    public private(set) var sourceErrors: [Source: String] = [:]
     /// tmdbId → fetched credits. Populated lazily when the view requests
     /// a card's credits via `fetchCreditsIfNeeded`. Used by the card's
     /// back face for cast headshots + director.
-    @Published public private(set) var creditsCache: [Int: TMDBCredits] = [:]
-    @Published public private(set) var llmPoolExhausted: Bool = false
+    public private(set) var creditsCache: [Int: TMDBCredits] = [:]
+    public private(set) var llmPoolExhausted: Bool = false
     /// True when the last TMDB fetch returned 0 results from the server
     /// (filter combo returned nothing — not a network error).
-    @Published public private(set) var tmdbReturnedEmpty: Bool = false
-    @Published public private(set) var isLoading: Bool = false
-    @Published public private(set) var errorMessage: String?
-    @Published public private(set) var matched: [DiscoverItem] = []
+    public private(set) var tmdbReturnedEmpty: Bool = false
+    public private(set) var isLoading: Bool = false
+    public private(set) var errorMessage: String?
+    public private(set) var matched: [DiscoverItem] = []
     /// Cards the user swiped right in the current session (since the
     /// last `seed(items:mood:)`). Cleared when a new session starts so
     /// the "more picks" feedback only carries fresh signal.
-    @Published public private(set) var sessionMatched: [DiscoverItem] = []
+    public private(set) var sessionMatched: [DiscoverItem] = []
     /// Cards the user swiped left in the current session.
-    @Published public private(set) var sessionSkipped: [DiscoverItem] = []
+    public private(set) var sessionSkipped: [DiscoverItem] = []
     /// Cards the user explicitly marked "fewer like this" — stronger
     /// negative signal than a regular left-swipe. Cleared when a new
     /// session starts.
-    @Published public private(set) var sessionDisliked: [DiscoverItem] = []
+    public private(set) var sessionDisliked: [DiscoverItem] = []
     /// Total number of picks the agent seeded for the current session.
     /// Set by `seed(items:mood:)` and used by the View to render the
     /// "N / total" progress chip. Doesn't shrink as the user swipes —
     /// progress is derived as `total - (queue.count + (current == nil ? 0 : 1))`.
-    @Published public private(set) var sessionTotal: Int = 0
+    public private(set) var sessionTotal: Int = 0
     /// True when the user has matched new picks since they last viewed
     /// the picks list inside the overlay. Drives the picks icon's pulse.
     /// Set to true on every right-swipe; cleared when the user opens
     /// the matched view.
-    @Published public private(set) var hasUnseenPicks: Bool = false
+    public private(set) var hasUnseenPicks: Bool = false
     /// Incremented only by user-driven actions (mood submit, filter chip
     /// taps, explicit reshuffle). The View's `task(id:)` keys on this so
     /// LLM-applied filter changes don't trigger an infinite reshuffle loop.
-    @Published public private(set) var userActionTick: Int = 0
+    public private(set) var userActionTick: Int = 0
     /// Media kind the user selected in the picker segmented control.
     /// Persisted to UserDefaults so the choice survives app restarts.
     private static let mediaSelectionKey = "ArrBarr.discoverMediaSelection"
     private let defaults: UserDefaults
 
-    @Published public var mediaSelection: DiscoverMediaSelection {
+    public var mediaSelection: DiscoverMediaSelection {
         didSet {
             defaults.set(mediaSelection.rawValue, forKey: Self.mediaSelectionKey)
         }
@@ -98,6 +99,13 @@ public final class DiscoverViewModel: ObservableObject {
     private var llmDormant = false
     private var creditsFetchingIds = Set<Int>()
     private var tmdbApiKey: String = ""
+
+    /// Process-wide shared instance. Used by views that can't easily
+    /// reach the popover-owned `@StateObject` (e.g. `QuizResumeCard`
+    /// rendered deep inside a chat message bubble where environment
+    /// objects don't always propagate reliably). PopoverContentView
+    /// uses the same `.shared` instance so the state stays unified.
+    public static let shared = DiscoverViewModel()
 
     public init(defaults: UserDefaults = .standard) {
         self.defaults = defaults

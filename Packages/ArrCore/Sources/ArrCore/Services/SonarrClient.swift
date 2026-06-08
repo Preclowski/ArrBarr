@@ -498,7 +498,9 @@ public actor SonarrClient: ArrAPIClient {
         let episodeNumber: Int?
         let episodeTitle: String?
         if let s = r.series {
-            title = s.title
+            // Bake the year into the series title so queue rows read the
+            // same "Series (2019)" shape as movies / the upcoming list.
+            title = s.year.map { "\(s.title) (\($0))" } ?? s.title
             if let ep = r.episode, let season = ep.seasonNumber, let number = ep.episodeNumber {
                 seasonNumber = season
                 episodeNumber = number

@@ -213,6 +213,20 @@ public struct TMDBClient: Sendable {
         return resp
     }
 
+    /// Series cast/crew. `aggregate_credits` rolls up the whole series'
+    /// recurring cast (better than `/credits`, which is pilot-only), so the
+    /// detail view shows the people you actually associate with the show.
+    /// Its cast entries carry `roles[]` rather than a flat `character`, but
+    /// `TMDBCredits` decodes only the shared id/name/profile fields the cast
+    /// row needs, so the same model works.
+    public func tvCredits(tvId: Int) async throws -> TMDBCredits {
+        let resp: TMDBCredits = try await get(
+            path: "/tv/\(tvId)/aggregate_credits",
+            query: []
+        )
+        return resp
+    }
+
     public func personMovieCredits(personId: Int) async throws -> [TMDBMovieSummary] {
         let resp: TMDBMovieCreditsResponse = try await get(
             path: "/person/\(personId)/movie_credits", query: []

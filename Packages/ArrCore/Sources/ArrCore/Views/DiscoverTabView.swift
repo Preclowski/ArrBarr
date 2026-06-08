@@ -1,7 +1,7 @@
 import SwiftUI
 
 public struct DiscoverTabView: View {
-    @ObservedObject var viewModel: DiscoverViewModel
+    var viewModel: DiscoverViewModel
     let llmAvailable: Bool
     let radarrAvailable: Bool
     let onAddToRadarr: (SearchResult) -> Void
@@ -88,14 +88,10 @@ public struct DiscoverTabView: View {
     }
 
     private var quizTopBar: some View {
-        HStack(spacing: 6) {
-            FloatingBackButton(action: {
-                if showMatched {
-                    withAnimation(.smooth(duration: 0.22)) { showMatched = false }
-                } else {
-                    onClose()
-                }
-            })
+        // Three-zone header: back-button left, centered title/filter,
+        // picks-count pill right. Centring via ZStack so the centre
+        // element doesn't shift when the side widths change.
+        ZStack {
             if showMatched {
                 Text("Your picks", bundle: .module)
                     .scaledFont(size: 15, weight: .semibold)
@@ -103,13 +99,19 @@ public struct DiscoverTabView: View {
                     .lineLimit(1)
             } else if !activeFilterSummary.isEmpty {
                 filterSummaryChip
-                if viewModel.sessionTotal > 0 {
-                    progressChip
-                }
             }
-            Spacer()
-            if !showMatched {
-                picksToggleButton
+            HStack(spacing: 6) {
+                FloatingBackButton(action: {
+                    if showMatched {
+                        withAnimation(.smooth(duration: 0.22)) { showMatched = false }
+                    } else {
+                        onClose()
+                    }
+                })
+                Spacer()
+                if !showMatched && !viewModel.matched.isEmpty {
+                    picksCountPill
+                }
             }
         }
         .padding(.horizontal, 12)
@@ -117,53 +119,35 @@ public struct DiscoverTabView: View {
         .padding(.bottom, 4)
     }
 
-    @State private var picksPulse: Bool = false
-
-    private var picksToggleButton: some View {
+    /// Pill showing the shortlist count: `★ N`. Only rendered when at
+    /// least one pick exists — there's no useful zero-state for it.
+    /// Tinted accent when there are unseen picks so the user notices
+    /// without an attention-grabbing pulse animation.
+    private var picksCountPill: some View {
         Button {
             withAnimation(.smooth(duration: 0.22)) {
                 showMatched = true
             }
             viewModel.acknowledgeUnseenPicks()
         } label: {
-            ZStack(alignment: .topTrailing) {
-                Image(systemName: viewModel.matched.isEmpty
-                      ? "list.star"
-                      : "list.star.rectangle.portrait.fill")
-                    .scaledFont(size: 13, weight: .semibold)
-                    .foregroundStyle(.secondary)
-                    .padding(8)
-                    .background(
-                        Circle()
-                            .fill(Color.primary.opacity(viewModel.hasUnseenPicks ? 0.15 : 0.06))
-                            .scaleEffect(viewModel.hasUnseenPicks && picksPulse ? 1.18 : 1.0)
-                            .opacity(viewModel.hasUnseenPicks && picksPulse ? 0.0 : 1.0)
-                    )
-                    .background(
-                        Circle().fill(Color.primary.opacity(0.06))
-                    )
-                if viewModel.hasUnseenPicks {
-                    Circle()
-                        .fill(Color.accentColor)
-                        .frame(width: 7, height: 7)
-                        .offset(x: 2, y: -2)
-                }
+            HStack(spacing: 4) {
+                Image(systemName: "star.fill")
+                    .scaledFont(size: 10, weight: .semibold)
+                Text(verbatim: "\(viewModel.matched.count)")
+                    .scaledFont(size: 12, weight: .semibold)
+                    .monospacedDigit()
             }
+            .foregroundStyle(viewModel.hasUnseenPicks ? Color.accentColor : Color.secondary)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            // Without this the Button only hit-tests the star glyph + the
+            // digits — the transparent padding / inter-element gap fell
+            // through. Make the whole padded pill the tap target.
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .glassPill()
         .help(Text("Your picks", bundle: .module))
-        .onChange(of: viewModel.hasUnseenPicks) { _, newValue in
-            if newValue {
-                picksPulse = false
-                withAnimation(.easeOut(duration: 1.0).repeatForever(autoreverses: false)) {
-                    picksPulse = true
-                }
-            } else {
-                withAnimation(.smooth(duration: 0.2)) {
-                    picksPulse = false
-                }
-            }
-        }
     }
 
     private var filterSummaryChip: some View {
@@ -177,26 +161,9 @@ public struct DiscoverTabView: View {
                 .lineLimit(1)
                 .truncationMode(.middle)
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .background(Capsule().fill(Color.primary.opacity(0.06)))
-        .overlay(Capsule().stroke(Color.primary.opacity(0.18), lineWidth: 0.5))
-    }
-
-    private var progressChip: some View {
-        HStack(spacing: 4) {
-            Image(systemName: "rectangle.stack")
-                .scaledFont(size: 10, weight: .semibold)
-                .foregroundStyle(.tertiary)
-            Text(verbatim: "\(viewModel.sessionConsumed) / \(viewModel.sessionTotal)")
-                .scaledFont(size: 11, weight: .medium)
-                .foregroundStyle(.tertiary)
-                .monospacedDigit()
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .background(Capsule().fill(Color.primary.opacity(0.04)))
-        .overlay(Capsule().stroke(Color.primary.opacity(0.12), lineWidth: 0.5))
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5)
+        .glassPill()
     }
 
     private func dispatch(_ item: DiscoverItem) {
@@ -245,31 +212,22 @@ public struct DiscoverTabView: View {
                 ForEach(stack.reversed(), id: \.1.id) { (idx, item) in
                     let isTop = (idx == 0)
                     let tmdbId = Int(item.result.foreignId) ?? item.result.id
-                    DiscoverCardView(item: item,
-                                     isHovered: isTop ? $isCardHovered : .constant(false),
-                                     dragOffset: isTop ? dragOffset : .zero,
-                                     credits: isTop ? viewModel.creditsCache[tmdbId] : nil)
-                        .frame(width: w, height: h)
-                        .scaleEffect(1.0 - CGFloat(idx) * 0.04, anchor: .top)
-                        .offset(x: isTop ? dragOffset.width : 0,
-                                y: CGFloat(idx) * 22 + (isTop ? dragOffset.height * 0.3 : 0))
-                        .rotationEffect(
-                            isTop
-                                ? .degrees(Double(dragOffset.width / 18))
-                                : stackRotation(for: item, idx: idx),
-                            anchor: isTop ? .bottom : .center
-                        )
-                        .opacity(idx == 0 ? 1.0 : 1.0 - Double(idx) * 0.15)
-                        .allowsHitTesting(isTop)
-                        .zIndex(Double(stack.count - idx))
-                        .gesture(isTop ? dragGesture : nil)
-                        .animation(.spring(response: 0.32, dampingFraction: 0.85),
-                                   value: viewModel.current?.dedupKey)
-                        .onChange(of: isCardHovered) { _, hovering in
-                            if hovering && isTop && tmdbId > 0 {
-                                viewModel.fetchCreditsIfNeeded(for: tmdbId)
-                            }
-                        }
+                    DiscoverCardStackItem(
+                        item: item,
+                        idx: idx,
+                        stackCount: stack.count,
+                        cardWidth: w,
+                        cardHeight: h,
+                        dragOffset: dragOffset,
+                        credits: isTop ? viewModel.creditsCache[tmdbId] : nil,
+                        tmdbId: tmdbId,
+                        stackRotation: stackRotation(for: item, idx: idx),
+                        animationKey: viewModel.current?.dedupKey,
+                        isHovered: isTop ? $isCardHovered : .constant(false),
+                        hoverState: isCardHovered,
+                        gesture: isTop ? dragGesture : nil,
+                        onHoverForCredits: { viewModel.fetchCreditsIfNeeded(for: $0) }
+                    )
                 }
             }
             // Center the stack vertically so empty space splits above + below.
@@ -304,7 +262,10 @@ public struct DiscoverTabView: View {
                 if value.translation.width > threshold {
                     completeSwipe(right: true, fromTranslation: value.translation)
                 } else if value.translation.width < -threshold {
-                    completeSwipe(right: false, fromTranslation: value.translation)
+                    // Left drag = thumbs-down. Same semantic as the
+                    // left button — tagged for "fewer like this", not
+                    // a silent skip.
+                    handleMarkDisliked()
                 } else {
                     withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
                         dragOffset = .zero
@@ -352,45 +313,35 @@ public struct DiscoverTabView: View {
     }
 
     private var cardActionRow: some View {
+        // Two-button verdict: thumbs-down (red, taggs "fewer like this")
+        // and thumbs-up (accent, drops the card into the shortlist).
+        // No immediate add to library — the user reviews the shortlist
+        // (`DiscoverMatchedListView`) and adds from there.
         HStack(spacing: 8) {
-            // "Fewer like this" — secondary negative signal. Drops the
-            // card like Skip but tags it so the next "More picks" prompt
-            // tells the agent to avoid similar items.
             Button {
                 handleMarkDisliked()
             } label: {
-                Image(systemName: "hand.thumbsdown")
-                    .scaledFont(size: 12, weight: .semibold)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 7)
-            }
-            .buttonStyle(.bordered)
-            .controlSize(.regular)
-            .help(Text("Fewer like this", bundle: .module))
-
-            Button {
-                completeSwipe(right: false, fromTranslation: .zero)
-            } label: {
                 HStack(spacing: 6) {
-                    Image(systemName: "xmark")
-                        .scaledFont(size: 11, weight: .semibold)
-                    Text("Skip", bundle: .module)
+                    Image(systemName: "hand.thumbsdown.fill")
+                        .scaledFont(size: 13, weight: .semibold)
+                    Text("Nie", bundle: .module)
                         .scaledFont(size: 12, weight: .semibold)
                 }
-                .frame(width: 90)
+                .frame(maxWidth: .infinity)
                 .padding(.vertical, 7)
             }
             .modifier(GlassProminentButtonStyle())
             .tint(.red)
             .keyboardShortcut(.leftArrow, modifiers: [])
+            .help(Text("Fewer like this", bundle: .module))
 
             Button {
                 completeSwipe(right: true, fromTranslation: .zero)
             } label: {
                 HStack(spacing: 6) {
-                    Image(systemName: rightActionIcon)
-                        .scaledFont(size: 11, weight: .semibold)
-                    Text(rightActionLabel, bundle: .module)
+                    Image(systemName: "hand.thumbsup.fill")
+                        .scaledFont(size: 13, weight: .semibold)
+                    Text("Tak", bundle: .module)
                         .scaledFont(size: 12, weight: .semibold)
                 }
                 .frame(maxWidth: .infinity)
@@ -398,31 +349,7 @@ public struct DiscoverTabView: View {
             }
             .modifier(GlassProminentButtonStyle())
             .keyboardShortcut(.rightArrow, modifiers: [])
-
-            // Third button: compact list opener with badge — keep current.
-            Button {
-                withAnimation(.smooth) { showMatched.toggle() }
-            } label: {
-                ZStack(alignment: .topTrailing) {
-                    Image(systemName: "rectangle.stack.fill")
-                        .scaledFont(size: 13, weight: .semibold)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 7)
-                    if viewModel.matched.count > 0 {
-                        Text(verbatim: "\(min(viewModel.matched.count, 99))")
-                            .scaledFont(size: 9, weight: .bold)
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 4)
-                            .padding(.vertical, 1)
-                            .background(Capsule().fill(Color.accentColor))
-                            .offset(x: 4, y: -4)
-                    }
-                }
-                .frame(minWidth: 32)
-            }
-            .buttonStyle(.bordered)
-            .controlSize(.regular)
-            .help(Text("Your picks", bundle: .module))
+            .help(Text("Save to picks", bundle: .module))
         }
     }
 
@@ -559,5 +486,57 @@ public struct DiscoverTabView: View {
             }
         }.sorted().joined(separator: ", ")
         return "\(names) unavailable"
+    }
+}
+
+/// A single card in the Quiz swipe stack: the poster card plus its full
+/// transform chain (scale / offset / rotation / opacity / gesture).
+/// Extracted from `DiscoverTabView.cardStack`'s `ForEach` closure so that
+/// closure stays trivial to type-check — the long modifier chain lived
+/// inline and pushed the getter over the 100ms warn threshold.
+private struct DiscoverCardStackItem<G: Gesture>: View {
+    let item: DiscoverItem
+    let idx: Int
+    let stackCount: Int
+    let cardWidth: CGFloat
+    let cardHeight: CGFloat
+    let dragOffset: CGSize
+    let credits: TMDBCredits?
+    let tmdbId: Int
+    let stackRotation: Angle
+    let animationKey: String?
+    @Binding var isHovered: Bool
+    let hoverState: Bool
+    let gesture: G?
+    let onHoverForCredits: (Int) -> Void
+
+    private var isTop: Bool { idx == 0 }
+
+    var body: some View {
+        DiscoverCardView(item: item,
+                         isHovered: $isHovered,
+                         dragOffset: isTop ? dragOffset : .zero,
+                         credits: credits)
+            .frame(width: cardWidth, height: cardHeight)
+            .scaleEffect(1.0 - CGFloat(idx) * 0.04, anchor: .top)
+            .offset(x: isTop ? dragOffset.width : 0,
+                    y: CGFloat(idx) * 22 + (isTop ? dragOffset.height * 0.3 : 0))
+            .rotationEffect(
+                isTop
+                    ? .degrees(Double(dragOffset.width / 18))
+                    : stackRotation,
+                anchor: isTop ? .bottom : .center
+            )
+            .opacity(idx == 0 ? 1.0 : 1.0 - Double(idx) * 0.15)
+            .allowsHitTesting(isTop)
+            .zIndex(Double(stackCount - idx))
+            .gesture(gesture)
+            .animation(.spring(response: 0.32, dampingFraction: 0.85),
+                       value: animationKey)
+            .onChange(of: hoverState) { _, hovering in
+                if hovering && isTop && tmdbId > 0 {
+                    onHoverForCredits(tmdbId)
+                }
+            }
     }
 }

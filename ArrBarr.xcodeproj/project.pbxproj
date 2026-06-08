@@ -15,7 +15,37 @@
 		IOS00001IOS00001IOS0001A /* ArrBarriOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = IOS00010IOS00010IOS0010A /* ArrBarriOSApp.swift */; };
 		IOS00002IOS00002IOS0002A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = IOS00012IOS00012IOS0012A /* Assets.xcassets */; };
 		IOS00003IOS00003IOS0003A /* ArrCore in Frameworks */ = {isa = PBXBuildFile; productRef = IOS00020IOS00020IOS0020A /* ArrCore */; };
+		IOS00099IOS00099IOS0099A /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 7A1D7C152F00000100000005 /* AppIcon.icon */; };
+		SKB00020SKB00020SKB0020A /* StoreKitBackend.swift in Sources */ = {isa = PBXBuildFile; fileRef = SKB00010SKB00010SKB0010A /* StoreKitBackend.swift */; };
+		SKB00030SKB00030SKB0030A /* StoreKitBackend.swift in Sources */ = {isa = PBXBuildFile; fileRef = SKB00010SKB00010SKB0010A /* StoreKitBackend.swift */; };
+		WDGBF001WDGBF001WDGBF01A /* ArrBarrWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = WDGFR010WDGFR010WDGFR01A /* ArrBarrWidgets.swift */; };
+		WDGBF002WDGBF002WDGBF02A /* ArrCore in Frameworks */ = {isa = PBXBuildFile; productRef = WDGPD020WDGPD020WDGPD02A /* ArrCore */; };
+		WDGBF003WDGBF003WDGBF03A /* ArrBarrWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = WDGFR013WDGFR013WDGFR13A /* ArrBarrWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		WDGPX071WDGPX071WDGPX71A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A653F04DC480B6C6FA6963CC /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = WDGNT050WDGNT050WDGNT05A;
+			remoteInfo = ArrBarrWidgets;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		WDGPH040WDGPH040WDGPH04A /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				WDGBF003WDGBF003WDGBF03A /* ArrBarrWidgets.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		24CA88887E39123AE476CB8E /* ArrBarr.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ArrBarr.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -28,7 +58,13 @@
 		IOS00010IOS00010IOS0010A /* ArrBarriOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArrBarriOSApp.swift; sourceTree = "<group>"; };
 		IOS00011IOS00011IOS0011A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		IOS00012IOS00012IOS0012A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		IOS00013IOS00013IOS0013A /* ArrBarriOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ArrBarriOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		IOS00013IOS00013IOS0013A /* ArrBarr.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ArrBarr.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		SKB00010SKB00010SKB0010A /* StoreKitBackend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreKitBackend.swift; sourceTree = "<group>"; };
+		SKB00040SKB00040SKB0040A /* ArrBarr.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = ArrBarr.storekit; sourceTree = "<group>"; };
+		WDGFR010WDGFR010WDGFR01A /* ArrBarrWidgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArrBarrWidgets.swift; sourceTree = "<group>"; };
+		WDGFR011WDGFR011WDGFR11A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		WDGFR012WDGFR012WDGFR12A /* ArrBarrWidgets.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ArrBarrWidgets.entitlements; sourceTree = "<group>"; };
+		WDGFR013WDGFR013WDGFR13A /* ArrBarrWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ArrBarrWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -48,6 +84,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		WDGPH031WDGPH031WDGPH31A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				WDGBF002WDGBF002WDGBF02A /* ArrCore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -55,19 +99,10 @@
 			isa = PBXGroup;
 			children = (
 				24CA88887E39123AE476CB8E /* ArrBarr.app */,
-				IOS00013IOS00013IOS0013A /* ArrBarriOS.app */,
+				IOS00013IOS00013IOS0013A /* ArrBarr.app */,
+				WDGFR013WDGFR013WDGFR13A /* ArrBarrWidgets.appex */,
 			);
 			name = Products;
-			sourceTree = "<group>";
-		};
-		IOS00060IOS00060IOS0060A /* ArrBarriOS */ = {
-			isa = PBXGroup;
-			children = (
-				IOS00010IOS00010IOS0010A /* ArrBarriOSApp.swift */,
-				IOS00011IOS00011IOS0011A /* Info.plist */,
-				IOS00012IOS00012IOS0012A /* Assets.xcassets */,
-			);
-			path = ArrBarriOS;
 			sourceTree = "<group>";
 		};
 		7C333C05887345F76F5DBD52 /* ArrBarr */ = {
@@ -88,8 +123,39 @@
 			children = (
 				7C333C05887345F76F5DBD52 /* ArrBarr */,
 				IOS00060IOS00060IOS0060A /* ArrBarriOS */,
+				WDGGR060WDGGR060WDGGR06A /* ArrBarrWidgets */,
+				SKB00050SKB00050SKB0050A /* Shared */,
+				SKB00040SKB00040SKB0040A /* ArrBarr.storekit */,
 				2AB51CB1B325CDC1D0C6215E /* Products */,
 			);
+			sourceTree = "<group>";
+		};
+		SKB00050SKB00050SKB0050A /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				SKB00010SKB00010SKB0010A /* StoreKitBackend.swift */,
+			);
+			path = Shared;
+			sourceTree = "<group>";
+		};
+		IOS00060IOS00060IOS0060A /* ArrBarriOS */ = {
+			isa = PBXGroup;
+			children = (
+				IOS00010IOS00010IOS0010A /* ArrBarriOSApp.swift */,
+				IOS00011IOS00011IOS0011A /* Info.plist */,
+				IOS00012IOS00012IOS0012A /* Assets.xcassets */,
+			);
+			path = ArrBarriOS;
+			sourceTree = "<group>";
+		};
+		WDGGR060WDGGR060WDGGR06A /* ArrBarrWidgets */ = {
+			isa = PBXGroup;
+			children = (
+				WDGFR010WDGFR010WDGFR01A /* ArrBarrWidgets.swift */,
+				WDGFR012WDGFR012WDGFR12A /* ArrBarrWidgets.entitlements */,
+				WDGFR011WDGFR011WDGFR11A /* Info.plist */,
+			);
+			path = ArrBarrWidgets;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -122,18 +188,40 @@
 				IOS00050IOS00050IOS0050A /* Sources */,
 				IOS00030IOS00030IOS0030A /* Frameworks */,
 				IOS00040IOS00040IOS0040A /* Resources */,
+				WDGPH040WDGPH040WDGPH04A /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				WDGDP070WDGDP070WDGDP07A /* PBXTargetDependency */,
 			);
 			name = ArrBarriOS;
 			packageProductDependencies = (
 				IOS00020IOS00020IOS0020A /* ArrCore */,
 			);
 			productName = ArrBarriOS;
-			productReference = IOS00013IOS00013IOS0013A /* ArrBarriOS.app */;
+			productReference = IOS00013IOS00013IOS0013A /* ArrBarr.app */;
 			productType = "com.apple.product-type.application";
+		};
+		WDGNT050WDGNT050WDGNT05A /* ArrBarrWidgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = WDGCL080WDGCL080WDGCL08A /* Build configuration list for PBXNativeTarget "ArrBarrWidgets" */;
+			buildPhases = (
+				WDGPH030WDGPH030WDGPH03A /* Sources */,
+				WDGPH031WDGPH031WDGPH31A /* Frameworks */,
+				WDGPH032WDGPH032WDGPH32A /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ArrBarrWidgets;
+			packageProductDependencies = (
+				WDGPD020WDGPD020WDGPD02A /* ArrCore */,
+			);
+			productName = ArrBarrWidgets;
+			productReference = WDGFR013WDGFR013WDGFR13A /* ArrBarrWidgets.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -147,6 +235,10 @@
 				TargetAttributes = {
 					981F7B6F6B019D53A2A452F0 = {
 						DevelopmentTeam = "";
+						ProvisioningStyle = Automatic;
+					};
+					WDGNT050WDGNT050WDGNT05A = {
+						DevelopmentTeam = 9M6DR2Z85Y;
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -174,6 +266,7 @@
 			targets = (
 				981F7B6F6B019D53A2A452F0 /* ArrBarr */,
 				IOS00070IOS00070IOS0070A /* ArrBarriOS */,
+				WDGNT050WDGNT050WDGNT05A /* ArrBarrWidgets */,
 			);
 		};
 /* End PBXProject section */
@@ -193,6 +286,14 @@
 			buildActionMask = 2147483647;
 			files = (
 				IOS00002IOS00002IOS0002A /* Assets.xcassets in Resources */,
+				IOS00099IOS00099IOS0099A /* AppIcon.icon in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		WDGPH032WDGPH032WDGPH32A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -205,6 +306,7 @@
 			files = (
 				1F0B1A9D78DA2F2F554BA54D /* AppDelegate.swift in Sources */,
 				D2FECFB6447CD596A4FC0207 /* ArrBarrApp.swift in Sources */,
+				SKB00020SKB00020SKB0020A /* StoreKitBackend.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -213,10 +315,27 @@
 			buildActionMask = 2147483647;
 			files = (
 				IOS00001IOS00001IOS0001A /* ArrBarriOSApp.swift in Sources */,
+				SKB00030SKB00030SKB0030A /* StoreKitBackend.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		WDGPH030WDGPH030WDGPH03A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				WDGBF001WDGBF001WDGBF01A /* ArrBarrWidgets.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		WDGDP070WDGDP070WDGDP07A /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = WDGNT050WDGNT050WDGNT05A /* ArrBarrWidgets */;
+			targetProxy = WDGPX071WDGPX071WDGPX71A /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		352BD470A5BE9D48B8298DCE /* Debug */ = {
@@ -327,6 +446,9 @@
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
 				DEAD_CODE_STRIPPING = YES;
+				DEPLOYMENT_POSTPROCESSING = YES;
+				STRIP_INSTALLED_PRODUCT = YES;
+				STRIP_STYLE = all;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = "";
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -393,10 +515,12 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = ArrBarriOS/ArrBarriOS.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "";
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = 9M6DR2Z85Y;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = ArrBarriOS/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -420,10 +544,12 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = ArrBarriOS/ArrBarriOS.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "";
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = 9M6DR2Z85Y;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = ArrBarriOS/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -442,6 +568,175 @@
 			};
 			name = Release;
 		};
+		ASR00010ASR00010ASR0010A /* Release-AppStore */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = "";
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 0.10.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 6.0;
+			};
+			name = "Release-AppStore";
+		};
+		ASR00020ASR00020ASR0020A /* Release-AppStore */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = ArrBarr/ArrBarr.entitlements;
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_PREVIEWS = YES;
+				INFOPLIST_FILE = ArrBarr/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.preclowski.ArrBarr;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) APPSTORE";
+			};
+			name = "Release-AppStore";
+		};
+		ASR00030ASR00030ASR0030A /* Release-AppStore */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = ArrBarriOS/ArrBarriOS.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "";
+				DEVELOPMENT_TEAM = 9M6DR2Z85Y;
+				ENABLE_PREVIEWS = YES;
+				INFOPLIST_FILE = ArrBarriOS/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.10.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.preclowski.ArrBarr.iOS;
+				PRODUCT_NAME = ArrBarr;
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) APPSTORE";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = "Release-AppStore";
+		};
+		WDGCF081WDGCF081WDGCF81A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ArrBarrWidgets/ArrBarrWidgets.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 9M6DR2Z85Y;
+				INFOPLIST_FILE = ArrBarrWidgets/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = ArrBarr;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 0.10.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.preclowski.ArrBarr.iOS.Widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		WDGCF082WDGCF082WDGCF82A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ArrBarrWidgets/ArrBarrWidgets.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 9M6DR2Z85Y;
+				INFOPLIST_FILE = ArrBarrWidgets/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = ArrBarr;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 0.10.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.preclowski.ArrBarr.iOS.Widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		WDGCF083WDGCF083WDGCF83A /* Release-AppStore */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ArrBarrWidgets/ArrBarrWidgets.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 9M6DR2Z85Y;
+				INFOPLIST_FILE = ArrBarrWidgets/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = ArrBarr;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 0.10.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.preclowski.ArrBarr.iOS.Widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) APPSTORE";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = "Release-AppStore";
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -450,6 +745,7 @@
 			buildConfigurations = (
 				A42B5AC8E0FD1391D7969489 /* Debug */,
 				E7AFBD3F229BC2E497429F73 /* Release */,
+				ASR00020ASR00020ASR0020A /* Release-AppStore */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
@@ -459,6 +755,7 @@
 			buildConfigurations = (
 				352BD470A5BE9D48B8298DCE /* Debug */,
 				4007DC1307241916DB3176F6 /* Release */,
+				ASR00010ASR00010ASR0010A /* Release-AppStore */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
@@ -468,6 +765,17 @@
 			buildConfigurations = (
 				IOS00081IOS00081IOS0081A /* Debug */,
 				IOS00082IOS00082IOS0082A /* Release */,
+				ASR00030ASR00030ASR0030A /* Release-AppStore */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		WDGCL080WDGCL080WDGCL08A /* Build configuration list for PBXNativeTarget "ArrBarrWidgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				WDGCF081WDGCF081WDGCF81A /* Debug */,
+				WDGCF082WDGCF082WDGCF82A /* Release */,
+				WDGCF083WDGCF083WDGCF83A /* Release-AppStore */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
@@ -482,11 +790,15 @@
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		IOS00020IOS00020IOS0020A /* ArrCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ArrCore;
+		};
 		PRD00001PRD00001PRD0001A /* ArrCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = ArrCore;
 		};
-		IOS00020IOS00020IOS0020A /* ArrCore */ = {
+		WDGPD020WDGPD020WDGPD02A /* ArrCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = ArrCore;
 		};

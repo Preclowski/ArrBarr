@@ -1,52 +1,21 @@
 {
   "fill" : {
-    "linear-gradient" : [
-      "display-p3:0.29748,0.92819,1.00000,1.00000",
-      "display-p3:0.19325,0.52613,0.96783,1.00000"
-    ],
-    "orientation" : {
-      "start" : {
-        "x" : 0.5,
-        "y" : 0
-      },
-      "stop" : {
-        "x" : 0.5,
-        "y" : 0.7
-      }
-    }
+    "solid" : "display-p3:0.96841,0.88675,0.77348,1.00000"
   },
   "groups" : [
     {
       "layers" : [
         {
-          "fill-specializations" : [
-            {
-              "appearance" : "tinted",
-              "value" : "automatic"
-            }
-          ],
-          "glass" : true,
-          "hidden" : false,
-          "image-name" : "03-arrow.svg",
-          "name" : "03-arrow"
-        },
-        {
-          "blend-mode" : "normal",
-          "fill-specializations" : [
-            {
-              "appearance" : "dark",
-              "value" : "none"
-            }
-          ],
-          "glass" : true,
-          "hidden" : false,
-          "image-name" : "02-waves.svg",
-          "name" : "02-waves"
-        },
-        {
-          "hidden" : true,
-          "image-name" : "01-background.svg",
-          "name" : "01-background"
+          "glass" : false,
+          "image-name" : "popcorn.png",
+          "name" : "Popcorn",
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              0.5,
+              0.5
+            ]
+          }
         }
       ],
       "name" : "IconLayers",

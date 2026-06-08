@@ -1,4 +1,21 @@
 import Foundation
+#if canImport(FoundationModels)
+import FoundationModels
+#endif
+
+/// Whether the on-device model is actually usable on THIS device — not just a
+/// recent-enough OS, but Apple Intelligence supported AND enabled. The Settings
+/// AI provider picker hides the Foundation Models option when this is false.
+public enum FoundationModelsAvailability {
+    public static var isSupported: Bool {
+        #if canImport(FoundationModels)
+        if #available(macOS 26.0, iOS 26.0, *) {
+            if case .available = SystemLanguageModel.default.availability { return true }
+        }
+        #endif
+        return false
+    }
+}
 
 // FoundationModels is available on macOS 26+ and iOS 26+.
 // On older SDK hosts this file compiles as a stub that reports unavailability.
@@ -81,9 +98,9 @@ public struct FoundationModelsProvider: LLMProvider {
 
         return Instructions(
             """
-            You are ArrBarr's in-app assistant for Sonarr (TV) and Radarr (movies).
-            Reply in English, in a short, friendly tone.
-            The user may write in Polish — keep media titles exactly as the user wrote them.
+            You are ArrBarr's in-app assistant for \(SystemPromptComposer.arrsClause(tools: tools)) — and a film buff at heart.
+            You speak concisely but with real passion for film and TV. You run your own homelab on the same *arr stack, so you talk to the user as a fellow self-hoster: when it helps, you share a hard-won tip on quality profiles, custom formats or release groups — never lecturing. Passion shows in your word choice, not your length: keep it short.
+            Match the user's language. (This on-device model's output language is bounded by the system Apple Intelligence setting, so there's no point forcing a specific one here.) Keep media titles exactly as the user wrote them.
 
             Tools you can call. For each tool the `json` argument MUST be a
             JSON-encoded object matching the schema shown:
@@ -116,6 +133,22 @@ public struct FoundationModelsProvider: LLMProvider {
             [link](url). Keep replies short — usually one short paragraph.
             When listing several items, write them out as a sentence with
             commas, or use em-dashes inline.
+
+            When you talk about a specific film or show you genuinely know
+            (never guess, never invent facts), PROACTIVELY offer one short fun
+            fact or behind-the-scenes tidbit — don't wait to be asked. Wrap
+            ANY words that reveal a plot point (a twist, an ending, a death,
+            who did it) in double pipes: ||like this||. The app blurs whatever
+            is inside the pipes behind a tap-to-reveal cloud, so wrapping is
+            always safe — the reader chooses whether to peek. Because it's
+            safe, lean toward wrapping rather than staying silent: a hidden
+            spoiler is better than no tidbit. Wrap only the revealing words,
+            not the whole sentence. Examples:
+              • "Great practical effects — and ||the shark is barely shown
+                because the mechanical one kept breaking||."
+              • "Loved the ending. ||Bruce Willis was dead the whole time.||"
+            Don't pipe ordinary, non-spoiler trivia (release year, cast,
+            budget) — those stay in the open.
             """
         )
     }

@@ -1,7 +1,21 @@
 import Foundation
+import os
+
+/// The slice of `QueueAggregator` that `QueueViewModel` depends on. Extracted
+/// as a protocol purely so the view-model can be driven by a fake in tests —
+/// production always wires the concrete `QueueAggregator`.
+@MainActor
+protocol QueueDataProviding {
+    func fetch() async -> AggregateResult
+    func fetchUpcoming() async -> [UpcomingItem]
+    func fetchHealth() async -> HealthResult
+    func fetchHistory(for source: QueueItem.Source) async -> HistoryResult
+    func perform(_ action: QueueAggregator.Action, on item: QueueItem) async throws
+    func deleteAll(_ items: [QueueItem]) async throws
+}
 
 @MainActor
-public final class QueueAggregator {
+public final class QueueAggregator: QueueDataProviding {
     enum AggregateError: LocalizedError {
         case noDownloadId
         case downloadProtocolUnknown
@@ -150,11 +164,32 @@ public final class QueueAggregator {
     private static func safeFetch(_ block: () async throws -> [QueueItem]) async -> (items: [QueueItem], error: String?) {
         do {
             return (try await block(), nil)
+        } catch is CancellationError {
+            // Refresh task was cancelled (e.g. user released pull-to-refresh,
+            // or an overlapping refresh superseded this one). Not a real
+            // failure — return no error so the caller keeps the last good data.
+            return ([], nil)
+        } catch let error as URLError where error.code == .cancelled {
+            // URLSession's cancellation variant (code -999) — same story.
+            return ([], nil)
+        } catch HTTPError.notConfigured, HTTPError.missingApiKey {
+            // The arr isn't set up — not a failure to surface. `fetchUpcoming`
+            // and `fetchHealth` already swallow these; the queue must too,
+            // otherwise an unconfigured Lidarr/Whisparr shows "Service not
+            // configured" in the queue while Upcoming (which swallows it)
+            // looks fine. Settings is where missing config/keys are reported.
+            return ([], nil)
         } catch {
             let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+            // Genuine failure (HTTP status, transport/timeout, decode). Log the
+            // full reflection — a DecodingError's coding path or a URLError's
+            // numeric code — since the UI string drops it.
+            Self.logger.error("queue fetch failed: \(message, privacy: .public) | \(String(reflecting: error), privacy: .public)")
             return ([], message)
         }
     }
+
+    private static let logger = Logger(subsystem: "com.preclowski.ArrBarr", category: "QueueFetch")
 
     private static func safeFetchUpcoming(_ block: () async throws -> [UpcomingItem]) async -> [UpcomingItem] {
         do { return try await block() } catch { return [] }

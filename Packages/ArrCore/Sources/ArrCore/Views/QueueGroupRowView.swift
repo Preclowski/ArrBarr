@@ -21,9 +21,19 @@ public struct QueueGroupRowView: View {
     /// window). Suppresses the long-hover tooltip popover.
     @Environment(\.suppressRowTooltip) private var suppressRowTooltip
     @State private var isHovering = false
-    @State private var showDeleteConfirmation = false
     @State private var showTooltip = false
     @State private var hoverTask: Task<Void, Never>?
+
+    private func requestDeleteConfirm() {
+        ConfirmCenter.request(PendingConfirm(
+            title: "Cancel this download?",
+            message: "This will remove the season pack from the client.",
+            confirmLabel: "Cancel download",
+            cancelLabel: "Keep download",
+            isDestructive: true,
+            onConfirm: onDelete
+        ))
+    }
 
     private var rep: QueueItem { group.representative }
 
@@ -66,9 +76,16 @@ public struct QueueGroupRowView: View {
                             .lineLimit(1)
                             .truncationMode(.tail)
 
-                        MediaBadgeCluster(isUpgrade: rep.isUpgrade)
+                        // Chevron next to title — same drill-in
+                        // affordance as QueueRowView.
+                        LinkChevron(size: 9)
+
                         Spacer(minLength: 4)
-                        // Client now lives in the card header.
+
+                        // Upgrade/New badge on the title row's trailing
+                        // edge — matches QueueRowView (moved out of the
+                        // progress card header below).
+                        MediaBadgeCluster(isUpgrade: rep.isUpgrade)
                     }
 
                     if let label = seasonLabel {
@@ -88,11 +105,12 @@ public struct QueueGroupRowView: View {
                     fadeTrailing: !(isHovering && canControl),
                     showUpgradeDiff: false,
                     showHeader: true,
+                    showBadge: false,
                     compactSpec: true
                 )
             }
         }
-        .padding(.horizontal, 12)
+        .padding(.horizontal, Tokens.Spacing.queueRowH)
         .padding(.vertical, 6)
         .background(
             RoundedRectangle(cornerRadius: Tokens.Radius.card)
@@ -111,6 +129,9 @@ public struct QueueGroupRowView: View {
             }
         }
         #endif
+        // ContentShape/onTapGesture before the hover affordances so the
+        // overlay's own buttons receive clicks instead of the row
+        // tap-gesture swallowing them.
         .contentShape(Rectangle())
         .onTapGesture {
             onShowDetail?()
@@ -139,18 +160,11 @@ public struct QueueGroupRowView: View {
             )
         }
         #endif
-        .confirmationDialog(
-            Text("Cancel this download?", bundle: .module),
-            isPresented: $showDeleteConfirmation,
-            titleVisibility: .visible
-        ) {
-            Button(role: .destructive) { onDelete() } label: {
-                Text("Cancel download", bundle: .module)
-            }
-            Button(role: .cancel) {} label: { Text("Keep download", bundle: .module) }
-        } message: {
-            Text(String(format: String(localized: "This will remove \"%@\" (%lld episodes) from the download client.", bundle: .module), headerLabel, group.memberCount))
-        }
+        // Light up the drill-in LinkChevron whenever the row is hovered
+        // (reuses the existing isHovering, no extra onHover).
+        .environment(\.linkRowHovering, isHovering)
+        // Confirmation now lives at panel level via ConfirmCenter
+        // (see requestDeleteConfirm).
     }
 
     // MARK: - Header text
@@ -224,7 +238,7 @@ public struct QueueGroupRowView: View {
             if canControl {
                 IconOverflowMenu(accessibilityLabel: "More actions") {
                     Button(role: .destructive) {
-                        showDeleteConfirmation = true
+                        requestDeleteConfirm()
                     } label: {
                         Label(String(localized: "Cancel download", bundle: .module),
                               systemImage: "trash")
@@ -253,7 +267,7 @@ public struct QueueGroupRowView: View {
             }
             if canControl {
                 TooltipActionButton(symbol: "trash", labelKey: "Remove", tint: .red) {
-                    showDeleteConfirmation = true
+                    requestDeleteConfirm()
                 }
             }
         }
@@ -274,7 +288,7 @@ public struct QueueGroupRowView: View {
                 IconButton(symbol: "trash", helpKey: "Remove from client",
                            accessibilityLabel: "Remove \(headerLabel)",
                            tint: .red) {
-                    showDeleteConfirmation = true
+                    requestDeleteConfirm()
                 }
             }
         }
@@ -325,7 +339,6 @@ public struct QueueGroupTooltip: View {
     private var tooltipContent: some View {
         VStack(alignment: .leading, spacing: 6) {
             header
-            Divider().opacity(0.5)
             infoGrid
 
             if !rep.customFormats.isEmpty || rep.customFormatScore != 0 {
@@ -415,7 +428,8 @@ public struct QueueGroupTooltip: View {
     @ViewBuilder
     private func replacesSummary(uniform: ExistingFingerprint) -> some View {
         let upgradeCount = group.items.filter(\.isUpgrade).count
-        VStack(alignment: .leading, spacing: 4) {
+        let rep = group.representative
+        VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 4) {
                 Image(systemName: "arrow.up.doc.fill")
                     .scaledFont(size: 9)
@@ -426,18 +440,13 @@ public struct QueueGroupTooltip: View {
                     .tracking(0.5)
                     .foregroundStyle(.indigo)
             }
-            HStack(spacing: 4) {
-                Text(uniform.quality).foregroundStyle(.primary)
-                if uniform.score != 0 {
-                    SeparatorDot()
-                    let sign = uniform.score > 0 ? "+" : ""
-                    Text(verbatim: "\(sign)\(uniform.score)")
-                        .scaledFont(size: 11, weight: .semibold)
-                        .foregroundStyle(uniform.score > 0 ? Color.green : Color.red)
-                }
-                ForEach(uniform.formats, id: \.self) { TagChip(text: $0) }
-            }
-            .scaledFont(size: 11)
+            // Same side-by-side diff as everywhere else (current → incoming),
+            // built from the pack's uniform existing fingerprint vs the shared
+            // incoming release.
+            UpgradeDiffView(
+                current: .init(quality: uniform.quality, score: uniform.score, size: nil, formats: uniform.formats),
+                incoming: .init(quality: rep.quality, score: rep.customFormatScore, size: nil, formats: rep.customFormats)
+            )
         }
         .padding(8)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -538,7 +547,10 @@ public struct QueueGroupTooltip: View {
     private func row(_ label: String, value: String, mono: Bool = false, wraps: Bool = false) -> some View {
         GridRow(alignment: .firstTextBaseline) {
             Text(LocalizedStringKey(label), bundle: .module)
-                .scaledFont(size: 11)
+                // Match the detail view's UpgradeDiffTable label
+                // typography (semibold secondary) so the tooltip's
+                // fact rows read the same as the detail diff.
+                .scaledFont(size: 11, weight: .semibold)
                 .foregroundStyle(.secondary)
                 .gridColumnAlignment(.leading)
             Text(value)

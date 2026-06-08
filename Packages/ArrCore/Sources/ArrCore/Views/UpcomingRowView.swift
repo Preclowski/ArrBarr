@@ -19,11 +19,16 @@ public struct UpcomingRowView: View {
             disabled: item.entityId == nil,
             onTap: openDetail
         ) {
-            if item.hasFile {
-                // Same accent-tinted pill as the search view's library
-                // hits — one visual for "you already own this" across
-                // every surface (see `InLibraryBadge`).
-                InLibraryBadge()
+            HStack(spacing: 6) {
+                if item.hasFile {
+                    // Same accent-tinted pill as the search view's library
+                    // hits — one visual for "you already own this" across
+                    // every surface (see `InLibraryBadge`).
+                    InLibraryBadge()
+                }
+                // Which arr this upcoming item comes from.
+                ServiceIcon(source: item.source, size: 13)
+                    .foregroundStyle(.tertiary)
             }
         }
         #if os(macOS)

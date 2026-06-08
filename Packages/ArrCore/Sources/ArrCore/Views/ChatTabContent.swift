@@ -7,7 +7,9 @@ import SwiftUI
 /// here because availability can flip mid-session (e.g. OpenAI key
 /// becomes invalid).
 struct ChatTabContent: View {
-    @ObservedObject var chatHolder: ChatViewModelHolder
+    // `@Observable` holder — observation is automatic when `body` reads its
+    // properties, so no `@ObservedObject` wrapper is needed.
+    var chatHolder: ChatViewModelHolder
 
     var body: some View {
         if !chatHolder.vm.providerIsAvailable {

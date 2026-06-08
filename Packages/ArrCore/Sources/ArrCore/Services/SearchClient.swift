@@ -3,7 +3,10 @@ import Foundation
 public actor SearchClient {
     private let config: ServiceConfig
     private let source: QueueItem.Source
-    private let http = HTTPClient()
+    // Indexer searches via the arr go out to trackers/Usenet and routinely
+    // take longer than the short refresh budget — give them headroom so chat
+    // "search" tools don't time out at 15s.
+    private let http = HTTPClient(timeout: 60)
 
     private var apiBase: String {
         source == .lidarr ? "/api/v1" : "/api/v3"

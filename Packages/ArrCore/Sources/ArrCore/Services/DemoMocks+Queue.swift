@@ -1,28 +1,53 @@
 import Foundation
 
-// Queue fixtures: per-arr static queue arrays plus the season-pack and independent-episode helpers used to assemble them.
+// Queue fixtures: curated open-source universe (3 movies, 5 episodes / 2 series,
+// 2 albums, 2 cat "nature films"). States are tuned to show off quality upgrades
+// and custom-format scores. No failures/warnings — health stays green.
 
 extension DemoMocks {
-    // MARK: - Queue
+    // MARK: - Radarr (3 movies)
 
     static var radarrQueue: [QueueItem] {
         [
+            // CF-score showcase: high-tier 2160p remux, big positive score.
+            // Paused, to show the paused state alongside the score breakdown.
             queueItem(
                 source: .radarr, id: "demo-radarr-1",
                 title: "Big Buck Bunny (2008)",
                 releaseName: "Big.Buck.Bunny.2008.2160p.BluRay.x265.HDR-DEMO",
-                status: .downloading, progress: 0.42,
-                quality: "Bluray-2160p", formats: ["HDR10+", "DV", "Atmos", "TrueHD", "Remux Tier 01", "HQ Source Group"], score: 1850,
+                status: .paused, progress: 0.42,
+                quality: "Bluray-2160p",
+                formats: ["HDR10+", "DV", "Atmos", "TrueHD", "Remux Tier 01", "HQ Source Group"], score: 1850,
                 client: "SABnzbd", indexer: "DemoUsenet",
                 upgrade: false, posterSeed: "bigbuckbunny", aspect: .portrait,
                 entityId: 201
             ),
+            // Headline UPGRADE: Bluray-1080p -> Bluray-2160p, score jumps, size grows.
             queueItem(
                 source: .radarr, id: "demo-radarr-2",
+                title: "Tears of Steel (2012)",
+                releaseName: "Tears.of.Steel.2012.2160p.BluRay.x265.HDR10.DV.Atmos-DEMO",
+                status: .downloading, progress: 0.62,
+                quality: "Bluray-2160p",
+                formats: ["HDR10+", "DV", "Atmos", "TrueHD", "x265"], score: 1720,
+                client: "NZBGet", indexer: "DemoUsenet",
+                upgrade: true,
+                existing: ExistingFile(
+                    quality: "Bluray-1080p", formats: ["x264", "DTS-HD MA 5.1"], score: 350,
+                    size: 8_400_000_000,
+                    fileName: "Tears.of.Steel.2012.1080p.BluRay.x264-OLD.mkv"
+                ),
+                posterSeed: "tearsofsteel", aspect: .portrait,
+                entityId: 203
+            ),
+            // Second upgrade, importing — codec/source bump (SD HDTV -> WEB-DL AV1).
+            queueItem(
+                source: .radarr, id: "demo-radarr-3",
                 title: "Sintel (2010)",
-                releaseName: "Sintel.2010.1080p.WEB-DL.AV1-DEMO",
+                releaseName: "Sintel.2010.1080p.WEB-DL.AV1.Atmos-DEMO",
                 status: .importing, progress: 1.0,
-                quality: "WEB-DL 1080p", formats: ["AMZN", "Atmos", "DDP 5.1", "x264", "HQ Source Group"], score: 720,
+                quality: "WEB-DL 1080p",
+                formats: ["AMZN", "Atmos", "DDP 5.1", "AV1", "HQ Source Group"], score: 720,
                 client: "qBittorrent", indexer: "DemoTracker",
                 upgrade: true,
                 existing: ExistingFile(
@@ -33,111 +58,37 @@ extension DemoMocks {
                 posterSeed: "sintel", aspect: .portrait,
                 entityId: 202
             ),
-            queueItem(
-                source: .radarr, id: "demo-radarr-3",
-                title: "Tears of Steel (2012)",
-                releaseName: "Tears.of.Steel.2012.720p.WEB-DL.x264-DEMO",
-                status: .paused, progress: 0.18,
-                quality: "WEB-DL 720p", formats: ["LQ Release Group", "x264", "AAC 2.0"], score: -160,
-                client: "Transmission", indexer: "DemoTracker",
-                upgrade: false, posterSeed: "tearsofsteel", aspect: .portrait,
-                entityId: 203
-            ),
         ]
     }
 
+    // MARK: - Sonarr (5 episodes / 2 series)
+
     static var sonarrQueue: [QueueItem] {
-        // Order: a single grabbed episode, then the Caminandes season pack
-        // (so it sits in the middle and isn't last in the section), then the
-        // three independent Pioneer One episodes (different downloadIds —
-        // they should NOT group), then the remaining standalones.
-        var items: [QueueItem] = [
-            queueItem(
-                source: .sonarr, id: "demo-sonarr-1",
-                title: "Pioneer One (2010)",
-                subtitle: "Season 01 · Episode 3 — Endurance",
-                seasonNumber: 1, episodeNumber: 3, episodeTitle: "Endurance",
-                releaseName: "Pioneer.One.S01E03.720p.HDTV.x264-DEMO",
-                status: .downloading, progress: 0.67,
-                quality: "HDTV-720p", formats: ["x264", "AAC 2.0", "Internal", "HQ Source Group"], score: 380,
-                client: "qBittorrent", indexer: "DemoTracker",
-                upgrade: true,
-                existing: ExistingFile(
-                    quality: "WEBRip-480p", formats: ["x264", "Repack"], score: 30,
-                    size: 350_000_000,
-                    fileName: "Pioneer.One.S01E03.480p.WEBRip-OLD.mkv"
-                ),
-                posterSeed: "pioneerone", aspect: .portrait,
-                entityId: 101
-            ),
-        ]
+        // The Caminandes 2-ep season pack (groups into one row) followed by the
+        // three independent Pioneer One S01 rows (distinct downloadIds => do NOT
+        // group). 5 episodes total.
+        var items: [QueueItem] = []
         items.append(contentsOf: caminandesSeasonPack)
-        items.append(contentsOf: tearsOfSteelSeasonPack)
         items.append(contentsOf: pioneerOneIndependentEpisodes)
-        items.append(contentsOf: springTalesIndependentEpisodes)
-        items.append(contentsOf: [
-            queueItem(
-                source: .sonarr, id: "demo-sonarr-2",
-                title: "Cosmos Laundromat (2015)",
-                subtitle: "Season 01 · Episode 1 — The Beginning",
-                seasonNumber: 1, episodeNumber: 1, episodeTitle: "The Beginning",
-                releaseName: "Cosmos.Laundromat.S01E01.1080p.WEB-DL-DEMO",
-                status: .queued, progress: 0,
-                quality: "WEB-DL 1080p", formats: ["AMZN", "x264"], score: 180,
-                client: "NZBGet", indexer: "DemoUsenet",
-                upgrade: false, posterSeed: "cosmoslaundromat", aspect: .portrait,
-                entityId: 104
-            ),
-            queueItem(
-                source: .sonarr, id: "demo-sonarr-3",
-                title: "Northern Cascade (2023)",
-                subtitle: "Season 02 · Episode 4 — Cold Start",
-                seasonNumber: 2, episodeNumber: 4, episodeTitle: "Cold Start",
-                releaseName: "Northern.Cascade.S02E04.2160p.WEB-DL.DV.HDR10-DEMO",
-                status: .warning, progress: 0.92,
-                quality: "WEB-DL 2160p", formats: ["AMZN", "DV", "HDR10", "Atmos", "x265", "10bit"], score: 1240,
-                client: "Deluge", indexer: "DemoTracker",
-                upgrade: false, posterSeed: "northerncascade", aspect: .portrait,
-                entityId: 105,
-                statusMessages: [
-                    "Import failed: No matching episode found in series.",
-                    "The release group conflicts with the configured preferred-words list."
-                ]
-            ),
-        ])
         return items
     }
 
-    /// A 5-episode Caminandes season pack — all members share the same
-    /// `downloadId` so QueueGrouping renders them as a single Sonarr row
-    /// labelled "Caminandes · S01". Each episode's *existing* file comes
-    /// from a different original release (mixed-source upgrade), which is
-    /// the realistic case: one was a crisp HDTV grab, two were lower-tier,
-    /// one missing entirely. The tooltip's per-episode grid shows it all.
+    /// Caminandes S01 two-episode pack — shared downloadId so QueueGrouping
+    /// renders a single "Caminandes · S01" row. Each member is an upgrade over a
+    /// different original file (mixed-source pack), shown in the per-episode grid.
     static var caminandesSeasonPack: [QueueItem] {
         let sharedDownloadId = "demo-pack-caminandes-s01"
         let baseRelease = "Caminandes.S01.1080p.WEB-DL.x264-DEMO"
         let episodes: [(num: Int, title: String, existing: ExistingFile?)] = [
-            (1, "Llama Drama", ExistingFile(
-                quality: "HDTV-720p", formats: ["x264", "Repack"], score: 60,
-                size: 320_000_000,
-                fileName: "Caminandes.S01E01.720p.HDTV.x264-CRISPY.mkv"
-            )),
             (2, "Gran Dillama", ExistingFile(
                 quality: "WEBRip-480p", formats: ["x264"], score: 20,
                 size: 180_000_000,
-                fileName: "Caminandes.S01E02.480p.WEBRip.x264-OTHER.mkv"
+                fileName: "Caminandes.S01E02.480p.WEBRip.x264-OLD.mkv"
             )),
-            (3, "Llamigos", nil), // missing — no existing file, just a fresh add
-            (4, "Mountain Pass", ExistingFile(
-                quality: "HDTV-720p", formats: ["x264"], score: 50,
-                size: 290_000_000,
-                fileName: "Caminandes.S01E04.720p.HDTV.x264-CRISPY.mkv"
-            )),
-            (5, "Frozen Lake", ExistingFile(
-                quality: "DVDRip", formats: ["XviD", "MP3"], score: -40,
-                size: 410_000_000,
-                fileName: "Caminandes.S01E05.DVDRip.XviD-ANCIENT.avi"
+            (3, "Llamigos", ExistingFile(
+                quality: "HDTV-720p", formats: ["x264", "Repack"], score: 60,
+                size: 320_000_000,
+                fileName: "Caminandes.S01E03.720p.HDTV.x264-OLD.mkv"
             )),
         ]
         return episodes.map { ep in
@@ -148,66 +99,28 @@ extension DemoMocks {
                 subtitle: String(format: String(localized: "Season 01 · Episode %lld — %@", bundle: .module), ep.num, ep.title),
                 seasonNumber: 1, episodeNumber: ep.num, episodeTitle: ep.title,
                 releaseName: baseRelease,
-                status: .downloading,
-                progress: 0.55,
+                status: .downloading, progress: 0.55,
                 quality: "WEB-DL 1080p",
-                formats: ["AMZN", "x264", "AAC 2.0", "HQ Source Group"],
-                score: 720,
-                client: "qBittorrent",
-                indexer: "DemoTracker",
-                upgrade: true,
-                existing: ep.existing,
-                posterSeed: "caminandes",
-                aspect: .portrait,
+                formats: ["AMZN", "x264", "AAC 2.0", "HQ Source Group"], score: 720,
+                client: "qBittorrent", indexer: "DemoTracker",
+                upgrade: true, existing: ep.existing,
+                posterSeed: "caminandes", aspect: .portrait,
                 downloadId: sharedDownloadId,
                 entityId: 102
             )
         }
     }
 
-    /// A second season pack — fresh grab (not an upgrade) — so the demo
-    /// has both a NEW pack and an UPGRADE pack visible side by side.
-    static var tearsOfSteelSeasonPack: [QueueItem] {
-        let sharedDownloadId = "demo-pack-tearsofsteel-s01"
-        let baseRelease = "Tears.of.Steel.S01.2160p.WEB-DL.HDR-DEMO"
-        let episodes: [(num: Int, title: String)] = [
-            (1, "First Light"),
-            (2, "Mecha"),
-            (3, "Reunion"),
-        ]
-        return episodes.map { ep in
-            queueItem(
-                source: .sonarr,
-                id: "demo-sonarr-tos-pack-\(ep.num)",
-                title: "Tears of Steel (2012)",
-                subtitle: String(format: String(localized: "Season 01 · Episode %lld — %@", bundle: .module), ep.num, ep.title),
-                seasonNumber: 1, episodeNumber: ep.num, episodeTitle: ep.title,
-                releaseName: baseRelease,
-                status: .downloading,
-                progress: 0.18,
-                quality: "WEB-DL 2160p",
-                formats: ["AMZN", "DV", "HDR10", "Atmos", "x265"],
-                score: 1450,
-                client: "SABnzbd",
-                indexer: "DemoUsenet",
-                upgrade: false,
-                posterSeed: "tearsofsteel",
-                aspect: .portrait,
-                downloadId: sharedDownloadId,
-                entityId: 103
-            )
-        }
-    }
-
-    /// Three Pioneer One episodes downloaded as separate releases — each
-    /// has its own `downloadId`, so QueueGrouping must render them as three
-    /// independent rows even though they share a series. Verifies the
-    /// "only group true season packs" rule.
+    /// Three Pioneer One S01 episodes grabbed as separate releases — each has its
+    /// own downloadId, so they render as three independent rows. E03 is an
+    /// upgrade; E04 a fresh grab; E05 queued.
     static var pioneerOneIndependentEpisodes: [QueueItem] {
-        let releases: [(num: Int, title: String, status: QueueItem.Status, progress: Double, score: Int, formats: [String])] = [
-            (4, "Brave New Earth",      .downloading, 0.34, 420, ["x264", "AAC 2.0"]),
-            (5, "Foothold",             .queued,      0.0,  60,  []),
-            (6, "Tomorrow Belongs to Us", .downloading, 0.78, 380, ["x264", "AAC 2.0", "HQ Source Group"]),
+        let releases: [(num: Int, title: String, status: QueueItem.Status, progress: Double, score: Int, formats: [String], upgrade: Bool, existing: ExistingFile?)] = [
+            (3, "Endurance", .downloading, 0.67, 380, ["x264", "AAC 2.0", "HQ Source Group"], true,
+                ExistingFile(quality: "WEBRip-480p", formats: ["x264", "Repack"], score: 30,
+                             size: 350_000_000, fileName: "Pioneer.One.S01E03.480p.WEBRip-OLD.mkv")),
+            (4, "Brave New Earth", .paused, 0.34, 420, ["x264", "AAC 2.0"], false, nil),
+            (5, "Foothold", .queued, 0.0, 60, [], false, nil),
         ]
         return releases.map { rel in
             queueItem(
@@ -217,62 +130,21 @@ extension DemoMocks {
                 subtitle: String(format: String(localized: "Season 01 · Episode %lld — %@", bundle: .module), rel.num, rel.title),
                 seasonNumber: 1, episodeNumber: rel.num, episodeTitle: rel.title,
                 releaseName: String(format: "Pioneer.One.S01E%02d.720p.HDTV.x264-DEMO", rel.num),
-                status: rel.status,
-                progress: rel.progress,
-                quality: "HDTV-720p",
-                formats: rel.formats,
-                score: rel.score,
-                client: "qBittorrent",
-                indexer: "DemoTracker",
-                upgrade: false,
-                posterSeed: "pioneerone",
-                aspect: .portrait,
+                status: rel.status, progress: rel.progress,
+                quality: "HDTV-720p", formats: rel.formats, score: rel.score,
+                client: "qBittorrent", indexer: "DemoTracker",
+                upgrade: rel.upgrade, existing: rel.existing,
+                posterSeed: "pioneerone", aspect: .portrait,
                 entityId: 101
-                // No downloadId override — defaults to id, so each is unique.
             )
         }
     }
 
-    /// Four Spring Tales episodes downloaded as separate releases. With
-    /// the virtual-bundle collapse removed, each one renders as its own
-    /// queue row — exactly like four independent Radarr movies would.
-    /// Pause/resume targets exactly what the user sees; no fan-out
-    /// trickery, no aggregate progress lying about which one is at what
-    /// percent.
-    static var springTalesIndependentEpisodes: [QueueItem] {
-        let cfs = ["AMZN", "DDP 5.1", "x264"]
-        let episodes: [(num: Int, title: String, status: QueueItem.Status, progress: Double)] = [
-            (1, "Bloom",   .downloading, 0.82),
-            (2, "Petals",  .downloading, 0.54),
-            (3, "Pollen",  .downloading, 0.31),
-            (4, "Wilt",    .queued,      0.00),
-        ]
-        return episodes.map { ep in
-            queueItem(
-                source: .sonarr,
-                id: "demo-sonarr-springtales-\(ep.num)",
-                title: "Spring Tales (2019)",
-                subtitle: String(format: String(localized: "Season 01 · Episode %lld — %@", bundle: .module), ep.num, ep.title),
-                seasonNumber: 1, episodeNumber: ep.num, episodeTitle: ep.title,
-                releaseName: String(format: "Spring.Tales.S01E%02d.1080p.WEB-DL.x264-DEMO", ep.num),
-                status: ep.status,
-                progress: ep.progress,
-                quality: "WEB-DL 1080p",
-                formats: cfs,
-                score: 420,
-                client: "qBittorrent",
-                indexer: "DemoTracker",
-                upgrade: false,
-                posterSeed: "spring",
-                aspect: .portrait,
-                releaseGroup: "DEMO",
-                entityId: 106
-            )
-        }
-    }
+    // MARK: - Lidarr (2 albums)
 
     static var lidarrQueue: [QueueItem] {
         [
+            // UPGRADE: MP3-320 -> FLAC lossless.
             queueItem(
                 source: .lidarr, id: "demo-lidarr-1",
                 title: "Nine Inch Nails — Ghosts I-IV",
@@ -282,7 +154,7 @@ extension DemoMocks {
                 client: "qBittorrent", indexer: "DemoTracker",
                 upgrade: true,
                 existing: ExistingFile(
-                    quality: "MP3-320", formats: ["Lossy"], score: -50,
+                    quality: "MP3-320", formats: ["Lossy"], score: 0,
                     size: 220_000_000,
                     fileName: "Nine Inch Nails - Ghosts I-IV (320kbps).zip"
                 ),
@@ -299,8 +171,27 @@ extension DemoMocks {
                 upgrade: false, posterSeed: "bradsucks", aspect: .square,
                 entityId: 302
             ),
+            // UPGRADE: MP3-V0 -> FLAC lossless on Brad Sucks' 2003 debut.
+            queueItem(
+                source: .lidarr, id: "demo-lidarr-3",
+                title: "Brad Sucks — I Don't Know What I'm Doing",
+                releaseName: "Brad.Sucks-I.Dont.Know.What.Im.Doing-FLAC-2003-DEMO",
+                status: .downloading, progress: 0.37,
+                quality: "FLAC", formats: ["Lossless", "Original Source"], score: 220,
+                client: "qBittorrent", indexer: "DemoTracker",
+                upgrade: true,
+                existing: ExistingFile(
+                    quality: "MP3-VBR V0", formats: ["Lossy"], score: 0,
+                    size: 78_000_000,
+                    fileName: "Brad Sucks - I Don't Know What I'm Doing (V0).zip"
+                ),
+                posterSeed: "bradsucks-debut", aspect: .square,
+                entityId: 303
+            ),
         ]
     }
+
+    // MARK: - Whisparr (2 cat "nature films")
 
     static var whisparrQueue: [QueueItem] {
         [
@@ -311,10 +202,10 @@ extension DemoMocks {
                 status: .downloading, progress: 0.55,
                 quality: "WEB-DL 1080p", formats: ["x264", "Atmos", "HQ Source Group"], score: 280,
                 client: "qBittorrent", indexer: "DemoTracker",
-                upgrade: false,
-                posterSeed: "kitten:neo", aspect: .portrait,
+                upgrade: false, posterSeed: "kitten:neo", aspect: .portrait,
                 entityId: 401
             ),
+            // UPGRADE: 1080p -> 2160p HDR.
             queueItem(
                 source: .whisparr, id: "demo-whisparr-2",
                 title: "The Black Cat Chronicles (2023)",
@@ -333,5 +224,4 @@ extension DemoMocks {
             ),
         ]
     }
-
 }
