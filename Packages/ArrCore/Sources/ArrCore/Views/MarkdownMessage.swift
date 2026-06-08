@@ -46,6 +46,12 @@ struct MarkdownMessage: View {
             return AnyView(Text(inline(h, size: baseSize + bump, bold: true))
                 .fixedSize(horizontal: false, vertical: true))
         case let p as Paragraph:
+            // A paragraph that is ENTIRELY one spoiler renders as a blurred
+            // block (real frosted blur, possible because it's its own view).
+            // Inline spoilers mid-paragraph fall back to the redaction bar.
+            if let body = blockSpoilerBody(p) {
+                return AnyView(spoilerBlockView(body))
+            }
             return AnyView(Text(inline(p, size: baseSize))
                 .fixedSize(horizontal: false, vertical: true))
         case let list as UnorderedList:
@@ -117,6 +123,45 @@ struct MarkdownMessage: View {
         }
         .padding(8)
         .background(Color.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 8))
+    }
+
+    // MARK: - Block spoiler
+
+    /// If a paragraph is exactly one `||spoiler||` (no other prose), returns the
+    /// inner text — it renders as a blurred, tap-to-reveal block.
+    private func blockSpoilerBody(_ p: Paragraph) -> String? {
+        let plain = p.plainText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard plain.hasPrefix("||"), plain.hasSuffix("||") else { return nil }
+        let segments = ChatSpoilerMarkup.parse(plain)
+        guard segments.count == 1, case .spoiler(let body) = segments[0] else { return nil }
+        return body
+    }
+
+    @ViewBuilder
+    private func spoilerBlockView(_ body: String) -> some View {
+        Text(body)
+            .scaledFont(size: baseSize)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(8)
+            .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 8))
+            .blur(radius: spoilersRevealed ? 0 : 6)
+            .overlay {
+                if !spoilersRevealed {
+                    Label {
+                        Text("Tap to reveal spoiler", bundle: .module)
+                    } icon: {
+                        Image(systemName: "eye.slash.fill")
+                    }
+                    .scaledFont(size: 11, weight: .medium)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(.ultraThinMaterial, in: Capsule())
+                }
+            }
+            .animation(.easeInOut(duration: 0.25), value: spoilersRevealed)
+            .contentShape(Rectangle())
     }
 
     // MARK: - Inline rendering (explicit per-run fonts)

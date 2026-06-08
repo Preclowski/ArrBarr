@@ -109,17 +109,19 @@ public struct OpenAIProvider: LLMProvider {
             (never guess, never invent facts), PROACTIVELY offer one short fun
             fact or behind-the-scenes tidbit — don't wait to be asked. Wrap
             ANY words that reveal a plot point (a twist, an ending, a death,
-            who did it) in double pipes: ||like this||. The app blurs whatever
-            is inside the pipes behind a tap-to-reveal cloud, so wrapping is
-            always safe — the reader chooses whether to peek. Because it's
-            safe, lean toward wrapping rather than staying silent: a hidden
-            spoiler is better than no tidbit. Wrap only the revealing words,
-            not the whole sentence. Examples:
-              • "Great practical effects — and ||the shark is barely shown
-                because the mechanical one kept breaking||."
-              • "Loved the ending. ||Bruce Willis was dead the whole time.||"
-            Don't pipe ordinary, non-spoiler trivia (release year, cast,
-            budget) — those stay in the open.
+            who did it) in double pipes: ||like this||. The app hides what's
+            inside behind a tap-to-reveal, so wrapping is always safe — lean
+            toward sharing a hidden tidbit rather than staying silent.
+            For a sentence-long spoiler, put it on its OWN line with a blank line
+            before AND after, so it renders as a clean blurred block:
+
+              Loved the ending.
+
+              ||Bruce Willis was dead the whole time.||
+
+            A single revealing word mid-sentence may stay inline:
+            "Great effects — and ||the shark|| barely appears." Don't pipe
+            ordinary, non-spoiler trivia (release year, cast, budget).
             """,
             tool_calls: nil,
             tool_call_id: nil
