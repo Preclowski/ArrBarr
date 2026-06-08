@@ -18,24 +18,22 @@ public enum MCPToolWhitelist {
     /// this list and the tool catalog in lockstep; new tools picking
     /// up these conventions are gated automatically.
     public static func isDestructive(_ name: String) -> Bool {
-        // Search tools — query indexers, often start a grab. The single-
-        // episode case fires *N* indexer queries when the season's
-        // monitor toggle hits the cascade-then-search path.
-        if name.contains("_search_") { return true }
-
-        // Monitor tools — flip monitored state and (in our impls) fire
-        // an immediate SeasonSearch / AlbumSearch when state=true.
-        // We gate regardless of the args' `state` value to keep the
-        // check simple at this layer; the confirm card surfaces the
-        // raw arguments so the user sees what's about to happen.
-        if name.contains("_monitor_") { return true }
-
-        // Add tools — none ship today (tap-the-card is the canonical
-        // add UX). Future-proof gate in case anything brings them back.
-        if name.contains("_add_") { return true }
-
-        // Delete / remove — same reasoning.
-        if name.contains("_delete_") || name.contains("_remove_") { return true }
+        // Action words that gate. We match each both as an infix segment
+        // (`sonarr_search_episodes`) and as a bare trailing suffix
+        // (`sonarr_search`) — catalog tools like `sonarr_search` /
+        // `radarr_search` put the action last with no following segment,
+        // so an infix-only check would let them slip through un-gated.
+        for action in ["search", "monitor", "add", "delete", "remove"] {
+            // Search tools query indexers and often start a grab; monitor
+            // tools flip monitored state and fire an immediate
+            // SeasonSearch / AlbumSearch when state=true; add/delete/remove
+            // mutate arr state. We gate regardless of arg values to keep
+            // the check simple — the confirm card surfaces the raw
+            // arguments so the user sees exactly what's about to happen.
+            if name.contains("_\(action)_") || name.hasSuffix("_\(action)") {
+                return true
+            }
+        }
 
         return false
     }
