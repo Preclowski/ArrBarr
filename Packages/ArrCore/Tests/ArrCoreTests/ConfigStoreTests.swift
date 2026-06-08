@@ -14,7 +14,7 @@ struct ConfigStoreTests {
         let (defaults, name) = makeDefaults()
         defer { UserDefaults.standard.removePersistentDomain(forName: name) }
 
-        let store = ConfigStore(defaults: defaults)
+        let store = ConfigStore(defaults: defaults, secrets: InMemorySecretStore())
         for kind in ServiceKind.allCases {
             #expect(store.config(for: kind) == .empty)
         }
@@ -25,7 +25,7 @@ struct ConfigStoreTests {
         let (defaults, name) = makeDefaults()
         defer { UserDefaults.standard.removePersistentDomain(forName: name) }
 
-        let store = ConfigStore(defaults: defaults)
+        let store = ConfigStore(defaults: defaults, secrets: InMemorySecretStore())
         #expect(store.foregroundInterval == 5)
         #expect(store.backgroundInterval == 30)
     }
@@ -35,16 +35,36 @@ struct ConfigStoreTests {
         let (defaults, name) = makeDefaults()
         defer { UserDefaults.standard.removePersistentDomain(forName: name) }
 
+        let secrets = InMemorySecretStore()
         let config = ServiceConfig(
             enabled: true, baseURL: "http://localhost:7878",
             apiKey: "test-api-key", username: "u", password: "test-password"
         )
 
-        let store = ConfigStore(defaults: defaults)
+        let store = ConfigStore(defaults: defaults, secrets: secrets)
         store.update(.radarr, with: config)
 
-        let reloaded = ConfigStore(defaults: defaults)
+        let reloaded = ConfigStore(defaults: defaults, secrets: secrets)
         #expect(reloaded.radarr == config)
+    }
+
+    @Test("Secrets are not persisted as plaintext in UserDefaults")
+    @MainActor func secretsNotInDefaults() {
+        let (defaults, name) = makeDefaults()
+        defer { UserDefaults.standard.removePersistentDomain(forName: name) }
+
+        let secrets = InMemorySecretStore()
+        let store = ConfigStore(defaults: defaults, secrets: secrets)
+        store.update(.radarr, with: ServiceConfig(
+            enabled: true, baseURL: "http://h:7878",
+            apiKey: "SENSITIVE-KEY", username: "u", password: "SENSITIVE-PW"))
+
+        let blob = defaults.data(forKey: "ArrBarr.config.radarr")!
+        let raw = String(data: blob, encoding: .utf8)!
+        #expect(!raw.contains("SENSITIVE-KEY"))
+        #expect(!raw.contains("SENSITIVE-PW"))
+        #expect(secrets.read(.apiKey(for: .radarr)) == "SENSITIVE-KEY")
+        #expect(secrets.read(.password(for: .radarr)) == "SENSITIVE-PW")
     }
 
     @Test("Custom intervals persist")
@@ -52,11 +72,12 @@ struct ConfigStoreTests {
         let (defaults, name) = makeDefaults()
         defer { UserDefaults.standard.removePersistentDomain(forName: name) }
 
-        let store = ConfigStore(defaults: defaults)
+        let secrets = InMemorySecretStore()
+        let store = ConfigStore(defaults: defaults, secrets: secrets)
         store.foregroundInterval = 15
         store.backgroundInterval = 120
 
-        let reloaded = ConfigStore(defaults: defaults)
+        let reloaded = ConfigStore(defaults: defaults, secrets: secrets)
         #expect(reloaded.foregroundInterval == 15)
         #expect(reloaded.backgroundInterval == 120)
     }
@@ -66,7 +87,8 @@ struct ConfigStoreTests {
         let (defaults, name) = makeDefaults()
         defer { UserDefaults.standard.removePersistentDomain(forName: name) }
 
-        let store = ConfigStore(defaults: defaults)
+        let secrets = InMemorySecretStore()
+        let store = ConfigStore(defaults: defaults, secrets: secrets)
         let radarrConfig = ServiceConfig(
             enabled: true, baseURL: "http://localhost:7878",
             apiKey: "radarr-key", username: "", password: ""
@@ -88,7 +110,8 @@ struct ConfigStoreTests {
         let (defaults, name) = makeDefaults()
         defer { UserDefaults.standard.removePersistentDomain(forName: name) }
 
-        let store = ConfigStore(defaults: defaults)
+        let secrets = InMemorySecretStore()
+        let store = ConfigStore(defaults: defaults, secrets: secrets)
         let config = ServiceConfig(
             enabled: true, baseURL: "http://test",
             apiKey: "key", username: "user", password: "pass"
@@ -105,7 +128,8 @@ struct ConfigStoreTests {
         let (defaults, name) = makeDefaults()
         defer { UserDefaults.standard.removePersistentDomain(forName: name) }
 
-        let store = ConfigStore(defaults: defaults)
+        let secrets = InMemorySecretStore()
+        let store = ConfigStore(defaults: defaults, secrets: secrets)
         #expect(store.notifyRadarr == true)
         #expect(store.notifySonarr == true)
         #expect(store.notifyLidarr == true)
@@ -113,18 +137,24 @@ struct ConfigStoreTests {
         store.notifyRadarr = false
         store.notifySonarr = false
 
-        let reloaded = ConfigStore(defaults: defaults)
+        let reloaded = ConfigStore(defaults: defaults, secrets: secrets)
         #expect(reloaded.notifyRadarr == false)
         #expect(reloaded.notifySonarr == false)
         #expect(reloaded.notifyLidarr == true)
     }
 
-    @Test("Migration flag prevents repeated keychain probing")
-    @MainActor func migrationFlagSetOnce() {
+    // NOTE: Legacy keychain migration was removed from init in Task 3 (secrets
+    // now flow through an injected SecretStore). This test previously asserted
+    // that init set the keychainMigrationDone flag; that behavior no longer
+    // exists. The flag constant and migration helper remain until Task 5 cleans
+    // them up. Test updated to reflect the new init contract.
+    @Test("Migration flag is not set by init (migration removed in Task 3)")
+    @MainActor func migrationFlagNotSetByInit() {
         let (defaults, name) = makeDefaults()
         defer { UserDefaults.standard.removePersistentDomain(forName: name) }
 
-        _ = ConfigStore(defaults: defaults)
-        #expect(defaults.bool(forKey: "ArrBarr.keychainMigrationDone") == true)
+        _ = ConfigStore(defaults: defaults, secrets: InMemorySecretStore())
+        // init no longer runs the legacy migration, so the flag stays false
+        #expect(defaults.bool(forKey: "ArrBarr.keychainMigrationDone") == false)
     }
 }

@@ -184,6 +184,7 @@ public final class ConfigStore: ObservableObject {
     public static let backgroundIntervalOptions: [TimeInterval] = [0, 10, 30, 60, 120, 300]
 
     private var defaults: UserDefaults
+    private let secrets: SecretStore
     private var cancellables: Set<AnyCancellable> = []
 
     /// Backing store for `ConfigStore.shared`: the demo suite while demo is
@@ -262,15 +263,10 @@ public final class ConfigStore: ObservableObject {
     /// without making it fully public.
     nonisolated static var groupMigrationDoneKeyForTesting: String { groupMigrationDoneKey }
 
-    public init(defaults: UserDefaults = ConfigStore.resolveDefaults()) {
+    public init(defaults: UserDefaults = ConfigStore.resolveDefaults(),
+                secrets: SecretStore = KeychainSecretStore()) {
         self.defaults = defaults
-        // One-time migration: pull leftover Keychain secrets back into
-        // UserDefaults. See migrateLegacyKeychainSecrets for why. Runs against
-        // whichever store we boot with (demo suite has nothing to migrate).
-        if !defaults.bool(forKey: Self.keychainMigrationDoneKey) {
-            Self.migrateLegacyKeychainSecrets(defaults: defaults)
-            defaults.set(true, forKey: Self.keychainMigrationDoneKey)
-        }
+        self.secrets = secrets
         applyValues(from: defaults)
         setupSinks()
     }
@@ -281,16 +277,16 @@ public final class ConfigStore: ObservableObject {
     /// (Exception: on iOS it normalizes the `AppleLanguages` key, a harmless
     /// write to the target store.)
     private func applyValues(from defaults: UserDefaults) {
-        self.radarr = Self.load(.radarr, from: defaults)
-        self.sonarr = Self.load(.sonarr, from: defaults)
-        self.lidarr = Self.load(.lidarr, from: defaults)
-        self.whisparr = Self.load(.whisparr, from: defaults)
-        self.sabnzbd = Self.load(.sabnzbd, from: defaults)
-        self.qbittorrent = Self.load(.qbittorrent, from: defaults)
-        self.nzbget = Self.load(.nzbget, from: defaults)
-        self.transmission = Self.load(.transmission, from: defaults)
-        self.rtorrent = Self.load(.rtorrent, from: defaults)
-        self.deluge = Self.load(.deluge, from: defaults)
+        self.radarr = loadService(.radarr)
+        self.sonarr = loadService(.sonarr)
+        self.lidarr = loadService(.lidarr)
+        self.whisparr = loadService(.whisparr)
+        self.sabnzbd = loadService(.sabnzbd)
+        self.qbittorrent = loadService(.qbittorrent)
+        self.nzbget = loadService(.nzbget)
+        self.transmission = loadService(.transmission)
+        self.rtorrent = loadService(.rtorrent)
+        self.deluge = loadService(.deluge)
         let fgKey = Self.foregroundIntervalKey
         self.foregroundInterval = defaults.object(forKey: fgKey) != nil ? defaults.double(forKey: fgKey) : 5
         let bgKey = Self.backgroundIntervalKey
@@ -353,7 +349,8 @@ public final class ConfigStore: ObservableObject {
         } else {
             self.openai = .empty
         }
-        self.tmdbApiKey = defaults.string(forKey: Self.tmdbApiKeyKey) ?? ""
+        self.openai.apiKey = secrets.read(.openAIKey) ?? self.openai.apiKey
+        self.tmdbApiKey = secrets.read(.tmdbKey) ?? (defaults.string(forKey: Self.tmdbApiKeyKey) ?? "")
         self.mcpEnabled = defaults.bool(forKey: Self.mcpEnabledKey)
         self.mcpHostPort = defaults.string(forKey: Self.mcpHostPortKey) ?? "127.0.0.1:8080"
         self.mcpRequireAuth = defaults.bool(forKey: Self.mcpRequireAuthKey)
@@ -449,12 +446,17 @@ public final class ConfigStore: ObservableObject {
             self?.defaults.set(val.rawValue, forKey: Self.chatProviderKey)
         }.store(in: &cancellables)
         $openai.dropFirst().sink { [weak self] cfg in
-            if let data = try? JSONEncoder().encode(cfg) {
-                self?.defaults.set(data, forKey: Self.openaiConfigKey)
+            guard let self else { return }
+            self.secrets.set(cfg.apiKey, for: .openAIKey)
+            var stripped = cfg
+            stripped.apiKey = ""
+            if let data = try? JSONEncoder().encode(stripped) {
+                self.defaults.set(data, forKey: Self.openaiConfigKey)
             }
         }.store(in: &cancellables)
         $tmdbApiKey.dropFirst().sink { [weak self] val in
-            self?.defaults.set(val, forKey: Self.tmdbApiKeyKey)
+            self?.secrets.set(val, for: .tmdbKey)
+            self?.defaults.removeObject(forKey: Self.tmdbApiKeyKey)
         }.store(in: &cancellables)
         $mcpEnabled.dropFirst().sink { [weak self] val in
             self?.defaults.set(val, forKey: Self.mcpEnabledKey)
@@ -641,9 +643,23 @@ public final class ConfigStore: ObservableObject {
     }
 
     private func save(_ kind: ServiceKind, _ config: ServiceConfig) {
-        if let data = try? JSONEncoder().encode(config) {
+        secrets.set(config.apiKey, for: .apiKey(for: kind))
+        secrets.set(config.password, for: .password(for: kind))
+        var stripped = config
+        stripped.apiKey = ""
+        stripped.password = ""
+        if let data = try? JSONEncoder().encode(stripped) {
             defaults.set(data, forKey: Self.key(kind))
         }
+    }
+
+    /// Load a service config from `defaults` and merge its secrets back in from
+    /// the secret store.
+    private func loadService(_ kind: ServiceKind) -> ServiceConfig {
+        var cfg = Self.load(kind, from: defaults)   // non-secret fields (secrets blank)
+        cfg.apiKey = secrets.read(.apiKey(for: kind)) ?? cfg.apiKey
+        cfg.password = secrets.read(.password(for: kind)) ?? cfg.password
+        return cfg
     }
 
     // MARK: - One-time migration from Keychain (0.6.0/0.6.1) back to UserDefaults
