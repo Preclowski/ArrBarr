@@ -42,6 +42,12 @@ public struct SearchAddPanel: View {
     /// covers the entire popover (form + scroll).
     @State private var enlargedPoster: URL?
 
+    @EnvironmentObject private var configStore: ConfigStore
+    /// Cast for the "new title to download" detail — fetched from TMDB so the
+    /// add panel matches the in-library DetailView (which also shows a CastRow).
+    /// Movies/series only; empty until loaded (and stays empty without a TMDB key).
+    @State private var cast: [CastMember] = []
+
     public var body: some View {
         ZStack {
             mainContent
@@ -147,6 +153,7 @@ public struct SearchAddPanel: View {
             selectedRootFolder = viewModel.rootFolders.first?.path
             selectedMetadataProfileId = viewModel.metadataProfiles.first?.id
         }
+        .task(id: result.id) { await loadCast() }
     }
 
     /// TMDB-sourced chat results carry only voteAverage + title + year + genres.
@@ -218,6 +225,33 @@ public struct SearchAddPanel: View {
             if let ov = result.overview, !ov.isEmpty {
                 ExpandableOverview(text: ov)
             }
+            if !cast.isEmpty {
+                CastRow(cast: cast)
+            }
+        }
+    }
+
+    /// Fetch the cast from TMDB (movie: id is the TMDB id; series: resolve the
+    /// tvdbId → TMDB id via `/find`). Supplementary — silent on failure / no key.
+    private func loadCast() async {
+        let key = configStore.tmdbApiKey
+        guard !key.isEmpty else { return }
+        let client = TMDBClient(apiKey: key)
+        do {
+            let credits: TMDBCredits
+            switch result.source {
+            case .radarr:
+                credits = try await client.movieCredits(movieId: result.id)
+            case .sonarr:
+                guard let tmdbId = try await client.tvIdFromTVDB(result.id) else { return }
+                credits = try await client.tvCredits(tvId: tmdbId)
+            default:
+                return  // lidarr / whisparr: no TMDB cast
+            }
+            let members = CastMember.from(tmdbCast: credits.cast)
+            await MainActor.run { cast = members }
+        } catch {
+            // Cast is supplementary; ignore lookup failures.
         }
     }
 

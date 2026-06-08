@@ -227,6 +227,22 @@ public struct TMDBClient: Sendable {
         return resp
     }
 
+    /// Resolve a Sonarr `tvdbId` to TMDB's own series id via `/find` (external
+    /// source lookup). Needed because Sonarr search results carry a tvdbId, but
+    /// `tvCredits` keys on TMDB's id. Returns the first TV match, or nil.
+    public func tvIdFromTVDB(_ tvdbId: Int) async throws -> Int? {
+        let resp: TMDBFindResponse = try await get(
+            path: "/find/\(tvdbId)",
+            query: [URLQueryItem(name: "external_source", value: "tvdb_id")]
+        )
+        return resp.tv_results.first?.id
+    }
+
+    private struct TMDBFindResponse: Decodable {
+        struct TVResult: Decodable { let id: Int }
+        let tv_results: [TVResult]
+    }
+
     public func personMovieCredits(personId: Int) async throws -> [TMDBMovieSummary] {
         let resp: TMDBMovieCreditsResponse = try await get(
             path: "/person/\(personId)/movie_credits", query: []
