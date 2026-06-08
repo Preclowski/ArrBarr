@@ -1,3 +1,4 @@
+import ArrCore
 import Logging
 import os
 
@@ -14,7 +15,7 @@ public struct OSLogForwardingHandler: LogHandler {
     public var metadata: Logging.Logger.Metadata = [:]
 
     public init(label: String) {
-        self.osLogger = os.Logger(subsystem: "com.preclowski.ArrBarr", category: label)
+        self.osLogger = os.Logger(subsystem: AppLog.subsystem, category: label)
     }
 
     public subscript(metadataKey key: String) -> Logging.Logger.Metadata.Value? {

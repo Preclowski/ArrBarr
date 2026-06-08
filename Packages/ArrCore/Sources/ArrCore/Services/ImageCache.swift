@@ -8,7 +8,7 @@ public actor ImageCache {
     private let memory = NSCache<NSString, PlatformImage>()
     private let cacheDir: URL
     private let session: URLSession
-    private let logger = Logger(subsystem: "com.preclowski.ArrBarr", category: "ImageCache")
+    private let logger = Logger(category: "ImageCache")
 
     private var inflight: [String: Task<PlatformImage?, Never>] = [:]
     private var negativeCache: [String: Date] = [:]
@@ -105,7 +105,7 @@ public actor ImageCache {
                 purged += 1
             }
         }
-        if purged > 0 { logger.info("purged \(purged, privacy: .public) old poster files") }
+        if purged > 0 { logger.notice("purged \(purged, privacy: .public) old poster files") }
     }
 
     private static func cacheKey(for url: URL) -> String {

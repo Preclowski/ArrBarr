@@ -189,7 +189,7 @@ public final class QueueAggregator: QueueDataProviding {
         }
     }
 
-    private static let logger = Logger(subsystem: "com.preclowski.ArrBarr", category: "QueueFetch")
+    private static let logger = Logger(category: "QueueFetch")
 
     private static func safeFetchUpcoming(_ block: () async throws -> [UpcomingItem]) async -> [UpcomingItem] {
         do { return try await block() } catch { return [] }

@@ -11,7 +11,7 @@ import WidgetKit
 #endif
 
 public enum LaunchAtLogin {
-    private static let logger = Logger(subsystem: "com.preclowski.ArrBarr", category: "LaunchAtLogin")
+    private static let logger = Logger(category: "LaunchAtLogin")
 
     static var isEnabled: Bool {
         #if os(macOS)
