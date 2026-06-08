@@ -12,6 +12,7 @@
 		953E24EE53AE7971D31F0FA0 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C345657BD587401B20496BE6 /* Assets.xcassets */; };
 		D2FECFB6447CD596A4FC0207 /* ArrBarrApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33A8662C0F95882A1E6A959B /* ArrBarrApp.swift */; };
 		FBP00001FBP00001FBP0001A /* ArrCore in Frameworks */ = {isa = PBXBuildFile; productRef = PRD00001PRD00001PRD0001A /* ArrCore */; };
+		MCP00001MCP00001MCP0001A /* ArrMCPServer in Frameworks */ = {isa = PBXBuildFile; productRef = MCPPD001MCPPD001MCPPD01A /* ArrMCPServer */; };
 		IOS00001IOS00001IOS0001A /* ArrBarriOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = IOS00010IOS00010IOS0010A /* ArrBarriOSApp.swift */; };
 		IOS00002IOS00002IOS0002A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = IOS00012IOS00012IOS0012A /* Assets.xcassets */; };
 		IOS00003IOS00003IOS0003A /* ArrCore in Frameworks */ = {isa = PBXBuildFile; productRef = IOS00020IOS00020IOS0020A /* ArrCore */; };
@@ -73,6 +74,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				FBP00001FBP00001FBP0001A /* ArrCore in Frameworks */,
+				MCP00001MCP00001MCP0001A /* ArrMCPServer in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -176,6 +178,7 @@
 			name = ArrBarr;
 			packageProductDependencies = (
 				PRD00001PRD00001PRD0001A /* ArrCore */,
+				MCPPD001MCPPD001MCPPD01A /* ArrMCPServer */,
 			);
 			productName = ArrBarr;
 			productReference = 24CA88887E39123AE476CB8E /* ArrBarr.app */;
@@ -258,6 +261,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				PKG00001PKG00001PKG0001A /* XCLocalSwiftPackageReference "Packages/ArrCore" */,
+				MCPPK001MCPPK001MCPPK01A /* XCLocalSwiftPackageReference "Packages/ArrMCPServer" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 2AB51CB1B325CDC1D0C6215E /* Products */;
@@ -787,6 +791,10 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/ArrCore;
 		};
+		MCPPK001MCPPK001MCPPK01A /* XCLocalSwiftPackageReference "Packages/ArrMCPServer" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/ArrMCPServer;
+		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -797,6 +805,10 @@
 		PRD00001PRD00001PRD0001A /* ArrCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = ArrCore;
+		};
+		MCPPD001MCPPD001MCPPD01A /* ArrMCPServer */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ArrMCPServer;
 		};
 		WDGPD020WDGPD020WDGPD02A /* ArrCore */ = {
 			isa = XCSwiftPackageProductDependency;
