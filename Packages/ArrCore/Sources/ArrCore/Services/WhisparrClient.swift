@@ -132,6 +132,15 @@ public actor WhisparrClient: ArrAPIClient {
         _ = try await http.delete(url, headers: apiHeaders)
     }
 
+    /// Force-grab a pending/delayed queue item now (no download-client item yet).
+    func grabQueueItem(id: Int) async throws {
+        guard config.isConfigured else { throw HTTPError.notConfigured }
+        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
+        let url = try http.url(base: config.baseURL, path: "\(apiBase)/queue/grab/\(id)")
+        let data = try JSONSerialization.data(withJSONObject: [String: Any]())
+        _ = try await http.post(url, headers: apiHeaders.merging(["Content-Type": "application/json"]) { $1 }, body: data)
+    }
+
     private static func unifyCalendar(_ r: WhisparrCalendarRecord, baseURL: String) -> UpcomingItem? {
         let (dateStr, releaseType): (String?, String) =
             if r.digitalRelease != nil { (r.digitalRelease, "Digital") }

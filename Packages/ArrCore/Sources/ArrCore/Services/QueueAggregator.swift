@@ -202,6 +202,14 @@ public final class QueueAggregator: QueueDataProviding {
             return
         }
 
+        // A deferred item the arr is still holding (delay profile) has no
+        // download-client entry yet, so "continue" can't go through the client —
+        // force-grab it via the arr API instead (POST /queue/grab/{id}).
+        if action == .continueDownload, (item.downloadId?.isEmpty ?? true) {
+            try await grabViaArr(item)
+            return
+        }
+
         guard let downloadId = item.downloadId, !downloadId.isEmpty else {
             throw AggregateError.noDownloadId
         }
@@ -226,6 +234,15 @@ public final class QueueAggregator: QueueDataProviding {
         case .sonarr: try await sonarrClient(for: configStore.sonarr).deleteQueueItem(id: item.arrQueueId, removeFromClient: removeFromClient)
         case .lidarr: try await lidarrClient(for: configStore.lidarr).deleteQueueItem(id: item.arrQueueId, removeFromClient: removeFromClient)
         case .whisparr: try await whisparrClient(for: configStore.whisparr).deleteQueueItem(id: item.arrQueueId, removeFromClient: removeFromClient)
+        }
+    }
+
+    private func grabViaArr(_ item: QueueItem) async throws {
+        switch item.source {
+        case .radarr: try await radarrClient(for: configStore.radarr).grabQueueItem(id: item.arrQueueId)
+        case .sonarr: try await sonarrClient(for: configStore.sonarr).grabQueueItem(id: item.arrQueueId)
+        case .lidarr: try await lidarrClient(for: configStore.lidarr).grabQueueItem(id: item.arrQueueId)
+        case .whisparr: try await whisparrClient(for: configStore.whisparr).grabQueueItem(id: item.arrQueueId)
         }
     }
 

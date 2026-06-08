@@ -181,6 +181,16 @@ public actor SonarrClient: ArrAPIClient {
         _ = try await http.delete(url, headers: apiHeaders)
     }
 
+    /// Force-grab a pending/delayed queue item now (no download-client item yet).
+    func grabQueueItem(id: Int) async throws {
+        if DemoMode.isActive { try? await Task.sleep(nanoseconds: 400_000_000); return }
+        guard config.isConfigured else { throw HTTPError.notConfigured }
+        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
+        let url = try http.url(base: config.baseURL, path: "\(apiBase)/queue/grab/\(id)")
+        let data = try JSONSerialization.data(withJSONObject: [String: Any]())
+        _ = try await http.post(url, headers: apiHeaders.merging(["Content-Type": "application/json"]) { $1 }, body: data)
+    }
+
     func fetchSeriesDetails(id: Int) async throws -> SonarrSeriesDetail {
         if DemoMode.isActive {
             try? await Task.sleep(nanoseconds: 250_000_000)
