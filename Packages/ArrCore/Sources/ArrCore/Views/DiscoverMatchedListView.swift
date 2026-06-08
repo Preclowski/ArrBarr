@@ -37,16 +37,21 @@ public struct DiscoverMatchedListView: View {
     @ViewBuilder
     private func sectionView(titleKey: String, items: [DiscoverItem]) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 6) {
-                Text(LocalizedStringKey(titleKey), bundle: .module)
-                    .scaledFont(size: 11, weight: .semibold)
-                    .tracking(0.6)
-                    .textCase(.uppercase)
-                    .foregroundStyle(.secondary)
-                Text(verbatim: "\(items.count)")
-                    .scaledFont(size: 11, weight: .medium)
-                    .foregroundStyle(.tertiary)
-                Spacer()
+            // Section header only disambiguates when there are TWO sections
+            // (owned vs. new). With a single section it's redundant noise under
+            // the "Your picks" title, so callers pass an empty titleKey to hide it.
+            if !titleKey.isEmpty {
+                HStack(spacing: 6) {
+                    Text(LocalizedStringKey(titleKey), bundle: .module)
+                        .scaledFont(size: 11, weight: .semibold)
+                        .tracking(0.6)
+                        .textCase(.uppercase)
+                        .foregroundStyle(.secondary)
+                    Text(verbatim: "\(items.count)")
+                        .scaledFont(size: 11, weight: .medium)
+                        .foregroundStyle(.tertiary)
+                    Spacer()
+                }
             }
             LazyVGrid(columns: [
                 GridItem(.flexible(), spacing: 12),
@@ -76,8 +81,11 @@ public struct DiscoverMatchedListView: View {
         }
         var out: [Section] = []
         // New finds lead; "In library" groups last as the already-owned footer.
-        if !discover.isEmpty { out.append(Section(titleKey: "Discover",   items: discover)) }
-        if !library.isEmpty  { out.append(Section(titleKey: "In library", items: library)) }
+        // Only label the sections when BOTH exist — a lone section needs no
+        // header (the page already says "Your picks").
+        let bothPresent = !discover.isEmpty && !library.isEmpty
+        if !discover.isEmpty { out.append(Section(titleKey: bothPresent ? "Discover" : "",   items: discover)) }
+        if !library.isEmpty  { out.append(Section(titleKey: bothPresent ? "In library" : "", items: library)) }
         return out
     }
 

@@ -20,14 +20,22 @@ struct ExistingFileBanner: View {
     /// Symmetric to `CustomFormatChips.existingFormats` which colours
     /// chips green when they're net-new vs the existing file.
     var newFormats: [String]?
+    /// Show the quality (+ size) line. False for the upgrade-in-progress caller,
+    /// where `DownloadProgressCard`'s `└─ OLD` sub-line already prints quality —
+    /// printing it here too would duplicate. True for the "already in library /
+    /// upcoming" callers, where this banner is the ONLY place quality appears, so
+    /// omitting it made the detail look broken (filename + formats but no quality).
+    var showMetadata: Bool
 
     init(quality: String?, size: Int64?, customFormatScore: Int?,
-         customFormats: [String], fileName: String?, newFormats: [String]? = nil) {
+         customFormats: [String], fileName: String?, newFormats: [String]? = nil,
+         showMetadata: Bool = false) {
         self.quality = quality; self.size = size
         self.customFormatScore = customFormatScore
         self.customFormats = customFormats
         self.fileName = fileName
         self.newFormats = newFormats
+        self.showMetadata = showMetadata
     }
 
     /// Build the banner from a queue row's `existing*` fields (upgrade-time
@@ -54,7 +62,8 @@ struct ExistingFileBanner: View {
             size: movieFile.size,
             customFormatScore: movieFile.customFormatScore,
             customFormats: (movieFile.customFormats ?? []).map(\.name),
-            fileName: movieFile.relativePath
+            fileName: movieFile.relativePath,
+            showMetadata: true
         )
     }
 
@@ -68,7 +77,8 @@ struct ExistingFileBanner: View {
             size: episodeFile.size,
             customFormatScore: episodeFile.customFormatScore,
             customFormats: (episodeFile.customFormats ?? []).map(\.name),
-            fileName: episodeFile.relativePath
+            fileName: episodeFile.relativePath,
+            showMetadata: true
         )
     }
 
@@ -82,6 +92,18 @@ struct ExistingFileBanner: View {
         // siblings: one block for the incoming release, one for the
         // one on disk, both styled identically.
         VStack(alignment: .leading, spacing: 5) {
+            if showMetadata, let q = quality, !q.isEmpty {
+                HStack(spacing: 6) {
+                    Text(q)
+                        .scaledFont(size: 12, weight: .semibold)
+                        .foregroundStyle(.primary)
+                    if let s = size, s > 0 {
+                        Text(ByteCountFormatter.string(fromByteCount: s, countStyle: .file))
+                            .scaledFont(size: 11)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
             if let name = fileName, !name.isEmpty {
                 Text(name)
                     .scaledFont(size: 11, design: .monospaced)

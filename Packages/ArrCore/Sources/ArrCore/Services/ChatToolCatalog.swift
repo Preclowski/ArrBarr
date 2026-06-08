@@ -536,6 +536,8 @@ public enum ChatToolCatalog {
 
             Pass `items` as 10–25 picks — err toward the higher end so the user has a satisfying deck to swipe through. Include `year` whenever you can — disambiguates remakes. All picks share one `kind`.
 
+            CALL THIS TOOL EXACTLY ONCE PER REQUEST. If the user's ask spans both movies and shows (or is vague about kind), pick the single most relevant `kind` for their request (default to "movie" when ambiguous) and fill the deck with that — do NOT call the tool twice in the same turn for different kinds, as that opens two separate quiz sessions and confuses the user.
+
             Pass `append: true` when the user asks for MORE picks continuing the current vibe — that extends the active deck instead of starting over.
 
             Use `library_mode: "none"` when the user explicitly asks for new/unseen content. Use `"many"` when they want to dig through what they already own. Default `"few"` for general taste-based quizzes.

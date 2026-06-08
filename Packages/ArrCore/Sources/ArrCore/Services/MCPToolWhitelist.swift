@@ -18,12 +18,17 @@ public enum MCPToolWhitelist {
     /// this list and the tool catalog in lockstep; new tools picking
     /// up these conventions are gated automatically.
     public static func isDestructive(_ name: String) -> Bool {
-        // Indexer searches grab releases — but ONLY the infix form
-        // (`sonarr_search_episodes`, `radarr_search_movie`, `lidarr_search_album`).
-        // The bare `<arr>_search` tools are metadata LOOKUPS that surface add
-        // candidates (the user taps a card to add); they query no indexer and
-        // start no grab, so they are read-only and deliberately NOT gated.
-        if name.contains("_search_") { return true }
+        // Indexer searches grab releases — but ONLY the infix form on an *arr
+        // tool (`sonarr_search_episodes`, `radarr_search_movie`,
+        // `lidarr_search_album`). The bare `<arr>_search` tools are metadata
+        // LOOKUPS that surface add candidates (the user taps a card to add); they
+        // query no indexer and start no grab, so they are read-only and NOT gated.
+        // Scope the `_search_` rule to the arr prefixes so read-only lookups like
+        // `tmdb_search_person` (a pure TMDB API call) are not falsely gated.
+        let indexerArrs = ["sonarr", "radarr", "lidarr", "whisparr"]
+        if indexerArrs.contains(where: { name.hasPrefix($0) }), name.contains("_search_") {
+            return true
+        }
 
         // Monitor / add / delete / remove mutate arr state wherever the action
         // word sits (monitor fires an immediate SeasonSearch/AlbumSearch when

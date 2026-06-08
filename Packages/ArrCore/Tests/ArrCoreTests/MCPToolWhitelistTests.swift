@@ -21,6 +21,10 @@ struct MCPToolWhitelistTests {
         #expect(MCPToolWhitelist.isDestructive("sonarr_search_episodes"))
         #expect(MCPToolWhitelist.isDestructive("radarr_search_movie"))
         #expect(MCPToolWhitelist.isDestructive("lidarr_search_album"))
+        // TMDB read-only lookups have `_search_` in the name but are NOT arr
+        // indexer searches — must not be gated.
+        #expect(!MCPToolWhitelist.isDestructive("tmdb_search_person"))
+        #expect(!MCPToolWhitelist.isDestructive("tmdb_discover_movies"))
     }
 
     @Test("monitor/add/delete/remove gate as infix and bare suffix")

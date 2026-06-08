@@ -64,10 +64,10 @@ public struct SearchAddPanel: View {
                 .zIndex(10)
             }
         }
-        .navigationTitle(navTitleString)
-        #if os(iOS)
-        .navigationBarTitleDisplayMode(.inline)
-        #endif
+        // No `.navigationTitle` here: the panel is a ZStack overlay inside the
+        // root NavigationStack and draws its own `header` (title + FloatingBackButton),
+        // so a navigationTitle would propagate up and render a SECOND, stacked
+        // header above the real one.
     }
 
     private var mainContent: some View {

@@ -26,7 +26,12 @@ public struct RichToolResultView: View {
 
     public var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            LazyHStack(alignment: .top, spacing: 10) {
+            // Eager HStack (not Lazy): with `.fixedSize(vertical:)` on the
+            // ScrollView, a LazyHStack only measures the first rendered card, so
+            // the row height locked to card #1 and taller later cards got clipped.
+            // An eager HStack measures every card up front → height = tallest card.
+            // Card counts here are small (bounded by visibleCount), so this is cheap.
+            HStack(alignment: .top, spacing: 10) {
                 switch content {
                 case .searchMovieResults(let results):
                     let visible = Array(results.prefix(visibleCount))
