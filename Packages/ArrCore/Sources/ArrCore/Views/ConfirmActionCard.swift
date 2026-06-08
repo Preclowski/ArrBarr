@@ -185,15 +185,31 @@ public struct InlineConfirmCard: View {
                     .fixedSize(horizontal: false, vertical: true)
                 HStack(spacing: 8) {
                     Spacer()
+                    // Custom capsules with the full padded area as the hit target
+                    // (`.contentShape` on the padded label + `.plain` style) — the
+                    // native button styles left only the text tappable here.
                     Button(role: .cancel, action: onCancel) {
                         Text(cancelLabelKey, bundle: .module)
+                            .scaledFont(size: 12, weight: .medium)
+                            .foregroundStyle(.primary)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 6)
+                            .contentShape(Capsule())
                     }
+                    .buttonStyle(.plain)
+                    .background(Color.primary.opacity(0.08), in: Capsule())
                     .keyboardShortcut(.escape, modifiers: [])
                     Button(role: destructive ? .destructive : nil, action: onConfirm) {
                         Text(confirmLabelKey, bundle: .module)
+                            .scaledFont(size: 12, weight: .semibold)
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 6)
+                            .contentShape(Capsule())
                     }
+                    .buttonStyle(.plain)
+                    .background(destructive ? Color.red : Color.accentColor, in: Capsule())
                     .keyboardShortcut(.return, modifiers: [])
-                    .modifier(GlassProminentButtonStyle())
                 }
             }
         }
@@ -243,18 +259,17 @@ public struct ModalConfirmOverlay: View {
 
     public var body: some View {
         ZStack(alignment: .bottom) {
-            // Strong scrim — separates the card from content behind.
-            // Chat usage shows the same card without scrim (inline).
+            // Light scrim — just enough to lift the card off the content, not a
+            // heavy black-out (the card itself is solid, so it doesn't need one).
             Rectangle()
-                .fill(.black.opacity(0.55))
+                .fill(.black.opacity(0.20))
                 .contentShape(Rectangle())
                 .onTapGesture { onCancel() }
                 .ignoresSafeArea()
 
-            // Re-use the chat-tool-gate card verbatim. One component,
-            // one visual language. The card's orange-tint + shield
-            // already reads as "attention" inline; over a scrim it
-            // reads as "modal".
+            // Re-use the chat-tool-gate card, but give it a SOLID material
+            // backing here so the modal reads as opaque (the inline orange tint
+            // alone was see-through).
             InlineConfirmCard(
                 title: title,
                 message: message,
@@ -263,6 +278,10 @@ public struct ModalConfirmOverlay: View {
                 destructive: destructive,
                 onConfirm: onConfirm,
                 onCancel: onCancel
+            )
+            .background(
+                RoundedRectangle(cornerRadius: Tokens.Radius.panel, style: .continuous)
+                    .fill(.regularMaterial)
             )
             .shadow(color: .black.opacity(0.30), radius: 16, y: -2)
             .padding(.horizontal, 14)

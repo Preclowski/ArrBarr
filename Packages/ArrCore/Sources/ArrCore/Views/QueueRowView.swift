@@ -17,6 +17,9 @@ public extension QueueItem.Status {
     var tint: Color {
         switch self {
         case .paused: return .orange
+        // Queued / deferred sits between "missing" (grey) and "paused" (orange):
+        // a muted amber so it reads as "waiting", not active and not stopped.
+        case .queued: return Color(hue: 0.09, saturation: 0.42, brightness: 0.72)
         case .failed, .warning: return .red
         case .completed: return .green
         case .importing: return .purple
