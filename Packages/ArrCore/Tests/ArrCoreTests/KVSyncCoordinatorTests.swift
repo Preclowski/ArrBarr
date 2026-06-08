@@ -66,24 +66,24 @@ struct KVSyncCoordinatorSuite {
         #expect(reloadCount == 1)
     }
 
-    @Test("start(): inbound apply does not trigger a reentrant outbound push storm")
-    @MainActor func startLoopGuard() async {
+    @Test("start(): inbound apply does not echo back to KVS (loop guard covers the async observer)")
+    @MainActor func startLoopGuardNoEcho() async {
         let (defaults, name) = makeDefaults()
         defer { UserDefaults.standard.removePersistentDomain(forName: name) }
         let kv = FakeKVStore()
         kv.storage["ArrBarr.showTonight"] = false
-        var reloadCount = 0
-        let coord = KVSyncCoordinator(defaults: defaults, kv: kv, reload: { reloadCount += 1 })
+        let coord = KVSyncCoordinator(defaults: defaults, kv: kv, reload: {})
         coord.start()
-        let setsAfterStart = kv.setCount
-        // Simulate an inbound iCloud change applied directly (as the block would):
+        await Task.yield()                  // let start()'s initial observers/blocks settle
+        let baseline = kv.setCount
+        // Inbound change arrives and is applied:
         coord.applyFromKV(keys: ["ArrBarr.showTonight"])
-        // Allow any queued main-queue notification blocks to drain.
+        // Drain the main queue so any queued outbound observer block runs:
         await Task.yield()
+        await Task.yield()
+        // The inbound apply must not have triggered an outbound push of the
+        // allowlist (the loop guard suppressed the didChange observer).
+        #expect(kv.setCount == baseline)
         #expect(defaults.object(forKey: "ArrBarr.showTonight") as? Bool == false)
-        // The apply itself must not have caused a flood of extra KVS writes beyond
-        // the allowlist push (i.e. no unbounded reentrant cascade).
-        #expect(kv.setCount - setsAfterStart <= SyncedKeys.all.count)
-        #expect(reloadCount >= 1)
     }
 }

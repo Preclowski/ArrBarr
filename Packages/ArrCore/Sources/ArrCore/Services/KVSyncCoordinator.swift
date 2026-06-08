@@ -68,13 +68,17 @@ public final class KVSyncCoordinator {
     /// then trigger one reload. Outbound observation is suppressed meanwhile.
     public func applyFromKV(keys: [String]) {
         isApplyingRemote = true
-        defer { isApplyingRemote = false }
         for key in keys where SyncedKeys.isSynced(key) {
             if let value = kv.object(forKey: key) {
                 defaults.set(value, forKey: key)
             }
         }
         reload()
+        // Reset on a later main-queue tick so the asynchronous outbound
+        // `didChangeNotification` observer (queue: .main, enqueued by the
+        // `defaults.set` calls above) still sees `isApplyingRemote == true`
+        // and skips the redundant re-push of the value we just applied.
+        DispatchQueue.main.async { [weak self] in self?.isApplyingRemote = false }
     }
 
     /// Test seam: simulate the outbound observer for one key.
