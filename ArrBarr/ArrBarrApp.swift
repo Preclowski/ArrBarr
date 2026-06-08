@@ -18,6 +18,7 @@ struct ArrBarrApp: App {
         // no StoreKit code is compiled in.
         #if APPSTORE
         StoreManager.shared.use(StoreKitBackend())
+        KVSyncCoordinator.startShared()
         #endif
     }
 

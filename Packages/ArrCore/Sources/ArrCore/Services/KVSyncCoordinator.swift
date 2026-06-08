@@ -85,3 +85,25 @@ public final class KVSyncCoordinator {
 
     deinit { observers.forEach { NotificationCenter.default.removeObserver($0) } }
 }
+
+@MainActor
+extension KVSyncCoordinator {
+    private static var _shared: KVSyncCoordinator?
+
+    /// Create, retain, and start the process-wide coordinator bound to the real
+    /// App Group suite (never the demo suite) and the live iCloud KVS. Idempotent
+    /// — safe to call once per launch. No-op if the group suite is unavailable.
+    /// Call only under `#if APPSTORE`.
+    @discardableResult
+    public static func startShared() -> KVSyncCoordinator? {
+        if let existing = _shared { return existing }
+        guard let group = WidgetDataStore.groupDefaults() else { return nil }
+        let coord = KVSyncCoordinator(
+            defaults: group,
+            kv: NSUbiquitousKeyValueStore.default,
+            reload: { ConfigStore.shared.reloadFromDefaults() })
+        _shared = coord
+        coord.start()
+        return coord
+    }
+}

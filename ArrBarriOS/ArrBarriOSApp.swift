@@ -19,6 +19,7 @@ struct ArrBarriOSApp: App {
         // Paywall is App Store-only; no backend injected elsewhere → unlocked.
         #if APPSTORE
         StoreManager.shared.use(StoreKitBackend())
+        KVSyncCoordinator.startShared()
         #endif
     }
 
