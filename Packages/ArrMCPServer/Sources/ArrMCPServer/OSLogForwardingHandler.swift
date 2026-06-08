@@ -37,7 +37,11 @@ private extension Logging.Logger.Level {
     var osLogType: OSLogType {
         switch self {
         case .trace, .debug: return .debug
-        case .info, .notice: return .info
+        case .info: return .info
+        // `.notice` -> os `.default`: unlike `.info`/`.debug`, default-level
+        // entries are persisted, so the server's lifecycle logs (host bound,
+        // server started, tool count) show up in `log show`, not just `log stream`.
+        case .notice: return .default
         case .warning, .error: return .error
         case .critical: return .fault
         }
