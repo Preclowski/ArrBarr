@@ -36,14 +36,15 @@ Packages/ArrCore/           # the real codebase (Swift 6 tools, lang mode v5)
     Services/      # arr clients (Sonarr/Radarr/Lidarr/Whisparr), download
                    #   clients (qBittorrent/Transmission/rTorrent/Deluge/
                    #   SABnzbd/NZBGet), QueueAggregator, RealtimeUpdates,
-                   #   ConfigStore, KeychainStore, LLM providers, ToolBackend +
+                   #   ConfigStore, SecretStore, KVSyncCoordinator, SyncedKeys,
+                   #   LLM providers, ToolBackend +
                    #   LocalToolBackend, DemoMocks, WidgetDataStore, …
     ViewModels/    # QueueViewModel, ChatViewModel, DiscoverViewModel, SearchViewModel
     Views/         # all SwiftUI (PopoverContentView, SettingsView, ChatView,
                    #   DiscoverTabView, SearchView, DetailView, iOSAppRoot, …)
     AppIntents/    # ArrBarrIntents — Siri/Shortcuts/Spotlight
     Resources/Localizable.xcstrings   # single string catalog, Bundle.module
-  Tests/ArrCoreTests/        # ~37 test files (XCTest)
+  Tests/ArrCoreTests/        # ~40 test files (Swift Testing: import Testing, @Test/#expect)
 
 Packages/ArrMCPServer/      # MCP server (depends on ArrCore)
   Sources/ArrMCPServer/
