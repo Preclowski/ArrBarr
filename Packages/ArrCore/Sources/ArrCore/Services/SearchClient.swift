@@ -340,7 +340,8 @@ public actor SearchClient {
             genres: r.genres ?? [],
             network: r.studio,
             certification: r.certification,
-            posterURL: poster, source: .radarr
+            posterURL: poster, source: .radarr,
+            inLibraryArrId: (r.id ?? 0) != 0 ? r.id : nil
         )
     }
 
@@ -358,7 +359,8 @@ public actor SearchClient {
             genres: r.genres ?? [],
             network: r.network,
             certification: nil,
-            posterURL: poster, source: .sonarr
+            posterURL: poster, source: .sonarr,
+            inLibraryArrId: (r.id ?? 0) != 0 ? r.id : nil
         )
     }
 

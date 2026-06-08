@@ -391,6 +391,10 @@ public struct SonarrCalendarRecord: Decodable {
 // MARK: - Search Lookup
 
 public struct RadarrLookupRecord: Decodable {
+    /// Radarr's `/movie/lookup` echoes the library record id here for movies the
+    /// user already owns (0 / absent otherwise) — the signal that drives the
+    /// "in library" state on search cards.
+    let id: Int?
     let tmdbId: Int?
     let title: String
     let year: Int?
@@ -420,6 +424,9 @@ public struct RadarrLookupRatingValue: Decodable, Sendable, Equatable {
 }
 
 public struct SonarrLookupRecord: Decodable {
+    /// Library record id for series the user already owns (0 / absent otherwise)
+    /// — drives the "in library" state on search cards.
+    let id: Int?
     let tvdbId: Int?
     let title: String
     let year: Int?

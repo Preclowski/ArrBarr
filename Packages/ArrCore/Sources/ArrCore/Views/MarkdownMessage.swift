@@ -189,17 +189,16 @@ struct MarkdownMessage: View {
             case .text(let txt):
                 result += styled(txt, size: size, bold: bold, italic: italic)
             case .spoiler(let txt):
-                if spoilersRevealed {
-                    result += styled(txt, size: size, bold: bold, italic: italic)
-                } else {
-                    // Render block glyphs instead of the real text so selecting
-                    // the bubble can't reveal it; tap toggles. Length tracks the
-                    // hidden text (capped) so the redaction bar reads naturally.
-                    let blocks = String(repeating: "█", count: max(2, min(txt.count, 28)))
-                    var a = styled(blocks, size: size, bold: bold, italic: italic)
-                    a.foregroundColor = .secondary
-                    result += a
+                // Keep the REAL text (same glyph positions) so revealing doesn't
+                // reflow / jump the layout — just toggle its colour. Hidden: a
+                // subtle highlight bar with invisible text; selection is disabled
+                // on spoiler messages (see SpoilerRevealTap) so it can't be peeked.
+                var a = styled(txt, size: size, bold: bold, italic: italic)
+                if !spoilersRevealed {
+                    a.foregroundColor = .clear
+                    a.backgroundColor = .secondary.opacity(0.30)
                 }
+                result += a
             }
         }
         return result
