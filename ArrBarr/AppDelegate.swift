@@ -272,18 +272,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let win = NSWindow(contentViewController: hosting)
         let shortVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""
         win.title = String(localized: "ArrBarr Settings", bundle: .arrCore) + (shortVersion.isEmpty ? "" : " v\(shortVersion)")
-        // `.closable` shows the standard traffic-light cluster with the red
-        // close button active; minimize + zoom render greyed-out (no
-        // `.miniaturizable` / `.resizable`), matching "three buttons, only
-        // close enabled".
-        win.styleMask = [.titled, .closable]
-        win.setContentSize(NSSize(width: 520, height: 460))
+        // System-Settings-style sidebar layout: the window needs to be
+        // resizable so the NavigationSplitView behaves (a fixed-size split
+        // view fights its column constraints and can't reveal the sidebar
+        // toggle). Traffic-light cluster fully enabled, like native Settings.
+        win.styleMask = [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView]
+        win.setContentSize(NSSize(width: 780, height: 540))
+        win.contentMinSize = NSSize(width: 700, height: 470)
         win.isReleasedWhenClosed = false
-        // Centre the title. macOS left-aligns standard titles, so hide the
-        // native one and host a centred label as a full-width titlebar
-        // accessory.
+        // The Settings UI is a hand-built two-column layout (a custom vibrant
+        // sidebar + a detail column). fullSizeContentView + a transparent
+        // titlebar let that content fill the whole window, so the sidebar
+        // material reaches the top-left with the traffic-lights floating on it
+        // (System Settings look). Title text hidden — the section name shows in
+        // the detail column's own top bar.
+        win.titlebarAppearsTransparent = true
         win.titleVisibility = .hidden
-        installCenteredTitle(win.title, in: win)
+        win.title = ""
         win.center()
 
         NotificationCenter.default.addObserver(
@@ -297,25 +302,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         settingsWindow = win
         win.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
-    }
-
-    /// Pin a centred title label into the window's titlebar container. macOS
-    /// has no API to centre the native title (it's left-aligned after the
-    /// traffic lights), so with `titleVisibility = .hidden` we add our own
-    /// label centred to the titlebar's full width.
-    private func installCenteredTitle(_ title: String, in win: NSWindow) {
-        guard let titlebar = win.standardWindowButton(.closeButton)?.superview else { return }
-        let label = NSTextField(labelWithString: title)
-        label.font = .systemFont(ofSize: 13, weight: .semibold)
-        label.textColor = .labelColor
-        label.alignment = .center
-        label.lineBreakMode = .byTruncatingTail
-        label.translatesAutoresizingMaskIntoConstraints = false
-        titlebar.addSubview(label)
-        NSLayoutConstraint.activate([
-            label.centerXAnchor.constraint(equalTo: titlebar.centerXAnchor),
-            label.centerYAnchor.constraint(equalTo: titlebar.centerYAnchor),
-        ])
     }
 
     // MARK: - Welcome

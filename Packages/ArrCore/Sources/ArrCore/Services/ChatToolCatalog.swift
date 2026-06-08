@@ -77,6 +77,61 @@ public enum ChatToolCatalog {
         }
     }
 
+    // MARK: - Tool directory (for the Settings → MCP pane)
+
+    /// One tool as presented in the MCP settings pane: its wire name, a short
+    /// human helper line, and the apps it touches (drives the row of brand
+    /// icons). Separate from the LLM-facing `MCPTool.description` (which is a
+    /// long prompt-engineered blurb) — this `summary` is a one-liner for a
+    /// human skimming the list.
+    public struct MCPToolInfo: Identifiable {
+        public let name: String
+        /// Short helper line (a localization key resolved by the pane).
+        public let summary: String
+        /// Apps the tool drives — rendered as a row of brand icons.
+        public let services: [ServiceKind]
+        public var id: String { name }
+    }
+
+    /// Flat directory of every catalog tool, in catalog order. The pane shows
+    /// all of them regardless of what's configured — toggling a tool here is
+    /// about the MCP surface, independent of whether that arr is set up.
+    public static var toolDirectory: [MCPToolInfo] {
+        [
+            .init(name: "sonarr_search", summary: "Search TV series to add", services: [.sonarr]),
+            .init(name: "sonarr_get_series", summary: "List library series & season status", services: [.sonarr]),
+            .init(name: "sonarr_monitor_season", summary: "Monitor & grab whole seasons", services: [.sonarr]),
+            .init(name: "sonarr_search_episodes", summary: "Search specific episodes", services: [.sonarr]),
+            .init(name: "radarr_search", summary: "Search movies to add", services: [.radarr]),
+            .init(name: "radarr_get_movies", summary: "List library movies", services: [.radarr]),
+            .init(name: "radarr_search_movie", summary: "Force a movie search", services: [.radarr]),
+            .init(name: "lidarr_search", summary: "Search music artists to add", services: [.lidarr]),
+            .init(name: "lidarr_get_artists", summary: "List library artists", services: [.lidarr]),
+            .init(name: "lidarr_get_artist_albums", summary: "List an artist's albums", services: [.lidarr]),
+            .init(name: "lidarr_monitor_album", summary: "Monitor & grab an album", services: [.lidarr]),
+            .init(name: "lidarr_search_album", summary: "Force an album search", services: [.lidarr]),
+            .init(name: "whisparr_search", summary: "Search adult scenes to add", services: [.whisparr]),
+            .init(name: "whisparr_get_movies", summary: "List Whisparr library", services: [.whisparr]),
+            .init(name: "tmdb_search_person", summary: "Find a person by name", services: [.radarr, .sonarr]),
+            .init(name: "tmdb_person_movie_credits", summary: "Movies a person worked on", services: [.radarr]),
+            .init(name: "tmdb_discover_movies", summary: "Discover movies by genre / year", services: [.radarr]),
+            .init(name: "tmdb_person_tv_credits", summary: "Shows a person worked on", services: [.sonarr]),
+            .init(name: "tmdb_discover_series", summary: "Discover series by genre / year", services: [.sonarr]),
+            .init(name: "suggest_titles", summary: "Curated title suggestions", services: [.sonarr, .radarr]),
+            .init(name: "discover_in_quiz", summary: "Open the swipe-to-pick quiz", services: [.sonarr, .radarr]),
+            .init(name: "get_calendar", summary: "Upcoming releases across services", services: [.sonarr, .radarr, .lidarr, .whisparr]),
+            .init(name: "health", summary: "Check service & download-client health",
+                  services: [.sonarr, .radarr, .lidarr, .whisparr, .sabnzbd, .nzbget, .qbittorrent, .transmission, .rtorrent, .deluge]),
+            .init(name: "get_title_details", summary: "Details & cast for one title", services: [.sonarr, .radarr]),
+            .init(name: "custom_formats", summary: "Inspect custom-format scoring", services: [.sonarr, .radarr]),
+            .init(name: "list_download_queue", summary: "Show the active download queue", services: [.sonarr, .radarr]),
+        ]
+    }
+
+    /// Flat list of every tool name — used to compute "all enabled" defaults
+    /// and the on/off summary count in the MCP pane.
+    public static var allToolNames: [String] { toolDirectory.map(\.name) }
+
     // MARK: - Sonarr
 
     private static let sonarrTools: [MCPTool] = [
