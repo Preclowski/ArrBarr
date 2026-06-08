@@ -21,11 +21,37 @@ jobs:
         run: sudo xcode-select -s "$(ls -d /Applications/Xcode_26*.app | sort -V | tail -1)"
 
       - name: Build
+        env:
+          # Stable self-signed code-signing cert (base64 .p12 + password) so the
+          # shipped app keeps one signing identity across releases. Without this,
+          # the ad-hoc ("-") signature changes every build and macOS prompts for
+          # the login password on every launch once secrets live in the Keychain.
+          # Until both secrets are set, the build falls back to ad-hoc signing.
+          MACOS_CERT_P12: ${{ secrets.MACOS_CERT_P12 }}
+          MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
         run: |
+          SIGN_IDENTITY="-"
+          if [ -n "$MACOS_CERT_P12" ]; then
+            KEYCHAIN="$RUNNER_TEMP/build.keychain"
+            KEYCHAIN_PW="$(uuidgen)"
+            security create-keychain -p "$KEYCHAIN_PW" "$KEYCHAIN"
+            security set-keychain-settings -lut 21600 "$KEYCHAIN"
+            security unlock-keychain -p "$KEYCHAIN_PW" "$KEYCHAIN"
+            echo "$MACOS_CERT_P12" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+            security import "$RUNNER_TEMP/cert.p12" -k "$KEYCHAIN" -P "$MACOS_CERT_PASSWORD" -T /usr/bin/codesign
+            security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PW" "$KEYCHAIN"
+            security list-keychains -d user -s "$KEYCHAIN" $(security list-keychains -d user | tr -d '"')
+            # Common Name of the self-signed cert — adjust if you named it differently.
+            SIGN_IDENTITY="ArrBarr Code Signing"
+            echo "Signing Release build with stable identity: $SIGN_IDENTITY"
+          else
+            echo "No MACOS_CERT_P12 secret set — falling back to ad-hoc signing ('-')."
+          fi
           xcodebuild -project ArrBarr.xcodeproj \
             -scheme ArrBarr \
             -configuration Release \
             -derivedDataPath build \
+            CODE_SIGN_IDENTITY="$SIGN_IDENTITY" \
             build
 
       - name: Test
