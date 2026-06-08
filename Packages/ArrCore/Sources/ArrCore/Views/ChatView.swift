@@ -253,8 +253,8 @@ private struct MessageBubble: View {
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
             .background(Color.primary.opacity(0.07), in: RoundedRectangle(cornerRadius: 14))
-            .contentShape(Rectangle())
-            .textSelection(.enabled)
+            // textSelection is owned by MarkdownMessage (it disables selection on
+            // spoiler messages so the reveal tap works).
     }
 
     @ViewBuilder

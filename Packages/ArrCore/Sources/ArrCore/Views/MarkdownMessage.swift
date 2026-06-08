@@ -189,12 +189,17 @@ struct MarkdownMessage: View {
             case .text(let txt):
                 result += styled(txt, size: size, bold: bold, italic: italic)
             case .spoiler(let txt):
-                var a = styled(txt, size: size, bold: bold, italic: italic)
-                if !spoilersRevealed {
-                    a.foregroundColor = .clear
-                    a.backgroundColor = .primary.opacity(0.85)
+                if spoilersRevealed {
+                    result += styled(txt, size: size, bold: bold, italic: italic)
+                } else {
+                    // Render block glyphs instead of the real text so selecting
+                    // the bubble can't reveal it; tap toggles. Length tracks the
+                    // hidden text (capped) so the redaction bar reads naturally.
+                    let blocks = String(repeating: "█", count: max(2, min(txt.count, 28)))
+                    var a = styled(blocks, size: size, bold: bold, italic: italic)
+                    a.foregroundColor = .secondary
+                    result += a
                 }
-                result += a
             }
         }
         return result
@@ -208,11 +213,16 @@ private struct SpoilerRevealTap: ViewModifier {
     let toggle: () -> Void
     func body(content: Content) -> some View {
         if active {
+            // Disable selection on spoiler messages so the tap reveals (and so a
+            // drag-select can't peek at hidden glyphs); normal messages stay
+            // selectable.
             content
+                .textSelection(.disabled)
                 .contentShape(Rectangle())
                 .onTapGesture(perform: toggle)
         } else {
             content
+                .textSelection(.enabled)
         }
     }
 }
