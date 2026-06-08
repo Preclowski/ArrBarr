@@ -730,7 +730,18 @@ public struct DetailView: View {
         // so isConfigured is false — gate on demo too or demo movies show no cast.
         guard DemoMode.isActive || configStore.radarr.isConfigured else { return }
         let credits = (try? await RadarrClient(config: configStore.radarr).fetchCredits(movieId: movieId)) ?? []
-        cast = CastMember.from(radarrCredits: credits)
+        var members = CastMember.from(radarrCredits: credits)
+        // Radarr frequently has NO credits for unreleased / upcoming movies, so
+        // the upcoming detail showed an empty cast. Fall back to TMDB when a key
+        // and the movie's tmdbId are available.
+        if members.isEmpty, !DemoMode.isActive {
+            let key = configStore.tmdbApiKey
+            if !key.isEmpty, let tmdbId = radarrDetail?.tmdbId, tmdbId > 0,
+               let tmdb = try? await TMDBClient(apiKey: key).movieCredits(movieId: tmdbId) {
+                members = CastMember.from(tmdbCast: tmdb.cast)
+            }
+        }
+        cast = members
     }
 
     /// Series cast from TMDB — Sonarr has no `/credit` endpoint, so this is
