@@ -107,6 +107,26 @@ public struct KeychainSecretStore: SecretStore {
     }
 }
 
+/// UserDefaults-backed `SecretStore` for builds WITHOUT stable code signing
+/// (local ad-hoc Debug, github/OSS Release). On macOS the file Keychain prompts
+/// for the login password on every rebuild of an ad-hoc-signed app (the
+/// signature is unstable, so "Always Allow" never sticks), which makes the
+/// Keychain unusable for day-to-day local/OSS builds. Those builds therefore
+/// keep secrets in the (sandboxed) UserDefaults plist — the same place they
+/// lived before the Keychain refactor — while only the stably-signed, entitled
+/// App Store build uses `KeychainSecretStore` (synced + prompt-free).
+public struct UserDefaultsSecretStore: SecretStore, @unchecked Sendable {
+    private let defaults: UserDefaults
+    public init(defaults: UserDefaults) { self.defaults = defaults }
+    private func key(_ k: SecretKey) -> String { "ArrBarr.\(k.account)" }
+    public func read(_ k: SecretKey) -> String? {
+        let v = defaults.string(forKey: key(k))
+        return (v?.isEmpty == false) ? v : nil
+    }
+    public func set(_ value: String, for k: SecretKey) { defaults.set(value, forKey: key(k)) }
+    public func delete(_ k: SecretKey) { defaults.removeObject(forKey: key(k)) }
+}
+
 /// In-memory `SecretStore` for tests — never touches the real Keychain.
 public final class InMemorySecretStore: SecretStore, @unchecked Sendable {
     private let lock = NSLock()

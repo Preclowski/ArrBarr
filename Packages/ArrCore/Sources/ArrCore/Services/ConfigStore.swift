@@ -264,12 +264,59 @@ public final class ConfigStore: ObservableObject {
     nonisolated static var groupMigrationDoneKeyForTesting: String { groupMigrationDoneKey }
 
     public init(defaults: UserDefaults = ConfigStore.resolveDefaults(),
-                secrets: SecretStore = KeychainSecretStore()) {
+                secrets: SecretStore? = nil) {
         self.defaults = defaults
-        self.secrets = secrets
-        Self.migrateSecretsToKeychain(defaults: defaults, secrets: secrets)
+        let store = secrets ?? Self.makeDefaultSecretStore(defaults: defaults)
+        self.secrets = store
+        #if APPSTORE
+        // Stably-signed + entitled: secrets belong in the (iCloud-synced) Keychain.
+        Self.migrateSecretsToKeychain(defaults: defaults, secrets: store)
+        #else
+        // Ad-hoc / OSS build: the file Keychain prompts on every rebuild, so
+        // secrets live in UserDefaults. If a previous build pushed them into the
+        // Keychain (and blanked them here), pull them back out once.
+        Self.recoverSecretsFromKeychainIfNeeded(defaults: defaults, secrets: store)
+        #endif
         applyValues(from: defaults)
         setupSinks()
+    }
+
+    /// Production secret backend: the iCloud-synced Keychain only in App Store
+    /// builds (stably signed + entitled, so no password prompts); UserDefaults
+    /// otherwise, because an ad-hoc-signed build's file-Keychain access prompts
+    /// for the login password on every rebuild.
+    nonisolated static func makeDefaultSecretStore(defaults: UserDefaults) -> SecretStore {
+        #if APPSTORE
+        return KeychainSecretStore()
+        #else
+        return UserDefaultsSecretStore(defaults: defaults)
+        #endif
+    }
+
+    /// One-time recovery for non-App-Store builds: if an earlier build migrated
+    /// secrets INTO the Keychain (and blanked them in UserDefaults), read them
+    /// back out into `secrets` (UserDefaults) so the app works without per-launch
+    /// Keychain prompts. Prompts once for the items the old build created, then
+    /// clears the migration flag so it never runs again. A cancelled prompt
+    /// leaves the flag set so the next launch can retry.
+    nonisolated static func recoverSecretsFromKeychainIfNeeded(defaults: UserDefaults, secrets: SecretStore) {
+        guard defaults.bool(forKey: secretsMigratedKey) else { return }
+        let keychain = KeychainSecretStore()
+        var recoveredAny = false
+        func move(_ key: SecretKey) {
+            if let v = keychain.read(key), !v.isEmpty {
+                secrets.set(v, for: key)
+                keychain.delete(key)
+                recoveredAny = true
+            }
+        }
+        for kind in ServiceKind.allCases {
+            move(.apiKey(for: kind))
+            move(.password(for: kind))
+        }
+        move(.openAIKey)
+        move(.tmdbKey)
+        if recoveredAny { defaults.set(false, forKey: secretsMigratedKey) }
     }
 
     /// Load every published value from `defaults`. Called once at init (before

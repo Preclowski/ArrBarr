@@ -70,11 +70,13 @@ struct SecretStoreSuite {
 
     @Test("Real Keychain round-trips a non-conflicting key")
     func keychainRoundTrips() {
-        // Use a synced key so this test does not share a Keychain entry with the
-        // MCPTokenStore tests (which also write to SecretKey.mcpBearer) and
-        // cause race-condition failures when the suite runs in parallel.
+        // Use a DEDICATED throwaway account — never a real SecretKey (.tmdbKey,
+        // .apiKey(for:), …). A real key would collide with the user's actual
+        // secrets in the developer's login Keychain, and an intermediate dev-time
+        // run once polluted the real Keychain that way. Device-only + immediate
+        // cleanup means nothing persists across runs.
         let store = KeychainSecretStore()
-        let key = SecretKey.tmdbKey
+        let key = SecretKey(account: "secret.__roundtrip_test__", synced: false, deviceOnly: true)
         defer { store.delete(key) }
         store.set("kc-token", for: key)
         #expect(store.read(key) == "kc-token")
