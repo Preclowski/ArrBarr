@@ -1,7 +1,7 @@
 [
   {
     "oldKey": "%lld days",
-    "newKey": "settings.lldDays.label",
+    "newKey": "unit.days",
     "en": "%lld days",
     "comment": "Label in settings",
     "area": "settings",
@@ -13,7 +13,7 @@
   },
   {
     "oldKey": "%lld downloads",
-    "newKey": "queue.lldDownloads.label",
+    "newKey": "unit.downloads",
     "en": "%lld downloads",
     "comment": "Label in queue",
     "area": "queue",
@@ -25,7 +25,7 @@
   },
   {
     "oldKey": "%lld episodes",
-    "newKey": "queue.lldEpisodes.label",
+    "newKey": "unit.episodes",
     "en": "%lld episodes",
     "comment": "Label in queue",
     "area": "queue",
@@ -37,7 +37,7 @@
   },
   {
     "oldKey": "%lld hours",
-    "newKey": "settings.lldHours.label",
+    "newKey": "unit.hours",
     "en": "%lld hours",
     "comment": "Label in settings",
     "area": "settings",
@@ -49,7 +49,7 @@
   },
   {
     "oldKey": "%lld items: %@",
-    "newKey": "queue.lldItems.label",
+    "newKey": "unit.itemsNamed",
     "en": "%lld items: %@",
     "comment": "Label in queue",
     "area": "queue",
@@ -61,7 +61,7 @@
   },
   {
     "oldKey": "%lld picked",
-    "newKey": "discover.lldPicked.label",
+    "newKey": "discover.pickedCount",
     "en": "%lld picked",
     "comment": "Label in discover",
     "area": "discover",
@@ -73,7 +73,7 @@
   },
   {
     "oldKey": "%lld tracks",
-    "newKey": "detail.lldTracks.label",
+    "newKey": "unit.tracks",
     "en": "%lld tracks",
     "comment": "Label in detail",
     "area": "detail",
@@ -83,13 +83,13 @@
   },
   {
     "oldKey": "%lld%%",
-    "newKey": "common.lld.label",
+    "newKey": "common.percent.label",
     "en": "%lld%%",
     "comment": "Label in common",
     "area": "common",
     "role": "label",
     "usages": [],
-    "needsReview": true
+    "needsReview": false
   },
   {
     "oldKey": "24 hours",

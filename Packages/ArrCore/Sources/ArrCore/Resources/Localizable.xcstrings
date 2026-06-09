@@ -2,7 +2,7 @@
   "sourceLanguage": "en",
   "version": "1.1",
   "strings": {
-    "settings.lldDays.label": {
+    "unit.days": {
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -10,17 +10,11 @@
             "state": "translated",
             "value": "%lld days"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld dni"
-          }
         }
       },
       "comment": "Label in settings"
     },
-    "queue.lldDownloads.label": {
+    "unit.downloads": {
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -28,17 +22,11 @@
             "state": "translated",
             "value": "%lld downloads"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld pobrań"
-          }
         }
       },
       "comment": "Label in queue"
     },
-    "queue.lldEpisodes.label": {
+    "unit.episodes": {
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -46,17 +34,11 @@
             "state": "translated",
             "value": "%lld episodes"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld odcinków"
-          }
         }
       },
       "comment": "Label in queue"
     },
-    "settings.lldHours.label": {
+    "unit.hours": {
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -64,17 +46,11 @@
             "state": "translated",
             "value": "%lld hours"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld godzin"
-          }
         }
       },
       "comment": "Label in settings"
     },
-    "queue.lldItems.label": {
+    "unit.itemsNamed": {
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -82,17 +58,11 @@
             "state": "translated",
             "value": "%lld items: %@"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld elementów: %@"
-          }
         }
       },
       "comment": "Label in queue"
     },
-    "discover.lldPicked.label": {
+    "discover.pickedCount": {
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -104,7 +74,7 @@
       },
       "comment": "Label in discover"
     },
-    "detail.lldTracks.label": {
+    "unit.tracks": {
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -112,17 +82,11 @@
             "state": "translated",
             "value": "%lld tracks"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld utworów"
-          }
         }
       },
       "comment": "Label in detail"
     },
-    "common.lld.label": {
+    "common.percent.label": {
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -142,12 +106,6 @@
             "state": "translated",
             "value": "24 hours"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "24 godziny"
-          }
         }
       },
       "comment": "Label in settings"
@@ -159,12 +117,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "3 movies in Radarr and a season in Sonarr."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "3 filmy w Radarr i sezon w Sonarr."
           }
         }
       },
@@ -178,12 +130,6 @@
             "state": "translated",
             "value": "A new Chat tab lets you ask questions in plain language — find a show, check what's coming this week, add a movie. Works with Apple Intelligence (macOS 26+) or any OpenAI-compatible API. Set up under Settings → AI."
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nowa zakładka Czat pozwala zadawać pytania zwykłym językiem — znajdź serial, sprawdź co wychodzi w tym tygodniu, dodaj film. Działa z Apple Intelligence (macOS 26+) lub dowolnym API zgodnym z OpenAI. Konfiguracja w Ustawienia → AI."
-          }
         }
       },
       "comment": "Tooltip/description in chat"
@@ -192,12 +138,6 @@
       "extractionState": "manual",
       "localizations": {
         "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AI"
-          }
-        },
-        "pl": {
           "stringUnit": {
             "state": "translated",
             "value": "AI"
@@ -214,12 +154,6 @@
             "state": "translated",
             "value": "AI Chat"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Czat AI"
-          }
         }
       },
       "comment": "Button in chat"
@@ -231,12 +165,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "AI decides"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AI decyduje"
           }
         }
       },
@@ -250,12 +178,6 @@
             "state": "translated",
             "value": "AI knows about Whisparr"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AI ma dostęp do Whisparra"
-          }
         }
       },
       "comment": "Button in settings"
@@ -267,12 +189,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "AI provider"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dostawca AI"
           }
         }
       },
@@ -286,12 +202,6 @@
             "state": "translated",
             "value": "AI will pick movies or shows based on your description"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AI dobierze filmy lub seriale na podstawie Twojego opisu"
-          }
         }
       },
       "comment": "Tooltip/description in common"
@@ -303,12 +213,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "API Key"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Klucz API"
           }
         }
       },
@@ -322,12 +226,6 @@
             "state": "translated",
             "value": "API base URL"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bazowy adres API"
-          }
         }
       },
       "comment": "Button in settings"
@@ -339,12 +237,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "API key"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Klucz API"
           }
         }
       },
@@ -370,12 +262,6 @@
             "state": "translated",
             "value": "About"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "O aplikacji"
-          }
         }
       },
       "comment": "Button in settings"
@@ -387,12 +273,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "About ArrBarr"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "O ArrBarr"
           }
         }
       },
@@ -406,12 +286,6 @@
             "state": "translated",
             "value": "Acknowledgements"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Podziękowania"
-          }
         }
       },
       "comment": "Button in settings"
@@ -423,12 +297,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Action"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Akcja"
           }
         }
       },
@@ -442,12 +310,6 @@
             "state": "translated",
             "value": "Add"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dodaj"
-          }
         }
       },
       "comment": "Button in paywall"
@@ -459,12 +321,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Add SABnzbd, qBittorrent, NZBGet, Transmission, rTorrent, or Deluge to pause and resume directly from the queue. Most features work fine without it — your arr already handles the heavy lifting."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dodaj SABnzbd, qBittorrent, NZBGet, Transmission, rTorrent lub Deluge, aby pauzować i wznawiać prosto z kolejki. Większość funkcji działa bez tego — Twój arr zajmie się resztą."
           }
         }
       },
@@ -478,12 +334,6 @@
             "state": "translated",
             "value": "Add TMDB API key in Settings to discover new films."
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dodaj klucz TMDB w Ustawieniach, by odkrywać nowe filmy."
-          }
         }
       },
       "comment": "Tooltip/description in settings"
@@ -495,12 +345,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Add a TMDB key to let chat search by actor, genre, and decade."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dodaj klucz TMDB, aby czat mógł szukać po aktorze, gatunku i dekadzie."
           }
         }
       },
@@ -514,12 +358,6 @@
             "state": "translated",
             "value": "Add a service"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dodaj usługę"
-          }
         }
       },
       "comment": "Button in settings"
@@ -532,12 +370,6 @@
             "state": "translated",
             "value": "Add and manage SABnzbd, qBittorrent and the rest."
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dodawaj i zarządzaj SABnzbd, qBittorrent i resztą."
-          }
         }
       },
       "comment": "Tooltip/description in paywall"
@@ -549,12 +381,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Add and manage download clients"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dodawaj i zarządzaj klientami pobierania"
           }
         }
       },
@@ -580,12 +406,6 @@
             "state": "translated",
             "value": "Add mood"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dodaj mood"
-          }
         }
       },
       "comment": "Button in discover"
@@ -597,12 +417,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Add movies and shows in one sentence"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dodawaj filmy i seriale jednym zdaniem"
           }
         }
       },
@@ -616,12 +430,6 @@
             "state": "translated",
             "value": "Add new"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dodaj nowe"
-          }
         }
       },
       "comment": "Button in search"
@@ -633,12 +441,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Add new movies and shows"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dodawaj nowe filmy i seriale"
           }
         }
       },
@@ -652,12 +454,6 @@
             "state": "translated",
             "value": "Add new titles"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dodawaj nowe tytuły"
-          }
         }
       },
       "comment": "Button in paywall"
@@ -669,12 +465,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Add person"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dodaj osobę"
           }
         }
       },
@@ -688,12 +478,6 @@
             "state": "translated",
             "value": "Add to Calendar"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dodaj do Kalendarza"
-          }
         }
       },
       "comment": "Button in settings"
@@ -705,12 +489,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Add to Radarr"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dodaj do Radarr"
           }
         }
       },
@@ -724,12 +502,6 @@
             "state": "translated",
             "value": "Add to Sonarr"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dodaj do Sonarra"
-          }
         }
       },
       "comment": "Button in search"
@@ -741,12 +513,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Add to Whisparr"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dodaj do Whisparra"
           }
         }
       },
@@ -760,12 +526,6 @@
             "state": "translated",
             "value": "Add your Radarr or Sonarr connection to get started."
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dodaj połączenie z Radarrem lub Sonarrem, aby rozpocząć."
-          }
         }
       },
       "comment": "Tooltip/description in settings"
@@ -777,12 +537,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Add your existing arr services in Settings — ArrBarr polls live queue, history, and health from each one."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dodaj istniejące usługi arr w ustawieniach — ArrBarr na bieżąco pobiera kolejkę, historię i stan każdej z nich."
           }
         }
       },
@@ -796,12 +550,6 @@
             "state": "translated",
             "value": "Adding titles is a Pro feature"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dodawanie tytułów to funkcja Pro"
-          }
         }
       },
       "comment": "Label in paywall"
@@ -813,12 +561,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Adult content"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Treści dla dorosłych"
           }
         }
       },
@@ -832,12 +574,6 @@
             "state": "translated",
             "value": "Adventure"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Przygodowy"
-          }
         }
       },
       "comment": "Button in discover"
@@ -849,12 +585,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Album details"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Szczegóły albumu"
           }
         }
       },
@@ -868,12 +598,6 @@
             "state": "translated",
             "value": "All"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wszystkie"
-          }
         }
       },
       "comment": "Button in search"
@@ -885,12 +609,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Almost there…"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Już prawie…"
           }
         }
       },
@@ -904,12 +622,6 @@
             "state": "translated",
             "value": "Animation"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Animacja"
-          }
         }
       },
       "comment": "Button in discover"
@@ -921,12 +633,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Any status"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Każdy status"
           }
         }
       },
@@ -940,12 +646,6 @@
             "state": "translated",
             "value": "Appearance"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wygląd"
-          }
         }
       },
       "comment": "Button in settings"
@@ -954,12 +654,6 @@
       "extractionState": "manual",
       "localizations": {
         "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Apple Intelligence"
-          }
-        },
-        "pl": {
           "stringUnit": {
             "state": "translated",
             "value": "Apple Intelligence"
@@ -976,12 +670,6 @@
             "state": "translated",
             "value": "Apple Intelligence is unavailable. Try turning it on in System Settings."
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Apple Intelligence jest niedostępne. Spróbuj je włączyć w Ustawieniach systemowych."
-          }
         }
       },
       "comment": "Tooltip/description in chat"
@@ -993,12 +681,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Apple Intelligence requires iOS 26."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Apple Intelligence wymaga iOS 26."
           }
         }
       },
@@ -1012,12 +694,6 @@
             "state": "translated",
             "value": "Apple Intelligence requires macOS 26."
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Apple Intelligence wymaga macOS 26."
-          }
         }
       },
       "comment": "Tooltip/description in settings"
@@ -1030,12 +706,6 @@
             "state": "translated",
             "value": "Application"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aplikacja"
-          }
         }
       },
       "comment": "Button in settings"
@@ -1044,12 +714,6 @@
       "extractionState": "manual",
       "localizations": {
         "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ArrBarr Pro"
-          }
-        },
-        "pl": {
           "stringUnit": {
             "state": "translated",
             "value": "ArrBarr Pro"
@@ -1066,12 +730,6 @@
             "state": "translated",
             "value": "ArrBarr Settings"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ustawienia ArrBarr"
-          }
         }
       },
       "comment": "Button in settings"
@@ -1083,12 +741,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "ArrBarr is not configured"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ArrBarr nie jest skonfigurowany"
           }
         }
       },
@@ -1102,12 +754,6 @@
             "state": "translated",
             "value": "ArrBarr now shows a brief intro on first launch and after major updates so you know what's new. Reopen it any time from Settings → General."
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ArrBarr pokazuje teraz krótkie wprowadzenie przy pierwszym uruchomieniu i po dużych aktualizacjach, dzięki czemu wiesz, co nowego. Otwórz je ponownie w dowolnej chwili z Ustawienia → Ogólne."
-          }
         }
       },
       "comment": "Tooltip/description in onboarding"
@@ -1119,12 +765,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "ArrBarr stays out of your Dock and shows active downloads at a glance. **Left-click** the icon to open the popover. **Right-click** for Add, Refresh, Settings — every action also has a keyboard shortcut."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ArrBarr nie zaśmieca Doca i pokazuje aktywne pobrania na pierwszy rzut oka. **Lewy klik** na ikonie otwiera popover. **Prawy klik** wywołuje Dodaj, Odśwież, Ustawienia — każda akcja ma też skrót klawiaturowy."
           }
         }
       },
@@ -1138,12 +778,6 @@
             "state": "translated",
             "value": "ArrBarr stays out of your Dock and shows active downloads at a glance. Click the icon for the popover; right-click for quick options."
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ArrBarr nie zajmuje miejsca w Docku i pokazuje aktywne pobierania w mgnieniu oka. Kliknij ikonę, aby otworzyć okno; kliknij prawym, aby zobaczyć szybkie opcje."
-          }
         }
       },
       "comment": "Tooltip/description in queue"
@@ -1155,12 +789,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "ArrBarr will relaunch now to apply the change."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ArrBarr uruchomi się ponownie, aby zastosować zmianę."
           }
         }
       },
@@ -1174,12 +802,6 @@
             "state": "translated",
             "value": "ArrBarr will relaunch now to load demo content."
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ArrBarr zostanie teraz uruchomiony ponownie, aby wczytać zawartość demo."
-          }
         }
       },
       "comment": "Tooltip/description in common"
@@ -1192,12 +814,6 @@
             "state": "translated",
             "value": "ArrBarr will relaunch. Open Settings → General to enable Demo mode and load preview content."
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ArrBarr uruchomi się ponownie. Otwórz Ustawienia → Ogólne, aby włączyć Tryb demo i załadować przykładowe dane."
-          }
         }
       },
       "comment": "Tooltip/description in settings"
@@ -1209,12 +825,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "ArrBarr's actions are available in the Shortcuts app, Spotlight and Siri."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Akcje ArrBarr są dostępne w aplikacji Skróty, Spotlight i Siri."
           }
         }
       },
@@ -1240,12 +850,6 @@
             "state": "translated",
             "value": "Ask about %@"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zapytaj o %@"
-          }
         }
       },
       "comment": "Label in common"
@@ -1257,12 +861,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ask and manage in plain language"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pytaj i zarządzaj w naturalnym języku"
           }
         }
       },
@@ -1276,12 +874,6 @@
             "state": "translated",
             "value": "Ask anything about your Sonarr / Radarr."
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zapytaj o cokolwiek dotyczącego Sonarra / Radarra."
-          }
         }
       },
       "comment": "Tooltip/description in common"
@@ -1293,12 +885,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ask anything…"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zapytaj o cokolwiek…"
           }
         }
       },
@@ -1312,12 +898,6 @@
             "state": "translated",
             "value": "Ask your library anything"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zapytaj swoją bibliotekę o cokolwiek"
-          }
         }
       },
       "comment": "Label in paywall"
@@ -1329,12 +909,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ask: more like Dune (2021)"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zapytaj: więcej jak Diuna (2021)"
           }
         }
       },
@@ -1348,12 +922,6 @@
             "state": "translated",
             "value": "Ask: what's good in my library?"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zapytaj: co dobrego mam w bibliotece?"
-          }
         }
       },
       "comment": "Tooltip/description in common"
@@ -1365,12 +933,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Assistant"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Asystent"
           }
         }
       },
@@ -1384,12 +946,6 @@
             "state": "translated",
             "value": "Assistant settings"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ustawienia asystenta"
-          }
         }
       },
       "comment": "Button in settings"
@@ -1402,12 +958,6 @@
             "state": "translated",
             "value": "Auto-jump off"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Auto-skok wyłączony"
-          }
         }
       },
       "comment": "Button in common"
@@ -1419,12 +969,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Auto-jump on"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Auto-skok włączony"
           }
         }
       },
@@ -1450,12 +994,6 @@
             "state": "translated",
             "value": "Back"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wstecz"
-          }
         }
       },
       "comment": "Button in settings"
@@ -1467,12 +1005,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Back to mood"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Powrót do nastroju"
           }
         }
       },
@@ -1486,12 +1018,6 @@
             "state": "translated",
             "value": "Back to mood picker"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Powrót do wyboru nastroju"
-          }
         }
       },
       "comment": "Button in discover"
@@ -1503,12 +1029,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Background"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "W tle"
           }
         }
       },
@@ -1522,12 +1042,6 @@
             "state": "translated",
             "value": "Background while cooking"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "W tle podczas gotowania"
-          }
         }
       },
       "comment": "Button in common"
@@ -1539,12 +1053,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Base URL"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Adres bazowy"
           }
         }
       },
@@ -1558,12 +1066,6 @@
             "state": "translated",
             "value": "Blur posters #nsfw"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Rozmyj plakaty #nsfw"
-          }
         }
       },
       "comment": "Button in common"
@@ -1575,12 +1077,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Built-in (Sonarr + Radarr)"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wbudowane (Sonarr + Radarr)"
           }
         }
       },
@@ -1594,12 +1090,6 @@
             "state": "translated",
             "value": "Buy"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kup"
-          }
         }
       },
       "comment": "Button in common"
@@ -1611,12 +1101,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Cancel"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Anuluj"
           }
         }
       },
@@ -1630,12 +1114,6 @@
             "state": "translated",
             "value": "Cancel download"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Anuluj pobieranie"
-          }
         }
       },
       "comment": "Button in queue"
@@ -1647,12 +1125,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Cancel this download?"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Anulować to pobieranie?"
           }
         }
       },
@@ -1678,12 +1150,6 @@
             "state": "translated",
             "value": "Change media kind"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zmień typ mediów"
-          }
         }
       },
       "comment": "Button in common"
@@ -1695,12 +1161,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Change mood"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zmień mood"
           }
         }
       },
@@ -1714,12 +1174,6 @@
             "state": "translated",
             "value": "Chat"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Czat"
-          }
         }
       },
       "comment": "Button in paywall"
@@ -1731,12 +1185,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Chat can search by actor, genre, and decade."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Czat może szukać po aktorze, gatunku i dekadzie."
           }
         }
       },
@@ -1750,12 +1198,6 @@
             "state": "translated",
             "value": "Chat drives your whole stack in plain language."
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Czat steruje całym Twoim stackiem w naturalnym języku."
-          }
         }
       },
       "comment": "Tooltip/description in paywall"
@@ -1767,12 +1209,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Chat is a Pro feature"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Chat to funkcja Pro"
           }
         }
       },
@@ -1786,12 +1222,6 @@
             "state": "translated",
             "value": "Chat requires iOS 26 with Apple Intelligence."
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Czat wymaga iOS 26 z Apple Intelligence."
-          }
         }
       },
       "comment": "Tooltip/description in common"
@@ -1803,12 +1233,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Chat requires macOS 26 with Apple Intelligence."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Czat wymaga macOS 26 z Apple Intelligence."
           }
         }
       },
@@ -1822,12 +1246,6 @@
             "state": "translated",
             "value": "Chat with your arrs"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Czat z Twoimi arrami"
-          }
         }
       },
       "comment": "Button in onboarding"
@@ -1839,12 +1257,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Chat with your library"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Czatuj ze swoją biblioteką"
           }
         }
       },
@@ -1870,12 +1282,6 @@
             "state": "translated",
             "value": "Clear"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wyczyść"
-          }
         }
       },
       "comment": "Button in common"
@@ -1887,12 +1293,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Clear all picks?"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wyczyścić wszystkie wybory?"
           }
         }
       },
@@ -1906,12 +1306,6 @@
             "state": "translated",
             "value": "Clear chat"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wyczyść chat"
-          }
         }
       },
       "comment": "Button in common"
@@ -1923,12 +1317,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Clear conversation"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wyczyść rozmowę"
           }
         }
       },
@@ -1942,12 +1330,6 @@
             "state": "translated",
             "value": "Clear filter"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wyczyść filtr"
-          }
         }
       },
       "comment": "Button in queue"
@@ -1959,12 +1341,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Clear filters"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wyczyść filtry"
           }
         }
       },
@@ -1978,12 +1354,6 @@
             "state": "translated",
             "value": "Clear genres"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wyczyść gatunki"
-          }
         }
       },
       "comment": "Button in detail"
@@ -1995,12 +1365,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Clear picks"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wyczyść wybory"
           }
         }
       },
@@ -2014,12 +1378,6 @@
             "state": "translated",
             "value": "Clear search"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wyczyść wyszukiwanie"
-          }
         }
       },
       "comment": "Button in search"
@@ -2031,12 +1389,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Click a row in the queue to see its details, episodes, and existing files."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kliknij wiersz w kolejce, aby zobaczyć szczegóły, odcinki i istniejące pliki."
           }
         }
       },
@@ -2050,12 +1402,6 @@
             "state": "translated",
             "value": "Client"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Klient"
-          }
         }
       },
       "comment": "Button in detail"
@@ -2067,12 +1413,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Client (%@) is not configured"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Klient (%@) nie jest skonfigurowany"
           }
         }
       },
@@ -2086,12 +1426,6 @@
             "state": "translated",
             "value": "Client:"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Klient:"
-          }
         }
       },
       "comment": "Button in common"
@@ -2103,12 +1437,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Close"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zamknij"
           }
         }
       },
@@ -2122,12 +1450,6 @@
             "state": "translated",
             "value": "Collapse section"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zwiń sekcję"
-          }
         }
       },
       "comment": "Button in queue"
@@ -2139,12 +1461,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Comedy"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Komedia"
           }
         }
       },
@@ -2158,12 +1474,6 @@
             "state": "translated",
             "value": "Completed"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ukończone"
-          }
         }
       },
       "comment": "Button in queue"
@@ -2175,12 +1485,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Configure Radarr in Settings to save picks to your library — add-actions will open TMDB instead."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Skonfiguruj Radarr w Ustawieniach, by zapisywać wybory do biblioteki — akcje „Dodaj” będą otwierać TMDB."
           }
         }
       },
@@ -2194,12 +1498,6 @@
             "state": "translated",
             "value": "Configure an LLM provider in Settings to get AI-powered picks."
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Skonfiguruj dostawcę LLM w Ustawieniach, aby otrzymać propozycje AI."
-          }
         }
       },
       "comment": "Tooltip/description in discover"
@@ -2211,12 +1509,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Confirm"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Potwierdź"
           }
         }
       },
@@ -2230,12 +1522,6 @@
             "state": "translated",
             "value": "Confirm (18+)"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Potwierdź (18+)"
-          }
         }
       },
       "comment": "Button in settings"
@@ -2247,12 +1533,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Confirm action"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Potwierdź akcję"
           }
         }
       },
@@ -2266,12 +1546,6 @@
             "state": "translated",
             "value": "Connect Radarr, Sonarr & Lidarr"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Połącz Radarr, Sonarr i Lidarr"
-          }
         }
       },
       "comment": "Button in onboarding"
@@ -2283,12 +1557,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Connect Radarr, Sonarr or Lidarr in Settings to get started."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Połącz Radarra, Sonarra lub Lidarra w Ustawieniach, aby zacząć."
           }
         }
       },
@@ -2302,12 +1570,6 @@
             "state": "translated",
             "value": "Connect Radarr, Sonarr or Lidarr to get started."
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Połącz Radarra, Sonarra lub Lidarra, aby zacząć."
-          }
         }
       },
       "comment": "Tooltip/description in common"
@@ -2319,12 +1581,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Connect download clients"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Podłącz klienty pobierania"
           }
         }
       },
@@ -2338,12 +1594,6 @@
             "state": "translated",
             "value": "Considering…"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Rozważam…"
-          }
         }
       },
       "comment": "Button in chat"
@@ -2356,12 +1606,6 @@
             "state": "translated",
             "value": "Continue"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dalej"
-          }
         }
       },
       "comment": "Button in queue"
@@ -2373,12 +1617,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Control"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kontrola"
           }
         }
       },
@@ -2404,12 +1642,6 @@
             "state": "translated",
             "value": "Couldn't load metadata"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nie udało się załadować metadanych"
-          }
         }
       },
       "comment": "Button in common"
@@ -2421,12 +1653,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Cozy"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Przytulny"
           }
         }
       },
@@ -2440,12 +1666,6 @@
             "state": "translated",
             "value": "Cozy Sunday afternoon"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Przytulne niedzielne popołudnie"
-          }
         }
       },
       "comment": "Button in common"
@@ -2457,12 +1677,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Cozy night in"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wieczór w domu"
           }
         }
       },
@@ -2476,12 +1690,6 @@
             "state": "translated",
             "value": "Crime"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kryminał"
-          }
         }
       },
       "comment": "Button in discover"
@@ -2493,12 +1701,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Crowd-pleaser"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dla wszystkich"
           }
         }
       },
@@ -2512,12 +1714,6 @@
             "state": "translated",
             "value": "Cult favorite"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kultowy"
-          }
         }
       },
       "comment": "Button in common"
@@ -2529,12 +1725,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Current file"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Obecny plik"
           }
         }
       },
@@ -2548,12 +1738,6 @@
             "state": "translated",
             "value": "Custom"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Własne"
-          }
         }
       },
       "comment": "Button in common"
@@ -2565,12 +1749,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Custom formats"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Formaty niestandardowe"
           }
         }
       },
@@ -2584,12 +1762,6 @@
             "state": "translated",
             "value": "Custom formats:"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Formaty niestandardowe:"
-          }
         }
       },
       "comment": "Button in history"
@@ -2601,12 +1773,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Custom mood"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Własny mood"
           }
         }
       },
@@ -2620,12 +1786,6 @@
             "state": "translated",
             "value": "DECADE"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "DEKADA"
-          }
         }
       },
       "comment": "Label in common"
@@ -2637,12 +1797,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Dark"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mroczny"
           }
         }
       },
@@ -2656,12 +1810,6 @@
             "state": "translated",
             "value": "Date night"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Randka"
-          }
         }
       },
       "comment": "Button in common"
@@ -2674,12 +1822,6 @@
             "state": "translated",
             "value": "Default"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Domyślny"
-          }
         }
       },
       "comment": "Button in settings"
@@ -2691,12 +1833,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Decades"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dekady"
           }
         }
       },
@@ -2722,12 +1858,6 @@
             "state": "translated",
             "value": "Deleted"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Usunięte"
-          }
         }
       },
       "comment": "Button in history"
@@ -2736,12 +1866,6 @@
       "extractionState": "manual",
       "localizations": {
         "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Deluge"
-          }
-        },
-        "pl": {
           "stringUnit": {
             "state": "translated",
             "value": "Deluge"
@@ -2758,12 +1882,6 @@
             "state": "translated",
             "value": "Demo mode"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tryb demo"
-          }
         }
       },
       "comment": "Button in settings"
@@ -2775,12 +1893,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Demo mode disabled"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tryb demo wyłączony"
           }
         }
       },
@@ -2794,12 +1906,6 @@
             "state": "translated",
             "value": "Demo mode enabled"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tryb demo włączony"
-          }
         }
       },
       "comment": "Button in common"
@@ -2812,12 +1918,6 @@
             "state": "translated",
             "value": "Detach from the menu bar into a standalone window with a Dock icon. Closing the window returns it to the Dock."
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Odepnij od paska menu do osobnego okna z ikoną w Docku. Zamknięcie okna chowa je z powrotem do Docka."
-          }
         }
       },
       "comment": "Tooltip/description in settings"
@@ -2829,12 +1929,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Detach into a window"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Odepnij to okno"
           }
         }
       },
@@ -2860,12 +1954,6 @@
             "state": "translated",
             "value": "Developer options"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Opcje deweloperskie"
-          }
         }
       },
       "comment": "Button in settings"
@@ -2877,12 +1965,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Developer options enabled"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Opcje programisty włączone"
           }
         }
       },
@@ -2896,12 +1978,6 @@
             "state": "translated",
             "value": "Device-specific settings (refresh intervals, appearance, MCP) stay on this device."
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ustawienia specyficzne dla urządzenia (interwały odświeżania, wygląd, MCP) pozostają na tym urządzeniu."
-          }
         }
       },
       "comment": "Tooltip/description in settings"
@@ -2913,12 +1989,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Directed by"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Reżyseria"
           }
         }
       },
@@ -2932,12 +2002,6 @@
             "state": "translated",
             "value": "Disable auto-jump to picks every 10"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wyłącz auto-skok do wyborów co 10"
-          }
         }
       },
       "comment": "Label in discover"
@@ -2949,12 +2013,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Disc %lld"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Płyta %lld"
           }
         }
       },
@@ -2968,12 +2026,6 @@
             "state": "translated",
             "value": "Discover"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Odkrywaj"
-          }
         }
       },
       "comment": "Button in discover"
@@ -2985,12 +2037,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Discover session"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sesja Discover"
           }
         }
       },
@@ -3004,12 +2050,6 @@
             "state": "translated",
             "value": "Discovery"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Odkrywanie"
-          }
         }
       },
       "comment": "Button in settings"
@@ -3021,12 +2061,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Display"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wyświetlanie"
           }
         }
       },
@@ -3040,12 +2074,6 @@
             "state": "translated",
             "value": "Do you want to save your changes before closing?"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Czy chcesz zapisać zmiany przed zamknięciem?"
-          }
         }
       },
       "comment": "Tooltip/description in common"
@@ -3057,12 +2085,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Documentary"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dokument"
           }
         }
       },
@@ -3076,12 +2098,6 @@
             "state": "translated",
             "value": "Don't Save"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nie zapisuj"
-          }
         }
       },
       "comment": "Button in common"
@@ -3093,12 +2109,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Done"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Gotowe"
           }
         }
       },
@@ -3112,12 +2122,6 @@
             "state": "translated",
             "value": "Download"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pobierz"
-          }
         }
       },
       "comment": "Button in queue"
@@ -3129,12 +2133,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Download actions"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Akcje pobierania"
           }
         }
       },
@@ -3148,12 +2146,6 @@
             "state": "translated",
             "value": "Download clients"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Klienty pobierania"
-          }
         }
       },
       "comment": "Button in settings"
@@ -3165,12 +2157,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Download clients (optional)"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Klienci pobierania (opcjonalnie)"
           }
         }
       },
@@ -3184,12 +2170,6 @@
             "state": "translated",
             "value": "Download clients are a Pro feature"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Klienty pobierania to funkcja Pro"
-          }
         }
       },
       "comment": "Label in paywall"
@@ -3201,12 +2181,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Downloading"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pobieranie"
           }
         }
       },
@@ -3220,12 +2194,6 @@
             "state": "translated",
             "value": "Drama"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dramat"
-          }
         }
       },
       "comment": "Button in discover"
@@ -3237,12 +2205,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Length"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Długość"
           }
         }
       },
@@ -3256,12 +2218,6 @@
             "state": "translated",
             "value": "Easy comfort watch"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lekki film do oglądania"
-          }
         }
       },
       "comment": "Button in common"
@@ -3273,12 +2229,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Edit mood and filters"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Edytuj mood i filtry"
           }
         }
       },
@@ -3292,12 +2242,6 @@
             "state": "translated",
             "value": "Enable AI"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Włącz AI"
-          }
         }
       },
       "comment": "Button in settings"
@@ -3309,12 +2253,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Enable MCP"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Włącz MCP"
           }
         }
       },
@@ -3328,12 +2266,6 @@
             "state": "translated",
             "value": "Enable chat"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Włącz czat"
-          }
         }
       },
       "comment": "Button in common"
@@ -3346,12 +2278,6 @@
             "state": "translated",
             "value": "Enabled"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Włączone"
-          }
         }
       },
       "comment": "Button in settings"
@@ -3363,12 +2289,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Enjoying ArrBarr?"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Podoba ci się ArrBarr?"
           }
         }
       },
@@ -3394,12 +2314,6 @@
             "state": "translated",
             "value": "Epic"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Epicki"
-          }
         }
       },
       "comment": "Button in common"
@@ -3411,12 +2325,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Episode %lld"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Odcinek %lld"
           }
         }
       },
@@ -3430,12 +2338,6 @@
             "state": "translated",
             "value": "Episodes"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Odcinki"
-          }
         }
       },
       "comment": "Button in queue"
@@ -3447,12 +2349,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Evaluating…"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Oceniam…"
           }
         }
       },
@@ -3466,12 +2362,6 @@
             "state": "translated",
             "value": "Event"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zdarzenie"
-          }
         }
       },
       "comment": "Button in history"
@@ -3483,12 +2373,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Existing"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Istniejący"
           }
         }
       },
@@ -3502,12 +2386,6 @@
             "state": "translated",
             "value": "Existing file"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Istniejący plik"
-          }
         }
       },
       "comment": "Button in common"
@@ -3519,12 +2397,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Existing file:"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Istniejący plik:"
           }
         }
       },
@@ -3538,12 +2410,6 @@
             "state": "translated",
             "value": "Existing files"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Istniejące pliki"
-          }
         }
       },
       "comment": "Button in common"
@@ -3555,12 +2421,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Expand section"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Rozwiń sekcję"
           }
         }
       },
@@ -3574,12 +2434,6 @@
             "state": "translated",
             "value": "Exposed on the network without authentication. Enable a bearer token."
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wystawione w sieci bez uwierzytelniania. Włącz token bearer."
-          }
         }
       },
       "comment": "Tooltip/description in settings"
@@ -3591,12 +2445,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Exposes ArrBarr's tools over the Model Context Protocol so an external client (e.g. Claude Desktop) can drive your media stack. This is separate from the built-in AI assistant — changing these settings does not affect the in-app chat."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Udostępnia narzędzia ArrBarr przez Model Context Protocol, aby zewnętrzny klient (np. Claude Desktop) mógł sterować Twoim stosem mediów. To jest oddzielne od wbudowanego asystenta AI — zmiana tych ustawień nie wpływa na czat w aplikacji."
           }
         }
       },
@@ -3610,12 +2458,6 @@
             "state": "translated",
             "value": "External MCP server"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zewnętrzny serwer MCP"
-          }
         }
       },
       "comment": "Button in settings"
@@ -3627,12 +2469,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Failed"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Błąd"
           }
         }
       },
@@ -3646,12 +2482,6 @@
             "state": "translated",
             "value": "Family"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Familijny"
-          }
         }
       },
       "comment": "Button in discover"
@@ -3660,12 +2490,6 @@
       "extractionState": "manual",
       "localizations": {
         "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fantasy"
-          }
-        },
-        "pl": {
           "stringUnit": {
             "state": "translated",
             "value": "Fantasy"
@@ -3682,12 +2506,6 @@
             "state": "translated",
             "value": "Feel-good"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Optymistyczny"
-          }
         }
       },
       "comment": "Label in common"
@@ -3699,12 +2517,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Fewer like this"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mniej takich"
           }
         }
       },
@@ -3718,12 +2530,6 @@
             "state": "translated",
             "value": "File"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Plik"
-          }
         }
       },
       "comment": "Button in queue"
@@ -3735,12 +2541,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "File:"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Plik:"
           }
         }
       },
@@ -3754,12 +2554,6 @@
             "state": "translated",
             "value": "Filter"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Filtr"
-          }
         }
       },
       "comment": "Button in common"
@@ -3771,12 +2565,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Filter queue"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Filtruj kolejkę"
           }
         }
       },
@@ -3790,12 +2578,6 @@
             "state": "translated",
             "value": "Filter…"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Filtruj…"
-          }
         }
       },
       "comment": "Button in common"
@@ -3807,12 +2589,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Find a movie or show and add it in one tap."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Znajdź film lub serial i dodaj go jednym kliknięciem."
           }
         }
       },
@@ -3826,12 +2602,6 @@
             "state": "translated",
             "value": "Finding ideas…"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Szukam pomysłów…"
-          }
         }
       },
       "comment": "Button in chat"
@@ -3843,12 +2613,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Finding more…"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Szukam więcej…"
           }
         }
       },
@@ -3862,12 +2626,6 @@
             "state": "translated",
             "value": "Friends over with pizza"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Znajomi i pizza"
-          }
         }
       },
       "comment": "Button in common"
@@ -3880,12 +2638,6 @@
             "state": "translated",
             "value": "GENRE"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "GATUNEK"
-          }
         }
       },
       "comment": "Label in detail"
@@ -3894,12 +2646,6 @@
       "extractionState": "manual",
       "localizations": {
         "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Gatunek"
-          }
-        },
-        "pl": {
           "stringUnit": {
             "state": "translated",
             "value": "Gatunek"
@@ -3916,12 +2662,6 @@
             "state": "translated",
             "value": "Gatunki"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Gatunki"
-          }
         }
       },
       "comment": "Button in common"
@@ -3933,12 +2673,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "General"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ogólne"
           }
         }
       },
@@ -3952,12 +2686,6 @@
             "state": "translated",
             "value": "Generate"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Generuj"
-          }
         }
       },
       "comment": "Button in settings"
@@ -3969,12 +2697,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Generate a token — auth stays off until one is set."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wygeneruj token — uwierzytelnianie pozostaje wyłączone, dopóki go nie ustawisz."
           }
         }
       },
@@ -3988,12 +2710,6 @@
             "state": "translated",
             "value": "Genres"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Gatunki"
-          }
         }
       },
       "comment": "Button in detail"
@@ -4005,12 +2721,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Get a free TMDB key"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pobierz darmowy klucz TMDB"
           }
         }
       },
@@ -4024,12 +2734,6 @@
             "state": "translated",
             "value": "Get started"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zacznij"
-          }
         }
       },
       "comment": "Button in onboarding"
@@ -4038,12 +2742,6 @@
       "extractionState": "manual",
       "localizations": {
         "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "GitHub"
-          }
-        },
-        "pl": {
           "stringUnit": {
             "state": "translated",
             "value": "GitHub"
@@ -4060,12 +2758,6 @@
             "state": "translated",
             "value": "Grabbed"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pobrane"
-          }
         }
       },
       "comment": "Button in history"
@@ -4077,12 +2769,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Hangover Sunday"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Niedzielny kac"
           }
         }
       },
@@ -4096,12 +2782,6 @@
             "state": "translated",
             "value": "Here are %lld films you might enjoy."
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Oto %lld filmów, które mogą Ci się spodobać."
-          }
         }
       },
       "comment": "Tooltip/description in chat"
@@ -4113,12 +2793,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Here are %lld series you might enjoy."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Oto %lld seriali, które mogą Ci się spodobać."
           }
         }
       },
@@ -4132,12 +2806,6 @@
             "state": "translated",
             "value": "Highly rated"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wysoko oceniany"
-          }
         }
       },
       "comment": "Button in common"
@@ -4149,12 +2817,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "History"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Historia"
           }
         }
       },
@@ -4168,12 +2830,6 @@
             "state": "translated",
             "value": "Hold to compare"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Przytrzymaj, aby porównać"
-          }
         }
       },
       "comment": "Button in queue"
@@ -4182,12 +2838,6 @@
       "extractionState": "manual",
       "localizations": {
         "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Horror"
-          }
-        },
-        "pl": {
           "stringUnit": {
             "state": "translated",
             "value": "Horror"
@@ -4204,12 +2854,6 @@
             "state": "translated",
             "value": "If you've configured Lidarr, music artists now show up in search results and the AI chat. Add an artist the same way you'd add a series or movie."
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Jeśli skonfigurowałeś Lidarra, artyści muzyczni pojawiają się teraz w wynikach wyszukiwania i czacie AI. Dodaj artystę tak samo jak serial czy film."
-          }
         }
       },
       "comment": "Tooltip/description in onboarding"
@@ -4221,12 +2865,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Imported"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zaimportowane"
           }
         }
       },
@@ -4240,12 +2878,6 @@
             "state": "translated",
             "value": "Importing"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Importowanie"
-          }
         }
       },
       "comment": "Button in queue"
@@ -4257,12 +2889,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "In library"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "W bibliotece"
           }
         }
       },
@@ -4276,12 +2902,6 @@
             "state": "translated",
             "value": "In library or new"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "W bibliotece lub nowe"
-          }
         }
       },
       "comment": "Button in common"
@@ -4293,12 +2913,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "In queue"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "W kolejce"
           }
         }
       },
@@ -4312,12 +2926,6 @@
             "state": "translated",
             "value": "Indexer"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Indekser"
-          }
         }
       },
       "comment": "Button in queue"
@@ -4329,12 +2937,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "It's free and open-source. A star on GitHub helps other people find it — and means a lot. Thanks for trying it out!"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ArrBarr jest darmowy i open source. Gwiazdka na GitHubie pomaga innym go znaleźć — i wiele dla nas znaczy. Dzięki, że go testujesz!"
           }
         }
       },
@@ -4348,12 +2950,6 @@
             "state": "translated",
             "value": "Keep download"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zachowaj pobieranie"
-          }
         }
       },
       "comment": "Button in queue"
@@ -4365,12 +2961,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Keep playing"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Graj dalej"
           }
         }
       },
@@ -4384,12 +2974,6 @@
             "state": "translated",
             "value": "Keep your servers, preferences, and saved keys in sync across your devices. Keys are stored in your encrypted iCloud Keychain."
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Synchronizuj serwery, preferencje i zapisane klucze na wszystkich urządzeniach. Klucze są przechowywane w zaszyfrowanym Pęku kluczy iCloud."
-          }
         }
       },
       "comment": "Tooltip/description in settings"
@@ -4401,12 +2985,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "LENGTH"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "DŁUGOŚĆ"
           }
         }
       },
@@ -4420,12 +2998,6 @@
             "state": "translated",
             "value": "Language"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Język"
-          }
         }
       },
       "comment": "Button in settings"
@@ -4437,12 +3009,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Larger"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Większy"
           }
         }
       },
@@ -4456,12 +3022,6 @@
             "state": "translated",
             "value": "Largest"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Największy"
-          }
         }
       },
       "comment": "Button in settings"
@@ -4473,12 +3033,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Last sync"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ostatnia synchronizacja"
           }
         }
       },
@@ -4492,12 +3046,6 @@
             "state": "translated",
             "value": "Launch at login"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Uruchamiaj przy logowaniu"
-          }
         }
       },
       "comment": "Button in settings"
@@ -4509,12 +3057,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Layout & visibility preferences"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Preferencje układu i widoczności"
           }
         }
       },
@@ -4528,12 +3070,6 @@
             "state": "translated",
             "value": "Library"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Biblioteka"
-          }
         }
       },
       "comment": "Button in search"
@@ -4542,12 +3078,6 @@
       "extractionState": "manual",
       "localizations": {
         "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lidarr"
-          }
-        },
-        "pl": {
           "stringUnit": {
             "state": "translated",
             "value": "Lidarr"
@@ -4564,12 +3094,6 @@
             "state": "translated",
             "value": "Lidarr support"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wsparcie dla Lidarra"
-          }
         }
       },
       "comment": "Button in onboarding"
@@ -4581,12 +3105,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Lidarr — notify on new grabs"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lidarr — powiadamiaj o nowych pobraniach"
           }
         }
       },
@@ -4600,12 +3118,6 @@
             "state": "translated",
             "value": "Light"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Jasny"
-          }
         }
       },
       "comment": "Button in settings"
@@ -4617,12 +3129,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Lives in your menu bar"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mieszka w pasku menu"
           }
         }
       },
@@ -4648,12 +3154,6 @@
             "state": "translated",
             "value": "Loading…"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ładowanie…"
-          }
         }
       },
       "comment": "Button in queue"
@@ -4665,12 +3165,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Login (leave empty for API key)"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Login (zostaw puste dla klucza API)"
           }
         }
       },
@@ -4684,12 +3178,6 @@
             "state": "translated",
             "value": "Long haul"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Długi seans"
-          }
         }
       },
       "comment": "Button in common"
@@ -4702,12 +3190,6 @@
             "state": "translated",
             "value": "Long solo flight"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Długi lot samotnie"
-          }
         }
       },
       "comment": "Button in common"
@@ -4716,12 +3198,6 @@
       "extractionState": "manual",
       "localizations": {
         "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "MCP"
-          }
-        },
-        "pl": {
           "stringUnit": {
             "state": "translated",
             "value": "MCP"
@@ -4738,12 +3214,6 @@
             "state": "translated",
             "value": "MCP bearer token (optional)"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Token MCP (opcjonalny)"
-          }
         }
       },
       "comment": "Label in settings"
@@ -4755,12 +3225,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "MCP connection enabled"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Połączenie MCP włączone"
           }
         }
       },
@@ -4774,12 +3238,6 @@
             "state": "translated",
             "value": "MCP server URL"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Adres serwera MCP"
-          }
         }
       },
       "comment": "Button in settings"
@@ -4791,12 +3249,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "MOOD STARTERS"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "PODPOWIEDZI NASTROJOWE"
           }
         }
       },
@@ -4810,12 +3262,6 @@
             "state": "translated",
             "value": "Make it yours"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dostosuj do siebie"
-          }
         }
       },
       "comment": "Button in onboarding"
@@ -4827,12 +3273,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Manage your downloads"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zarządzaj pobieraniami"
           }
         }
       },
@@ -4846,12 +3286,6 @@
             "state": "translated",
             "value": "Managing downloads is a Pro feature"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zarządzanie pobieraniami to funkcja Pro"
-          }
         }
       },
       "comment": "Label in paywall"
@@ -4863,12 +3297,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Manual import required"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wymagany import ręczny"
           }
         }
       },
@@ -4882,12 +3310,6 @@
             "state": "translated",
             "value": "Marathon binge"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Maraton odcinków"
-          }
         }
       },
       "comment": "Button in common"
@@ -4899,12 +3321,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Mark this card to suppress similar picks next time"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Oznacz tę kartę, aby ograniczyć podobne propozycje następnym razem"
           }
         }
       },
@@ -4918,12 +3334,6 @@
             "state": "translated",
             "value": "Maybe later"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Może później"
-          }
         }
       },
       "comment": "Button in paywall"
@@ -4935,12 +3345,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Media Managers"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Menedżery mediów"
           }
         }
       },
@@ -4954,12 +3358,6 @@
             "state": "translated",
             "value": "Metadata Profile"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Profil metadanych"
-          }
         }
       },
       "comment": "Button in search"
@@ -4971,12 +3369,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Mind-bending"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mózgołam"
           }
         }
       },
@@ -5002,12 +3394,6 @@
             "state": "translated",
             "value": "Model"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Model"
-          }
         }
       },
       "comment": "Button in settings"
@@ -5020,12 +3406,6 @@
             "state": "translated",
             "value": "Monitor"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Monitoruj"
-          }
         }
       },
       "comment": "Button in search"
@@ -5037,12 +3417,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Monitor season %lld and start search."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Monitoruj sezon %lld i rozpocznij wyszukiwanie."
           }
         }
       },
@@ -5068,12 +3442,6 @@
             "state": "translated",
             "value": "Monitor this album and start search."
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Monitoruj ten album i rozpocznij wyszukiwanie."
-          }
         }
       },
       "comment": "Tooltip/description in common"
@@ -5085,12 +3453,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Monitor this season"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Monitoruj ten sezon"
           }
         }
       },
@@ -5104,12 +3466,6 @@
             "state": "translated",
             "value": "Monitored"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Monitorowane"
-          }
         }
       },
       "comment": "Button in common"
@@ -5122,12 +3478,6 @@
             "state": "translated",
             "value": "Mood"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nastrój"
-          }
         }
       },
       "comment": "Button in discover"
@@ -5139,12 +3489,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "More"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Więcej"
           }
         }
       },
@@ -5170,12 +3514,6 @@
             "state": "translated",
             "value": "More actions"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Więcej akcji"
-          }
         }
       },
       "comment": "Button in detail"
@@ -5187,12 +3525,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "More filters"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Więcej filtrów"
           }
         }
       },
@@ -5206,12 +3538,6 @@
             "state": "translated",
             "value": "More options"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Więcej opcji"
-          }
         }
       },
       "comment": "Button in common"
@@ -5223,12 +3549,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "More picks like these"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Więcej takich propozycji"
           }
         }
       },
@@ -5242,12 +3562,6 @@
             "state": "translated",
             "value": "Most votes"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Najwięcej głosów"
-          }
         }
       },
       "comment": "Button in common"
@@ -5259,12 +3573,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Movie details"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Szczegóły filmu"
           }
         }
       },
@@ -5278,12 +3586,6 @@
             "state": "translated",
             "value": "Movies"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Filmy"
-          }
         }
       },
       "comment": "Button in discover"
@@ -5295,12 +3597,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Multiple seasons"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wiele sezonów"
           }
         }
       },
@@ -5314,12 +3610,6 @@
             "state": "translated",
             "value": "Music"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Muzyczny"
-          }
         }
       },
       "comment": "Button in discover"
@@ -5331,12 +3621,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Mystery"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tajemnica"
           }
         }
       },
@@ -5350,12 +3634,6 @@
             "state": "translated",
             "value": "NSFW filter"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Filtr NSFW"
-          }
         }
       },
       "comment": "Button in settings"
@@ -5364,12 +3642,6 @@
       "extractionState": "manual",
       "localizations": {
         "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "NZBGet"
-          }
-        },
-        "pl": {
           "stringUnit": {
             "state": "translated",
             "value": "NZBGet"
@@ -5386,12 +3658,6 @@
             "state": "translated",
             "value": "Needs attention"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wymaga uwagi"
-          }
         }
       },
       "comment": "Button in queue"
@@ -5403,12 +3669,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Needs you"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Potrzebuje twojej uwagi"
           }
         }
       },
@@ -5422,12 +3682,6 @@
             "state": "translated",
             "value": "Never"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nigdy"
-          }
         }
       },
       "comment": "Button in settings"
@@ -5439,12 +3693,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "New"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nowy"
           }
         }
       },
@@ -5458,12 +3706,6 @@
             "state": "translated",
             "value": "New chat"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nowy czat"
-          }
         }
       },
       "comment": "Button in chat"
@@ -5475,12 +3717,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "New file"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nowy plik"
           }
         }
       },
@@ -5506,12 +3742,6 @@
             "state": "translated",
             "value": "Next week"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "W tym tygodniu"
-          }
         }
       },
       "comment": "Button in queue"
@@ -5523,12 +3753,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "No"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nie"
           }
         }
       },
@@ -5542,12 +3766,6 @@
             "state": "translated",
             "value": "No download ID — item hasn't reached the client yet"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Brak ID pobierania — element jeszcze nie dotarł do klienta"
-          }
         }
       },
       "comment": "Tooltip/description in queue"
@@ -5560,12 +3778,6 @@
             "state": "translated",
             "value": "No history"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Brak historii"
-          }
         }
       },
       "comment": "Button in common"
@@ -5577,12 +3789,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "No matches."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Brak wyników."
           }
         }
       },
@@ -5608,12 +3814,6 @@
             "state": "translated",
             "value": "No movies match this query."
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Brak filmów pasujących do zapytania."
-          }
         }
       },
       "comment": "Tooltip/description in common"
@@ -5625,12 +3825,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "No overview available"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Brak opisu"
           }
         }
       },
@@ -5644,12 +3838,6 @@
             "state": "translated",
             "value": "No picks yet — swipe right to collect"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Jeszcze nic — przesuń w prawo, by dodać"
-          }
         }
       },
       "comment": "Label in discover"
@@ -5662,12 +3850,6 @@
             "state": "translated",
             "value": "No scenes match this query."
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Brak scen pasujących do zapytania."
-          }
         }
       },
       "comment": "Tooltip/description in common"
@@ -5679,12 +3861,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "No series match this query."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Brak seriali pasujących do zapytania."
           }
         }
       },
@@ -5710,12 +3886,6 @@
             "state": "translated",
             "value": "Nostalgic"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nostalgiczny"
-          }
         }
       },
       "comment": "Button in common"
@@ -5727,12 +3897,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Not aired yet"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Jeszcze nie wyemitowany"
           }
         }
       },
@@ -5746,12 +3910,6 @@
             "state": "translated",
             "value": "Nothing upcoming"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Brak nadchodzących"
-          }
         }
       },
       "comment": "Button in common"
@@ -5763,12 +3921,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Notification settings"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ustawienia powiadomień"
           }
         }
       },
@@ -5782,12 +3934,6 @@
             "state": "translated",
             "value": "Notification sound"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dźwięk powiadomienia"
-          }
         }
       },
       "comment": "Button in settings"
@@ -5800,12 +3946,6 @@
             "state": "translated",
             "value": "Notifications"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Powiadomienia"
-          }
         }
       },
       "comment": "Button in common"
@@ -5817,12 +3957,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Notify on new grabs"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Powiadom o nowych pobraniach"
           }
         }
       },
@@ -5848,12 +3982,6 @@
             "state": "translated",
             "value": "One-time purchase. No subscription. iOS + macOS."
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Jeden zakup. Bez subskrypcji. iOS + macOS."
-          }
         }
       },
       "comment": "Tooltip/description in paywall"
@@ -5865,12 +3993,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "One-time purchase. Unlocks everything, forever."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Jednorazowy zakup. Odblokowuje wszystko na zawsze."
           }
         }
       },
@@ -5884,12 +4006,6 @@
             "state": "translated",
             "value": "Open %@ in browser"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Otwórz %@ w przeglądarce"
-          }
         }
       },
       "comment": "Label in common"
@@ -5901,12 +4017,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Open Settings"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Otwórz ustawienia"
           }
         }
       },
@@ -5920,12 +4030,6 @@
             "state": "translated",
             "value": "Open Settings…"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Otwórz ustawienia…"
-          }
         }
       },
       "comment": "Button in common"
@@ -5937,12 +4041,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Open Shortcuts app"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Otwórz aplikację Skróty"
           }
         }
       },
@@ -5956,12 +4054,6 @@
             "state": "translated",
             "value": "Open Window…"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Otwórz okno…"
-          }
         }
       },
       "comment": "Button in common"
@@ -5973,12 +4065,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Open in browser"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Otwórz w przeglądarce"
           }
         }
       },
@@ -6004,12 +4090,6 @@
             "state": "translated",
             "value": "Open your picks"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Otwórz swoje typy"
-          }
         }
       },
       "comment": "Button in discover"
@@ -6018,12 +4098,6 @@
       "extractionState": "manual",
       "localizations": {
         "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "OpenAI / OpenRouter"
-          }
-        },
-        "pl": {
           "stringUnit": {
             "state": "translated",
             "value": "OpenAI / OpenRouter"
@@ -6040,12 +4114,6 @@
             "state": "translated",
             "value": "Optional vibe — or hit ↵ to discover"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Opcjonalny nastrój — lub naciśnij ↵"
-          }
         }
       },
       "comment": "Label in common"
@@ -6057,12 +4125,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Or describe what you want:"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lub opisz na co masz ochotę:"
           }
         }
       },
@@ -6076,12 +4138,6 @@
             "state": "translated",
             "value": "Or describe…"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Albo opisz…"
-          }
         }
       },
       "comment": "Button in common"
@@ -6090,12 +4146,6 @@
       "extractionState": "manual",
       "localizations": {
         "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Osoby"
-          }
-        },
-        "pl": {
           "stringUnit": {
             "state": "translated",
             "value": "Osoby"
@@ -6112,12 +4162,6 @@
             "state": "translated",
             "value": "Owned"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Posiadane"
-          }
         }
       },
       "comment": "Button in discover"
@@ -6129,12 +4173,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Page %lld"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Strona %lld"
           }
         }
       },
@@ -6148,12 +4186,6 @@
             "state": "translated",
             "value": "Password"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hasło"
-          }
         }
       },
       "comment": "Button in settings"
@@ -6166,12 +4198,6 @@
             "state": "translated",
             "value": "Password or API key"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hasło lub klucz API"
-          }
         }
       },
       "comment": "Button in settings"
@@ -6183,12 +4209,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Passwords & API keys (iCloud Keychain)"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hasła i klucze API (Pęk kluczy iCloud)"
           }
         }
       },
@@ -6214,12 +4234,6 @@
             "state": "translated",
             "value": "Paste your API key"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wklej swój klucz API"
-          }
         }
       },
       "comment": "Button in settings"
@@ -6232,12 +4246,6 @@
             "state": "translated",
             "value": "Pause"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wstrzymaj"
-          }
         }
       },
       "comment": "Button in queue"
@@ -6249,12 +4257,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Pause %@"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wstrzymaj %@"
           }
         }
       },
@@ -6280,12 +4282,6 @@
             "state": "translated",
             "value": "Pause download"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wstrzymaj pobieranie"
-          }
         }
       },
       "comment": "Button in detail"
@@ -6297,12 +4293,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Pause episode download"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wstrzymaj pobieranie odcinka"
           }
         }
       },
@@ -6316,12 +4306,6 @@
             "state": "translated",
             "value": "Pause, resume and remove downloads"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wstrzymuj, wznawiaj i usuwaj pobierania"
-          }
         }
       },
       "comment": "Label in queue"
@@ -6333,12 +4317,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Pause, resume and remove downloads right from ArrBarr."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wstrzymuj, wznawiaj i usuwaj pobierania wprost z ArrBarr."
           }
         }
       },
@@ -6352,12 +4330,6 @@
             "state": "translated",
             "value": "Pause, resume and retry without a browser"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wstrzymuj, wznawiaj i ponawiaj bez przeglądarki"
-          }
         }
       },
       "comment": "Tooltip/description in paywall"
@@ -6369,12 +4341,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Paused"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wstrzymane"
           }
         }
       },
@@ -6400,12 +4366,6 @@
             "state": "translated",
             "value": "People"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ludzie"
-          }
         }
       },
       "comment": "Button in common"
@@ -6417,12 +4377,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Person"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Osoba"
           }
         }
       },
@@ -6436,12 +4390,6 @@
             "state": "translated",
             "value": "Pick"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Biorę!"
-          }
         }
       },
       "comment": "Button in discover"
@@ -6453,12 +4401,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Pick a media kind to start:"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wybierz typ na początek:"
           }
         }
       },
@@ -6472,12 +4414,6 @@
             "state": "translated",
             "value": "Play"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Odtwórz"
-          }
         }
       },
       "comment": "Button in settings"
@@ -6490,12 +4426,6 @@
             "state": "translated",
             "value": "Plus everything else from Control mode"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Plus wszystko inne z trybu Kontrola"
-          }
         }
       },
       "comment": "Label in paywall"
@@ -6507,12 +4437,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Popover open"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Okno otwarte"
           }
         }
       },
@@ -6538,12 +4462,6 @@
             "state": "translated",
             "value": "Privacy Policy"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Polityka prywatności"
-          }
         }
       },
       "comment": "Button in settings"
@@ -6555,12 +4473,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Quality"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Jakość"
           }
         }
       },
@@ -6574,12 +4486,6 @@
             "state": "translated",
             "value": "Quality profile"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Profil jakości"
-          }
         }
       },
       "comment": "Button in search"
@@ -6591,12 +4497,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Quality:"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Jakość:"
           }
         }
       },
@@ -6610,12 +4510,6 @@
             "state": "translated",
             "value": "Queue"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kolejka"
-          }
         }
       },
       "comment": "Button in paywall"
@@ -6627,12 +4521,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Queue empty"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kolejka pusta"
           }
         }
       },
@@ -6646,12 +4534,6 @@
             "state": "translated",
             "value": "Queued"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "W kolejce"
-          }
         }
       },
       "comment": "Button in queue"
@@ -6663,12 +4545,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Quicker way to add"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Szybszy sposób dodawania"
           }
         }
       },
@@ -6682,12 +4558,6 @@
             "state": "translated",
             "value": "Quirky"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dziwaczny"
-          }
         }
       },
       "comment": "Button in common"
@@ -6700,12 +4570,6 @@
             "state": "translated",
             "value": "Quit ArrBarr"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zakończ ArrBarr"
-          }
         }
       },
       "comment": "Button in common"
@@ -6717,12 +4581,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Quit and reopen the app to apply the new language."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zamknij i otwórz aplikację ponownie, aby zastosować nowy język."
           }
         }
       },
@@ -6748,12 +4606,6 @@
             "state": "translated",
             "value": "Radarr"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Radarr"
-          }
         }
       },
       "comment": "Button in queue"
@@ -6765,12 +4617,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Radarr — notify on new grabs"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Radarr — powiadamiaj o nowych pobraniach"
           }
         }
       },
@@ -6784,12 +4630,6 @@
             "state": "translated",
             "value": "Re-downloading identical release"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ponowne pobieranie identycznego wydania"
-          }
         }
       },
       "comment": "Label in queue"
@@ -6801,12 +4641,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Re-enable auto-jump to picks every 10"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Włącz ponownie auto-skok do wyborów co 10"
           }
         }
       },
@@ -6820,12 +4654,6 @@
             "state": "translated",
             "value": "Reattach to menu bar"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Przypnij do taskbara"
-          }
         }
       },
       "comment": "Button in common"
@@ -6837,12 +4665,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Refresh"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Odśwież"
           }
         }
       },
@@ -6856,12 +4678,6 @@
             "state": "translated",
             "value": "Refresh Interval"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Częstotliwość odświeżania"
-          }
         }
       },
       "comment": "Button in settings"
@@ -6873,12 +4689,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Regenerate"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wygeneruj ponownie"
           }
         }
       },
@@ -6892,12 +4702,6 @@
             "state": "translated",
             "value": "Relaunch"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Uruchom ponownie"
-          }
         }
       },
       "comment": "Button in settings"
@@ -6909,12 +4713,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Relevance"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Trafność"
           }
         }
       },
@@ -6928,12 +4726,6 @@
             "state": "translated",
             "value": "Remove"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Usuń"
-          }
         }
       },
       "comment": "Button in common"
@@ -6945,12 +4737,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Remove %@"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Usuń %@"
           }
         }
       },
@@ -6964,12 +4750,6 @@
             "state": "translated",
             "value": "Remove download?"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Usunąć pobieranie?"
-          }
         }
       },
       "comment": "Tooltip/description in queue"
@@ -6981,12 +4761,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Remove episode download"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Anuluj pobieranie"
           }
         }
       },
@@ -7000,12 +4774,6 @@
             "state": "translated",
             "value": "Remove from client"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Usuń z klienta"
-          }
         }
       },
       "comment": "Button in common"
@@ -7017,12 +4785,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Remove from picks"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Usuń z wyborów"
           }
         }
       },
@@ -7036,12 +4798,6 @@
             "state": "translated",
             "value": "Remove mood"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Usuń mood"
-          }
         }
       },
       "comment": "Button in discover"
@@ -7053,12 +4809,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Remove person"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Usuń osobę"
           }
         }
       },
@@ -7072,12 +4822,6 @@
             "state": "translated",
             "value": "Reorder sections, hide what you don't need, tweak refresh intervals, and pick your language in Settings. Show only what matters to you."
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zmień kolejność sekcji, ukryj to, czego nie potrzebujesz, dostosuj częstotliwość odświeżania i wybierz język w ustawieniach. Pokazuj tylko to, co ważne."
-          }
         }
       },
       "comment": "Tooltip/description in onboarding"
@@ -7089,12 +4833,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Replacing"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zastępuje"
           }
         }
       },
@@ -7108,12 +4846,6 @@
             "state": "translated",
             "value": "Replacing all %lld episodes"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zastępowanie wszystkich %lld odcinków"
-          }
         }
       },
       "comment": "Label in detail"
@@ -7125,12 +4857,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Replacing existing files"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zastępuje istniejące pliki"
           }
         }
       },
@@ -7156,12 +4882,6 @@
             "state": "translated",
             "value": "Require bearer token"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wymagaj tokena bearer"
-          }
         }
       },
       "comment": "Button in settings"
@@ -7173,12 +4893,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Restart ArrBarr to apply language change."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Uruchom ArrBarr ponownie, aby zastosować zmianę języka."
           }
         }
       },
@@ -7192,12 +4906,6 @@
             "state": "translated",
             "value": "Restart required to apply the new language."
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wymagany restart, aby zastosować nowy język."
-          }
         }
       },
       "comment": "Tooltip/description in settings"
@@ -7209,12 +4917,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Restore Purchases"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Przywróć zakupy"
           }
         }
       },
@@ -7228,12 +4930,6 @@
             "state": "translated",
             "value": "Type"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Typ"
-          }
         }
       },
       "comment": "Button in common"
@@ -7245,12 +4941,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Result type"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Typ wyników"
           }
         }
       },
@@ -7264,12 +4954,6 @@
             "state": "translated",
             "value": "Resume"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wznów"
-          }
         }
       },
       "comment": "Button in queue"
@@ -7282,12 +4966,6 @@
             "state": "translated",
             "value": "Resume %@"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wznów %@"
-          }
         }
       },
       "comment": "Label in queue"
@@ -7299,12 +4977,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Resume Discover"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wznów Discover"
           }
         }
       },
@@ -7330,12 +5002,6 @@
             "state": "translated",
             "value": "Resume download"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wznów pobieranie"
-          }
         }
       },
       "comment": "Button in queue"
@@ -7347,12 +5013,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Resume episode download"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wznów pobieranie odcinka"
           }
         }
       },
@@ -7378,12 +5038,6 @@
             "state": "translated",
             "value": "Romance"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Romans"
-          }
         }
       },
       "comment": "Button in discover"
@@ -7395,12 +5049,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Romantic"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Romantyczny"
           }
         }
       },
@@ -7414,12 +5062,6 @@
             "state": "translated",
             "value": "Root folder"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Folder główny"
-          }
         }
       },
       "comment": "Button in search"
@@ -7431,12 +5073,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Run %@."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Uruchom %@."
           }
         }
       },
@@ -7450,12 +5086,6 @@
             "state": "translated",
             "value": "Running"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Działa"
-          }
         }
       },
       "comment": "Button in settings"
@@ -7464,12 +5094,6 @@
       "extractionState": "manual",
       "localizations": {
         "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "SABnzbd"
-          }
-        },
-        "pl": {
           "stringUnit": {
             "state": "translated",
             "value": "SABnzbd"
@@ -7486,12 +5110,6 @@
             "state": "translated",
             "value": "STARTERS"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "PROPOZYCJE"
-          }
         }
       },
       "comment": "Label in common"
@@ -7503,12 +5121,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "STARTERS (AI)"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "PROPOZYCJE (AI)"
           }
         }
       },
@@ -7522,12 +5134,6 @@
             "state": "translated",
             "value": "Same spec, retagged"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ta sama specyfikacja, inne tagi"
-          }
         }
       },
       "comment": "Button in queue"
@@ -7539,12 +5145,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Saturday night"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sobotni wieczór"
           }
         }
       },
@@ -7558,12 +5158,6 @@
             "state": "translated",
             "value": "Saturday night with friends"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sobotni wieczór z przyjaciółmi"
-          }
         }
       },
       "comment": "Label in common"
@@ -7575,12 +5169,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Save"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zapisz"
           }
         }
       },
@@ -7594,12 +5182,6 @@
             "state": "translated",
             "value": "Save mood"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zapisz mood"
-          }
         }
       },
       "comment": "Button in discover"
@@ -7612,12 +5194,6 @@
             "state": "translated",
             "value": "Save person"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zapisz osobę"
-          }
         }
       },
       "comment": "Button in common"
@@ -7629,12 +5205,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Save to picks"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zapisz do listy"
           }
         }
       },
@@ -7672,12 +5242,6 @@
             "state": "translated",
             "value": "Scenes"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sceny"
-          }
         }
       },
       "comment": "Button in search"
@@ -7689,12 +5253,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Science Fiction"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sci-Fi"
           }
         }
       },
@@ -7720,12 +5278,6 @@
             "state": "translated",
             "value": "Score:"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wynik:"
-          }
         }
       },
       "comment": "Button in history"
@@ -7737,12 +5289,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Search"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Szukaj"
           }
         }
       },
@@ -7756,12 +5302,6 @@
             "state": "translated",
             "value": "Search %lld"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Szukaj %lld"
-          }
         }
       },
       "comment": "Label in search"
@@ -7773,12 +5313,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Search %lld episode(s)."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Szukaj %lld odcinka/odcinków."
           }
         }
       },
@@ -7804,12 +5338,6 @@
             "state": "translated",
             "value": "Search all %lld missing"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Szukaj wszystkich %lld brakujących"
-          }
         }
       },
       "comment": "Label in search"
@@ -7821,12 +5349,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Search all missing episodes?"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Szukać wszystkich brakujących odcinków?"
           }
         }
       },
@@ -7840,12 +5362,6 @@
             "state": "translated",
             "value": "Search for every missing episode in this series"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Szukaj wszystkich brakujących odcinków w tym serialu"
-          }
         }
       },
       "comment": "Tooltip/description in detail"
@@ -7857,12 +5373,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Search for missing episodes in this season"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Szukaj brakujących odcinków w tym sezonie"
           }
         }
       },
@@ -7876,12 +5386,6 @@
             "state": "translated",
             "value": "Search for this album."
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Szukaj tego albumu."
-          }
         }
       },
       "comment": "Tooltip/description in common"
@@ -7893,12 +5397,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Search for this episode"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Szukaj tego odcinka"
           }
         }
       },
@@ -7912,12 +5410,6 @@
             "state": "translated",
             "value": "Search for this movie."
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Szukaj tego filmu."
-          }
         }
       },
       "comment": "Tooltip/description in common"
@@ -7929,12 +5421,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Search movies and TV series"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Szukaj filmów i seriali"
           }
         }
       },
@@ -7948,12 +5434,6 @@
             "state": "translated",
             "value": "Search queued"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wyszukiwanie w kolejce"
-          }
         }
       },
       "comment": "Button in detail"
@@ -7965,12 +5445,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Search scope"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zakres wyszukiwania"
           }
         }
       },
@@ -7984,12 +5458,6 @@
             "state": "translated",
             "value": "Search this episode?"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Szukać tego odcinka?"
-          }
         }
       },
       "comment": "Tooltip/description in detail"
@@ -8001,12 +5469,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Search this season?"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Szukać tego sezonu?"
           }
         }
       },
@@ -8032,12 +5494,6 @@
             "state": "translated",
             "value": "Search whole series"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Szukaj całego serialu"
-          }
         }
       },
       "comment": "Button in search"
@@ -8050,12 +5506,6 @@
             "state": "translated",
             "value": "Searching"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wyszukiwanie"
-          }
         }
       },
       "comment": "Button in queue"
@@ -8067,12 +5517,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Season"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sezon"
           }
         }
       },
@@ -8098,12 +5542,6 @@
             "state": "translated",
             "value": "Season %02lld"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sezon %02lld"
-          }
         }
       },
       "comment": "Button in queue"
@@ -8115,12 +5553,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Season 01 · Episode %lld — %@"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sezon 01 · Odcinek %lld — %@"
           }
         }
       },
@@ -8134,12 +5566,6 @@
             "state": "translated",
             "value": "Season pack"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pakiet sezonu"
-          }
         }
       },
       "comment": "Button in queue"
@@ -8151,12 +5577,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Season %lld"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sezon %lld"
           }
         }
       },
@@ -8170,12 +5590,6 @@
             "state": "translated",
             "value": "Seasons"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sezony"
-          }
         }
       },
       "comment": "Button in detail"
@@ -8187,12 +5601,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Section order"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kolejność sekcji"
           }
         }
       },
@@ -8206,12 +5614,6 @@
             "state": "translated",
             "value": "See what's airing tonight, get notified about new grabs, and surface indexer issues before they become a problem."
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zobacz, co leci dziś wieczorem, otrzymuj powiadomienia o nowych pobraniach i wykrywaj problemy z indeksami zanim staną się kłopotem."
-          }
         }
       },
       "comment": "Tooltip/description in onboarding"
@@ -8223,12 +5625,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Select an item"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wybierz pozycję"
           }
         }
       },
@@ -8242,12 +5638,6 @@
             "state": "translated",
             "value": "Send"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wyślij"
-          }
         }
       },
       "comment": "Button in chat"
@@ -8259,12 +5649,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Send test notification"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wyślij testowe powiadomienie"
           }
         }
       },
@@ -8278,12 +5662,6 @@
             "state": "translated",
             "value": "Series"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Seriale"
-          }
         }
       },
       "comment": "Button in search"
@@ -8295,12 +5673,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Series Type"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Typ serialu"
           }
         }
       },
@@ -8314,12 +5686,6 @@
             "state": "translated",
             "value": "Series details"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Szczegóły serialu"
-          }
         }
       },
       "comment": "Button in detail"
@@ -8331,12 +5697,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Server configurations"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Konfiguracje serwerów"
           }
         }
       },
@@ -8350,12 +5710,6 @@
             "state": "translated",
             "value": "Service icons by Dashboard Icons, licensed CC BY 4.0 (recoloured for the UI)."
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ikony usług autorstwa Dashboard Icons, na licencji CC BY 4.0 (przekolorowane na potrzeby UI)."
-          }
         }
       },
       "comment": "Tooltip/description in settings"
@@ -8367,12 +5721,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Service problem"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Problem usługi"
           }
         }
       },
@@ -8386,12 +5734,6 @@
             "state": "translated",
             "value": "Set MCP server URL in Settings to start chatting."
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ustaw adres serwera MCP w Ustawieniach, aby zacząć czat."
-          }
         }
       },
       "comment": "Tooltip/description in chat"
@@ -8403,12 +5745,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Settings"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ustawienia"
           }
         }
       },
@@ -8422,12 +5758,6 @@
             "state": "translated",
             "value": "Settings…"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ustawienia…"
-          }
         }
       },
       "comment": "Button in common"
@@ -8439,12 +5769,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Short"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Krótki"
           }
         }
       },
@@ -8458,12 +5782,6 @@
             "state": "translated",
             "value": "Show %lld more"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pokaż jeszcze %lld"
-          }
         }
       },
       "comment": "Label in common"
@@ -8476,12 +5794,6 @@
             "state": "translated",
             "value": "Show Needs you"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pokaż „Potrzebuje twojej uwagi“"
-          }
         }
       },
       "comment": "Button in common"
@@ -8493,12 +5805,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Show Tonight banner"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pokaż baner „Dziś wieczorem“"
           }
         }
       },
@@ -8524,12 +5830,6 @@
             "state": "translated",
             "value": "Show history"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pokaż historię"
-          }
         }
       },
       "comment": "Button in queue"
@@ -8541,12 +5841,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Show in Dock as a window"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pokaż w Docku jako okno"
           }
         }
       },
@@ -8560,12 +5854,6 @@
             "state": "translated",
             "value": "Show indexer issues warning"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pokaż ostrzeżenie o problemach z indekserami"
-          }
         }
       },
       "comment": "Label in settings"
@@ -8577,12 +5865,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Show less"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pokaż mniej"
           }
         }
       },
@@ -8596,12 +5878,6 @@
             "state": "translated",
             "value": "Show more"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pokaż więcej"
-          }
         }
       },
       "comment": "Button in queue"
@@ -8613,12 +5889,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Show poster"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pokaż plakat"
           }
         }
       },
@@ -8644,12 +5914,6 @@
             "state": "translated",
             "value": "Show welcome screen"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pokaż ekran powitalny"
-          }
         }
       },
       "comment": "Button in settings"
@@ -8661,12 +5925,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Show your picks"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pokaż wybory"
           }
         }
       },
@@ -8680,12 +5938,6 @@
             "state": "translated",
             "value": "Shows"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Seriale"
-          }
         }
       },
       "comment": "Button in discover"
@@ -8697,12 +5949,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Sign in to iCloud in System Settings to enable sync."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zaloguj się do iCloud w Ustawieniach systemowych, aby włączyć synchronizację."
           }
         }
       },
@@ -8716,12 +5962,6 @@
             "state": "translated",
             "value": "Siri & Shortcuts"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Siri i Skróty"
-          }
         }
       },
       "comment": "Button in settings"
@@ -8733,12 +5973,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Size"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Rozmiar"
           }
         }
       },
@@ -8752,12 +5986,6 @@
             "state": "translated",
             "value": "Skip"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pomiń"
-          }
         }
       },
       "comment": "Button in discover"
@@ -8770,12 +5998,6 @@
             "state": "translated",
             "value": "Slow burn"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Powolne tempo"
-          }
         }
       },
       "comment": "Button in common"
@@ -8784,12 +6006,6 @@
       "extractionState": "manual",
       "localizations": {
         "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sonarr"
-          }
-        },
-        "pl": {
           "stringUnit": {
             "state": "translated",
             "value": "Sonarr"
@@ -8806,12 +6022,6 @@
             "state": "translated",
             "value": "Sonarr — notify on new grabs"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sonarr — powiadamiaj o nowych pobraniach"
-          }
         }
       },
       "comment": "Label in common"
@@ -8823,12 +6033,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Source"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Źródło"
           }
         }
       },
@@ -8842,12 +6046,6 @@
             "state": "translated",
             "value": "Sources"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Źródła"
-          }
         }
       },
       "comment": "Button in common"
@@ -8856,12 +6054,6 @@
       "extractionState": "manual",
       "localizations": {
         "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Spoiler"
-          }
-        },
-        "pl": {
           "stringUnit": {
             "state": "translated",
             "value": "Spoiler"
@@ -8878,12 +6070,6 @@
             "state": "translated",
             "value": "Star on GitHub"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dodaj gwiazdkę na GitHubie"
-          }
         }
       },
       "comment": "Button in onboarding"
@@ -8895,12 +6081,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Start a new chat"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Rozpocznij nowy czat"
           }
         }
       },
@@ -8914,12 +6094,6 @@
             "state": "translated",
             "value": "Start downloading"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Rozpocznij pobieranie"
-          }
         }
       },
       "comment": "Button in intents"
@@ -8931,12 +6105,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Start typing to search across Radarr and Sonarr."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zacznij pisać, aby przeszukać Radarr i Sonarr."
           }
         }
       },
@@ -8950,12 +6118,6 @@
             "state": "translated",
             "value": "Startup"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Uruchamianie"
-          }
         }
       },
       "comment": "Button in common"
@@ -8964,12 +6126,6 @@
       "extractionState": "manual",
       "localizations": {
         "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Status"
-          }
-        },
-        "pl": {
           "stringUnit": {
             "state": "translated",
             "value": "Status"
@@ -8985,12 +6141,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Stop monitoring season %lld."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Przestań monitorować sezon %lld."
           }
         }
       },
@@ -9016,12 +6166,6 @@
             "state": "translated",
             "value": "Stop monitoring this album."
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Przestań monitorować ten album."
-          }
         }
       },
       "comment": "Tooltip/description in common"
@@ -9033,12 +6177,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Stop monitoring this season"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Przestań monitorować ten sezon"
           }
         }
       },
@@ -9052,12 +6190,6 @@
             "state": "translated",
             "value": "Stopped"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zatrzymany"
-          }
         }
       },
       "comment": "Button in settings"
@@ -9069,12 +6201,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Subscribes this calendar in Apple Calendar. The server must be reachable when Calendar refreshes (home network or VPN)."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Subskrybuje ten kalendarz w aplikacji Kalendarz. Serwer musi być osiągalny przy odświeżaniu (sieć domowa lub VPN)."
           }
         }
       },
@@ -9088,12 +6214,6 @@
             "state": "translated",
             "value": "Suspenseful"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Trzymający w napięciu"
-          }
         }
       },
       "comment": "Button in common"
@@ -9105,12 +6225,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Switch movie/show kind"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Przełącz film/serial"
           }
         }
       },
@@ -9124,12 +6238,6 @@
             "state": "translated",
             "value": "Sync with iCloud"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Synchronizuj przez iCloud"
-          }
         }
       },
       "comment": "Button in settings"
@@ -9141,12 +6249,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "System"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Systemowy"
           }
         }
       },
@@ -9160,12 +6262,6 @@
             "state": "translated",
             "value": "TMDB API key"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Klucz API TMDB"
-          }
         }
       },
       "comment": "Button in settings"
@@ -9177,12 +6273,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "TMDB found no new films matching your filters. Try clearing some."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "TMDB nie znalazł nowych filmów pasujących do Twoich filtrów. Spróbuj wyczyścić część z nich."
           }
         }
       },
@@ -9196,12 +6286,6 @@
             "state": "translated",
             "value": "TV Movie"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Film TV"
-          }
         }
       },
       "comment": "Button in discover"
@@ -9213,12 +6297,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Yes"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tak"
           }
         }
       },
@@ -9232,12 +6310,6 @@
             "state": "translated",
             "value": "Tap “Add to Siri” to set a phrase. The same actions appear in the Shortcuts app and Spotlight — no setup needed."
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dotknij „Dodaj do Siri”, aby ustawić frazę. Te same akcje są w aplikacji Skróty i w Spotlight — bez konfiguracji."
-          }
         }
       },
       "comment": "Tooltip/description in settings"
@@ -9249,12 +6321,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Tear-jerker"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wyciskający łzy"
           }
         }
       },
@@ -9268,12 +6334,6 @@
             "state": "translated",
             "value": "Test Connection"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Testuj połączenie"
-          }
         }
       },
       "comment": "Button in queue"
@@ -9285,12 +6345,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Text size"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Rozmiar tekstu"
           }
         }
       },
@@ -9304,12 +6358,6 @@
             "state": "translated",
             "value": "The footer is gone. Add new content via the **+** button next to the tabs, or press **⌘N** anywhere in the popover. The **⋯** menu next to it holds Settings, Quit and Open Window — and everything's also in the right-click menu on the menu bar icon."
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Stopka zniknęła. Dodawaj nowe pozycje przyciskiem **Add** obok zakładek lub klawiszem **⌘N** w dowolnym miejscu popovera. Sąsiednie menu **⋯** zawiera Ustawienia, Zamknij i Otwórz okno — wszystko jest też w menu po kliknięciu prawym przyciskiem na ikonie pod paskiem menu."
-          }
         }
       },
       "comment": "Tooltip/description in settings"
@@ -9321,12 +6369,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "The model must support tool calling, and results vary by model. Library items may be sent to the model to tailor recommendations. Tip: free models on OpenRouter work well."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Model musi obsługiwać wywoływanie narzędzi, a wyniki zależą od modelu. Elementy biblioteki mogą zostać wysłane do modelu w celu dopasowania rekomendacji. Wskazówka: darmowe modele na OpenRouter sprawdzają się dobrze."
           }
         }
       },
@@ -9340,12 +6382,6 @@
             "state": "translated",
             "value": "Theme"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Motyw"
-          }
         }
       },
       "comment": "Button in settings"
@@ -9357,12 +6393,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Thinking…"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Myślę…"
           }
         }
       },
@@ -9376,12 +6406,6 @@
             "state": "translated",
             "value": "This empties your Your Picks list. The swipe deck is unaffected."
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Czyści listę \"Twoje wybory\". Talia swipe pozostaje bez zmian."
-          }
         }
       },
       "comment": "Tooltip/description in discover"
@@ -9394,12 +6418,6 @@
             "state": "translated",
             "value": "This will remove \"%@\" (%lld episodes) from the download client."
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Spowoduje to usunięcie „%@\" (%lld odcinków) z klienta pobierań."
-          }
         }
       },
       "comment": "Tooltip/description in settings"
@@ -9411,12 +6429,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "This will remove \"%@\" from the download client."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Spowoduje to usunięcie „%@\" z klienta pobierania."
           }
         }
       },
@@ -9454,12 +6466,6 @@
             "state": "translated",
             "value": "Thriller"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Thriller"
-          }
         }
       },
       "comment": "Button in discover"
@@ -9471,12 +6477,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Tip: ask for a quiz of movies or shows to start swiping."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wskazówka: poproś o quiz filmów lub seriali, aby zacząć swipować."
           }
         }
       },
@@ -9490,12 +6490,6 @@
             "state": "translated",
             "value": "To discover new films, add a TMDB API key in Settings → AI → Discovery."
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aby odkrywać nowe filmy, dodaj klucz TMDB w Ustawieniach → AI → Odkrywanie."
-          }
         }
       },
       "comment": "Tooltip/description in settings"
@@ -9507,12 +6501,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "To download"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Do pobrania"
           }
         }
       },
@@ -9526,12 +6514,6 @@
             "state": "translated",
             "value": "Today"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dziś"
-          }
         }
       },
       "comment": "Button in upcoming"
@@ -9540,12 +6522,6 @@
       "extractionState": "manual",
       "localizations": {
         "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Token"
-          }
-        },
-        "pl": {
           "stringUnit": {
             "state": "translated",
             "value": "Token"
@@ -9562,12 +6538,6 @@
             "state": "translated",
             "value": "Tomorrow"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Jutro"
-          }
         }
       },
       "comment": "Button in upcoming"
@@ -9579,12 +6549,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Tonight"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dziś wieczorem"
           }
         }
       },
@@ -9598,12 +6562,6 @@
             "state": "translated",
             "value": "Tonight, Needs you, and notifications"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dziś wieczorem, Potrzebuje twojej uwagi i powiadomienia"
-          }
         }
       },
       "comment": "Label in onboarding"
@@ -9615,12 +6573,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Tool call: %@"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wywołanie narzędzia: %@"
           }
         }
       },
@@ -9634,12 +6586,6 @@
             "state": "translated",
             "value": "Tools"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Narzędzia"
-          }
         }
       },
       "comment": "Button in settings"
@@ -9652,12 +6598,6 @@
             "state": "translated",
             "value": "Tools are only registered for services you have configured — with no Sonarr/Radarr set up, the server exposes none."
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Narzędzia są rejestrowane tylko dla skonfigurowanych usług — bez ustawionego Sonarr/Radarr serwer nie udostępnia żadnych."
-          }
         }
       },
       "comment": "Tooltip/description in settings"
@@ -9666,12 +6606,6 @@
       "extractionState": "manual",
       "localizations": {
         "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Torrent"
-          }
-        },
-        "pl": {
           "stringUnit": {
             "state": "translated",
             "value": "Torrent"
@@ -9688,12 +6622,6 @@
             "state": "translated",
             "value": "Torrents"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Torrenty"
-          }
         }
       },
       "comment": "Button in queue"
@@ -9706,12 +6634,6 @@
             "state": "translated",
             "value": "Tracks"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Utwory"
-          }
         }
       },
       "comment": "Button in detail"
@@ -9720,12 +6642,6 @@
       "extractionState": "manual",
       "localizations": {
         "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Transmission"
-          }
-        },
-        "pl": {
           "stringUnit": {
             "state": "translated",
             "value": "Transmission"
@@ -9742,12 +6658,6 @@
             "state": "translated",
             "value": "True story"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Oparty na faktach"
-          }
         }
       },
       "comment": "Button in common"
@@ -9759,12 +6669,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Try demo mode"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wypróbuj tryb demo"
           }
         }
       },
@@ -9778,12 +6682,6 @@
             "state": "translated",
             "value": "Try: Cozy Sunday afternoon…"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Spróbuj: Spokojne niedzielne popołudnie…"
-          }
         }
       },
       "comment": "Label in common"
@@ -9795,12 +6693,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Try: Crowd-pleaser…"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Spróbuj: Dla wszystkich…"
           }
         }
       },
@@ -9814,12 +6706,6 @@
             "state": "translated",
             "value": "Try: Date night…"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Spróbuj: Randka…"
-          }
         }
       },
       "comment": "Button in common"
@@ -9831,12 +6717,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Try: Friends over with pizza…"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Spróbuj: Znajomi i pizza…"
           }
         }
       },
@@ -9850,12 +6730,6 @@
             "state": "translated",
             "value": "Try: Long flight…"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Spróbuj: Długi lot…"
-          }
         }
       },
       "comment": "Button in common"
@@ -9867,12 +6741,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Try: give me a quiz of cozy 90s comedies"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Spróbuj: daj mi quiz przytulnych komedii z lat 90."
           }
         }
       },
@@ -9886,12 +6754,6 @@
             "state": "translated",
             "value": "Try: surprise me with a Saturday-night quiz"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Spróbuj: pokaż mi quiz na sobotę wieczór"
-          }
         }
       },
       "comment": "Label in discover"
@@ -9903,12 +6765,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Try: surprise me with a quiz"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Spróbuj: zaskocz mnie quizem"
           }
         }
       },
@@ -9922,12 +6778,6 @@
             "state": "translated",
             "value": "Type label…"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wpisz etykietę…"
-          }
         }
       },
       "comment": "Button in common"
@@ -9940,12 +6790,6 @@
             "state": "translated",
             "value": "Type name…"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wpisz nazwisko…"
-          }
         }
       },
       "comment": "Button in common"
@@ -9954,12 +6798,6 @@
       "extractionState": "manual",
       "localizations": {
         "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "URL"
-          }
-        },
-        "pl": {
           "stringUnit": {
             "state": "translated",
             "value": "URL"
@@ -9976,12 +6814,6 @@
             "state": "translated",
             "value": "Unaired"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nie wyemitowano"
-          }
         }
       },
       "comment": "Button in detail"
@@ -9993,12 +6825,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Unknown"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nieznane"
           }
         }
       },
@@ -10012,12 +6838,6 @@
             "state": "translated",
             "value": "Unknown download protocol"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nieznany protokół pobierania"
-          }
         }
       },
       "comment": "Label in queue"
@@ -10029,12 +6849,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Unlock"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Odblokuj"
           }
         }
       },
@@ -10048,12 +6862,6 @@
             "state": "translated",
             "value": "Unlock ArrBarr Pro"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Odblokuj ArrBarr Pro"
-          }
         }
       },
       "comment": "Button in settings"
@@ -10065,12 +6873,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Unlock Control"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Odblokuj kontrolę"
           }
         }
       },
@@ -10084,12 +6886,6 @@
             "state": "translated",
             "value": "Unsaved Changes"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Niezapisane zmiany"
-          }
         }
       },
       "comment": "Button in common"
@@ -10101,12 +6897,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Upcoming"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nadchodzące"
           }
         }
       },
@@ -10120,12 +6910,6 @@
             "state": "translated",
             "value": "Upcoming window"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Okno nadchodzących"
-          }
         }
       },
       "comment": "Button in upcoming"
@@ -10138,12 +6922,6 @@
             "state": "translated",
             "value": "Upgrade"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ulepszenie"
-          }
         }
       },
       "comment": "Button in detail"
@@ -10152,12 +6930,6 @@
       "extractionState": "manual",
       "localizations": {
         "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Usenet"
-          }
-        },
-        "pl": {
           "stringUnit": {
             "state": "translated",
             "value": "Usenet"
@@ -10174,12 +6946,6 @@
             "state": "translated",
             "value": "Username"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nazwa użytkownika"
-          }
         }
       },
       "comment": "Button in settings"
@@ -10191,12 +6957,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "VIBE"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "NASTRÓJ"
           }
         }
       },
@@ -10210,12 +6970,6 @@
             "state": "translated",
             "value": "Version"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wersja"
-          }
         }
       },
       "comment": "Button in settings"
@@ -10227,12 +6981,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Version %@"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wersja %@"
           }
         }
       },
@@ -10246,12 +6994,6 @@
             "state": "translated",
             "value": "View"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Widok"
-          }
         }
       },
       "comment": "Button in onboarding"
@@ -10263,12 +7005,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "War"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wojenny"
           }
         }
       },
@@ -10282,12 +7018,6 @@
             "state": "translated",
             "value": "Warning"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ostrzeżenie"
-          }
         }
       },
       "comment": "Button in queue"
@@ -10299,12 +7029,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Watch"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Obejrzyj"
           }
         }
       },
@@ -10318,12 +7042,6 @@
             "state": "translated",
             "value": "Watching is always free"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Oglądanie zawsze za darmo"
-          }
         }
       },
       "comment": "Button in paywall"
@@ -10335,12 +7053,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Website"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Strona internetowa"
           }
         }
       },
@@ -10354,12 +7066,6 @@
             "state": "translated",
             "value": "Weighing options…"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ważę opcje…"
-          }
         }
       },
       "comment": "Button in chat"
@@ -10371,12 +7077,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Welcome screen"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ekran powitalny"
           }
         }
       },
@@ -10390,12 +7090,6 @@
             "state": "translated",
             "value": "Welcome to ArrBarr"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Witaj w ArrBarr"
-          }
         }
       },
       "comment": "Button in onboarding"
@@ -10404,12 +7098,6 @@
       "extractionState": "manual",
       "localizations": {
         "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Western"
-          }
-        },
-        "pl": {
           "stringUnit": {
             "state": "translated",
             "value": "Western"
@@ -10426,12 +7114,6 @@
             "state": "translated",
             "value": "What are you discovering?"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Czego dziś szukasz?"
-          }
         }
       },
       "comment": "Tooltip/description in common"
@@ -10443,12 +7125,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "What are you in the mood for?"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Na co masz dziś ochotę?"
           }
         }
       },
@@ -10462,12 +7138,6 @@
             "state": "translated",
             "value": "What syncs"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Co się synchronizuje"
-          }
         }
       },
       "comment": "Button in settings"
@@ -10479,12 +7149,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "What's New in ArrBarr"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Co nowego w ArrBarr"
           }
         }
       },
@@ -10498,12 +7162,6 @@
             "state": "translated",
             "value": "What's downloading right now?"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Co się teraz ściąga?"
-          }
         }
       },
       "comment": "Tooltip/description in paywall"
@@ -10516,12 +7174,6 @@
             "state": "translated",
             "value": "While open"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Gdy otwarte"
-          }
         }
       },
       "comment": "Button in common"
@@ -10530,12 +7182,6 @@
       "extractionState": "manual",
       "localizations": {
         "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Whisparr"
-          }
-        },
-        "pl": {
           "stringUnit": {
             "state": "translated",
             "value": "Whisparr"
@@ -10552,12 +7198,6 @@
             "state": "translated",
             "value": "Whisparr AI access is disabled in Settings."
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dostęp AI do Whisparra jest wyłączony w Ustawieniach."
-          }
         }
       },
       "comment": "Tooltip/description in settings"
@@ -10569,12 +7209,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Whisparr may provide 18+ content. Confirm that you are 18 or older."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Whisparr może udostępniać treści 18+. Potwierdź, że masz ukończone 18 lat."
           }
         }
       },
@@ -10588,12 +7222,6 @@
             "state": "translated",
             "value": "Will query your indexers and start a download if a release matches."
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wykona zapytanie do indekserów i rozpocznie pobieranie, jeśli znajdzie pasującą wersję."
-          }
         }
       },
       "comment": "Tooltip/description in detail"
@@ -10605,12 +7233,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Will query your indexers for every episode in this season — including upgrades for episodes already on disk."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Odpyta indeksery o każdy odcinek z tego sezonu — w tym aktualizacje odcinków już posiadanych."
           }
         }
       },
@@ -10624,12 +7246,6 @@
             "state": "translated",
             "value": "Will query your indexers for every missing episode across the entire series."
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wykona zapytanie do indekserów dla każdego brakującego odcinka w całym serialu."
-          }
         }
       },
       "comment": "Tooltip/description in detail"
@@ -10641,12 +7257,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Will query your indexers for every missing episode in this season."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wykona zapytanie do indekserów dla każdego brakującego odcinka w tym sezonie."
           }
         }
       },
@@ -10660,12 +7270,6 @@
             "state": "translated",
             "value": "Will replace existing file"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zastąpi istniejący plik"
-          }
         }
       },
       "comment": "Label in common"
@@ -10677,12 +7281,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Working…"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pracuję…"
           }
         }
       },
@@ -10696,12 +7294,6 @@
             "state": "translated",
             "value": "Your menu-bar companion for Radarr, Sonarr, and Lidarr."
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Twój towarzysz w pasku menu dla Radarra, Sonarra i Lidarra."
-          }
         }
       },
       "comment": "Tooltip/description in common"
@@ -10714,12 +7306,6 @@
             "state": "translated",
             "value": "Your picks"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Twoje wybory"
-          }
         }
       },
       "comment": "Button in discover"
@@ -10728,12 +7314,6 @@
       "extractionState": "manual",
       "localizations": {
         "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Z"
-          }
-        },
-        "pl": {
           "stringUnit": {
             "state": "translated",
             "value": "Z"
@@ -10750,12 +7330,6 @@
             "state": "translated",
             "value": "Z lat"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Z lat"
-          }
         }
       },
       "comment": "Button in common"
@@ -10764,12 +7338,6 @@
       "extractionState": "manual",
       "localizations": {
         "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "admin"
-          }
-        },
-        "pl": {
           "stringUnit": {
             "state": "translated",
             "value": "admin"
@@ -10786,12 +7354,6 @@
             "state": "translated",
             "value": "OR ASK"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ALBO ZAPYTAJ"
-          }
         }
       },
       "comment": "Button in chat"
@@ -10803,12 +7365,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "What to watch tonight?"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Co dziś obejrzeć?"
           }
         }
       },
@@ -10822,12 +7378,6 @@
             "state": "translated",
             "value": "Let's go"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zaczynamy"
-          }
         }
       },
       "comment": "Button in common"
@@ -10839,12 +7389,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Movies"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Filmy"
           }
         }
       },
@@ -10858,12 +7402,6 @@
             "state": "translated",
             "value": "Series"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Seriale"
-          }
         }
       },
       "comment": "Button in onboarding"
@@ -10876,12 +7414,6 @@
             "state": "translated",
             "value": "Swipe through picks, add to your library."
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Swipuj propozycje, dodawaj do biblioteki."
-          }
         }
       },
       "comment": "Tooltip/description in onboarding"
@@ -10890,12 +7422,6 @@
       "extractionState": "manual",
       "localizations": {
         "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Quiz"
-          }
-        },
-        "pl": {
           "stringUnit": {
             "state": "translated",
             "value": "Quiz"
@@ -10912,12 +7438,6 @@
             "state": "translated",
             "value": "Quiz, a tip, or type a question."
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Quiz, podpowiedź albo wpisz pytanie."
-          }
         }
       },
       "comment": "Tooltip/description in chat"
@@ -10929,12 +7449,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Movies with Tilda Swinton"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Filmy z Tildą Swinton"
           }
         }
       },
@@ -10948,12 +7462,6 @@
             "state": "translated",
             "value": "What's downloading?"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Co się teraz ściąga?"
-          }
         }
       },
       "comment": "Tooltip/description in chat"
@@ -10965,12 +7473,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Suggest something like Mr. Robot?"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Polecisz coś jak Mr. Robot?"
           }
         }
       },
@@ -10984,12 +7486,6 @@
             "state": "translated",
             "value": "What's out today?"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Co dziś wychodzi?"
-          }
         }
       },
       "comment": "Tooltip/description in chat"
@@ -11002,12 +7498,6 @@
             "state": "translated",
             "value": "from"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "z"
-          }
         }
       },
       "comment": "Label in common"
@@ -11016,12 +7506,6 @@
       "extractionState": "manual",
       "localizations": {
         "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "iCloud"
-          }
-        },
-        "pl": {
           "stringUnit": {
             "state": "translated",
             "value": "iCloud"
@@ -11038,12 +7522,6 @@
             "state": "translated",
             "value": "iCloud storage is full — some settings couldn’t sync."
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pamięć iCloud jest pełna — nie udało się zsynchronizować części ustawień."
-          }
         }
       },
       "comment": "Tooltip/description in settings"
@@ -11052,12 +7530,6 @@
       "extractionState": "manual",
       "localizations": {
         "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "qBittorrent"
-          }
-        },
-        "pl": {
           "stringUnit": {
             "state": "translated",
             "value": "qBittorrent"
@@ -11074,12 +7546,6 @@
             "state": "translated",
             "value": "rTorrent"
           }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "rTorrent"
-          }
         }
       },
       "comment": "Label in settings"
@@ -11091,12 +7557,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "…or describe it in words"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "…lub opisz słownie"
           }
         }
       },

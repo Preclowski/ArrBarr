@@ -109,6 +109,15 @@ ROLE_LABEL = {"button": "Button", "tooltip": "Tooltip/description", "label": "La
 OVERRIDES = {
     "24 hours": {"newKey": "settings.twentyFourHours.label"},
     "3 movies in Radarr and a season in Sonarr.": {"newKey": "paywall.exampleSummary.tooltip"},
+    # Plural count strings -> clean unit.* keys (get CLDR variations in Task 8).
+    "%lld days": {"newKey": "unit.days"},
+    "%lld hours": {"newKey": "unit.hours"},
+    "%lld downloads": {"newKey": "unit.downloads"},
+    "%lld episodes": {"newKey": "unit.episodes"},
+    "%lld tracks": {"newKey": "unit.tracks"},
+    "%lld picked": {"newKey": "discover.pickedCount"},
+    "%lld items: %@": {"newKey": "unit.itemsNamed"},
+    "%lld%%": {"newKey": "common.percent.label"},
     # Polish literals wrongly stored as English source keys — fix the EN value.
     "Długość": {"newKey": "discover.lengthFilter.label", "en": "Length"},
     "Dekady": {"newKey": "discover.decadeFilter.label", "en": "Decades"},
