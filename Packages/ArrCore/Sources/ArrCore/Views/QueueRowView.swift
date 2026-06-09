@@ -451,76 +451,17 @@ public struct QueueItemTooltip: View {
                     row("Size", value: sizeString)
                 }
             }
-            // "↑ replaces …" sits inside the grid as a sibling row of
-            // Quality / Size so it shares the value-column alignment
-            // and reads as a sub-line. Empty label cell on the left
-            // keeps the indent.
-            if item.isUpgrade && hasExistingFileMetadata {
-                replacesGridRow
-            }
             if let indexer = item.indexer, !indexer.isEmpty {
                 row("Indexer", value: indexer)
             }
-            // Release file name + the replaced on-disk path: only for
-            // non-upgrades here. Upgrades render both (untruncated) inside
-            // `UpgradeDiffView` above, so repeating them would double up.
+            // Release file name: only for non-upgrades here. Upgrades render
+            // the old→new quality diff AND both filenames (untruncated) inside
+            // `UpgradeDiffView` above, so the grid stays out of their way and
+            // only carries the indexer — otherwise the tooltip showed the same
+            // comparison twice (the arrow diff plus a stacked duplicate).
             if !item.isUpgrade, let file = item.releaseName, !file.isEmpty {
                 row("File", value: file, mono: true, wraps: true)
             }
-            // Existing file's on-disk path as a `└─` sub-row of File,
-            // same tree-branch pattern as the quality diff above. Lets
-            // the user see *which* file is being replaced, not just
-            // its metadata.
-            if item.isUpgrade,
-               let existing = item.existingFileName, !existing.isEmpty {
-                replacesFilenameGridRow(existing)
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func replacesFilenameGridRow(_ path: String) -> some View {
-        GridRow(alignment: .firstTextBaseline) {
-            Color.clear.frame(width: 0, height: 0)
-            HStack(alignment: .firstTextBaseline, spacing: 4) {
-                Image(systemName: "arrow.turn.down.right")
-                    .scaledFont(size: 9, weight: .semibold)
-                    .foregroundStyle(.tertiary)
-                Text(path)
-                    .scaledFont(size: 11, design: .monospaced)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
-                    .truncationMode(.middle)
-            }
-        }
-    }
-
-    /// True when the queue item carries at least one piece of
-    /// existing-file metadata worth surfacing in the diff. Guards the
-    /// inline "↑ replaces" row so we don't render an empty indigo
-    /// line for upgrades where the arr happens not to ship existing-
-    /// file fields.
-    private var hasExistingFileMetadata: Bool {
-        (item.existingQuality.map { !$0.isEmpty } ?? false)
-            || (item.existingSize ?? 0) > 0
-            || (item.existingCustomFormatScore ?? 0) != 0
-    }
-
-    @ViewBuilder
-    private var replacesGridRow: some View {
-        GridRow(alignment: .firstTextBaseline) {
-            // Empty leading cell aligns the value with the Quality
-            // value above it.
-            Color.clear.frame(width: 0, height: 0)
-            ExistingFileDiffRow(
-                existingQuality: item.existingQuality,
-                existingSize: item.existingSize,
-                existingScore: item.existingCustomFormatScore,
-                newScore: item.customFormatScore,
-                newQuality: item.quality,
-                newSize: item.sizeTotal > 0 ? item.sizeTotal : nil,
-                tagsDiffer: Set(item.customFormats) != Set(item.existingCustomFormats)
-            )
         }
     }
 
