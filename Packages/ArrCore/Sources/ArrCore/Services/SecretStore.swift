@@ -73,6 +73,7 @@ public struct KeychainSecretStore: SecretStore {
     /// Device-local UserDefaults key mirroring `ConfigStore.iCloudSyncEnabled`.
     /// Duplicated here (not imported) so the nonisolated Keychain layer stays
     /// free of ConfigStore. Kept in sync with `ConfigStore.iCloudSyncEnabledKey`.
+    /// Internal (not public): consumers toggle sync via `ConfigStore`, tests read it via `@testable`.
     static let iCloudSyncEnabledKey = "ArrBarr.iCloudSyncEnabled"
 
     /// Whether iCloud sync is currently enabled, read from the App Group suite

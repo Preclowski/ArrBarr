@@ -2,7 +2,7 @@ import Testing
 import Foundation
 @testable import ArrCore
 
-@Suite("SecretStore")
+@Suite("SecretStore", .serialized)
 struct SecretStoreSuite {
 
     @Test("InMemory fake round-trips and deletes")
@@ -121,7 +121,7 @@ struct SecretStoreSuite {
         let d = UserDefaults(suiteName: suite)!
         defer { UserDefaults.standard.removePersistentDomain(forName: suite) }
         #expect(KeychainSecretStore.syncEnabled(in: d) == true)   // unset → true
-        d.set(false, forKey: "ArrBarr.iCloudSyncEnabled")
+        d.set(false, forKey: KeychainSecretStore.iCloudSyncEnabledKey)
         #expect(KeychainSecretStore.syncEnabled(in: d) == false)
     }
 
