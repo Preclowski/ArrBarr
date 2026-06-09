@@ -31,15 +31,36 @@ public final class KVSyncCoordinator: ObservableObject {
     @Published public private(set) var isRunning: Bool = false
 
     /// Whether this device is signed into iCloud (Keychain/KVS can replicate).
-    /// Stored + `@Published` so the settings UI refreshes when it changes;
-    /// recomputed on `start()`/`stop()`.
+    /// Stored + `@Published` so the settings UI refreshes live; updated on
+    /// `start()`/`stop()` and whenever the iCloud account changes (see the
+    /// `NSUbiquityIdentityDidChange` observer registered in `init`).
     @Published public private(set) var accountAvailable: Bool
-        = FileManager.default.ubiquityIdentityToken != nil
 
-    public init(defaults: UserDefaults, kv: KeyValueSyncing, reload: @escaping () -> Void) {
+    /// Reads the current iCloud account presence. Injectable so tests can drive
+    /// sign-in/out without a real iCloud account.
+    private let identityCheck: @Sendable () -> Bool
+
+    /// Lifetime-long observer of iCloud sign-in/out, kept OUT of `observers`
+    /// (which `start()`/`stop()` manage) so `accountAvailable` stays current
+    /// regardless of `isRunning`. Removed only in `deinit`.
+    private var identityObserver: NSObjectProtocol?
+
+    public init(defaults: UserDefaults, kv: KeyValueSyncing, reload: @escaping () -> Void,
+                identityCheck: @escaping @Sendable () -> Bool
+                    = { FileManager.default.ubiquityIdentityToken != nil }) {
         self.defaults = defaults
         self.kv = kv
         self.reload = reload
+        self.identityCheck = identityCheck
+        self.accountAvailable = identityCheck()
+        // Always observe account changes (even while sync is paused) so the
+        // settings banner reflects sign-in/out the moment it happens. The
+        // notification can arrive on any thread, so hop to the main actor.
+        identityObserver = NotificationCenter.default.addObserver(
+            forName: .NSUbiquityIdentityDidChange, object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.refreshAccountAvailability() }
+        }
     }
 
     /// Begin observing inbound KVS changes and outbound UserDefaults changes,
@@ -87,7 +108,7 @@ public final class KVSyncCoordinator: ObservableObject {
     }
 
     private func refreshAccountAvailability() {
-        accountAvailable = FileManager.default.ubiquityIdentityToken != nil
+        accountAvailable = identityCheck()
     }
 
     /// Idempotently start or stop syncing to match the user's toggle.
@@ -134,7 +155,10 @@ public final class KVSyncCoordinator: ObservableObject {
         if let value = defaults.object(forKey: key) { kv.set(value, forKey: key) }
     }
 
-    deinit { observers.forEach { NotificationCenter.default.removeObserver($0) } }
+    deinit {
+        observers.forEach { NotificationCenter.default.removeObserver($0) }
+        if let identityObserver { NotificationCenter.default.removeObserver(identityObserver) }
+    }
 }
 
 @MainActor

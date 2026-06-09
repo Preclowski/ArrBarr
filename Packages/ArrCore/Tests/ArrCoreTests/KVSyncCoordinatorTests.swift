@@ -118,6 +118,30 @@ struct KVSyncCoordinatorSuite {
         #expect(kv.setCount == baseline)
     }
 
+    @Test("accountAvailable updates live when the iCloud identity changes")
+    @MainActor func accountAvailabilityReactsToIdentityChange() async {
+        let (defaults, name) = makeDefaults()
+        defer { UserDefaults.standard.removePersistentDomain(forName: name) }
+
+        // A Sendable box the injected identity check reads, so we can flip the
+        // simulated sign-in state from the test without a real iCloud account.
+        final class Box: @unchecked Sendable { var signedIn = false }
+        let box = Box()
+        let coord = KVSyncCoordinator(defaults: defaults, kv: FakeKVStore(),
+                                      reload: {}, identityCheck: { box.signedIn })
+        #expect(coord.accountAvailable == false)
+
+        box.signedIn = true
+        NotificationCenter.default.post(name: .NSUbiquityIdentityDidChange, object: nil)
+        await Task.yield(); await Task.yield()   // let the main-queue observer run
+        #expect(coord.accountAvailable == true)
+
+        box.signedIn = false
+        NotificationCenter.default.post(name: .NSUbiquityIdentityDidChange, object: nil)
+        await Task.yield(); await Task.yield()
+        #expect(coord.accountAvailable == false)
+    }
+
     @Test("setEnabled is idempotent — repeated enables are no-ops")
     @MainActor func setEnabledIdempotent() {
         let (defaults, name) = makeDefaults()
