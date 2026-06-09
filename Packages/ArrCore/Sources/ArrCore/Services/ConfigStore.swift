@@ -144,12 +144,32 @@ public final class ConfigStore: ObservableObject {
         ("de", "Deutsch"),
         ("es", "Español"),
         ("fr", "Français"),
+        ("nl", "Nederlands"),
         ("pl", "Polski"),
     ]
 
     public var currentLocale: Locale {
         if appLanguage == "system" { return .autoupdatingCurrent }
         return Locale(identifier: appLanguage)
+    }
+
+    /// Apply the persisted in-app language to the *process* so that model- and
+    /// service-layer `String(localized:)` / `NSLocalizedString` (download
+    /// statuses, history labels, notifications) resolve in the chosen language —
+    /// not just SwiftUI `Text`, which follows `environment(\.locale)`. Without
+    /// this, those eager lookups fall back to the system language whenever the
+    /// in-app language differs from it (the override is persisted in the demo /
+    /// group suite, never in `.standard`, which is what Foundation consults).
+    ///
+    /// Call as early as possible at launch, before the first localized lookup.
+    /// Changing the language still needs a relaunch (the UI already says so).
+    nonisolated public static func applyAppLanguageToProcess() {
+        let lang = resolveDefaults().string(forKey: appLanguageKey) ?? "system"
+        if lang == "system" {
+            UserDefaults.standard.removeObject(forKey: "AppleLanguages")
+        } else {
+            UserDefaults.standard.set([lang], forKey: "AppleLanguages")
+        }
     }
 
     /// AI is usable only when enabled AND the selected provider has what it
@@ -244,7 +264,7 @@ public final class ConfigStore: ObservableObject {
     private static let launchAtLoginKey = "ArrBarr.launchAtLogin"
     private static let detachedWindowKey = "ArrBarr.detachedWindow"
     nonisolated static let iCloudSyncEnabledKey = "ArrBarr.iCloudSyncEnabled"
-    private static let appLanguageKey = "ArrBarr.appLanguage"
+    nonisolated private static let appLanguageKey = "ArrBarr.appLanguage"
     private static let appearanceKey = "ArrBarr.appearance"
     private static let arrOrderKey = "ArrBarr.arrOrder"
     private static let showTonightKey = "ArrBarr.showTonight"
@@ -504,10 +524,16 @@ public final class ConfigStore: ObservableObject {
         $appLanguage.dropFirst().sink { [weak self] val in
             guard let self else { return }
             self.defaults.set(val, forKey: Self.appLanguageKey)
+            // Write AppleLanguages to `.standard` (NOT the suite): Foundation only
+            // consults `.standard` for process language, and CFBundle snapshots it
+            // at process start — so this lands before the "restart required" prompt's
+            // relaunch, making model-layer String(localized:) honor the new language
+            // after a single restart. `applyAppLanguageToProcess()` keeps it in sync
+            // at launch for existing installs.
             if val == "system" {
-                self.defaults.removeObject(forKey: "AppleLanguages")
+                UserDefaults.standard.removeObject(forKey: "AppleLanguages")
             } else {
-                self.defaults.set([val], forKey: "AppleLanguages")
+                UserDefaults.standard.set([val], forKey: "AppleLanguages")
             }
         }.store(in: &cancellables)
         $aiEnabled.dropFirst().sink { [weak self] val in

@@ -9,6 +9,10 @@ struct ArrBarriOSApp: App {
     @Environment(\.scenePhase) private var scenePhase
 
     init() {
+        // Apply the chosen in-app language to the process before the first
+        // localized lookup, so model-layer String(localized:) (download statuses,
+        // notifications, history) matches the UI instead of the system language.
+        ConfigStore.applyAppLanguageToProcess()
         #if APPSTORE
         AppCapabilities.configure(isAppStore: true)
         #endif

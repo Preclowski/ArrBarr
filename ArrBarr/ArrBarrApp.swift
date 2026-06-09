@@ -20,6 +20,10 @@ struct ArrBarrApp: App {
     @ObservedObject private var configStore = ConfigStore.shared
 
     init() {
+        // Apply the chosen in-app language to the process before the first
+        // localized lookup, so model-layer String(localized:) (download statuses,
+        // notifications, history) matches the UI instead of the system language.
+        ConfigStore.applyAppLanguageToProcess()
         // Paywall is App Store-only. In every other build (Debug, GitHub/OSS
         // Release) no backend is injected, so StoreManager stays unlocked and
         // no StoreKit code is compiled in.
