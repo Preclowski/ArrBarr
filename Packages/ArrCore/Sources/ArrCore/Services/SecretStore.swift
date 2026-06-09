@@ -26,12 +26,37 @@ public struct SecretKey: Sendable, Equatable {
     /// The MCP server bearer token gates a server bound to one machine, so it is
     /// never synced and stays device-only.
     public static let mcpBearer = SecretKey(account: "secret.mcp.bearer", synced: false, deviceOnly: true)
+
+    /// Every secret eligible for iCloud Keychain sync: API key + password for
+    /// each service, plus the OpenAI and TMDB keys. `mcpBearer` is excluded —
+    /// it is `deviceOnly` and must never replicate.
+    public static let syncable: [SecretKey] = {
+        var keys: [SecretKey] = []
+        for kind in ServiceKind.allCases {
+            keys.append(.apiKey(for: kind))
+            keys.append(.password(for: kind))
+        }
+        keys.append(.openAIKey)
+        keys.append(.tmdbKey)
+        return keys
+    }()
 }
 
 public protocol SecretStore: Sendable {
     func read(_ key: SecretKey) -> String?
     func set(_ value: String, for key: SecretKey)
     func delete(_ key: SecretKey)
+}
+
+public extension SecretStore {
+    /// Rewrite each given secret that currently holds a value, so the store's
+    /// write path re-stamps the (possibly changed) `synchronizable` attribute.
+    /// Keys with no value are skipped. Used to hard-toggle iCloud Keychain sync.
+    func reapplySyncAttribute(for keys: [SecretKey]) {
+        for key in keys {
+            if let value = read(key) { set(value, for: key) }
+        }
+    }
 }
 
 /// Keychain-backed `SecretStore`. All items share the `service` namespace; the
@@ -45,17 +70,32 @@ public struct KeychainSecretStore: SecretStore {
     public static let accessGroup = "9M6DR2Z85Y.com.preclowski.ArrBarr.shared"
     private static let logger = Logger(category: "SecretStore")
 
+    /// Device-local UserDefaults key mirroring `ConfigStore.iCloudSyncEnabled`.
+    /// Duplicated here (not imported) so the nonisolated Keychain layer stays
+    /// free of ConfigStore. Kept in sync with `ConfigStore.iCloudSyncEnabledKey`.
+    /// Internal (not public): consumers toggle sync via `ConfigStore`, tests read it via `@testable`.
+    static let iCloudSyncEnabledKey = "ArrBarr.iCloudSyncEnabled"
+
+    /// Whether iCloud sync is currently enabled, read from the App Group suite
+    /// (defaults to `true` when unset or unavailable). Overridable for tests.
+    public static var syncEnabledProvider: @Sendable () -> Bool = {
+        syncEnabled(in: WidgetDataStore.groupDefaults())
+    }
+
+    /// Pure reader for the device-local flag, defaulting to `true`.
+    public static func syncEnabled(in defaults: UserDefaults?) -> Bool {
+        guard let defaults, defaults.object(forKey: iCloudSyncEnabledKey) != nil
+        else { return true }
+        return defaults.bool(forKey: iCloudSyncEnabledKey)
+    }
+
     public init() {}
 
     /// The identifying query fields + storage policy for a key. Exposed so tests
     /// can assert the synchronizable/accessibility gating without touching the
     /// real Keychain.
     public static func baseQuery(for key: SecretKey) -> [String: Any] {
-        #if APPSTORE
-        let synchronizable = key.synced
-        #else
-        let synchronizable = false
-        #endif
+        let synchronizable = AppCapabilities.isAppStore && key.synced && Self.syncEnabledProvider()
         var q: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -65,10 +105,10 @@ public struct KeychainSecretStore: SecretStore {
                 ? (kSecAttrAccessibleWhenUnlockedThisDeviceOnly as String)
                 : (kSecAttrAccessibleAfterFirstUnlock as String),
         ]
-        #if APPSTORE
-        q[kSecAttrAccessGroup as String] = Self.accessGroup
-        q[kSecUseDataProtectionKeychain as String] = true
-        #endif
+        if AppCapabilities.isAppStore {
+            q[kSecAttrAccessGroup as String] = Self.accessGroup
+            q[kSecUseDataProtectionKeychain as String] = true
+        }
         return q
     }
 

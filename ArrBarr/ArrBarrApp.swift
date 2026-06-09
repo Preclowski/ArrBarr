@@ -4,6 +4,13 @@ import AppIntents
 
 @main
 struct ArrBarrApp: App {
+    // Runs before every other stored property (incl. `configStore`), so the
+    // App Store flag is set before `ConfigStore.shared` first chooses its secret
+    // store. `#if APPSTORE` is live here (app target), unlike inside ArrCore.
+    #if APPSTORE
+    private let _capabilities: Void = { AppCapabilities.configure(isAppStore: true) }()
+    #endif
+
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
     // Observe shared models so the menu-bar icon label rebuilds when the

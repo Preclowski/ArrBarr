@@ -2,7 +2,7 @@ import Testing
 import Foundation
 @testable import ArrCore
 
-@Suite("SecretStore")
+@Suite("SecretStore", .serialized)
 struct SecretStoreSuite {
 
     @Test("InMemory fake round-trips and deletes")
@@ -34,16 +34,28 @@ struct SecretStoreSuite {
         }
     }
 
-    @Test("Keychain query honors synchronizable only under APPSTORE")
-    func keychainSynchronizableGating() {
-        let synced = KeychainSecretStore.baseQuery(for: .openAIKey)
-        let mcp = KeychainSecretStore.baseQuery(for: .mcpBearer)
-        #if APPSTORE
-        #expect(synced[kSecAttrSynchronizable as String] as? Bool == true)
-        #else
-        #expect(synced[kSecAttrSynchronizable as String] as? Bool == false)
-        #endif
-        #expect(mcp[kSecAttrSynchronizable as String] as? Bool == false)
+    @Test("baseQuery synchronizable + access group follow AppCapabilities.isAppStore")
+    func keychainGatingRuntime() {
+        let originalAppStore = AppCapabilities.isAppStore
+        let originalProvider = KeychainSecretStore.syncEnabledProvider
+        defer {
+            AppCapabilities.configure(isAppStore: originalAppStore)
+            KeychainSecretStore.syncEnabledProvider = originalProvider
+        }
+        KeychainSecretStore.syncEnabledProvider = { true }
+
+        AppCapabilities.configure(isAppStore: true)
+        let on = KeychainSecretStore.baseQuery(for: .openAIKey)
+        #expect(on[kSecAttrSynchronizable as String] as? Bool == true)
+        #expect(on[kSecAttrAccessGroup as String] as? String == KeychainSecretStore.accessGroup)
+        #expect(on[kSecUseDataProtectionKeychain as String] as? Bool == true)
+        #expect(KeychainSecretStore.baseQuery(for: .mcpBearer)[kSecAttrSynchronizable as String] as? Bool == false)
+
+        AppCapabilities.configure(isAppStore: false)
+        let off = KeychainSecretStore.baseQuery(for: .openAIKey)
+        #expect(off[kSecAttrSynchronizable as String] as? Bool == false)
+        #expect(off[kSecAttrAccessGroup as String] == nil)
+        #expect(off[kSecUseDataProtectionKeychain as String] == nil)
     }
 
     @Test("Keychain accessibility: MCP device-only, synced after-first-unlock")
@@ -56,16 +68,19 @@ struct SecretStoreSuite {
                 == (kSecAttrAccessibleWhenUnlockedThisDeviceOnly as String))
     }
 
-    @Test("Access group + data-protection keychain set only under APPSTORE")
-    func keychainAccessGroupGating() {
-        let q = KeychainSecretStore.baseQuery(for: .apiKey(for: .radarr))
-        #if APPSTORE
-        #expect(q[kSecAttrAccessGroup as String] as? String == KeychainSecretStore.accessGroup)
-        #expect(q[kSecUseDataProtectionKeychain as String] as? Bool == true)
-        #else
-        #expect(q[kSecAttrAccessGroup as String] == nil)
-        #expect(q[kSecUseDataProtectionKeychain as String] == nil)
-        #endif
+    @Test("synchronizable also honors the runtime sync provider when isAppStore")
+    func keychainSynchronizableRespectsProvider() {
+        let originalAppStore = AppCapabilities.isAppStore
+        let originalProvider = KeychainSecretStore.syncEnabledProvider
+        defer {
+            AppCapabilities.configure(isAppStore: originalAppStore)
+            KeychainSecretStore.syncEnabledProvider = originalProvider
+        }
+        AppCapabilities.configure(isAppStore: true)
+        KeychainSecretStore.syncEnabledProvider = { false }
+        #expect(KeychainSecretStore.baseQuery(for: .openAIKey)[kSecAttrSynchronizable as String] as? Bool == false)
+        KeychainSecretStore.syncEnabledProvider = { true }
+        #expect(KeychainSecretStore.baseQuery(for: .openAIKey)[kSecAttrSynchronizable as String] as? Bool == true)
     }
 
     @Test("Real Keychain round-trips a non-conflicting key")
@@ -83,4 +98,53 @@ struct SecretStoreSuite {
         store.delete(key)
         #expect(store.read(key) == nil)
     }
+
+    @Test("syncable lists every per-service key plus openai/tmdb, excludes mcpBearer")
+    func syncableContents() {
+        let accounts = Set(SecretKey.syncable.map(\.account))
+        for kind in ServiceKind.allCases {
+            #expect(accounts.contains("secret.\(kind.rawValue).apiKey"))
+            #expect(accounts.contains("secret.\(kind.rawValue).password"))
+        }
+        #expect(accounts.contains("secret.openai.apiKey"))
+        #expect(accounts.contains("secret.tmdb.apiKey"))
+        #expect(!accounts.contains("secret.mcp.bearer"))
+        #expect(SecretKey.syncable.allSatisfy { $0.synced && !$0.deviceOnly })
+    }
+
+    @Test("defaultSyncEnabled reads the device-local flag, defaulting true")
+    func defaultSyncEnabledReadsFlag() {
+        let suite = "test.icloudflag.\(UUID().uuidString)"
+        let d = UserDefaults(suiteName: suite)!
+        defer { UserDefaults.standard.removePersistentDomain(forName: suite) }
+        #expect(KeychainSecretStore.syncEnabled(in: d) == true)   // unset → true
+        d.set(false, forKey: KeychainSecretStore.iCloudSyncEnabledKey)
+        #expect(KeychainSecretStore.syncEnabled(in: d) == false)
+    }
+
+    @Test("reapplySyncAttribute rewrites only keys that currently hold a value")
+    func reapplyRewritesPresentOnly() {
+        let store = RecordingSecretStore()
+        let present = SecretKey.apiKey(for: .radarr)
+        store.set("v", for: present)
+        store.resetLog()
+
+        store.reapplySyncAttribute(for: SecretKey.syncable)
+
+        #expect(store.setLog == [present.account])
+        #expect(store.read(present) == "v")
+    }
+}
+
+/// SecretStore that records which accounts were re-written, to assert
+/// `reapplySyncAttribute` only touches keys that hold a value.
+fileprivate final class RecordingSecretStore: SecretStore, @unchecked Sendable {
+    private var values: [String: String] = [:]
+    private(set) var setLog: [String] = []
+    func read(_ key: SecretKey) -> String? { values[key.account] }
+    func set(_ value: String, for key: SecretKey) {
+        values[key.account] = value; setLog.append(key.account)
+    }
+    func delete(_ key: SecretKey) { values[key.account] = nil }
+    func resetLog() { setLog.removeAll() }
 }

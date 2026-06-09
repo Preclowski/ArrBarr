@@ -81,6 +81,7 @@ public final class ConfigStore: ObservableObject {
     @Published public var fontScale: Double = 1.0
     @Published public var aiKnowsAboutWhisparr: Bool = false
     @Published public var launchAtLogin: Bool = false
+    @Published public var iCloudSyncEnabled: Bool = true
     @Published public var appLanguage: String = "system"
     /// UI appearance preference: "system" / "light" / "dark".
     @Published public var appearance: String = "system"
@@ -237,6 +238,7 @@ public final class ConfigStore: ObservableObject {
     private static let fontScaleKey = "ArrBarr.fontScale"
     private static let aiKnowsAboutWhisparrKey = "ArrBarr.aiKnowsAboutWhisparr"
     private static let launchAtLoginKey = "ArrBarr.launchAtLogin"
+    nonisolated static let iCloudSyncEnabledKey = "ArrBarr.iCloudSyncEnabled"
     private static let appLanguageKey = "ArrBarr.appLanguage"
     private static let appearanceKey = "ArrBarr.appearance"
     private static let arrOrderKey = "ArrBarr.arrOrder"
@@ -262,21 +264,23 @@ public final class ConfigStore: ObservableObject {
     /// Exposed for testing only — lets tests assert on the done-flag key name
     /// without making it fully public.
     nonisolated static var groupMigrationDoneKeyForTesting: String { groupMigrationDoneKey }
+    nonisolated static var secretsMigratedKeyForTesting: String { secretsMigratedKey }
+    nonisolated static func serviceKeyForTesting(_ kind: ServiceKind) -> String { key(kind) }
 
     public init(defaults: UserDefaults = ConfigStore.resolveDefaults(),
                 secrets: SecretStore? = nil) {
         self.defaults = defaults
         let store = secrets ?? Self.makeDefaultSecretStore(defaults: defaults)
         self.secrets = store
-        #if APPSTORE
-        // Stably-signed + entitled: secrets belong in the (iCloud-synced) Keychain.
-        Self.migrateSecretsToKeychain(defaults: defaults, secrets: store)
-        #else
-        // Ad-hoc / OSS build: the file Keychain prompts on every rebuild, so
-        // secrets live in UserDefaults. If a previous build pushed them into the
-        // Keychain (and blanked them here), pull them back out once.
-        Self.recoverSecretsFromKeychainIfNeeded(defaults: defaults, secrets: store)
-        #endif
+        if AppCapabilities.isAppStore && AppCapabilities.keychainSharingAvailable {
+            // Stably-signed + entitled: secrets belong in the (iCloud-synced) Keychain.
+            Self.migrateSecretsToKeychain(defaults: defaults, secrets: store)
+        } else {
+            // Ad-hoc / OSS build: the file Keychain prompts on every rebuild, so
+            // secrets live in UserDefaults. If a previous build pushed them into the
+            // Keychain (and blanked them here), pull them back out once.
+            Self.recoverSecretsFromKeychainIfNeeded(defaults: defaults, secrets: store)
+        }
         applyValues(from: defaults)
         setupSinks()
     }
@@ -286,11 +290,10 @@ public final class ConfigStore: ObservableObject {
     /// otherwise, because an ad-hoc-signed build's file-Keychain access prompts
     /// for the login password on every rebuild.
     nonisolated static func makeDefaultSecretStore(defaults: UserDefaults) -> SecretStore {
-        #if APPSTORE
-        return KeychainSecretStore()
-        #else
+        if AppCapabilities.isAppStore && AppCapabilities.keychainSharingAvailable {
+            return KeychainSecretStore()
+        }
         return UserDefaultsSecretStore(defaults: defaults)
-        #endif
     }
 
     /// One-time recovery for non-App-Store builds: if an earlier build migrated
@@ -354,6 +357,8 @@ public final class ConfigStore: ObservableObject {
         self.fontScale = storedScale > 0 ? storedScale : 1.0
         self.aiKnowsAboutWhisparr = defaults.object(forKey: Self.aiKnowsAboutWhisparrKey) != nil ? defaults.bool(forKey: Self.aiKnowsAboutWhisparrKey) : false
         self.launchAtLogin = defaults.object(forKey: Self.launchAtLoginKey) != nil ? defaults.bool(forKey: Self.launchAtLoginKey) : false
+        self.iCloudSyncEnabled = defaults.object(forKey: Self.iCloudSyncEnabledKey) != nil
+            ? defaults.bool(forKey: Self.iCloudSyncEnabledKey) : true
         self.appLanguage = defaults.string(forKey: Self.appLanguageKey) ?? "system"
         self.appearance = defaults.string(forKey: Self.appearanceKey) ?? "system"
         #if os(iOS)
@@ -449,6 +454,15 @@ public final class ConfigStore: ObservableObject {
         $launchAtLogin.dropFirst().sink { [weak self] val in
             self?.defaults.set(val, forKey: Self.launchAtLoginKey)
             LaunchAtLogin.set(enabled: val)
+        }.store(in: &cancellables)
+        $iCloudSyncEnabled.dropFirst().sink { [weak self] val in
+            guard let self else { return }
+            self.defaults.set(val, forKey: Self.iCloudSyncEnabledKey)
+            guard AppCapabilities.isAppStore else { return }
+            // Preferences (KVS): start/stop the live coordinator.
+            KVSyncCoordinator.shared?.setEnabled(val)
+            // Secrets (iCloud Keychain): rewrite items to the new sync state.
+            self.secrets.reapplySyncAttribute(for: SecretKey.syncable)
         }.store(in: &cancellables)
         $arrOrder.dropFirst().sink { [weak self] val in
             self?.defaults.set(val, forKey: Self.arrOrderKey)
@@ -729,17 +743,29 @@ public final class ConfigStore: ObservableObject {
     /// in `defaults` into `secrets`, then blank them in `defaults`. Idempotent.
     nonisolated static func migrateSecretsToKeychain(defaults: UserDefaults, secrets: SecretStore) {
         guard !defaults.bool(forKey: secretsMigratedKey) else { return }
+        var allVerified = true
+
+        /// Write `value`, read it back, and only then report success. A failed
+        /// read-back (e.g. Keychain write rejected for missing entitlement) marks
+        /// the migration incomplete so the plaintext copy is preserved.
+        func store(_ value: String, _ key: SecretKey) -> Bool {
+            guard !value.isEmpty else { return true }
+            secrets.set(value, for: key)
+            if secrets.read(key) == value { return true }
+            allVerified = false
+            return false
+        }
 
         for kind in ServiceKind.allCases {
             guard let data = defaults.data(forKey: key(kind)),
                   var cfg = try? JSONDecoder().decode(ServiceConfig.self, from: data)
             else { continue }
             var changed = false
-            if !cfg.apiKey.isEmpty {
-                secrets.set(cfg.apiKey, for: .apiKey(for: kind)); cfg.apiKey = ""; changed = true
+            if !cfg.apiKey.isEmpty, store(cfg.apiKey, .apiKey(for: kind)) {
+                cfg.apiKey = ""; changed = true
             }
-            if !cfg.password.isEmpty {
-                secrets.set(cfg.password, for: .password(for: kind)); cfg.password = ""; changed = true
+            if !cfg.password.isEmpty, store(cfg.password, .password(for: kind)) {
+                cfg.password = ""; changed = true
             }
             if changed, let updated = try? JSONEncoder().encode(cfg) {
                 defaults.set(updated, forKey: key(kind))
@@ -748,20 +774,19 @@ public final class ConfigStore: ObservableObject {
 
         if let data = defaults.data(forKey: openaiConfigKey),
            var cfg = try? JSONDecoder().decode(OpenAIConfig.self, from: data),
-           !cfg.apiKey.isEmpty {
-            secrets.set(cfg.apiKey, for: .openAIKey)
+           !cfg.apiKey.isEmpty, store(cfg.apiKey, .openAIKey) {
             cfg.apiKey = ""
             if let updated = try? JSONEncoder().encode(cfg) {
                 defaults.set(updated, forKey: openaiConfigKey)
             }
         }
 
-        if let tmdb = defaults.string(forKey: tmdbApiKeyKey), !tmdb.isEmpty {
-            secrets.set(tmdb, for: .tmdbKey)
+        if let tmdb = defaults.string(forKey: tmdbApiKeyKey), !tmdb.isEmpty,
+           store(tmdb, .tmdbKey) {
             defaults.removeObject(forKey: tmdbApiKeyKey)
         }
 
-        defaults.set(true, forKey: secretsMigratedKey)
+        if allVerified { defaults.set(true, forKey: secretsMigratedKey) }
     }
 
 }

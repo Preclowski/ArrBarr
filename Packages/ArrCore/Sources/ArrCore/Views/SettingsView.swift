@@ -53,6 +53,7 @@ public struct SettingsView: View {
         case service(ServiceKind)
         case assistant
         case mcp
+        case icloud
         case siri
         case about
     }
@@ -401,6 +402,10 @@ public struct SettingsView: View {
             .tag(SettingsSection.assistant)
         Label { Text("MCP", bundle: .module) } icon: { Image(systemName: "point.3.connected.trianglepath.dotted") }
             .tag(SettingsSection.mcp)
+        if AppCapabilities.isAppStore {
+            Label { Text("iCloud", bundle: .module) } icon: { Image(systemName: "icloud") }
+                .tag(SettingsSection.icloud)
+        }
         Label { Text("Siri & Shortcuts", bundle: .module) } icon: { Image(systemName: "mic.fill") }
             .tag(SettingsSection.siri)
         Label { Text("About", bundle: .module) } icon: { Image(systemName: "info.circle") }
@@ -431,6 +436,11 @@ public struct SettingsView: View {
         items += [
             .init(section: .assistant, title: String(localized: "Assistant", bundle: .module), kind: nil, systemImage: "sparkles"),
             .init(section: .mcp, title: String(localized: "MCP", bundle: .module), kind: nil, systemImage: "point.3.connected.trianglepath.dotted"),
+        ]
+        if AppCapabilities.isAppStore {
+            items.append(.init(section: .icloud, title: String(localized: "iCloud", bundle: .module), kind: nil, systemImage: "icloud"))
+        }
+        items += [
             .init(section: .siri, title: String(localized: "Siri & Shortcuts", bundle: .module), kind: nil, systemImage: "mic.fill"),
             .init(section: .about, title: String(localized: "About", bundle: .module), kind: nil, systemImage: "info.circle"),
         ]
@@ -496,6 +506,7 @@ public struct SettingsView: View {
         case .service(let kind): return Text(verbatim: kind.displayName)
         case .assistant: return Text("Assistant", bundle: .module)
         case .mcp: return Text("MCP", bundle: .module)
+        case .icloud: return Text("iCloud", bundle: .module)
         case .siri: return Text("Siri & Shortcuts", bundle: .module)
         case .about: return Text("About", bundle: .module)
         }
@@ -510,6 +521,7 @@ public struct SettingsView: View {
         case .service(let kind): singleServicePane(for: kind)
         case .assistant: aiPane
         case .mcp: MCPSettingsPane()
+        case .icloud: ICloudSettingsView()
         case .siri: siriPane
         case .about: aboutPane
         }
@@ -647,6 +659,9 @@ public struct SettingsView: View {
             iosSettingsLink("Media managers", systemImage: "server.rack") { iosMediaManagersForm }
             iosSettingsLink("Download clients", systemImage: "arrow.down.circle") { iosDownloadClientsForm }
             iosSettingsLink("Assistant", systemImage: "sparkles") { iosAIForm }
+            if AppCapabilities.isAppStore {
+                iosSettingsLink("iCloud", systemImage: "icloud") { ICloudSettingsView() }
+            }
             iosSettingsLink("Siri & Shortcuts", systemImage: "mic.fill") { iosSiriForm }
             iosSettingsLink("About", systemImage: "info.circle") { iosAboutForm }
         }

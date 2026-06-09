@@ -15,7 +15,7 @@ extension NSUbiquitousKeyValueStore: KeyValueSyncing {}
 /// truth) and iCloud KVS. Compiled in all builds for testability; only started
 /// (`start()`) by the app under `#if APPSTORE`.
 @MainActor
-public final class KVSyncCoordinator {
+public final class KVSyncCoordinator: ObservableObject {
     private let defaults: UserDefaults
     private let kv: KeyValueSyncing
     private let reload: () -> Void
@@ -23,22 +23,64 @@ public final class KVSyncCoordinator {
     private let logger = Logger(category: "KVSync")
     private var observers: [NSObjectProtocol] = []
 
-    public init(defaults: UserDefaults, kv: KeyValueSyncing, reload: @escaping () -> Void) {
+    /// Timestamp of the last successful push or pull. `nil` until first sync.
+    @Published public private(set) var lastSyncDate: Date?
+    /// Human-readable description of the last sync failure, or `nil` if healthy.
+    @Published public private(set) var lastError: String?
+    /// Whether the coordinator is currently observing and mirroring changes.
+    @Published public private(set) var isRunning: Bool = false
+
+    /// Whether this device is signed into iCloud (Keychain/KVS can replicate).
+    /// Stored + `@Published` so the settings UI refreshes live; updated on
+    /// `start()`/`stop()` and whenever the iCloud account changes (see the
+    /// `NSUbiquityIdentityDidChange` observer registered in `init`).
+    @Published public private(set) var accountAvailable: Bool
+
+    /// Reads the current iCloud account presence. Injectable so tests can drive
+    /// sign-in/out without a real iCloud account.
+    private let identityCheck: @Sendable () -> Bool
+
+    /// Lifetime-long observer of iCloud sign-in/out, kept OUT of `observers`
+    /// (which `start()`/`stop()` manage) so `accountAvailable` stays current
+    /// regardless of `isRunning`. Removed only in `deinit`.
+    private var identityObserver: NSObjectProtocol?
+
+    public init(defaults: UserDefaults, kv: KeyValueSyncing, reload: @escaping () -> Void,
+                identityCheck: @escaping @Sendable () -> Bool
+                    = { FileManager.default.ubiquityIdentityToken != nil }) {
         self.defaults = defaults
         self.kv = kv
         self.reload = reload
+        self.identityCheck = identityCheck
+        self.accountAvailable = identityCheck()
+        // Always observe account changes (even while sync is paused) so the
+        // settings banner reflects sign-in/out the moment it happens. The
+        // notification can arrive on any thread, so hop to the main actor.
+        identityObserver = NotificationCenter.default.addObserver(
+            forName: .NSUbiquityIdentityDidChange, object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.refreshAccountAvailability() }
+        }
     }
 
     /// Begin observing inbound KVS changes and outbound UserDefaults changes,
     /// and do an initial two-way reconcile (pull remote, then push local).
     public func start() {
+        refreshAccountAvailability()
         let kvObs = NotificationCenter.default.addObserver(
             forName: NSUbiquitousKeyValueStore.didChangeExternallyNotification,
             object: kv as AnyObject, queue: .main
         ) { [weak self] note in
+            let reason = note.userInfo?[NSUbiquitousKeyValueStoreChangeReasonKey] as? Int
             let changed = (note.userInfo?[NSUbiquitousKeyValueStoreChangedKeysKey] as? [String])
                 ?? Array(SyncedKeys.all)
-            MainActor.assumeIsolated { self?.applyFromKV(keys: changed) }
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                self.lastError = (reason == NSUbiquitousKeyValueStoreQuotaViolationChange)
+                    ? String(localized: "iCloud storage is full \u{2014} some settings couldn\u{2019}t sync.", bundle: .module)
+                    : nil
+                self.applyFromKV(keys: changed)
+            }
         }
         let defObs = NotificationCenter.default.addObserver(
             forName: UserDefaults.didChangeNotification,
@@ -53,6 +95,31 @@ public final class KVSyncCoordinator {
         applyFromKV(keys: Array(SyncedKeys.all))
         pushAllToKV()
         kv.synchronize()
+        isRunning = true
+        lastError = nil
+    }
+
+    /// Stop observing and mirroring. Existing KVS/Keychain data is left intact.
+    public func stop() {
+        refreshAccountAvailability()
+        observers.forEach { NotificationCenter.default.removeObserver($0) }
+        observers.removeAll()
+        isRunning = false
+    }
+
+    private func refreshAccountAvailability() {
+        accountAvailable = identityCheck()
+    }
+
+    /// Idempotently start or stop syncing to match the user's toggle.
+    public func setEnabled(_ enabled: Bool) {
+        if enabled {
+            guard !isRunning else { return }
+            start()
+        } else {
+            guard isRunning else { return }
+            stop()
+        }
     }
 
     /// Copy every allowlisted key present in UserDefaults into KVS.
@@ -62,6 +129,7 @@ public final class KVSyncCoordinator {
                 kv.set(value, forKey: key)
             }
         }
+        if accountAvailable { lastSyncDate = Date() }
     }
 
     /// Apply the given inbound KVS keys (allowlist-filtered) into UserDefaults,
@@ -87,17 +155,24 @@ public final class KVSyncCoordinator {
         if let value = defaults.object(forKey: key) { kv.set(value, forKey: key) }
     }
 
-    deinit { observers.forEach { NotificationCenter.default.removeObserver($0) } }
+    deinit {
+        observers.forEach { NotificationCenter.default.removeObserver($0) }
+        if let identityObserver { NotificationCenter.default.removeObserver(identityObserver) }
+    }
 }
 
 @MainActor
 extension KVSyncCoordinator {
     private static var _shared: KVSyncCoordinator?
 
-    /// Create, retain, and start the process-wide coordinator bound to the real
-    /// App Group suite (never the demo suite) and the live iCloud KVS. Idempotent
-    /// — safe to call once per launch. No-op if the group suite is unavailable.
-    /// Call only under `#if APPSTORE`.
+    /// The process-wide coordinator, if one has been created. Read-only access
+    /// for UI (status display) and for `ConfigStore`'s toggle sink.
+    public static var shared: KVSyncCoordinator? { _shared }
+
+    /// Create, retain, and (if iCloud sync is enabled) start the process-wide
+    /// coordinator bound to the real App Group suite and the live iCloud KVS.
+    /// Idempotent. No-op if the group suite is unavailable. Call only under
+    /// `#if APPSTORE`.
     @discardableResult
     public static func startShared() -> KVSyncCoordinator? {
         if let existing = _shared { return existing }
@@ -107,7 +182,15 @@ extension KVSyncCoordinator {
             kv: NSUbiquitousKeyValueStore.default,
             reload: { ConfigStore.shared.reloadFromDefaults() })
         _shared = coord
-        coord.start()
+        if KeychainSecretStore.syncEnabled(in: group) {
+            coord.start()
+        } else {
+            // Sync is off: re-stamp existing Keychain secrets as
+            // non-synchronizable at launch so the "off = don't replicate"
+            // guarantee holds even if the flag was turned off on another device
+            // (the in-app toggle already does this; this covers cold starts).
+            KeychainSecretStore().reapplySyncAttribute(for: SecretKey.syncable)
+        }
         return coord
     }
 }

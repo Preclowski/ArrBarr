@@ -51,10 +51,17 @@ struct RadarrDetailPanel<Header: View>: View {
             // fetched `radarrMovieFile` because it carries
             // customFormats; fall back to the stripped inline one
             // from /movie/{id} only when the separate fetch failed.
+            //
+            // Lead with the same `library` status badge the list rows
+            // wear, so a detail reached from the Upcoming tab shows the
+            // "you already own this" status the way a queue-reached
+            // detail leads with its Downloading/Upgrade status chip.
             if !hasActiveDownloads {
                 if let file = radarrMovieFile {
+                    InLibraryBadge()
                     ExistingFileBanner(movieFile: file)
                 } else if let movieFile = radarrDetail?.movieFile {
+                    InLibraryBadge()
                     ExistingFileBanner(movieFile: movieFile)
                 }
             }

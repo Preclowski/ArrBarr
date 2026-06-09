@@ -22,11 +22,9 @@ public enum WidgetDataStore {
         var cfg = ConfigStore.decodeServiceConfig(kind, from: d)
         // Match the app's secret backend: shared-group Keychain under APPSTORE,
         // otherwise the UserDefaults group suite (where the app stored them).
-        #if APPSTORE
-        let secrets: SecretStore = KeychainSecretStore()
-        #else
-        let secrets: SecretStore = UserDefaultsSecretStore(defaults: d)
-        #endif
+        let secrets: SecretStore = (AppCapabilities.isAppStore && AppCapabilities.keychainSharingAvailable)
+            ? KeychainSecretStore()
+            : UserDefaultsSecretStore(defaults: d)
         cfg.apiKey = secrets.read(.apiKey(for: kind)) ?? cfg.apiKey
         cfg.password = secrets.read(.password(for: kind)) ?? cfg.password
         return cfg
