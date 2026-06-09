@@ -272,15 +272,15 @@ public final class ConfigStore: ObservableObject {
         self.defaults = defaults
         let store = secrets ?? Self.makeDefaultSecretStore(defaults: defaults)
         self.secrets = store
-        #if APPSTORE
-        // Stably-signed + entitled: secrets belong in the (iCloud-synced) Keychain.
-        Self.migrateSecretsToKeychain(defaults: defaults, secrets: store)
-        #else
-        // Ad-hoc / OSS build: the file Keychain prompts on every rebuild, so
-        // secrets live in UserDefaults. If a previous build pushed them into the
-        // Keychain (and blanked them here), pull them back out once.
-        Self.recoverSecretsFromKeychainIfNeeded(defaults: defaults, secrets: store)
-        #endif
+        if AppCapabilities.isAppStore && AppCapabilities.keychainSharingAvailable {
+            // Stably-signed + entitled: secrets belong in the (iCloud-synced) Keychain.
+            Self.migrateSecretsToKeychain(defaults: defaults, secrets: store)
+        } else {
+            // Ad-hoc / OSS build: the file Keychain prompts on every rebuild, so
+            // secrets live in UserDefaults. If a previous build pushed them into the
+            // Keychain (and blanked them here), pull them back out once.
+            Self.recoverSecretsFromKeychainIfNeeded(defaults: defaults, secrets: store)
+        }
         applyValues(from: defaults)
         setupSinks()
     }
@@ -290,11 +290,10 @@ public final class ConfigStore: ObservableObject {
     /// otherwise, because an ad-hoc-signed build's file-Keychain access prompts
     /// for the login password on every rebuild.
     nonisolated static func makeDefaultSecretStore(defaults: UserDefaults) -> SecretStore {
-        #if APPSTORE
-        return KeychainSecretStore()
-        #else
+        if AppCapabilities.isAppStore && AppCapabilities.keychainSharingAvailable {
+            return KeychainSecretStore()
+        }
         return UserDefaultsSecretStore(defaults: defaults)
-        #endif
     }
 
     /// One-time recovery for non-App-Store builds: if an earlier build migrated

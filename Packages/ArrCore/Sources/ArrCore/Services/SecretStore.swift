@@ -95,11 +95,7 @@ public struct KeychainSecretStore: SecretStore {
     /// can assert the synchronizable/accessibility gating without touching the
     /// real Keychain.
     public static func baseQuery(for key: SecretKey) -> [String: Any] {
-        #if APPSTORE
-        let synchronizable = key.synced && Self.syncEnabledProvider()
-        #else
-        let synchronizable = false
-        #endif
+        let synchronizable = AppCapabilities.isAppStore && key.synced && Self.syncEnabledProvider()
         var q: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -109,10 +105,10 @@ public struct KeychainSecretStore: SecretStore {
                 ? (kSecAttrAccessibleWhenUnlockedThisDeviceOnly as String)
                 : (kSecAttrAccessibleAfterFirstUnlock as String),
         ]
-        #if APPSTORE
-        q[kSecAttrAccessGroup as String] = Self.accessGroup
-        q[kSecUseDataProtectionKeychain as String] = true
-        #endif
+        if AppCapabilities.isAppStore {
+            q[kSecAttrAccessGroup as String] = Self.accessGroup
+            q[kSecUseDataProtectionKeychain as String] = true
+        }
         return q
     }
 

@@ -34,16 +34,28 @@ struct SecretStoreSuite {
         }
     }
 
-    @Test("Keychain query honors synchronizable only under APPSTORE")
-    func keychainSynchronizableGating() {
-        let synced = KeychainSecretStore.baseQuery(for: .openAIKey)
-        let mcp = KeychainSecretStore.baseQuery(for: .mcpBearer)
-        #if APPSTORE
-        #expect(synced[kSecAttrSynchronizable as String] as? Bool == true)
-        #else
-        #expect(synced[kSecAttrSynchronizable as String] as? Bool == false)
-        #endif
-        #expect(mcp[kSecAttrSynchronizable as String] as? Bool == false)
+    @Test("baseQuery synchronizable + access group follow AppCapabilities.isAppStore")
+    func keychainGatingRuntime() {
+        let originalAppStore = AppCapabilities.isAppStore
+        let originalProvider = KeychainSecretStore.syncEnabledProvider
+        defer {
+            AppCapabilities.configure(isAppStore: originalAppStore)
+            KeychainSecretStore.syncEnabledProvider = originalProvider
+        }
+        KeychainSecretStore.syncEnabledProvider = { true }
+
+        AppCapabilities.configure(isAppStore: true)
+        let on = KeychainSecretStore.baseQuery(for: .openAIKey)
+        #expect(on[kSecAttrSynchronizable as String] as? Bool == true)
+        #expect(on[kSecAttrAccessGroup as String] as? String == KeychainSecretStore.accessGroup)
+        #expect(on[kSecUseDataProtectionKeychain as String] as? Bool == true)
+        #expect(KeychainSecretStore.baseQuery(for: .mcpBearer)[kSecAttrSynchronizable as String] as? Bool == false)
+
+        AppCapabilities.configure(isAppStore: false)
+        let off = KeychainSecretStore.baseQuery(for: .openAIKey)
+        #expect(off[kSecAttrSynchronizable as String] as? Bool == false)
+        #expect(off[kSecAttrAccessGroup as String] == nil)
+        #expect(off[kSecUseDataProtectionKeychain as String] == nil)
     }
 
     @Test("Keychain accessibility: MCP device-only, synced after-first-unlock")
@@ -56,16 +68,19 @@ struct SecretStoreSuite {
                 == (kSecAttrAccessibleWhenUnlockedThisDeviceOnly as String))
     }
 
-    @Test("Access group + data-protection keychain set only under APPSTORE")
-    func keychainAccessGroupGating() {
-        let q = KeychainSecretStore.baseQuery(for: .apiKey(for: .radarr))
-        #if APPSTORE
-        #expect(q[kSecAttrAccessGroup as String] as? String == KeychainSecretStore.accessGroup)
-        #expect(q[kSecUseDataProtectionKeychain as String] as? Bool == true)
-        #else
-        #expect(q[kSecAttrAccessGroup as String] == nil)
-        #expect(q[kSecUseDataProtectionKeychain as String] == nil)
-        #endif
+    @Test("synchronizable also honors the runtime sync provider when isAppStore")
+    func keychainSynchronizableRespectsProvider() {
+        let originalAppStore = AppCapabilities.isAppStore
+        let originalProvider = KeychainSecretStore.syncEnabledProvider
+        defer {
+            AppCapabilities.configure(isAppStore: originalAppStore)
+            KeychainSecretStore.syncEnabledProvider = originalProvider
+        }
+        AppCapabilities.configure(isAppStore: true)
+        KeychainSecretStore.syncEnabledProvider = { false }
+        #expect(KeychainSecretStore.baseQuery(for: .openAIKey)[kSecAttrSynchronizable as String] as? Bool == false)
+        KeychainSecretStore.syncEnabledProvider = { true }
+        #expect(KeychainSecretStore.baseQuery(for: .openAIKey)[kSecAttrSynchronizable as String] as? Bool == true)
     }
 
     @Test("Real Keychain round-trips a non-conflicting key")
@@ -95,24 +110,6 @@ struct SecretStoreSuite {
         #expect(accounts.contains("secret.tmdb.apiKey"))
         #expect(!accounts.contains("secret.mcp.bearer"))
         #expect(SecretKey.syncable.allSatisfy { $0.synced && !$0.deviceOnly })
-    }
-
-    @Test("baseQuery synchronizable honors the runtime sync provider (APPSTORE only)")
-    func keychainSynchronizableRuntimeGating() {
-        let original = KeychainSecretStore.syncEnabledProvider
-        defer { KeychainSecretStore.syncEnabledProvider = original }
-
-        KeychainSecretStore.syncEnabledProvider = { false }
-        let off = KeychainSecretStore.baseQuery(for: .openAIKey)
-        #expect(off[kSecAttrSynchronizable as String] as? Bool == false)
-
-        KeychainSecretStore.syncEnabledProvider = { true }
-        let on = KeychainSecretStore.baseQuery(for: .openAIKey)
-        #if APPSTORE
-        #expect(on[kSecAttrSynchronizable as String] as? Bool == true)
-        #else
-        #expect(on[kSecAttrSynchronizable as String] as? Bool == false)
-        #endif
     }
 
     @Test("defaultSyncEnabled reads the device-local flag, defaulting true")
