@@ -9,6 +9,9 @@ struct ArrBarriOSApp: App {
     @Environment(\.scenePhase) private var scenePhase
 
     init() {
+        #if APPSTORE
+        AppCapabilities.configure(isAppStore: true)
+        #endif
         // iOS has no AppDelegate, so wire notifications here: a delegate that
         // shows in-foreground banners + handles Pause/Resume/Remove/Open
         // action taps, the action categories, and authorization.

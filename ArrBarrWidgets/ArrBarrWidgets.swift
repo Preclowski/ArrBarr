@@ -7,6 +7,12 @@ import ArrCore
 
 @main
 struct ArrBarrWidgetsBundle: WidgetBundle {
+    init() {
+        #if APPSTORE
+        AppCapabilities.configure(isAppStore: true)
+        #endif
+    }
+
     var body: some Widget {
         LibraryStatusGridWidget()
         LibraryServiceWidget()
