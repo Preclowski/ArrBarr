@@ -15,13 +15,25 @@ extension NSUbiquitousKeyValueStore: KeyValueSyncing {}
 /// truth) and iCloud KVS. Compiled in all builds for testability; only started
 /// (`start()`) by the app under `#if APPSTORE`.
 @MainActor
-public final class KVSyncCoordinator {
+public final class KVSyncCoordinator: ObservableObject {
     private let defaults: UserDefaults
     private let kv: KeyValueSyncing
     private let reload: () -> Void
     private var isApplyingRemote = false
     private let logger = Logger(category: "KVSync")
     private var observers: [NSObjectProtocol] = []
+
+    /// Timestamp of the last successful push or pull. `nil` until first sync.
+    @Published public private(set) var lastSyncDate: Date?
+    /// Human-readable description of the last sync failure, or `nil` if healthy.
+    @Published public private(set) var lastError: String?
+    /// Whether the coordinator is currently observing and mirroring changes.
+    @Published public private(set) var isRunning: Bool = false
+
+    /// Whether this device is signed into iCloud (Keychain/KVS can replicate).
+    public var accountAvailable: Bool {
+        FileManager.default.ubiquityIdentityToken != nil
+    }
 
     public init(defaults: UserDefaults, kv: KeyValueSyncing, reload: @escaping () -> Void) {
         self.defaults = defaults
@@ -53,6 +65,27 @@ public final class KVSyncCoordinator {
         applyFromKV(keys: Array(SyncedKeys.all))
         pushAllToKV()
         kv.synchronize()
+        isRunning = true
+        lastSyncDate = Date()
+        lastError = nil
+    }
+
+    /// Stop observing and mirroring. Existing KVS/Keychain data is left intact.
+    public func stop() {
+        observers.forEach { NotificationCenter.default.removeObserver($0) }
+        observers.removeAll()
+        isRunning = false
+    }
+
+    /// Idempotently start or stop syncing to match the user's toggle.
+    public func setEnabled(_ enabled: Bool) {
+        if enabled {
+            guard !isRunning else { return }
+            start()
+        } else {
+            guard isRunning else { return }
+            stop()
+        }
     }
 
     /// Copy every allowlisted key present in UserDefaults into KVS.
@@ -62,6 +95,7 @@ public final class KVSyncCoordinator {
                 kv.set(value, forKey: key)
             }
         }
+        lastSyncDate = Date()
     }
 
     /// Apply the given inbound KVS keys (allowlist-filtered) into UserDefaults,
@@ -94,10 +128,14 @@ public final class KVSyncCoordinator {
 extension KVSyncCoordinator {
     private static var _shared: KVSyncCoordinator?
 
-    /// Create, retain, and start the process-wide coordinator bound to the real
-    /// App Group suite (never the demo suite) and the live iCloud KVS. Idempotent
-    /// — safe to call once per launch. No-op if the group suite is unavailable.
-    /// Call only under `#if APPSTORE`.
+    /// The process-wide coordinator, if one has been created. Read-only access
+    /// for UI (status display) and for `ConfigStore`'s toggle sink.
+    public static var shared: KVSyncCoordinator? { _shared }
+
+    /// Create, retain, and (if iCloud sync is enabled) start the process-wide
+    /// coordinator bound to the real App Group suite and the live iCloud KVS.
+    /// Idempotent. No-op if the group suite is unavailable. Call only under
+    /// `#if APPSTORE`.
     @discardableResult
     public static func startShared() -> KVSyncCoordinator? {
         if let existing = _shared { return existing }
@@ -107,7 +145,7 @@ extension KVSyncCoordinator {
             kv: NSUbiquitousKeyValueStore.default,
             reload: { ConfigStore.shared.reloadFromDefaults() })
         _shared = coord
-        coord.start()
+        if KeychainSecretStore.syncEnabled(in: group) { coord.start() }
         return coord
     }
 }
