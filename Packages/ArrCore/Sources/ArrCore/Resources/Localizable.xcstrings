@@ -100,6 +100,12 @@
             "state": "translated",
             "value": "%lld picked"
           }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld wybranych"
+          }
         }
       },
       "comment": "Label in discover"
@@ -126,6 +132,12 @@
       "extractionState": "manual",
       "localizations": {
         "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld%%"
+          }
+        },
+        "pl": {
           "stringUnit": {
             "state": "translated",
             "value": "%lld%%"
@@ -358,6 +370,12 @@
             "state": "translated",
             "value": "API key is required."
           }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klucz API jest wymagany."
+          }
         }
       },
       "comment": "Tooltip/description in settings"
@@ -567,6 +585,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Add base URL, API key and model — AI stays off until then."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Podaj adres bazowy, klucz API i model — do tego czasu AI pozostaje wyłączone."
           }
         }
       },
@@ -1228,6 +1252,12 @@
             "state": "translated",
             "value": "Artists"
           }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wykonawcy"
+          }
         }
       },
       "comment": "Button in search"
@@ -1437,6 +1467,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Available"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dostępne"
           }
         }
       },
@@ -1666,6 +1702,12 @@
             "state": "translated",
             "value": "Cast"
           }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Obsada"
+          }
         }
       },
       "comment": "Button in detail"
@@ -1857,6 +1899,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Check service health"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sprawdź stan usług"
           }
         }
       },
@@ -2392,6 +2440,12 @@
             "state": "translated",
             "value": "Copy the API Key"
           }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skopiuj klucz API"
+          }
         }
       },
       "comment": "Button in common"
@@ -2710,6 +2764,12 @@
             "state": "translated",
             "value": "Delete"
           }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usuń"
+          }
         }
       },
       "comment": "Button in queue"
@@ -2847,6 +2907,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Details"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Szczegóły"
           }
         }
       },
@@ -3381,6 +3447,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Enter a valid URL (http:// or https://)."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Podaj prawidłowy adres URL (http:// lub https://)."
           }
         }
       },
@@ -4636,6 +4708,12 @@
             "state": "translated",
             "value": "Loading episode…"
           }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wczytywanie odcinka…"
+          }
         }
       },
       "comment": "Button in detail"
@@ -4990,6 +5068,12 @@
             "state": "translated",
             "value": "Missing"
           }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Brakujące"
+          }
         }
       },
       "comment": "Button in search"
@@ -5055,6 +5139,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Monitor season(s) %@ and start search."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Monitoruj sezon(y) %@ i rozpocznij wyszukiwanie."
           }
         }
       },
@@ -5157,6 +5247,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "More AI suggestions"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Więcej propozycji AI"
           }
         }
       },
@@ -5494,6 +5590,12 @@
             "state": "translated",
             "value": "Next"
           }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dalej"
+          }
         }
       },
       "comment": "Button in onboarding"
@@ -5596,6 +5698,12 @@
             "state": "translated",
             "value": "No more cards"
           }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Koniec kart"
+          }
         }
       },
       "comment": "Button in discover"
@@ -5697,6 +5805,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "None"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Brak"
           }
         }
       },
@@ -5835,6 +5949,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "On disk"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Na dysku"
           }
         }
       },
@@ -5991,6 +6111,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Open your arr's web UI → Settings → General"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Otwórz panel webowy swojego arr → Ustawienia → Ogólne"
           }
         }
       },
@@ -6202,6 +6328,12 @@
             "state": "translated",
             "value": "Paste it here, along with the URL"
           }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wklej go tutaj razem z adresem URL"
+          }
         }
       },
       "comment": "Label in common"
@@ -6267,6 +6399,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Pause all downloads"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wstrzymaj wszystkie pobierania"
           }
         }
       },
@@ -6387,6 +6525,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Pauses every active download (where a download client is configured)."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wstrzymuje każde aktywne pobieranie (jeśli skonfigurowano klienta pobierania)."
           }
         }
       },
@@ -6525,6 +6669,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Previous"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wstecz"
           }
         }
       },
@@ -6732,6 +6882,12 @@
       "extractionState": "manual",
       "localizations": {
         "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quiz"
+          }
+        },
+        "pl": {
           "stringUnit": {
             "state": "translated",
             "value": "Quiz"
@@ -7144,6 +7300,12 @@
             "state": "translated",
             "value": "Reports warnings/errors across your arrs and whether download clients are reachable."
           }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zgłasza ostrzeżenia i błędy ze wszystkich arrów oraz to, czy klienci pobierania są osiągalni."
+          }
         }
       },
       "comment": "Tooltip/description in intents"
@@ -7318,6 +7480,12 @@
             "state": "translated",
             "value": "Resume all downloads"
           }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wznów wszystkie pobierania"
+          }
         }
       },
       "comment": "Button in intents"
@@ -7365,6 +7533,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Resumes every paused download (where a download client is configured)."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wznawia każde wstrzymane pobieranie (jeśli skonfigurowano klienta pobierania)."
           }
         }
       },
@@ -7648,6 +7822,12 @@
             "state": "translated",
             "value": "Says the next upcoming episodes, movies and albums."
           }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Podaje najbliższe nadchodzące odcinki, filmy i albumy."
+          }
         }
       },
       "comment": "Tooltip/description in intents"
@@ -7659,6 +7839,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Says what Sonarr and Radarr are currently downloading."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Podaje, co Sonarr i Radarr aktualnie pobierają."
           }
         }
       },
@@ -7707,6 +7893,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Score"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ocena"
           }
         }
       },
@@ -7791,6 +7983,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Search Sonarr/Radarr and open ArrBarr at the results to add something."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wyszukuje w Sonarr/Radarr i otwiera ArrBarr na wynikach, by coś dodać."
           }
         }
       },
@@ -8020,6 +8218,12 @@
             "state": "translated",
             "value": "Search to add"
           }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wyszukaj i dodaj"
+          }
         }
       },
       "comment": "Button in intents"
@@ -8085,6 +8289,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Season %02d"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sezon %02d"
           }
         }
       },
@@ -8512,6 +8722,12 @@
             "state": "translated",
             "value": "Show download queue"
           }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pokaż kolejkę pobierania"
+          }
         }
       },
       "comment": "Button in intents"
@@ -8631,6 +8847,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Show upcoming releases"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pokaż nadchodzące premiery"
           }
         }
       },
@@ -9003,6 +9225,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Stop monitoring season(s) %@."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Przestań monitorować sezon(y) %@."
           }
         }
       },
@@ -9430,6 +9658,12 @@
             "state": "translated",
             "value": "This will remove the download from the client."
           }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To usunie pobieranie z klienta."
+          }
         }
       },
       "comment": "Tooltip/description in detail"
@@ -9441,6 +9675,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "This will remove the season pack from the client."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To usunie paczkę sezonu z klienta."
           }
         }
       },
@@ -9494,7 +9734,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Aby odkrywać nowe filmy, dodaj klucz TMDB w Ustawieniach → AI → Odkrywanie."
+            "value": "Dodaj klucz TMDB w Ustawieniach → AI → Odkrywanie, aby odkrywać nowe filmy."
           }
         }
       },
@@ -11111,6 +11351,12 @@
             "state": "translated",
             "value": "Connected"
           }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Połączono"
+          }
         }
       }
     },
@@ -11122,6 +11368,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Invalid key"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nieprawidłowy klucz"
           }
         }
       }
@@ -11135,6 +11387,12 @@
             "state": "translated",
             "value": "Failed — check key & URL"
           }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Błąd — sprawdź klucz i adres URL"
+          }
         }
       }
     },
@@ -11146,6 +11404,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Custom format score"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ocena formatu niestandardowego"
           }
         }
       }
@@ -11159,6 +11423,12 @@
             "state": "translated",
             "value": "Enable MCP server"
           }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Włącz serwer MCP"
+          }
         }
       }
     },
@@ -11170,6 +11440,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "MCP Server"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Serwer MCP"
           }
         }
       }
@@ -11183,6 +11459,12 @@
             "state": "translated",
             "value": "Listen address"
           }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adres nasłuchu"
+          }
         }
       }
     },
@@ -11194,6 +11476,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Connection"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Połączenie"
           }
         }
       }
@@ -11207,6 +11495,12 @@
             "state": "translated",
             "value": "host:port to bind the server to. Use 0.0.0.0 to accept connections on every network interface, or 127.0.0.1 to keep it local."
           }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "host:port, na którym nasłuchuje serwer. Użyj 0.0.0.0, aby przyjmować połączenia ze wszystkich interfejsów sieciowych, albo 127.0.0.1, aby pozostać lokalnie."
+          }
         }
       }
     },
@@ -11218,6 +11512,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Authentication"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uwierzytelnianie"
           }
         }
       }
@@ -11231,6 +11531,12 @@
             "state": "translated",
             "value": "Tap to reveal spoiler"
           }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dotknij, aby odsłonić spoiler"
+          }
         }
       }
     },
@@ -11242,6 +11548,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Start now"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rozpocznij teraz"
           }
         }
       }
@@ -11255,6 +11567,12 @@
             "state": "translated",
             "value": "Remove from queue"
           }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usuń z kolejki"
+          }
         }
       }
     },
@@ -11266,6 +11584,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "TMDB Read Access Token"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Token odczytu TMDB"
           }
         }
       }
@@ -11279,6 +11603,12 @@
             "state": "translated",
             "value": "Get a free TMDB token"
           }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zdobądź darmowy token TMDB"
+          }
         }
       }
     },
@@ -11291,6 +11621,12 @@
             "state": "translated",
             "value": "Forward"
           }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Naprzód"
+          }
         }
       }
     },
@@ -11302,6 +11638,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$lld of %2$lld tools exposed"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Udostępniono %1$lld z %2$lld narzędzi"
           }
         }
       }
