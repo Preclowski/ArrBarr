@@ -37,7 +37,15 @@ struct ArrBarrApp: App {
         // NavigationStack drill-downs render native `< title` chrome
         // automatically — which was the whole reason we migrated off
         // NSPopover.
-        MenuBarExtra {
+        // `isInserted` hides the status item in detached (Dock-window) mode.
+        // The flag is the single source of truth; the AppDelegate flips the
+        // activation policy + window off the same value, so the menu-bar icon
+        // and the detached window are never shown at the same time. Read-only
+        // setter — visibility is owned by the Settings toggle, not by ⌘-drag.
+        MenuBarExtra(isInserted: Binding(
+            get: { !configStore.detachedWindow },
+            set: { _ in }
+        )) {
             PopoverContentView(
                 viewModel: queueVM,
                 onOpenSettings: { appDelegate.openSettings() },
@@ -63,6 +71,16 @@ struct ArrBarrApp: App {
         Settings { EmptyView() }
             .commands {
                 CommandGroup(replacing: .appSettings) { }
+                // Route the app menu's "About ArrBarr" (visible in detached /
+                // Dock mode) to the same custom About window as the "…" menu,
+                // instead of AppKit's default standard about panel.
+                CommandGroup(replacing: .appInfo) {
+                    Button {
+                        appDelegate.showAbout()
+                    } label: {
+                        Text("About ArrBarr", bundle: .arrCore)
+                    }
+                }
             }
     }
 }

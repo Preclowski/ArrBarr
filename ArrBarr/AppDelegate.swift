@@ -39,6 +39,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             .sink { [weak self] in self?.applyAppearance($0) }
             .store(in: &cancellables)
 
+        // Dock-icon vs menu-bar-only mode. The sink fires once on subscribe
+        // with the current value (the initial apply), then on every toggle.
+        configStore.$detachedWindow
+            .removeDuplicates()
+            .sink { [weak self] in self?.applyWindowMode($0) }
+            .store(in: &cancellables)
+
         // Paywall presentation (App Store builds). The gate lives in ArrCore as
         // a published `gatedFeature`. We deliberately do NOT present it as a
         // sheet inside the MenuBarExtra panel — that panel auto-dismisses the
@@ -510,6 +517,132 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         try? task.run()
         NSApp.terminate(nil)
     }
+
+    // MARK: - Detached window (Dock-icon mode)
+
+    /// The real, titlebar'd window shown in detached mode. Hosts the same
+    /// `PopoverContentView` as the menu-bar panel, on the same shared models.
+    private var mainWindow: NSWindow?
+
+    /// Set the activation policy *before* the first window appears so the app
+    /// doesn't visibly flip from accessory to Dock on launch. The window itself
+    /// is created later in `applicationDidFinishLaunching` once the UI is up.
+    func applicationWillFinishLaunching(_ notification: Notification) {
+        if configStore.detachedWindow {
+            NSApp.setActivationPolicy(.regular)
+        }
+    }
+
+    /// Pure function of the `detachedWindow` preference: pick the activation
+    /// policy and show/hide the real window. The menu-bar icon is toggled
+    /// independently in SwiftUI via `MenuBarExtra(isInserted:)` bound to the
+    /// same flag, so the two surfaces are never visible at once.
+    private func applyWindowMode(_ detached: Bool) {
+        if detached {
+            NSApp.setActivationPolicy(.regular)
+            openMainWindow()
+        } else {
+            mainWindow?.close()   // willClose handler nils the reference
+            NSApp.setActivationPolicy(.accessory)
+        }
+    }
+
+    /// Show (or re-show) the detached window. Idempotent: an existing window is
+    /// just brought to front.
+    func openMainWindow() {
+        if let win = mainWindow {
+            win.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
+
+        // PopoverContentView draws on a clear background — in the menu-bar
+        // panel the system supplies the vibrant glass behind it. The detached
+        // window must supply that backdrop itself, otherwise the clear content
+        // sits on a flat opaque window. A behind-window `NSVisualEffectView`
+        // gives the same material the popover uses (rendered as Liquid Glass on
+        // macOS 26), so the two surfaces look identical.
+        let view = PopoverContentView(
+            viewModel: queueVM,
+            onOpenSettings: { [weak self] in self?.openSettings() },
+            onShowAbout: { [weak self] in self?.showAbout() },
+            onQuit: { NSApp.terminate(nil) }
+        )
+        .environmentObject(configStore)
+        .background(WindowGlassBackground().ignoresSafeArea())
+        // This window is a hand-built NSWindow where NavigationStack's automatic
+        // `< Back` chevron does not render (only the MenuBarExtra scene gets it
+        // for free). Flag the content so DetailView draws its own in-content back
+        // button here, while the menu-bar panel keeps the native chevron.
+        .environment(\.isDetachedWindow, true)
+        // NOTE: we intentionally leave `hosting.sceneBridgingOptions` at its
+        // default ([]). Bridging would push SwiftUI's `.navigationTitle` and
+        // `.toolbar` items into the titlebar — but the NavigationStack automatic
+        // `< Back` chevron never bridges to a hand-built NSWindow anyway
+        // (verified empirically), and bridging the rest only duplicated the
+        // title + surfaced toolbar buttons we don't want up there. DetailView
+        // draws its own back button + title in-content instead (`.isDetachedWindow`).
+        let hosting = NSHostingController(rootView: view)
+        let win = NSWindow(contentViewController: hosting)
+        win.title = "ArrBarr"
+        // Fixed 400×600 (PopoverContentView is a hard-sized, internally-scrolling
+        // layout — no `.resizable`, which would only add empty gutters).
+        // `.fullSizeContentView` + transparent titlebar lets the glass backdrop
+        // fill the whole window including under the (now SwiftUI-owned) titlebar.
+        win.styleMask = [.titled, .closable, .miniaturizable, .fullSizeContentView]
+        win.setContentSize(NSSize(width: 400, height: 600))
+        win.isOpaque = false
+        win.backgroundColor = .clear
+        win.titlebarAppearsTransparent = true
+        win.titleVisibility = .hidden
+        win.isMovableByWindowBackground = true
+        win.isReleasedWhenClosed = false
+        win.center()
+
+        // Red close button must not tear down the app — it returns to the Dock
+        // icon. We drop our reference so the next Dock click (or toggle) rebuilds
+        // a fresh window; `applicationShouldTerminateAfterLastWindowClosed`
+        // keeps the process alive.
+        NotificationCenter.default.addObserver(
+            forName: NSWindow.willCloseNotification,
+            object: win,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in self?.mainWindow = nil }
+        }
+
+        mainWindow = win
+        win.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    /// Closing the last window (the detached main window, or Settings/About in
+    /// accessory mode) never quits ArrBarr — it lives in the menu bar or Dock.
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        false
+    }
+
+    /// Clicking the Dock icon after the window was closed reopens it.
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        if configStore.detachedWindow && mainWindow == nil {
+            openMainWindow()
+        }
+        return true
+    }
+}
+
+/// Behind-window vibrant material for the detached window, matching the
+/// menu-bar popover's backdrop. `.popover` keeps the two surfaces visually
+/// identical; on macOS 26 the system renders it as Liquid Glass.
+private struct WindowGlassBackground: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSVisualEffectView {
+        let v = NSVisualEffectView()
+        v.material = .popover
+        v.blendingMode = .behindWindow
+        v.state = .active
+        return v
+    }
+    func updateNSView(_ nsView: NSVisualEffectView, context: Context) {}
 }
 
 extension AppDelegate: @preconcurrency UNUserNotificationCenterDelegate {

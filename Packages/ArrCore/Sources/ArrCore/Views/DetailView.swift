@@ -21,6 +21,9 @@ public struct DetailView: View {
     var autoDrillToEpisode: Bool = true
     var viewModel: QueueViewModel
     @EnvironmentObject var configStore: ConfigStore
+    /// True only in the macOS detached window — drives the in-content back
+    /// button (the hand-built NSWindow doesn't render NavigationStack's chevron).
+    @Environment(\.isDetachedWindow) private var isDetachedWindow
 
     public init(
         item: QueueItem,
@@ -339,14 +342,31 @@ public struct DetailView: View {
 
     // MARK: - Header (floating glass back + source info)
 
+    @ViewBuilder
     private var header: some View {
-        // Inline header removed in the MenuBarExtra(.window) migration —
-        // both macOS popover (now window-backed) and iOS push DetailView
-        // into a NavigationStack, so the system renders `<` + title for
-        // us. Source identity lives in `.navigationTitle(...)` on body.
-        // Kept as `EmptyView` rather than deleted so the call site in
-        // body's VStack doesn't have to be touched.
-        EmptyView()
+        // Inline header was removed in the MenuBarExtra(.window) migration —
+        // both the menu-bar panel and iOS push DetailView into a NavigationStack
+        // that renders `<` + title for free. The macOS *detached* window is a
+        // hand-built NSWindow, where that automatic chevron does NOT render, so
+        // there we draw our own in-content back button (matching the pattern
+        // EpisodeDetailOverlay / History / Search already use). The panel keeps
+        // `EmptyView` + the native chevron.
+        if isDetachedWindow {
+            HStack(spacing: 6) {
+                FloatingBackButton(action: onBack)
+                    .keyboardShortcut(.cancelAction)
+                Text(navTitleString)
+                    .scaledFont(size: 15, weight: .semibold)
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 12)
+            .padding(.top, 10)
+            .padding(.bottom, 4)
+        } else {
+            EmptyView()
+        }
     }
 
     // MARK: - Download CTA strip

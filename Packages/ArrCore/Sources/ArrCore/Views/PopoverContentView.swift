@@ -592,15 +592,16 @@ public struct PopoverContentView: View {
             // inside an explicit GeometryReader removes that ambiguity.
             GeometryReader { _ in
                 if let frame = tabFrames[selectedTab] {
-                    // Indicator pill spreads past the tab's text + padding
-                    // box — `+ 18` on each side — so it reads as a real
-                    // tab slot rather than a tight chip hugging the text.
-                    // Vertical only loses 2pt so the pill keeps its
-                    // capsule shape against the surrounding glass bar.
+                    // Indicator pill spreads horizontally past the tab's
+                    // text + padding box (+12 each side) so it reads as a
+                    // real tab slot rather than a tight chip hugging the
+                    // text. Vertically it must stay *inside* the tab's box —
+                    // the surrounding glass bar is only as tall as the tab
+                    // button, so any positive vertical growth makes the pill
+                    // spill above/below the bar. Inset 6pt (3pt rim top and
+                    // bottom) keeps it a clean capsule within the bar.
                     TabPillBackground()
-                        // Fill the whole tab button (it was insetting slightly):
-                        // a touch wider than the label+padding box, full height.
-                        .frame(width: max(0, frame.width + 24), height: max(0, frame.height + 4))
+                        .frame(width: max(0, frame.width + 24), height: max(0, frame.height - 6))
                         .position(x: frame.midX, y: frame.midY)
                 }
             }
@@ -634,6 +635,12 @@ public struct PopoverContentView: View {
                 .keyboardShortcut(",", modifiers: .command)
             #if os(macOS)
             Button { onShowAbout() } label: { Text("About ArrBarr", bundle: .module) }
+            // Shortcut to the Settings "Show in Dock as a window" toggle. Label
+            // reflects current state so the same item detaches from the panel
+            // and re-attaches from the detached window.
+            Button { configStore.detachedWindow.toggle() } label: {
+                Text(configStore.detachedWindow ? "Reattach to menu bar" : "Detach into a window", bundle: .module)
+            }
             #endif
             Divider()
             Button { onQuit() } label: { Text("Quit ArrBarr", bundle: .module) }

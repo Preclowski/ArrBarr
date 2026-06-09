@@ -926,6 +926,12 @@ public struct SettingsView: View {
         Form {
             Section {
                 Toggle(isOn: $configStore.launchAtLogin) { Text("Launch at login", bundle: .module) }
+                #if os(macOS)
+                Toggle(isOn: $configStore.detachedWindow) {
+                    Text("Show in Dock as a window", bundle: .module)
+                    Text("Detach from the menu bar into a standalone window with a Dock icon. Closing the window returns it to the Dock.", bundle: .module)
+                }
+                #endif
                 Picker(selection: $configStore.appLanguage) {
                     ForEach(ConfigStore.appLanguageOptions, id: \.code) { opt in
                         Text(LocalizedStringKey(opt.label)).tag(opt.code)
