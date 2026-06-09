@@ -6814,6 +6814,35 @@
         }
       }
     },
+    "iCloud storage is full — some settings couldn’t sync.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der iCloud-Speicher ist voll – einige Einstellungen konnten nicht synchronisiert werden."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El almacenamiento de iCloud está lleno: algunos ajustes no se pudieron sincronizar."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le stockage iCloud est plein — certains réglages n’ont pas pu être synchronisés."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pamięć iCloud jest pełna — nie udało się zsynchronizować części ustawień."
+          }
+        }
+      }
+    },
     "Keep download": {
       "extractionState": "manual",
       "localizations": {

@@ -48,9 +48,16 @@ public final class KVSyncCoordinator: ObservableObject {
             forName: NSUbiquitousKeyValueStore.didChangeExternallyNotification,
             object: kv as AnyObject, queue: .main
         ) { [weak self] note in
+            let reason = note.userInfo?[NSUbiquitousKeyValueStoreChangeReasonKey] as? Int
             let changed = (note.userInfo?[NSUbiquitousKeyValueStoreChangedKeysKey] as? [String])
                 ?? Array(SyncedKeys.all)
-            MainActor.assumeIsolated { self?.applyFromKV(keys: changed) }
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                self.lastError = (reason == NSUbiquitousKeyValueStoreQuotaViolationChange)
+                    ? String(localized: "iCloud storage is full \u{2014} some settings couldn\u{2019}t sync.", bundle: .module)
+                    : nil
+                self.applyFromKV(keys: changed)
+            }
         }
         let defObs = NotificationCenter.default.addObserver(
             forName: UserDefaults.didChangeNotification,
@@ -66,7 +73,6 @@ public final class KVSyncCoordinator: ObservableObject {
         pushAllToKV()
         kv.synchronize()
         isRunning = true
-        lastSyncDate = Date()
         lastError = nil
     }
 

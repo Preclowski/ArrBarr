@@ -118,7 +118,7 @@ struct KVSyncCoordinatorSuite {
         #expect(kv.setCount == baseline)
     }
 
-    @Test("setEnabled is idempotent — repeated enables don't double-stamp errors")
+    @Test("setEnabled is idempotent — repeated enables are no-ops")
     @MainActor func setEnabledIdempotent() {
         let (defaults, name) = makeDefaults()
         defer { UserDefaults.standard.removePersistentDomain(forName: name) }
