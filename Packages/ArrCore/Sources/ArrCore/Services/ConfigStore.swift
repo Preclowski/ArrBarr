@@ -458,12 +458,11 @@ public final class ConfigStore: ObservableObject {
         $iCloudSyncEnabled.dropFirst().sink { [weak self] val in
             guard let self else { return }
             self.defaults.set(val, forKey: Self.iCloudSyncEnabledKey)
-            #if APPSTORE
+            guard AppCapabilities.isAppStore else { return }
             // Preferences (KVS): start/stop the live coordinator.
             KVSyncCoordinator.shared?.setEnabled(val)
             // Secrets (iCloud Keychain): rewrite items to the new sync state.
             self.secrets.reapplySyncAttribute(for: SecretKey.syncable)
-            #endif
         }.store(in: &cancellables)
         $arrOrder.dropFirst().sink { [weak self] val in
             self?.defaults.set(val, forKey: Self.arrOrderKey)
