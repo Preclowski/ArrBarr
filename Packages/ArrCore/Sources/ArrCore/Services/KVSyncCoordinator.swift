@@ -77,7 +77,7 @@ public final class KVSyncCoordinator: ObservableObject {
             MainActor.assumeIsolated {
                 guard let self else { return }
                 self.lastError = (reason == NSUbiquitousKeyValueStoreQuotaViolationChange)
-                    ? String(localized: "iCloud storage is full \u{2014} some settings couldn\u{2019}t sync.", bundle: .module)
+                    ? String(localized: "settings.icloudStorageIsFull.tooltip", bundle: .module)
                     : nil
                 self.applyFromKV(keys: changed)
             }

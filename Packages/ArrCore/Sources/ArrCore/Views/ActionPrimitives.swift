@@ -222,7 +222,7 @@ public struct PosterPlayPauseButton: View {
             .contentShape(Circle())
         }
         .buttonStyle(.plain)
-        .help(isPaused ? Text("Resume", bundle: .module) : Text("Pause", bundle: .module))
+        .help(isPaused ? Text("queue.resume.button", bundle: .module) : Text("queue.pause.button", bundle: .module))
     }
 }
 #endif

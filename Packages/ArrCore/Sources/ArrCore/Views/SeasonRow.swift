@@ -323,7 +323,7 @@ struct SeasonRow: View {
                         Text("Search \(missing)", bundle: .module)
                             .scaledFont(size: 11, weight: .medium)
                     } else {
-                        Text("Search", bundle: .module)
+                        Text("search.search.button", bundle: .module)
                             .scaledFont(size: 11, weight: .medium)
                     }
                 }
@@ -332,14 +332,14 @@ struct SeasonRow: View {
         .buttonStyle(.bordered)
         .controlSize(.small)
         .disabled(isSearchingSeason)
-        .help(Text("Search", bundle: .module))
+        .help(Text("search.search.button", bundle: .module))
         .confirmationDialog(
-            Text("Search this season?", bundle: .module),
+            Text("detail.searchThisSeason.tooltip", bundle: .module),
             isPresented: $showSearchConfirm,
             titleVisibility: .visible
         ) {
-            Button { performSeasonSearch() } label: { Text("Search", bundle: .module) }
-            Button(role: .cancel) {} label: { Text("Cancel", bundle: .module) }
+            Button { performSeasonSearch() } label: { Text("search.search.button", bundle: .module) }
+            Button(role: .cancel) {} label: { Text("common.cancel.button", bundle: .module) }
         } message: {
             Text("Will query your indexers for every episode in this season — including upgrades for episodes already on disk.", bundle: .module)
         }

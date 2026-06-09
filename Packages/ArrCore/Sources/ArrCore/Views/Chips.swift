@@ -32,7 +32,7 @@ public struct InQueueBadge: View {
     public init() {}
 
     public var body: some View {
-        Text("Queued", bundle: .module)
+        Text("queue.queued.button", bundle: .module)
             .font(.system(size: 9, weight: .semibold))
             .textCase(.lowercase)
             .foregroundStyle(Color.orange)
@@ -79,7 +79,7 @@ public struct InLibraryBadge: View {
     public init() {}
 
     public var body: some View {
-        Text("Library", bundle: .module)
+        Text("search.library.button", bundle: .module)
             .scaledFont(size: 9, weight: .semibold)
             .textCase(.lowercase)
             .foregroundStyle(Color.accentColor)

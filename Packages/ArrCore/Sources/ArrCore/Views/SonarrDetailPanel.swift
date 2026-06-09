@@ -160,7 +160,7 @@ struct SonarrDetailPanel<Header: View>: View {
             }
         } label: {
             HStack(spacing: large ? 5 : 4) {
-                Text(String(format: String(localized: "Season pill %lld", bundle: .module), season.seasonNumber))
+                Text(String(format: String(localized: "detail.seasonLld.label", bundle: .module), season.seasonNumber))
                     .scaledFont(size: large ? 13 : 10, weight: isActive ? .semibold : .medium)
                     .foregroundStyle(isActive ? .primary : .secondary)
                 // Dot colour reflects what the user will see when
@@ -232,7 +232,7 @@ struct SonarrDetailPanel<Header: View>: View {
     @ViewBuilder
     private func seasonsHeader(seasons: [SonarrSeasonInfo]) -> some View {
         HStack(spacing: 8) {
-            Text("Seasons", bundle: .module)
+            Text("detail.seasons.button", bundle: .module)
                 .scaledFont(size: 11, weight: .semibold)
                 .foregroundStyle(.secondary)
                 .textCase(.uppercase)

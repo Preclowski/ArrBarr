@@ -97,8 +97,8 @@ struct UpgradeDiffView: View {
         return VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
                 (comparing
-                    ? Text("Current file", bundle: .module)
-                    : Text("New file", bundle: .module))
+                    ? Text("queue.currentFile.button", bundle: .module)
+                    : Text("queue.newFile.button", bundle: .module))
                     .scaledFont(size: 9, weight: .semibold)
                     .textCase(.uppercase)
                     .tracking(0.5)
@@ -120,7 +120,7 @@ struct UpgradeDiffView: View {
             }
             HStack(spacing: 4) {
                 Image(systemName: "hand.tap.fill").scaledFont(size: 9)
-                Text("Hold to compare", bundle: .module).scaledFont(size: 10)
+                Text("queue.holdToCompare.button", bundle: .module).scaledFont(size: 10)
             }
             .foregroundStyle(.tertiary)
             .opacity(comparing ? 0 : 1)
@@ -176,7 +176,7 @@ struct UpgradeDiffView: View {
                 // Render the integer verbatim — interpolating it straight into
                 // a localized string applies the locale's grouping separator
                 // ("1 250"), which reads as a glitch on a raw score.
-                Text(verbatim: String(localized: "Score", bundle: .module) + " \(score)")
+                Text(verbatim: String(localized: "queue.score.button", bundle: .module) + " \(score)")
                     .scaledFont(size: 10)
                     .foregroundStyle(scoreHighlighted ? .green : .secondary)
             }

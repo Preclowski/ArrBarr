@@ -194,8 +194,8 @@ public struct MediaHeaderCard: View {
         if let onPosterTap {
             Button { onPosterTap(posterURL) } label: { poster }
                 .buttonStyle(.plain)
-                .help(Text("Show poster", bundle: .module))
-                .accessibilityLabel(Text("Show poster", bundle: .module))
+                .help(Text("detail.showPoster.button", bundle: .module))
+                .accessibilityLabel(Text("detail.showPoster.button", bundle: .module))
         } else {
             poster
         }

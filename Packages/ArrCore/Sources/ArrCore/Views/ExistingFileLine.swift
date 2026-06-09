@@ -11,7 +11,7 @@ struct ExistingFileLine: View {
                 Image(systemName: "arrow.up.doc")
                     .scaledFont(size: 9)
                     .foregroundStyle(.indigo)
-                Text("Existing", bundle: .module)
+                Text("search.existing.button", bundle: .module)
                     .scaledFont(size: 10, weight: .semibold)
                     .foregroundStyle(.indigo)
                 if let q = item.existingQuality, !q.isEmpty {

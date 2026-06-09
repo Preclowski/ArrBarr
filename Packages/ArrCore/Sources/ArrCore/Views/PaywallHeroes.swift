@@ -134,7 +134,7 @@ private struct AddTitlePaywallHero: View {
                         .foregroundStyle(.secondary)
                 }
                 Spacer(minLength: 0)
-                Text("Add", bundle: .module)
+                Text("paywall.add.button", bundle: .module)
                     .scaledFont(size: 11, weight: .semibold)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)

@@ -200,7 +200,7 @@ public struct WelcomeView: View {
                 .foregroundStyle(.secondary)
         }
         .buttonStyle(.plain)
-        .help(String(localized: "Close", bundle: .module))
+        .help(String(localized: "settings.close.button", bundle: .module))
         .keyboardShortcut(.cancelAction)
     }
 
@@ -209,7 +209,7 @@ public struct WelcomeView: View {
     private var footer: some View {
         HStack(spacing: 12) {
             if case .firstRun = variant, !isLastPage {
-                Button(String(localized: "Try demo mode", bundle: .module)) { onTryDemo() }
+                Button(String(localized: "onboarding.tryDemoMode.button", bundle: .module)) { onTryDemo() }
                     #if os(macOS)
                     .buttonStyle(.link)
                     #else
@@ -227,8 +227,8 @@ public struct WelcomeView: View {
     }
 
     private var primaryButtonTitle: String {
-        if !isLastPage { return String(localized: "Continue", bundle: .module) }
-        return String(localized: "Done", bundle: .module)
+        if !isLastPage { return String(localized: "queue.continue.button", bundle: .module) }
+        return String(localized: "onboarding.done.button", bundle: .module)
     }
 
     private func onPrimary() {
@@ -362,8 +362,8 @@ private struct MenuBarIllustration: View {
                 .scaledFont(size: 9, weight: .semibold)
                 .foregroundStyle(.primary)
             Text(verbatim: "ArrBarr").scaledFont(size: 9, weight: .semibold)
-            Text("File", bundle: .module).scaledFont(size: 9).foregroundStyle(.primary.opacity(0.85))
-            Text("View", bundle: .module).scaledFont(size: 9).foregroundStyle(.primary.opacity(0.85))
+            Text("queue.file.button", bundle: .module).scaledFont(size: 9).foregroundStyle(.primary.opacity(0.85))
+            Text("onboarding.view.button", bundle: .module).scaledFont(size: 9).foregroundStyle(.primary.opacity(0.85))
             Spacer()
             Image(systemName: "wifi").scaledFont(size: 9).foregroundStyle(.secondary)
             Image(systemName: "battery.100percent").scaledFont(size: 9).foregroundStyle(.secondary)
@@ -487,7 +487,7 @@ private struct TonightIllustration: View {
                 .scaledFont(size: 12, weight: .semibold)
                 .foregroundStyle(.tint)
                 .symbolRenderingMode(.hierarchical)
-            Text("Tonight", bundle: .module)
+            Text("onboarding.tonight.button", bundle: .module)
                 .scaledFont(size: 11, weight: .semibold)
                 .foregroundStyle(.primary)
             Text(verbatim: "2")

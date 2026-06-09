@@ -351,7 +351,7 @@ public struct SearchAddPanel: View {
 
     private var sonarrForm: some View {
         VStack(alignment: .leading, spacing: 0) {
-            sectionLabel("Library")
+            sectionLabel("search.library.button")
             // Match the 14pt horizontal inset every other form here uses
             // (radarrForm / whisparrForm / lidarrForm). Without it the
             // picker capsules touch the popover edge while the section
@@ -377,7 +377,7 @@ public struct SearchAddPanel: View {
             }
             .padding(.horizontal, 14)
 
-            sectionLabel("Monitor")
+            sectionLabel("search.monitor.button")
             monitorChips
         }
         .padding(.bottom, 4)

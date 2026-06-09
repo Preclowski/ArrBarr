@@ -120,7 +120,7 @@ struct QueueTabContent: View {
     private var searchModeHeader: some View {
         HStack(spacing: 6) {
             FloatingBackButton { queueFilter = "" }
-            Text("Searching", bundle: .module)
+            Text("queue.searching.button", bundle: .module)
                 .scaledFont(size: 15, weight: .semibold)
                 .foregroundStyle(.primary)
             Spacer()
@@ -191,7 +191,7 @@ struct QueueTabContent: View {
             .frame(width: 15, height: 15)
             .animation(.easeInOut(duration: 0.12), value: showSpinner)
             TextField("", text: $queueFilter, prompt:
-                Text("Filter queue", bundle: .module)
+                Text("queue.filterQueue.button", bundle: .module)
             )
             .scaledFont(size: 14)
             .textFieldStyle(.plain)
@@ -203,7 +203,7 @@ struct QueueTabContent: View {
                         .foregroundStyle(.tertiary)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(Text("Clear filter", bundle: .module))
+                .accessibilityLabel(Text("queue.clearFilter.button", bundle: .module))
             }
         }
         .animation(.easeInOut(duration: 0.18), value: isFiltering)
@@ -285,7 +285,7 @@ struct QueueTabContent: View {
             Image(systemName: "moon.stars.fill")
                 .scaledFont(size: 11)
                 .foregroundStyle(.purple)
-            Text("Next week", bundle: .module)
+            Text("queue.nextWeek.button", bundle: .module)
                 .scaledFont(size: 11, weight: .semibold)
                 .foregroundStyle(.secondary)
         }
@@ -307,7 +307,7 @@ struct QueueTabContent: View {
             scheduleBannerCollapse()
         } label: {
             HStack(spacing: 3) {
-                Text("Show more", bundle: .module)
+                Text("queue.showMore.button", bundle: .module)
                     .scaledFont(size: 10)
                 Image(systemName: "chevron.down")
                     .scaledFont(size: 9, weight: .medium)

@@ -17,7 +17,7 @@ struct ApiKeyTestButton: View {
     var body: some View {
         HStack(spacing: 8) {
             Button { Task { await run() } } label: {
-                Text("Test Connection", bundle: .module)
+                Text("queue.testConnection.button", bundle: .module)
             }
             .modifier(GlassButtonStyle())
             .controlSize(.small)

@@ -49,7 +49,7 @@ public struct HistoryView: View {
         // just scattered metadata.
         HStack(spacing: 6) {
             FloatingBackButton(action: onClose)
-            Text("History", bundle: .module)
+            Text("discover.history.button", bundle: .module)
                 .scaledFont(size: 15, weight: .semibold)
                 .foregroundStyle(.primary)
             Spacer()
@@ -84,7 +84,7 @@ public struct HistoryView: View {
                 .foregroundStyle(.orange)
                 .padding(12)
         } else if shownItems.isEmpty {
-            Text("No history", bundle: .module)
+            Text("common.noHistory.button", bundle: .module)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -237,14 +237,14 @@ public struct HistoryRowView: View {
         if let src = item.sourceTitle { lines.append(src) }
         lines.append("")
         lines.append(item.date.formatted(date: .abbreviated, time: .shortened))
-        if let q = item.quality { lines.append("\(String(localized: "Quality:", bundle: .module)) \(q)") }
+        if let q = item.quality { lines.append("\(String(localized: "history.quality.button", bundle: .module)) \(q)") }
         if item.customFormatScore != 0 {
             let sign = item.customFormatScore > 0 ? "+" : ""
-            lines.append("\(String(localized: "Score:", bundle: .module)) \(sign)\(item.customFormatScore)")
+            lines.append("\(String(localized: "history.score.button", bundle: .module)) \(sign)\(item.customFormatScore)")
         }
         if !item.customFormats.isEmpty {
             let tags = item.customFormats.map { "[\($0)]" }.joined()
-            lines.append("\(String(localized: "Custom formats:", bundle: .module)) \(tags)")
+            lines.append("\(String(localized: "history.customFormats.button", bundle: .module)) \(tags)")
         }
         return lines.joined(separator: "\n")
     }

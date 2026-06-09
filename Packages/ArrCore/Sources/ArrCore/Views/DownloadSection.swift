@@ -261,11 +261,11 @@ struct DownloadSection: View {
                             .foregroundStyle(.tertiary)
                             .rotationEffect(.degrees(listExpanded ? 90 : 0))
                     }
-                    Text("In queue", bundle: .module)
+                    Text("queue.inQueue.button", bundle: .module)
                         .scaledFont(size: 11, weight: .semibold)
                         .foregroundStyle(.secondary)
                     SeparatorDot()
-                    Text(String(format: String(localized: "%lld downloads", bundle: .module), items.count))
+                    Text(String(format: String(localized: "unit.downloads", bundle: .module), items.count))
                         .scaledFont(size: 11)
                         .foregroundStyle(.secondary)
                     Spacer()

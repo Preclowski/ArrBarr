@@ -48,8 +48,8 @@ struct PauseResumeButton: View {
                     Image(systemName: isPaused ? "play.fill" : "pause.fill")
                         .scaledFont(size: Self.iconSize, weight: .semibold)
                     Text(isPaused
-                            ? String(localized: "Resume download", bundle: .module)
-                            : String(localized: "Pause download", bundle: .module))
+                            ? String(localized: "queue.resumeDownload.button", bundle: .module)
+                            : String(localized: "detail.pauseDownload.button", bundle: .module))
                         .scaledFont(size: Self.labelSize, weight: .semibold)
                 }
             }

@@ -183,7 +183,7 @@ private struct PickCard: View {
                 onRemove(item)
             } label: {
                 Label {
-                    Text("Remove from picks", bundle: .module)
+                    Text("discover.removeFromPicks.button", bundle: .module)
                 } icon: {
                     Image(systemName: "trash")
                 }

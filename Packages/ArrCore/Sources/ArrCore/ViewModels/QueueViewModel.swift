@@ -449,7 +449,7 @@ public final class QueueViewModel {
         // .map(NeedsYouItem.init)` chain: that chain was the single most
         // expensive expression to type-check in the whole package
         // (~250 ms). The loop is equivalent and effectively free.
-        let problemLabel = String(localized: "Service problem", bundle: .module)
+        let problemLabel = String(localized: "queue.serviceProblem.button", bundle: .module)
         var result: [NeedsYouItem] = []
         for source in QueueItem.Source.allCases {
             // Queue items that need manual intervention.
@@ -647,7 +647,7 @@ public struct NeedsYouItem: Identifiable, Equatable {
         self.source = item.source
         self.title = item.title
         self.subtitle = item.status == .warning
-            ? String(localized: "Manual import required", bundle: .module)
+            ? String(localized: "queue.manualImportRequired.button", bundle: .module)
             : item.status.displayName
         self.detailLines = item.statusMessages
     }

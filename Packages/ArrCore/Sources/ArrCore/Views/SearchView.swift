@@ -161,7 +161,7 @@ public struct SearchView: View {
                     // library" is a distinction users don't think in.
                     // Per-source copy ("No movies / series / artists")
                     // was clutter in a 340pt-wide popover.
-                    Text("No matches.", bundle: .module)
+                    Text("search.noMatches.tooltip", bundle: .module)
                         .font(.caption)
                         .foregroundStyle(.tertiary)
                         .padding(.horizontal, 12)
@@ -242,7 +242,7 @@ public struct SearchView: View {
                 .scaledFont(size: 15, weight: .medium)
                 .foregroundStyle(.tertiary)
             TextField(
-                String(localized: "Search movies and TV series", bundle: .module),
+                String(localized: "search.searchMoviesAndTv.label", bundle: .module),
                 text: $viewModel.query
             )
             .scaledFont(size: 14)
@@ -255,7 +255,7 @@ public struct SearchView: View {
                         .foregroundStyle(.tertiary)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(Text("Clear search", bundle: .module))
+                .accessibilityLabel(Text("search.clearSearch.button", bundle: .module))
             }
         }
         .padding(.horizontal, 14)
@@ -268,7 +268,7 @@ public struct SearchView: View {
             Image(systemName: "magnifyingglass")
                 .scaledFont(size: 26, weight: .light)
                 .foregroundStyle(.tertiary)
-            Text("Start typing to search across Radarr and Sonarr.", bundle: .module)
+            Text("search.startTypingToSearch.tooltip", bundle: .module)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)

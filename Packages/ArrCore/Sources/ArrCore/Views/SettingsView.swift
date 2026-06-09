@@ -109,10 +109,10 @@ public struct SettingsView: View {
         // matches, and the scale silently sticks at whatever it was
         // (no compile error, no runtime warning, just nothing changes).
         Picker(selection: $configStore.fontScale) {
-            Text("Default", bundle: .module).tag(1.0 as Double)
-            Text("Larger", bundle: .module).tag(1.10 as Double)
-            Text("Largest", bundle: .module).tag(1.20 as Double)
-        } label: { Text("Text size", bundle: .module) }
+            Text("settings.default.button", bundle: .module).tag(1.0 as Double)
+            Text("settings.larger.button", bundle: .module).tag(1.10 as Double)
+            Text("settings.largest.button", bundle: .module).tag(1.20 as Double)
+        } label: { Text("settings.textSize.button", bundle: .module) }
     }
 
     /// Light / Dark / System appearance preset. Applied via
@@ -120,10 +120,10 @@ public struct SettingsView: View {
     @ViewBuilder
     private var themePicker: some View {
         Picker(selection: $configStore.appearance) {
-            Text("System", bundle: .module).tag("system")
-            Text("Light", bundle: .module).tag("light")
-            Text("Dark", bundle: .module).tag("dark")
-        } label: { Text("Theme", bundle: .module) }
+            Text("settings.system.button", bundle: .module).tag("system")
+            Text("settings.light.button", bundle: .module).tag("light")
+            Text("settings.dark.button", bundle: .module).tag("dark")
+        } label: { Text("settings.theme.button", bundle: .module) }
     }
 
     /// Shared "AI" section. One master toggle at the top kills the whole
@@ -131,8 +131,8 @@ public struct SettingsView: View {
     @ViewBuilder
     private var aiSection: some View {
         Section {
-            Toggle(isOn: $configStore.aiEnabled) { Text("Enable AI", bundle: .module) }
-        } header: { Text("Assistant", bundle: .module) }
+            Toggle(isOn: $configStore.aiEnabled) { Text("settings.enableAi.button", bundle: .module) }
+        } header: { Text("settings.assistant.button", bundle: .module) }
         if configStore.aiEnabled {
             Section {
                 Picker(selection: $configStore.chatProvider) {
@@ -142,14 +142,14 @@ public struct SettingsView: View {
                     }) { p in
                         Text(p.displayName).tag(p)
                     }
-                } label: { Text("AI provider", bundle: .module) }
+                } label: { Text("settings.aiProvider.button", bundle: .module) }
                 if configStore.chatProvider == .openai {
                     TextField(text: $configStore.openai.baseURL,
                               prompt: Text(verbatim: "https://api.openai.com/v1")) {
-                        Text("API base URL", bundle: .module)
+                        Text("settings.apiBaseUrl.button", bundle: .module)
                     }
                     .urlField()
-                    SecureField(text: $configStore.openai.apiKey) { Text("API key", bundle: .module) }
+                    SecureField(text: $configStore.openai.apiKey) { Text("settings.apiKey2.button", bundle: .module) }
                         .apiKeyField()
                     // LabeledContent keeps the "Model" label visible next to
                     // the value — a bare Form TextField hides its label once
@@ -165,7 +165,7 @@ public struct SettingsView: View {
                         #endif
                         .technicalField()
                     } label: {
-                        Text("Model", bundle: .module)
+                        Text("settings.model.button", bundle: .module)
                     }
                     if !configStore.openai.apiKey.isEmpty && !configStore.openai.baseURL.isEmpty {
                         ApiKeyTestButton {
@@ -181,27 +181,27 @@ public struct SettingsView: View {
                         .font(.caption)
                         .foregroundStyle(.orange)
                     }
-                    Text("The model must support tool calling, and results vary by model. Library items may be sent to the model to tailor recommendations. Tip: free models on OpenRouter work well.", bundle: .module)
+                    Text("settings.theModelMustSupport.tooltip", bundle: .module)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
                 if configStore.chatProvider == .foundationModels {
                     #if os(macOS)
                     if #unavailable(macOS 26.0) {
-                        Label { Text("Apple Intelligence requires macOS 26.", bundle: .module) } icon: { Image(systemName: "exclamationmark.triangle") }
+                        Label { Text("settings.appleIntelligenceRequiresMacos.tooltip", bundle: .module) } icon: { Image(systemName: "exclamationmark.triangle") }
                             .foregroundStyle(.secondary)
                             .font(.caption)
                     }
                     #else
                     if #unavailable(iOS 26.0) {
-                        Label { Text("Apple Intelligence requires iOS 26.", bundle: .module) } icon: { Image(systemName: "exclamationmark.triangle") }
+                        Label { Text("settings.appleIntelligenceRequiresIos.tooltip", bundle: .module) } icon: { Image(systemName: "exclamationmark.triangle") }
                             .foregroundStyle(.secondary)
                             .font(.caption)
                     }
                     #endif
                 }
                 if configStore.whisparr.isConfigured {
-                    Toggle(isOn: $configStore.aiKnowsAboutWhisparr) { Text("AI knows about Whisparr", bundle: .module) }
+                    Toggle(isOn: $configStore.aiKnowsAboutWhisparr) { Text("settings.aiKnowsAboutWhisparr.button", bundle: .module) }
                 }
             }
             Section {
@@ -222,11 +222,11 @@ public struct SettingsView: View {
                     }
                 }
             } header: {
-                Text("Discovery", bundle: .module)
+                Text("settings.discovery.button", bundle: .module)
             } footer: {
                 Text(configStore.tmdbEnabled
-                     ? String(localized: "Chat can search by actor, genre, and decade.", bundle: .module)
-                     : String(localized: "Add a TMDB key to let chat search by actor, genre, and decade.", bundle: .module))
+                     ? String(localized: "settings.chatCanSearchBy.tooltip", bundle: .module)
+                     : String(localized: "settings.addATmdbKey.tooltip", bundle: .module))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -319,7 +319,7 @@ public struct SettingsView: View {
                         .contentShape(Rectangle())
                 }
                 .disabled(!canGoBack)
-                .help(Text("Back", bundle: .module))
+                .help(Text("settings.back.button", bundle: .module))
                 Divider().frame(height: 15)
                 Button { goForward() } label: {
                     Image(systemName: "chevron.forward")
@@ -370,7 +370,7 @@ public struct SettingsView: View {
             Image(systemName: "magnifyingglass")
                 .foregroundStyle(.secondary)
                 .font(.system(size: 13))
-            TextField(text: $macSearch) { Text("Search", bundle: .module) }
+            TextField(text: $macSearch) { Text("search.search.button", bundle: .module) }
                 .textFieldStyle(.plain)
                 .font(.system(size: 13))
             if !macSearch.isEmpty {
@@ -392,23 +392,23 @@ public struct SettingsView: View {
     /// Download clients are hubs that open a card list in the detail.
     @ViewBuilder
     private var structuredSidebar: some View {
-        Label { Text("General", bundle: .module) } icon: { Image(systemName: "gearshape") }
+        Label { Text("settings.general.button", bundle: .module) } icon: { Image(systemName: "gearshape") }
             .tag(SettingsSection.general)
-        Label { Text("Media Managers", bundle: .module) } icon: { Image(systemName: "server.rack") }
+        Label { Text("settings.mediaManagers.button", bundle: .module) } icon: { Image(systemName: "server.rack") }
             .tag(SettingsSection.mediaManagers)
-        Label { Text("Download clients", bundle: .module) } icon: { Image(systemName: "arrow.down.circle") }
+        Label { Text("settings.downloadClients.button", bundle: .module) } icon: { Image(systemName: "arrow.down.circle") }
             .tag(SettingsSection.downloadClients)
-        Label { Text("Assistant", bundle: .module) } icon: { Image(systemName: "sparkles") }
+        Label { Text("settings.assistant.button", bundle: .module) } icon: { Image(systemName: "sparkles") }
             .tag(SettingsSection.assistant)
-        Label { Text("MCP", bundle: .module) } icon: { Image(systemName: "point.3.connected.trianglepath.dotted") }
+        Label { Text("settings.mcp.label", bundle: .module) } icon: { Image(systemName: "point.3.connected.trianglepath.dotted") }
             .tag(SettingsSection.mcp)
         if AppCapabilities.isAppStore {
-            Label { Text("iCloud", bundle: .module) } icon: { Image(systemName: "icloud") }
+            Label { Text("settings.icloud.label", bundle: .module) } icon: { Image(systemName: "icloud") }
                 .tag(SettingsSection.icloud)
         }
-        Label { Text("Siri & Shortcuts", bundle: .module) } icon: { Image(systemName: "mic.fill") }
+        Label { Text("settings.siriShortcuts.button", bundle: .module) } icon: { Image(systemName: "mic.fill") }
             .tag(SettingsSection.siri)
-        Label { Text("About", bundle: .module) } icon: { Image(systemName: "info.circle") }
+        Label { Text("settings.about.button", bundle: .module) } icon: { Image(systemName: "info.circle") }
             .tag(SettingsSection.about)
     }
 
@@ -426,23 +426,23 @@ public struct SettingsView: View {
 
     private var sidebarEntries: [SidebarEntry] {
         var items: [SidebarEntry] = [
-            .init(section: .general, title: String(localized: "General", bundle: .module), kind: nil, systemImage: "gearshape"),
-            .init(section: .mediaManagers, title: String(localized: "Media Managers", bundle: .module), kind: nil, systemImage: "server.rack"),
-            .init(section: .downloadClients, title: String(localized: "Download clients", bundle: .module), kind: nil, systemImage: "arrow.down.circle"),
+            .init(section: .general, title: String(localized: "settings.general.button", bundle: .module), kind: nil, systemImage: "gearshape"),
+            .init(section: .mediaManagers, title: String(localized: "settings.mediaManagers.button", bundle: .module), kind: nil, systemImage: "server.rack"),
+            .init(section: .downloadClients, title: String(localized: "settings.downloadClients.button", bundle: .module), kind: nil, systemImage: "arrow.down.circle"),
         ]
         items += (mediaManagerSpecs + downloadClientSpecs).map {
             .init(section: .service($0.kind), title: $0.title, kind: $0.kind, systemImage: "")
         }
         items += [
-            .init(section: .assistant, title: String(localized: "Assistant", bundle: .module), kind: nil, systemImage: "sparkles"),
-            .init(section: .mcp, title: String(localized: "MCP", bundle: .module), kind: nil, systemImage: "point.3.connected.trianglepath.dotted"),
+            .init(section: .assistant, title: String(localized: "settings.assistant.button", bundle: .module), kind: nil, systemImage: "sparkles"),
+            .init(section: .mcp, title: String(localized: "settings.mcp.label", bundle: .module), kind: nil, systemImage: "point.3.connected.trianglepath.dotted"),
         ]
         if AppCapabilities.isAppStore {
-            items.append(.init(section: .icloud, title: String(localized: "iCloud", bundle: .module), kind: nil, systemImage: "icloud"))
+            items.append(.init(section: .icloud, title: String(localized: "settings.icloud.label", bundle: .module), kind: nil, systemImage: "icloud"))
         }
         items += [
-            .init(section: .siri, title: String(localized: "Siri & Shortcuts", bundle: .module), kind: nil, systemImage: "mic.fill"),
-            .init(section: .about, title: String(localized: "About", bundle: .module), kind: nil, systemImage: "info.circle"),
+            .init(section: .siri, title: String(localized: "settings.siriShortcuts.button", bundle: .module), kind: nil, systemImage: "mic.fill"),
+            .init(section: .about, title: String(localized: "settings.about.button", bundle: .module), kind: nil, systemImage: "info.circle"),
         ]
         return items
     }
@@ -500,15 +500,15 @@ public struct SettingsView: View {
     /// Window title for the selected section.
     private func navTitle(for section: SettingsSection) -> Text {
         switch section {
-        case .general: return Text("General", bundle: .module)
-        case .mediaManagers: return Text("Media Managers", bundle: .module)
-        case .downloadClients: return Text("Download clients", bundle: .module)
+        case .general: return Text("settings.general.button", bundle: .module)
+        case .mediaManagers: return Text("settings.mediaManagers.button", bundle: .module)
+        case .downloadClients: return Text("settings.downloadClients.button", bundle: .module)
         case .service(let kind): return Text(verbatim: kind.displayName)
-        case .assistant: return Text("Assistant", bundle: .module)
-        case .mcp: return Text("MCP", bundle: .module)
-        case .icloud: return Text("iCloud", bundle: .module)
-        case .siri: return Text("Siri & Shortcuts", bundle: .module)
-        case .about: return Text("About", bundle: .module)
+        case .assistant: return Text("settings.assistant.button", bundle: .module)
+        case .mcp: return Text("settings.mcp.label", bundle: .module)
+        case .icloud: return Text("settings.icloud.label", bundle: .module)
+        case .siri: return Text("settings.siriShortcuts.button", bundle: .module)
+        case .about: return Text("settings.about.button", bundle: .module)
         }
     }
 
@@ -612,26 +612,26 @@ public struct SettingsView: View {
                 LabeledContent {
                     Text(Self.versionString).foregroundStyle(.secondary)
                 } label: {
-                    Text("Version", bundle: .module)
+                    Text("settings.version.button", bundle: .module)
                 }
                 Link(destination: URL(string: "https://github.com/Preclowski/ArrBarr")!) {
                     Label { Text(verbatim: "GitHub") } icon: { Image(systemName: "link") }
                 }
                 Link(destination: URL(string: "https://arrbarr.app")!) {
-                    Label { Text("Website", bundle: .module) } icon: { Image(systemName: "globe") }
+                    Label { Text("settings.website.button", bundle: .module) } icon: { Image(systemName: "globe") }
                 }
                 Link(destination: URL(string: "https://arrbarr.app/privacy-policy")!) {
-                    Label { Text("Privacy Policy", bundle: .module) } icon: { Image(systemName: "hand.raised") }
+                    Label { Text("settings.privacyPolicy.button", bundle: .module) } icon: { Image(systemName: "hand.raised") }
                 }
                 Text(verbatim: "Made by 🥨")
                     .foregroundStyle(.secondary)
-            } header: { Text("About", bundle: .module) }
+            } header: { Text("settings.about.button", bundle: .module) }
             Section {
                 Link(destination: URL(string: "https://dashboardicons.com")!) {
                     Label { Text(verbatim: "Dashboard Icons — CC BY 4.0") } icon: { Image(systemName: "paintpalette") }
                 }
-            } header: { Text("Acknowledgements", bundle: .module) } footer: {
-                Text("Service icons by Dashboard Icons, licensed CC BY 4.0 (recoloured for the UI).", bundle: .module)
+            } header: { Text("settings.acknowledgements.button", bundle: .module) } footer: {
+                Text("settings.serviceIconsByDashboard.tooltip", bundle: .module)
             }
         }
         .formStyle(.grouped)
@@ -674,7 +674,7 @@ public struct SettingsView: View {
                 SiriShortcutsSettingsContent()
             }
         }
-        .navigationTitle(Text("Siri & Shortcuts", bundle: .module))
+        .navigationTitle(Text("settings.siriShortcuts.button", bundle: .module))
         .navigationBarTitleDisplayMode(.inline)
     }
 
@@ -750,7 +750,7 @@ public struct SettingsView: View {
 
     private var iosAIForm: some View {
         Form { aiSection }
-            .navigationTitle(Text("Assistant", bundle: .module))
+            .navigationTitle(Text("settings.assistant.button", bundle: .module))
             .navigationBarTitleDisplayMode(.inline)
     }
 
@@ -766,7 +766,7 @@ public struct SettingsView: View {
                 .onMove(perform: moveArrOrder)
             } header: {
                 HStack {
-                    Text("Section order", bundle: .module)
+                    Text("settings.sectionOrder.button", bundle: .module)
                     Spacer()
                     EditButton()
                         .textCase(nil)
@@ -781,7 +781,7 @@ public struct SettingsView: View {
             // background, so there's no configurable background interval).
             // Both are forced in ConfigStore for iOS.
         }
-        .navigationTitle(Text("General", bundle: .module))
+        .navigationTitle(Text("settings.general.button", bundle: .module))
         .navigationBarTitleDisplayMode(.inline)
     }
 
@@ -803,7 +803,7 @@ public struct SettingsView: View {
                     }
                 } label: {
                     HStack {
-                        Text("Version", bundle: .module)
+                        Text("settings.version.button", bundle: .module)
                             .foregroundStyle(.primary)
                         Spacer()
                         Text(Self.versionString)
@@ -815,23 +815,23 @@ public struct SettingsView: View {
                     Label { Text(verbatim: "GitHub") } icon: { Image(systemName: "link") }
                 }
                 Link(destination: URL(string: "https://arrbarr.app")!) {
-                    Label { Text("Website", bundle: .module) } icon: { Image(systemName: "globe") }
+                    Label { Text("settings.website.button", bundle: .module) } icon: { Image(systemName: "globe") }
                 }
                 Link(destination: URL(string: "https://arrbarr.app/privacy-policy")!) {
-                    Label { Text("Privacy Policy", bundle: .module) } icon: { Image(systemName: "hand.raised") }
+                    Label { Text("settings.privacyPolicy.button", bundle: .module) } icon: { Image(systemName: "hand.raised") }
                 }
                 Text(verbatim: "Made by 🥨")
                     .foregroundStyle(.secondary)
-            } header: { Text("About", bundle: .module) }
+            } header: { Text("settings.about.button", bundle: .module) }
             Section {
                 Link(destination: URL(string: "https://dashboardicons.com")!) {
                     Label { Text(verbatim: "Dashboard Icons — CC BY 4.0") } icon: { Image(systemName: "paintpalette") }
                 }
-            } header: { Text("Acknowledgements", bundle: .module) } footer: {
-                Text("Service icons by Dashboard Icons, licensed CC BY 4.0 (recoloured for the UI).", bundle: .module)
+            } header: { Text("settings.acknowledgements.button", bundle: .module) } footer: {
+                Text("settings.serviceIconsByDashboard.tooltip", bundle: .module)
             }
         }
-        .navigationTitle(Text("About", bundle: .module))
+        .navigationTitle(Text("settings.about.button", bundle: .module))
         .navigationBarTitleDisplayMode(.inline)
     }
     #endif
@@ -851,16 +851,16 @@ public struct SettingsView: View {
                     let committed = onSetDemoMode?(newValue) ?? false
                     if committed { demoModeOn = newValue }
                 }
-            )) { Text("Demo mode", bundle: .module) }
+            )) { Text("settings.demoMode.button", bundle: .module) }
             if demoModeOn {
                 if let onTestNotification {
-                    Button { onTestNotification() } label: { Text("Send test notification", bundle: .module) }
+                    Button { onTestNotification() } label: { Text("settings.sendTestNotification.button", bundle: .module) }
                 }
                 if let onShowWelcome {
-                    Button { onShowWelcome() } label: { Text("Show welcome screen", bundle: .module) }
+                    Button { onShowWelcome() } label: { Text("settings.showWelcomeScreen.button", bundle: .module) }
                 }
             }
-        } header: { Text("Developer options", bundle: .module) }
+        } header: { Text("settings.developerOptions.button", bundle: .module) }
     }
 
     // MARK: - Service roster (shared data)
@@ -925,18 +925,18 @@ public struct SettingsView: View {
     private var generalPane: some View {
         Form {
             Section {
-                Toggle(isOn: $configStore.launchAtLogin) { Text("Launch at login", bundle: .module) }
+                Toggle(isOn: $configStore.launchAtLogin) { Text("settings.launchAtLogin.button", bundle: .module) }
                 #if os(macOS)
                 Toggle(isOn: $configStore.detachedWindow) {
-                    Text("Show in Dock as a window", bundle: .module)
-                    Text("Detach from the menu bar into a standalone window with a Dock icon. Closing the window returns it to the Dock.", bundle: .module)
+                    Text("settings.showInDockAs.button", bundle: .module)
+                    Text("settings.detachFromTheMenu.tooltip", bundle: .module)
                 }
                 #endif
                 Picker(selection: $configStore.appLanguage) {
                     ForEach(ConfigStore.appLanguageOptions, id: \.code) { opt in
                         Text(LocalizedStringKey(opt.label)).tag(opt.code)
                     }
-                } label: { Text("Language", bundle: .module) }
+                } label: { Text("settings.language.button", bundle: .module) }
                 themePicker
                 textSizePicker
                 notificationSoundPicker
@@ -945,19 +945,19 @@ public struct SettingsView: View {
                 // upcoming-window picker gone there was only one
                 // toggle left, which read as orphaned. App-level
                 // toggles all sit under one heading now.
-                Toggle(isOn: $configStore.showIndexerIssues) { Text("Show indexer issues warning", bundle: .module) }
+                Toggle(isOn: $configStore.showIndexerIssues) { Text("settings.showIndexerIssuesWarning.label", bundle: .module) }
             } header: {
-                Text("Application", bundle: .module)
+                Text("settings.application.button", bundle: .module)
             } footer: {
                 if languageChanged {
                     #if os(macOS)
                     HStack(spacing: 8) {
-                        Text("Restart required to apply the new language.", bundle: .module)
-                        Button { relaunchApp() } label: { Text("Relaunch", bundle: .module) }
+                        Text("settings.restartRequiredToApply.tooltip", bundle: .module)
+                        Button { relaunchApp() } label: { Text("settings.relaunch.button", bundle: .module) }
                             .controlSize(.small)
                     }
                     #else
-                    Text("Quit and reopen the app to apply the new language.", bundle: .module)
+                    Text("settings.quitAndReopenThe.tooltip", bundle: .module)
                     #endif
                 }
             }
@@ -966,19 +966,19 @@ public struct SettingsView: View {
                     arrOrderRow(key: key)
                 }
                 .onMove(perform: moveArrOrder)
-            } header: { Text("Section order", bundle: .module) }
+            } header: { Text("settings.sectionOrder.button", bundle: .module) }
             Section {
                 Picker(selection: $configStore.foregroundInterval) {
                     ForEach(ConfigStore.foregroundIntervalOptions, id: \.self) { interval in
                         Text(Self.formatInterval(interval)).tag(interval)
                     }
-                } label: { Text("Popover open", bundle: .module) }
+                } label: { Text("settings.popoverOpen.button", bundle: .module) }
                 Picker(selection: $configStore.backgroundInterval) {
                     ForEach(ConfigStore.backgroundIntervalOptions, id: \.self) { interval in
                         Text(Self.formatInterval(interval)).tag(interval)
                     }
-                } label: { Text("Background", bundle: .module) }
-            } header: { Text("Refresh Interval", bundle: .module) }
+                } label: { Text("settings.background.button", bundle: .module) }
+            } header: { Text("settings.refreshInterval.button", bundle: .module) }
             // Developer/Demo controls moved to the About pane; Siri & Shortcuts
             // is now its own sidebar row (see siriPane).
         }
@@ -994,21 +994,21 @@ public struct SettingsView: View {
     private var notificationSoundPicker: some View {
         #if os(macOS)
         Picker(selection: $configStore.notificationSoundName) {
-            Text("Default", bundle: .module).tag("")
-            Text("None", bundle: .module).tag(ConfigStore.silentSoundName)
+            Text("settings.default.button", bundle: .module).tag("")
+            Text("search.none.button", bundle: .module).tag(ConfigStore.silentSoundName)
             Divider()
             ForEach(Self.systemSoundNames, id: \.self) { name in
                 Text(name).tag(name)
             }
         } label: {
             HStack(spacing: 6) {
-                Text("Notification sound", bundle: .module)
+                Text("settings.notificationSound.button", bundle: .module)
                 Button { Self.previewSound(named: configStore.notificationSoundName) } label: {
                     Image(systemName: "play.circle")
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(.secondary)
-                .help(Text("Play", bundle: .module))
+                .help(Text("settings.play.button", bundle: .module))
             }
         }
         .onChange(of: configStore.notificationSoundName) { _, newValue in
@@ -1111,7 +1111,7 @@ public struct SettingsView: View {
 
     private static func formatInterval(_ seconds: TimeInterval) -> String {
         if seconds == 0 {
-            return String(localized: "Never", bundle: .module)
+            return String(localized: "settings.never.button", bundle: .module)
         } else if seconds < 60 {
             return "\(Int(seconds))s"
         } else {
@@ -1121,11 +1121,11 @@ public struct SettingsView: View {
 
     private static func formatTonight(hours: Int) -> String {
         if hours < 24 {
-            return String(format: String(localized: "%lld hours", bundle: .module), hours)
+            return String(format: String(localized: "unit.hours", bundle: .module), hours)
         }
         let days = hours / 24
-        if days == 1 { return String(localized: "24 hours", bundle: .module) }
-        return String(format: String(localized: "%lld days", bundle: .module), days)
+        if days == 1 { return String(localized: "settings.twentyFourHours.label", bundle: .module) }
+        return String(format: String(localized: "unit.days", bundle: .module), days)
     }
 }
 
@@ -1138,7 +1138,7 @@ private struct ProLockOverlay: View {
             VStack(spacing: 8) {
                 Image(systemName: "lock.fill").font(.title2).foregroundStyle(.secondary)
                 Button { store.gate(feature) } label: {
-                    Text("Unlock ArrBarr Pro", bundle: .module)
+                    Text("settings.unlockArrbarrPro.button", bundle: .module)
                 }
                 .buttonStyle(.borderedProminent)
             }

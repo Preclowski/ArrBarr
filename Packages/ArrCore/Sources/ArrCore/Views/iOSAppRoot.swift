@@ -30,13 +30,13 @@ public struct iOSAppRoot: View {
     public var body: some View {
         TabView {
             NavigationStack { QueueTab(viewModel: viewModel) }
-                .tabItem { Label { Text("Queue", bundle: .module) } icon: { Image(systemName: "arrow.down.circle") } }
+                .tabItem { Label { Text("paywall.queue.button", bundle: .module) } icon: { Image(systemName: "arrow.down.circle") } }
 
             NavigationStack { UpcomingTab(viewModel: viewModel) }
-                .tabItem { Label { Text("Upcoming", bundle: .module) } icon: { Image(systemName: "calendar") } }
+                .tabItem { Label { Text("queue.upcoming.button", bundle: .module) } icon: { Image(systemName: "calendar") } }
 
             NavigationStack { HistoryTab(viewModel: viewModel) }
-                .tabItem { Label { Text("History", bundle: .module) } icon: { Image(systemName: "clock.arrow.circlepath") } }
+                .tabItem { Label { Text("discover.history.button", bundle: .module) } icon: { Image(systemName: "clock.arrow.circlepath") } }
 
             if configStore.aiConfigured {
                 NavigationStack {
@@ -48,7 +48,7 @@ public struct iOSAppRoot: View {
                 }
                 .tabItem {
                     Label {
-                        Text("Chat", bundle: .module)
+                        Text("paywall.chat.button", bundle: .module)
                     } icon: {
                         Image(systemName: storeManager.isPro ? "sparkles" : "lock.fill")
                     }
@@ -56,7 +56,7 @@ public struct iOSAppRoot: View {
             }
 
             NavigationStack { SettingsTab(viewModel: viewModel) }
-                .tabItem { Label { Text("Settings", bundle: .module) } icon: { Image(systemName: "gearshape") } }
+                .tabItem { Label { Text("common.settings.button", bundle: .module) } icon: { Image(systemName: "gearshape") } }
         }
         .environmentObject(configStore)
         .fullScreenCover(isPresented: Binding(
@@ -113,8 +113,8 @@ private struct ChatLockedPlaceholder: View {
     var body: some View {
         VStack(spacing: 12) {
             Image(systemName: "lock.fill").font(.largeTitle).foregroundStyle(.secondary)
-            Text("Chat is a Pro feature", bundle: .module).font(.headline)
-            Button { onUnlock() } label: { Text("Unlock ArrBarr Pro", bundle: .module) }
+            Text("common.chatIsAPro.button", bundle: .module).font(.headline)
+            Button { onUnlock() } label: { Text("settings.unlockArrbarrPro.button", bundle: .module) }
                 .buttonStyle(.borderedProminent)
         }
         .padding()
@@ -181,7 +181,7 @@ private struct QueueTab: View {
         .searchable(
             text: $searchVM.query,
             placement: .navigationBarDrawer(displayMode: .always),
-            prompt: Text("Search movies and TV series", bundle: .module)
+            prompt: Text("search.searchMoviesAndTv.label", bundle: .module)
         )
         .autocorrectionDisabled(true)
         // Fire the arr lookups when the query changes — same trigger macOS
@@ -298,7 +298,7 @@ private struct UpcomingTab: View {
             Image(systemName: "calendar")
                 .scaledFont(size: 36, weight: .light)
                 .foregroundStyle(.tertiary)
-            Text("Nothing upcoming", bundle: .module)
+            Text("common.nothingUpcoming.button", bundle: .module)
                 .font(.headline)
                 .foregroundStyle(.secondary)
         }
@@ -377,7 +377,7 @@ private struct HistoryTab: View {
     var body: some View {
         Group {
             if available.isEmpty {
-                Text("No history", bundle: .module)
+                Text("common.noHistory.button", bundle: .module)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -402,7 +402,7 @@ private struct HistoryTab: View {
                             selected = nil
                         } label: {
                             Label {
-                                Text("All", bundle: .module)
+                                Text("search.all.button", bundle: .module)
                             } icon: {
                                 Image(systemName: selected == nil ? "checkmark" : "square.stack")
                             }
@@ -439,14 +439,14 @@ private struct HistoryTab: View {
                                 Text(verbatim: current.displayName)
                             } else {
                                 Image(systemName: "square.stack")
-                                Text("All", bundle: .module)
+                                Text("search.all.button", bundle: .module)
                             }
                             Image(systemName: "chevron.down")
                                 .font(.caption2)
                         }
                         .font(.subheadline)
                     }
-                    .accessibilityLabel(Text("Filter", bundle: .module))
+                    .accessibilityLabel(Text("common.filter.button", bundle: .module))
                 }
             }
             // Second filter: event type (Grabbed / Imported / Failed /
@@ -458,7 +458,7 @@ private struct HistoryTab: View {
                         selectedType = nil
                     } label: {
                         Label {
-                            Text("All", bundle: .module)
+                            Text("search.all.button", bundle: .module)
                         } icon: {
                             Image(systemName: selectedType == nil ? "checkmark" : "line.3.horizontal.decrease")
                         }
@@ -487,7 +487,7 @@ private struct HistoryTab: View {
                     }
                     .font(.subheadline)
                 }
-                .accessibilityLabel(Text("Filter", bundle: .module))
+                .accessibilityLabel(Text("common.filter.button", bundle: .module))
             }
         }
     }

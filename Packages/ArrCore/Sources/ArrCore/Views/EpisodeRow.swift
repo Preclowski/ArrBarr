@@ -228,26 +228,26 @@ struct EpisodeRow: View {
         // pattern Apple uses across Finder / Mail / Photos. Replaces
         // the bespoke `InlineConfirmCard` popovers we had on the row.
         .confirmationDialog(
-            Text("Search this episode?", bundle: .module),
+            Text("detail.searchThisEpisode.tooltip", bundle: .module),
             isPresented: $showSearchConfirm,
             titleVisibility: .visible
         ) {
-            Button { performSearch() } label: { Text("Search", bundle: .module) }
-            Button(role: .cancel) {} label: { Text("Cancel", bundle: .module) }
+            Button { performSearch() } label: { Text("search.search.button", bundle: .module) }
+            Button(role: .cancel) {} label: { Text("common.cancel.button", bundle: .module) }
         } message: {
-            Text("Will query your indexers and start a download if a release matches.", bundle: .module)
+            Text("detail.willQueryYourIndexers.tooltip", bundle: .module)
         }
         .confirmationDialog(
-            Text("Cancel this download?", bundle: .module),
+            Text("queue.cancelThisDownload.tooltip", bundle: .module),
             isPresented: $showDeleteConfirm,
             titleVisibility: .visible
         ) {
             Button(role: .destructive) {
                 if let q = queueItem { onDeleteQueueItem?(q) }
-            } label: { Text("Cancel download", bundle: .module) }
-            Button(role: .cancel) {} label: { Text("Keep download", bundle: .module) }
+            } label: { Text("queue.cancelDownload.button", bundle: .module) }
+            Button(role: .cancel) {} label: { Text("queue.keepDownload.button", bundle: .module) }
         } message: {
-            Text(String(format: String(localized: "This will remove \"%@\" from the download client.", bundle: .module), queueItem?.title ?? episode.title ?? ""))
+            Text(String(format: String(localized: "detail.thisWillRemoveFrom.tooltip", bundle: .module), queueItem?.title ?? episode.title ?? ""))
         }
     }
 
@@ -300,7 +300,7 @@ struct EpisodeRow: View {
                 Button(role: .destructive) {
                     showDeleteConfirm = true
                 } label: {
-                    Label(String(localized: "Cancel download", bundle: .module),
+                    Label(String(localized: "queue.cancelDownload.button", bundle: .module),
                           systemImage: "trash")
                 }
             }
@@ -320,7 +320,7 @@ struct EpisodeRow: View {
             Image(systemName: "calendar")
                 .scaledFont(size: 10)
                 .foregroundStyle(.tertiary)
-                .help(Text("Not aired yet", bundle: .module))
+                .help(Text("detail.notAiredYet.button", bundle: .module))
         } else if episode.hasFile != true && queueItem == nil {
             // Missing-aired with no active download — the only state
             // that still warrants an indicator glyph. Downloading

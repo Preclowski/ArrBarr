@@ -43,9 +43,9 @@ public struct ChatEmptyStateView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("chat.empty.greeting", bundle: .module)
+                    Text("chat.whatToWatchTonight.tooltip", bundle: .module)
                         .font(.system(size: 22, weight: .semibold))
-                    Text("chat.empty.subhead", bundle: .module)
+                    Text("chat.quizATipOr.tooltip", bundle: .module)
                         .font(.system(size: 13))
                         .foregroundStyle(.secondary)
                 }
@@ -58,7 +58,7 @@ public struct ChatEmptyStateView: View {
 
                 HStack(spacing: 12) {
                     Rectangle().fill(Color.secondary.opacity(0.15)).frame(height: 0.5)
-                    Text("chat.empty.divider", bundle: .module)
+                    Text("chat.orAsk.button", bundle: .module)
                         .font(.system(size: 11))
                         .foregroundStyle(.tertiary)
                         .tracking(0.5)

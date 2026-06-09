@@ -12,7 +12,7 @@ struct UpcomingTabContent: View {
                         Image(systemName: "calendar")
                             .scaledFont(size: 24, weight: .light)
                             .foregroundStyle(.tertiary)
-                        Text("Nothing upcoming", bundle: .module)
+                        Text("common.nothingUpcoming.button", bundle: .module)
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }

@@ -141,9 +141,9 @@ public struct QueueGroupRowView: View {
                     if rep.status == .queued {
                         Label { Text("Start now", bundle: .module) } icon: { Image(systemName: "play.fill") }
                     } else if rep.isPaused {
-                        Label { Text("Resume", bundle: .module) } icon: { Image(systemName: "play.fill") }
+                        Label { Text("queue.resume.button", bundle: .module) } icon: { Image(systemName: "play.fill") }
                     } else {
-                        Label { Text("Pause", bundle: .module) } icon: { Image(systemName: "pause.fill") }
+                        Label { Text("queue.pause.button", bundle: .module) } icon: { Image(systemName: "pause.fill") }
                     }
                 }
             }
@@ -196,15 +196,15 @@ public struct QueueGroupRowView: View {
     /// belongs in the subtitle alongside other shape descriptors.
     private var seasonLabel: String? {
         let seasons = Set(group.items.compactMap(\.seasonNumber))
-        let packLabel = String(localized: "Season pack", bundle: .module)
+        let packLabel = String(localized: "queue.seasonPack.button", bundle: .module)
         if seasons.count == 1, let s = seasons.first {
-            let seasonText = String(format: String(localized: "Season %02lld", bundle: .module), s)
+            let seasonText = String(format: String(localized: "queue.season02lld.button", bundle: .module), s)
             return "\(seasonText) · \(packLabel) · \(episodeCountText)"
         }
         if seasons.count > 1 {
-            return "\(String(localized: "Multiple seasons", bundle: .module)) · \(packLabel) · \(episodeCountText)"
+            return "\(String(localized: "queue.multipleSeasons.button", bundle: .module)) · \(packLabel) · \(episodeCountText)"
         }
-        return "\(String(localized: "Season pack", bundle: .module)) · \(episodeCountText)"
+        return "\(String(localized: "queue.seasonPack.button", bundle: .module)) · \(episodeCountText)"
     }
 
     /// Used in the alert; same logic as `seasonLabel` but always returns
@@ -215,7 +215,7 @@ public struct QueueGroupRowView: View {
     }
 
     private var episodeCountText: String {
-        String(format: String(localized: "%lld episodes", bundle: .module), group.memberCount)
+        String(format: String(localized: "unit.episodes", bundle: .module), group.memberCount)
     }
 
     /// Aggregate completion across all members. For `.pack` groups this
@@ -256,7 +256,7 @@ public struct QueueGroupRowView: View {
         .buttonStyle(.plain)
         .help(rep.status == .queued
               ? Text("Start now", bundle: .module)
-              : (rep.isPaused ? Text("Resume", bundle: .module) : Text("Pause", bundle: .module)))
+              : (rep.isPaused ? Text("queue.resume.button", bundle: .module) : Text("queue.pause.button", bundle: .module)))
     }
     #endif
 
@@ -330,11 +330,11 @@ public struct QueueGroupTooltip: View {
                 let seasonHeader: Text = {
                     let uniqueSeasons = Set(group.items.compactMap(\.seasonNumber))
                     if uniqueSeasons.count == 1, let s = uniqueSeasons.first {
-                        return Text(String(format: NSLocalizedString("Season %02d",
+                        return Text(String(format: NSLocalizedString("queue.season02d.button",
                                                                      bundle: .module,
                                                                      comment: "Tooltip section header"), s))
                     }
-                    return Text("Episodes", bundle: .module)
+                    return Text("queue.episodes.button", bundle: .module)
                 }()
                 seasonHeader
                     .scaledFont(size: 10, weight: .semibold)
@@ -493,11 +493,11 @@ public struct QueueGroupTooltip: View {
             // %02lld is a zero-padded format specifier — LocalizedStringKey
             // interpolation can't express it, so resolve the format string
             // through the catalog and feed it to String(format:).
-            let fmt = String(localized: "Season %02lld", bundle: Bundle.module)
+            let fmt = String(localized: "queue.season02lld.button", bundle: Bundle.module)
             return String(format: fmt, s)
         }
         if seasons.count > 1 {
-            return String(localized: "Multiple seasons", bundle: Bundle.module)
+            return String(localized: "queue.multipleSeasons.button", bundle: Bundle.module)
         }
         return nil
     }

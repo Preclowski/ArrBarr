@@ -16,7 +16,7 @@ public struct ListingBadgesView: View {
     public var body: some View {
         if item.isUpgrade {
             HStack(spacing: 4) {
-                Text("Upgrade", bundle: .module)
+                Text("detail.upgrade.button", bundle: .module)
                     .scaledFont(size: 9, weight: .semibold)
                     .foregroundStyle(Color.indigo)
                     .padding(.horizontal, 5)

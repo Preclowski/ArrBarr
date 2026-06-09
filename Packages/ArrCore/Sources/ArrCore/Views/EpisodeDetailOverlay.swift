@@ -74,9 +74,9 @@ public struct EpisodeDetailOverlay: View {
     /// episode NAME lives in the content hero; the series identity is
     /// the year-bearing drill-in link.
     private var navTitleString: String {
-        let seasonText = String(format: String(localized: "Season pill %lld", bundle: .module),
+        let seasonText = String(format: String(localized: "detail.seasonLld.label", bundle: .module),
                                 episode.seasonNumber ?? 0)
-        let episodeText = String(format: String(localized: "Episode %lld", bundle: .module),
+        let episodeText = String(format: String(localized: "detail.episodeLld.label", bundle: .module),
                                  episode.episodeNumber ?? 0)
         return "\(seasonText) · \(episodeText)"
     }
@@ -180,7 +180,7 @@ public struct EpisodeDetailOverlay: View {
                     Button { PlatformURLOpener.open(url) } label: {
                         Image(systemName: "safari")
                     }
-                    .help(Text("Open in browser", bundle: .module))
+                    .help(Text("detail.openInBrowser.button", bundle: .module))
                 }
                 // iOS: delete in the toolbar, to the RIGHT of Safari.
                 // macOS surfaces it next to the Resume CTA instead.
@@ -190,7 +190,7 @@ public struct EpisodeDetailOverlay: View {
                         Image(systemName: "trash")
                     }
                     .tint(.red)
-                    .help(Text("Cancel download", bundle: .module))
+                    .help(Text("queue.cancelDownload.button", bundle: .module))
                 }
                 #endif
             }
@@ -273,8 +273,8 @@ public struct EpisodeDetailOverlay: View {
         }
         .buttonStyle(.plain)
         .liquidGlassProgressCTA(progress: 0, tint: .red)
-        .help(Text("Cancel download", bundle: .module))
-        .accessibilityLabel(Text("Cancel download", bundle: .module))
+        .help(Text("queue.cancelDownload.button", bundle: .module))
+        .accessibilityLabel(Text("queue.cancelDownload.button", bundle: .module))
     }
 
     @ViewBuilder
@@ -283,7 +283,7 @@ public struct EpisodeDetailOverlay: View {
             HStack(spacing: 6) {
                 Image(systemName: "trash")
                     .scaledFont(size: 11, weight: .semibold)
-                Text("Cancel download", bundle: .module)
+                Text("queue.cancelDownload.button", bundle: .module)
                     .scaledFont(size: 12, weight: .semibold)
             }
             .frame(maxWidth: .infinity)
@@ -302,12 +302,12 @@ public struct EpisodeDetailOverlay: View {
                 } else if didSearch {
                     Image(systemName: "checkmark")
                         .scaledFont(size: 11, weight: .semibold)
-                    Text("Search queued", bundle: .module)
+                    Text("detail.searchQueued.button", bundle: .module)
                         .scaledFont(size: 12, weight: .semibold)
                 } else {
                     Image(systemName: "magnifyingglass")
                         .scaledFont(size: 11, weight: .semibold)
-                    Text("Search this episode?", bundle: .module)
+                    Text("detail.searchThisEpisode.tooltip", bundle: .module)
                         .scaledFont(size: 12, weight: .semibold)
                 }
             }
@@ -324,14 +324,14 @@ public struct EpisodeDetailOverlay: View {
             HStack(spacing: 6) {
                 Image(systemName: "safari")
                     .scaledFont(size: 11, weight: .semibold)
-                Text("Open in browser", bundle: .module)
+                Text("detail.openInBrowser.button", bundle: .module)
                     .scaledFont(size: 12, weight: .semibold)
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 7)
         }
         .modifier(GlassProminentButtonStyle())
-        .help(Text("Open in browser", bundle: .module))
+        .help(Text("detail.openInBrowser.button", bundle: .module))
     }
 
     @ViewBuilder
@@ -343,7 +343,7 @@ public struct EpisodeDetailOverlay: View {
                 .padding(.vertical, 7)
         }
         .buttonStyle(.bordered)
-        .help(Text("Open in browser", bundle: .module))
+        .help(Text("detail.openInBrowser.button", bundle: .module))
     }
 
     private var header: some View {
@@ -398,7 +398,7 @@ public struct EpisodeDetailOverlay: View {
                 } label: { poster }
                     .buttonStyle(.plain)
                     .disabled(posterURL == nil)
-                    .help(Text("Show poster", bundle: .module))
+                    .help(Text("detail.showPoster.button", bundle: .module))
                 VStack(alignment: .leading, spacing: 6) {
                     // Series title (with year) shows in content as a
                     // drill-in link — the episode's series context. Only
@@ -424,7 +424,7 @@ public struct EpisodeDetailOverlay: View {
                     // SxxExx moved to the nav-bar title. "Unaired" only
                     // renders when relevant — no empty row left behind.
                     if !hasAired {
-                        Text("Unaired", bundle: .module)
+                        Text("detail.unaired.button", bundle: .module)
                             .scaledFont(size: 9, weight: .semibold)
                             .foregroundStyle(Color.orange)
                             .padding(.horizontal, 5)

@@ -218,9 +218,9 @@ public struct QueueRowView: View {
                     if item.status == .queued {
                         Label { Text("Start now", bundle: .module) } icon: { Image(systemName: "play.fill") }
                     } else if item.isPaused {
-                        Label { Text("Resume", bundle: .module) } icon: { Image(systemName: "play.fill") }
+                        Label { Text("queue.resume.button", bundle: .module) } icon: { Image(systemName: "play.fill") }
                     } else {
-                        Label { Text("Pause", bundle: .module) } icon: { Image(systemName: "pause.fill") }
+                        Label { Text("queue.pause.button", bundle: .module) } icon: { Image(systemName: "pause.fill") }
                     }
                 }
             }
@@ -307,7 +307,7 @@ public struct QueueRowView: View {
         .buttonStyle(.plain)
         .help(item.status == .queued
               ? Text("Start now", bundle: .module)
-              : (item.isPaused ? Text("Resume", bundle: .module) : Text("Pause", bundle: .module)))
+              : (item.isPaused ? Text("queue.resume.button", bundle: .module) : Text("queue.pause.button", bundle: .module)))
     }
     #endif
 

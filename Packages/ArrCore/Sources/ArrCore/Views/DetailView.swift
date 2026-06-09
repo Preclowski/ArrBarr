@@ -225,7 +225,7 @@ public struct DetailView: View {
                     Button { PlatformURLOpener.open(url) } label: {
                         Image(systemName: "safari")
                     }
-                    .help(Text("Open in browser", bundle: .module))
+                    .help(Text("detail.openInBrowser.button", bundle: .module))
                 }
                 // iOS keeps delete in the toolbar (to the RIGHT of Safari).
                 // macOS surfaces it next to the Resume CTA instead.
@@ -235,7 +235,7 @@ public struct DetailView: View {
                         Image(systemName: "trash")
                     }
                     .tint(.red)
-                    .help(Text("Cancel download", bundle: .module))
+                    .help(Text("queue.cancelDownload.button", bundle: .module))
                 }
                 #endif
             }
@@ -448,7 +448,7 @@ public struct DetailView: View {
             HStack(spacing: 6) {
                 Image(systemName: "trash")
                     .scaledFont(size: 11, weight: .semibold)
-                Text("Cancel download", bundle: .module)
+                Text("queue.cancelDownload.button", bundle: .module)
                     .scaledFont(size: 12, weight: .semibold)
             }
             .frame(maxWidth: .infinity)
@@ -474,8 +474,8 @@ public struct DetailView: View {
         }
         .buttonStyle(.plain)
         .liquidGlassProgressCTA(progress: 0, tint: .red)
-        .help(Text("Cancel download", bundle: .module))
-        .accessibilityLabel(Text("Cancel download", bundle: .module))
+        .help(Text("queue.cancelDownload.button", bundle: .module))
+        .accessibilityLabel(Text("queue.cancelDownload.button", bundle: .module))
     }
     #endif
 
@@ -487,14 +487,14 @@ public struct DetailView: View {
             HStack(spacing: 6) {
                 Image(systemName: "safari")
                     .scaledFont(size: 11, weight: .semibold)
-                Text("Open in browser", bundle: .module)
+                Text("detail.openInBrowser.button", bundle: .module)
                     .scaledFont(size: 12, weight: .semibold)
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 7)
         }
         .modifier(GlassProminentButtonStyle())
-        .help(Text("Open in browser", bundle: .module))
+        .help(Text("detail.openInBrowser.button", bundle: .module))
     }
 
     @ViewBuilder
@@ -508,8 +508,8 @@ public struct DetailView: View {
                 .padding(.vertical, 7)
         }
         .buttonStyle(.bordered)
-        .help(Text("Open in browser", bundle: .module))
-        .accessibilityLabel(Text("Open in browser", bundle: .module))
+        .help(Text("detail.openInBrowser.button", bundle: .module))
+        .accessibilityLabel(Text("detail.openInBrowser.button", bundle: .module))
     }
 
     // MARK: - Content switch

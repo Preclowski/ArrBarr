@@ -26,7 +26,7 @@ struct CastRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("Cast", bundle: .module)
+            Text("detail.cast.button", bundle: .module)
                 .scaledFont(size: 11, weight: .semibold)
                 .foregroundStyle(.secondary)
                 .textCase(.uppercase)

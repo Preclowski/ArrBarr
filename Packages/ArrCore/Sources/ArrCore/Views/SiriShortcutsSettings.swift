@@ -18,24 +18,24 @@ public struct SiriShortcutsSettingsContent: View {
             SiriTipView(intent: ShowUpcomingIntent())
             SiriTipView(intent: CheckArrHealthIntent())
         } header: {
-            Text("Siri & Shortcuts", bundle: .module)
+            Text("settings.siriShortcuts.button", bundle: .module)
         } footer: {
             Text("Tap “Add to Siri” to set a phrase. The same actions appear in the Shortcuts app and Spotlight — no setup needed.", bundle: .module)
         }
         #else
         Section {
-            Text("ArrBarr's actions are available in the Shortcuts app, Spotlight and Siri.", bundle: .module)
+            Text("settings.arrbarrSActionsAre.tooltip", bundle: .module)
                 .font(.caption)
                 .foregroundStyle(.secondary)
         } header: {
-            Text("Siri & Shortcuts", bundle: .module)
+            Text("settings.siriShortcuts.button", bundle: .module)
         }
         #endif
         Section {
             Button {
                 if let url = URL(string: "shortcuts://") { openURL(url) }
             } label: {
-                Label { Text("Open Shortcuts app", bundle: .module) } icon: { Image(systemName: "square.2.layers.3d") }
+                Label { Text("settings.openShortcutsApp.button", bundle: .module) } icon: { Image(systemName: "square.2.layers.3d") }
             }
         }
     }

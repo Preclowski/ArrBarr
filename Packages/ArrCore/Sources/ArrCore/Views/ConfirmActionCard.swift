@@ -41,26 +41,26 @@ public struct ConfirmActionCard: View {
             let joined = ListFormatter.localizedString(byJoining: seasons.map { String($0) })
             let state = boolArg("state") ?? true
             if state {
-                return String(format: String(localized: "Monitor season(s) %@ and start search.", bundle: .module), joined)
+                return String(format: String(localized: "common.monitorSeasonSAnd.tooltip", bundle: .module), joined)
             } else {
-                return String(format: String(localized: "Stop monitoring season(s) %@.", bundle: .module), joined)
+                return String(format: String(localized: "common.stopMonitoringSeasonS.tooltip", bundle: .module), joined)
             }
         case "sonarr_search_episodes":
             let count = arrayArgCount("episodeIds")
-            return String(format: String(localized: "Search %lld episode(s).", bundle: .module), count)
+            return String(format: String(localized: "common.searchLldEpisodeS.tooltip", bundle: .module), count)
         case "radarr_search_movie":
-            return String(localized: "Search for this movie.", bundle: .module)
+            return String(localized: "common.searchForThisMovie.tooltip", bundle: .module)
         case "lidarr_monitor_album":
             let state = boolArg("state") ?? true
             if state {
-                return String(localized: "Monitor this album and start search.", bundle: .module)
+                return String(localized: "common.monitorThisAlbumAnd.tooltip", bundle: .module)
             } else {
-                return String(localized: "Stop monitoring this album.", bundle: .module)
+                return String(localized: "common.stopMonitoringThisAlbum.tooltip", bundle: .module)
             }
         case "lidarr_search_album":
-            return String(localized: "Search for this album.", bundle: .module)
+            return String(localized: "common.searchForThisAlbum.tooltip", bundle: .module)
         default:
-            return String(format: String(localized: "Run %@.", bundle: .module), call.name)
+            return String(format: String(localized: "common.run.tooltip", bundle: .module), call.name)
         }
     }
 

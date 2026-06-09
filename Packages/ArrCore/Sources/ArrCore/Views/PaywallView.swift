@@ -86,7 +86,7 @@ public struct PaywallView: View {
         HStack(spacing: 6) {
             Image(systemName: "eye")
                 .scaledFont(size: 11, weight: .semibold)
-            Text("Watching is always free", bundle: .module)
+            Text("paywall.watchingIsAlwaysFree.button", bundle: .module)
                 .scaledFont(size: 11, weight: .medium)
         }
         .foregroundStyle(.secondary)
@@ -123,7 +123,7 @@ public struct PaywallView: View {
                 Task { await store.purchase() }
             } label: {
                 HStack(spacing: 6) {
-                    Text("Unlock Control", bundle: .module)
+                    Text("paywall.unlockControl.button", bundle: .module)
                     if let price = store.displayPrice {
                         Text(verbatim: "· \(price)")
                     }
@@ -144,18 +144,18 @@ public struct PaywallView: View {
             }
             .buttonStyle(.plain)
 
-            Text("One-time purchase. No subscription. iOS + macOS.", bundle: .module)
+            Text("paywall.oneTimePurchaseNo.tooltip", bundle: .module)
                 .scaledFont(size: 11)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
 
             HStack(spacing: 16) {
-                Button { onClose() } label: { Text("Maybe later", bundle: .module) }
+                Button { onClose() } label: { Text("paywall.maybeLater.button", bundle: .module) }
                     .buttonStyle(.plain)
-                Button { Task { await store.restore() } } label: { Text("Restore Purchases", bundle: .module) }
+                Button { Task { await store.restore() } } label: { Text("paywall.restorePurchases.button", bundle: .module) }
                     .buttonStyle(.plain)
                 Link(destination: URL(string: "https://arrbarr.app/privacy-policy")!) {
-                    Text("Privacy Policy", bundle: .module)
+                    Text("settings.privacyPolicy.button", bundle: .module)
                 }
             }
             .scaledFont(size: 11)

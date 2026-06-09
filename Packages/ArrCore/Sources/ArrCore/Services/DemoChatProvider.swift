@@ -86,8 +86,8 @@ public struct DemoChatProvider: LLMProvider {
 
     private static func summary(kind: SuggestionKind, count: Int) -> String {
         let template: String = (kind == .series)
-            ? String(localized: "Here are %lld series you might enjoy.", bundle: .module)
-            : String(localized: "Here are %lld films you might enjoy.", bundle: .module)
+            ? String(localized: "chat.hereAreLldSeries.tooltip", bundle: .module)
+            : String(localized: "chat.hereAreLldFilms.tooltip", bundle: .module)
         return String(format: template, count)
     }
 

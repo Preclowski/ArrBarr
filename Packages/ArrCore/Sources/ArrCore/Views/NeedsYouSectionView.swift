@@ -16,7 +16,7 @@ public struct NeedsYouSectionView: View {
                     .frame(width: 10)
                 Image(systemName: "exclamationmark.bubble.fill")
                     .foregroundStyle(.orange)
-                Text("Needs you", bundle: .module)
+                Text("queue.needsYou.button", bundle: .module)
                     .scaledFont(size: 12, weight: .semibold)
                     .foregroundStyle(.secondary)
                 Text(verbatim: "\(items.count)")
@@ -79,7 +79,7 @@ public struct NeedsYouSectionView: View {
                             }
                         }
                         #endif
-                        .help(Text("Open in browser", bundle: .module))
+                        .help(Text("detail.openInBrowser.button", bundle: .module))
                         // Drill-in chevron brightens on row hover.
                         .linkRowHover()
                     }

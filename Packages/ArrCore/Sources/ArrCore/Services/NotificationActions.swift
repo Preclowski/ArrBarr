@@ -19,22 +19,22 @@ public enum NotificationActions {
     public static func categories() -> [UNNotificationCategory] {
         let open = UNNotificationAction(
             identifier: NotificationCoalescer.openActionIdentifier,
-            title: String(localized: "Open in browser", bundle: .module),
+            title: String(localized: "detail.openInBrowser.button", bundle: .module),
             options: [.foreground]
         )
         let pause = UNNotificationAction(
             identifier: NotificationCoalescer.pauseActionIdentifier,
-            title: String(localized: "Pause", bundle: .module),
+            title: String(localized: "queue.pause.button", bundle: .module),
             options: []
         )
         let resume = UNNotificationAction(
             identifier: NotificationCoalescer.resumeActionIdentifier,
-            title: String(localized: "Start downloading", bundle: .module),
+            title: String(localized: "intents.startDownloading.button", bundle: .module),
             options: []
         )
         let remove = UNNotificationAction(
             identifier: NotificationCoalescer.removeActionIdentifier,
-            title: String(localized: "Remove", bundle: .module),
+            title: String(localized: "common.remove.button", bundle: .module),
             options: [.destructive]
         )
         return [

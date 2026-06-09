@@ -24,7 +24,7 @@ public final class QueueAggregator: QueueDataProviding {
         var errorDescription: String? {
             switch self {
             case .noDownloadId: return String(localized: "No download ID — item hasn't reached the client yet", bundle: .module)
-            case .downloadProtocolUnknown: return String(localized: "Unknown download protocol", bundle: .module)
+            case .downloadProtocolUnknown: return String(localized: "queue.unknownDownloadProtocol.label", bundle: .module)
             case .downloadClientNotConfigured(let p):
                 return String(localized: "Client (\(p.rawValue)) is not configured", bundle: .module)
             }

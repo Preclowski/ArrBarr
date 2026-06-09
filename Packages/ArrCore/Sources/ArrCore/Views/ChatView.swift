@@ -121,7 +121,7 @@ public struct ChatView: View {
                         HStack(spacing: 4) {
                             Image(systemName: "arrow.counterclockwise")
                                 .scaledFont(size: 11, weight: .medium)
-                            Text("New chat", bundle: .module)
+                            Text("chat.newChat.button", bundle: .module)
                                 .scaledFont(size: 11, weight: .medium)
                         }
                         .foregroundStyle(clearHovered ? .primary : .secondary)
@@ -130,7 +130,7 @@ public struct ChatView: View {
                     }
                     .buttonStyle(.plain)
                     .glassyFloatingBar()
-                    .help(Text("Start a new chat", bundle: .module))
+                    .help(Text("chat.startANewChat.button", bundle: .module))
                     .opacity(clearHovered ? 1 : 0.55)
                     .padding(.top, 8)
                     .padding(.leading, 10)
@@ -156,7 +156,7 @@ public struct ChatView: View {
             }
             .buttonStyle(.plain)
             .disabled(draft.trimmingCharacters(in: .whitespaces).isEmpty || viewModel.isThinking)
-            .accessibilityLabel(Text("Send", bundle: .module))
+            .accessibilityLabel(Text("chat.send.button", bundle: .module))
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 8)

@@ -30,7 +30,7 @@ struct LidarrDetailPanel: View {
 
             if !lidarrTracks.isEmpty {
                 Divider().padding(.vertical, 2)
-                Text("Tracks", bundle: .module)
+                Text("detail.tracks.button", bundle: .module)
                     .scaledFont(size: 11, weight: .semibold)
                     .foregroundStyle(.secondary)
                     .textCase(.uppercase)
@@ -93,7 +93,7 @@ struct LidarrDetailPanel: View {
                 }
             } label: { poster }
                 .buttonStyle(.plain)
-                .help(Text("Show poster", bundle: .module))
+                .help(Text("detail.showPoster.button", bundle: .module))
             VStack(alignment: .leading, spacing: 4) {
                 Text(album?.title ?? item.title)
                     .scaledFont(size: 15, weight: .semibold)
@@ -170,7 +170,7 @@ struct LidarrDetailPanel: View {
             }
         } label: {
             HStack(spacing: 4) {
-                Text(String(format: String(localized: "Disc %lld", bundle: .module), disc))
+                Text(String(format: String(localized: "detail.discLld.label", bundle: .module), disc))
                     .scaledFont(size: 10, weight: isActive ? .semibold : .medium)
                     .foregroundStyle(isActive ? .primary : .secondary)
                 if complete {

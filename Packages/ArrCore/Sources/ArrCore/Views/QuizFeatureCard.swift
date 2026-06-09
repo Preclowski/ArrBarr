@@ -38,10 +38,10 @@ public struct QuizFeatureCard: View {
                 deck
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("chat.empty.quiz.title", bundle: .module)
+                    Text("onboarding.quiz.button", bundle: .module)
                         .font(.system(size: 17, weight: .semibold))
                         .foregroundStyle(.primary)
-                    Text("chat.empty.quiz.subtitle", bundle: .module)
+                    Text("onboarding.swipeThroughPicksAdd.tooltip", bundle: .module)
                         .font(.system(size: 12.5))
                         .foregroundStyle(.secondary)
                 }

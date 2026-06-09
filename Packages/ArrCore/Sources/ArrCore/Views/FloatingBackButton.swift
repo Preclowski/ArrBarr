@@ -25,7 +25,7 @@ public struct FloatingBackButton: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .help(Text("Back", bundle: .module))
+        .help(Text("settings.back.button", bundle: .module))
         #if os(macOS)
         .onHover { hovering in
             withAnimation(.easeInOut(duration: 0.15)) { isHovering = hovering }

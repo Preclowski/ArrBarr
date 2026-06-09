@@ -628,13 +628,13 @@ public struct PopoverContentView: View {
             // Manual refresh — mirrors the hidden ⌘R button above so the
             // shortcut is also discoverable in the menu (same dual-
             // registration pattern as Settings' ⌘,).
-            Button { Task { await viewModel.refresh() } } label: { Text("Refresh", bundle: .module) }
+            Button { Task { await viewModel.refresh() } } label: { Text("common.refresh.button", bundle: .module) }
                 .keyboardShortcut("r", modifiers: .command)
             Divider()
             Button { onOpenSettings() } label: { Text("Settings…", bundle: .module) }
                 .keyboardShortcut(",", modifiers: .command)
             #if os(macOS)
-            Button { onShowAbout() } label: { Text("About ArrBarr", bundle: .module) }
+            Button { onShowAbout() } label: { Text("settings.aboutArrbarr.button", bundle: .module) }
             // Shortcut to the Settings "Show in Dock as a window" toggle. Label
             // reflects current state so the same item detaches from the panel
             // and re-attaches from the detached window.
@@ -643,7 +643,7 @@ public struct PopoverContentView: View {
             }
             #endif
             Divider()
-            Button { onQuit() } label: { Text("Quit ArrBarr", bundle: .module) }
+            Button { onQuit() } label: { Text("common.quitArrbarr.button", bundle: .module) }
                 .keyboardShortcut("q", modifiers: .command)
         } label: {
             Image(systemName: "ellipsis")
@@ -654,7 +654,7 @@ public struct PopoverContentView: View {
         .menuIndicator(.hidden)
         .frame(width: Self.pillHeight, height: Self.pillHeight)
         .contentShape(Capsule())
-        .help(Text("More options", bundle: .module))
+        .help(Text("common.moreOptions.button", bundle: .module))
     }
 
 }

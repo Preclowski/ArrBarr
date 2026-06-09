@@ -27,14 +27,14 @@ public struct QueueItem: Identifiable, Equatable, Hashable, Sendable {
 
         public var displayName: String {
             switch self {
-            case .downloading: return String(localized: "Downloading", bundle: .module)
-            case .paused:      return String(localized: "Paused", bundle: .module)
-            case .queued:      return String(localized: "Queued", bundle: .module)
-            case .importing:   return String(localized: "Importing", bundle: .module)
-            case .completed:   return String(localized: "Completed", bundle: .module)
-            case .warning:     return String(localized: "Warning", bundle: .module)
-            case .failed:      return String(localized: "Failed", bundle: .module)
-            case .unknown:     return String(localized: "Unknown", bundle: .module)
+            case .downloading: return String(localized: "queue.downloading.button", bundle: .module)
+            case .paused:      return String(localized: "queue.paused.button", bundle: .module)
+            case .queued:      return String(localized: "queue.queued.button", bundle: .module)
+            case .importing:   return String(localized: "queue.importing.button", bundle: .module)
+            case .completed:   return String(localized: "queue.completed.button", bundle: .module)
+            case .warning:     return String(localized: "queue.warning.button", bundle: .module)
+            case .failed:      return String(localized: "history.failed.button", bundle: .module)
+            case .unknown:     return String(localized: "queue.unknown.button", bundle: .module)
             }
         }
     }

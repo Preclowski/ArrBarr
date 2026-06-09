@@ -65,7 +65,7 @@ public struct QueueSectionView: View {
             } else if let onShowHistory {
                 Button(action: onShowHistory) {
                     HStack(spacing: 2) {
-                        Text("Show history", bundle: .module)
+                        Text("queue.showHistory.button", bundle: .module)
                         Image(systemName: "chevron.right")
                             .scaledFont(size: 8, weight: .semibold)
                     }
@@ -74,7 +74,7 @@ public struct QueueSectionView: View {
                 }
                 .buttonStyle(.plain)
                 .onHover { hoveringHistory = $0 }
-                .help(Text("Show history", bundle: .module))
+                .help(Text("queue.showHistory.button", bundle: .module))
             }
         }
         .padding(.horizontal, 12)
@@ -99,7 +99,7 @@ public struct QueueSectionView: View {
             }
             if (!isCollapsed || hideHeader) && error == nil {
                 if entries.isEmpty {
-                    Text("Queue empty", bundle: .module)
+                    Text("queue.queueEmpty.button", bundle: .module)
                         .scaledFont(size: 12)
                         .foregroundStyle(.tertiary)
                         .padding(.horizontal, 12)

@@ -31,11 +31,11 @@ public struct HistoryItem: Identifiable, Equatable {
 
         public var displayName: String {
             switch self {
-            case .grabbed:  return String(localized: "Grabbed", bundle: .module)
-            case .imported: return String(localized: "Imported", bundle: .module)
-            case .failed:   return String(localized: "Failed", bundle: .module)
-            case .deleted:  return String(localized: "Deleted", bundle: .module)
-            case .other:    return String(localized: "Event", bundle: .module)
+            case .grabbed:  return String(localized: "history.grabbed.button", bundle: .module)
+            case .imported: return String(localized: "history.imported.button", bundle: .module)
+            case .failed:   return String(localized: "history.failed.button", bundle: .module)
+            case .deleted:  return String(localized: "history.deleted.button", bundle: .module)
+            case .other:    return String(localized: "history.event.button", bundle: .module)
             }
         }
 

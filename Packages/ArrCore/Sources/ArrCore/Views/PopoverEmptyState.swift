@@ -13,9 +13,9 @@ struct PopoverEmptyState<MoreMenu: View>: View {
                     .symbolRenderingMode(.hierarchical)
 
                 VStack(spacing: 4) {
-                    Text("ArrBarr is not configured", bundle: .module)
+                    Text("common.arrbarrIsNotConfigured.label", bundle: .module)
                         .font(.headline)
-                    Text("Connect Radarr, Sonarr or Lidarr to get started.", bundle: .module)
+                    Text("common.connectRadarrSonarrOr.tooltip", bundle: .module)
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)

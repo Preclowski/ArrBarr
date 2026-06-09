@@ -86,7 +86,7 @@ struct QueueListView: View {
             if !collapsed, arrError == nil {
                 let rows = entries(for: source)
                 if rows.isEmpty {
-                    Text("Queue empty", bundle: .module)
+                    Text("queue.queueEmpty.button", bundle: .module)
                         .scaledFont(size: 12)
                         .foregroundStyle(.tertiary)
                         .plainQueueRow(insets: EdgeInsets(top: 6, leading: 14, bottom: 6, trailing: 14))
@@ -101,7 +101,7 @@ struct QueueListView: View {
                                 } label: {
                                     Image(systemName: "trash")
                                 }
-                                .accessibilityLabel(Text("Delete", bundle: .module))
+                                .accessibilityLabel(Text("queue.delete.button", bundle: .module))
                             }
                             // Leading swipe → pause/resume. Only when there's a
                             // configured download client (arrs can't control the
@@ -174,7 +174,7 @@ struct QueueListView: View {
             } else if let onShowHistory {
                 Button { onShowHistory(source) } label: {
                     HStack(spacing: 2) {
-                        Text("Show history", bundle: .module)
+                        Text("queue.showHistory.button", bundle: .module)
                         Image(systemName: "chevron.right").scaledFont(size: 8, weight: .semibold)
                     }
                     .scaledFont(size: 10)
@@ -222,9 +222,9 @@ struct QueueListView: View {
             Image(systemName: "gearshape.2")
                 .scaledFont(size: 36, weight: .light)
                 .foregroundStyle(.secondary)
-            Text("ArrBarr is not configured", bundle: .module)
+            Text("common.arrbarrIsNotConfigured.label", bundle: .module)
                 .font(.headline)
-            Text("Connect Radarr, Sonarr or Lidarr in Settings to get started.", bundle: .module)
+            Text("queue.connectRadarrSonarrOr.tooltip", bundle: .module)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)

@@ -53,10 +53,10 @@ public struct UpcomingItem: Identifiable, Equatable, Sendable {
     public func airDateFormatted(locale: Locale = .current) -> String {
         let cal = Calendar.current
         if cal.isDateInToday(airDate) {
-            return String(localized: "Today", bundle: Bundle.module)
+            return String(localized: "upcoming.today.button", bundle: Bundle.module)
         }
         if cal.isDateInTomorrow(airDate) {
-            return String(localized: "Tomorrow", bundle: Bundle.module)
+            return String(localized: "upcoming.tomorrow.button", bundle: Bundle.module)
         }
         return airDate.formatted(
             .dateTime

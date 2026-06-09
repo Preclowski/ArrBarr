@@ -44,30 +44,30 @@ struct ServiceFields: View {
     }
 
     public var body: some View {
-        Toggle(isOn: enableBinding) { Text("Enabled", bundle: .module) }
-            .alert(Text("Adult content", bundle: .module), isPresented: $showAgeGate) {
-                Button(role: .cancel) { } label: { Text("Cancel", bundle: .module) }
+        Toggle(isOn: enableBinding) { Text("settings.enabled.button", bundle: .module) }
+            .alert(Text("settings.adultContent.button", bundle: .module), isPresented: $showAgeGate) {
+                Button(role: .cancel) { } label: { Text("common.cancel.button", bundle: .module) }
                 Button {
                     ageConfirmedBinding?.wrappedValue = true
                     withAnimation { config.enabled = true }
-                } label: { Text("Confirm (18+)", bundle: .module) }
+                } label: { Text("settings.confirm18.button", bundle: .module) }
             } message: {
-                Text("Whisparr may provide 18+ content. Confirm that you are 18 or older.", bundle: .module)
+                Text("settings.whisparrMayProvide18.tooltip", bundle: .module)
             }
 
         if config.enabled, let notifyBinding {
-            Toggle(isOn: notifyBinding) { Text("Notify on new grabs", bundle: .module) }
+            Toggle(isOn: notifyBinding) { Text("settings.notifyOnNewGrabs.button", bundle: .module) }
         }
 
         if config.enabled {
             TextField(text: $config.baseURL, prompt: Text(verbatim: kind.urlPlaceholder)) {
-                Text("URL", bundle: .module)
+                Text("settings.url.label", bundle: .module)
             }
             .urlField()
 
             if kind.requiresApiKey {
-                SecureField(text: $config.apiKey, prompt: Text("Paste your API key", bundle: .module)) {
-                    Text("API Key", bundle: .module)
+                SecureField(text: $config.apiKey, prompt: Text("settings.pasteYourApiKey.button", bundle: .module)) {
+                    Text("settings.apiKey.button", bundle: .module)
                 }
                 .apiKeyField()
             }
@@ -78,19 +78,19 @@ struct ServiceFields: View {
                 // login blank switches the client into API-key mode, where the
                 // "password" field carries the key (see QbittorrentClient).
                 let isQbit = kind == .qbittorrent
-                TextField(text: $config.username, prompt: Text("admin", bundle: .module)) {
+                TextField(text: $config.username, prompt: Text("settings.admin.label", bundle: .module)) {
                     if isQbit {
-                        Text("Login (leave empty for API key)", bundle: .module)
+                        Text("settings.loginLeaveEmptyFor.label", bundle: .module)
                     } else {
-                        Text("Username", bundle: .module)
+                        Text("settings.username.button", bundle: .module)
                     }
                 }
                 .usernameField()
-                SecureField(text: $config.password, prompt: Text("Password", bundle: .module)) {
+                SecureField(text: $config.password, prompt: Text("settings.password.button", bundle: .module)) {
                     if isQbit {
-                        Text("Password or API key", bundle: .module)
+                        Text("settings.passwordOrApiKey.button", bundle: .module)
                     } else {
-                        Text("Password", bundle: .module)
+                        Text("settings.password.button", bundle: .module)
                     }
                 }
                 .passwordField()
@@ -110,7 +110,7 @@ struct ServiceFields: View {
             }
 
             HStack(spacing: 8) {
-                Button { runTest() } label: { Text("Test Connection", bundle: .module) }
+                Button { runTest() } label: { Text("queue.testConnection.button", bundle: .module) }
                     .modifier(GlassButtonStyle())
                     .controlSize(.small)
                     .disabled(testState == .testing || !config.isConfigured)
@@ -145,16 +145,16 @@ struct ServiceFields: View {
                 Button {
                     openURL(calURL)
                 } label: {
-                    Label { Text("Add to Calendar", bundle: .module) } icon: { Image(systemName: "calendar.badge.plus") }
+                    Label { Text("settings.addToCalendar.button", bundle: .module) } icon: { Image(systemName: "calendar.badge.plus") }
                 }
-                Text("Subscribes this calendar in Apple Calendar. The server must be reachable when Calendar refreshes (home network or VPN).", bundle: .module)
+                Text("settings.subscribesThisCalendarIn.tooltip", bundle: .module)
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
 
             // Whisparr-only: NSFW filter (poster blur), defaulting on.
             if kind == .whisparr, let nsfw = nsfwFilterBinding {
-                Toggle(isOn: nsfw) { Text("NSFW filter", bundle: .module) }
+                Toggle(isOn: nsfw) { Text("settings.nsfwFilter.button", bundle: .module) }
             }
         }
     }
@@ -164,10 +164,10 @@ struct ServiceFields: View {
     private var incompleteReason: String? {
         guard config.enabled else { return nil }
         if !config.isConfigured {
-            return String(localized: "Enter a valid URL (http:// or https://).", bundle: .module)
+            return String(localized: "settings.enterAValidUrl.tooltip", bundle: .module)
         }
         if kind.requiresApiKey && config.apiKey.isEmpty {
-            return String(localized: "API key is required.", bundle: .module)
+            return String(localized: "settings.apiKeyIsRequired.tooltip", bundle: .module)
         }
         return nil
     }

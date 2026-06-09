@@ -223,7 +223,7 @@ public struct QueueStatusMessagesBanner: View {
                     PlatformURLOpener.open(actionURL)
                 } label: {
                     HStack(spacing: 4) {
-                        Text("Open in browser", bundle: .module)
+                        Text("detail.openInBrowser.button", bundle: .module)
                         Image(systemName: "arrow.up.right.square")
                             .scaledFont(size: 10, weight: .medium)
                     }
@@ -231,7 +231,7 @@ public struct QueueStatusMessagesBanner: View {
                     .foregroundStyle(tint)
                 }
                 .buttonStyle(.plain)
-                .help(Text("Open in browser", bundle: .module))
+                .help(Text("detail.openInBrowser.button", bundle: .module))
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -340,8 +340,8 @@ public struct ExistingFileDiffRow: View {
             // Everything matches — fall back to one muted phrase
             // instead of repeating identical values on both sides.
             Text(tagsDiffer
-                    ? String(localized: "Same spec, retagged", bundle: .module)
-                    : String(localized: "Re-downloading identical release", bundle: .module))
+                    ? String(localized: "queue.sameSpecRetagged.button", bundle: .module)
+                    : String(localized: "queue.reDownloadingIdenticalRelease.label", bundle: .module))
                 .scaledFont(size: 11)
                 .foregroundStyle(.secondary)
         } else {

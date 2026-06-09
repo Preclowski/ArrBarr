@@ -93,7 +93,7 @@ public struct DiscoverTabView: View {
         // element doesn't shift when the side widths change.
         ZStack {
             if showMatched {
-                Text("Your picks", bundle: .module)
+                Text("discover.yourPicks.button", bundle: .module)
                     .scaledFont(size: 15, weight: .semibold)
                     .foregroundStyle(.primary)
                     .lineLimit(1)
@@ -147,7 +147,7 @@ public struct DiscoverTabView: View {
         }
         .buttonStyle(.plain)
         .glassPill()
-        .help(Text("Your picks", bundle: .module))
+        .help(Text("discover.yourPicks.button", bundle: .module))
     }
 
     private var filterSummaryChip: some View {
@@ -324,7 +324,7 @@ public struct DiscoverTabView: View {
                 HStack(spacing: 6) {
                     Image(systemName: "hand.thumbsdown.fill")
                         .scaledFont(size: 13, weight: .semibold)
-                    Text("Nie", bundle: .module)
+                    Text("discover.no.button", bundle: .module)
                         .scaledFont(size: 12, weight: .semibold)
                 }
                 .frame(maxWidth: .infinity)
@@ -333,7 +333,7 @@ public struct DiscoverTabView: View {
             .modifier(GlassProminentButtonStyle())
             .tint(.red)
             .keyboardShortcut(.leftArrow, modifiers: [])
-            .help(Text("Fewer like this", bundle: .module))
+            .help(Text("discover.fewerLikeThis.button", bundle: .module))
 
             Button {
                 completeSwipe(right: true, fromTranslation: .zero)
@@ -341,7 +341,7 @@ public struct DiscoverTabView: View {
                 HStack(spacing: 6) {
                     Image(systemName: "hand.thumbsup.fill")
                         .scaledFont(size: 13, weight: .semibold)
-                    Text("Tak", bundle: .module)
+                    Text("discover.yes.button", bundle: .module)
                         .scaledFont(size: 12, weight: .semibold)
                 }
                 .frame(maxWidth: .infinity)
@@ -349,7 +349,7 @@ public struct DiscoverTabView: View {
             }
             .modifier(GlassProminentButtonStyle())
             .keyboardShortcut(.rightArrow, modifiers: [])
-            .help(Text("Save to picks", bundle: .module))
+            .help(Text("discover.saveToPicks.button", bundle: .module))
         }
     }
 
@@ -378,7 +378,7 @@ public struct DiscoverTabView: View {
             Image(systemName: "rectangle.stack.fill")
                 .scaledFont(size: 22, weight: .light)
                 .foregroundStyle(.tertiary)
-            Text("No more cards", bundle: .module)
+            Text("discover.noMoreCards.button", bundle: .module)
                 .scaledFont(size: 12)
                 .foregroundStyle(.secondary)
             if viewModel.matched.count > 0 {
@@ -386,7 +386,7 @@ public struct DiscoverTabView: View {
                     withAnimation(.smooth) { showMatched = true }
                     viewModel.acknowledgeUnseenPicks()
                 } label: {
-                    Text("Show your picks", bundle: .module)
+                    Text("discover.showYourPicks.button", bundle: .module)
                         .scaledFont(size: 11, weight: .semibold)
                         .foregroundStyle(Color.accentColor)
                 }
@@ -395,7 +395,7 @@ public struct DiscoverTabView: View {
             Button {
                 onClose()
             } label: {
-                Text("Back to mood", bundle: .module)
+                Text("discover.backToMood.button", bundle: .module)
                     .scaledFont(size: 11, weight: .semibold)
                     .foregroundStyle(.secondary)
             }
@@ -410,7 +410,7 @@ public struct DiscoverTabView: View {
                     HStack(spacing: 6) {
                         Image(systemName: "sparkles")
                             .scaledFont(size: 12, weight: .semibold)
-                        Text("More picks like these", bundle: .module)
+                        Text("discover.morePicksLikeThese.button", bundle: .module)
                             .scaledFont(size: 13, weight: .semibold)
                     }
                     .padding(.horizontal, 14)
@@ -426,7 +426,7 @@ public struct DiscoverTabView: View {
                 } label: {
                     HStack(spacing: 4) {
                         Image(systemName: "sparkles")
-                        Text("More AI suggestions", bundle: .module)
+                        Text("discover.moreAiSuggestions.button", bundle: .module)
                     }
                     .scaledFont(size: 11, weight: .semibold)
                     .padding(.horizontal, 10).padding(.vertical, 5)
@@ -445,7 +445,7 @@ public struct DiscoverTabView: View {
                     .padding(.top, 4)
             }
             if !llmAvailable {
-                Text("Configure an LLM provider in Settings to get AI-powered picks.",
+                Text("discover.configureAnLlmProvider.tooltip",
                      bundle: .module)
                     .scaledFont(size: 12)
                     .foregroundStyle(.secondary)

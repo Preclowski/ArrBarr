@@ -73,7 +73,7 @@ public struct ExpandableOverview: View {
                     withAnimation(.smooth(duration: 0.18)) { expanded = true }
                 } label: {
                     HStack(spacing: 3) {
-                        Text("Show more", bundle: .module)
+                        Text("queue.showMore.button", bundle: .module)
                             .scaledFont(size: 11, weight: .medium)
                         Image(systemName: "chevron.down")
                             .scaledFont(size: 9, weight: .semibold)

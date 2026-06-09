@@ -210,7 +210,7 @@ public struct DiscoverCardView: View {
                                 }
                             }
                         } else {
-                            Text("No overview available", bundle: .module)
+                            Text("discover.noOverviewAvailable.button", bundle: .module)
                                 .scaledFont(size: 12)
                                 .foregroundStyle(.secondary)
                         }
@@ -220,7 +220,7 @@ public struct DiscoverCardView: View {
                         if let credits {
                             if let dirName = directorName(from: credits) {
                                 HStack(spacing: 4) {
-                                    Text("Directed by", bundle: .module)
+                                    Text("discover.directedBy.button", bundle: .module)
                                         .scaledFont(size: 10, weight: .medium)
                                         .foregroundStyle(.primary)
                                     Text(dirName)
@@ -331,7 +331,7 @@ public struct DiscoverCardView: View {
                 Image(systemName: "checkmark.circle.fill")
                     .scaledFont(size: 8, weight: .semibold)
                     .foregroundStyle(Color.accentColor)
-                Text("In library", bundle: .module)
+                Text("search.inLibrary.button", bundle: .module)
                     .scaledFont(size: 9, weight: .semibold)
                     .foregroundStyle(Color.accentColor)
             }

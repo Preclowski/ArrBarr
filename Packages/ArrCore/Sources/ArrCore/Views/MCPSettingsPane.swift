@@ -63,7 +63,7 @@ struct MCPSettingsPane: View {
     @ViewBuilder private var statusRow: some View {
         switch configStore.mcpServerStatus {
         case .stopped:
-            Label { Text("Stopped", bundle: .module) }
+            Label { Text("settings.stopped.button", bundle: .module) }
             icon: { Circle().fill(.gray).frame(width: 8, height: 8) }
         case .running(let url):
             LabeledContent {
@@ -73,7 +73,7 @@ struct MCPSettingsPane: View {
                         .buttonStyle(.borderless)
                 }
             } label: {
-                Label { Text("Running", bundle: .module) }
+                Label { Text("settings.running.button", bundle: .module) }
                 icon: { Circle().fill(.green).frame(width: 8, height: 8) }
             }
         case .failed(let message):
@@ -84,14 +84,14 @@ struct MCPSettingsPane: View {
     }
 
     private var statusSection: some View {
-        Section { statusRow } header: { Text("Status", bundle: .module) }
+        Section { statusRow } header: { Text("settings.status.button", bundle: .module) }
     }
 
     // MARK: - Authentication
 
     private var authSection: some View {
         Section {
-            Toggle(isOn: $configStore.mcpRequireAuth) { Text("Require bearer token", bundle: .module) }
+            Toggle(isOn: $configStore.mcpRequireAuth) { Text("settings.requireBearerToken.button", bundle: .module) }
             if configStore.mcpRequireAuth {
                 LabeledContent {
                     HStack(spacing: 8) {
@@ -110,7 +110,7 @@ struct MCPSettingsPane: View {
                         .buttonStyle(.borderless)
                     }
                 } label: {
-                    Text("Token", bundle: .module)
+                    Text("settings.token.button", bundle: .module)
                 }
             }
         } header: {
@@ -146,7 +146,7 @@ struct MCPSettingsPane: View {
             }
         } header: {
             HStack(spacing: 6) {
-                Text("Tools", bundle: .module)
+                Text("settings.tools.button", bundle: .module)
                 Spacer()
                 Button { toggleAll() } label: {
                     Text(allToolsEnabled ? "Disable all" : "Enable all", bundle: .module)

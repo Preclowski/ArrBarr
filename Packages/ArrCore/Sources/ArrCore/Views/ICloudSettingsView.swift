@@ -25,10 +25,10 @@ struct ICloudSettingsView: View {
         Form {
             Section {
                 Toggle(isOn: $config.iCloudSyncEnabled) {
-                    Text("Sync with iCloud", bundle: .module)
+                    Text("settings.syncWithIcloud.button", bundle: .module)
                 }
             } footer: {
-                Text("Keep your servers, preferences, and saved keys in sync across your devices. Keys are stored in your encrypted iCloud Keychain.", bundle: .module)
+                Text("settings.keepYourServersPreferences.tooltip", bundle: .module)
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -45,7 +45,7 @@ struct ICloudSettingsView: View {
         Section {
             if !coordinator.accountAvailable {
                 Label {
-                    Text("Sign in to iCloud in System Settings to enable sync.", bundle: .module)
+                    Text("settings.signInToIcloud.tooltip", bundle: .module)
                 } icon: {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .foregroundStyle(.orange)
@@ -55,10 +55,10 @@ struct ICloudSettingsView: View {
                 if let date = coordinator.lastSyncDate {
                     Text(date, format: .relative(presentation: .named))
                 } else {
-                    Text("Never", bundle: .module)
+                    Text("settings.never.button", bundle: .module)
                 }
             } label: {
-                Text("Last sync", bundle: .module)
+                Text("settings.lastSync.button", bundle: .module)
             }
             if let error = coordinator.lastError {
                 Label {
@@ -69,7 +69,7 @@ struct ICloudSettingsView: View {
                 .foregroundStyle(.red)
             }
         } header: {
-            Text("Status", bundle: .module)
+            Text("settings.status.button", bundle: .module)
         }
     }
 
@@ -81,9 +81,9 @@ struct ICloudSettingsView: View {
             row("sparkles", "Assistant settings")
             row("rectangle.3.group", "Layout & visibility preferences")
         } header: {
-            Text("What syncs", bundle: .module)
+            Text("settings.whatSyncs.button", bundle: .module)
         } footer: {
-            Text("Device-specific settings (refresh intervals, appearance, MCP) stay on this device.", bundle: .module)
+            Text("settings.deviceSpecificSettingsRefresh.tooltip", bundle: .module)
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

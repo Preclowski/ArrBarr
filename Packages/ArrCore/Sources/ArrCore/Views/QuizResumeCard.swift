@@ -72,7 +72,7 @@ public struct QuizResumeCard: View {
             Image(systemName: "sparkles")
                 .scaledFont(size: 11, weight: .semibold)
                 .foregroundStyle(.purple)
-            Text("Quiz", bundle: .module)
+            Text("discover.quiz.button", bundle: .module)
                 .scaledFont(size: 11, weight: .semibold)
                 .foregroundStyle(.primary)
             Spacer(minLength: 0)
@@ -142,7 +142,7 @@ public struct QuizResumeCard: View {
             HStack(spacing: 3) {
                 Image(systemName: "checkmark.circle.fill")
                     .scaledFont(size: 9, weight: .semibold)
-                Text(String(format: NSLocalizedString("%lld picked", bundle: .module, comment: ""), pickedCount))
+                Text(String(format: NSLocalizedString("discover.pickedCount", bundle: .module, comment: ""), pickedCount))
                     .scaledFont(size: 10, weight: .semibold)
             }
             .foregroundStyle(.green)
