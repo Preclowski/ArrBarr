@@ -136,7 +136,9 @@ struct OpenAIProviderTests {
         let system = body.messages.first { $0.role == "system" }?.content ?? ""
         #expect(system.contains("Radarr (movies) and Lidarr (music)"))
         #expect(!system.contains("Sonarr"))
-        #expect(system.contains("Reply in Polish"))
+        // The user's language wins; the app language is only the fallback.
+        #expect(system.contains("same language as the user"))
+        #expect(system.contains("default to Polish"))
     }
 
     @Test("SystemPromptComposer.arrsClause joins present arrs, falls back when none")
