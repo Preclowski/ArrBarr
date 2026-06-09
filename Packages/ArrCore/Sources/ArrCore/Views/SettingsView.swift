@@ -402,10 +402,10 @@ public struct SettingsView: View {
             .tag(SettingsSection.assistant)
         Label { Text("MCP", bundle: .module) } icon: { Image(systemName: "point.3.connected.trianglepath.dotted") }
             .tag(SettingsSection.mcp)
-        #if APPSTORE
-        Label { Text("iCloud", bundle: .module) } icon: { Image(systemName: "icloud") }
-            .tag(SettingsSection.icloud)
-        #endif
+        if AppCapabilities.isAppStore {
+            Label { Text("iCloud", bundle: .module) } icon: { Image(systemName: "icloud") }
+                .tag(SettingsSection.icloud)
+        }
         Label { Text("Siri & Shortcuts", bundle: .module) } icon: { Image(systemName: "mic.fill") }
             .tag(SettingsSection.siri)
         Label { Text("About", bundle: .module) } icon: { Image(systemName: "info.circle") }
@@ -437,9 +437,9 @@ public struct SettingsView: View {
             .init(section: .assistant, title: String(localized: "Assistant", bundle: .module), kind: nil, systemImage: "sparkles"),
             .init(section: .mcp, title: String(localized: "MCP", bundle: .module), kind: nil, systemImage: "point.3.connected.trianglepath.dotted"),
         ]
-        #if APPSTORE
-        items.append(.init(section: .icloud, title: String(localized: "iCloud", bundle: .module), kind: nil, systemImage: "icloud"))
-        #endif
+        if AppCapabilities.isAppStore {
+            items.append(.init(section: .icloud, title: String(localized: "iCloud", bundle: .module), kind: nil, systemImage: "icloud"))
+        }
         items += [
             .init(section: .siri, title: String(localized: "Siri & Shortcuts", bundle: .module), kind: nil, systemImage: "mic.fill"),
             .init(section: .about, title: String(localized: "About", bundle: .module), kind: nil, systemImage: "info.circle"),
@@ -659,9 +659,9 @@ public struct SettingsView: View {
             iosSettingsLink("Media managers", systemImage: "server.rack") { iosMediaManagersForm }
             iosSettingsLink("Download clients", systemImage: "arrow.down.circle") { iosDownloadClientsForm }
             iosSettingsLink("Assistant", systemImage: "sparkles") { iosAIForm }
-            #if APPSTORE
-            iosSettingsLink("iCloud", systemImage: "icloud") { ICloudSettingsView() }
-            #endif
+            if AppCapabilities.isAppStore {
+                iosSettingsLink("iCloud", systemImage: "icloud") { ICloudSettingsView() }
+            }
             iosSettingsLink("Siri & Shortcuts", systemImage: "mic.fill") { iosSiriForm }
             iosSettingsLink("About", systemImage: "info.circle") { iosAboutForm }
         }

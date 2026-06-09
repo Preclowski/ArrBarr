@@ -24,14 +24,13 @@ struct ServiceFields: View {
         Binding(
             get: { config.enabled },
             set: { newValue in
-                #if APPSTORE
                 // App Store: enabling Whisparr requires a one-time 18+ confirm.
-                if newValue, kind == .whisparr,
+                if AppCapabilities.isAppStore,
+                   newValue, kind == .whisparr,
                    let ageConfirmed = ageConfirmedBinding, !ageConfirmed.wrappedValue {
                     showAgeGate = true
                     return
                 }
-                #endif
                 withAnimation { config.enabled = newValue }
             }
         )
