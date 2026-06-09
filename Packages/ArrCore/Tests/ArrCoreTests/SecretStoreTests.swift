@@ -97,6 +97,34 @@ struct SecretStoreSuite {
         #expect(SecretKey.syncable.allSatisfy { $0.synced && !$0.deviceOnly })
     }
 
+    @Test("baseQuery synchronizable honors the runtime sync provider (APPSTORE only)")
+    func keychainSynchronizableRuntimeGating() {
+        let original = KeychainSecretStore.syncEnabledProvider
+        defer { KeychainSecretStore.syncEnabledProvider = original }
+
+        KeychainSecretStore.syncEnabledProvider = { false }
+        let off = KeychainSecretStore.baseQuery(for: .openAIKey)
+        #expect(off[kSecAttrSynchronizable as String] as? Bool == false)
+
+        KeychainSecretStore.syncEnabledProvider = { true }
+        let on = KeychainSecretStore.baseQuery(for: .openAIKey)
+        #if APPSTORE
+        #expect(on[kSecAttrSynchronizable as String] as? Bool == true)
+        #else
+        #expect(on[kSecAttrSynchronizable as String] as? Bool == false)
+        #endif
+    }
+
+    @Test("defaultSyncEnabled reads the device-local flag, defaulting true")
+    func defaultSyncEnabledReadsFlag() {
+        let suite = "test.icloudflag.\(UUID().uuidString)"
+        let d = UserDefaults(suiteName: suite)!
+        defer { UserDefaults.standard.removePersistentDomain(forName: suite) }
+        #expect(KeychainSecretStore.syncEnabled(in: d) == true)   // unset → true
+        d.set(false, forKey: "ArrBarr.iCloudSyncEnabled")
+        #expect(KeychainSecretStore.syncEnabled(in: d) == false)
+    }
+
     @Test("reapplySyncAttribute rewrites only keys that currently hold a value")
     func reapplyRewritesPresentOnly() {
         let store = RecordingSecretStore()

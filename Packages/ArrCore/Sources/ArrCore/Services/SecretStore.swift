@@ -70,6 +70,24 @@ public struct KeychainSecretStore: SecretStore {
     public static let accessGroup = "9M6DR2Z85Y.com.preclowski.ArrBarr.shared"
     private static let logger = Logger(category: "SecretStore")
 
+    /// Device-local UserDefaults key mirroring `ConfigStore.iCloudSyncEnabled`.
+    /// Duplicated here (not imported) so the nonisolated Keychain layer stays
+    /// free of ConfigStore. Kept in sync with `ConfigStore.iCloudSyncEnabledKey`.
+    static let iCloudSyncEnabledKey = "ArrBarr.iCloudSyncEnabled"
+
+    /// Whether iCloud sync is currently enabled, read from the App Group suite
+    /// (defaults to `true` when unset or unavailable). Overridable for tests.
+    public static var syncEnabledProvider: @Sendable () -> Bool = {
+        syncEnabled(in: WidgetDataStore.groupDefaults())
+    }
+
+    /// Pure reader for the device-local flag, defaulting to `true`.
+    public static func syncEnabled(in defaults: UserDefaults?) -> Bool {
+        guard let defaults, defaults.object(forKey: iCloudSyncEnabledKey) != nil
+        else { return true }
+        return defaults.bool(forKey: iCloudSyncEnabledKey)
+    }
+
     public init() {}
 
     /// The identifying query fields + storage policy for a key. Exposed so tests
@@ -77,7 +95,7 @@ public struct KeychainSecretStore: SecretStore {
     /// real Keychain.
     public static func baseQuery(for key: SecretKey) -> [String: Any] {
         #if APPSTORE
-        let synchronizable = key.synced
+        let synchronizable = key.synced && Self.syncEnabledProvider()
         #else
         let synchronizable = false
         #endif
