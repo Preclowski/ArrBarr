@@ -2185,6 +2185,35 @@
         }
       }
     },
+    "Assistant settings": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Assistent-Einstellungen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajustes del asistente"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Réglages de l'assistant"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ustawienia asystenta"
+          }
+        }
+      }
+    },
     "Auto-jump off": {
       "extractionState": "manual",
       "localizations": {
@@ -4479,6 +4508,35 @@
           "stringUnit": {
             "state": "translated",
             "value": "Opcje programisty włączone"
+          }
+        }
+      }
+    },
+    "Device-specific settings (refresh intervals, appearance, MCP) stay on this device.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gerätespezifische Einstellungen (Aktualisierungsintervalle, Erscheinungsbild, MCP) bleiben auf diesem Gerät."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los ajustes específicos del dispositivo (intervalos de actualización, apariencia, MCP) permanecen en este dispositivo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les réglages propres à l'appareil (intervalles d'actualisation, apparence, MCP) restent sur cet appareil."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ustawienia specyficzne dla urządzenia (interwały odświeżania, wygląd, MCP) pozostają na tym urządzeniu."
           }
         }
       }
@@ -6814,35 +6872,6 @@
         }
       }
     },
-    "iCloud storage is full — some settings couldn’t sync.": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Der iCloud-Speicher ist voll – einige Einstellungen konnten nicht synchronisiert werden."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "El almacenamiento de iCloud está lleno: algunos ajustes no se pudieron sincronizar."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Le stockage iCloud est plein — certains réglages n’ont pas pu être synchronisés."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pamięć iCloud jest pełna — nie udało się zsynchronizować części ustawień."
-          }
-        }
-      }
-    },
     "Keep download": {
       "extractionState": "manual",
       "localizations": {
@@ -6903,6 +6932,35 @@
           "stringUnit": {
             "state": "translated",
             "value": "Graj dalej"
+          }
+        }
+      }
+    },
+    "Keep your servers, preferences, and saved keys in sync across your devices. Keys are stored in your encrypted iCloud Keychain.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Halte deine Server, Einstellungen und gespeicherten Schlüssel auf allen Geräten synchron. Schlüssel werden in deinem verschlüsselten iCloud-Schlüsselbund gespeichert."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mantén tus servidores, preferencias y claves guardadas sincronizados entre tus dispositivos. Las claves se almacenan en tu llavero de iCloud cifrado."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gardez vos serveurs, préférences et clés enregistrées synchronisés sur tous vos appareils. Les clés sont stockées dans votre trousseau iCloud chiffré."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Synchronizuj serwery, preferencje i zapisane klucze na wszystkich urządzeniach. Klucze są przechowywane w zaszyfrowanym Pęku kluczy iCloud."
           }
         }
       }
@@ -7034,6 +7092,35 @@
         }
       }
     },
+    "Last sync": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Letzte Synchronisierung"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Última sincronización"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dernière synchronisation"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ostatnia synchronizacja"
+          }
+        }
+      }
+    },
     "Launch at login": {
       "localizations": {
         "de": {
@@ -7058,6 +7145,35 @@
           "stringUnit": {
             "state": "translated",
             "value": "Uruchamiaj przy logowaniu"
+          }
+        }
+      }
+    },
+    "Layout & visibility preferences": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Layout- & Sichtbarkeitseinstellungen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preferencias de diseño y visibilidad"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Préférences de disposition et de visibilité"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preferencje układu i widoczności"
           }
         }
       }
@@ -8986,6 +9102,35 @@
         }
       }
     },
+    "Notification settings": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Benachrichtigungseinstellungen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajustes de notificaciones"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Réglages des notifications"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ustawienia powiadomień"
+          }
+        }
+      }
+    },
     "Notification sound": {
       "localizations": {
         "de": {
@@ -9611,6 +9756,35 @@
           "stringUnit": {
             "state": "translated",
             "value": "Hasło lub klucz API"
+          }
+        }
+      }
+    },
+    "Passwords & API keys (iCloud Keychain)": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Passwörter & API-Schlüssel (iCloud-Schlüsselbund)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Contraseñas y claves de API (Llavero de iCloud)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mots de passe et clés API (Trousseau iCloud)"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hasła i klucze API (Pęk kluczy iCloud)"
           }
         }
       }
@@ -12902,6 +13076,35 @@
         }
       }
     },
+    "Server configurations": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Serverkonfigurationen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Configuraciones de servidor"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Configurations de serveur"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Konfiguracje serwerów"
+          }
+        }
+      }
+    },
     "Service icons by Dashboard Icons, licensed CC BY 4.0 (recoloured for the UI).": {
       "localizations": {
         "de": {
@@ -13406,6 +13609,35 @@
           "stringUnit": {
             "state": "translated",
             "value": "Seriale"
+          }
+        }
+      }
+    },
+    "Sign in to iCloud in System Settings to enable sync.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Melde dich in den Systemeinstellungen bei iCloud an, um die Synchronisierung zu aktivieren."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inicia sesión en iCloud en Ajustes del Sistema para activar la sincronización."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connectez-vous à iCloud dans Réglages Système pour activer la synchronisation."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zaloguj się do iCloud w Ustawieniach systemowych, aby włączyć synchronizację."
           }
         }
       }
@@ -14049,6 +14281,35 @@
           "stringUnit": {
             "state": "translated",
             "value": "Przełącz film/serial"
+          }
+        }
+      }
+    },
+    "Sync with iCloud": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mit iCloud synchronisieren"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sincronizar con iCloud"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Synchroniser avec iCloud"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Synchronizuj przez iCloud"
           }
         }
       }
@@ -16180,6 +16441,35 @@
         }
       }
     },
+    "What syncs": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Was synchronisiert wird"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qué se sincroniza"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce qui est synchronisé"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Co się synchronizuje"
+          }
+        }
+      }
+    },
     "What's New in ArrBarr": {
       "extractionState": "manual",
       "localizations": {
@@ -17136,6 +17426,64 @@
           "stringUnit": {
             "state": "translated",
             "value": "z"
+          }
+        }
+      }
+    },
+    "iCloud": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iCloud"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iCloud"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iCloud"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iCloud"
+          }
+        }
+      }
+    },
+    "iCloud storage is full — some settings couldn’t sync.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der iCloud-Speicher ist voll – einige Einstellungen konnten nicht synchronisiert werden."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El almacenamiento de iCloud está lleno: algunos ajustes no se pudieron sincronizar."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le stockage iCloud est plein — certains réglages n’ont pas pu être synchronisés."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pamięć iCloud jest pełna — nie udało się zsynchronizować części ustawień."
           }
         }
       }
