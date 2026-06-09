@@ -83,4 +83,43 @@ struct SecretStoreSuite {
         store.delete(key)
         #expect(store.read(key) == nil)
     }
+
+    @Test("syncable lists every per-service key plus openai/tmdb, excludes mcpBearer")
+    func syncableContents() {
+        let accounts = Set(SecretKey.syncable.map(\.account))
+        for kind in ServiceKind.allCases {
+            #expect(accounts.contains("secret.\(kind.rawValue).apiKey"))
+            #expect(accounts.contains("secret.\(kind.rawValue).password"))
+        }
+        #expect(accounts.contains("secret.openai.apiKey"))
+        #expect(accounts.contains("secret.tmdb.apiKey"))
+        #expect(!accounts.contains("secret.mcp.bearer"))
+        #expect(SecretKey.syncable.allSatisfy { $0.synced && !$0.deviceOnly })
+    }
+
+    @Test("reapplySyncAttribute rewrites only keys that currently hold a value")
+    func reapplyRewritesPresentOnly() {
+        let store = RecordingSecretStore()
+        let present = SecretKey.apiKey(for: .radarr)
+        store.set("v", for: present)
+        store.resetLog()
+
+        store.reapplySyncAttribute(for: SecretKey.syncable)
+
+        #expect(store.setLog == [present.account])
+        #expect(store.read(present) == "v")
+    }
+}
+
+/// SecretStore that records which accounts were re-written, to assert
+/// `reapplySyncAttribute` only touches keys that hold a value.
+final class RecordingSecretStore: SecretStore, @unchecked Sendable {
+    private var values: [String: String] = [:]
+    private(set) var setLog: [String] = []
+    func read(_ key: SecretKey) -> String? { values[key.account] }
+    func set(_ value: String, for key: SecretKey) {
+        values[key.account] = value; setLog.append(key.account)
+    }
+    func delete(_ key: SecretKey) { values[key.account] = nil }
+    func resetLog() { setLog.removeAll() }
 }

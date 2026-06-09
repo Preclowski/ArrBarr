@@ -26,12 +26,37 @@ public struct SecretKey: Sendable, Equatable {
     /// The MCP server bearer token gates a server bound to one machine, so it is
     /// never synced and stays device-only.
     public static let mcpBearer = SecretKey(account: "secret.mcp.bearer", synced: false, deviceOnly: true)
+
+    /// Every secret eligible for iCloud Keychain sync: API key + password for
+    /// each service, plus the OpenAI and TMDB keys. `mcpBearer` is excluded —
+    /// it is `deviceOnly` and must never replicate.
+    public static var syncable: [SecretKey] {
+        var keys: [SecretKey] = []
+        for kind in ServiceKind.allCases {
+            keys.append(.apiKey(for: kind))
+            keys.append(.password(for: kind))
+        }
+        keys.append(.openAIKey)
+        keys.append(.tmdbKey)
+        return keys
+    }
 }
 
 public protocol SecretStore: Sendable {
     func read(_ key: SecretKey) -> String?
     func set(_ value: String, for key: SecretKey)
     func delete(_ key: SecretKey)
+}
+
+public extension SecretStore {
+    /// Rewrite each given secret that currently holds a value, so the store's
+    /// write path re-stamps the (possibly changed) `synchronizable` attribute.
+    /// Keys with no value are skipped. Used to hard-toggle iCloud Keychain sync.
+    func reapplySyncAttribute(for keys: [SecretKey]) {
+        for key in keys {
+            if let value = read(key) { set(value, for: key) }
+        }
+    }
 }
 
 /// Keychain-backed `SecretStore`. All items share the `service` namespace; the
