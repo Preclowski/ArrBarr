@@ -266,8 +266,8 @@ public final class NotificationCoalescer {
         let content = UNMutableNotificationContent()
         content.title = source.displayName
         let titles = items.prefix(3).map(\.title).joined(separator: ", ")
-        let format = String(localized: "unit.itemsNamed", bundle: .module)
-        content.body = String(format: format, items.count, titles)
+        let format = NSLocalizedString("unit.itemsNamed", bundle: .module, comment: "")
+        content.body = String.localizedStringWithFormat(format, items.count, titles)
         content.sound = configuredSound
         content.categoryIdentifier = Self.categoryIdentifier
         content.threadIdentifier = "arrbarr.\(source.rawValue)"

@@ -1121,11 +1121,11 @@ public struct SettingsView: View {
 
     private static func formatTonight(hours: Int) -> String {
         if hours < 24 {
-            return String(format: String(localized: "unit.hours", bundle: .module), hours)
+            return String.localizedStringWithFormat(NSLocalizedString("unit.hours", bundle: .module, comment: ""), hours)
         }
         let days = hours / 24
         if days == 1 { return String(localized: "settings.twentyFourHours.label", bundle: .module) }
-        return String(format: String(localized: "unit.days", bundle: .module), days)
+        return String.localizedStringWithFormat(NSLocalizedString("unit.days", bundle: .module, comment: ""), days)
     }
 }
 

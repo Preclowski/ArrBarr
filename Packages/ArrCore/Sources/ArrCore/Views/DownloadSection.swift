@@ -265,7 +265,7 @@ struct DownloadSection: View {
                         .scaledFont(size: 11, weight: .semibold)
                         .foregroundStyle(.secondary)
                     SeparatorDot()
-                    Text(String(format: String(localized: "unit.downloads", bundle: .module), items.count))
+                    Text(String.localizedStringWithFormat(NSLocalizedString("unit.downloads", bundle: .module, comment: ""), items.count))
                         .scaledFont(size: 11)
                         .foregroundStyle(.secondary)
                     Spacer()

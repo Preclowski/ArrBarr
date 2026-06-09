@@ -142,7 +142,7 @@ public struct QuizResumeCard: View {
             HStack(spacing: 3) {
                 Image(systemName: "checkmark.circle.fill")
                     .scaledFont(size: 9, weight: .semibold)
-                Text(String(format: NSLocalizedString("discover.pickedCount", bundle: .module, comment: ""), pickedCount))
+                Text(String.localizedStringWithFormat(NSLocalizedString("discover.pickedCount", bundle: .module, comment: ""), pickedCount))
                     .scaledFont(size: 10, weight: .semibold)
             }
             .foregroundStyle(.green)

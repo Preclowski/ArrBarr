@@ -215,7 +215,7 @@ public struct QueueGroupRowView: View {
     }
 
     private var episodeCountText: String {
-        String(format: String(localized: "unit.episodes", bundle: .module), group.memberCount)
+        String.localizedStringWithFormat(NSLocalizedString("unit.episodes", bundle: .module, comment: ""), group.memberCount)
     }
 
     /// Aggregate completion across all members. For `.pack` groups this
