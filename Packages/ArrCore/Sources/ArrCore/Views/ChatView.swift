@@ -58,9 +58,10 @@ public struct ChatView: View {
                             // fire a movie session *and* a series session
                             // when the prompt said "movies and shows") and
                             // ask for a dozen-plus so the deck isn't thin.
-                            let prompt = kind == .movies
-                                ? "Zrób mi quiz z filmów — kilkanaście popularnych filmów, których jeszcze nie mam w bibliotece."
-                                : "Zrób mi quiz z seriali — kilkanaście popularnych seriali, których jeszcze nie mam w bibliotece."
+                            let promptKey = kind == .movies
+                                ? "chat.quizPrompt.movies"
+                                : "chat.quizPrompt.series"
+                            let prompt = String(localized: String.LocalizationValue(promptKey), bundle: .module)
                             Task { await viewModel.send(prompt) }
                         },
                         onSuggestionTap: { prompt in

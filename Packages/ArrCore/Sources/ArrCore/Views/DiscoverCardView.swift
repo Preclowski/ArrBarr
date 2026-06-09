@@ -345,7 +345,7 @@ public struct DiscoverCardView: View {
                 Image(systemName: "globe")
                     .scaledFont(size: 8, weight: .semibold)
                     .foregroundStyle(Color.blue)
-                Text(verbatim: "Discover")
+                Text("discover.discover.button", bundle: .module)
                     .scaledFont(size: 9, weight: .medium)
                     .foregroundStyle(Color.blue)
             }
@@ -357,7 +357,7 @@ public struct DiscoverCardView: View {
                 Image(systemName: "sparkles")
                     .scaledFont(size: 8, weight: .semibold)
                     .foregroundStyle(Color.purple)
-                Text(verbatim: "AI")
+                Text("settings.ai.label", bundle: .module)
                     .scaledFont(size: 9, weight: .medium)
                     .foregroundStyle(Color.purple)
             }

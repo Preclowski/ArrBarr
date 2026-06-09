@@ -82,7 +82,7 @@ public struct UpgradeDiffTable: View {
         Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 8, verticalSpacing: 3) {
             if let nq = newQuality, !nq.isEmpty {
                 GridRow {
-                    label("Jakość")
+                    label("queue.quality.button")
                     oldCell(oldQuality)
                     arrowCell(showArrow: hasQualityChange)
                     newCell(nq)
@@ -93,7 +93,7 @@ public struct UpgradeDiffTable: View {
                 let os = oldSize ?? 0
                 let delta = ns - os
                 GridRow {
-                    label("Rozmiar")
+                    label("queue.size.button")
                     oldCell(os > 0 ? formatBytes(os) : nil)
                     arrowCell(showArrow: os > 0 && delta != 0)
                     newCell(formatBytes(ns))
@@ -106,7 +106,7 @@ public struct UpgradeDiffTable: View {
                 let oScore = oldScore ?? 0
                 let delta = nScore - oScore
                 GridRow {
-                    label("Score")
+                    label("queue.score.button")
                     oldCell(oldScore != nil ? formatScore(oScore) : nil)
                     arrowCell(showArrow: oldScore != nil && delta != 0)
                     newCell(formatScore(nScore))
@@ -120,7 +120,7 @@ public struct UpgradeDiffTable: View {
             // chip rows.
             if !newFormats.isEmpty || !oldFormats.isEmpty {
                 GridRow {
-                    label("Formaty")
+                    label("common.customFormats.button")
                     formatChipsCell()
                         .gridCellColumns(4)
                 }
@@ -130,7 +130,7 @@ public struct UpgradeDiffTable: View {
             // side-by-side reading on a popover-width surface.
             if newFilename != nil || oldFilename != nil {
                 GridRow {
-                    label("Plik")
+                    label("queue.file.button")
                     filenamesCell()
                         .gridCellColumns(4)
                 }
@@ -146,25 +146,25 @@ public struct UpgradeDiffTable: View {
         Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 8, verticalSpacing: 3) {
             if let nq = newQuality, !nq.isEmpty {
                 GridRow {
-                    label("Jakość")
+                    label("queue.quality.button")
                     newCell(nq)
                 }
             }
             if let ns = newSize, ns > 0 {
                 GridRow {
-                    label("Rozmiar")
+                    label("queue.size.button")
                     newCell(formatBytes(ns))
                 }
             }
             if newScore != 0 {
                 GridRow {
-                    label("Score")
+                    label("queue.score.button")
                     newCell(formatScore(newScore))
                 }
             }
             if !newFormats.isEmpty {
                 GridRow {
-                    label("Formaty")
+                    label("common.customFormats.button")
                     TooltipFlowLayout(spacing: 4) {
                         ForEach(newFormats, id: \.self) { f in
                             TagChip(text: f, color: .primary)
@@ -174,7 +174,7 @@ public struct UpgradeDiffTable: View {
             }
             if let nf = newFilename, !nf.isEmpty {
                 GridRow {
-                    label("Plik")
+                    label("queue.file.button")
                     Text(nf)
                         .scaledFont(size: 11, design: .monospaced)
                         .foregroundStyle(.primary)
@@ -242,8 +242,8 @@ public struct UpgradeDiffTable: View {
     }
 
     @ViewBuilder
-    private func label(_ text: String) -> some View {
-        Text(text)
+    private func label(_ key: LocalizedStringKey) -> some View {
+        Text(key, bundle: .module)
             .scaledFont(size: 11, weight: .semibold)
             .foregroundStyle(.secondary)
             .gridColumnAlignment(.leading)

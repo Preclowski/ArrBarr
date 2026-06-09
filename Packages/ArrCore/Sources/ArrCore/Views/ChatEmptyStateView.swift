@@ -17,16 +17,14 @@ public struct ChatEmptyStateView: View {
     /// by the parent (see `LibraryPosterSampler`). Empty renders placeholders.
     public let quizPosterURLs: [URL]
 
-    private struct Suggestion {
-        let key: LocalizedStringKey
-        let prompt: String
-    }
-
-    private let suggestions: [Suggestion] = [
-        .init(key: "chat.empty.suggest.upcoming",  prompt: "Co dziś wychodzi?"),
-        .init(key: "chat.empty.suggest.queue",     prompt: "Co się teraz ściąga?"),
-        .init(key: "chat.empty.suggest.tasteMrRobot", prompt: "Polecisz coś jak Mr. Robot?"),
-        .init(key: "chat.empty.suggest.personSwinton", prompt: "Filmy z Tildą Swinton"),
+    /// A chat suggestion is one catalog key: it's localized both for the chip
+    /// label AND for the prompt actually sent to the LLM — so tapping an English
+    /// chip sends an English question, a Polish chip a Polish one, etc.
+    private let suggestionKeys: [String] = [
+        "chat.empty.suggest.upcoming",
+        "chat.empty.suggest.queue",
+        "chat.empty.suggest.tasteMrRobot",
+        "chat.empty.suggest.personSwinton",
     ]
 
     public init(
@@ -68,8 +66,10 @@ public struct ChatEmptyStateView: View {
                 .padding(.top, 28)
 
                 VStack(spacing: 10) {
-                    ForEach(suggestions, id: \.prompt) { s in
-                        SuggestionPromptRow(s.key) { onSuggestionTap(s.prompt) }
+                    ForEach(suggestionKeys, id: \.self) { key in
+                        SuggestionPromptRow(LocalizedStringKey(key)) {
+                            onSuggestionTap(String(localized: String.LocalizationValue(key), bundle: .module))
+                        }
                     }
                 }
                 .padding(.horizontal, 20)

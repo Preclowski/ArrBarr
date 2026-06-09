@@ -28015,6 +28015,90 @@
           }
         }
       }
+    },
+    "chat.quizPrompt.movies": {
+      "extractionState": "manual",
+      "comment": "Prompt sent to the LLM when starting a quiz from the chat hero card",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Make me a movie quiz — a dozen-plus popular movies I don't have in my library yet."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zrób mi quiz z filmów — kilkanaście popularnych filmów, których jeszcze nie mam w bibliotece."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mach mir ein Film-Quiz — ein Dutzend beliebter Filme, die ich noch nicht in meiner Bibliothek habe."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hazme un quiz de películas: una docena de películas populares que aún no tengo en mi biblioteca."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fais-moi un quiz de films — une douzaine de films populaires que je n'ai pas encore dans ma bibliothèque."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Maak een filmquiz voor me — een tiental populaire films die ik nog niet in mijn bibliotheek heb."
+          }
+        }
+      }
+    },
+    "chat.quizPrompt.series": {
+      "extractionState": "manual",
+      "comment": "Prompt sent to the LLM when starting a quiz from the chat hero card",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Make me a series quiz — a dozen-plus popular series I don't have in my library yet."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zrób mi quiz z seriali — kilkanaście popularnych seriali, których jeszcze nie mam w bibliotece."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mach mir ein Serien-Quiz — ein Dutzend beliebter Serien, die ich noch nicht in meiner Bibliothek habe."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hazme un quiz de series: una docena de series populares que aún no tengo en mi biblioteca."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fais-moi un quiz de séries — une douzaine de séries populaires que je n'ai pas encore dans ma bibliothèque."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Maak een seriequiz voor me — een tiental populaire series die ik nog niet in mijn bibliotheek heb."
+          }
+        }
+      }
     }
   }
 }
