@@ -143,6 +143,57 @@ struct ConfigStoreTests {
         #expect(reloaded.notifyLidarr == true)
     }
 
+    // MARK: - migrateSecretsToKeychain tests
+
+    /// A SecretStore whose writes silently fail (simulating a Keychain write with
+    /// no entitlement), to prove migration never blanks UserDefaults unverified.
+    final class FailingSecretStore: SecretStore, @unchecked Sendable {
+        func read(_ key: SecretKey) -> String? { nil }   // read-back never verifies
+        func set(_ value: String, for key: SecretKey) {}  // write is a no-op
+        func delete(_ key: SecretKey) {}
+    }
+
+    @Test("migration leaves UserDefaults secrets intact when the Keychain write fails")
+    @MainActor func migrationVerifiesBeforeBlanking() throws {
+        let suite = "test.cfg.migrate.\(UUID().uuidString)"
+        let d = UserDefaults(suiteName: suite)!
+        defer { UserDefaults.standard.removePersistentDomain(forName: suite) }
+
+        var cfg = ServiceConfig.empty
+        cfg.apiKey = "secret-key"
+        let data = try JSONEncoder().encode(cfg)
+        d.set(data, forKey: ConfigStore.serviceKeyForTesting(.radarr))
+
+        ConfigStore.migrateSecretsToKeychain(defaults: d, secrets: FailingSecretStore())
+
+        let after = try JSONDecoder().decode(ServiceConfig.self,
+                    from: d.data(forKey: ConfigStore.serviceKeyForTesting(.radarr))!)
+        #expect(after.apiKey == "secret-key")
+        #expect(d.bool(forKey: ConfigStore.secretsMigratedKeyForTesting) == false)
+    }
+
+    @Test("migration blanks UserDefaults and sets the done flag when writes verify")
+    @MainActor func migrationSucceedsWithWorkingStore() throws {
+        let suite = "test.cfg.migrate.ok.\(UUID().uuidString)"
+        let d = UserDefaults(suiteName: suite)!
+        defer { UserDefaults.standard.removePersistentDomain(forName: suite) }
+
+        var cfg = ServiceConfig.empty
+        cfg.apiKey = "k1"; cfg.password = "p1"
+        d.set(try JSONEncoder().encode(cfg), forKey: ConfigStore.serviceKeyForTesting(.sonarr))
+
+        let store = InMemorySecretStore()
+        ConfigStore.migrateSecretsToKeychain(defaults: d, secrets: store)
+
+        let after = try JSONDecoder().decode(ServiceConfig.self,
+                    from: d.data(forKey: ConfigStore.serviceKeyForTesting(.sonarr))!)
+        #expect(after.apiKey == "")
+        #expect(after.password == "")
+        #expect(store.read(.apiKey(for: .sonarr)) == "k1")
+        #expect(store.read(.password(for: .sonarr)) == "p1")
+        #expect(d.bool(forKey: ConfigStore.secretsMigratedKeyForTesting) == true)
+    }
+
     @Test("ConfigStore and KeychainSecretStore agree on the iCloud flag key")
     func iCloudFlagKeyConstantsMatch() {
         #expect(ConfigStore.iCloudSyncEnabledKey == KeychainSecretStore.iCloudSyncEnabledKey)

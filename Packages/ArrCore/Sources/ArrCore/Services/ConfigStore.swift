@@ -264,6 +264,8 @@ public final class ConfigStore: ObservableObject {
     /// Exposed for testing only — lets tests assert on the done-flag key name
     /// without making it fully public.
     nonisolated static var groupMigrationDoneKeyForTesting: String { groupMigrationDoneKey }
+    nonisolated static var secretsMigratedKeyForTesting: String { secretsMigratedKey }
+    nonisolated static func serviceKeyForTesting(_ kind: ServiceKind) -> String { key(kind) }
 
     public init(defaults: UserDefaults = ConfigStore.resolveDefaults(),
                 secrets: SecretStore? = nil) {
@@ -743,17 +745,29 @@ public final class ConfigStore: ObservableObject {
     /// in `defaults` into `secrets`, then blank them in `defaults`. Idempotent.
     nonisolated static func migrateSecretsToKeychain(defaults: UserDefaults, secrets: SecretStore) {
         guard !defaults.bool(forKey: secretsMigratedKey) else { return }
+        var allVerified = true
+
+        /// Write `value`, read it back, and only then report success. A failed
+        /// read-back (e.g. Keychain write rejected for missing entitlement) marks
+        /// the migration incomplete so the plaintext copy is preserved.
+        func store(_ value: String, _ key: SecretKey) -> Bool {
+            guard !value.isEmpty else { return true }
+            secrets.set(value, for: key)
+            if secrets.read(key) == value { return true }
+            allVerified = false
+            return false
+        }
 
         for kind in ServiceKind.allCases {
             guard let data = defaults.data(forKey: key(kind)),
                   var cfg = try? JSONDecoder().decode(ServiceConfig.self, from: data)
             else { continue }
             var changed = false
-            if !cfg.apiKey.isEmpty {
-                secrets.set(cfg.apiKey, for: .apiKey(for: kind)); cfg.apiKey = ""; changed = true
+            if !cfg.apiKey.isEmpty, store(cfg.apiKey, .apiKey(for: kind)) {
+                cfg.apiKey = ""; changed = true
             }
-            if !cfg.password.isEmpty {
-                secrets.set(cfg.password, for: .password(for: kind)); cfg.password = ""; changed = true
+            if !cfg.password.isEmpty, store(cfg.password, .password(for: kind)) {
+                cfg.password = ""; changed = true
             }
             if changed, let updated = try? JSONEncoder().encode(cfg) {
                 defaults.set(updated, forKey: key(kind))
@@ -762,20 +776,19 @@ public final class ConfigStore: ObservableObject {
 
         if let data = defaults.data(forKey: openaiConfigKey),
            var cfg = try? JSONDecoder().decode(OpenAIConfig.self, from: data),
-           !cfg.apiKey.isEmpty {
-            secrets.set(cfg.apiKey, for: .openAIKey)
+           !cfg.apiKey.isEmpty, store(cfg.apiKey, .openAIKey) {
             cfg.apiKey = ""
             if let updated = try? JSONEncoder().encode(cfg) {
                 defaults.set(updated, forKey: openaiConfigKey)
             }
         }
 
-        if let tmdb = defaults.string(forKey: tmdbApiKeyKey), !tmdb.isEmpty {
-            secrets.set(tmdb, for: .tmdbKey)
+        if let tmdb = defaults.string(forKey: tmdbApiKeyKey), !tmdb.isEmpty,
+           store(tmdb, .tmdbKey) {
             defaults.removeObject(forKey: tmdbApiKeyKey)
         }
 
-        defaults.set(true, forKey: secretsMigratedKey)
+        if allVerified { defaults.set(true, forKey: secretsMigratedKey) }
     }
 
 }
