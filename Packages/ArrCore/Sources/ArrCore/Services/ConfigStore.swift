@@ -238,7 +238,7 @@ public final class ConfigStore: ObservableObject {
     private static let fontScaleKey = "ArrBarr.fontScale"
     private static let aiKnowsAboutWhisparrKey = "ArrBarr.aiKnowsAboutWhisparr"
     private static let launchAtLoginKey = "ArrBarr.launchAtLogin"
-    private static let iCloudSyncEnabledKey = "ArrBarr.iCloudSyncEnabled"
+    nonisolated static let iCloudSyncEnabledKey = "ArrBarr.iCloudSyncEnabled"
     private static let appLanguageKey = "ArrBarr.appLanguage"
     private static let appearanceKey = "ArrBarr.appearance"
     private static let arrOrderKey = "ArrBarr.arrOrder"

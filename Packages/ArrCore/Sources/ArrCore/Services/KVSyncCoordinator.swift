@@ -108,7 +108,7 @@ public final class KVSyncCoordinator: ObservableObject {
                 kv.set(value, forKey: key)
             }
         }
-        lastSyncDate = Date()
+        if accountAvailable { lastSyncDate = Date() }
     }
 
     /// Apply the given inbound KVS keys (allowlist-filtered) into UserDefaults,
@@ -158,7 +158,15 @@ extension KVSyncCoordinator {
             kv: NSUbiquitousKeyValueStore.default,
             reload: { ConfigStore.shared.reloadFromDefaults() })
         _shared = coord
-        if KeychainSecretStore.syncEnabled(in: group) { coord.start() }
+        if KeychainSecretStore.syncEnabled(in: group) {
+            coord.start()
+        } else {
+            // Sync is off: re-stamp existing Keychain secrets as
+            // non-synchronizable at launch so the "off = don't replicate"
+            // guarantee holds even if the flag was turned off on another device
+            // (the in-app toggle already does this; this covers cold starts).
+            KeychainSecretStore().reapplySyncAttribute(for: SecretKey.syncable)
+        }
         return coord
     }
 }

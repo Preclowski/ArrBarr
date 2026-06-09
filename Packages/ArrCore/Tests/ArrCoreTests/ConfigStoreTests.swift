@@ -143,6 +143,11 @@ struct ConfigStoreTests {
         #expect(reloaded.notifyLidarr == true)
     }
 
+    @Test("ConfigStore and KeychainSecretStore agree on the iCloud flag key")
+    func iCloudFlagKeyConstantsMatch() {
+        #expect(ConfigStore.iCloudSyncEnabledKey == KeychainSecretStore.iCloudSyncEnabledKey)
+    }
+
     @Test("iCloudSyncEnabled defaults to true and persists")
     @MainActor func iCloudSyncEnabledPersists() {
         let suite = "test.cfg.icloud.\(UUID().uuidString)"
