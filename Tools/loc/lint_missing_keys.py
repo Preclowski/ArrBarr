@@ -20,7 +20,7 @@ def missing_keys(sources=SOURCES):
     keys, areas = catalog_keys_and_areas()
     # any string literal shaped like a dotted key whose first segment is a
     # known catalog area
-    lit = re.compile(r'"([a-z][a-zA-Z0-9]*(?:\.[a-zA-Z0-9]+){1,3})"')
+    lit = re.compile(r'"([a-z][a-zA-Z0-9]*(?:\.[a-zA-Z0-9]+){1,6})"')
     bad = {}
     for p in sources.rglob("*.swift"):
         for m in lit.finditer(p.read_text()):
