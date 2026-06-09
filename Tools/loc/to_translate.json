@@ -1,0 +1,4587 @@
+[
+ {
+  "key": "chat.aNewChatTab.tooltip",
+  "comment": "Tooltip/description in chat",
+  "plural": false,
+  "en": "A new Chat tab lets you ask questions in plain language — find a show, check what's coming this week, add a movie. Works with Apple Intelligence (macOS 26+) or any OpenAI-compatible API. Set up under Settings → AI.",
+  "pl": "Nowa zakładka Czat pozwala zadawać pytania zwykłym językiem — znajdź serial, sprawdź co wychodzi w tym tygodniu, dodaj film. Działa z Apple Intelligence (macOS 26+) lub dowolnym API zgodnym z OpenAI. Konfiguracja w Ustawienia → AI."
+ },
+ {
+  "key": "chat.aiChat.button",
+  "comment": "Button in chat",
+  "plural": false,
+  "en": "AI Chat",
+  "pl": "Czat AI"
+ },
+ {
+  "key": "chat.almostThere.button",
+  "comment": "Button in chat",
+  "plural": false,
+  "en": "Almost there…",
+  "pl": "Już prawie…"
+ },
+ {
+  "key": "chat.appleIntelligence.button",
+  "comment": "Button in chat",
+  "plural": false,
+  "en": "Apple Intelligence",
+  "pl": "Apple Intelligence"
+ },
+ {
+  "key": "chat.appleIntelligenceIsUnavailable.tooltip",
+  "comment": "Tooltip/description in chat",
+  "plural": false,
+  "en": "Apple Intelligence is unavailable. Try turning it on in System Settings.",
+  "pl": "Apple Intelligence jest niedostępne. Spróbuj je włączyć w Ustawieniach systemowych."
+ },
+ {
+  "key": "chat.askAbout.label",
+  "comment": "Label in common",
+  "plural": false,
+  "en": "Ask about %@",
+  "pl": "Zapytaj o %@"
+ },
+ {
+  "key": "chat.askAnything.button",
+  "comment": "Button in chat",
+  "plural": false,
+  "en": "Ask anything…",
+  "pl": "Zapytaj o cokolwiek…"
+ },
+ {
+  "key": "chat.askAnythingAboutYour.tooltip",
+  "comment": "Tooltip/description in common",
+  "plural": false,
+  "en": "Ask anything about your Sonarr / Radarr.",
+  "pl": "Zapytaj o cokolwiek dotyczącego Sonarra / Radarra."
+ },
+ {
+  "key": "chat.askWhatSGood.tooltip",
+  "comment": "Tooltip/description in common",
+  "plural": false,
+  "en": "Ask: what's good in my library?",
+  "pl": "Zapytaj: co dobrego mam w bibliotece?"
+ },
+ {
+  "key": "chat.chatRequiresIos26.tooltip",
+  "comment": "Tooltip/description in common",
+  "plural": false,
+  "en": "Chat requires iOS 26 with Apple Intelligence.",
+  "pl": "Czat wymaga iOS 26 z Apple Intelligence."
+ },
+ {
+  "key": "chat.chatRequiresMacos26.tooltip",
+  "comment": "Tooltip/description in chat",
+  "plural": false,
+  "en": "Chat requires macOS 26 with Apple Intelligence.",
+  "pl": "Czat wymaga macOS 26 z Apple Intelligence."
+ },
+ {
+  "key": "chat.chatWithYourLibrary.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Chat with your library",
+  "pl": "Czatuj ze swoją biblioteką"
+ },
+ {
+  "key": "chat.clearChat.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Clear chat",
+  "pl": "Wyczyść chat"
+ },
+ {
+  "key": "chat.clearConversation.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Clear conversation",
+  "pl": "Wyczyść rozmowę"
+ },
+ {
+  "key": "chat.considering.button",
+  "comment": "Button in chat",
+  "plural": false,
+  "en": "Considering…",
+  "pl": "Rozważam…"
+ },
+ {
+  "key": "chat.evaluating.button",
+  "comment": "Button in chat",
+  "plural": false,
+  "en": "Evaluating…",
+  "pl": "Oceniam…"
+ },
+ {
+  "key": "chat.exposesArrbarrSTools.tooltip",
+  "comment": "Tooltip/description in chat",
+  "plural": false,
+  "en": "Exposes ArrBarr's tools over the Model Context Protocol so an external client (e.g. Claude Desktop) can drive your media stack. This is separate from the built-in AI assistant — changing these settings does not affect the in-app chat.",
+  "pl": "Udostępnia narzędzia ArrBarr przez Model Context Protocol, aby zewnętrzny klient (np. Claude Desktop) mógł sterować Twoim stosem mediów. To jest oddzielne od wbudowanego asystenta AI — zmiana tych ustawień nie wpływa na czat w aplikacji."
+ },
+ {
+  "key": "chat.findingIdeas.button",
+  "comment": "Button in chat",
+  "plural": false,
+  "en": "Finding ideas…",
+  "pl": "Szukam pomysłów…"
+ },
+ {
+  "key": "chat.hereAreLldFilms.tooltip",
+  "comment": "Tooltip/description in chat",
+  "plural": false,
+  "en": "Here are %lld films you might enjoy.",
+  "pl": "Oto %lld filmów, które mogą Ci się spodobać."
+ },
+ {
+  "key": "chat.hereAreLldSeries.tooltip",
+  "comment": "Tooltip/description in chat",
+  "plural": false,
+  "en": "Here are %lld series you might enjoy.",
+  "pl": "Oto %lld seriali, które mogą Ci się spodobać."
+ },
+ {
+  "key": "chat.moviesWithTildaSwinton.label",
+  "comment": "Label in chat",
+  "plural": false,
+  "en": "Movies with Tilda Swinton",
+  "pl": "Filmy z Tildą Swinton"
+ },
+ {
+  "key": "chat.newChat.button",
+  "comment": "Button in chat",
+  "plural": false,
+  "en": "New chat",
+  "pl": "Nowy czat"
+ },
+ {
+  "key": "chat.orAsk.button",
+  "comment": "Button in chat",
+  "plural": false,
+  "en": "OR ASK",
+  "pl": "ALBO ZAPYTAJ"
+ },
+ {
+  "key": "chat.quizATipOr.tooltip",
+  "comment": "Tooltip/description in chat",
+  "plural": false,
+  "en": "Quiz, a tip, or type a question.",
+  "pl": "Quiz, podpowiedź albo wpisz pytanie."
+ },
+ {
+  "key": "chat.send.button",
+  "comment": "Button in chat",
+  "plural": false,
+  "en": "Send",
+  "pl": "Wyślij"
+ },
+ {
+  "key": "chat.setMcpServerUrl.tooltip",
+  "comment": "Tooltip/description in chat",
+  "plural": false,
+  "en": "Set MCP server URL in Settings to start chatting.",
+  "pl": "Ustaw adres serwera MCP w Ustawieniach, aby zacząć czat."
+ },
+ {
+  "key": "chat.startANewChat.button",
+  "comment": "Button in chat",
+  "plural": false,
+  "en": "Start a new chat",
+  "pl": "Rozpocznij nowy czat"
+ },
+ {
+  "key": "chat.suggestSomethingLikeMr.tooltip",
+  "comment": "Tooltip/description in chat",
+  "plural": false,
+  "en": "Suggest something like Mr. Robot?",
+  "pl": "Polecisz coś jak Mr. Robot?"
+ },
+ {
+  "key": "chat.tapToRevealSpoiler.button",
+  "comment": "Button in chat",
+  "plural": false,
+  "en": "Tap to reveal spoiler",
+  "pl": "Dotknij, aby odsłonić spoiler"
+ },
+ {
+  "key": "chat.thinking.button",
+  "comment": "Button in chat",
+  "plural": false,
+  "en": "Thinking…",
+  "pl": "Myślę…"
+ },
+ {
+  "key": "chat.weighingOptions.button",
+  "comment": "Button in chat",
+  "plural": false,
+  "en": "Weighing options…",
+  "pl": "Ważę opcje…"
+ },
+ {
+  "key": "chat.whatSDownloading.tooltip",
+  "comment": "Tooltip/description in chat",
+  "plural": false,
+  "en": "What's downloading?",
+  "pl": "Co się teraz ściąga?"
+ },
+ {
+  "key": "chat.whatSOutToday.tooltip",
+  "comment": "Tooltip/description in chat",
+  "plural": false,
+  "en": "What's out today?",
+  "pl": "Co dziś wychodzi?"
+ },
+ {
+  "key": "chat.whatToWatchTonight.tooltip",
+  "comment": "Tooltip/description in chat",
+  "plural": false,
+  "en": "What to watch tonight?",
+  "pl": "Co dziś obejrzeć?"
+ },
+ {
+  "key": "chat.working.button",
+  "comment": "Button in chat",
+  "plural": false,
+  "en": "Working…",
+  "pl": "Pracuję…"
+ },
+ {
+  "key": "common.addPerson.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Add person",
+  "pl": "Dodaj osobę"
+ },
+ {
+  "key": "common.arrbarrIsNotConfigured.label",
+  "comment": "Label in common",
+  "plural": false,
+  "en": "ArrBarr is not configured",
+  "pl": "ArrBarr nie jest skonfigurowany"
+ },
+ {
+  "key": "common.arrbarrWillRelaunchNow.tooltip",
+  "comment": "Tooltip/description in common",
+  "plural": false,
+  "en": "ArrBarr will relaunch now to apply the change.",
+  "pl": "ArrBarr uruchomi się ponownie, aby zastosować zmianę."
+ },
+ {
+  "key": "common.arrbarrWillRelaunchNow2.tooltip",
+  "comment": "Tooltip/description in common",
+  "plural": false,
+  "en": "ArrBarr will relaunch now to load demo content.",
+  "pl": "ArrBarr zostanie teraz uruchomiony ponownie, aby wczytać zawartość demo."
+ },
+ {
+  "key": "common.autoJumpOff.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Auto-jump off",
+  "pl": "Auto-skok wyłączony"
+ },
+ {
+  "key": "common.autoJumpOn.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Auto-jump on",
+  "pl": "Auto-skok włączony"
+ },
+ {
+  "key": "common.backgroundWhileCooking.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Background while cooking",
+  "pl": "W tle podczas gotowania"
+ },
+ {
+  "key": "common.blurPostersNsfw.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Blur posters #nsfw",
+  "pl": "Rozmyj plakaty #nsfw"
+ },
+ {
+  "key": "common.builtInSonarrRadarr.label",
+  "comment": "Label in common",
+  "plural": false,
+  "en": "Built-in (Sonarr + Radarr)",
+  "pl": "Wbudowane (Sonarr + Radarr)"
+ },
+ {
+  "key": "common.buy.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Buy",
+  "pl": "Kup"
+ },
+ {
+  "key": "common.cancel.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Cancel",
+  "pl": "Anuluj"
+ },
+ {
+  "key": "common.changeMediaKind.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Change media kind",
+  "pl": "Zmień typ mediów"
+ },
+ {
+  "key": "common.chatIsAPro.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Chat is a Pro feature",
+  "pl": "Chat to funkcja Pro"
+ },
+ {
+  "key": "common.clear.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Clear",
+  "pl": "Wyczyść"
+ },
+ {
+  "key": "common.clearFilters.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Clear filters",
+  "pl": "Wyczyść filtry"
+ },
+ {
+  "key": "common.client.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Client:",
+  "pl": "Klient:"
+ },
+ {
+  "key": "common.clientIsNotConfigured.label",
+  "comment": "Label in common",
+  "plural": false,
+  "en": "Client (%@) is not configured",
+  "pl": "Klient (%@) nie jest skonfigurowany"
+ },
+ {
+  "key": "common.confirm.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Confirm",
+  "pl": "Potwierdź"
+ },
+ {
+  "key": "common.confirmAction.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Confirm action",
+  "pl": "Potwierdź akcję"
+ },
+ {
+  "key": "common.connectRadarrSonarrOr.tooltip",
+  "comment": "Tooltip/description in common",
+  "plural": false,
+  "en": "Connect Radarr, Sonarr or Lidarr to get started.",
+  "pl": "Połącz Radarra, Sonarra lub Lidarra, aby zacząć."
+ },
+ {
+  "key": "common.copyTheApiKey.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Copy the API Key",
+  "pl": "Skopiuj klucz API"
+ },
+ {
+  "key": "common.couldnTLoadMetadata.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Couldn't load metadata",
+  "pl": "Nie udało się załadować metadanych"
+ },
+ {
+  "key": "common.custom.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Custom",
+  "pl": "Własne"
+ },
+ {
+  "key": "common.customFormatScore.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Custom format score",
+  "pl": "Ocena formatu niestandardowego"
+ },
+ {
+  "key": "common.customFormats.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Custom formats",
+  "pl": "Formaty niestandardowe"
+ },
+ {
+  "key": "common.demoModeDisabled.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Demo mode disabled",
+  "pl": "Tryb demo wyłączony"
+ },
+ {
+  "key": "common.demoModeEnabled.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Demo mode enabled",
+  "pl": "Tryb demo włączony"
+ },
+ {
+  "key": "common.detachIntoAWindow.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Detach into a window",
+  "pl": "Odepnij to okno"
+ },
+ {
+  "key": "common.developerOptionsEnabled.label",
+  "comment": "Label in common",
+  "plural": false,
+  "en": "Developer options enabled",
+  "pl": "Opcje programisty włączone"
+ },
+ {
+  "key": "common.display.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Display",
+  "pl": "Wyświetlanie"
+ },
+ {
+  "key": "common.doYouWantTo.tooltip",
+  "comment": "Tooltip/description in common",
+  "plural": false,
+  "en": "Do you want to save your changes before closing?",
+  "pl": "Czy chcesz zapisać zmiany przed zamknięciem?"
+ },
+ {
+  "key": "common.donTSave.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Don't Save",
+  "pl": "Nie zapisuj"
+ },
+ {
+  "key": "common.easyComfortWatch.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Easy comfort watch",
+  "pl": "Lekki film do oglądania"
+ },
+ {
+  "key": "common.enableChat.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Enable chat",
+  "pl": "Włącz czat"
+ },
+ {
+  "key": "common.epic.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Epic",
+  "pl": "Epicki"
+ },
+ {
+  "key": "common.existingFile.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Existing file",
+  "pl": "Istniejący plik"
+ },
+ {
+  "key": "common.existingFile2.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Existing file:",
+  "pl": "Istniejący plik:"
+ },
+ {
+  "key": "common.existingFiles.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Existing files",
+  "pl": "Istniejące pliki"
+ },
+ {
+  "key": "common.feelGood.label",
+  "comment": "Label in common",
+  "plural": false,
+  "en": "Feel-good",
+  "pl": "Optymistyczny"
+ },
+ {
+  "key": "common.file.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "File:",
+  "pl": "Plik:"
+ },
+ {
+  "key": "common.filter.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Filter",
+  "pl": "Filtr"
+ },
+ {
+  "key": "common.filter2.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Filter…",
+  "pl": "Filtruj…"
+ },
+ {
+  "key": "common.findingMore.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Finding more…",
+  "pl": "Szukam więcej…"
+ },
+ {
+  "key": "common.friendsOverWithPizza.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Friends over with pizza",
+  "pl": "Znajomi i pizza"
+ },
+ {
+  "key": "common.from.label",
+  "comment": "Label in common",
+  "plural": false,
+  "en": "from",
+  "pl": "z"
+ },
+ {
+  "key": "common.gatunek.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Gatunek",
+  "pl": "Gatunek"
+ },
+ {
+  "key": "common.gatunki.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Gatunki",
+  "pl": "Gatunki"
+ },
+ {
+  "key": "common.getAFreeTmdb.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Get a free TMDB key",
+  "pl": "Pobierz darmowy klucz TMDB"
+ },
+ {
+  "key": "common.hangoverSunday.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Hangover Sunday",
+  "pl": "Niedzielny kac"
+ },
+ {
+  "key": "common.highlyRated.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Highly rated",
+  "pl": "Wysoko oceniany"
+ },
+ {
+  "key": "common.inLibraryOrNew.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "In library or new",
+  "pl": "W bibliotece lub nowe"
+ },
+ {
+  "key": "common.keepPlaying.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Keep playing",
+  "pl": "Graj dalej"
+ },
+ {
+  "key": "common.length.label",
+  "comment": "Label in common",
+  "plural": false,
+  "en": "LENGTH",
+  "pl": "DŁUGOŚĆ"
+ },
+ {
+  "key": "common.letSGo.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Let's go",
+  "pl": "Zaczynamy"
+ },
+ {
+  "key": "common.lidarrNotifyOnNew.label",
+  "comment": "Label in common",
+  "plural": false,
+  "en": "Lidarr — notify on new grabs",
+  "pl": "Lidarr — powiadamiaj o nowych pobraniach"
+ },
+ {
+  "key": "common.longHaul.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Long haul",
+  "pl": "Długi seans"
+ },
+ {
+  "key": "common.longSoloFlight.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Long solo flight",
+  "pl": "Długi lot samotnie"
+ },
+ {
+  "key": "common.marathonBinge.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Marathon binge",
+  "pl": "Maraton odcinków"
+ },
+ {
+  "key": "common.mindBending.label",
+  "comment": "Label in common",
+  "plural": false,
+  "en": "Mind-bending",
+  "pl": "Mózgołam"
+ },
+ {
+  "key": "common.monitorSeasonSAnd.tooltip",
+  "comment": "Tooltip/description in common",
+  "plural": false,
+  "en": "Monitor season(s) %@ and start search.",
+  "pl": "Monitoruj sezon(y) %@ i rozpocznij wyszukiwanie."
+ },
+ {
+  "key": "common.monitorThisAlbumAnd.tooltip",
+  "comment": "Tooltip/description in common",
+  "plural": false,
+  "en": "Monitor this album and start search.",
+  "pl": "Monitoruj ten album i rozpocznij wyszukiwanie."
+ },
+ {
+  "key": "common.monitored.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Monitored",
+  "pl": "Monitorowane"
+ },
+ {
+  "key": "common.moreFilters.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "More filters",
+  "pl": "Więcej filtrów"
+ },
+ {
+  "key": "common.moreOptions.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "More options",
+  "pl": "Więcej opcji"
+ },
+ {
+  "key": "common.mostVotes.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Most votes",
+  "pl": "Najwięcej głosów"
+ },
+ {
+  "key": "common.noHistory.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "No history",
+  "pl": "Brak historii"
+ },
+ {
+  "key": "common.noMoviesMatchThis.tooltip",
+  "comment": "Tooltip/description in common",
+  "plural": false,
+  "en": "No movies match this query.",
+  "pl": "Brak filmów pasujących do zapytania."
+ },
+ {
+  "key": "common.noScenesMatchThis.tooltip",
+  "comment": "Tooltip/description in common",
+  "plural": false,
+  "en": "No scenes match this query.",
+  "pl": "Brak scen pasujących do zapytania."
+ },
+ {
+  "key": "common.noSeriesMatchThis.tooltip",
+  "comment": "Tooltip/description in common",
+  "plural": false,
+  "en": "No series match this query.",
+  "pl": "Brak seriali pasujących do zapytania."
+ },
+ {
+  "key": "common.nostalgic.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Nostalgic",
+  "pl": "Nostalgiczny"
+ },
+ {
+  "key": "common.nothingUpcoming.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Nothing upcoming",
+  "pl": "Brak nadchodzących"
+ },
+ {
+  "key": "common.notifications.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Notifications",
+  "pl": "Powiadomienia"
+ },
+ {
+  "key": "common.openInBrowser.label",
+  "comment": "Label in common",
+  "plural": false,
+  "en": "Open %@ in browser",
+  "pl": "Otwórz %@ w przeglądarce"
+ },
+ {
+  "key": "common.openSettings.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Open Settings…",
+  "pl": "Otwórz ustawienia…"
+ },
+ {
+  "key": "common.openWindow.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Open Window…",
+  "pl": "Otwórz okno…"
+ },
+ {
+  "key": "common.openYourArrS.tooltip",
+  "comment": "Tooltip/description in common",
+  "plural": false,
+  "en": "Open your arr's web UI → Settings → General",
+  "pl": "Otwórz panel webowy swojego arr → Ustawienia → Ogólne"
+ },
+ {
+  "key": "common.optionalVibeOrHit.label",
+  "comment": "Label in common",
+  "plural": false,
+  "en": "Optional vibe — or hit ↵ to discover",
+  "pl": "Opcjonalny nastrój — lub naciśnij ↵"
+ },
+ {
+  "key": "common.orDescribe.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Or describe…",
+  "pl": "Albo opisz…"
+ },
+ {
+  "key": "common.orDescribeWhatYou.label",
+  "comment": "Label in common",
+  "plural": false,
+  "en": "Or describe what you want:",
+  "pl": "Lub opisz na co masz ochotę:"
+ },
+ {
+  "key": "common.osoby.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Osoby",
+  "pl": "Osoby"
+ },
+ {
+  "key": "common.pageLld.label",
+  "comment": "Label in common",
+  "plural": false,
+  "en": "Page %lld",
+  "pl": "Strona %lld"
+ },
+ {
+  "key": "common.pasteItHereAlong.label",
+  "comment": "Label in common",
+  "plural": false,
+  "en": "Paste it here, along with the URL",
+  "pl": "Wklej go tutaj razem z adresem URL"
+ },
+ {
+  "key": "common.people.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "People",
+  "pl": "Ludzie"
+ },
+ {
+  "key": "common.percent.label",
+  "comment": "Label in common",
+  "plural": false,
+  "en": "%lld%%",
+  "pl": "%lld%%"
+ },
+ {
+  "key": "common.person.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Person",
+  "pl": "Osoba"
+ },
+ {
+  "key": "common.pickAMediaKind.label",
+  "comment": "Label in common",
+  "plural": false,
+  "en": "Pick a media kind to start:",
+  "pl": "Wybierz typ na początek:"
+ },
+ {
+  "key": "common.quirky.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Quirky",
+  "pl": "Dziwaczny"
+ },
+ {
+  "key": "common.quitArrbarr.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Quit ArrBarr",
+  "pl": "Zakończ ArrBarr"
+ },
+ {
+  "key": "common.radarrNotifyOnNew.label",
+  "comment": "Label in common",
+  "plural": false,
+  "en": "Radarr — notify on new grabs",
+  "pl": "Radarr — powiadamiaj o nowych pobraniach"
+ },
+ {
+  "key": "common.reattachToMenuBar.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Reattach to menu bar",
+  "pl": "Przypnij do taskbara"
+ },
+ {
+  "key": "common.refresh.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Refresh",
+  "pl": "Odśwież"
+ },
+ {
+  "key": "common.relevance.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Relevance",
+  "pl": "Trafność"
+ },
+ {
+  "key": "common.remove.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Remove",
+  "pl": "Usuń"
+ },
+ {
+  "key": "common.remove.label",
+  "comment": "Label in common",
+  "plural": false,
+  "en": "Remove %@",
+  "pl": "Usuń %@"
+ },
+ {
+  "key": "common.removeFromClient.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Remove from client",
+  "pl": "Usuń z klienta"
+ },
+ {
+  "key": "common.removePerson.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Remove person",
+  "pl": "Usuń osobę"
+ },
+ {
+  "key": "common.replacing.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Replacing",
+  "pl": "Zastępuje"
+ },
+ {
+  "key": "common.replacingExistingFiles.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Replacing existing files",
+  "pl": "Zastępuje istniejące pliki"
+ },
+ {
+  "key": "common.restartArrbarrToApply.tooltip",
+  "comment": "Tooltip/description in common",
+  "plural": false,
+  "en": "Restart ArrBarr to apply language change.",
+  "pl": "Uruchom ArrBarr ponownie, aby zastosować zmianę języka."
+ },
+ {
+  "key": "common.resultType.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Result type",
+  "pl": "Typ wyników"
+ },
+ {
+  "key": "common.romantic.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Romantic",
+  "pl": "Romantyczny"
+ },
+ {
+  "key": "common.run.tooltip",
+  "comment": "Tooltip/description in common",
+  "plural": false,
+  "en": "Run %@.",
+  "pl": "Uruchom %@."
+ },
+ {
+  "key": "common.saturdayNight.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Saturday night",
+  "pl": "Sobotni wieczór"
+ },
+ {
+  "key": "common.saturdayNightWithFriends.label",
+  "comment": "Label in common",
+  "plural": false,
+  "en": "Saturday night with friends",
+  "pl": "Sobotni wieczór z przyjaciółmi"
+ },
+ {
+  "key": "common.save.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Save",
+  "pl": "Zapisz"
+ },
+ {
+  "key": "common.savePerson.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Save person",
+  "pl": "Zapisz osobę"
+ },
+ {
+  "key": "common.searchForThisAlbum.tooltip",
+  "comment": "Tooltip/description in common",
+  "plural": false,
+  "en": "Search for this album.",
+  "pl": "Szukaj tego albumu."
+ },
+ {
+  "key": "common.searchForThisMovie.tooltip",
+  "comment": "Tooltip/description in common",
+  "plural": false,
+  "en": "Search for this movie.",
+  "pl": "Szukaj tego filmu."
+ },
+ {
+  "key": "common.searchLldEpisodeS.tooltip",
+  "comment": "Tooltip/description in common",
+  "plural": false,
+  "en": "Search %lld episode(s).",
+  "pl": "Szukaj %lld odcinka/odcinków."
+ },
+ {
+  "key": "common.selectAnItem.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Select an item",
+  "pl": "Wybierz pozycję"
+ },
+ {
+  "key": "common.settings.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Settings",
+  "pl": "Ustawienia"
+ },
+ {
+  "key": "common.settings2.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Settings…",
+  "pl": "Ustawienia…"
+ },
+ {
+  "key": "common.short.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Short",
+  "pl": "Krótki"
+ },
+ {
+  "key": "common.showLldMore.label",
+  "comment": "Label in common",
+  "plural": false,
+  "en": "Show %lld more",
+  "pl": "Pokaż jeszcze %lld"
+ },
+ {
+  "key": "common.showNeedsYou.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Show Needs you",
+  "pl": "Pokaż „Potrzebuje twojej uwagi“"
+ },
+ {
+  "key": "common.showTonightBanner.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Show Tonight banner",
+  "pl": "Pokaż baner „Dziś wieczorem“"
+ },
+ {
+  "key": "common.slowBurn.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Slow burn",
+  "pl": "Powolne tempo"
+ },
+ {
+  "key": "common.sonarrNotifyOnNew.label",
+  "comment": "Label in common",
+  "plural": false,
+  "en": "Sonarr — notify on new grabs",
+  "pl": "Sonarr — powiadamiaj o nowych pobraniach"
+ },
+ {
+  "key": "common.source.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Source",
+  "pl": "Źródło"
+ },
+ {
+  "key": "common.sources.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Sources",
+  "pl": "Źródła"
+ },
+ {
+  "key": "common.spoiler.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Spoiler",
+  "pl": "Spoiler"
+ },
+ {
+  "key": "common.starters.label",
+  "comment": "Label in common",
+  "plural": false,
+  "en": "STARTERS",
+  "pl": "PROPOZYCJE"
+ },
+ {
+  "key": "common.startersAi.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "STARTERS (AI)",
+  "pl": "PROPOZYCJE (AI)"
+ },
+ {
+  "key": "common.startup.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Startup",
+  "pl": "Uruchamianie"
+ },
+ {
+  "key": "common.stopMonitoringSeasonS.tooltip",
+  "comment": "Tooltip/description in common",
+  "plural": false,
+  "en": "Stop monitoring season(s) %@.",
+  "pl": "Przestań monitorować sezon(y) %@."
+ },
+ {
+  "key": "common.stopMonitoringThisAlbum.tooltip",
+  "comment": "Tooltip/description in common",
+  "plural": false,
+  "en": "Stop monitoring this album.",
+  "pl": "Przestań monitorować ten album."
+ },
+ {
+  "key": "common.suspenseful.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Suspenseful",
+  "pl": "Trzymający w napięciu"
+ },
+ {
+  "key": "common.switchMovieShowKind.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Switch movie/show kind",
+  "pl": "Przełącz film/serial"
+ },
+ {
+  "key": "common.tearJerker.label",
+  "comment": "Label in common",
+  "plural": false,
+  "en": "Tear-jerker",
+  "pl": "Wyciskający łzy"
+ },
+ {
+  "key": "common.tmdbFoundNoNew.tooltip",
+  "comment": "Tooltip/description in common",
+  "plural": false,
+  "en": "TMDB found no new films matching your filters. Try clearing some.",
+  "pl": "TMDB nie znalazł nowych filmów pasujących do Twoich filtrów. Spróbuj wyczyścić część z nich."
+ },
+ {
+  "key": "common.toolCall.label",
+  "comment": "Label in common",
+  "plural": false,
+  "en": "Tool call: %@",
+  "pl": "Wywołanie narzędzia: %@"
+ },
+ {
+  "key": "common.trueStory.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "True story",
+  "pl": "Oparty na faktach"
+ },
+ {
+  "key": "common.tryFriendsOverWith.label",
+  "comment": "Label in common",
+  "plural": false,
+  "en": "Try: Friends over with pizza…",
+  "pl": "Spróbuj: Znajomi i pizza…"
+ },
+ {
+  "key": "common.tryLongFlight.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Try: Long flight…",
+  "pl": "Spróbuj: Długi lot…"
+ },
+ {
+  "key": "common.type.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Type",
+  "pl": "Typ"
+ },
+ {
+  "key": "common.typeLabel.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Type label…",
+  "pl": "Wpisz etykietę…"
+ },
+ {
+  "key": "common.typeName.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Type name…",
+  "pl": "Wpisz nazwisko…"
+ },
+ {
+  "key": "common.unsavedChanges.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Unsaved Changes",
+  "pl": "Niezapisane zmiany"
+ },
+ {
+  "key": "common.version.label",
+  "comment": "Label in common",
+  "plural": false,
+  "en": "Version %@",
+  "pl": "Wersja %@"
+ },
+ {
+  "key": "common.vibe.label",
+  "comment": "Label in common",
+  "plural": false,
+  "en": "VIBE",
+  "pl": "NASTRÓJ"
+ },
+ {
+  "key": "common.whatAreYouDiscovering.tooltip",
+  "comment": "Tooltip/description in common",
+  "plural": false,
+  "en": "What are you discovering?",
+  "pl": "Czego dziś szukasz?"
+ },
+ {
+  "key": "common.whatSNewIn.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "What's New in ArrBarr",
+  "pl": "Co nowego w ArrBarr"
+ },
+ {
+  "key": "common.whileOpen.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "While open",
+  "pl": "Gdy otwarte"
+ },
+ {
+  "key": "common.willReplaceExistingFile.label",
+  "comment": "Label in common",
+  "plural": false,
+  "en": "Will replace existing file",
+  "pl": "Zastąpi istniejący plik"
+ },
+ {
+  "key": "common.yourMenuBarCompanion.tooltip",
+  "comment": "Tooltip/description in common",
+  "plural": false,
+  "en": "Your menu-bar companion for Radarr, Sonarr, and Lidarr.",
+  "pl": "Twój towarzysz w pasku menu dla Radarra, Sonarra i Lidarra."
+ },
+ {
+  "key": "common.z.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Z",
+  "pl": "Z"
+ },
+ {
+  "key": "common.zLat.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Z lat",
+  "pl": "Z lat"
+ },
+ {
+  "key": "detail.albumDetails.button",
+  "comment": "Button in detail",
+  "plural": false,
+  "en": "Album details",
+  "pl": "Szczegóły albumu"
+ },
+ {
+  "key": "detail.available.button",
+  "comment": "Button in detail",
+  "plural": false,
+  "en": "Available",
+  "pl": "Dostępne"
+ },
+ {
+  "key": "detail.cast.button",
+  "comment": "Button in detail",
+  "plural": false,
+  "en": "Cast",
+  "pl": "Obsada"
+ },
+ {
+  "key": "detail.clearGenres.button",
+  "comment": "Button in detail",
+  "plural": false,
+  "en": "Clear genres",
+  "pl": "Wyczyść gatunki"
+ },
+ {
+  "key": "detail.clickARowIn.tooltip",
+  "comment": "Tooltip/description in detail",
+  "plural": false,
+  "en": "Click a row in the queue to see its details, episodes, and existing files.",
+  "pl": "Kliknij wiersz w kolejce, aby zobaczyć szczegóły, odcinki i istniejące pliki."
+ },
+ {
+  "key": "detail.client.button",
+  "comment": "Button in detail",
+  "plural": false,
+  "en": "Client",
+  "pl": "Klient"
+ },
+ {
+  "key": "detail.details.button",
+  "comment": "Button in detail",
+  "plural": false,
+  "en": "Details",
+  "pl": "Szczegóły"
+ },
+ {
+  "key": "detail.discLld.label",
+  "comment": "Label in detail",
+  "plural": false,
+  "en": "Disc %lld",
+  "pl": "Płyta %lld"
+ },
+ {
+  "key": "detail.episodeLld.label",
+  "comment": "Label in detail",
+  "plural": false,
+  "en": "Episode %lld",
+  "pl": "Odcinek %lld"
+ },
+ {
+  "key": "detail.genre.label",
+  "comment": "Label in detail",
+  "plural": false,
+  "en": "GENRE",
+  "pl": "GATUNEK"
+ },
+ {
+  "key": "detail.genres.button",
+  "comment": "Button in detail",
+  "plural": false,
+  "en": "Genres",
+  "pl": "Gatunki"
+ },
+ {
+  "key": "detail.loadingEpisode.button",
+  "comment": "Button in detail",
+  "plural": false,
+  "en": "Loading episode…",
+  "pl": "Wczytywanie odcinka…"
+ },
+ {
+  "key": "detail.monitorSeasonLldAnd.tooltip",
+  "comment": "Tooltip/description in detail",
+  "plural": false,
+  "en": "Monitor season %lld and start search.",
+  "pl": "Monitoruj sezon %lld i rozpocznij wyszukiwanie."
+ },
+ {
+  "key": "detail.monitorThisSeason.button",
+  "comment": "Button in detail",
+  "plural": false,
+  "en": "Monitor this season",
+  "pl": "Monitoruj ten sezon"
+ },
+ {
+  "key": "detail.moreActions.button",
+  "comment": "Button in detail",
+  "plural": false,
+  "en": "More actions",
+  "pl": "Więcej akcji"
+ },
+ {
+  "key": "detail.movieDetails.button",
+  "comment": "Button in detail",
+  "plural": false,
+  "en": "Movie details",
+  "pl": "Szczegóły filmu"
+ },
+ {
+  "key": "detail.new.button",
+  "comment": "Button in detail",
+  "plural": false,
+  "en": "New",
+  "pl": "Nowy"
+ },
+ {
+  "key": "detail.notAiredYet.button",
+  "comment": "Button in detail",
+  "plural": false,
+  "en": "Not aired yet",
+  "pl": "Jeszcze nie wyemitowany"
+ },
+ {
+  "key": "detail.onDisk.button",
+  "comment": "Button in detail",
+  "plural": false,
+  "en": "On disk",
+  "pl": "Na dysku"
+ },
+ {
+  "key": "detail.openInBrowser.button",
+  "comment": "Button in detail",
+  "plural": false,
+  "en": "Open in browser",
+  "pl": "Otwórz w przeglądarce"
+ },
+ {
+  "key": "detail.pauseDownload.button",
+  "comment": "Button in detail",
+  "plural": false,
+  "en": "Pause download",
+  "pl": "Wstrzymaj pobieranie"
+ },
+ {
+  "key": "detail.pauseEpisodeDownload.button",
+  "comment": "Button in detail",
+  "plural": false,
+  "en": "Pause episode download",
+  "pl": "Wstrzymaj pobieranie odcinka"
+ },
+ {
+  "key": "detail.removeEpisodeDownload.button",
+  "comment": "Button in detail",
+  "plural": false,
+  "en": "Remove episode download",
+  "pl": "Anuluj pobieranie"
+ },
+ {
+  "key": "detail.replacingAllLldEpisodes.label",
+  "comment": "Label in detail",
+  "plural": false,
+  "en": "Replacing all %lld episodes",
+  "pl": "Zastępowanie wszystkich %lld odcinków"
+ },
+ {
+  "key": "detail.resumeEpisodeDownload.button",
+  "comment": "Button in detail",
+  "plural": false,
+  "en": "Resume episode download",
+  "pl": "Wznów pobieranie odcinka"
+ },
+ {
+  "key": "detail.searchAllMissingEpisodes.tooltip",
+  "comment": "Tooltip/description in detail",
+  "plural": false,
+  "en": "Search all missing episodes?",
+  "pl": "Szukać wszystkich brakujących odcinków?"
+ },
+ {
+  "key": "detail.searchForEveryMissing.tooltip",
+  "comment": "Tooltip/description in detail",
+  "plural": false,
+  "en": "Search for every missing episode in this series",
+  "pl": "Szukaj wszystkich brakujących odcinków w tym serialu"
+ },
+ {
+  "key": "detail.searchForMissingEpisodes.tooltip",
+  "comment": "Tooltip/description in detail",
+  "plural": false,
+  "en": "Search for missing episodes in this season",
+  "pl": "Szukaj brakujących odcinków w tym sezonie"
+ },
+ {
+  "key": "detail.searchForThisEpisode.button",
+  "comment": "Button in detail",
+  "plural": false,
+  "en": "Search for this episode",
+  "pl": "Szukaj tego odcinka"
+ },
+ {
+  "key": "detail.searchQueued.button",
+  "comment": "Button in detail",
+  "plural": false,
+  "en": "Search queued",
+  "pl": "Wyszukiwanie w kolejce"
+ },
+ {
+  "key": "detail.searchThisEpisode.tooltip",
+  "comment": "Tooltip/description in detail",
+  "plural": false,
+  "en": "Search this episode?",
+  "pl": "Szukać tego odcinka?"
+ },
+ {
+  "key": "detail.searchThisSeason.tooltip",
+  "comment": "Tooltip/description in detail",
+  "plural": false,
+  "en": "Search this season?",
+  "pl": "Szukać tego sezonu?"
+ },
+ {
+  "key": "detail.season.button",
+  "comment": "Button in detail",
+  "plural": false,
+  "en": "Season",
+  "pl": "Sezon"
+ },
+ {
+  "key": "detail.season01EpisodeLld.label",
+  "comment": "Label in detail",
+  "plural": false,
+  "en": "Season 01 · Episode %lld — %@",
+  "pl": "Sezon 01 · Odcinek %lld — %@"
+ },
+ {
+  "key": "detail.seasonLld.label",
+  "comment": "Label in detail",
+  "plural": false,
+  "en": "Season %lld",
+  "pl": "Sezon %lld"
+ },
+ {
+  "key": "detail.seasons.button",
+  "comment": "Button in detail",
+  "plural": false,
+  "en": "Seasons",
+  "pl": "Sezony"
+ },
+ {
+  "key": "detail.seriesDetails.button",
+  "comment": "Button in detail",
+  "plural": false,
+  "en": "Series details",
+  "pl": "Szczegóły serialu"
+ },
+ {
+  "key": "detail.showPoster.button",
+  "comment": "Button in detail",
+  "plural": false,
+  "en": "Show poster",
+  "pl": "Pokaż plakat"
+ },
+ {
+  "key": "detail.stopMonitoringSeasonLld.tooltip",
+  "comment": "Tooltip/description in detail",
+  "plural": false,
+  "en": "Stop monitoring season %lld.",
+  "pl": "Przestań monitorować sezon %lld."
+ },
+ {
+  "key": "detail.stopMonitoringThisSeason.label",
+  "comment": "Label in detail",
+  "plural": false,
+  "en": "Stop monitoring this season",
+  "pl": "Przestań monitorować ten sezon"
+ },
+ {
+  "key": "detail.thisWillRemoveFrom.tooltip",
+  "comment": "Tooltip/description in detail",
+  "plural": false,
+  "en": "This will remove \"%@\" from the download client.",
+  "pl": "Spowoduje to usunięcie „%@\" z klienta pobierania."
+ },
+ {
+  "key": "detail.thisWillRemoveThe.tooltip",
+  "comment": "Tooltip/description in detail",
+  "plural": false,
+  "en": "This will remove the download from the client.",
+  "pl": "To usunie pobieranie z klienta."
+ },
+ {
+  "key": "detail.tracks.button",
+  "comment": "Button in detail",
+  "plural": false,
+  "en": "Tracks",
+  "pl": "Utwory"
+ },
+ {
+  "key": "detail.unaired.button",
+  "comment": "Button in detail",
+  "plural": false,
+  "en": "Unaired",
+  "pl": "Nie wyemitowano"
+ },
+ {
+  "key": "detail.upgrade.button",
+  "comment": "Button in detail",
+  "plural": false,
+  "en": "Upgrade",
+  "pl": "Ulepszenie"
+ },
+ {
+  "key": "detail.willQueryYourIndexers.tooltip",
+  "comment": "Tooltip/description in detail",
+  "plural": false,
+  "en": "Will query your indexers and start a download if a release matches.",
+  "pl": "Wykona zapytanie do indekserów i rozpocznie pobieranie, jeśli znajdzie pasującą wersję."
+ },
+ {
+  "key": "detail.willQueryYourIndexers2.tooltip",
+  "comment": "Tooltip/description in detail",
+  "plural": false,
+  "en": "Will query your indexers for every episode in this season — including upgrades for episodes already on disk.",
+  "pl": "Odpyta indeksery o każdy odcinek z tego sezonu — w tym aktualizacje odcinków już posiadanych."
+ },
+ {
+  "key": "detail.willQueryYourIndexers3.tooltip",
+  "comment": "Tooltip/description in detail",
+  "plural": false,
+  "en": "Will query your indexers for every missing episode across the entire series.",
+  "pl": "Wykona zapytanie do indekserów dla każdego brakującego odcinka w całym serialu."
+ },
+ {
+  "key": "detail.willQueryYourIndexers4.tooltip",
+  "comment": "Tooltip/description in detail",
+  "plural": false,
+  "en": "Will query your indexers for every missing episode in this season.",
+  "pl": "Wykona zapytanie do indekserów dla każdego brakującego odcinka w tym sezonie."
+ },
+ {
+  "key": "discover.action.button",
+  "comment": "Button in discover",
+  "plural": false,
+  "en": "Action",
+  "pl": "Akcja"
+ },
+ {
+  "key": "discover.addMood.button",
+  "comment": "Button in discover",
+  "plural": false,
+  "en": "Add mood",
+  "pl": "Dodaj mood"
+ },
+ {
+  "key": "discover.adventure.button",
+  "comment": "Button in discover",
+  "plural": false,
+  "en": "Adventure",
+  "pl": "Przygodowy"
+ },
+ {
+  "key": "discover.aiDecides.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "AI decides",
+  "pl": "AI decyduje"
+ },
+ {
+  "key": "discover.aiWillPickMovies.tooltip",
+  "comment": "Tooltip/description in common",
+  "plural": false,
+  "en": "AI will pick movies or shows based on your description",
+  "pl": "AI dobierze filmy lub seriale na podstawie Twojego opisu"
+ },
+ {
+  "key": "discover.animation.button",
+  "comment": "Button in discover",
+  "plural": false,
+  "en": "Animation",
+  "pl": "Animacja"
+ },
+ {
+  "key": "discover.anyStatus.button",
+  "comment": "Button in discover",
+  "plural": false,
+  "en": "Any status",
+  "pl": "Każdy status"
+ },
+ {
+  "key": "discover.askMoreLikeDune.label",
+  "comment": "Label in discover",
+  "plural": false,
+  "en": "Ask: more like Dune (2021)",
+  "pl": "Zapytaj: więcej jak Diuna (2021)"
+ },
+ {
+  "key": "discover.backToMood.button",
+  "comment": "Button in discover",
+  "plural": false,
+  "en": "Back to mood",
+  "pl": "Powrót do nastroju"
+ },
+ {
+  "key": "discover.backToMoodPicker.button",
+  "comment": "Button in discover",
+  "plural": false,
+  "en": "Back to mood picker",
+  "pl": "Powrót do wyboru nastroju"
+ },
+ {
+  "key": "discover.changeMood.button",
+  "comment": "Button in discover",
+  "plural": false,
+  "en": "Change mood",
+  "pl": "Zmień mood"
+ },
+ {
+  "key": "discover.clearAllPicks.tooltip",
+  "comment": "Tooltip/description in discover",
+  "plural": false,
+  "en": "Clear all picks?",
+  "pl": "Wyczyścić wszystkie wybory?"
+ },
+ {
+  "key": "discover.clearPicks.button",
+  "comment": "Button in discover",
+  "plural": false,
+  "en": "Clear picks",
+  "pl": "Wyczyść wybory"
+ },
+ {
+  "key": "discover.comedy.button",
+  "comment": "Button in discover",
+  "plural": false,
+  "en": "Comedy",
+  "pl": "Komedia"
+ },
+ {
+  "key": "discover.configureAnLlmProvider.tooltip",
+  "comment": "Tooltip/description in discover",
+  "plural": false,
+  "en": "Configure an LLM provider in Settings to get AI-powered picks.",
+  "pl": "Skonfiguruj dostawcę LLM w Ustawieniach, aby otrzymać propozycje AI."
+ },
+ {
+  "key": "discover.configureRadarrInSettings.tooltip",
+  "comment": "Tooltip/description in discover",
+  "plural": false,
+  "en": "Configure Radarr in Settings to save picks to your library — add-actions will open TMDB instead.",
+  "pl": "Skonfiguruj Radarr w Ustawieniach, by zapisywać wybory do biblioteki — akcje „Dodaj” będą otwierać TMDB."
+ },
+ {
+  "key": "discover.cozy.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Cozy",
+  "pl": "Przytulny"
+ },
+ {
+  "key": "discover.cozyNightIn.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Cozy night in",
+  "pl": "Wieczór w domu"
+ },
+ {
+  "key": "discover.cozySundayAfternoon.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Cozy Sunday afternoon",
+  "pl": "Przytulne niedzielne popołudnie"
+ },
+ {
+  "key": "discover.crime.button",
+  "comment": "Button in discover",
+  "plural": false,
+  "en": "Crime",
+  "pl": "Kryminał"
+ },
+ {
+  "key": "discover.crowdPleaser.label",
+  "comment": "Label in common",
+  "plural": false,
+  "en": "Crowd-pleaser",
+  "pl": "Dla wszystkich"
+ },
+ {
+  "key": "discover.cultFavorite.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Cult favorite",
+  "pl": "Kultowy"
+ },
+ {
+  "key": "discover.customMood.button",
+  "comment": "Button in discover",
+  "plural": false,
+  "en": "Custom mood",
+  "pl": "Własny mood"
+ },
+ {
+  "key": "discover.dateNight.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Date night",
+  "pl": "Randka"
+ },
+ {
+  "key": "discover.decade.label",
+  "comment": "Label in common",
+  "plural": false,
+  "en": "DECADE",
+  "pl": "DEKADA"
+ },
+ {
+  "key": "discover.decadeFilter.label",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Decades",
+  "pl": "Dekady"
+ },
+ {
+  "key": "discover.directedBy.button",
+  "comment": "Button in discover",
+  "plural": false,
+  "en": "Directed by",
+  "pl": "Reżyseria"
+ },
+ {
+  "key": "discover.disableAutoJumpTo.label",
+  "comment": "Label in discover",
+  "plural": false,
+  "en": "Disable auto-jump to picks every 10",
+  "pl": "Wyłącz auto-skok do wyborów co 10"
+ },
+ {
+  "key": "discover.discover.button",
+  "comment": "Button in discover",
+  "plural": false,
+  "en": "Discover",
+  "pl": "Odkrywaj"
+ },
+ {
+  "key": "discover.discoverSession.button",
+  "comment": "Button in discover",
+  "plural": false,
+  "en": "Discover session",
+  "pl": "Sesja Discover"
+ },
+ {
+  "key": "discover.documentary.button",
+  "comment": "Button in discover",
+  "plural": false,
+  "en": "Documentary",
+  "pl": "Dokument"
+ },
+ {
+  "key": "discover.drama.button",
+  "comment": "Button in discover",
+  "plural": false,
+  "en": "Drama",
+  "pl": "Dramat"
+ },
+ {
+  "key": "discover.editMoodAndFilters.button",
+  "comment": "Button in discover",
+  "plural": false,
+  "en": "Edit mood and filters",
+  "pl": "Edytuj mood i filtry"
+ },
+ {
+  "key": "discover.family.button",
+  "comment": "Button in discover",
+  "plural": false,
+  "en": "Family",
+  "pl": "Familijny"
+ },
+ {
+  "key": "discover.fantasy.button",
+  "comment": "Button in discover",
+  "plural": false,
+  "en": "Fantasy",
+  "pl": "Fantasy"
+ },
+ {
+  "key": "discover.fewerLikeThis.button",
+  "comment": "Button in discover",
+  "plural": false,
+  "en": "Fewer like this",
+  "pl": "Mniej takich"
+ },
+ {
+  "key": "discover.history.button",
+  "comment": "Button in discover",
+  "plural": false,
+  "en": "History",
+  "pl": "Historia"
+ },
+ {
+  "key": "discover.horror.button",
+  "comment": "Button in discover",
+  "plural": false,
+  "en": "Horror",
+  "pl": "Horror"
+ },
+ {
+  "key": "discover.lengthFilter.label",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Length",
+  "pl": "Długość"
+ },
+ {
+  "key": "discover.markThisCardTo.tooltip",
+  "comment": "Tooltip/description in discover",
+  "plural": false,
+  "en": "Mark this card to suppress similar picks next time",
+  "pl": "Oznacz tę kartę, aby ograniczyć podobne propozycje następnym razem"
+ },
+ {
+  "key": "discover.mood.button",
+  "comment": "Button in discover",
+  "plural": false,
+  "en": "Mood",
+  "pl": "Nastrój"
+ },
+ {
+  "key": "discover.moodStarters.button",
+  "comment": "Button in discover",
+  "plural": false,
+  "en": "MOOD STARTERS",
+  "pl": "PODPOWIEDZI NASTROJOWE"
+ },
+ {
+  "key": "discover.moreAiSuggestions.button",
+  "comment": "Button in discover",
+  "plural": false,
+  "en": "More AI suggestions",
+  "pl": "Więcej propozycji AI"
+ },
+ {
+  "key": "discover.morePicksLikeThese.button",
+  "comment": "Button in discover",
+  "plural": false,
+  "en": "More picks like these",
+  "pl": "Więcej takich propozycji"
+ },
+ {
+  "key": "discover.movies.button",
+  "comment": "Button in discover",
+  "plural": false,
+  "en": "Movies",
+  "pl": "Filmy"
+ },
+ {
+  "key": "discover.music.button",
+  "comment": "Button in discover",
+  "plural": false,
+  "en": "Music",
+  "pl": "Muzyczny"
+ },
+ {
+  "key": "discover.mystery.button",
+  "comment": "Button in discover",
+  "plural": false,
+  "en": "Mystery",
+  "pl": "Tajemnica"
+ },
+ {
+  "key": "discover.no.button",
+  "comment": "Button in discover",
+  "plural": false,
+  "en": "No",
+  "pl": "Nie"
+ },
+ {
+  "key": "discover.noMoreCards.button",
+  "comment": "Button in discover",
+  "plural": false,
+  "en": "No more cards",
+  "pl": "Koniec kart"
+ },
+ {
+  "key": "discover.noOverviewAvailable.button",
+  "comment": "Button in discover",
+  "plural": false,
+  "en": "No overview available",
+  "pl": "Brak opisu"
+ },
+ {
+  "key": "discover.noPicksYetSwipe.label",
+  "comment": "Label in discover",
+  "plural": false,
+  "en": "No picks yet — swipe right to collect",
+  "pl": "Jeszcze nic — przesuń w prawo, by dodać"
+ },
+ {
+  "key": "discover.openYourPicks.button",
+  "comment": "Button in discover",
+  "plural": false,
+  "en": "Open your picks",
+  "pl": "Otwórz swoje typy"
+ },
+ {
+  "key": "discover.orDescribe.placeholder",
+  "comment": "Label in common",
+  "plural": false,
+  "en": "…or describe it in words",
+  "pl": "…lub opisz słownie"
+ },
+ {
+  "key": "discover.owned.button",
+  "comment": "Button in discover",
+  "plural": false,
+  "en": "Owned",
+  "pl": "Posiadane"
+ },
+ {
+  "key": "discover.pick.button",
+  "comment": "Button in discover",
+  "plural": false,
+  "en": "Pick",
+  "pl": "Biorę!"
+ },
+ {
+  "key": "discover.pickedCount",
+  "comment": "Label in discover",
+  "plural": true,
+  "en": {
+   "one": "%lld picked",
+   "other": "%lld picked"
+  },
+  "pl": {
+   "one": "%lld wybrany",
+   "few": "%lld wybrane",
+   "many": "%lld wybranych",
+   "other": "%lld wybranych"
+  }
+ },
+ {
+  "key": "discover.quiz.button",
+  "comment": "Button in discover",
+  "plural": false,
+  "en": "Quiz",
+  "pl": "Quiz"
+ },
+ {
+  "key": "discover.reEnableAutoJump.label",
+  "comment": "Label in discover",
+  "plural": false,
+  "en": "Re-enable auto-jump to picks every 10",
+  "pl": "Włącz ponownie auto-skok do wyborów co 10"
+ },
+ {
+  "key": "discover.removeFromPicks.button",
+  "comment": "Button in discover",
+  "plural": false,
+  "en": "Remove from picks",
+  "pl": "Usuń z wyborów"
+ },
+ {
+  "key": "discover.removeMood.button",
+  "comment": "Button in discover",
+  "plural": false,
+  "en": "Remove mood",
+  "pl": "Usuń mood"
+ },
+ {
+  "key": "discover.romance.button",
+  "comment": "Button in discover",
+  "plural": false,
+  "en": "Romance",
+  "pl": "Romans"
+ },
+ {
+  "key": "discover.saveMood.button",
+  "comment": "Button in discover",
+  "plural": false,
+  "en": "Save mood",
+  "pl": "Zapisz mood"
+ },
+ {
+  "key": "discover.saveToPicks.button",
+  "comment": "Button in discover",
+  "plural": false,
+  "en": "Save to picks",
+  "pl": "Zapisz do listy"
+ },
+ {
+  "key": "discover.scienceFiction.button",
+  "comment": "Button in discover",
+  "plural": false,
+  "en": "Science Fiction",
+  "pl": "Sci-Fi"
+ },
+ {
+  "key": "discover.showLess.button",
+  "comment": "Button in discover",
+  "plural": false,
+  "en": "Show less",
+  "pl": "Pokaż mniej"
+ },
+ {
+  "key": "discover.showYourPicks.button",
+  "comment": "Button in discover",
+  "plural": false,
+  "en": "Show your picks",
+  "pl": "Pokaż wybory"
+ },
+ {
+  "key": "discover.shows.button",
+  "comment": "Button in discover",
+  "plural": false,
+  "en": "Shows",
+  "pl": "Seriale"
+ },
+ {
+  "key": "discover.skip.button",
+  "comment": "Button in discover",
+  "plural": false,
+  "en": "Skip",
+  "pl": "Pomiń"
+ },
+ {
+  "key": "discover.thisEmptiesYourYour.tooltip",
+  "comment": "Tooltip/description in discover",
+  "plural": false,
+  "en": "This empties your Your Picks list. The swipe deck is unaffected.",
+  "pl": "Czyści listę \"Twoje wybory\". Talia swipe pozostaje bez zmian."
+ },
+ {
+  "key": "discover.thriller.button",
+  "comment": "Button in discover",
+  "plural": false,
+  "en": "Thriller",
+  "pl": "Thriller"
+ },
+ {
+  "key": "discover.tipAskForA.tooltip",
+  "comment": "Tooltip/description in discover",
+  "plural": false,
+  "en": "Tip: ask for a quiz of movies or shows to start swiping.",
+  "pl": "Wskazówka: poproś o quiz filmów lub seriali, aby zacząć swipować."
+ },
+ {
+  "key": "discover.toDownload.button",
+  "comment": "Button in discover",
+  "plural": false,
+  "en": "To download",
+  "pl": "Do pobrania"
+ },
+ {
+  "key": "discover.tryCozySundayAfternoon.label",
+  "comment": "Label in common",
+  "plural": false,
+  "en": "Try: Cozy Sunday afternoon…",
+  "pl": "Spróbuj: Spokojne niedzielne popołudnie…"
+ },
+ {
+  "key": "discover.tryCrowdPleaser.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Try: Crowd-pleaser…",
+  "pl": "Spróbuj: Dla wszystkich…"
+ },
+ {
+  "key": "discover.tryDateNight.button",
+  "comment": "Button in common",
+  "plural": false,
+  "en": "Try: Date night…",
+  "pl": "Spróbuj: Randka…"
+ },
+ {
+  "key": "discover.tryExample.saturdayNight",
+  "comment": "Label in discover",
+  "plural": false,
+  "en": "Try: surprise me with a Saturday-night quiz",
+  "pl": "Spróbuj: pokaż mi quiz na sobotę wieczór"
+ },
+ {
+  "key": "discover.tryGiveMeA.label",
+  "comment": "Label in discover",
+  "plural": false,
+  "en": "Try: give me a quiz of cozy 90s comedies",
+  "pl": "Spróbuj: daj mi quiz przytulnych komedii z lat 90."
+ },
+ {
+  "key": "discover.trySurpriseMeWith.label",
+  "comment": "Label in discover",
+  "plural": false,
+  "en": "Try: surprise me with a quiz",
+  "pl": "Spróbuj: zaskocz mnie quizem"
+ },
+ {
+  "key": "discover.tvMovie.button",
+  "comment": "Button in discover",
+  "plural": false,
+  "en": "TV Movie",
+  "pl": "Film TV"
+ },
+ {
+  "key": "discover.war.button",
+  "comment": "Button in discover",
+  "plural": false,
+  "en": "War",
+  "pl": "Wojenny"
+ },
+ {
+  "key": "discover.watch.button",
+  "comment": "Button in discover",
+  "plural": false,
+  "en": "Watch",
+  "pl": "Obejrzyj"
+ },
+ {
+  "key": "discover.western.button",
+  "comment": "Button in discover",
+  "plural": false,
+  "en": "Western",
+  "pl": "Western"
+ },
+ {
+  "key": "discover.whatAreYouIn.tooltip",
+  "comment": "Tooltip/description in discover",
+  "plural": false,
+  "en": "What are you in the mood for?",
+  "pl": "Na co masz dziś ochotę?"
+ },
+ {
+  "key": "discover.yes.button",
+  "comment": "Button in discover",
+  "plural": false,
+  "en": "Yes",
+  "pl": "Tak"
+ },
+ {
+  "key": "discover.yourPicks.button",
+  "comment": "Button in discover",
+  "plural": false,
+  "en": "Your picks",
+  "pl": "Twoje wybory"
+ },
+ {
+  "key": "history.customFormats.button",
+  "comment": "Button in history",
+  "plural": false,
+  "en": "Custom formats:",
+  "pl": "Formaty niestandardowe:"
+ },
+ {
+  "key": "history.deleted.button",
+  "comment": "Button in history",
+  "plural": false,
+  "en": "Deleted",
+  "pl": "Usunięte"
+ },
+ {
+  "key": "history.event.button",
+  "comment": "Button in history",
+  "plural": false,
+  "en": "Event",
+  "pl": "Zdarzenie"
+ },
+ {
+  "key": "history.failed.button",
+  "comment": "Button in history",
+  "plural": false,
+  "en": "Failed",
+  "pl": "Błąd"
+ },
+ {
+  "key": "history.grabbed.button",
+  "comment": "Button in history",
+  "plural": false,
+  "en": "Grabbed",
+  "pl": "Pobrane"
+ },
+ {
+  "key": "history.imported.button",
+  "comment": "Button in history",
+  "plural": false,
+  "en": "Imported",
+  "pl": "Zaimportowane"
+ },
+ {
+  "key": "history.quality.button",
+  "comment": "Button in history",
+  "plural": false,
+  "en": "Quality:",
+  "pl": "Jakość:"
+ },
+ {
+  "key": "history.score.button",
+  "comment": "Button in history",
+  "plural": false,
+  "en": "Score:",
+  "pl": "Wynik:"
+ },
+ {
+  "key": "intents.checkServiceHealth.button",
+  "comment": "Button in intents",
+  "plural": false,
+  "en": "Check service health",
+  "pl": "Sprawdź stan usług"
+ },
+ {
+  "key": "intents.more.button",
+  "comment": "Button in intents",
+  "plural": false,
+  "en": "More",
+  "pl": "Więcej"
+ },
+ {
+  "key": "intents.pauseAllDownloads.button",
+  "comment": "Button in intents",
+  "plural": false,
+  "en": "Pause all downloads",
+  "pl": "Wstrzymaj wszystkie pobierania"
+ },
+ {
+  "key": "intents.pausesEveryActiveDownload.tooltip",
+  "comment": "Tooltip/description in intents",
+  "plural": false,
+  "en": "Pauses every active download (where a download client is configured).",
+  "pl": "Wstrzymuje każde aktywne pobieranie (jeśli skonfigurowano klienta pobierania)."
+ },
+ {
+  "key": "intents.reportsWarningsErrorsAcross.tooltip",
+  "comment": "Tooltip/description in intents",
+  "plural": false,
+  "en": "Reports warnings/errors across your arrs and whether download clients are reachable.",
+  "pl": "Zgłasza ostrzeżenia i błędy ze wszystkich arrów oraz to, czy klienci pobierania są osiągalni."
+ },
+ {
+  "key": "intents.resumeAllDownloads.button",
+  "comment": "Button in intents",
+  "plural": false,
+  "en": "Resume all downloads",
+  "pl": "Wznów wszystkie pobierania"
+ },
+ {
+  "key": "intents.resumesEveryPausedDownload.tooltip",
+  "comment": "Tooltip/description in intents",
+  "plural": false,
+  "en": "Resumes every paused download (where a download client is configured).",
+  "pl": "Wznawia każde wstrzymane pobieranie (jeśli skonfigurowano klienta pobierania)."
+ },
+ {
+  "key": "intents.saysTheNextUpcoming.tooltip",
+  "comment": "Tooltip/description in intents",
+  "plural": false,
+  "en": "Says the next upcoming episodes, movies and albums.",
+  "pl": "Podaje najbliższe nadchodzące odcinki, filmy i albumy."
+ },
+ {
+  "key": "intents.saysWhatSonarrAnd.tooltip",
+  "comment": "Tooltip/description in intents",
+  "plural": false,
+  "en": "Says what Sonarr and Radarr are currently downloading.",
+  "pl": "Podaje, co Sonarr i Radarr aktualnie pobierają."
+ },
+ {
+  "key": "intents.searchSonarrRadarrAnd.tooltip",
+  "comment": "Tooltip/description in intents",
+  "plural": false,
+  "en": "Search Sonarr/Radarr and open ArrBarr at the results to add something.",
+  "pl": "Wyszukuje w Sonarr/Radarr i otwiera ArrBarr na wynikach, by coś dodać."
+ },
+ {
+  "key": "intents.searchToAdd.button",
+  "comment": "Button in intents",
+  "plural": false,
+  "en": "Search to add",
+  "pl": "Wyszukaj i dodaj"
+ },
+ {
+  "key": "intents.showDownloadQueue.button",
+  "comment": "Button in intents",
+  "plural": false,
+  "en": "Show download queue",
+  "pl": "Pokaż kolejkę pobierania"
+ },
+ {
+  "key": "intents.showUpcomingReleases.button",
+  "comment": "Button in intents",
+  "plural": false,
+  "en": "Show upcoming releases",
+  "pl": "Pokaż nadchodzące premiery"
+ },
+ {
+  "key": "intents.startDownloading.button",
+  "comment": "Button in intents",
+  "plural": false,
+  "en": "Start downloading",
+  "pl": "Rozpocznij pobieranie"
+ },
+ {
+  "key": "onboarding.addYourExistingArr.tooltip",
+  "comment": "Tooltip/description in onboarding",
+  "plural": false,
+  "en": "Add your existing arr services in Settings — ArrBarr polls live queue, history, and health from each one.",
+  "pl": "Dodaj istniejące usługi arr w ustawieniach — ArrBarr na bieżąco pobiera kolejkę, historię i stan każdej z nich."
+ },
+ {
+  "key": "onboarding.arrbarrNowShowsA.tooltip",
+  "comment": "Tooltip/description in onboarding",
+  "plural": false,
+  "en": "ArrBarr now shows a brief intro on first launch and after major updates so you know what's new. Reopen it any time from Settings → General.",
+  "pl": "ArrBarr pokazuje teraz krótkie wprowadzenie przy pierwszym uruchomieniu i po dużych aktualizacjach, dzięki czemu wiesz, co nowego. Otwórz je ponownie w dowolnej chwili z Ustawienia → Ogólne."
+ },
+ {
+  "key": "onboarding.chatWithYourArrs.button",
+  "comment": "Button in onboarding",
+  "plural": false,
+  "en": "Chat with your arrs",
+  "pl": "Czat z Twoimi arrami"
+ },
+ {
+  "key": "onboarding.connectRadarrSonarrLidarr.button",
+  "comment": "Button in onboarding",
+  "plural": false,
+  "en": "Connect Radarr, Sonarr & Lidarr",
+  "pl": "Połącz Radarr, Sonarr i Lidarr"
+ },
+ {
+  "key": "onboarding.done.button",
+  "comment": "Button in onboarding",
+  "plural": false,
+  "en": "Done",
+  "pl": "Gotowe"
+ },
+ {
+  "key": "onboarding.enjoyingArrbarr.tooltip",
+  "comment": "Tooltip/description in onboarding",
+  "plural": false,
+  "en": "Enjoying ArrBarr?",
+  "pl": "Podoba ci się ArrBarr?"
+ },
+ {
+  "key": "onboarding.getStarted.button",
+  "comment": "Button in onboarding",
+  "plural": false,
+  "en": "Get started",
+  "pl": "Zacznij"
+ },
+ {
+  "key": "onboarding.ifYouVeConfigured.tooltip",
+  "comment": "Tooltip/description in onboarding",
+  "plural": false,
+  "en": "If you've configured Lidarr, music artists now show up in search results and the AI chat. Add an artist the same way you'd add a series or movie.",
+  "pl": "Jeśli skonfigurowałeś Lidarra, artyści muzyczni pojawiają się teraz w wynikach wyszukiwania i czacie AI. Dodaj artystę tak samo jak serial czy film."
+ },
+ {
+  "key": "onboarding.itSFreeAnd.tooltip",
+  "comment": "Tooltip/description in onboarding",
+  "plural": false,
+  "en": "It's free and open-source. A star on GitHub helps other people find it — and means a lot. Thanks for trying it out!",
+  "pl": "ArrBarr jest darmowy i open source. Gwiazdka na GitHubie pomaga innym go znaleźć — i wiele dla nas znaczy. Dzięki, że go testujesz!"
+ },
+ {
+  "key": "onboarding.lidarrSupport.button",
+  "comment": "Button in onboarding",
+  "plural": false,
+  "en": "Lidarr support",
+  "pl": "Wsparcie dla Lidarra"
+ },
+ {
+  "key": "onboarding.livesInYourMenu.button",
+  "comment": "Button in onboarding",
+  "plural": false,
+  "en": "Lives in your menu bar",
+  "pl": "Mieszka w pasku menu"
+ },
+ {
+  "key": "onboarding.makeItYours.button",
+  "comment": "Button in onboarding",
+  "plural": false,
+  "en": "Make it yours",
+  "pl": "Dostosuj do siebie"
+ },
+ {
+  "key": "onboarding.movies.button",
+  "comment": "Button in onboarding",
+  "plural": false,
+  "en": "Movies",
+  "pl": "Filmy"
+ },
+ {
+  "key": "onboarding.next.button",
+  "comment": "Button in onboarding",
+  "plural": false,
+  "en": "Next",
+  "pl": "Dalej"
+ },
+ {
+  "key": "onboarding.openSettings.button",
+  "comment": "Button in onboarding",
+  "plural": false,
+  "en": "Open Settings",
+  "pl": "Otwórz ustawienia"
+ },
+ {
+  "key": "onboarding.previous.button",
+  "comment": "Button in onboarding",
+  "plural": false,
+  "en": "Previous",
+  "pl": "Wstecz"
+ },
+ {
+  "key": "onboarding.quickerWayToAdd.button",
+  "comment": "Button in onboarding",
+  "plural": false,
+  "en": "Quicker way to add",
+  "pl": "Szybszy sposób dodawania"
+ },
+ {
+  "key": "onboarding.quiz.button",
+  "comment": "Button in onboarding",
+  "plural": false,
+  "en": "Quiz",
+  "pl": "Quiz"
+ },
+ {
+  "key": "onboarding.reorderSectionsHideWhat.tooltip",
+  "comment": "Tooltip/description in onboarding",
+  "plural": false,
+  "en": "Reorder sections, hide what you don't need, tweak refresh intervals, and pick your language in Settings. Show only what matters to you.",
+  "pl": "Zmień kolejność sekcji, ukryj to, czego nie potrzebujesz, dostosuj częstotliwość odświeżania i wybierz język w ustawieniach. Pokazuj tylko to, co ważne."
+ },
+ {
+  "key": "onboarding.seeWhatSAiring.tooltip",
+  "comment": "Tooltip/description in onboarding",
+  "plural": false,
+  "en": "See what's airing tonight, get notified about new grabs, and surface indexer issues before they become a problem.",
+  "pl": "Zobacz, co leci dziś wieczorem, otrzymuj powiadomienia o nowych pobraniach i wykrywaj problemy z indeksami zanim staną się kłopotem."
+ },
+ {
+  "key": "onboarding.series.button",
+  "comment": "Button in onboarding",
+  "plural": false,
+  "en": "Series",
+  "pl": "Seriale"
+ },
+ {
+  "key": "onboarding.starOnGithub.button",
+  "comment": "Button in onboarding",
+  "plural": false,
+  "en": "Star on GitHub",
+  "pl": "Dodaj gwiazdkę na GitHubie"
+ },
+ {
+  "key": "onboarding.swipeThroughPicksAdd.tooltip",
+  "comment": "Tooltip/description in onboarding",
+  "plural": false,
+  "en": "Swipe through picks, add to your library.",
+  "pl": "Swipuj propozycje, dodawaj do biblioteki."
+ },
+ {
+  "key": "onboarding.tonight.button",
+  "comment": "Button in onboarding",
+  "plural": false,
+  "en": "Tonight",
+  "pl": "Dziś wieczorem"
+ },
+ {
+  "key": "onboarding.tonightNeedsYouAnd.label",
+  "comment": "Label in onboarding",
+  "plural": false,
+  "en": "Tonight, Needs you, and notifications",
+  "pl": "Dziś wieczorem, Potrzebuje twojej uwagi i powiadomienia"
+ },
+ {
+  "key": "onboarding.tryDemoMode.button",
+  "comment": "Button in onboarding",
+  "plural": false,
+  "en": "Try demo mode",
+  "pl": "Wypróbuj tryb demo"
+ },
+ {
+  "key": "onboarding.view.button",
+  "comment": "Button in onboarding",
+  "plural": false,
+  "en": "View",
+  "pl": "Widok"
+ },
+ {
+  "key": "onboarding.welcomeScreen.button",
+  "comment": "Button in onboarding",
+  "plural": false,
+  "en": "Welcome screen",
+  "pl": "Ekran powitalny"
+ },
+ {
+  "key": "onboarding.welcomeToArrbarr.button",
+  "comment": "Button in onboarding",
+  "plural": false,
+  "en": "Welcome to ArrBarr",
+  "pl": "Witaj w ArrBarr"
+ },
+ {
+  "key": "paywall.add.button",
+  "comment": "Button in paywall",
+  "plural": false,
+  "en": "Add",
+  "pl": "Dodaj"
+ },
+ {
+  "key": "paywall.addAndManageSabnzbd.tooltip",
+  "comment": "Tooltip/description in paywall",
+  "plural": false,
+  "en": "Add and manage SABnzbd, qBittorrent and the rest.",
+  "pl": "Dodawaj i zarządzaj SABnzbd, qBittorrent i resztą."
+ },
+ {
+  "key": "paywall.addMoviesAndShows.label",
+  "comment": "Label in paywall",
+  "plural": false,
+  "en": "Add movies and shows in one sentence",
+  "pl": "Dodawaj filmy i seriale jednym zdaniem"
+ },
+ {
+  "key": "paywall.addNewTitles.button",
+  "comment": "Button in paywall",
+  "plural": false,
+  "en": "Add new titles",
+  "pl": "Dodawaj nowe tytuły"
+ },
+ {
+  "key": "paywall.addingTitlesIsA.label",
+  "comment": "Label in paywall",
+  "plural": false,
+  "en": "Adding titles is a Pro feature",
+  "pl": "Dodawanie tytułów to funkcja Pro"
+ },
+ {
+  "key": "paywall.arrbarrPro.button",
+  "comment": "Button in paywall",
+  "plural": false,
+  "en": "ArrBarr Pro",
+  "pl": "ArrBarr Pro"
+ },
+ {
+  "key": "paywall.askAndManageIn.label",
+  "comment": "Label in paywall",
+  "plural": false,
+  "en": "Ask and manage in plain language",
+  "pl": "Pytaj i zarządzaj w naturalnym języku"
+ },
+ {
+  "key": "paywall.askYourLibraryAnything.label",
+  "comment": "Label in paywall",
+  "plural": false,
+  "en": "Ask your library anything",
+  "pl": "Zapytaj swoją bibliotekę o cokolwiek"
+ },
+ {
+  "key": "paywall.chat.button",
+  "comment": "Button in paywall",
+  "plural": false,
+  "en": "Chat",
+  "pl": "Czat"
+ },
+ {
+  "key": "paywall.chatDrivesYourWhole.tooltip",
+  "comment": "Tooltip/description in paywall",
+  "plural": false,
+  "en": "Chat drives your whole stack in plain language.",
+  "pl": "Czat steruje całym Twoim stackiem w naturalnym języku."
+ },
+ {
+  "key": "paywall.connectDownloadClients.button",
+  "comment": "Button in paywall",
+  "plural": false,
+  "en": "Connect download clients",
+  "pl": "Podłącz klienty pobierania"
+ },
+ {
+  "key": "paywall.control.button",
+  "comment": "Button in paywall",
+  "plural": false,
+  "en": "Control",
+  "pl": "Kontrola"
+ },
+ {
+  "key": "paywall.downloadClientsAreA.label",
+  "comment": "Label in paywall",
+  "plural": false,
+  "en": "Download clients are a Pro feature",
+  "pl": "Klienty pobierania to funkcja Pro"
+ },
+ {
+  "key": "paywall.exampleSummary.tooltip",
+  "comment": "Tooltip/description in paywall",
+  "plural": false,
+  "en": "3 movies in Radarr and a season in Sonarr.",
+  "pl": "3 filmy w Radarr i sezon w Sonarr."
+ },
+ {
+  "key": "paywall.findAMovieOr.tooltip",
+  "comment": "Tooltip/description in paywall",
+  "plural": false,
+  "en": "Find a movie or show and add it in one tap.",
+  "pl": "Znajdź film lub serial i dodaj go jednym kliknięciem."
+ },
+ {
+  "key": "paywall.manageYourDownloads.button",
+  "comment": "Button in paywall",
+  "plural": false,
+  "en": "Manage your downloads",
+  "pl": "Zarządzaj pobieraniami"
+ },
+ {
+  "key": "paywall.managingDownloadsIsA.label",
+  "comment": "Label in paywall",
+  "plural": false,
+  "en": "Managing downloads is a Pro feature",
+  "pl": "Zarządzanie pobieraniami to funkcja Pro"
+ },
+ {
+  "key": "paywall.maybeLater.button",
+  "comment": "Button in paywall",
+  "plural": false,
+  "en": "Maybe later",
+  "pl": "Może później"
+ },
+ {
+  "key": "paywall.oneTimePurchaseNo.tooltip",
+  "comment": "Tooltip/description in paywall",
+  "plural": false,
+  "en": "One-time purchase. No subscription. iOS + macOS.",
+  "pl": "Jeden zakup. Bez subskrypcji. iOS + macOS."
+ },
+ {
+  "key": "paywall.oneTimePurchaseUnlocks.tooltip",
+  "comment": "Tooltip/description in paywall",
+  "plural": false,
+  "en": "One-time purchase. Unlocks everything, forever.",
+  "pl": "Jednorazowy zakup. Odblokowuje wszystko na zawsze."
+ },
+ {
+  "key": "paywall.pauseResumeAndRemove.tooltip",
+  "comment": "Tooltip/description in paywall",
+  "plural": false,
+  "en": "Pause, resume and remove downloads right from ArrBarr.",
+  "pl": "Wstrzymuj, wznawiaj i usuwaj pobierania wprost z ArrBarr."
+ },
+ {
+  "key": "paywall.pauseResumeAndRetry.tooltip",
+  "comment": "Tooltip/description in paywall",
+  "plural": false,
+  "en": "Pause, resume and retry without a browser",
+  "pl": "Wstrzymuj, wznawiaj i ponawiaj bez przeglądarki"
+ },
+ {
+  "key": "paywall.plusEverythingElseFrom.label",
+  "comment": "Label in paywall",
+  "plural": false,
+  "en": "Plus everything else from Control mode",
+  "pl": "Plus wszystko inne z trybu Kontrola"
+ },
+ {
+  "key": "paywall.queue.button",
+  "comment": "Button in paywall",
+  "plural": false,
+  "en": "Queue",
+  "pl": "Kolejka"
+ },
+ {
+  "key": "paywall.restorePurchases.button",
+  "comment": "Button in paywall",
+  "plural": false,
+  "en": "Restore Purchases",
+  "pl": "Przywróć zakupy"
+ },
+ {
+  "key": "paywall.unlock.button",
+  "comment": "Button in paywall",
+  "plural": false,
+  "en": "Unlock",
+  "pl": "Odblokuj"
+ },
+ {
+  "key": "paywall.unlockControl.button",
+  "comment": "Button in paywall",
+  "plural": false,
+  "en": "Unlock Control",
+  "pl": "Odblokuj kontrolę"
+ },
+ {
+  "key": "paywall.watchingIsAlwaysFree.button",
+  "comment": "Button in paywall",
+  "plural": false,
+  "en": "Watching is always free",
+  "pl": "Oglądanie zawsze za darmo"
+ },
+ {
+  "key": "paywall.whatSDownloadingRight.tooltip",
+  "comment": "Tooltip/description in paywall",
+  "plural": false,
+  "en": "What's downloading right now?",
+  "pl": "Co się teraz ściąga?"
+ },
+ {
+  "key": "queue.addSabnzbdQbittorrentNzbget.tooltip",
+  "comment": "Tooltip/description in queue",
+  "plural": false,
+  "en": "Add SABnzbd, qBittorrent, NZBGet, Transmission, rTorrent, or Deluge to pause and resume directly from the queue. Most features work fine without it — your arr already handles the heavy lifting.",
+  "pl": "Dodaj SABnzbd, qBittorrent, NZBGet, Transmission, rTorrent lub Deluge, aby pauzować i wznawiać prosto z kolejki. Większość funkcji działa bez tego — Twój arr zajmie się resztą."
+ },
+ {
+  "key": "queue.arrbarrStaysOutOf.tooltip",
+  "comment": "Tooltip/description in queue",
+  "plural": false,
+  "en": "ArrBarr stays out of your Dock and shows active downloads at a glance. Click the icon for the popover; right-click for quick options.",
+  "pl": "ArrBarr nie zajmuje miejsca w Docku i pokazuje aktywne pobierania w mgnieniu oka. Kliknij ikonę, aby otworzyć okno; kliknij prawym, aby zobaczyć szybkie opcje."
+ },
+ {
+  "key": "queue.cancelDownload.button",
+  "comment": "Button in queue",
+  "plural": false,
+  "en": "Cancel download",
+  "pl": "Anuluj pobieranie"
+ },
+ {
+  "key": "queue.cancelThisDownload.tooltip",
+  "comment": "Tooltip/description in queue",
+  "plural": false,
+  "en": "Cancel this download?",
+  "pl": "Anulować to pobieranie?"
+ },
+ {
+  "key": "queue.clearFilter.button",
+  "comment": "Button in queue",
+  "plural": false,
+  "en": "Clear filter",
+  "pl": "Wyczyść filtr"
+ },
+ {
+  "key": "queue.collapseSection.button",
+  "comment": "Button in queue",
+  "plural": false,
+  "en": "Collapse section",
+  "pl": "Zwiń sekcję"
+ },
+ {
+  "key": "queue.completed.button",
+  "comment": "Button in queue",
+  "plural": false,
+  "en": "Completed",
+  "pl": "Ukończone"
+ },
+ {
+  "key": "queue.connectRadarrSonarrOr.tooltip",
+  "comment": "Tooltip/description in queue",
+  "plural": false,
+  "en": "Connect Radarr, Sonarr or Lidarr in Settings to get started.",
+  "pl": "Połącz Radarra, Sonarra lub Lidarra w Ustawieniach, aby zacząć."
+ },
+ {
+  "key": "queue.continue.button",
+  "comment": "Button in queue",
+  "plural": false,
+  "en": "Continue",
+  "pl": "Dalej"
+ },
+ {
+  "key": "queue.currentFile.button",
+  "comment": "Button in queue",
+  "plural": false,
+  "en": "Current file",
+  "pl": "Obecny plik"
+ },
+ {
+  "key": "queue.delete.button",
+  "comment": "Button in queue",
+  "plural": false,
+  "en": "Delete",
+  "pl": "Usuń"
+ },
+ {
+  "key": "queue.download.button",
+  "comment": "Button in queue",
+  "plural": false,
+  "en": "Download",
+  "pl": "Pobierz"
+ },
+ {
+  "key": "queue.downloadActions.button",
+  "comment": "Button in queue",
+  "plural": false,
+  "en": "Download actions",
+  "pl": "Akcje pobierania"
+ },
+ {
+  "key": "queue.downloading.button",
+  "comment": "Button in queue",
+  "plural": false,
+  "en": "Downloading",
+  "pl": "Pobieranie"
+ },
+ {
+  "key": "queue.episodes.button",
+  "comment": "Button in queue",
+  "plural": false,
+  "en": "Episodes",
+  "pl": "Odcinki"
+ },
+ {
+  "key": "queue.expandSection.button",
+  "comment": "Button in queue",
+  "plural": false,
+  "en": "Expand section",
+  "pl": "Rozwiń sekcję"
+ },
+ {
+  "key": "queue.file.button",
+  "comment": "Button in queue",
+  "plural": false,
+  "en": "File",
+  "pl": "Plik"
+ },
+ {
+  "key": "queue.filterQueue.button",
+  "comment": "Button in queue",
+  "plural": false,
+  "en": "Filter queue",
+  "pl": "Filtruj kolejkę"
+ },
+ {
+  "key": "queue.holdToCompare.button",
+  "comment": "Button in queue",
+  "plural": false,
+  "en": "Hold to compare",
+  "pl": "Przytrzymaj, aby porównać"
+ },
+ {
+  "key": "queue.importing.button",
+  "comment": "Button in queue",
+  "plural": false,
+  "en": "Importing",
+  "pl": "Importowanie"
+ },
+ {
+  "key": "queue.inQueue.button",
+  "comment": "Button in queue",
+  "plural": false,
+  "en": "In queue",
+  "pl": "W kolejce"
+ },
+ {
+  "key": "queue.indexer.button",
+  "comment": "Button in queue",
+  "plural": false,
+  "en": "Indexer",
+  "pl": "Indekser"
+ },
+ {
+  "key": "queue.keepDownload.button",
+  "comment": "Button in queue",
+  "plural": false,
+  "en": "Keep download",
+  "pl": "Zachowaj pobieranie"
+ },
+ {
+  "key": "queue.lidarr.button",
+  "comment": "Button in queue",
+  "plural": false,
+  "en": "Lidarr",
+  "pl": "Lidarr"
+ },
+ {
+  "key": "queue.loading.button",
+  "comment": "Button in queue",
+  "plural": false,
+  "en": "Loading…",
+  "pl": "Ładowanie…"
+ },
+ {
+  "key": "queue.manualImportRequired.button",
+  "comment": "Button in queue",
+  "plural": false,
+  "en": "Manual import required",
+  "pl": "Wymagany import ręczny"
+ },
+ {
+  "key": "queue.multipleSeasons.button",
+  "comment": "Button in queue",
+  "plural": false,
+  "en": "Multiple seasons",
+  "pl": "Wiele sezonów"
+ },
+ {
+  "key": "queue.needsAttention.button",
+  "comment": "Button in queue",
+  "plural": false,
+  "en": "Needs attention",
+  "pl": "Wymaga uwagi"
+ },
+ {
+  "key": "queue.needsYou.button",
+  "comment": "Button in queue",
+  "plural": false,
+  "en": "Needs you",
+  "pl": "Potrzebuje twojej uwagi"
+ },
+ {
+  "key": "queue.newFile.button",
+  "comment": "Button in queue",
+  "plural": false,
+  "en": "New file",
+  "pl": "Nowy plik"
+ },
+ {
+  "key": "queue.nextWeek.button",
+  "comment": "Button in queue",
+  "plural": false,
+  "en": "Next week",
+  "pl": "W tym tygodniu"
+ },
+ {
+  "key": "queue.noDownloadIdItem.tooltip",
+  "comment": "Tooltip/description in queue",
+  "plural": false,
+  "en": "No download ID — item hasn't reached the client yet",
+  "pl": "Brak ID pobierania — element jeszcze nie dotarł do klienta"
+ },
+ {
+  "key": "queue.pause.button",
+  "comment": "Button in queue",
+  "plural": false,
+  "en": "Pause",
+  "pl": "Wstrzymaj"
+ },
+ {
+  "key": "queue.pause.label",
+  "comment": "Label in queue",
+  "plural": false,
+  "en": "Pause %@",
+  "pl": "Wstrzymaj %@"
+ },
+ {
+  "key": "queue.pauseResumeAndRemove.label",
+  "comment": "Label in queue",
+  "plural": false,
+  "en": "Pause, resume and remove downloads",
+  "pl": "Wstrzymuj, wznawiaj i usuwaj pobierania"
+ },
+ {
+  "key": "queue.paused.button",
+  "comment": "Button in queue",
+  "plural": false,
+  "en": "Paused",
+  "pl": "Wstrzymane"
+ },
+ {
+  "key": "queue.quality.button",
+  "comment": "Button in queue",
+  "plural": false,
+  "en": "Quality",
+  "pl": "Jakość"
+ },
+ {
+  "key": "queue.queueEmpty.button",
+  "comment": "Button in queue",
+  "plural": false,
+  "en": "Queue empty",
+  "pl": "Kolejka pusta"
+ },
+ {
+  "key": "queue.queued.button",
+  "comment": "Button in queue",
+  "plural": false,
+  "en": "Queued",
+  "pl": "W kolejce"
+ },
+ {
+  "key": "queue.radarr.button",
+  "comment": "Button in queue",
+  "plural": false,
+  "en": "Radarr",
+  "pl": "Radarr"
+ },
+ {
+  "key": "queue.reDownloadingIdenticalRelease.label",
+  "comment": "Label in queue",
+  "plural": false,
+  "en": "Re-downloading identical release",
+  "pl": "Ponowne pobieranie identycznego wydania"
+ },
+ {
+  "key": "queue.removeDownload.tooltip",
+  "comment": "Tooltip/description in queue",
+  "plural": false,
+  "en": "Remove download?",
+  "pl": "Usunąć pobieranie?"
+ },
+ {
+  "key": "queue.removeFromQueue.button",
+  "comment": "Button in queue",
+  "plural": false,
+  "en": "Remove from queue",
+  "pl": "Usuń z kolejki"
+ },
+ {
+  "key": "queue.resume.button",
+  "comment": "Button in queue",
+  "plural": false,
+  "en": "Resume",
+  "pl": "Wznów"
+ },
+ {
+  "key": "queue.resume.label",
+  "comment": "Label in queue",
+  "plural": false,
+  "en": "Resume %@",
+  "pl": "Wznów %@"
+ },
+ {
+  "key": "queue.resumeDiscover.button",
+  "comment": "Button in queue",
+  "plural": false,
+  "en": "Resume Discover",
+  "pl": "Wznów Discover"
+ },
+ {
+  "key": "queue.resumeDownload.button",
+  "comment": "Button in queue",
+  "plural": false,
+  "en": "Resume download",
+  "pl": "Wznów pobieranie"
+ },
+ {
+  "key": "queue.sameSpecRetagged.button",
+  "comment": "Button in queue",
+  "plural": false,
+  "en": "Same spec, retagged",
+  "pl": "Ta sama specyfikacja, inne tagi"
+ },
+ {
+  "key": "queue.score.button",
+  "comment": "Button in queue",
+  "plural": false,
+  "en": "Score",
+  "pl": "Ocena"
+ },
+ {
+  "key": "queue.searching.button",
+  "comment": "Button in queue",
+  "plural": false,
+  "en": "Searching",
+  "pl": "Wyszukiwanie"
+ },
+ {
+  "key": "queue.season02d.button",
+  "comment": "Button in queue",
+  "plural": false,
+  "en": "Season %02d",
+  "pl": "Sezon %02d"
+ },
+ {
+  "key": "queue.season02lld.button",
+  "comment": "Button in queue",
+  "plural": false,
+  "en": "Season %02lld",
+  "pl": "Sezon %02lld"
+ },
+ {
+  "key": "queue.seasonPack.button",
+  "comment": "Button in queue",
+  "plural": false,
+  "en": "Season pack",
+  "pl": "Pakiet sezonu"
+ },
+ {
+  "key": "queue.serviceProblem.button",
+  "comment": "Button in queue",
+  "plural": false,
+  "en": "Service problem",
+  "pl": "Problem usługi"
+ },
+ {
+  "key": "queue.showHistory.button",
+  "comment": "Button in queue",
+  "plural": false,
+  "en": "Show history",
+  "pl": "Pokaż historię"
+ },
+ {
+  "key": "queue.showMore.button",
+  "comment": "Button in queue",
+  "plural": false,
+  "en": "Show more",
+  "pl": "Pokaż więcej"
+ },
+ {
+  "key": "queue.size.button",
+  "comment": "Button in queue",
+  "plural": false,
+  "en": "Size",
+  "pl": "Rozmiar"
+ },
+ {
+  "key": "queue.sonarr.button",
+  "comment": "Button in queue",
+  "plural": false,
+  "en": "Sonarr",
+  "pl": "Sonarr"
+ },
+ {
+  "key": "queue.startNow.button",
+  "comment": "Button in queue",
+  "plural": false,
+  "en": "Start now",
+  "pl": "Rozpocznij teraz"
+ },
+ {
+  "key": "queue.testConnection.button",
+  "comment": "Button in queue",
+  "plural": false,
+  "en": "Test Connection",
+  "pl": "Testuj połączenie"
+ },
+ {
+  "key": "queue.thisWillRemoveThe.tooltip",
+  "comment": "Tooltip/description in queue",
+  "plural": false,
+  "en": "This will remove the season pack from the client.",
+  "pl": "To usunie paczkę sezonu z klienta."
+ },
+ {
+  "key": "queue.torrent.button",
+  "comment": "Button in queue",
+  "plural": false,
+  "en": "Torrent",
+  "pl": "Torrent"
+ },
+ {
+  "key": "queue.torrents.button",
+  "comment": "Button in queue",
+  "plural": false,
+  "en": "Torrents",
+  "pl": "Torrenty"
+ },
+ {
+  "key": "queue.unknown.button",
+  "comment": "Button in queue",
+  "plural": false,
+  "en": "Unknown",
+  "pl": "Nieznane"
+ },
+ {
+  "key": "queue.unknownDownloadProtocol.label",
+  "comment": "Label in queue",
+  "plural": false,
+  "en": "Unknown download protocol",
+  "pl": "Nieznany protokół pobierania"
+ },
+ {
+  "key": "queue.upcoming.button",
+  "comment": "Button in queue",
+  "plural": false,
+  "en": "Upcoming",
+  "pl": "Nadchodzące"
+ },
+ {
+  "key": "queue.usenet.button",
+  "comment": "Button in queue",
+  "plural": false,
+  "en": "Usenet",
+  "pl": "Usenet"
+ },
+ {
+  "key": "queue.warning.button",
+  "comment": "Button in queue",
+  "plural": false,
+  "en": "Warning",
+  "pl": "Ostrzeżenie"
+ },
+ {
+  "key": "queue.whisparr.button",
+  "comment": "Button in queue",
+  "plural": false,
+  "en": "Whisparr",
+  "pl": "Whisparr"
+ },
+ {
+  "key": "search.addNew.button",
+  "comment": "Button in search",
+  "plural": false,
+  "en": "Add new",
+  "pl": "Dodaj nowe"
+ },
+ {
+  "key": "search.addNewMoviesAnd.button",
+  "comment": "Button in search",
+  "plural": false,
+  "en": "Add new movies and shows",
+  "pl": "Dodawaj nowe filmy i seriale"
+ },
+ {
+  "key": "search.addToRadarr.button",
+  "comment": "Button in search",
+  "plural": false,
+  "en": "Add to Radarr",
+  "pl": "Dodaj do Radarr"
+ },
+ {
+  "key": "search.addToSonarr.button",
+  "comment": "Button in search",
+  "plural": false,
+  "en": "Add to Sonarr",
+  "pl": "Dodaj do Sonarra"
+ },
+ {
+  "key": "search.addToWhisparr.button",
+  "comment": "Button in search",
+  "plural": false,
+  "en": "Add to Whisparr",
+  "pl": "Dodaj do Whisparra"
+ },
+ {
+  "key": "search.all.button",
+  "comment": "Button in search",
+  "plural": false,
+  "en": "All",
+  "pl": "Wszystkie"
+ },
+ {
+  "key": "search.artists.button",
+  "comment": "Button in search",
+  "plural": false,
+  "en": "Artists",
+  "pl": "Wykonawcy"
+ },
+ {
+  "key": "search.clearSearch.button",
+  "comment": "Button in search",
+  "plural": false,
+  "en": "Clear search",
+  "pl": "Wyczyść wyszukiwanie"
+ },
+ {
+  "key": "search.existing.button",
+  "comment": "Button in search",
+  "plural": false,
+  "en": "Existing",
+  "pl": "Istniejący"
+ },
+ {
+  "key": "search.inLibrary.button",
+  "comment": "Button in search",
+  "plural": false,
+  "en": "In library",
+  "pl": "W bibliotece"
+ },
+ {
+  "key": "search.library.button",
+  "comment": "Button in search",
+  "plural": false,
+  "en": "Library",
+  "pl": "Biblioteka"
+ },
+ {
+  "key": "search.metadataProfile.button",
+  "comment": "Button in search",
+  "plural": false,
+  "en": "Metadata Profile",
+  "pl": "Profil metadanych"
+ },
+ {
+  "key": "search.missing.button",
+  "comment": "Button in search",
+  "plural": false,
+  "en": "Missing",
+  "pl": "Brakujące"
+ },
+ {
+  "key": "search.monitor.button",
+  "comment": "Button in search",
+  "plural": false,
+  "en": "Monitor",
+  "pl": "Monitoruj"
+ },
+ {
+  "key": "search.noMatches.tooltip",
+  "comment": "Tooltip/description in search",
+  "plural": false,
+  "en": "No matches.",
+  "pl": "Brak wyników."
+ },
+ {
+  "key": "search.none.button",
+  "comment": "Button in search",
+  "plural": false,
+  "en": "None",
+  "pl": "Brak"
+ },
+ {
+  "key": "search.qualityProfile.button",
+  "comment": "Button in search",
+  "plural": false,
+  "en": "Quality profile",
+  "pl": "Profil jakości"
+ },
+ {
+  "key": "search.rootFolder.button",
+  "comment": "Button in search",
+  "plural": false,
+  "en": "Root folder",
+  "pl": "Folder główny"
+ },
+ {
+  "key": "search.scenes.button",
+  "comment": "Button in search",
+  "plural": false,
+  "en": "Scenes",
+  "pl": "Sceny"
+ },
+ {
+  "key": "search.search.button",
+  "comment": "Button in search",
+  "plural": false,
+  "en": "Search",
+  "pl": "Szukaj"
+ },
+ {
+  "key": "search.searchAllLldMissing.label",
+  "comment": "Label in search",
+  "plural": false,
+  "en": "Search all %lld missing",
+  "pl": "Szukaj wszystkich %lld brakujących"
+ },
+ {
+  "key": "search.searchLld.label",
+  "comment": "Label in search",
+  "plural": false,
+  "en": "Search %lld",
+  "pl": "Szukaj %lld"
+ },
+ {
+  "key": "search.searchMoviesAndTv.label",
+  "comment": "Label in search",
+  "plural": false,
+  "en": "Search movies and TV series",
+  "pl": "Szukaj filmów i seriali"
+ },
+ {
+  "key": "search.searchScope.button",
+  "comment": "Button in search",
+  "plural": false,
+  "en": "Search scope",
+  "pl": "Zakres wyszukiwania"
+ },
+ {
+  "key": "search.searchWholeSeries.button",
+  "comment": "Button in search",
+  "plural": false,
+  "en": "Search whole series",
+  "pl": "Szukaj całego serialu"
+ },
+ {
+  "key": "search.series.button",
+  "comment": "Button in search",
+  "plural": false,
+  "en": "Series",
+  "pl": "Seriale"
+ },
+ {
+  "key": "search.seriesType.button",
+  "comment": "Button in search",
+  "plural": false,
+  "en": "Series Type",
+  "pl": "Typ serialu"
+ },
+ {
+  "key": "search.startTypingToSearch.tooltip",
+  "comment": "Tooltip/description in search",
+  "plural": false,
+  "en": "Start typing to search across Radarr and Sonarr.",
+  "pl": "Zacznij pisać, aby przeszukać Radarr i Sonarr."
+ },
+ {
+  "key": "settings.about.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "About",
+  "pl": "O aplikacji"
+ },
+ {
+  "key": "settings.aboutArrbarr.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "About ArrBarr",
+  "pl": "O ArrBarr"
+ },
+ {
+  "key": "settings.acknowledgements.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Acknowledgements",
+  "pl": "Podziękowania"
+ },
+ {
+  "key": "settings.addAService.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Add a service",
+  "pl": "Dodaj usługę"
+ },
+ {
+  "key": "settings.addATmdbKey.tooltip",
+  "comment": "Tooltip/description in settings",
+  "plural": false,
+  "en": "Add a TMDB key to let chat search by actor, genre, and decade.",
+  "pl": "Dodaj klucz TMDB, aby czat mógł szukać po aktorze, gatunku i dekadzie."
+ },
+ {
+  "key": "settings.addAndManageDownload.label",
+  "comment": "Label in settings",
+  "plural": false,
+  "en": "Add and manage download clients",
+  "pl": "Dodawaj i zarządzaj klientami pobierania"
+ },
+ {
+  "key": "settings.addBaseUrlApi.tooltip",
+  "comment": "Tooltip/description in settings",
+  "plural": false,
+  "en": "Add base URL, API key and model — AI stays off until then.",
+  "pl": "Podaj adres bazowy, klucz API i model — do tego czasu AI pozostaje wyłączone."
+ },
+ {
+  "key": "settings.addTmdbApiKey.tooltip",
+  "comment": "Tooltip/description in settings",
+  "plural": false,
+  "en": "Add TMDB API key in Settings to discover new films.",
+  "pl": "Dodaj klucz TMDB w Ustawieniach, by odkrywać nowe filmy."
+ },
+ {
+  "key": "settings.addToCalendar.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Add to Calendar",
+  "pl": "Dodaj do Kalendarza"
+ },
+ {
+  "key": "settings.addYourRadarrOr.tooltip",
+  "comment": "Tooltip/description in settings",
+  "plural": false,
+  "en": "Add your Radarr or Sonarr connection to get started.",
+  "pl": "Dodaj połączenie z Radarrem lub Sonarrem, aby rozpocząć."
+ },
+ {
+  "key": "settings.admin.label",
+  "comment": "Label in settings",
+  "plural": false,
+  "en": "admin",
+  "pl": "admin"
+ },
+ {
+  "key": "settings.adultContent.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Adult content",
+  "pl": "Treści dla dorosłych"
+ },
+ {
+  "key": "settings.ai.label",
+  "comment": "Label in settings",
+  "plural": false,
+  "en": "AI",
+  "pl": "AI"
+ },
+ {
+  "key": "settings.aiKnowsAboutWhisparr.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "AI knows about Whisparr",
+  "pl": "AI ma dostęp do Whisparra"
+ },
+ {
+  "key": "settings.aiProvider.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "AI provider",
+  "pl": "Dostawca AI"
+ },
+ {
+  "key": "settings.apiBaseUrl.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "API base URL",
+  "pl": "Bazowy adres API"
+ },
+ {
+  "key": "settings.apiKey.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "API Key",
+  "pl": "Klucz API"
+ },
+ {
+  "key": "settings.apiKey2.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "API key",
+  "pl": "Klucz API"
+ },
+ {
+  "key": "settings.apiKeyIsRequired.tooltip",
+  "comment": "Tooltip/description in settings",
+  "plural": false,
+  "en": "API key is required.",
+  "pl": "Klucz API jest wymagany."
+ },
+ {
+  "key": "settings.appearance.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Appearance",
+  "pl": "Wygląd"
+ },
+ {
+  "key": "settings.appleIntelligenceRequiresIos.tooltip",
+  "comment": "Tooltip/description in settings",
+  "plural": false,
+  "en": "Apple Intelligence requires iOS 26.",
+  "pl": "Apple Intelligence wymaga iOS 26."
+ },
+ {
+  "key": "settings.appleIntelligenceRequiresMacos.tooltip",
+  "comment": "Tooltip/description in settings",
+  "plural": false,
+  "en": "Apple Intelligence requires macOS 26.",
+  "pl": "Apple Intelligence wymaga macOS 26."
+ },
+ {
+  "key": "settings.application.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Application",
+  "pl": "Aplikacja"
+ },
+ {
+  "key": "settings.arrbarrSActionsAre.tooltip",
+  "comment": "Tooltip/description in settings",
+  "plural": false,
+  "en": "ArrBarr's actions are available in the Shortcuts app, Spotlight and Siri.",
+  "pl": "Akcje ArrBarr są dostępne w aplikacji Skróty, Spotlight i Siri."
+ },
+ {
+  "key": "settings.arrbarrSettings.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "ArrBarr Settings",
+  "pl": "Ustawienia ArrBarr"
+ },
+ {
+  "key": "settings.arrbarrStaysOutOf.tooltip",
+  "comment": "Tooltip/description in settings",
+  "plural": false,
+  "en": "ArrBarr stays out of your Dock and shows active downloads at a glance. **Left-click** the icon to open the popover. **Right-click** for Add, Refresh, Settings — every action also has a keyboard shortcut.",
+  "pl": "ArrBarr nie zaśmieca Doca i pokazuje aktywne pobrania na pierwszy rzut oka. **Lewy klik** na ikonie otwiera popover. **Prawy klik** wywołuje Dodaj, Odśwież, Ustawienia — każda akcja ma też skrót klawiaturowy."
+ },
+ {
+  "key": "settings.arrbarrWillRelaunchOpen.tooltip",
+  "comment": "Tooltip/description in settings",
+  "plural": false,
+  "en": "ArrBarr will relaunch. Open Settings → General to enable Demo mode and load preview content.",
+  "pl": "ArrBarr uruchomi się ponownie. Otwórz Ustawienia → Ogólne, aby włączyć Tryb demo i załadować przykładowe dane."
+ },
+ {
+  "key": "settings.assistant.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Assistant",
+  "pl": "Asystent"
+ },
+ {
+  "key": "settings.assistantSettings.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Assistant settings",
+  "pl": "Ustawienia asystenta"
+ },
+ {
+  "key": "settings.authentication.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Authentication",
+  "pl": "Uwierzytelnianie"
+ },
+ {
+  "key": "settings.back.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Back",
+  "pl": "Wstecz"
+ },
+ {
+  "key": "settings.background.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Background",
+  "pl": "W tle"
+ },
+ {
+  "key": "settings.baseUrl.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Base URL",
+  "pl": "Adres bazowy"
+ },
+ {
+  "key": "settings.chatCanSearchBy.tooltip",
+  "comment": "Tooltip/description in settings",
+  "plural": false,
+  "en": "Chat can search by actor, genre, and decade.",
+  "pl": "Czat może szukać po aktorze, gatunku i dekadzie."
+ },
+ {
+  "key": "settings.close.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Close",
+  "pl": "Zamknij"
+ },
+ {
+  "key": "settings.confirm18.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Confirm (18+)",
+  "pl": "Potwierdź (18+)"
+ },
+ {
+  "key": "settings.connected.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Connected",
+  "pl": "Połączono"
+ },
+ {
+  "key": "settings.connection.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Connection",
+  "pl": "Połączenie"
+ },
+ {
+  "key": "settings.dark.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Dark",
+  "pl": "Mroczny"
+ },
+ {
+  "key": "settings.default.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Default",
+  "pl": "Domyślny"
+ },
+ {
+  "key": "settings.deluge.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Deluge",
+  "pl": "Deluge"
+ },
+ {
+  "key": "settings.demoMode.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Demo mode",
+  "pl": "Tryb demo"
+ },
+ {
+  "key": "settings.detachFromTheMenu.tooltip",
+  "comment": "Tooltip/description in settings",
+  "plural": false,
+  "en": "Detach from the menu bar into a standalone window with a Dock icon. Closing the window returns it to the Dock.",
+  "pl": "Odepnij od paska menu do osobnego okna z ikoną w Docku. Zamknięcie okna chowa je z powrotem do Docka."
+ },
+ {
+  "key": "settings.developerOptions.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Developer options",
+  "pl": "Opcje deweloperskie"
+ },
+ {
+  "key": "settings.deviceSpecificSettingsRefresh.tooltip",
+  "comment": "Tooltip/description in settings",
+  "plural": false,
+  "en": "Device-specific settings (refresh intervals, appearance, MCP) stay on this device.",
+  "pl": "Ustawienia specyficzne dla urządzenia (interwały odświeżania, wygląd, MCP) pozostają na tym urządzeniu."
+ },
+ {
+  "key": "settings.discovery.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Discovery",
+  "pl": "Odkrywanie"
+ },
+ {
+  "key": "settings.downloadClients.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Download clients",
+  "pl": "Klienty pobierania"
+ },
+ {
+  "key": "settings.downloadClientsOptional.label",
+  "comment": "Label in settings",
+  "plural": false,
+  "en": "Download clients (optional)",
+  "pl": "Klienci pobierania (opcjonalnie)"
+ },
+ {
+  "key": "settings.enableAi.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Enable AI",
+  "pl": "Włącz AI"
+ },
+ {
+  "key": "settings.enableMcp.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Enable MCP",
+  "pl": "Włącz MCP"
+ },
+ {
+  "key": "settings.enableMcpServer.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Enable MCP server",
+  "pl": "Włącz serwer MCP"
+ },
+ {
+  "key": "settings.enabled.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Enabled",
+  "pl": "Włączone"
+ },
+ {
+  "key": "settings.enterAValidUrl.tooltip",
+  "comment": "Tooltip/description in settings",
+  "plural": false,
+  "en": "Enter a valid URL (http:// or https://).",
+  "pl": "Podaj prawidłowy adres URL (http:// lub https://)."
+ },
+ {
+  "key": "settings.exposedOnTheNetwork.tooltip",
+  "comment": "Tooltip/description in settings",
+  "plural": false,
+  "en": "Exposed on the network without authentication. Enable a bearer token.",
+  "pl": "Wystawione w sieci bez uwierzytelniania. Włącz token bearer."
+ },
+ {
+  "key": "settings.externalMcpServer.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "External MCP server",
+  "pl": "Zewnętrzny serwer MCP"
+ },
+ {
+  "key": "settings.failedCheckKeyUrl.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Failed — check key & URL",
+  "pl": "Błąd — sprawdź klucz i adres URL"
+ },
+ {
+  "key": "settings.forward.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Forward",
+  "pl": "Naprzód"
+ },
+ {
+  "key": "settings.general.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "General",
+  "pl": "Ogólne"
+ },
+ {
+  "key": "settings.generate.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Generate",
+  "pl": "Generuj"
+ },
+ {
+  "key": "settings.generateATokenAuth.tooltip",
+  "comment": "Tooltip/description in settings",
+  "plural": false,
+  "en": "Generate a token — auth stays off until one is set.",
+  "pl": "Wygeneruj token — uwierzytelnianie pozostaje wyłączone, dopóki go nie ustawisz."
+ },
+ {
+  "key": "settings.getAFreeTmdb.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Get a free TMDB token",
+  "pl": "Zdobądź darmowy token TMDB"
+ },
+ {
+  "key": "settings.github.label",
+  "comment": "Label in settings",
+  "plural": false,
+  "en": "GitHub",
+  "pl": "GitHub"
+ },
+ {
+  "key": "settings.hostPortToBind.tooltip",
+  "comment": "Tooltip/description in settings",
+  "plural": false,
+  "en": "host:port to bind the server to. Use 0.0.0.0 to accept connections on every network interface, or 127.0.0.1 to keep it local.",
+  "pl": "host:port, na którym nasłuchuje serwer. Użyj 0.0.0.0, aby przyjmować połączenia ze wszystkich interfejsów sieciowych, albo 127.0.0.1, aby pozostać lokalnie."
+ },
+ {
+  "key": "settings.icloud.label",
+  "comment": "Label in settings",
+  "plural": false,
+  "en": "iCloud",
+  "pl": "iCloud"
+ },
+ {
+  "key": "settings.icloudStorageIsFull.tooltip",
+  "comment": "Tooltip/description in settings",
+  "plural": false,
+  "en": "iCloud storage is full — some settings couldn’t sync.",
+  "pl": "Pamięć iCloud jest pełna — nie udało się zsynchronizować części ustawień."
+ },
+ {
+  "key": "settings.invalidKey.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Invalid key",
+  "pl": "Nieprawidłowy klucz"
+ },
+ {
+  "key": "settings.keepYourServersPreferences.tooltip",
+  "comment": "Tooltip/description in settings",
+  "plural": false,
+  "en": "Keep your servers, preferences, and saved keys in sync across your devices. Keys are stored in your encrypted iCloud Keychain.",
+  "pl": "Synchronizuj serwery, preferencje i zapisane klucze na wszystkich urządzeniach. Klucze są przechowywane w zaszyfrowanym Pęku kluczy iCloud."
+ },
+ {
+  "key": "settings.language.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Language",
+  "pl": "Język"
+ },
+ {
+  "key": "settings.larger.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Larger",
+  "pl": "Większy"
+ },
+ {
+  "key": "settings.largest.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Largest",
+  "pl": "Największy"
+ },
+ {
+  "key": "settings.lastSync.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Last sync",
+  "pl": "Ostatnia synchronizacja"
+ },
+ {
+  "key": "settings.launchAtLogin.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Launch at login",
+  "pl": "Uruchamiaj przy logowaniu"
+ },
+ {
+  "key": "settings.layoutVisibilityPreferences.label",
+  "comment": "Label in settings",
+  "plural": false,
+  "en": "Layout & visibility preferences",
+  "pl": "Preferencje układu i widoczności"
+ },
+ {
+  "key": "settings.light.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Light",
+  "pl": "Jasny"
+ },
+ {
+  "key": "settings.listenAddress.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Listen address",
+  "pl": "Adres nasłuchu"
+ },
+ {
+  "key": "settings.loginLeaveEmptyFor.label",
+  "comment": "Label in settings",
+  "plural": false,
+  "en": "Login (leave empty for API key)",
+  "pl": "Login (zostaw puste dla klucza API)"
+ },
+ {
+  "key": "settings.mcp.label",
+  "comment": "Label in settings",
+  "plural": false,
+  "en": "MCP",
+  "pl": "MCP"
+ },
+ {
+  "key": "settings.mcpBearerTokenOptional.label",
+  "comment": "Label in settings",
+  "plural": false,
+  "en": "MCP bearer token (optional)",
+  "pl": "Token MCP (opcjonalny)"
+ },
+ {
+  "key": "settings.mcpConnectionEnabled.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "MCP connection enabled",
+  "pl": "Połączenie MCP włączone"
+ },
+ {
+  "key": "settings.mcpServer.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "MCP Server",
+  "pl": "Serwer MCP"
+ },
+ {
+  "key": "settings.mcpServerUrl.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "MCP server URL",
+  "pl": "Adres serwera MCP"
+ },
+ {
+  "key": "settings.mediaManagers.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Media Managers",
+  "pl": "Menedżery mediów"
+ },
+ {
+  "key": "settings.model.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Model",
+  "pl": "Model"
+ },
+ {
+  "key": "settings.never.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Never",
+  "pl": "Nigdy"
+ },
+ {
+  "key": "settings.notificationSettings.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Notification settings",
+  "pl": "Ustawienia powiadomień"
+ },
+ {
+  "key": "settings.notificationSound.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Notification sound",
+  "pl": "Dźwięk powiadomienia"
+ },
+ {
+  "key": "settings.notifyOnNewGrabs.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Notify on new grabs",
+  "pl": "Powiadom o nowych pobraniach"
+ },
+ {
+  "key": "settings.nsfwFilter.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "NSFW filter",
+  "pl": "Filtr NSFW"
+ },
+ {
+  "key": "settings.nzbget.label",
+  "comment": "Label in settings",
+  "plural": false,
+  "en": "NZBGet",
+  "pl": "NZBGet"
+ },
+ {
+  "key": "settings.openShortcutsApp.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Open Shortcuts app",
+  "pl": "Otwórz aplikację Skróty"
+ },
+ {
+  "key": "settings.openaiOpenrouter.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "OpenAI / OpenRouter",
+  "pl": "OpenAI / OpenRouter"
+ },
+ {
+  "key": "settings.password.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Password",
+  "pl": "Hasło"
+ },
+ {
+  "key": "settings.passwordOrApiKey.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Password or API key",
+  "pl": "Hasło lub klucz API"
+ },
+ {
+  "key": "settings.passwordsApiKeysIcloud.label",
+  "comment": "Label in settings",
+  "plural": false,
+  "en": "Passwords & API keys (iCloud Keychain)",
+  "pl": "Hasła i klucze API (Pęk kluczy iCloud)"
+ },
+ {
+  "key": "settings.pasteYourApiKey.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Paste your API key",
+  "pl": "Wklej swój klucz API"
+ },
+ {
+  "key": "settings.play.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Play",
+  "pl": "Odtwórz"
+ },
+ {
+  "key": "settings.popoverOpen.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Popover open",
+  "pl": "Okno otwarte"
+ },
+ {
+  "key": "settings.privacyPolicy.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Privacy Policy",
+  "pl": "Polityka prywatności"
+ },
+ {
+  "key": "settings.qbittorrent.label",
+  "comment": "Label in settings",
+  "plural": false,
+  "en": "qBittorrent",
+  "pl": "qBittorrent"
+ },
+ {
+  "key": "settings.quitAndReopenThe.tooltip",
+  "comment": "Tooltip/description in settings",
+  "plural": false,
+  "en": "Quit and reopen the app to apply the new language.",
+  "pl": "Zamknij i otwórz aplikację ponownie, aby zastosować nowy język."
+ },
+ {
+  "key": "settings.refreshInterval.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Refresh Interval",
+  "pl": "Częstotliwość odświeżania"
+ },
+ {
+  "key": "settings.regenerate.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Regenerate",
+  "pl": "Wygeneruj ponownie"
+ },
+ {
+  "key": "settings.relaunch.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Relaunch",
+  "pl": "Uruchom ponownie"
+ },
+ {
+  "key": "settings.requireBearerToken.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Require bearer token",
+  "pl": "Wymagaj tokena bearer"
+ },
+ {
+  "key": "settings.restartRequiredToApply.tooltip",
+  "comment": "Tooltip/description in settings",
+  "plural": false,
+  "en": "Restart required to apply the new language.",
+  "pl": "Wymagany restart, aby zastosować nowy język."
+ },
+ {
+  "key": "settings.rtorrent.label",
+  "comment": "Label in settings",
+  "plural": false,
+  "en": "rTorrent",
+  "pl": "rTorrent"
+ },
+ {
+  "key": "settings.running.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Running",
+  "pl": "Działa"
+ },
+ {
+  "key": "settings.sabnzbd.label",
+  "comment": "Label in settings",
+  "plural": false,
+  "en": "SABnzbd",
+  "pl": "SABnzbd"
+ },
+ {
+  "key": "settings.sectionOrder.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Section order",
+  "pl": "Kolejność sekcji"
+ },
+ {
+  "key": "settings.sendTestNotification.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Send test notification",
+  "pl": "Wyślij testowe powiadomienie"
+ },
+ {
+  "key": "settings.serverConfigurations.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Server configurations",
+  "pl": "Konfiguracje serwerów"
+ },
+ {
+  "key": "settings.serviceIconsByDashboard.tooltip",
+  "comment": "Tooltip/description in settings",
+  "plural": false,
+  "en": "Service icons by Dashboard Icons, licensed CC BY 4.0 (recoloured for the UI).",
+  "pl": "Ikony usług autorstwa Dashboard Icons, na licencji CC BY 4.0 (przekolorowane na potrzeby UI)."
+ },
+ {
+  "key": "settings.showInDockAs.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Show in Dock as a window",
+  "pl": "Pokaż w Docku jako okno"
+ },
+ {
+  "key": "settings.showIndexerIssuesWarning.label",
+  "comment": "Label in settings",
+  "plural": false,
+  "en": "Show indexer issues warning",
+  "pl": "Pokaż ostrzeżenie o problemach z indekserami"
+ },
+ {
+  "key": "settings.showWelcomeScreen.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Show welcome screen",
+  "pl": "Pokaż ekran powitalny"
+ },
+ {
+  "key": "settings.signInToIcloud.tooltip",
+  "comment": "Tooltip/description in settings",
+  "plural": false,
+  "en": "Sign in to iCloud in System Settings to enable sync.",
+  "pl": "Zaloguj się do iCloud w Ustawieniach systemowych, aby włączyć synchronizację."
+ },
+ {
+  "key": "settings.siriShortcuts.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Siri & Shortcuts",
+  "pl": "Siri i Skróty"
+ },
+ {
+  "key": "settings.status.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Status",
+  "pl": "Status"
+ },
+ {
+  "key": "settings.stopped.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Stopped",
+  "pl": "Zatrzymany"
+ },
+ {
+  "key": "settings.subscribesThisCalendarIn.tooltip",
+  "comment": "Tooltip/description in settings",
+  "plural": false,
+  "en": "Subscribes this calendar in Apple Calendar. The server must be reachable when Calendar refreshes (home network or VPN).",
+  "pl": "Subskrybuje ten kalendarz w aplikacji Kalendarz. Serwer musi być osiągalny przy odświeżaniu (sieć domowa lub VPN)."
+ },
+ {
+  "key": "settings.syncWithIcloud.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Sync with iCloud",
+  "pl": "Synchronizuj przez iCloud"
+ },
+ {
+  "key": "settings.system.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "System",
+  "pl": "Systemowy"
+ },
+ {
+  "key": "settings.tapAddToSiri.tooltip",
+  "comment": "Tooltip/description in settings",
+  "plural": false,
+  "en": "Tap “Add to Siri” to set a phrase. The same actions appear in the Shortcuts app and Spotlight — no setup needed.",
+  "pl": "Dotknij „Dodaj do Siri”, aby ustawić frazę. Te same akcje są w aplikacji Skróty i w Spotlight — bez konfiguracji."
+ },
+ {
+  "key": "settings.textSize.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Text size",
+  "pl": "Rozmiar tekstu"
+ },
+ {
+  "key": "settings.theFooterIsGone.tooltip",
+  "comment": "Tooltip/description in settings",
+  "plural": false,
+  "en": "The footer is gone. Add new content via the **+** button next to the tabs, or press **⌘N** anywhere in the popover. The **⋯** menu next to it holds Settings, Quit and Open Window — and everything's also in the right-click menu on the menu bar icon.",
+  "pl": "Stopka zniknęła. Dodawaj nowe pozycje przyciskiem **Add** obok zakładek lub klawiszem **⌘N** w dowolnym miejscu popovera. Sąsiednie menu **⋯** zawiera Ustawienia, Zamknij i Otwórz okno — wszystko jest też w menu po kliknięciu prawym przyciskiem na ikonie pod paskiem menu."
+ },
+ {
+  "key": "settings.theModelMustSupport.tooltip",
+  "comment": "Tooltip/description in settings",
+  "plural": false,
+  "en": "The model must support tool calling, and results vary by model. Library items may be sent to the model to tailor recommendations. Tip: free models on OpenRouter work well.",
+  "pl": "Model musi obsługiwać wywoływanie narzędzi, a wyniki zależą od modelu. Elementy biblioteki mogą zostać wysłane do modelu w celu dopasowania rekomendacji. Wskazówka: darmowe modele na OpenRouter sprawdzają się dobrze."
+ },
+ {
+  "key": "settings.theme.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Theme",
+  "pl": "Motyw"
+ },
+ {
+  "key": "settings.thisWillRemoveLld.tooltip",
+  "comment": "Tooltip/description in settings",
+  "plural": false,
+  "en": "This will remove \"%@\" (%lld episodes) from the download client.",
+  "pl": "Spowoduje to usunięcie „%@\" (%lld odcinków) z klienta pobierań."
+ },
+ {
+  "key": "settings.tmdbApiKey.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "TMDB API key",
+  "pl": "Klucz API TMDB"
+ },
+ {
+  "key": "settings.tmdbReadAccessToken.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "TMDB Read Access Token",
+  "pl": "Token odczytu TMDB"
+ },
+ {
+  "key": "settings.toDiscoverNewFilms.tooltip",
+  "comment": "Tooltip/description in settings",
+  "plural": false,
+  "en": "To discover new films, add a TMDB API key in Settings → AI → Discovery.",
+  "pl": "Dodaj klucz TMDB w Ustawieniach → AI → Odkrywanie, aby odkrywać nowe filmy."
+ },
+ {
+  "key": "settings.token.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Token",
+  "pl": "Token"
+ },
+ {
+  "key": "settings.tools.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Tools",
+  "pl": "Narzędzia"
+ },
+ {
+  "key": "settings.toolsAreOnlyRegistered.tooltip",
+  "comment": "Tooltip/description in settings",
+  "plural": false,
+  "en": "Tools are only registered for services you have configured — with no Sonarr/Radarr set up, the server exposes none.",
+  "pl": "Narzędzia są rejestrowane tylko dla skonfigurowanych usług — bez ustawionego Sonarr/Radarr serwer nie udostępnia żadnych."
+ },
+ {
+  "key": "settings.toolsExposedCount.label",
+  "comment": "Label in settings",
+  "plural": false,
+  "en": "%1$lld of %2$lld tools exposed",
+  "pl": "Udostępniono %1$lld z %2$lld narzędzi"
+ },
+ {
+  "key": "settings.transmission.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Transmission",
+  "pl": "Transmission"
+ },
+ {
+  "key": "settings.twentyFourHours.label",
+  "comment": "Label in settings",
+  "plural": false,
+  "en": "24 hours",
+  "pl": "24 godziny"
+ },
+ {
+  "key": "settings.unlockArrbarrPro.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Unlock ArrBarr Pro",
+  "pl": "Odblokuj ArrBarr Pro"
+ },
+ {
+  "key": "settings.url.label",
+  "comment": "Label in settings",
+  "plural": false,
+  "en": "URL",
+  "pl": "URL"
+ },
+ {
+  "key": "settings.username.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Username",
+  "pl": "Nazwa użytkownika"
+ },
+ {
+  "key": "settings.version.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Version",
+  "pl": "Wersja"
+ },
+ {
+  "key": "settings.website.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "Website",
+  "pl": "Strona internetowa"
+ },
+ {
+  "key": "settings.whatSyncs.button",
+  "comment": "Button in settings",
+  "plural": false,
+  "en": "What syncs",
+  "pl": "Co się synchronizuje"
+ },
+ {
+  "key": "settings.whisparrAiAccessIs.tooltip",
+  "comment": "Tooltip/description in settings",
+  "plural": false,
+  "en": "Whisparr AI access is disabled in Settings.",
+  "pl": "Dostęp AI do Whisparra jest wyłączony w Ustawieniach."
+ },
+ {
+  "key": "settings.whisparrMayProvide18.tooltip",
+  "comment": "Tooltip/description in settings",
+  "plural": false,
+  "en": "Whisparr may provide 18+ content. Confirm that you are 18 or older.",
+  "pl": "Whisparr może udostępniać treści 18+. Potwierdź, że masz ukończone 18 lat."
+ },
+ {
+  "key": "unit.days",
+  "comment": "Label in settings",
+  "plural": true,
+  "en": {
+   "one": "%lld day",
+   "other": "%lld days"
+  },
+  "pl": {
+   "one": "%lld dzień",
+   "few": "%lld dni",
+   "many": "%lld dni",
+   "other": "%lld dnia"
+  }
+ },
+ {
+  "key": "unit.downloads",
+  "comment": "Label in queue",
+  "plural": true,
+  "en": {
+   "one": "%lld download",
+   "other": "%lld downloads"
+  },
+  "pl": {
+   "one": "%lld pobieranie",
+   "few": "%lld pobierania",
+   "many": "%lld pobierań",
+   "other": "%lld pobierania"
+  }
+ },
+ {
+  "key": "unit.episodes",
+  "comment": "Label in queue",
+  "plural": true,
+  "en": {
+   "one": "%lld episode",
+   "other": "%lld episodes"
+  },
+  "pl": {
+   "one": "%lld odcinek",
+   "few": "%lld odcinki",
+   "many": "%lld odcinków",
+   "other": "%lld odcinka"
+  }
+ },
+ {
+  "key": "unit.hours",
+  "comment": "Label in settings",
+  "plural": true,
+  "en": {
+   "one": "%lld hour",
+   "other": "%lld hours"
+  },
+  "pl": {
+   "one": "%lld godzina",
+   "few": "%lld godziny",
+   "many": "%lld godzin",
+   "other": "%lld godziny"
+  }
+ },
+ {
+  "key": "unit.itemsNamed",
+  "comment": "Label in queue",
+  "plural": true,
+  "en": {
+   "one": "%lld item: %@",
+   "other": "%lld items: %@"
+  },
+  "pl": {
+   "one": "%lld element: %@",
+   "few": "%lld elementy: %@",
+   "many": "%lld elementów: %@",
+   "other": "%lld elementu: %@"
+  }
+ },
+ {
+  "key": "unit.tracks",
+  "comment": "Label in detail",
+  "plural": true,
+  "en": {
+   "one": "%lld track",
+   "other": "%lld tracks"
+  },
+  "pl": {
+   "one": "%lld utwór",
+   "few": "%lld utwory",
+   "many": "%lld utworów",
+   "other": "%lld utworu"
+  }
+ },
+ {
+  "key": "upcoming.today.button",
+  "comment": "Button in upcoming",
+  "plural": false,
+  "en": "Today",
+  "pl": "Dziś"
+ },
+ {
+  "key": "upcoming.tomorrow.button",
+  "comment": "Button in upcoming",
+  "plural": false,
+  "en": "Tomorrow",
+  "pl": "Jutro"
+ },
+ {
+  "key": "upcoming.upcomingWindow.button",
+  "comment": "Button in upcoming",
+  "plural": false,
+  "en": "Upcoming window",
+  "pl": "Okno nadchodzących"
+ }
+]

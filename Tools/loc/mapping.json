@@ -2536,7 +2536,7 @@
   {
     "oldKey": "Gatunek",
     "newKey": "common.gatunek.button",
-    "en": "Gatunek",
+    "en": "Genre",
     "comment": "Button in common",
     "area": "common",
     "role": "button",
@@ -2546,7 +2546,7 @@
   {
     "oldKey": "Gatunki",
     "newKey": "common.gatunki.button",
-    "en": "Gatunki",
+    "en": "Genres",
     "comment": "Button in common",
     "area": "common",
     "role": "button",
@@ -4014,7 +4014,7 @@
   {
     "oldKey": "Osoby",
     "newKey": "common.osoby.button",
-    "en": "Osoby",
+    "en": "People",
     "comment": "Button in common",
     "area": "common",
     "role": "button",
@@ -7107,7 +7107,7 @@
   {
     "oldKey": "Z lat",
     "newKey": "common.zLat.button",
-    "en": "Z lat",
+    "en": "From the years",
     "comment": "Button in common",
     "area": "common",
     "role": "button",
