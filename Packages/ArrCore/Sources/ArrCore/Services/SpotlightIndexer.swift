@@ -60,6 +60,24 @@ public enum SpotlightIndexer {
     /// macOS opens Spotlight hits in the arr's web UI (the menu-bar app has no
     /// window to host a detail view). Fetches the title slug — the synthetic
     /// item from the identifier doesn't carry it.
+
+    /// Remove ArrBarr's own Spotlight entries (the Radarr/Sonarr library items
+    /// we indexed) without re-adding them. Surgical: deletes only our two
+    /// domains, so nothing else in the system index is touched. Resets the
+    /// reindex throttle so a later `reindex()` can repopulate on demand.
+    /// This is the only way to clear these — CoreSpotlight is per-app, so an
+    /// external tool can't reach ArrBarr's index.
+    @MainActor
+    public static func clearIndex() async {
+        let index = CSSearchableIndex.default()
+        await withCheckedContinuation { cont in
+            index.deleteSearchableItems(withDomainIdentifiers: [domainRadarr, domainSonarr]) { _ in
+                cont.resume()
+            }
+        }
+        lastReindex = nil
+    }
+
     @MainActor
     public static func browserURL(forIdentifier id: String, configStore: ConfigStore = .shared) async -> URL? {
         guard let ref = parse(id) else { return nil }

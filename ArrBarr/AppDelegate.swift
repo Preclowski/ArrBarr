@@ -69,7 +69,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Task.detached { await ImageCache.shared.purgeOlderThan(30) }
 
         // Index the library into Spotlight (search "american pie" → result).
-        SpotlightIndexer.reindex(configStore: configStore)
+        // `--clear-intents` instead wipes ArrBarr's own Spotlight entries and
+        // skips reindexing — a one-shot way to clear stale icons.
+        if CommandLine.arguments.contains("--clear-intents") {
+            Task { @MainActor in
+                await SpotlightIndexer.clearIndex()
+                NSLog("ArrBarr: cleared Spotlight intents index (--clear-intents)")
+            }
+        } else {
+            SpotlightIndexer.reindex(configStore: configStore)
+        }
 
         // Wake handler — WebSockets don't survive a Mac sleep cycle
         // reliably; the OS can take 30-90 s to surface the dead socket,

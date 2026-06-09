@@ -28099,6 +28099,132 @@
           }
         }
       }
+    },
+    "settings.clearIntentsCache.button": {
+      "extractionState": "manual",
+      "comment": "Siri/Shortcuts settings: clear Spotlight intents",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear intents cache"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wyczyść cache intencji"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Intent-Cache leeren"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vaciar caché de intents"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vider le cache des intents"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Intent-cache wissen"
+          }
+        }
+      }
+    },
+    "settings.intentsCacheCleared.button": {
+      "extractionState": "manual",
+      "comment": "Siri/Shortcuts settings: clear Spotlight intents",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cleared"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wyczyszczono"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geleert"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vaciado"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vidé"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gewist"
+          }
+        }
+      }
+    },
+    "settings.clearIntentsCache.tooltip": {
+      "extractionState": "manual",
+      "comment": "Siri/Shortcuts settings: clear Spotlight intents",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Removes ArrBarr's library entries from Spotlight (fixes stale icons). They re-index automatically."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usuwa pozycje biblioteki ArrBarr ze Spotlight (naprawia stałe ikony). Zindeksują się ponownie automatycznie."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entfernt ArrBarrs Bibliothekseinträge aus Spotlight (behebt veraltete Symbole). Sie werden automatisch neu indiziert."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elimina las entradas de la biblioteca de ArrBarr de Spotlight (corrige iconos obsoletos). Se reindexan automáticamente."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Supprime les entrées de la bibliothèque ArrBarr de Spotlight (corrige les icônes obsolètes). Elles sont réindexées automatiquement."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verwijdert ArrBarrs bibliotheekvermeldingen uit Spotlight (lost verouderde iconen op). Ze worden automatisch opnieuw geïndexeerd."
+          }
+        }
+      }
     }
   }
 }
