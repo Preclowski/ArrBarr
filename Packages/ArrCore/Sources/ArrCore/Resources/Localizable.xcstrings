@@ -28023,7 +28023,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Make me a movie quiz — a dozen-plus popular movies I don't have in my library yet."
+            "value": "Give me a quiz of popular movies to swipe through — a dozen-plus that aren't in my library yet."
           }
         },
         "pl": {
@@ -28035,25 +28035,25 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mach mir ein Film-Quiz — ein Dutzend beliebter Filme, die ich noch nicht in meiner Bibliothek habe."
+            "value": "Gib mir ein Quiz mit beliebten Filmen zum Durchswipen — ein Dutzend, die noch nicht in meiner Bibliothek sind."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Hazme un quiz de películas: una docena de películas populares que aún no tengo en mi biblioteca."
+            "value": "Dame un quiz de películas populares para deslizar — una docena que aún no tengo en mi biblioteca."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fais-moi un quiz de films — une douzaine de films populaires que je n'ai pas encore dans ma bibliothèque."
+            "value": "Donne-moi un quiz de films populaires à faire défiler — une douzaine que je n'ai pas encore dans ma bibliothèque."
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Maak een filmquiz voor me — een tiental populaire films die ik nog niet in mijn bibliotheek heb."
+            "value": "Geef me een quiz met populaire films om doorheen te swipen — een tiental die ik nog niet in mijn bibliotheek heb."
           }
         }
       }
@@ -28065,7 +28065,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Make me a series quiz — a dozen-plus popular series I don't have in my library yet."
+            "value": "Give me a quiz of popular series to swipe through — a dozen-plus that aren't in my library yet."
           }
         },
         "pl": {
@@ -28077,25 +28077,25 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mach mir ein Serien-Quiz — ein Dutzend beliebter Serien, die ich noch nicht in meiner Bibliothek habe."
+            "value": "Gib mir ein Quiz mit beliebten Serien zum Durchswipen — ein Dutzend, die noch nicht in meiner Bibliothek sind."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Hazme un quiz de series: una docena de series populares que aún no tengo en mi biblioteca."
+            "value": "Dame un quiz de series populares para deslizar — una docena que aún no tengo en mi biblioteca."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fais-moi un quiz de séries — une douzaine de séries populaires que je n'ai pas encore dans ma bibliothèque."
+            "value": "Donne-moi un quiz de séries populaires à faire défiler — une douzaine que je n'ai pas encore dans ma bibliothèque."
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Maak een seriequiz voor me — een tiental populaire series die ik nog niet in mijn bibliotheek heb."
+            "value": "Geef me een quiz met populaire series om doorheen te swipen — een tiental die ik nog niet in mijn bibliotheek heb."
           }
         }
       }
