@@ -31,9 +31,10 @@ public final class KVSyncCoordinator: ObservableObject {
     @Published public private(set) var isRunning: Bool = false
 
     /// Whether this device is signed into iCloud (Keychain/KVS can replicate).
-    public var accountAvailable: Bool {
-        FileManager.default.ubiquityIdentityToken != nil
-    }
+    /// Stored + `@Published` so the settings UI refreshes when it changes;
+    /// recomputed on `start()`/`stop()`.
+    @Published public private(set) var accountAvailable: Bool
+        = FileManager.default.ubiquityIdentityToken != nil
 
     public init(defaults: UserDefaults, kv: KeyValueSyncing, reload: @escaping () -> Void) {
         self.defaults = defaults
@@ -44,6 +45,7 @@ public final class KVSyncCoordinator: ObservableObject {
     /// Begin observing inbound KVS changes and outbound UserDefaults changes,
     /// and do an initial two-way reconcile (pull remote, then push local).
     public func start() {
+        refreshAccountAvailability()
         let kvObs = NotificationCenter.default.addObserver(
             forName: NSUbiquitousKeyValueStore.didChangeExternallyNotification,
             object: kv as AnyObject, queue: .main
@@ -78,9 +80,14 @@ public final class KVSyncCoordinator: ObservableObject {
 
     /// Stop observing and mirroring. Existing KVS/Keychain data is left intact.
     public func stop() {
+        refreshAccountAvailability()
         observers.forEach { NotificationCenter.default.removeObserver($0) }
         observers.removeAll()
         isRunning = false
+    }
+
+    private func refreshAccountAvailability() {
+        accountAvailable = FileManager.default.ubiquityIdentityToken != nil
     }
 
     /// Idempotently start or stop syncing to match the user's toggle.

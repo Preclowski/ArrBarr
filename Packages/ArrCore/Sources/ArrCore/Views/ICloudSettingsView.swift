@@ -10,7 +10,10 @@ struct ICloudSettingsView: View {
 
     /// A non-optional coordinator for the view to observe. Falls back to a
     /// stopped instance when the shared one was never created (e.g. previews,
-    /// non-APPSTORE), so status simply reads "Off / Never".
+    /// non-APPSTORE), so status simply reads "Off / Never". It is a cached
+    /// static (not `@StateObject`) because a computed `shared ?? fallback`
+    /// would create a fresh throwaway every render when `shared` is nil,
+    /// breaking observation.
     @MainActor private static var coordinator: KVSyncCoordinator = {
         KVSyncCoordinator.shared ?? KVSyncCoordinator(
             defaults: WidgetDataStore.groupDefaults() ?? .standard,
@@ -90,7 +93,7 @@ struct ICloudSettingsView: View {
         Label {
             Text(key, bundle: .module)
         } icon: {
-            Image(systemName: symbol).foregroundStyle(.secondary)
+            Image(systemName: symbol).foregroundStyle(.secondary).accessibilityHidden(true)
         }
     }
 }
