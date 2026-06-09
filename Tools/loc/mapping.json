@@ -1,0 +1,7345 @@
+[
+  {
+    "oldKey": "%lld days",
+    "newKey": "settings.lldDays.label",
+    "en": "%lld days",
+    "comment": "Label in settings",
+    "area": "settings",
+    "role": "label",
+    "usages": [
+      "SettingsView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "%lld downloads",
+    "newKey": "queue.lldDownloads.label",
+    "en": "%lld downloads",
+    "comment": "Label in queue",
+    "area": "queue",
+    "role": "label",
+    "usages": [
+      "DownloadSection"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "%lld episodes",
+    "newKey": "queue.lldEpisodes.label",
+    "en": "%lld episodes",
+    "comment": "Label in queue",
+    "area": "queue",
+    "role": "label",
+    "usages": [
+      "QueueGroupRowView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "%lld hours",
+    "newKey": "settings.lldHours.label",
+    "en": "%lld hours",
+    "comment": "Label in settings",
+    "area": "settings",
+    "role": "label",
+    "usages": [
+      "SettingsView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "%lld items: %@",
+    "newKey": "queue.lldItems.label",
+    "en": "%lld items: %@",
+    "comment": "Label in queue",
+    "area": "queue",
+    "role": "label",
+    "usages": [
+      "NotificationCoalescer"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "%lld picked",
+    "newKey": "discover.lldPicked.label",
+    "en": "%lld picked",
+    "comment": "Label in discover",
+    "area": "discover",
+    "role": "label",
+    "usages": [
+      "QuizResumeCard"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "%lld tracks",
+    "newKey": "detail.lldTracks.label",
+    "en": "%lld tracks",
+    "comment": "Label in detail",
+    "area": "detail",
+    "role": "label",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "%lld%%",
+    "newKey": "common.lld.label",
+    "en": "%lld%%",
+    "comment": "Label in common",
+    "area": "common",
+    "role": "label",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "24 hours",
+    "newKey": "settings.twentyFourHours.label",
+    "en": "24 hours",
+    "comment": "Label in settings",
+    "area": "settings",
+    "role": "label",
+    "usages": [
+      "SettingsView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "3 movies in Radarr and a season in Sonarr.",
+    "newKey": "paywall.exampleSummary.tooltip",
+    "en": "3 movies in Radarr and a season in Sonarr.",
+    "comment": "Tooltip/description in paywall",
+    "area": "paywall",
+    "role": "tooltip",
+    "usages": [
+      "PaywallHeroes"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "A new Chat tab lets you ask questions in plain language — find a show, check what's coming this week, add a movie. Works with Apple Intelligence (macOS 26+) or any OpenAI-compatible API. Set up under Settings → AI.",
+    "newKey": "chat.aNewChatTab.tooltip",
+    "en": "A new Chat tab lets you ask questions in plain language — find a show, check what's coming this week, add a movie. Works with Apple Intelligence (macOS 26+) or any OpenAI-compatible API. Set up under Settings → AI.",
+    "comment": "Tooltip/description in chat",
+    "area": "chat",
+    "role": "tooltip",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "AI",
+    "newKey": "settings.ai.label",
+    "en": "AI",
+    "comment": "Label in settings",
+    "area": "settings",
+    "role": "label",
+    "usages": [
+      "SettingsView",
+      "DiscoverCardView",
+      "DiscoverTabView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "AI Chat",
+    "newKey": "chat.aiChat.button",
+    "en": "AI Chat",
+    "comment": "Button in chat",
+    "area": "chat",
+    "role": "button",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "AI decides",
+    "newKey": "discover.aiDecides.button",
+    "en": "AI decides",
+    "comment": "Button in common",
+    "area": "discover",
+    "role": "button",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "AI knows about Whisparr",
+    "newKey": "settings.aiKnowsAboutWhisparr.button",
+    "en": "AI knows about Whisparr",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "SettingsView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "AI provider",
+    "newKey": "settings.aiProvider.button",
+    "en": "AI provider",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "SettingsView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "AI will pick movies or shows based on your description",
+    "newKey": "discover.aiWillPickMovies.tooltip",
+    "en": "AI will pick movies or shows based on your description",
+    "comment": "Tooltip/description in common",
+    "area": "discover",
+    "role": "tooltip",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "API Key",
+    "newKey": "settings.apiKey.button",
+    "en": "API Key",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "ServiceFields",
+      "TMDBClient"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "API base URL",
+    "newKey": "settings.apiBaseUrl.button",
+    "en": "API base URL",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "SettingsView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "API key",
+    "newKey": "settings.apiKey2.button",
+    "en": "API key",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "SettingsView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "API key is required.",
+    "newKey": "settings.apiKeyIsRequired.tooltip",
+    "en": "API key is required.",
+    "comment": "Tooltip/description in settings",
+    "area": "settings",
+    "role": "tooltip",
+    "usages": [
+      "ServiceFields"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "About",
+    "newKey": "settings.about.button",
+    "en": "About",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "SettingsView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "About ArrBarr",
+    "newKey": "settings.aboutArrbarr.button",
+    "en": "About ArrBarr",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "SettingsView",
+      "PopoverContentView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Acknowledgements",
+    "newKey": "settings.acknowledgements.button",
+    "en": "Acknowledgements",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "SettingsView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Action",
+    "newKey": "discover.action.button",
+    "en": "Action",
+    "comment": "Button in discover",
+    "area": "discover",
+    "role": "button",
+    "usages": [
+      "DiscoverItem",
+      "DemoChatProvider",
+      "DemoMocks+Details",
+      "DemoMocks+Search"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Add",
+    "newKey": "paywall.add.button",
+    "en": "Add",
+    "comment": "Button in paywall",
+    "area": "paywall",
+    "role": "button",
+    "usages": [
+      "PaywallHeroes"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Add SABnzbd, qBittorrent, NZBGet, Transmission, rTorrent, or Deluge to pause and resume directly from the queue. Most features work fine without it — your arr already handles the heavy lifting.",
+    "newKey": "queue.addSabnzbdQbittorrentNzbget.tooltip",
+    "en": "Add SABnzbd, qBittorrent, NZBGet, Transmission, rTorrent, or Deluge to pause and resume directly from the queue. Most features work fine without it — your arr already handles the heavy lifting.",
+    "comment": "Tooltip/description in queue",
+    "area": "queue",
+    "role": "tooltip",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Add TMDB API key in Settings to discover new films.",
+    "newKey": "settings.addTmdbApiKey.tooltip",
+    "en": "Add TMDB API key in Settings to discover new films.",
+    "comment": "Tooltip/description in settings",
+    "area": "settings",
+    "role": "tooltip",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Add a TMDB key to let chat search by actor, genre, and decade.",
+    "newKey": "settings.addATmdbKey.tooltip",
+    "en": "Add a TMDB key to let chat search by actor, genre, and decade.",
+    "comment": "Tooltip/description in settings",
+    "area": "settings",
+    "role": "tooltip",
+    "usages": [
+      "SettingsView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Add a service",
+    "newKey": "settings.addAService.button",
+    "en": "Add a service",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Add and manage SABnzbd, qBittorrent and the rest.",
+    "newKey": "paywall.addAndManageSabnzbd.tooltip",
+    "en": "Add and manage SABnzbd, qBittorrent and the rest.",
+    "comment": "Tooltip/description in paywall",
+    "area": "paywall",
+    "role": "tooltip",
+    "usages": [
+      "ProFeature"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Add and manage download clients",
+    "newKey": "settings.addAndManageDownload.label",
+    "en": "Add and manage download clients",
+    "comment": "Label in settings",
+    "area": "settings",
+    "role": "label",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Add base URL, API key and model — AI stays off until then.",
+    "newKey": "settings.addBaseUrlApi.tooltip",
+    "en": "Add base URL, API key and model — AI stays off until then.",
+    "comment": "Tooltip/description in settings",
+    "area": "settings",
+    "role": "tooltip",
+    "usages": [
+      "SettingsView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Add mood",
+    "newKey": "discover.addMood.button",
+    "en": "Add mood",
+    "comment": "Button in discover",
+    "area": "discover",
+    "role": "button",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Add movies and shows in one sentence",
+    "newKey": "paywall.addMoviesAndShows.label",
+    "en": "Add movies and shows in one sentence",
+    "comment": "Label in paywall",
+    "area": "paywall",
+    "role": "label",
+    "usages": [
+      "PaywallView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Add new",
+    "newKey": "search.addNew.button",
+    "en": "Add new",
+    "comment": "Button in search",
+    "area": "search",
+    "role": "button",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Add new movies and shows",
+    "newKey": "search.addNewMoviesAnd.button",
+    "en": "Add new movies and shows",
+    "comment": "Button in search",
+    "area": "search",
+    "role": "button",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Add new titles",
+    "newKey": "paywall.addNewTitles.button",
+    "en": "Add new titles",
+    "comment": "Button in paywall",
+    "area": "paywall",
+    "role": "button",
+    "usages": [
+      "ProFeature"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Add person",
+    "newKey": "common.addPerson.button",
+    "en": "Add person",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Add to Calendar",
+    "newKey": "settings.addToCalendar.button",
+    "en": "Add to Calendar",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "ServiceFields"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Add to Radarr",
+    "newKey": "search.addToRadarr.button",
+    "en": "Add to Radarr",
+    "comment": "Button in search",
+    "area": "search",
+    "role": "button",
+    "usages": [
+      "SearchAddPanel"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Add to Sonarr",
+    "newKey": "search.addToSonarr.button",
+    "en": "Add to Sonarr",
+    "comment": "Button in search",
+    "area": "search",
+    "role": "button",
+    "usages": [
+      "SearchAddPanel"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Add to Whisparr",
+    "newKey": "search.addToWhisparr.button",
+    "en": "Add to Whisparr",
+    "comment": "Button in search",
+    "area": "search",
+    "role": "button",
+    "usages": [
+      "SearchAddPanel"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Add your Radarr or Sonarr connection to get started.",
+    "newKey": "settings.addYourRadarrOr.tooltip",
+    "en": "Add your Radarr or Sonarr connection to get started.",
+    "comment": "Tooltip/description in settings",
+    "area": "settings",
+    "role": "tooltip",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Add your existing arr services in Settings — ArrBarr polls live queue, history, and health from each one.",
+    "newKey": "onboarding.addYourExistingArr.tooltip",
+    "en": "Add your existing arr services in Settings — ArrBarr polls live queue, history, and health from each one.",
+    "comment": "Tooltip/description in onboarding",
+    "area": "onboarding",
+    "role": "tooltip",
+    "usages": [
+      "WelcomeContent"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Adding titles is a Pro feature",
+    "newKey": "paywall.addingTitlesIsA.label",
+    "en": "Adding titles is a Pro feature",
+    "comment": "Label in paywall",
+    "area": "paywall",
+    "role": "label",
+    "usages": [
+      "ProFeature"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Adult content",
+    "newKey": "settings.adultContent.button",
+    "en": "Adult content",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "ServiceFields"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Adventure",
+    "newKey": "discover.adventure.button",
+    "en": "Adventure",
+    "comment": "Button in discover",
+    "area": "discover",
+    "role": "button",
+    "usages": [
+      "DiscoverItem",
+      "DemoChatProvider",
+      "DemoMocks+Details",
+      "DemoMocks+Search"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Album details",
+    "newKey": "detail.albumDetails.button",
+    "en": "Album details",
+    "comment": "Button in detail",
+    "area": "detail",
+    "role": "button",
+    "usages": [
+      "DetailView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "All",
+    "newKey": "search.all.button",
+    "en": "All",
+    "comment": "Button in search",
+    "area": "search",
+    "role": "button",
+    "usages": [
+      "SearchTypes",
+      "iOSAppRoot",
+      "HistoryView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Almost there…",
+    "newKey": "chat.almostThere.button",
+    "en": "Almost there…",
+    "comment": "Button in chat",
+    "area": "chat",
+    "role": "button",
+    "usages": [
+      "ChatView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Animation",
+    "newKey": "discover.animation.button",
+    "en": "Animation",
+    "comment": "Button in discover",
+    "area": "discover",
+    "role": "button",
+    "usages": [
+      "DiscoverItem",
+      "DemoChatProvider",
+      "DemoMocks+Details",
+      "DemoMocks+Search"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Any status",
+    "newKey": "discover.anyStatus.button",
+    "en": "Any status",
+    "comment": "Button in discover",
+    "area": "discover",
+    "role": "button",
+    "usages": [
+      "DiscoverItem"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Appearance",
+    "newKey": "settings.appearance.button",
+    "en": "Appearance",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Apple Intelligence",
+    "newKey": "chat.appleIntelligence.button",
+    "en": "Apple Intelligence",
+    "comment": "Button in chat",
+    "area": "chat",
+    "role": "button",
+    "usages": [
+      "ChatProvider"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Apple Intelligence is unavailable. Try turning it on in System Settings.",
+    "newKey": "chat.appleIntelligenceIsUnavailable.tooltip",
+    "en": "Apple Intelligence is unavailable. Try turning it on in System Settings.",
+    "comment": "Tooltip/description in chat",
+    "area": "chat",
+    "role": "tooltip",
+    "usages": [
+      "ChatUnavailableView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Apple Intelligence requires iOS 26.",
+    "newKey": "settings.appleIntelligenceRequiresIos.tooltip",
+    "en": "Apple Intelligence requires iOS 26.",
+    "comment": "Tooltip/description in settings",
+    "area": "settings",
+    "role": "tooltip",
+    "usages": [
+      "SettingsView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Apple Intelligence requires macOS 26.",
+    "newKey": "settings.appleIntelligenceRequiresMacos.tooltip",
+    "en": "Apple Intelligence requires macOS 26.",
+    "comment": "Tooltip/description in settings",
+    "area": "settings",
+    "role": "tooltip",
+    "usages": [
+      "SettingsView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Application",
+    "newKey": "settings.application.button",
+    "en": "Application",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "SettingsView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "ArrBarr Pro",
+    "newKey": "paywall.arrbarrPro.button",
+    "en": "ArrBarr Pro",
+    "comment": "Button in paywall",
+    "area": "paywall",
+    "role": "button",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "ArrBarr Settings",
+    "newKey": "settings.arrbarrSettings.button",
+    "en": "ArrBarr Settings",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "ArrBarr is not configured",
+    "newKey": "common.arrbarrIsNotConfigured.label",
+    "en": "ArrBarr is not configured",
+    "comment": "Label in common",
+    "area": "common",
+    "role": "label",
+    "usages": [
+      "PopoverEmptyState",
+      "QueueListView"
+    ],
+    "needsReview": true
+  },
+  {
+    "oldKey": "ArrBarr now shows a brief intro on first launch and after major updates so you know what's new. Reopen it any time from Settings → General.",
+    "newKey": "onboarding.arrbarrNowShowsA.tooltip",
+    "en": "ArrBarr now shows a brief intro on first launch and after major updates so you know what's new. Reopen it any time from Settings → General.",
+    "comment": "Tooltip/description in onboarding",
+    "area": "onboarding",
+    "role": "tooltip",
+    "usages": [
+      "WelcomeContent"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "ArrBarr stays out of your Dock and shows active downloads at a glance. **Left-click** the icon to open the popover. **Right-click** for Add, Refresh, Settings — every action also has a keyboard shortcut.",
+    "newKey": "settings.arrbarrStaysOutOf.tooltip",
+    "en": "ArrBarr stays out of your Dock and shows active downloads at a glance. **Left-click** the icon to open the popover. **Right-click** for Add, Refresh, Settings — every action also has a keyboard shortcut.",
+    "comment": "Tooltip/description in settings",
+    "area": "settings",
+    "role": "tooltip",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "ArrBarr stays out of your Dock and shows active downloads at a glance. Click the icon for the popover; right-click for quick options.",
+    "newKey": "queue.arrbarrStaysOutOf.tooltip",
+    "en": "ArrBarr stays out of your Dock and shows active downloads at a glance. Click the icon for the popover; right-click for quick options.",
+    "comment": "Tooltip/description in queue",
+    "area": "queue",
+    "role": "tooltip",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "ArrBarr will relaunch now to apply the change.",
+    "newKey": "common.arrbarrWillRelaunchNow.tooltip",
+    "en": "ArrBarr will relaunch now to apply the change.",
+    "comment": "Tooltip/description in common",
+    "area": "common",
+    "role": "tooltip",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "ArrBarr will relaunch now to load demo content.",
+    "newKey": "common.arrbarrWillRelaunchNow2.tooltip",
+    "en": "ArrBarr will relaunch now to load demo content.",
+    "comment": "Tooltip/description in common",
+    "area": "common",
+    "role": "tooltip",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "ArrBarr will relaunch. Open Settings → General to enable Demo mode and load preview content.",
+    "newKey": "settings.arrbarrWillRelaunchOpen.tooltip",
+    "en": "ArrBarr will relaunch. Open Settings → General to enable Demo mode and load preview content.",
+    "comment": "Tooltip/description in settings",
+    "area": "settings",
+    "role": "tooltip",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "ArrBarr's actions are available in the Shortcuts app, Spotlight and Siri.",
+    "newKey": "settings.arrbarrSActionsAre.tooltip",
+    "en": "ArrBarr's actions are available in the Shortcuts app, Spotlight and Siri.",
+    "comment": "Tooltip/description in settings",
+    "area": "settings",
+    "role": "tooltip",
+    "usages": [
+      "SiriShortcutsSettings"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Artists",
+    "newKey": "search.artists.button",
+    "en": "Artists",
+    "comment": "Button in search",
+    "area": "search",
+    "role": "button",
+    "usages": [
+      "SearchView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Ask about %@",
+    "newKey": "chat.askAbout.label",
+    "en": "Ask about %@",
+    "comment": "Label in common",
+    "area": "chat",
+    "role": "label",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Ask and manage in plain language",
+    "newKey": "paywall.askAndManageIn.label",
+    "en": "Ask and manage in plain language",
+    "comment": "Label in paywall",
+    "area": "paywall",
+    "role": "label",
+    "usages": [
+      "PaywallView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Ask anything about your Sonarr / Radarr.",
+    "newKey": "chat.askAnythingAboutYour.tooltip",
+    "en": "Ask anything about your Sonarr / Radarr.",
+    "comment": "Tooltip/description in common",
+    "area": "chat",
+    "role": "tooltip",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Ask anything…",
+    "newKey": "chat.askAnything.button",
+    "en": "Ask anything…",
+    "comment": "Button in chat",
+    "area": "chat",
+    "role": "button",
+    "usages": [
+      "ChatView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Ask your library anything",
+    "newKey": "paywall.askYourLibraryAnything.label",
+    "en": "Ask your library anything",
+    "comment": "Label in paywall",
+    "area": "paywall",
+    "role": "label",
+    "usages": [
+      "ProFeature"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Ask: more like Dune (2021)",
+    "newKey": "discover.askMoreLikeDune.label",
+    "en": "Ask: more like Dune (2021)",
+    "comment": "Label in discover",
+    "area": "discover",
+    "role": "label",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Ask: what's good in my library?",
+    "newKey": "chat.askWhatSGood.tooltip",
+    "en": "Ask: what's good in my library?",
+    "comment": "Tooltip/description in common",
+    "area": "chat",
+    "role": "tooltip",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Assistant",
+    "newKey": "settings.assistant.button",
+    "en": "Assistant",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "SettingsView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Assistant settings",
+    "newKey": "settings.assistantSettings.button",
+    "en": "Assistant settings",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "ICloudSettingsView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Auto-jump off",
+    "newKey": "common.autoJumpOff.button",
+    "en": "Auto-jump off",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Auto-jump on",
+    "newKey": "common.autoJumpOn.button",
+    "en": "Auto-jump on",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Available",
+    "newKey": "detail.available.button",
+    "en": "Available",
+    "comment": "Button in detail",
+    "area": "detail",
+    "role": "button",
+    "usages": [
+      "SeasonRow"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Back",
+    "newKey": "settings.back.button",
+    "en": "Back",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "SettingsView",
+      "FloatingBackButton"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Back to mood",
+    "newKey": "discover.backToMood.button",
+    "en": "Back to mood",
+    "comment": "Button in discover",
+    "area": "discover",
+    "role": "button",
+    "usages": [
+      "DiscoverTabView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Back to mood picker",
+    "newKey": "discover.backToMoodPicker.button",
+    "en": "Back to mood picker",
+    "comment": "Button in discover",
+    "area": "discover",
+    "role": "button",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Background",
+    "newKey": "settings.background.button",
+    "en": "Background",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "SettingsView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Background while cooking",
+    "newKey": "common.backgroundWhileCooking.button",
+    "en": "Background while cooking",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Base URL",
+    "newKey": "settings.baseUrl.button",
+    "en": "Base URL",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Blur posters #nsfw",
+    "newKey": "common.blurPostersNsfw.button",
+    "en": "Blur posters #nsfw",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Built-in (Sonarr + Radarr)",
+    "newKey": "common.builtInSonarrRadarr.label",
+    "en": "Built-in (Sonarr + Radarr)",
+    "comment": "Label in common",
+    "area": "common",
+    "role": "label",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Buy",
+    "newKey": "common.buy.button",
+    "en": "Buy",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Cancel",
+    "newKey": "common.cancel.button",
+    "en": "Cancel",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [
+      "ConfirmActionCard",
+      "ServiceFields",
+      "SeasonRow",
+      "InlineConfirm",
+      "EpisodeRow",
+      "ConfirmCenter"
+    ],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Cancel download",
+    "newKey": "queue.cancelDownload.button",
+    "en": "Cancel download",
+    "comment": "Button in queue",
+    "area": "queue",
+    "role": "button",
+    "usages": [
+      "QueueGroupRowView",
+      "DetailView",
+      "MultiRow",
+      "QueueRowView",
+      "EpisodeDetailOverlay",
+      "EpisodeRow"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Cancel this download?",
+    "newKey": "queue.cancelThisDownload.tooltip",
+    "en": "Cancel this download?",
+    "comment": "Tooltip/description in queue",
+    "area": "queue",
+    "role": "tooltip",
+    "usages": [
+      "QueueGroupRowView",
+      "DetailView",
+      "MultiRow",
+      "QueueRowView",
+      "EpisodeDetailOverlay",
+      "EpisodeRow"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Cast",
+    "newKey": "detail.cast.button",
+    "en": "Cast",
+    "comment": "Button in detail",
+    "area": "detail",
+    "role": "button",
+    "usages": [
+      "CastRow"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Change media kind",
+    "newKey": "common.changeMediaKind.button",
+    "en": "Change media kind",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Change mood",
+    "newKey": "discover.changeMood.button",
+    "en": "Change mood",
+    "comment": "Button in discover",
+    "area": "discover",
+    "role": "button",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Chat",
+    "newKey": "paywall.chat.button",
+    "en": "Chat",
+    "comment": "Button in paywall",
+    "area": "paywall",
+    "role": "button",
+    "usages": [
+      "PaywallHeroes",
+      "PopoverContentView",
+      "iOSAppRoot"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Chat can search by actor, genre, and decade.",
+    "newKey": "settings.chatCanSearchBy.tooltip",
+    "en": "Chat can search by actor, genre, and decade.",
+    "comment": "Tooltip/description in settings",
+    "area": "settings",
+    "role": "tooltip",
+    "usages": [
+      "SettingsView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Chat drives your whole stack in plain language.",
+    "newKey": "paywall.chatDrivesYourWhole.tooltip",
+    "en": "Chat drives your whole stack in plain language.",
+    "comment": "Tooltip/description in paywall",
+    "area": "paywall",
+    "role": "tooltip",
+    "usages": [
+      "ProFeature"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Chat is a Pro feature",
+    "newKey": "common.chatIsAPro.button",
+    "en": "Chat is a Pro feature",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [
+      "iOSAppRoot",
+      "ProFeature"
+    ],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Chat requires iOS 26 with Apple Intelligence.",
+    "newKey": "chat.chatRequiresIos26.tooltip",
+    "en": "Chat requires iOS 26 with Apple Intelligence.",
+    "comment": "Tooltip/description in common",
+    "area": "chat",
+    "role": "tooltip",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Chat requires macOS 26 with Apple Intelligence.",
+    "newKey": "chat.chatRequiresMacos26.tooltip",
+    "en": "Chat requires macOS 26 with Apple Intelligence.",
+    "comment": "Tooltip/description in chat",
+    "area": "chat",
+    "role": "tooltip",
+    "usages": [
+      "ChatUnavailableView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Chat with your arrs",
+    "newKey": "onboarding.chatWithYourArrs.button",
+    "en": "Chat with your arrs",
+    "comment": "Button in onboarding",
+    "area": "onboarding",
+    "role": "button",
+    "usages": [
+      "WelcomeContent"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Chat with your library",
+    "newKey": "chat.chatWithYourLibrary.button",
+    "en": "Chat with your library",
+    "comment": "Button in common",
+    "area": "chat",
+    "role": "button",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Check service health",
+    "newKey": "intents.checkServiceHealth.button",
+    "en": "Check service health",
+    "comment": "Button in intents",
+    "area": "intents",
+    "role": "button",
+    "usages": [
+      "ArrBarrIntents"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Clear",
+    "newKey": "common.clear.button",
+    "en": "Clear",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Clear all picks?",
+    "newKey": "discover.clearAllPicks.tooltip",
+    "en": "Clear all picks?",
+    "comment": "Tooltip/description in discover",
+    "area": "discover",
+    "role": "tooltip",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Clear chat",
+    "newKey": "chat.clearChat.button",
+    "en": "Clear chat",
+    "comment": "Button in common",
+    "area": "chat",
+    "role": "button",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Clear conversation",
+    "newKey": "chat.clearConversation.button",
+    "en": "Clear conversation",
+    "comment": "Button in common",
+    "area": "chat",
+    "role": "button",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Clear filter",
+    "newKey": "queue.clearFilter.button",
+    "en": "Clear filter",
+    "comment": "Button in queue",
+    "area": "queue",
+    "role": "button",
+    "usages": [
+      "QueueTabContent"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Clear filters",
+    "newKey": "common.clearFilters.button",
+    "en": "Clear filters",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Clear genres",
+    "newKey": "detail.clearGenres.button",
+    "en": "Clear genres",
+    "comment": "Button in detail",
+    "area": "detail",
+    "role": "button",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Clear picks",
+    "newKey": "discover.clearPicks.button",
+    "en": "Clear picks",
+    "comment": "Button in discover",
+    "area": "discover",
+    "role": "button",
+    "usages": [
+      "DiscoverViewModel"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Clear search",
+    "newKey": "search.clearSearch.button",
+    "en": "Clear search",
+    "comment": "Button in search",
+    "area": "search",
+    "role": "button",
+    "usages": [
+      "SearchView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Click a row in the queue to see its details, episodes, and existing files.",
+    "newKey": "detail.clickARowIn.tooltip",
+    "en": "Click a row in the queue to see its details, episodes, and existing files.",
+    "comment": "Tooltip/description in detail",
+    "area": "detail",
+    "role": "tooltip",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Client",
+    "newKey": "detail.client.button",
+    "en": "Client",
+    "comment": "Button in detail",
+    "area": "detail",
+    "role": "button",
+    "usages": [
+      "EpisodeRowTooltip"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Client (%@) is not configured",
+    "newKey": "common.clientIsNotConfigured.label",
+    "en": "Client (%@) is not configured",
+    "comment": "Label in common",
+    "area": "common",
+    "role": "label",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Client:",
+    "newKey": "common.client.button",
+    "en": "Client:",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Close",
+    "newKey": "settings.close.button",
+    "en": "Close",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "SettingsView",
+      "WelcomeView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Collapse section",
+    "newKey": "queue.collapseSection.button",
+    "en": "Collapse section",
+    "comment": "Button in queue",
+    "area": "queue",
+    "role": "button",
+    "usages": [
+      "QueueTabContent",
+      "NeedsYouSectionView",
+      "QueueSectionView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Comedy",
+    "newKey": "discover.comedy.button",
+    "en": "Comedy",
+    "comment": "Button in discover",
+    "area": "discover",
+    "role": "button",
+    "usages": [
+      "DiscoverItem",
+      "DemoChatProvider",
+      "DemoMocks+Details",
+      "DemoMocks+Search"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Completed",
+    "newKey": "queue.completed.button",
+    "en": "Completed",
+    "comment": "Button in queue",
+    "area": "queue",
+    "role": "button",
+    "usages": [
+      "QueueItem",
+      "SeasonRow"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Configure Radarr in Settings to save picks to your library — add-actions will open TMDB instead.",
+    "newKey": "discover.configureRadarrInSettings.tooltip",
+    "en": "Configure Radarr in Settings to save picks to your library — add-actions will open TMDB instead.",
+    "comment": "Tooltip/description in discover",
+    "area": "discover",
+    "role": "tooltip",
+    "usages": [
+      "DiscoverTabView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Configure an LLM provider in Settings to get AI-powered picks.",
+    "newKey": "discover.configureAnLlmProvider.tooltip",
+    "en": "Configure an LLM provider in Settings to get AI-powered picks.",
+    "comment": "Tooltip/description in discover",
+    "area": "discover",
+    "role": "tooltip",
+    "usages": [
+      "DiscoverTabView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Confirm",
+    "newKey": "common.confirm.button",
+    "en": "Confirm",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [
+      "ConfirmActionCard"
+    ],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Confirm (18+)",
+    "newKey": "settings.confirm18.button",
+    "en": "Confirm (18+)",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "ServiceFields"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Confirm action",
+    "newKey": "common.confirmAction.button",
+    "en": "Confirm action",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Connect Radarr, Sonarr & Lidarr",
+    "newKey": "onboarding.connectRadarrSonarrLidarr.button",
+    "en": "Connect Radarr, Sonarr & Lidarr",
+    "comment": "Button in onboarding",
+    "area": "onboarding",
+    "role": "button",
+    "usages": [
+      "WelcomeContent"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Connect Radarr, Sonarr or Lidarr in Settings to get started.",
+    "newKey": "queue.connectRadarrSonarrOr.tooltip",
+    "en": "Connect Radarr, Sonarr or Lidarr in Settings to get started.",
+    "comment": "Tooltip/description in queue",
+    "area": "queue",
+    "role": "tooltip",
+    "usages": [
+      "QueueListView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Connect Radarr, Sonarr or Lidarr to get started.",
+    "newKey": "common.connectRadarrSonarrOr.tooltip",
+    "en": "Connect Radarr, Sonarr or Lidarr to get started.",
+    "comment": "Tooltip/description in common",
+    "area": "common",
+    "role": "tooltip",
+    "usages": [
+      "PopoverEmptyState"
+    ],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Connect download clients",
+    "newKey": "paywall.connectDownloadClients.button",
+    "en": "Connect download clients",
+    "comment": "Button in paywall",
+    "area": "paywall",
+    "role": "button",
+    "usages": [
+      "ProFeature"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Considering…",
+    "newKey": "chat.considering.button",
+    "en": "Considering…",
+    "comment": "Button in chat",
+    "area": "chat",
+    "role": "button",
+    "usages": [
+      "ShimmerThinkingLabel"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Continue",
+    "newKey": "queue.continue.button",
+    "en": "Continue",
+    "comment": "Button in queue",
+    "area": "queue",
+    "role": "button",
+    "usages": [
+      "QueueViewModel",
+      "WelcomeView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Control",
+    "newKey": "paywall.control.button",
+    "en": "Control",
+    "comment": "Button in paywall",
+    "area": "paywall",
+    "role": "button",
+    "usages": [
+      "PaywallView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Copy the API Key",
+    "newKey": "common.copyTheApiKey.button",
+    "en": "Copy the API Key",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [
+      "PopoverEmptyState"
+    ],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Couldn't load metadata",
+    "newKey": "common.couldnTLoadMetadata.button",
+    "en": "Couldn't load metadata",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Cozy",
+    "newKey": "discover.cozy.button",
+    "en": "Cozy",
+    "comment": "Button in common",
+    "area": "discover",
+    "role": "button",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Cozy Sunday afternoon",
+    "newKey": "discover.cozySundayAfternoon.button",
+    "en": "Cozy Sunday afternoon",
+    "comment": "Button in common",
+    "area": "discover",
+    "role": "button",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Cozy night in",
+    "newKey": "discover.cozyNightIn.button",
+    "en": "Cozy night in",
+    "comment": "Button in common",
+    "area": "discover",
+    "role": "button",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Crime",
+    "newKey": "discover.crime.button",
+    "en": "Crime",
+    "comment": "Button in discover",
+    "area": "discover",
+    "role": "button",
+    "usages": [
+      "DiscoverItem",
+      "DemoMocks+Search"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Crowd-pleaser",
+    "newKey": "discover.crowdPleaser.label",
+    "en": "Crowd-pleaser",
+    "comment": "Label in common",
+    "area": "discover",
+    "role": "label",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Cult favorite",
+    "newKey": "discover.cultFavorite.button",
+    "en": "Cult favorite",
+    "comment": "Button in common",
+    "area": "discover",
+    "role": "button",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Current file",
+    "newKey": "queue.currentFile.button",
+    "en": "Current file",
+    "comment": "Button in queue",
+    "area": "queue",
+    "role": "button",
+    "usages": [
+      "UpgradeDiffView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Custom",
+    "newKey": "common.custom.button",
+    "en": "Custom",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Custom formats",
+    "newKey": "common.customFormats.button",
+    "en": "Custom formats",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Custom formats:",
+    "newKey": "history.customFormats.button",
+    "en": "Custom formats:",
+    "comment": "Button in history",
+    "area": "history",
+    "role": "button",
+    "usages": [
+      "HistoryView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Custom mood",
+    "newKey": "discover.customMood.button",
+    "en": "Custom mood",
+    "comment": "Button in discover",
+    "area": "discover",
+    "role": "button",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "DECADE",
+    "newKey": "discover.decade.label",
+    "en": "DECADE",
+    "comment": "Label in common",
+    "area": "discover",
+    "role": "label",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Dark",
+    "newKey": "settings.dark.button",
+    "en": "Dark",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "SettingsView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Date night",
+    "newKey": "discover.dateNight.button",
+    "en": "Date night",
+    "comment": "Button in common",
+    "area": "discover",
+    "role": "button",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Default",
+    "newKey": "settings.default.button",
+    "en": "Default",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "SettingsView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Dekady",
+    "newKey": "discover.decadeFilter.label",
+    "en": "Decades",
+    "comment": "Button in common",
+    "area": "discover",
+    "role": "button",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Delete",
+    "newKey": "queue.delete.button",
+    "en": "Delete",
+    "comment": "Button in queue",
+    "area": "queue",
+    "role": "button",
+    "usages": [
+      "QueueListView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Deleted",
+    "newKey": "history.deleted.button",
+    "en": "Deleted",
+    "comment": "Button in history",
+    "area": "history",
+    "role": "button",
+    "usages": [
+      "HistoryItem"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Deluge",
+    "newKey": "settings.deluge.button",
+    "en": "Deluge",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "ServiceConfig",
+      "SettingsView",
+      "DelugeClient",
+      "LocalToolBackend+ArrTools"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Demo mode",
+    "newKey": "settings.demoMode.button",
+    "en": "Demo mode",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "SettingsView",
+      "DemoMocks"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Demo mode disabled",
+    "newKey": "common.demoModeDisabled.button",
+    "en": "Demo mode disabled",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Demo mode enabled",
+    "newKey": "common.demoModeEnabled.button",
+    "en": "Demo mode enabled",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Detach from the menu bar into a standalone window with a Dock icon. Closing the window returns it to the Dock.",
+    "newKey": "settings.detachFromTheMenu.tooltip",
+    "en": "Detach from the menu bar into a standalone window with a Dock icon. Closing the window returns it to the Dock.",
+    "comment": "Tooltip/description in settings",
+    "area": "settings",
+    "role": "tooltip",
+    "usages": [
+      "SettingsView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Detach into a window",
+    "newKey": "common.detachIntoAWindow.button",
+    "en": "Detach into a window",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [
+      "PopoverContentView"
+    ],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Details",
+    "newKey": "detail.details.button",
+    "en": "Details",
+    "comment": "Button in detail",
+    "area": "detail",
+    "role": "button",
+    "usages": [
+      "DetailView",
+      "EpisodeQuickDetail",
+      "EpisodeDetailOverlay"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Developer options",
+    "newKey": "settings.developerOptions.button",
+    "en": "Developer options",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "SettingsView",
+      "DemoMocks"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Developer options enabled",
+    "newKey": "common.developerOptionsEnabled.label",
+    "en": "Developer options enabled",
+    "comment": "Label in common",
+    "area": "common",
+    "role": "label",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Device-specific settings (refresh intervals, appearance, MCP) stay on this device.",
+    "newKey": "settings.deviceSpecificSettingsRefresh.tooltip",
+    "en": "Device-specific settings (refresh intervals, appearance, MCP) stay on this device.",
+    "comment": "Tooltip/description in settings",
+    "area": "settings",
+    "role": "tooltip",
+    "usages": [
+      "ICloudSettingsView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Directed by",
+    "newKey": "discover.directedBy.button",
+    "en": "Directed by",
+    "comment": "Button in discover",
+    "area": "discover",
+    "role": "button",
+    "usages": [
+      "DiscoverCardView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Disable auto-jump to picks every 10",
+    "newKey": "discover.disableAutoJumpTo.label",
+    "en": "Disable auto-jump to picks every 10",
+    "comment": "Label in discover",
+    "area": "discover",
+    "role": "label",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Disc %lld",
+    "newKey": "detail.discLld.label",
+    "en": "Disc %lld",
+    "comment": "Label in detail",
+    "area": "detail",
+    "role": "label",
+    "usages": [
+      "LidarrDetailPanel"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Discover",
+    "newKey": "discover.discover.button",
+    "en": "Discover",
+    "comment": "Button in discover",
+    "area": "discover",
+    "role": "button",
+    "usages": [
+      "DiscoverCardView",
+      "DiscoverMatchedListView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Discover session",
+    "newKey": "discover.discoverSession.button",
+    "en": "Discover session",
+    "comment": "Button in discover",
+    "area": "discover",
+    "role": "button",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Discovery",
+    "newKey": "settings.discovery.button",
+    "en": "Discovery",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "SettingsView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Display",
+    "newKey": "common.display.button",
+    "en": "Display",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Do you want to save your changes before closing?",
+    "newKey": "common.doYouWantTo.tooltip",
+    "en": "Do you want to save your changes before closing?",
+    "comment": "Tooltip/description in common",
+    "area": "common",
+    "role": "tooltip",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Documentary",
+    "newKey": "discover.documentary.button",
+    "en": "Documentary",
+    "comment": "Button in discover",
+    "area": "discover",
+    "role": "button",
+    "usages": [
+      "DiscoverItem",
+      "DemoMocks+Search"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Don't Save",
+    "newKey": "common.donTSave.button",
+    "en": "Don't Save",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Done",
+    "newKey": "onboarding.done.button",
+    "en": "Done",
+    "comment": "Button in onboarding",
+    "area": "onboarding",
+    "role": "button",
+    "usages": [
+      "WelcomeView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Download",
+    "newKey": "queue.download.button",
+    "en": "Download",
+    "comment": "Button in queue",
+    "area": "queue",
+    "role": "button",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Download actions",
+    "newKey": "queue.downloadActions.button",
+    "en": "Download actions",
+    "comment": "Button in queue",
+    "area": "queue",
+    "role": "button",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Download clients",
+    "newKey": "settings.downloadClients.button",
+    "en": "Download clients",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "SettingsView",
+      "PaywallHeroes"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Download clients (optional)",
+    "newKey": "settings.downloadClientsOptional.label",
+    "en": "Download clients (optional)",
+    "comment": "Label in settings",
+    "area": "settings",
+    "role": "label",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Download clients are a Pro feature",
+    "newKey": "paywall.downloadClientsAreA.label",
+    "en": "Download clients are a Pro feature",
+    "comment": "Label in paywall",
+    "area": "paywall",
+    "role": "label",
+    "usages": [
+      "ProFeature"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Downloading",
+    "newKey": "queue.downloading.button",
+    "en": "Downloading",
+    "comment": "Button in queue",
+    "area": "queue",
+    "role": "button",
+    "usages": [
+      "QueueItem",
+      "SeasonRow",
+      "ProgressLine"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Drama",
+    "newKey": "discover.drama.button",
+    "en": "Drama",
+    "comment": "Button in discover",
+    "area": "discover",
+    "role": "button",
+    "usages": [
+      "DiscoverItem",
+      "DemoChatProvider",
+      "DemoMocks+Details",
+      "DemoMocks+Search"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Długość",
+    "newKey": "discover.lengthFilter.label",
+    "en": "Length",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Easy comfort watch",
+    "newKey": "common.easyComfortWatch.button",
+    "en": "Easy comfort watch",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Edit mood and filters",
+    "newKey": "discover.editMoodAndFilters.button",
+    "en": "Edit mood and filters",
+    "comment": "Button in discover",
+    "area": "discover",
+    "role": "button",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Enable AI",
+    "newKey": "settings.enableAi.button",
+    "en": "Enable AI",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "SettingsView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Enable MCP",
+    "newKey": "settings.enableMcp.button",
+    "en": "Enable MCP",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Enable chat",
+    "newKey": "common.enableChat.button",
+    "en": "Enable chat",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Enabled",
+    "newKey": "settings.enabled.button",
+    "en": "Enabled",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "ServiceFields"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Enjoying ArrBarr?",
+    "newKey": "onboarding.enjoyingArrbarr.tooltip",
+    "en": "Enjoying ArrBarr?",
+    "comment": "Tooltip/description in onboarding",
+    "area": "onboarding",
+    "role": "tooltip",
+    "usages": [
+      "WelcomeContent"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Enter a valid URL (http:// or https://).",
+    "newKey": "settings.enterAValidUrl.tooltip",
+    "en": "Enter a valid URL (http:// or https://).",
+    "comment": "Tooltip/description in settings",
+    "area": "settings",
+    "role": "tooltip",
+    "usages": [
+      "ServiceFields"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Epic",
+    "newKey": "common.epic.button",
+    "en": "Epic",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Episode %lld",
+    "newKey": "detail.episodeLld.label",
+    "en": "Episode %lld",
+    "comment": "Label in detail",
+    "area": "detail",
+    "role": "label",
+    "usages": [
+      "EpisodeDetailOverlay"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Episodes",
+    "newKey": "queue.episodes.button",
+    "en": "Episodes",
+    "comment": "Button in queue",
+    "area": "queue",
+    "role": "button",
+    "usages": [
+      "QueueGroupRowView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Evaluating…",
+    "newKey": "chat.evaluating.button",
+    "en": "Evaluating…",
+    "comment": "Button in chat",
+    "area": "chat",
+    "role": "button",
+    "usages": [
+      "ShimmerThinkingLabel"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Event",
+    "newKey": "history.event.button",
+    "en": "Event",
+    "comment": "Button in history",
+    "area": "history",
+    "role": "button",
+    "usages": [
+      "HistoryItem"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Existing",
+    "newKey": "search.existing.button",
+    "en": "Existing",
+    "comment": "Button in search",
+    "area": "search",
+    "role": "button",
+    "usages": [
+      "SearchTypes",
+      "ExistingFileLine"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Existing file",
+    "newKey": "common.existingFile.button",
+    "en": "Existing file",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Existing file:",
+    "newKey": "common.existingFile2.button",
+    "en": "Existing file:",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Existing files",
+    "newKey": "common.existingFiles.button",
+    "en": "Existing files",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Expand section",
+    "newKey": "queue.expandSection.button",
+    "en": "Expand section",
+    "comment": "Button in queue",
+    "area": "queue",
+    "role": "button",
+    "usages": [
+      "QueueTabContent",
+      "NeedsYouSectionView",
+      "QueueSectionView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Exposed on the network without authentication. Enable a bearer token.",
+    "newKey": "settings.exposedOnTheNetwork.tooltip",
+    "en": "Exposed on the network without authentication. Enable a bearer token.",
+    "comment": "Tooltip/description in settings",
+    "area": "settings",
+    "role": "tooltip",
+    "usages": [
+      "MCPSettingsPane"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Exposes ArrBarr's tools over the Model Context Protocol so an external client (e.g. Claude Desktop) can drive your media stack. This is separate from the built-in AI assistant — changing these settings does not affect the in-app chat.",
+    "newKey": "chat.exposesArrbarrSTools.tooltip",
+    "en": "Exposes ArrBarr's tools over the Model Context Protocol so an external client (e.g. Claude Desktop) can drive your media stack. This is separate from the built-in AI assistant — changing these settings does not affect the in-app chat.",
+    "comment": "Tooltip/description in chat",
+    "area": "chat",
+    "role": "tooltip",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "External MCP server",
+    "newKey": "settings.externalMcpServer.button",
+    "en": "External MCP server",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Failed",
+    "newKey": "history.failed.button",
+    "en": "Failed",
+    "comment": "Button in history",
+    "area": "history",
+    "role": "button",
+    "usages": [
+      "HistoryItem",
+      "QueueItem"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Family",
+    "newKey": "discover.family.button",
+    "en": "Family",
+    "comment": "Button in discover",
+    "area": "discover",
+    "role": "button",
+    "usages": [
+      "DiscoverItem",
+      "DemoChatProvider",
+      "DemoMocks+Details",
+      "DemoMocks+Search"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Fantasy",
+    "newKey": "discover.fantasy.button",
+    "en": "Fantasy",
+    "comment": "Button in discover",
+    "area": "discover",
+    "role": "button",
+    "usages": [
+      "DiscoverItem",
+      "DemoChatProvider",
+      "DemoMocks+Details",
+      "DemoMocks+Search"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Feel-good",
+    "newKey": "common.feelGood.label",
+    "en": "Feel-good",
+    "comment": "Label in common",
+    "area": "common",
+    "role": "label",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Fewer like this",
+    "newKey": "discover.fewerLikeThis.button",
+    "en": "Fewer like this",
+    "comment": "Button in discover",
+    "area": "discover",
+    "role": "button",
+    "usages": [
+      "DiscoverCardView",
+      "DiscoverTabView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "File",
+    "newKey": "queue.file.button",
+    "en": "File",
+    "comment": "Button in queue",
+    "area": "queue",
+    "role": "button",
+    "usages": [
+      "QueueGroupRowView",
+      "WelcomeView",
+      "QueueRowView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "File:",
+    "newKey": "common.file.button",
+    "en": "File:",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Filter",
+    "newKey": "common.filter.button",
+    "en": "Filter",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [
+      "iOSAppRoot"
+    ],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Filter queue",
+    "newKey": "queue.filterQueue.button",
+    "en": "Filter queue",
+    "comment": "Button in queue",
+    "area": "queue",
+    "role": "button",
+    "usages": [
+      "QueueTabContent"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Filter…",
+    "newKey": "common.filter2.button",
+    "en": "Filter…",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Find a movie or show and add it in one tap.",
+    "newKey": "paywall.findAMovieOr.tooltip",
+    "en": "Find a movie or show and add it in one tap.",
+    "comment": "Tooltip/description in paywall",
+    "area": "paywall",
+    "role": "tooltip",
+    "usages": [
+      "ProFeature"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Finding ideas…",
+    "newKey": "chat.findingIdeas.button",
+    "en": "Finding ideas…",
+    "comment": "Button in chat",
+    "area": "chat",
+    "role": "button",
+    "usages": [
+      "ShimmerThinkingLabel"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Finding more…",
+    "newKey": "common.findingMore.button",
+    "en": "Finding more…",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Friends over with pizza",
+    "newKey": "common.friendsOverWithPizza.button",
+    "en": "Friends over with pizza",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "GENRE",
+    "newKey": "detail.genre.label",
+    "en": "GENRE",
+    "comment": "Label in detail",
+    "area": "detail",
+    "role": "label",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Gatunek",
+    "newKey": "common.gatunek.button",
+    "en": "Gatunek",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Gatunki",
+    "newKey": "common.gatunki.button",
+    "en": "Gatunki",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "General",
+    "newKey": "settings.general.button",
+    "en": "General",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "SettingsView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Generate",
+    "newKey": "settings.generate.button",
+    "en": "Generate",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "MCPSettingsPane"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Generate a token — auth stays off until one is set.",
+    "newKey": "settings.generateATokenAuth.tooltip",
+    "en": "Generate a token — auth stays off until one is set.",
+    "comment": "Tooltip/description in settings",
+    "area": "settings",
+    "role": "tooltip",
+    "usages": [
+      "MCPSettingsPane"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Genres",
+    "newKey": "detail.genres.button",
+    "en": "Genres",
+    "comment": "Button in detail",
+    "area": "detail",
+    "role": "button",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Get a free TMDB key",
+    "newKey": "common.getAFreeTmdb.button",
+    "en": "Get a free TMDB key",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Get started",
+    "newKey": "onboarding.getStarted.button",
+    "en": "Get started",
+    "comment": "Button in onboarding",
+    "area": "onboarding",
+    "role": "button",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "GitHub",
+    "newKey": "settings.github.label",
+    "en": "GitHub",
+    "comment": "Label in settings",
+    "area": "settings",
+    "role": "label",
+    "usages": [
+      "SettingsView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Grabbed",
+    "newKey": "history.grabbed.button",
+    "en": "Grabbed",
+    "comment": "Button in history",
+    "area": "history",
+    "role": "button",
+    "usages": [
+      "HistoryItem"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Hangover Sunday",
+    "newKey": "common.hangoverSunday.button",
+    "en": "Hangover Sunday",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Here are %lld films you might enjoy.",
+    "newKey": "chat.hereAreLldFilms.tooltip",
+    "en": "Here are %lld films you might enjoy.",
+    "comment": "Tooltip/description in chat",
+    "area": "chat",
+    "role": "tooltip",
+    "usages": [
+      "DemoChatProvider"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Here are %lld series you might enjoy.",
+    "newKey": "chat.hereAreLldSeries.tooltip",
+    "en": "Here are %lld series you might enjoy.",
+    "comment": "Tooltip/description in chat",
+    "area": "chat",
+    "role": "tooltip",
+    "usages": [
+      "DemoChatProvider"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Highly rated",
+    "newKey": "common.highlyRated.button",
+    "en": "Highly rated",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "History",
+    "newKey": "discover.history.button",
+    "en": "History",
+    "comment": "Button in discover",
+    "area": "discover",
+    "role": "button",
+    "usages": [
+      "DiscoverItem",
+      "iOSAppRoot",
+      "HistoryView",
+      "DemoChatProvider"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Hold to compare",
+    "newKey": "queue.holdToCompare.button",
+    "en": "Hold to compare",
+    "comment": "Button in queue",
+    "area": "queue",
+    "role": "button",
+    "usages": [
+      "UpgradeDiffView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Horror",
+    "newKey": "discover.horror.button",
+    "en": "Horror",
+    "comment": "Button in discover",
+    "area": "discover",
+    "role": "button",
+    "usages": [
+      "DiscoverItem",
+      "DemoChatProvider"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "If you've configured Lidarr, music artists now show up in search results and the AI chat. Add an artist the same way you'd add a series or movie.",
+    "newKey": "onboarding.ifYouVeConfigured.tooltip",
+    "en": "If you've configured Lidarr, music artists now show up in search results and the AI chat. Add an artist the same way you'd add a series or movie.",
+    "comment": "Tooltip/description in onboarding",
+    "area": "onboarding",
+    "role": "tooltip",
+    "usages": [
+      "WelcomeContent"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Imported",
+    "newKey": "history.imported.button",
+    "en": "Imported",
+    "comment": "Button in history",
+    "area": "history",
+    "role": "button",
+    "usages": [
+      "HistoryItem"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Importing",
+    "newKey": "queue.importing.button",
+    "en": "Importing",
+    "comment": "Button in queue",
+    "area": "queue",
+    "role": "button",
+    "usages": [
+      "QueueItem",
+      "SeasonRow"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "In library",
+    "newKey": "search.inLibrary.button",
+    "en": "In library",
+    "comment": "Button in search",
+    "area": "search",
+    "role": "button",
+    "usages": [
+      "SearchViewModel",
+      "DiscoverCardView",
+      "PosterMetadataRow",
+      "SearchResultRow",
+      "DiscoverMatchedListView",
+      "SearchClient",
+      "LocalToolBackend+Discover"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "In library or new",
+    "newKey": "common.inLibraryOrNew.button",
+    "en": "In library or new",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "In queue",
+    "newKey": "queue.inQueue.button",
+    "en": "In queue",
+    "comment": "Button in queue",
+    "area": "queue",
+    "role": "button",
+    "usages": [
+      "DownloadSection",
+      "QueueSearchRow"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Indexer",
+    "newKey": "queue.indexer.button",
+    "en": "Indexer",
+    "comment": "Button in queue",
+    "area": "queue",
+    "role": "button",
+    "usages": [
+      "QueueGroupRowView",
+      "QueueRowView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "It's free and open-source. A star on GitHub helps other people find it — and means a lot. Thanks for trying it out!",
+    "newKey": "onboarding.itSFreeAnd.tooltip",
+    "en": "It's free and open-source. A star on GitHub helps other people find it — and means a lot. Thanks for trying it out!",
+    "comment": "Tooltip/description in onboarding",
+    "area": "onboarding",
+    "role": "tooltip",
+    "usages": [
+      "WelcomeContent"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Keep download",
+    "newKey": "queue.keepDownload.button",
+    "en": "Keep download",
+    "comment": "Button in queue",
+    "area": "queue",
+    "role": "button",
+    "usages": [
+      "QueueGroupRowView",
+      "DetailView",
+      "MultiRow",
+      "QueueRowView",
+      "EpisodeDetailOverlay",
+      "EpisodeRow"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Keep playing",
+    "newKey": "common.keepPlaying.button",
+    "en": "Keep playing",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Keep your servers, preferences, and saved keys in sync across your devices. Keys are stored in your encrypted iCloud Keychain.",
+    "newKey": "settings.keepYourServersPreferences.tooltip",
+    "en": "Keep your servers, preferences, and saved keys in sync across your devices. Keys are stored in your encrypted iCloud Keychain.",
+    "comment": "Tooltip/description in settings",
+    "area": "settings",
+    "role": "tooltip",
+    "usages": [
+      "ICloudSettingsView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "LENGTH",
+    "newKey": "common.length.label",
+    "en": "LENGTH",
+    "comment": "Label in common",
+    "area": "common",
+    "role": "label",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Language",
+    "newKey": "settings.language.button",
+    "en": "Language",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "SettingsView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Larger",
+    "newKey": "settings.larger.button",
+    "en": "Larger",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "SettingsView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Largest",
+    "newKey": "settings.largest.button",
+    "en": "Largest",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "SettingsView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Last sync",
+    "newKey": "settings.lastSync.button",
+    "en": "Last sync",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "ICloudSettingsView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Launch at login",
+    "newKey": "settings.launchAtLogin.button",
+    "en": "Launch at login",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "SettingsView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Layout & visibility preferences",
+    "newKey": "settings.layoutVisibilityPreferences.label",
+    "en": "Layout & visibility preferences",
+    "comment": "Label in settings",
+    "area": "settings",
+    "role": "label",
+    "usages": [
+      "ICloudSettingsView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Library",
+    "newKey": "search.library.button",
+    "en": "Library",
+    "comment": "Button in search",
+    "area": "search",
+    "role": "button",
+    "usages": [
+      "SearchAddPanel",
+      "DiscoverTabView",
+      "Chips"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Lidarr",
+    "newKey": "queue.lidarr.button",
+    "en": "Lidarr",
+    "comment": "Button in queue",
+    "area": "queue",
+    "role": "button",
+    "usages": [
+      "ServiceConfig",
+      "QueueItem",
+      "SettingsView",
+      "WelcomeView",
+      "HistoryView",
+      "Chips"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Lidarr support",
+    "newKey": "onboarding.lidarrSupport.button",
+    "en": "Lidarr support",
+    "comment": "Button in onboarding",
+    "area": "onboarding",
+    "role": "button",
+    "usages": [
+      "WelcomeContent"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Lidarr — notify on new grabs",
+    "newKey": "common.lidarrNotifyOnNew.label",
+    "en": "Lidarr — notify on new grabs",
+    "comment": "Label in common",
+    "area": "common",
+    "role": "label",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Light",
+    "newKey": "settings.light.button",
+    "en": "Light",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "SettingsView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Lives in your menu bar",
+    "newKey": "onboarding.livesInYourMenu.button",
+    "en": "Lives in your menu bar",
+    "comment": "Button in onboarding",
+    "area": "onboarding",
+    "role": "button",
+    "usages": [
+      "WelcomeContent"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Loading episode…",
+    "newKey": "detail.loadingEpisode.button",
+    "en": "Loading episode…",
+    "comment": "Button in detail",
+    "area": "detail",
+    "role": "button",
+    "usages": [
+      "EpisodeQuickDetail"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Loading…",
+    "newKey": "queue.loading.button",
+    "en": "Loading…",
+    "comment": "Button in queue",
+    "area": "queue",
+    "role": "button",
+    "usages": [
+      "QueueTabContent",
+      "HistoryView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Login (leave empty for API key)",
+    "newKey": "settings.loginLeaveEmptyFor.label",
+    "en": "Login (leave empty for API key)",
+    "comment": "Label in settings",
+    "area": "settings",
+    "role": "label",
+    "usages": [
+      "ServiceFields"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Long haul",
+    "newKey": "common.longHaul.button",
+    "en": "Long haul",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Long solo flight",
+    "newKey": "common.longSoloFlight.button",
+    "en": "Long solo flight",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "MCP",
+    "newKey": "settings.mcp.label",
+    "en": "MCP",
+    "comment": "Label in settings",
+    "area": "settings",
+    "role": "label",
+    "usages": [
+      "SettingsView",
+      "ConfigStore"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "MCP bearer token (optional)",
+    "newKey": "settings.mcpBearerTokenOptional.label",
+    "en": "MCP bearer token (optional)",
+    "comment": "Label in settings",
+    "area": "settings",
+    "role": "label",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "MCP connection enabled",
+    "newKey": "settings.mcpConnectionEnabled.button",
+    "en": "MCP connection enabled",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "MCP server URL",
+    "newKey": "settings.mcpServerUrl.button",
+    "en": "MCP server URL",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "MOOD STARTERS",
+    "newKey": "discover.moodStarters.button",
+    "en": "MOOD STARTERS",
+    "comment": "Button in discover",
+    "area": "discover",
+    "role": "button",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Make it yours",
+    "newKey": "onboarding.makeItYours.button",
+    "en": "Make it yours",
+    "comment": "Button in onboarding",
+    "area": "onboarding",
+    "role": "button",
+    "usages": [
+      "WelcomeContent"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Manage your downloads",
+    "newKey": "paywall.manageYourDownloads.button",
+    "en": "Manage your downloads",
+    "comment": "Button in paywall",
+    "area": "paywall",
+    "role": "button",
+    "usages": [
+      "ProFeature"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Managing downloads is a Pro feature",
+    "newKey": "paywall.managingDownloadsIsA.label",
+    "en": "Managing downloads is a Pro feature",
+    "comment": "Label in paywall",
+    "area": "paywall",
+    "role": "label",
+    "usages": [
+      "ProFeature"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Manual import required",
+    "newKey": "queue.manualImportRequired.button",
+    "en": "Manual import required",
+    "comment": "Button in queue",
+    "area": "queue",
+    "role": "button",
+    "usages": [
+      "QueueViewModel"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Marathon binge",
+    "newKey": "common.marathonBinge.button",
+    "en": "Marathon binge",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Mark this card to suppress similar picks next time",
+    "newKey": "discover.markThisCardTo.tooltip",
+    "en": "Mark this card to suppress similar picks next time",
+    "comment": "Tooltip/description in discover",
+    "area": "discover",
+    "role": "tooltip",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Maybe later",
+    "newKey": "paywall.maybeLater.button",
+    "en": "Maybe later",
+    "comment": "Button in paywall",
+    "area": "paywall",
+    "role": "button",
+    "usages": [
+      "PaywallView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Media Managers",
+    "newKey": "settings.mediaManagers.button",
+    "en": "Media Managers",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "SettingsView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Metadata Profile",
+    "newKey": "search.metadataProfile.button",
+    "en": "Metadata Profile",
+    "comment": "Button in search",
+    "area": "search",
+    "role": "button",
+    "usages": [
+      "SearchAddPanel"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Mind-bending",
+    "newKey": "common.mindBending.label",
+    "en": "Mind-bending",
+    "comment": "Label in common",
+    "area": "common",
+    "role": "label",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Missing",
+    "newKey": "search.missing.button",
+    "en": "Missing",
+    "comment": "Button in search",
+    "area": "search",
+    "role": "button",
+    "usages": [
+      "SearchTypes",
+      "SeasonRow"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Model",
+    "newKey": "settings.model.button",
+    "en": "Model",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "SettingsView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Monitor",
+    "newKey": "search.monitor.button",
+    "en": "Monitor",
+    "comment": "Button in search",
+    "area": "search",
+    "role": "button",
+    "usages": [
+      "SearchAddPanel"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Monitor season %lld and start search.",
+    "newKey": "detail.monitorSeasonLldAnd.tooltip",
+    "en": "Monitor season %lld and start search.",
+    "comment": "Tooltip/description in detail",
+    "area": "detail",
+    "role": "tooltip",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Monitor season(s) %@ and start search.",
+    "newKey": "common.monitorSeasonSAnd.tooltip",
+    "en": "Monitor season(s) %@ and start search.",
+    "comment": "Tooltip/description in common",
+    "area": "common",
+    "role": "tooltip",
+    "usages": [
+      "ConfirmActionCard"
+    ],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Monitor this album and start search.",
+    "newKey": "common.monitorThisAlbumAnd.tooltip",
+    "en": "Monitor this album and start search.",
+    "comment": "Tooltip/description in common",
+    "area": "common",
+    "role": "tooltip",
+    "usages": [
+      "ConfirmActionCard"
+    ],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Monitor this season",
+    "newKey": "detail.monitorThisSeason.button",
+    "en": "Monitor this season",
+    "comment": "Button in detail",
+    "area": "detail",
+    "role": "button",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Monitored",
+    "newKey": "common.monitored.button",
+    "en": "Monitored",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Mood",
+    "newKey": "discover.mood.button",
+    "en": "Mood",
+    "comment": "Button in discover",
+    "area": "discover",
+    "role": "button",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "More",
+    "newKey": "intents.more.button",
+    "en": "More",
+    "comment": "Button in intents",
+    "area": "intents",
+    "role": "button",
+    "usages": [
+      "ActionPrimitives"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "More AI suggestions",
+    "newKey": "discover.moreAiSuggestions.button",
+    "en": "More AI suggestions",
+    "comment": "Button in discover",
+    "area": "discover",
+    "role": "button",
+    "usages": [
+      "DiscoverTabView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "More actions",
+    "newKey": "detail.moreActions.button",
+    "en": "More actions",
+    "comment": "Button in detail",
+    "area": "detail",
+    "role": "button",
+    "usages": [
+      "EpisodeRow"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "More filters",
+    "newKey": "common.moreFilters.button",
+    "en": "More filters",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "More options",
+    "newKey": "common.moreOptions.button",
+    "en": "More options",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [
+      "PopoverContentView"
+    ],
+    "needsReview": true
+  },
+  {
+    "oldKey": "More picks like these",
+    "newKey": "discover.morePicksLikeThese.button",
+    "en": "More picks like these",
+    "comment": "Button in discover",
+    "area": "discover",
+    "role": "button",
+    "usages": [
+      "DiscoverTabView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Most votes",
+    "newKey": "common.mostVotes.button",
+    "en": "Most votes",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Movie details",
+    "newKey": "detail.movieDetails.button",
+    "en": "Movie details",
+    "comment": "Button in detail",
+    "area": "detail",
+    "role": "button",
+    "usages": [
+      "DetailView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Movies",
+    "newKey": "discover.movies.button",
+    "en": "Movies",
+    "comment": "Button in discover",
+    "area": "discover",
+    "role": "button",
+    "usages": [
+      "DiscoverItem",
+      "SearchView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Multiple seasons",
+    "newKey": "queue.multipleSeasons.button",
+    "en": "Multiple seasons",
+    "comment": "Button in queue",
+    "area": "queue",
+    "role": "button",
+    "usages": [
+      "QueueGroupRowView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Music",
+    "newKey": "discover.music.button",
+    "en": "Music",
+    "comment": "Button in discover",
+    "area": "discover",
+    "role": "button",
+    "usages": [
+      "DiscoverItem"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Mystery",
+    "newKey": "discover.mystery.button",
+    "en": "Mystery",
+    "comment": "Button in discover",
+    "area": "discover",
+    "role": "button",
+    "usages": [
+      "DiscoverItem",
+      "DemoChatProvider",
+      "DemoMocks+Details",
+      "DemoMocks+Search"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "NSFW filter",
+    "newKey": "settings.nsfwFilter.button",
+    "en": "NSFW filter",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "ServiceFields"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "NZBGet",
+    "newKey": "settings.nzbget.label",
+    "en": "NZBGet",
+    "comment": "Label in settings",
+    "area": "settings",
+    "role": "label",
+    "usages": [
+      "ServiceConfig",
+      "SettingsView",
+      "DemoMocks+Queue",
+      "LocalToolBackend+ArrTools"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Needs attention",
+    "newKey": "queue.needsAttention.button",
+    "en": "Needs attention",
+    "comment": "Button in queue",
+    "area": "queue",
+    "role": "button",
+    "usages": [
+      "NotificationCoalescer"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Needs you",
+    "newKey": "queue.needsYou.button",
+    "en": "Needs you",
+    "comment": "Button in queue",
+    "area": "queue",
+    "role": "button",
+    "usages": [
+      "QueueViewModel",
+      "SettingsView",
+      "LinkChevron",
+      "NeedsYouSectionView",
+      "WelcomeView",
+      "QueueListView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Never",
+    "newKey": "settings.never.button",
+    "en": "Never",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "SettingsView",
+      "ICloudSettingsView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "New",
+    "newKey": "detail.new.button",
+    "en": "New",
+    "comment": "Button in detail",
+    "area": "detail",
+    "role": "button",
+    "usages": [
+      "ListingBadgesView",
+      "QueueItemPrimitives",
+      "EpisodeRow",
+      "NotificationCoalescer"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "New chat",
+    "newKey": "chat.newChat.button",
+    "en": "New chat",
+    "comment": "Button in chat",
+    "area": "chat",
+    "role": "button",
+    "usages": [
+      "ChatView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "New file",
+    "newKey": "queue.newFile.button",
+    "en": "New file",
+    "comment": "Button in queue",
+    "area": "queue",
+    "role": "button",
+    "usages": [
+      "UpgradeDiffView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Next",
+    "newKey": "onboarding.next.button",
+    "en": "Next",
+    "comment": "Button in onboarding",
+    "area": "onboarding",
+    "role": "button",
+    "usages": [
+      "WelcomeView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Next week",
+    "newKey": "queue.nextWeek.button",
+    "en": "Next week",
+    "comment": "Button in queue",
+    "area": "queue",
+    "role": "button",
+    "usages": [
+      "QueueTabContent",
+      "PopoverContentView",
+      "QueueListView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Nie",
+    "newKey": "discover.no.button",
+    "en": "No",
+    "comment": "Button in discover",
+    "area": "discover",
+    "role": "button",
+    "usages": [
+      "DiscoverTabView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "No download ID — item hasn't reached the client yet",
+    "newKey": "queue.noDownloadIdItem.tooltip",
+    "en": "No download ID — item hasn't reached the client yet",
+    "comment": "Tooltip/description in queue",
+    "area": "queue",
+    "role": "tooltip",
+    "usages": [
+      "QueueAggregator"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "No history",
+    "newKey": "common.noHistory.button",
+    "en": "No history",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [
+      "iOSAppRoot",
+      "HistoryView"
+    ],
+    "needsReview": true
+  },
+  {
+    "oldKey": "No matches.",
+    "newKey": "search.noMatches.tooltip",
+    "en": "No matches.",
+    "comment": "Tooltip/description in search",
+    "area": "search",
+    "role": "tooltip",
+    "usages": [
+      "SearchView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "No more cards",
+    "newKey": "discover.noMoreCards.button",
+    "en": "No more cards",
+    "comment": "Button in discover",
+    "area": "discover",
+    "role": "button",
+    "usages": [
+      "DiscoverTabView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "No movies match this query.",
+    "newKey": "common.noMoviesMatchThis.tooltip",
+    "en": "No movies match this query.",
+    "comment": "Tooltip/description in common",
+    "area": "common",
+    "role": "tooltip",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "No overview available",
+    "newKey": "discover.noOverviewAvailable.button",
+    "en": "No overview available",
+    "comment": "Button in discover",
+    "area": "discover",
+    "role": "button",
+    "usages": [
+      "DiscoverCardView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "No picks yet — swipe right to collect",
+    "newKey": "discover.noPicksYetSwipe.label",
+    "en": "No picks yet — swipe right to collect",
+    "comment": "Label in discover",
+    "area": "discover",
+    "role": "label",
+    "usages": [
+      "DiscoverMatchedListView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "No scenes match this query.",
+    "newKey": "common.noScenesMatchThis.tooltip",
+    "en": "No scenes match this query.",
+    "comment": "Tooltip/description in common",
+    "area": "common",
+    "role": "tooltip",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "No series match this query.",
+    "newKey": "common.noSeriesMatchThis.tooltip",
+    "en": "No series match this query.",
+    "comment": "Tooltip/description in common",
+    "area": "common",
+    "role": "tooltip",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "None",
+    "newKey": "search.none.button",
+    "en": "None",
+    "comment": "Button in search",
+    "area": "search",
+    "role": "button",
+    "usages": [
+      "SearchTypes",
+      "SettingsView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Nostalgic",
+    "newKey": "common.nostalgic.button",
+    "en": "Nostalgic",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Not aired yet",
+    "newKey": "detail.notAiredYet.button",
+    "en": "Not aired yet",
+    "comment": "Button in detail",
+    "area": "detail",
+    "role": "button",
+    "usages": [
+      "EpisodeRow"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Nothing upcoming",
+    "newKey": "common.nothingUpcoming.button",
+    "en": "Nothing upcoming",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [
+      "iOSAppRoot",
+      "UpcomingTabContent"
+    ],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Notification settings",
+    "newKey": "settings.notificationSettings.button",
+    "en": "Notification settings",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "ICloudSettingsView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Notification sound",
+    "newKey": "settings.notificationSound.button",
+    "en": "Notification sound",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "SettingsView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Notifications",
+    "newKey": "common.notifications.button",
+    "en": "Notifications",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Notify on new grabs",
+    "newKey": "settings.notifyOnNewGrabs.button",
+    "en": "Notify on new grabs",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "ServiceFields"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "On disk",
+    "newKey": "detail.onDisk.button",
+    "en": "On disk",
+    "comment": "Button in detail",
+    "area": "detail",
+    "role": "button",
+    "usages": [
+      "EpisodeRowTooltip"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "One-time purchase. No subscription. iOS + macOS.",
+    "newKey": "paywall.oneTimePurchaseNo.tooltip",
+    "en": "One-time purchase. No subscription. iOS + macOS.",
+    "comment": "Tooltip/description in paywall",
+    "area": "paywall",
+    "role": "tooltip",
+    "usages": [
+      "PaywallView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "One-time purchase. Unlocks everything, forever.",
+    "newKey": "paywall.oneTimePurchaseUnlocks.tooltip",
+    "en": "One-time purchase. Unlocks everything, forever.",
+    "comment": "Tooltip/description in paywall",
+    "area": "paywall",
+    "role": "tooltip",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Open %@ in browser",
+    "newKey": "common.openInBrowser.label",
+    "en": "Open %@ in browser",
+    "comment": "Label in common",
+    "area": "common",
+    "role": "label",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Open Settings",
+    "newKey": "onboarding.openSettings.button",
+    "en": "Open Settings",
+    "comment": "Button in onboarding",
+    "area": "onboarding",
+    "role": "button",
+    "usages": [
+      "WelcomeContent"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Open Settings…",
+    "newKey": "common.openSettings.button",
+    "en": "Open Settings…",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [
+      "PopoverEmptyState",
+      "ChatUnavailableView"
+    ],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Open Shortcuts app",
+    "newKey": "settings.openShortcutsApp.button",
+    "en": "Open Shortcuts app",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "SiriShortcutsSettings"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Open Window…",
+    "newKey": "common.openWindow.button",
+    "en": "Open Window…",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Open in browser",
+    "newKey": "detail.openInBrowser.button",
+    "en": "Open in browser",
+    "comment": "Button in detail",
+    "area": "detail",
+    "role": "button",
+    "usages": [
+      "DetailView",
+      "QueueItemPrimitives",
+      "DownloadSection",
+      "NeedsYouSectionView",
+      "EpisodeDetailOverlay",
+      "NotificationActions",
+      "NotificationCoalescer"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Open your arr's web UI → Settings → General",
+    "newKey": "common.openYourArrS.tooltip",
+    "en": "Open your arr's web UI → Settings → General",
+    "comment": "Tooltip/description in common",
+    "area": "common",
+    "role": "tooltip",
+    "usages": [
+      "PopoverEmptyState"
+    ],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Open your picks",
+    "newKey": "discover.openYourPicks.button",
+    "en": "Open your picks",
+    "comment": "Button in discover",
+    "area": "discover",
+    "role": "button",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "OpenAI / OpenRouter",
+    "newKey": "settings.openaiOpenrouter.button",
+    "en": "OpenAI / OpenRouter",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Optional vibe — or hit ↵ to discover",
+    "newKey": "common.optionalVibeOrHit.label",
+    "en": "Optional vibe — or hit ↵ to discover",
+    "comment": "Label in common",
+    "area": "common",
+    "role": "label",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Or describe what you want:",
+    "newKey": "common.orDescribeWhatYou.label",
+    "en": "Or describe what you want:",
+    "comment": "Label in common",
+    "area": "common",
+    "role": "label",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Or describe…",
+    "newKey": "common.orDescribe.button",
+    "en": "Or describe…",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Osoby",
+    "newKey": "common.osoby.button",
+    "en": "Osoby",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Owned",
+    "newKey": "discover.owned.button",
+    "en": "Owned",
+    "comment": "Button in discover",
+    "area": "discover",
+    "role": "button",
+    "usages": [
+      "DiscoverItem"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Page %lld",
+    "newKey": "common.pageLld.label",
+    "en": "Page %lld",
+    "comment": "Label in common",
+    "area": "common",
+    "role": "label",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Password",
+    "newKey": "settings.password.button",
+    "en": "Password",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "ServiceFields"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Password or API key",
+    "newKey": "settings.passwordOrApiKey.button",
+    "en": "Password or API key",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "ServiceFields"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Passwords & API keys (iCloud Keychain)",
+    "newKey": "settings.passwordsApiKeysIcloud.label",
+    "en": "Passwords & API keys (iCloud Keychain)",
+    "comment": "Label in settings",
+    "area": "settings",
+    "role": "label",
+    "usages": [
+      "ICloudSettingsView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Paste it here, along with the URL",
+    "newKey": "common.pasteItHereAlong.label",
+    "en": "Paste it here, along with the URL",
+    "comment": "Label in common",
+    "area": "common",
+    "role": "label",
+    "usages": [
+      "PopoverEmptyState"
+    ],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Paste your API key",
+    "newKey": "settings.pasteYourApiKey.button",
+    "en": "Paste your API key",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "ServiceFields"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Pause",
+    "newKey": "queue.pause.button",
+    "en": "Pause",
+    "comment": "Button in queue",
+    "area": "queue",
+    "role": "button",
+    "usages": [
+      "QueueGroupRowView",
+      "DetailView",
+      "ActionPrimitives",
+      "MultiRow",
+      "QueueRowView",
+      "QueueListView",
+      "NotificationActions"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Pause %@",
+    "newKey": "queue.pause.label",
+    "en": "Pause %@",
+    "comment": "Label in queue",
+    "area": "queue",
+    "role": "label",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Pause all downloads",
+    "newKey": "intents.pauseAllDownloads.button",
+    "en": "Pause all downloads",
+    "comment": "Button in intents",
+    "area": "intents",
+    "role": "button",
+    "usages": [
+      "ArrBarrIntents"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Pause download",
+    "newKey": "detail.pauseDownload.button",
+    "en": "Pause download",
+    "comment": "Button in detail",
+    "area": "detail",
+    "role": "button",
+    "usages": [
+      "DetailView",
+      "PauseResumeButton",
+      "GlassyFloatingBar"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Pause episode download",
+    "newKey": "detail.pauseEpisodeDownload.button",
+    "en": "Pause episode download",
+    "comment": "Button in detail",
+    "area": "detail",
+    "role": "button",
+    "usages": [
+      "EpisodeRow"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Pause, resume and remove downloads",
+    "newKey": "queue.pauseResumeAndRemove.label",
+    "en": "Pause, resume and remove downloads",
+    "comment": "Label in queue",
+    "area": "queue",
+    "role": "label",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Pause, resume and remove downloads right from ArrBarr.",
+    "newKey": "paywall.pauseResumeAndRemove.tooltip",
+    "en": "Pause, resume and remove downloads right from ArrBarr.",
+    "comment": "Tooltip/description in paywall",
+    "area": "paywall",
+    "role": "tooltip",
+    "usages": [
+      "ProFeature"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Pause, resume and retry without a browser",
+    "newKey": "paywall.pauseResumeAndRetry.tooltip",
+    "en": "Pause, resume and retry without a browser",
+    "comment": "Tooltip/description in paywall",
+    "area": "paywall",
+    "role": "tooltip",
+    "usages": [
+      "PaywallView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Paused",
+    "newKey": "queue.paused.button",
+    "en": "Paused",
+    "comment": "Button in queue",
+    "area": "queue",
+    "role": "button",
+    "usages": [
+      "QueueItem",
+      "SeasonRow"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Pauses every active download (where a download client is configured).",
+    "newKey": "intents.pausesEveryActiveDownload.tooltip",
+    "en": "Pauses every active download (where a download client is configured).",
+    "comment": "Tooltip/description in intents",
+    "area": "intents",
+    "role": "tooltip",
+    "usages": [
+      "ArrBarrIntents"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "People",
+    "newKey": "common.people.button",
+    "en": "People",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Person",
+    "newKey": "common.person.button",
+    "en": "Person",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Pick",
+    "newKey": "discover.pick.button",
+    "en": "Pick",
+    "comment": "Button in discover",
+    "area": "discover",
+    "role": "button",
+    "usages": [
+      "DiscoverCardView",
+      "DiscoverTabView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Pick a media kind to start:",
+    "newKey": "common.pickAMediaKind.label",
+    "en": "Pick a media kind to start:",
+    "comment": "Label in common",
+    "area": "common",
+    "role": "label",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Play",
+    "newKey": "settings.play.button",
+    "en": "Play",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "SettingsView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Plus everything else from Control mode",
+    "newKey": "paywall.plusEverythingElseFrom.label",
+    "en": "Plus everything else from Control mode",
+    "comment": "Label in paywall",
+    "area": "paywall",
+    "role": "label",
+    "usages": [
+      "PaywallView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Popover open",
+    "newKey": "settings.popoverOpen.button",
+    "en": "Popover open",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "SettingsView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Previous",
+    "newKey": "onboarding.previous.button",
+    "en": "Previous",
+    "comment": "Button in onboarding",
+    "area": "onboarding",
+    "role": "button",
+    "usages": [
+      "WelcomeView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Privacy Policy",
+    "newKey": "settings.privacyPolicy.button",
+    "en": "Privacy Policy",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "SettingsView",
+      "PaywallView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Quality",
+    "newKey": "queue.quality.button",
+    "en": "Quality",
+    "comment": "Button in queue",
+    "area": "queue",
+    "role": "button",
+    "usages": [
+      "QueueGroupRowView",
+      "QueueRowView",
+      "EpisodeRowTooltip"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Quality profile",
+    "newKey": "search.qualityProfile.button",
+    "en": "Quality profile",
+    "comment": "Button in search",
+    "area": "search",
+    "role": "button",
+    "usages": [
+      "SearchAddPanel"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Quality:",
+    "newKey": "history.quality.button",
+    "en": "Quality:",
+    "comment": "Button in history",
+    "area": "history",
+    "role": "button",
+    "usages": [
+      "HistoryView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Queue",
+    "newKey": "paywall.queue.button",
+    "en": "Queue",
+    "comment": "Button in paywall",
+    "area": "paywall",
+    "role": "button",
+    "usages": [
+      "PaywallHeroes",
+      "PopoverContentView",
+      "iOSAppRoot"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Queue empty",
+    "newKey": "queue.queueEmpty.button",
+    "en": "Queue empty",
+    "comment": "Button in queue",
+    "area": "queue",
+    "role": "button",
+    "usages": [
+      "QueueSectionView",
+      "QueueListView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Queued",
+    "newKey": "queue.queued.button",
+    "en": "Queued",
+    "comment": "Button in queue",
+    "area": "queue",
+    "role": "button",
+    "usages": [
+      "QueueItem",
+      "MultiRow",
+      "Chips"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Quicker way to add",
+    "newKey": "onboarding.quickerWayToAdd.button",
+    "en": "Quicker way to add",
+    "comment": "Button in onboarding",
+    "area": "onboarding",
+    "role": "button",
+    "usages": [
+      "WelcomeContent"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Quirky",
+    "newKey": "common.quirky.button",
+    "en": "Quirky",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Quit ArrBarr",
+    "newKey": "common.quitArrbarr.button",
+    "en": "Quit ArrBarr",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [
+      "PopoverContentView"
+    ],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Quit and reopen the app to apply the new language.",
+    "newKey": "settings.quitAndReopenThe.tooltip",
+    "en": "Quit and reopen the app to apply the new language.",
+    "comment": "Tooltip/description in settings",
+    "area": "settings",
+    "role": "tooltip",
+    "usages": [
+      "SettingsView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Quiz",
+    "newKey": "discover.quiz.button",
+    "en": "Quiz",
+    "comment": "Button in discover",
+    "area": "discover",
+    "role": "button",
+    "usages": [
+      "QuizResumeCard"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Radarr",
+    "newKey": "queue.radarr.button",
+    "en": "Radarr",
+    "comment": "Button in queue",
+    "area": "queue",
+    "role": "button",
+    "usages": [
+      "ServiceConfig",
+      "QueueItem",
+      "SettingsView",
+      "HistoryView",
+      "SearchResultRow",
+      "Chips",
+      "LocalToolBackend+Discover"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Radarr — notify on new grabs",
+    "newKey": "common.radarrNotifyOnNew.label",
+    "en": "Radarr — notify on new grabs",
+    "comment": "Label in common",
+    "area": "common",
+    "role": "label",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Re-downloading identical release",
+    "newKey": "queue.reDownloadingIdenticalRelease.label",
+    "en": "Re-downloading identical release",
+    "comment": "Label in queue",
+    "area": "queue",
+    "role": "label",
+    "usages": [
+      "QueueItemPrimitives"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Re-enable auto-jump to picks every 10",
+    "newKey": "discover.reEnableAutoJump.label",
+    "en": "Re-enable auto-jump to picks every 10",
+    "comment": "Label in discover",
+    "area": "discover",
+    "role": "label",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Reattach to menu bar",
+    "newKey": "common.reattachToMenuBar.button",
+    "en": "Reattach to menu bar",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [
+      "PopoverContentView"
+    ],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Refresh",
+    "newKey": "common.refresh.button",
+    "en": "Refresh",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [
+      "PopoverContentView"
+    ],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Refresh Interval",
+    "newKey": "settings.refreshInterval.button",
+    "en": "Refresh Interval",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "SettingsView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Regenerate",
+    "newKey": "settings.regenerate.button",
+    "en": "Regenerate",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "MCPSettingsPane"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Relaunch",
+    "newKey": "settings.relaunch.button",
+    "en": "Relaunch",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "SettingsView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Relevance",
+    "newKey": "common.relevance.button",
+    "en": "Relevance",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Remove",
+    "newKey": "common.remove.button",
+    "en": "Remove",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [
+      "ConfirmActionCard",
+      "NotificationActions"
+    ],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Remove %@",
+    "newKey": "common.remove.label",
+    "en": "Remove %@",
+    "comment": "Label in common",
+    "area": "common",
+    "role": "label",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Remove download?",
+    "newKey": "queue.removeDownload.tooltip",
+    "en": "Remove download?",
+    "comment": "Tooltip/description in queue",
+    "area": "queue",
+    "role": "tooltip",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Remove episode download",
+    "newKey": "detail.removeEpisodeDownload.button",
+    "en": "Remove episode download",
+    "comment": "Button in detail",
+    "area": "detail",
+    "role": "button",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Remove from client",
+    "newKey": "common.removeFromClient.button",
+    "en": "Remove from client",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Remove from picks",
+    "newKey": "discover.removeFromPicks.button",
+    "en": "Remove from picks",
+    "comment": "Button in discover",
+    "area": "discover",
+    "role": "button",
+    "usages": [
+      "DiscoverMatchedListView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Remove mood",
+    "newKey": "discover.removeMood.button",
+    "en": "Remove mood",
+    "comment": "Button in discover",
+    "area": "discover",
+    "role": "button",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Remove person",
+    "newKey": "common.removePerson.button",
+    "en": "Remove person",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Reorder sections, hide what you don't need, tweak refresh intervals, and pick your language in Settings. Show only what matters to you.",
+    "newKey": "onboarding.reorderSectionsHideWhat.tooltip",
+    "en": "Reorder sections, hide what you don't need, tweak refresh intervals, and pick your language in Settings. Show only what matters to you.",
+    "comment": "Tooltip/description in onboarding",
+    "area": "onboarding",
+    "role": "tooltip",
+    "usages": [
+      "WelcomeContent"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Replacing",
+    "newKey": "common.replacing.button",
+    "en": "Replacing",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Replacing all %lld episodes",
+    "newKey": "detail.replacingAllLldEpisodes.label",
+    "en": "Replacing all %lld episodes",
+    "comment": "Label in detail",
+    "area": "detail",
+    "role": "label",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Replacing existing files",
+    "newKey": "common.replacingExistingFiles.button",
+    "en": "Replacing existing files",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Reports warnings/errors across your arrs and whether download clients are reachable.",
+    "newKey": "intents.reportsWarningsErrorsAcross.tooltip",
+    "en": "Reports warnings/errors across your arrs and whether download clients are reachable.",
+    "comment": "Tooltip/description in intents",
+    "area": "intents",
+    "role": "tooltip",
+    "usages": [
+      "ArrBarrIntents"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Require bearer token",
+    "newKey": "settings.requireBearerToken.button",
+    "en": "Require bearer token",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "MCPSettingsPane"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Restart ArrBarr to apply language change.",
+    "newKey": "common.restartArrbarrToApply.tooltip",
+    "en": "Restart ArrBarr to apply language change.",
+    "comment": "Tooltip/description in common",
+    "area": "common",
+    "role": "tooltip",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Restart required to apply the new language.",
+    "newKey": "settings.restartRequiredToApply.tooltip",
+    "en": "Restart required to apply the new language.",
+    "comment": "Tooltip/description in settings",
+    "area": "settings",
+    "role": "tooltip",
+    "usages": [
+      "SettingsView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Restore Purchases",
+    "newKey": "paywall.restorePurchases.button",
+    "en": "Restore Purchases",
+    "comment": "Button in paywall",
+    "area": "paywall",
+    "role": "button",
+    "usages": [
+      "PaywallView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Result kind",
+    "newKey": "common.type.button",
+    "en": "Type",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Result type",
+    "newKey": "common.resultType.button",
+    "en": "Result type",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Resume",
+    "newKey": "queue.resume.button",
+    "en": "Resume",
+    "comment": "Button in queue",
+    "area": "queue",
+    "role": "button",
+    "usages": [
+      "QueueGroupRowView",
+      "ActionPrimitives",
+      "MultiRow",
+      "QueueRowView",
+      "QueueListView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Resume %@",
+    "newKey": "queue.resume.label",
+    "en": "Resume %@",
+    "comment": "Label in queue",
+    "area": "queue",
+    "role": "label",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Resume Discover",
+    "newKey": "queue.resumeDiscover.button",
+    "en": "Resume Discover",
+    "comment": "Button in queue",
+    "area": "queue",
+    "role": "button",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Resume all downloads",
+    "newKey": "intents.resumeAllDownloads.button",
+    "en": "Resume all downloads",
+    "comment": "Button in intents",
+    "area": "intents",
+    "role": "button",
+    "usages": [
+      "ArrBarrIntents"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Resume download",
+    "newKey": "queue.resumeDownload.button",
+    "en": "Resume download",
+    "comment": "Button in queue",
+    "area": "queue",
+    "role": "button",
+    "usages": [
+      "PauseResumeButton",
+      "GlassyFloatingBar"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Resume episode download",
+    "newKey": "detail.resumeEpisodeDownload.button",
+    "en": "Resume episode download",
+    "comment": "Button in detail",
+    "area": "detail",
+    "role": "button",
+    "usages": [
+      "EpisodeRow"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Resumes every paused download (where a download client is configured).",
+    "newKey": "intents.resumesEveryPausedDownload.tooltip",
+    "en": "Resumes every paused download (where a download client is configured).",
+    "comment": "Tooltip/description in intents",
+    "area": "intents",
+    "role": "tooltip",
+    "usages": [
+      "ArrBarrIntents"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Romance",
+    "newKey": "discover.romance.button",
+    "en": "Romance",
+    "comment": "Button in discover",
+    "area": "discover",
+    "role": "button",
+    "usages": [
+      "DiscoverItem",
+      "DemoChatProvider"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Romantic",
+    "newKey": "common.romantic.button",
+    "en": "Romantic",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Root folder",
+    "newKey": "search.rootFolder.button",
+    "en": "Root folder",
+    "comment": "Button in search",
+    "area": "search",
+    "role": "button",
+    "usages": [
+      "SearchAddPanel"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Run %@.",
+    "newKey": "common.run.tooltip",
+    "en": "Run %@.",
+    "comment": "Tooltip/description in common",
+    "area": "common",
+    "role": "tooltip",
+    "usages": [
+      "ConfirmActionCard"
+    ],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Running",
+    "newKey": "settings.running.button",
+    "en": "Running",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "MCPSettingsPane"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "SABnzbd",
+    "newKey": "settings.sabnzbd.label",
+    "en": "SABnzbd",
+    "comment": "Label in settings",
+    "area": "settings",
+    "role": "label",
+    "usages": [
+      "ServiceConfig",
+      "SettingsView",
+      "DemoMocks+Queue",
+      "LocalToolBackend+ArrTools",
+      "NotificationCoalescer"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "STARTERS",
+    "newKey": "common.starters.label",
+    "en": "STARTERS",
+    "comment": "Label in common",
+    "area": "common",
+    "role": "label",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "STARTERS (AI)",
+    "newKey": "common.startersAi.button",
+    "en": "STARTERS (AI)",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Same spec, retagged",
+    "newKey": "queue.sameSpecRetagged.button",
+    "en": "Same spec, retagged",
+    "comment": "Button in queue",
+    "area": "queue",
+    "role": "button",
+    "usages": [
+      "QueueItemPrimitives"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Saturday night",
+    "newKey": "common.saturdayNight.button",
+    "en": "Saturday night",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Saturday night with friends",
+    "newKey": "common.saturdayNightWithFriends.label",
+    "en": "Saturday night with friends",
+    "comment": "Label in common",
+    "area": "common",
+    "role": "label",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Save",
+    "newKey": "common.save.button",
+    "en": "Save",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Save mood",
+    "newKey": "discover.saveMood.button",
+    "en": "Save mood",
+    "comment": "Button in discover",
+    "area": "discover",
+    "role": "button",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Save person",
+    "newKey": "common.savePerson.button",
+    "en": "Save person",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Save to picks",
+    "newKey": "discover.saveToPicks.button",
+    "en": "Save to picks",
+    "comment": "Button in discover",
+    "area": "discover",
+    "role": "button",
+    "usages": [
+      "DiscoverTabView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Says the next upcoming episodes, movies and albums.",
+    "newKey": "intents.saysTheNextUpcoming.tooltip",
+    "en": "Says the next upcoming episodes, movies and albums.",
+    "comment": "Tooltip/description in intents",
+    "area": "intents",
+    "role": "tooltip",
+    "usages": [
+      "ArrBarrIntents"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Says what Sonarr and Radarr are currently downloading.",
+    "newKey": "intents.saysWhatSonarrAnd.tooltip",
+    "en": "Says what Sonarr and Radarr are currently downloading.",
+    "comment": "Tooltip/description in intents",
+    "area": "intents",
+    "role": "tooltip",
+    "usages": [
+      "ArrBarrIntents"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Scenes",
+    "newKey": "search.scenes.button",
+    "en": "Scenes",
+    "comment": "Button in search",
+    "area": "search",
+    "role": "button",
+    "usages": [
+      "SearchView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Science Fiction",
+    "newKey": "discover.scienceFiction.button",
+    "en": "Science Fiction",
+    "comment": "Button in discover",
+    "area": "discover",
+    "role": "button",
+    "usages": [
+      "DiscoverItem"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Score",
+    "newKey": "queue.score.button",
+    "en": "Score",
+    "comment": "Button in queue",
+    "area": "queue",
+    "role": "button",
+    "usages": [
+      "UpgradeDiffView",
+      "UpgradeDiffLine"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Score:",
+    "newKey": "history.score.button",
+    "en": "Score:",
+    "comment": "Button in history",
+    "area": "history",
+    "role": "button",
+    "usages": [
+      "HistoryView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Search",
+    "newKey": "search.search.button",
+    "en": "Search",
+    "comment": "Button in search",
+    "area": "search",
+    "role": "button",
+    "usages": [
+      "SearchViewModel",
+      "ArrBarrIntents",
+      "ConfirmActionCard",
+      "SettingsView",
+      "SeasonRow",
+      "EpisodeDetailOverlay",
+      "EpisodeRow",
+      "SearchClient"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Search %lld",
+    "newKey": "search.searchLld.label",
+    "en": "Search %lld",
+    "comment": "Label in search",
+    "area": "search",
+    "role": "label",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Search %lld episode(s).",
+    "newKey": "common.searchLldEpisodeS.tooltip",
+    "en": "Search %lld episode(s).",
+    "comment": "Tooltip/description in common",
+    "area": "common",
+    "role": "tooltip",
+    "usages": [
+      "ConfirmActionCard"
+    ],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Search Sonarr/Radarr and open ArrBarr at the results to add something.",
+    "newKey": "intents.searchSonarrRadarrAnd.tooltip",
+    "en": "Search Sonarr/Radarr and open ArrBarr at the results to add something.",
+    "comment": "Tooltip/description in intents",
+    "area": "intents",
+    "role": "tooltip",
+    "usages": [
+      "ArrBarrIntents"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Search all %lld missing",
+    "newKey": "search.searchAllLldMissing.label",
+    "en": "Search all %lld missing",
+    "comment": "Label in search",
+    "area": "search",
+    "role": "label",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Search all missing episodes?",
+    "newKey": "detail.searchAllMissingEpisodes.tooltip",
+    "en": "Search all missing episodes?",
+    "comment": "Tooltip/description in detail",
+    "area": "detail",
+    "role": "tooltip",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Search for every missing episode in this series",
+    "newKey": "detail.searchForEveryMissing.tooltip",
+    "en": "Search for every missing episode in this series",
+    "comment": "Tooltip/description in detail",
+    "area": "detail",
+    "role": "tooltip",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Search for missing episodes in this season",
+    "newKey": "detail.searchForMissingEpisodes.tooltip",
+    "en": "Search for missing episodes in this season",
+    "comment": "Tooltip/description in detail",
+    "area": "detail",
+    "role": "tooltip",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Search for this album.",
+    "newKey": "common.searchForThisAlbum.tooltip",
+    "en": "Search for this album.",
+    "comment": "Tooltip/description in common",
+    "area": "common",
+    "role": "tooltip",
+    "usages": [
+      "ConfirmActionCard"
+    ],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Search for this episode",
+    "newKey": "detail.searchForThisEpisode.button",
+    "en": "Search for this episode",
+    "comment": "Button in detail",
+    "area": "detail",
+    "role": "button",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Search for this movie.",
+    "newKey": "common.searchForThisMovie.tooltip",
+    "en": "Search for this movie.",
+    "comment": "Tooltip/description in common",
+    "area": "common",
+    "role": "tooltip",
+    "usages": [
+      "ConfirmActionCard"
+    ],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Search movies and TV series",
+    "newKey": "search.searchMoviesAndTv.label",
+    "en": "Search movies and TV series",
+    "comment": "Label in search",
+    "area": "search",
+    "role": "label",
+    "usages": [
+      "SearchView",
+      "iOSAppRoot"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Search queued",
+    "newKey": "detail.searchQueued.button",
+    "en": "Search queued",
+    "comment": "Button in detail",
+    "area": "detail",
+    "role": "button",
+    "usages": [
+      "EpisodeDetailOverlay"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Search scope",
+    "newKey": "search.searchScope.button",
+    "en": "Search scope",
+    "comment": "Button in search",
+    "area": "search",
+    "role": "button",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Search this episode?",
+    "newKey": "detail.searchThisEpisode.tooltip",
+    "en": "Search this episode?",
+    "comment": "Tooltip/description in detail",
+    "area": "detail",
+    "role": "tooltip",
+    "usages": [
+      "EpisodeDetailOverlay",
+      "EpisodeRow"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Search this season?",
+    "newKey": "detail.searchThisSeason.tooltip",
+    "en": "Search this season?",
+    "comment": "Tooltip/description in detail",
+    "area": "detail",
+    "role": "tooltip",
+    "usages": [
+      "SeasonRow"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Search to add",
+    "newKey": "intents.searchToAdd.button",
+    "en": "Search to add",
+    "comment": "Button in intents",
+    "area": "intents",
+    "role": "button",
+    "usages": [
+      "ArrBarrIntents"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Search whole series",
+    "newKey": "search.searchWholeSeries.button",
+    "en": "Search whole series",
+    "comment": "Button in search",
+    "area": "search",
+    "role": "button",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Searching",
+    "newKey": "queue.searching.button",
+    "en": "Searching",
+    "comment": "Button in queue",
+    "area": "queue",
+    "role": "button",
+    "usages": [
+      "QueueTabContent"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Season",
+    "newKey": "detail.season.button",
+    "en": "Season",
+    "comment": "Button in detail",
+    "area": "detail",
+    "role": "button",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Season %02d",
+    "newKey": "queue.season02d.button",
+    "en": "Season %02d",
+    "comment": "Button in queue",
+    "area": "queue",
+    "role": "button",
+    "usages": [
+      "QueueGroupRowView",
+      "SeasonRow",
+      "EpisodeRowTooltip"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Season %02lld",
+    "newKey": "queue.season02lld.button",
+    "en": "Season %02lld",
+    "comment": "Button in queue",
+    "area": "queue",
+    "role": "button",
+    "usages": [
+      "QueueGroupRowView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Season 01 · Episode %lld — %@",
+    "newKey": "detail.season01EpisodeLld.label",
+    "en": "Season 01 · Episode %lld — %@",
+    "comment": "Label in detail",
+    "area": "detail",
+    "role": "label",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Season pack",
+    "newKey": "queue.seasonPack.button",
+    "en": "Season pack",
+    "comment": "Button in queue",
+    "area": "queue",
+    "role": "button",
+    "usages": [
+      "QueueGroupRowView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Season pill %lld",
+    "newKey": "detail.seasonLld.label",
+    "en": "Season %lld",
+    "comment": "Label in detail",
+    "area": "detail",
+    "role": "label",
+    "usages": [
+      "SonarrDetailPanel",
+      "EpisodeDetailOverlay"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Seasons",
+    "newKey": "detail.seasons.button",
+    "en": "Seasons",
+    "comment": "Button in detail",
+    "area": "detail",
+    "role": "button",
+    "usages": [
+      "SonarrDetailPanel"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Section order",
+    "newKey": "settings.sectionOrder.button",
+    "en": "Section order",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "SettingsView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "See what's airing tonight, get notified about new grabs, and surface indexer issues before they become a problem.",
+    "newKey": "onboarding.seeWhatSAiring.tooltip",
+    "en": "See what's airing tonight, get notified about new grabs, and surface indexer issues before they become a problem.",
+    "comment": "Tooltip/description in onboarding",
+    "area": "onboarding",
+    "role": "tooltip",
+    "usages": [
+      "WelcomeContent"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Select an item",
+    "newKey": "common.selectAnItem.button",
+    "en": "Select an item",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Send",
+    "newKey": "chat.send.button",
+    "en": "Send",
+    "comment": "Button in chat",
+    "area": "chat",
+    "role": "button",
+    "usages": [
+      "ChatView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Send test notification",
+    "newKey": "settings.sendTestNotification.button",
+    "en": "Send test notification",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "SettingsView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Series",
+    "newKey": "search.series.button",
+    "en": "Series",
+    "comment": "Button in search",
+    "area": "search",
+    "role": "button",
+    "usages": [
+      "SearchView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Series Type",
+    "newKey": "search.seriesType.button",
+    "en": "Series Type",
+    "comment": "Button in search",
+    "area": "search",
+    "role": "button",
+    "usages": [
+      "SearchAddPanel"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Series details",
+    "newKey": "detail.seriesDetails.button",
+    "en": "Series details",
+    "comment": "Button in detail",
+    "area": "detail",
+    "role": "button",
+    "usages": [
+      "DetailView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Server configurations",
+    "newKey": "settings.serverConfigurations.button",
+    "en": "Server configurations",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "ICloudSettingsView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Service icons by Dashboard Icons, licensed CC BY 4.0 (recoloured for the UI).",
+    "newKey": "settings.serviceIconsByDashboard.tooltip",
+    "en": "Service icons by Dashboard Icons, licensed CC BY 4.0 (recoloured for the UI).",
+    "comment": "Tooltip/description in settings",
+    "area": "settings",
+    "role": "tooltip",
+    "usages": [
+      "SettingsView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Service problem",
+    "newKey": "queue.serviceProblem.button",
+    "en": "Service problem",
+    "comment": "Button in queue",
+    "area": "queue",
+    "role": "button",
+    "usages": [
+      "QueueViewModel"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Set MCP server URL in Settings to start chatting.",
+    "newKey": "chat.setMcpServerUrl.tooltip",
+    "en": "Set MCP server URL in Settings to start chatting.",
+    "comment": "Tooltip/description in chat",
+    "area": "chat",
+    "role": "tooltip",
+    "usages": [
+      "ChatUnavailableView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Settings",
+    "newKey": "common.settings.button",
+    "en": "Settings",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [
+      "iOSAppRoot"
+    ],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Settings…",
+    "newKey": "common.settings2.button",
+    "en": "Settings…",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [
+      "PopoverContentView"
+    ],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Short",
+    "newKey": "common.short.button",
+    "en": "Short",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [
+      "DemoMocks+Details",
+      "DemoMocks+Search"
+    ],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Show %lld more",
+    "newKey": "common.showLldMore.label",
+    "en": "Show %lld more",
+    "comment": "Label in common",
+    "area": "common",
+    "role": "label",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Show Needs you",
+    "newKey": "common.showNeedsYou.button",
+    "en": "Show Needs you",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Show Tonight banner",
+    "newKey": "common.showTonightBanner.button",
+    "en": "Show Tonight banner",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Show download queue",
+    "newKey": "intents.showDownloadQueue.button",
+    "en": "Show download queue",
+    "comment": "Button in intents",
+    "area": "intents",
+    "role": "button",
+    "usages": [
+      "ArrBarrIntents"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Show history",
+    "newKey": "queue.showHistory.button",
+    "en": "Show history",
+    "comment": "Button in queue",
+    "area": "queue",
+    "role": "button",
+    "usages": [
+      "QueueSectionView",
+      "HistoryView",
+      "QueueListView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Show in Dock as a window",
+    "newKey": "settings.showInDockAs.button",
+    "en": "Show in Dock as a window",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "SettingsView",
+      "PopoverContentView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Show indexer issues warning",
+    "newKey": "settings.showIndexerIssuesWarning.label",
+    "en": "Show indexer issues warning",
+    "comment": "Label in settings",
+    "area": "settings",
+    "role": "label",
+    "usages": [
+      "SettingsView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Show less",
+    "newKey": "discover.showLess.button",
+    "en": "Show less",
+    "comment": "Button in discover",
+    "area": "discover",
+    "role": "button",
+    "usages": [
+      "DiscoverCardView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Show more",
+    "newKey": "queue.showMore.button",
+    "en": "Show more",
+    "comment": "Button in queue",
+    "area": "queue",
+    "role": "button",
+    "usages": [
+      "QueueTabContent",
+      "ExpandableOverview",
+      "DiscoverCardView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Show poster",
+    "newKey": "detail.showPoster.button",
+    "en": "Show poster",
+    "comment": "Button in detail",
+    "area": "detail",
+    "role": "button",
+    "usages": [
+      "MediaHeaderCard",
+      "EpisodeDetailOverlay",
+      "LidarrDetailPanel"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Show upcoming releases",
+    "newKey": "intents.showUpcomingReleases.button",
+    "en": "Show upcoming releases",
+    "comment": "Button in intents",
+    "area": "intents",
+    "role": "button",
+    "usages": [
+      "ArrBarrIntents"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Show welcome screen",
+    "newKey": "settings.showWelcomeScreen.button",
+    "en": "Show welcome screen",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "SettingsView",
+      "WelcomeContent"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Show your picks",
+    "newKey": "discover.showYourPicks.button",
+    "en": "Show your picks",
+    "comment": "Button in discover",
+    "area": "discover",
+    "role": "button",
+    "usages": [
+      "DiscoverTabView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Shows",
+    "newKey": "discover.shows.button",
+    "en": "Shows",
+    "comment": "Button in discover",
+    "area": "discover",
+    "role": "button",
+    "usages": [
+      "DiscoverItem"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Sign in to iCloud in System Settings to enable sync.",
+    "newKey": "settings.signInToIcloud.tooltip",
+    "en": "Sign in to iCloud in System Settings to enable sync.",
+    "comment": "Tooltip/description in settings",
+    "area": "settings",
+    "role": "tooltip",
+    "usages": [
+      "ICloudSettingsView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Siri & Shortcuts",
+    "newKey": "settings.siriShortcuts.button",
+    "en": "Siri & Shortcuts",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "SettingsView",
+      "SiriShortcutsSettings"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Size",
+    "newKey": "queue.size.button",
+    "en": "Size",
+    "comment": "Button in queue",
+    "area": "queue",
+    "role": "button",
+    "usages": [
+      "QueueGroupRowView",
+      "QueueRowView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Skip",
+    "newKey": "discover.skip.button",
+    "en": "Skip",
+    "comment": "Button in discover",
+    "area": "discover",
+    "role": "button",
+    "usages": [
+      "DiscoverCardView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Slow burn",
+    "newKey": "common.slowBurn.button",
+    "en": "Slow burn",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Sonarr",
+    "newKey": "queue.sonarr.button",
+    "en": "Sonarr",
+    "comment": "Button in queue",
+    "area": "queue",
+    "role": "button",
+    "usages": [
+      "QueueViewModel",
+      "ServiceConfig",
+      "QueueItem",
+      "SettingsView",
+      "QueueSectionView",
+      "EpisodeDetailOverlay",
+      "HistoryView",
+      "SearchResultRow",
+      "Chips",
+      "LocalToolBackend+Discover"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Sonarr — notify on new grabs",
+    "newKey": "common.sonarrNotifyOnNew.label",
+    "en": "Sonarr — notify on new grabs",
+    "comment": "Label in common",
+    "area": "common",
+    "role": "label",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Source",
+    "newKey": "common.source.button",
+    "en": "Source",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Sources",
+    "newKey": "common.sources.button",
+    "en": "Sources",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Spoiler",
+    "newKey": "common.spoiler.button",
+    "en": "Spoiler",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Star on GitHub",
+    "newKey": "onboarding.starOnGithub.button",
+    "en": "Star on GitHub",
+    "comment": "Button in onboarding",
+    "area": "onboarding",
+    "role": "button",
+    "usages": [
+      "WelcomeContent"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Start a new chat",
+    "newKey": "chat.startANewChat.button",
+    "en": "Start a new chat",
+    "comment": "Button in chat",
+    "area": "chat",
+    "role": "button",
+    "usages": [
+      "ChatView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Start downloading",
+    "newKey": "intents.startDownloading.button",
+    "en": "Start downloading",
+    "comment": "Button in intents",
+    "area": "intents",
+    "role": "button",
+    "usages": [
+      "NotificationActions",
+      "NotificationCoalescer"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Start typing to search across Radarr and Sonarr.",
+    "newKey": "search.startTypingToSearch.tooltip",
+    "en": "Start typing to search across Radarr and Sonarr.",
+    "comment": "Tooltip/description in search",
+    "area": "search",
+    "role": "tooltip",
+    "usages": [
+      "SearchView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Startup",
+    "newKey": "common.startup.button",
+    "en": "Startup",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Status",
+    "newKey": "settings.status.button",
+    "en": "Status",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "MCPSettingsPane",
+      "EpisodeRowTooltip",
+      "ICloudSettingsView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Stop monitoring season %lld.",
+    "newKey": "detail.stopMonitoringSeasonLld.tooltip",
+    "en": "Stop monitoring season %lld.",
+    "comment": "Tooltip/description in detail",
+    "area": "detail",
+    "role": "tooltip",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Stop monitoring season(s) %@.",
+    "newKey": "common.stopMonitoringSeasonS.tooltip",
+    "en": "Stop monitoring season(s) %@.",
+    "comment": "Tooltip/description in common",
+    "area": "common",
+    "role": "tooltip",
+    "usages": [
+      "ConfirmActionCard"
+    ],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Stop monitoring this album.",
+    "newKey": "common.stopMonitoringThisAlbum.tooltip",
+    "en": "Stop monitoring this album.",
+    "comment": "Tooltip/description in common",
+    "area": "common",
+    "role": "tooltip",
+    "usages": [
+      "ConfirmActionCard"
+    ],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Stop monitoring this season",
+    "newKey": "detail.stopMonitoringThisSeason.label",
+    "en": "Stop monitoring this season",
+    "comment": "Label in detail",
+    "area": "detail",
+    "role": "label",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Stopped",
+    "newKey": "settings.stopped.button",
+    "en": "Stopped",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "MCPSettingsPane"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Subscribes this calendar in Apple Calendar. The server must be reachable when Calendar refreshes (home network or VPN).",
+    "newKey": "settings.subscribesThisCalendarIn.tooltip",
+    "en": "Subscribes this calendar in Apple Calendar. The server must be reachable when Calendar refreshes (home network or VPN).",
+    "comment": "Tooltip/description in settings",
+    "area": "settings",
+    "role": "tooltip",
+    "usages": [
+      "ServiceFields"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Suspenseful",
+    "newKey": "common.suspenseful.button",
+    "en": "Suspenseful",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Switch movie/show kind",
+    "newKey": "common.switchMovieShowKind.button",
+    "en": "Switch movie/show kind",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Sync with iCloud",
+    "newKey": "settings.syncWithIcloud.button",
+    "en": "Sync with iCloud",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "ICloudSettingsView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "System",
+    "newKey": "settings.system.button",
+    "en": "System",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "SettingsView",
+      "ConfigStore"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "TMDB API key",
+    "newKey": "settings.tmdbApiKey.button",
+    "en": "TMDB API key",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "TMDB found no new films matching your filters. Try clearing some.",
+    "newKey": "common.tmdbFoundNoNew.tooltip",
+    "en": "TMDB found no new films matching your filters. Try clearing some.",
+    "comment": "Tooltip/description in common",
+    "area": "common",
+    "role": "tooltip",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "TV Movie",
+    "newKey": "discover.tvMovie.button",
+    "en": "TV Movie",
+    "comment": "Button in discover",
+    "area": "discover",
+    "role": "button",
+    "usages": [
+      "DiscoverItem"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Tak",
+    "newKey": "discover.yes.button",
+    "en": "Yes",
+    "comment": "Button in discover",
+    "area": "discover",
+    "role": "button",
+    "usages": [
+      "DiscoverTabView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Tap “Add to Siri” to set a phrase. The same actions appear in the Shortcuts app and Spotlight — no setup needed.",
+    "newKey": "settings.tapAddToSiri.tooltip",
+    "en": "Tap “Add to Siri” to set a phrase. The same actions appear in the Shortcuts app and Spotlight — no setup needed.",
+    "comment": "Tooltip/description in settings",
+    "area": "settings",
+    "role": "tooltip",
+    "usages": [
+      "SiriShortcutsSettings"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Tear-jerker",
+    "newKey": "common.tearJerker.label",
+    "en": "Tear-jerker",
+    "comment": "Label in common",
+    "area": "common",
+    "role": "label",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Test Connection",
+    "newKey": "queue.testConnection.button",
+    "en": "Test Connection",
+    "comment": "Button in queue",
+    "area": "queue",
+    "role": "button",
+    "usages": [
+      "QueueViewModel",
+      "ServiceFields",
+      "ApiKeyTestButton",
+      "AppNotifications"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Text size",
+    "newKey": "settings.textSize.button",
+    "en": "Text size",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "SettingsView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "The footer is gone. Add new content via the **+** button next to the tabs, or press **⌘N** anywhere in the popover. The **⋯** menu next to it holds Settings, Quit and Open Window — and everything's also in the right-click menu on the menu bar icon.",
+    "newKey": "settings.theFooterIsGone.tooltip",
+    "en": "The footer is gone. Add new content via the **+** button next to the tabs, or press **⌘N** anywhere in the popover. The **⋯** menu next to it holds Settings, Quit and Open Window — and everything's also in the right-click menu on the menu bar icon.",
+    "comment": "Tooltip/description in settings",
+    "area": "settings",
+    "role": "tooltip",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "The model must support tool calling, and results vary by model. Library items may be sent to the model to tailor recommendations. Tip: free models on OpenRouter work well.",
+    "newKey": "settings.theModelMustSupport.tooltip",
+    "en": "The model must support tool calling, and results vary by model. Library items may be sent to the model to tailor recommendations. Tip: free models on OpenRouter work well.",
+    "comment": "Tooltip/description in settings",
+    "area": "settings",
+    "role": "tooltip",
+    "usages": [
+      "SettingsView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Theme",
+    "newKey": "settings.theme.button",
+    "en": "Theme",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "SettingsView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Thinking…",
+    "newKey": "chat.thinking.button",
+    "en": "Thinking…",
+    "comment": "Button in chat",
+    "area": "chat",
+    "role": "button",
+    "usages": [
+      "ChatView",
+      "ShimmerThinkingLabel"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "This empties your Your Picks list. The swipe deck is unaffected.",
+    "newKey": "discover.thisEmptiesYourYour.tooltip",
+    "en": "This empties your Your Picks list. The swipe deck is unaffected.",
+    "comment": "Tooltip/description in discover",
+    "area": "discover",
+    "role": "tooltip",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "This will remove \"%@\" (%lld episodes) from the download client.",
+    "newKey": "settings.thisWillRemoveLld.tooltip",
+    "en": "This will remove \"%@\" (%lld episodes) from the download client.",
+    "comment": "Tooltip/description in settings",
+    "area": "settings",
+    "role": "tooltip",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "This will remove \"%@\" from the download client.",
+    "newKey": "detail.thisWillRemoveFrom.tooltip",
+    "en": "This will remove \"%@\" from the download client.",
+    "comment": "Tooltip/description in detail",
+    "area": "detail",
+    "role": "tooltip",
+    "usages": [
+      "EpisodeRow"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "This will remove the download from the client.",
+    "newKey": "detail.thisWillRemoveThe.tooltip",
+    "en": "This will remove the download from the client.",
+    "comment": "Tooltip/description in detail",
+    "area": "detail",
+    "role": "tooltip",
+    "usages": [
+      "DetailView",
+      "MultiRow",
+      "QueueRowView",
+      "EpisodeDetailOverlay"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "This will remove the season pack from the client.",
+    "newKey": "queue.thisWillRemoveThe.tooltip",
+    "en": "This will remove the season pack from the client.",
+    "comment": "Tooltip/description in queue",
+    "area": "queue",
+    "role": "tooltip",
+    "usages": [
+      "QueueGroupRowView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Thriller",
+    "newKey": "discover.thriller.button",
+    "en": "Thriller",
+    "comment": "Button in discover",
+    "area": "discover",
+    "role": "button",
+    "usages": [
+      "DiscoverItem",
+      "DemoChatProvider"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Tip: ask for a quiz of movies or shows to start swiping.",
+    "newKey": "discover.tipAskForA.tooltip",
+    "en": "Tip: ask for a quiz of movies or shows to start swiping.",
+    "comment": "Tooltip/description in discover",
+    "area": "discover",
+    "role": "tooltip",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "To discover new films, add a TMDB API key in Settings → AI → Discovery.",
+    "newKey": "settings.toDiscoverNewFilms.tooltip",
+    "en": "To discover new films, add a TMDB API key in Settings → AI → Discovery.",
+    "comment": "Tooltip/description in settings",
+    "area": "settings",
+    "role": "tooltip",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "To download",
+    "newKey": "discover.toDownload.button",
+    "en": "To download",
+    "comment": "Button in discover",
+    "area": "discover",
+    "role": "button",
+    "usages": [
+      "DiscoverItem"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Today",
+    "newKey": "upcoming.today.button",
+    "en": "Today",
+    "comment": "Button in upcoming",
+    "area": "upcoming",
+    "role": "button",
+    "usages": [
+      "UpcomingItem"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Token",
+    "newKey": "settings.token.button",
+    "en": "Token",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "MCPSettingsPane"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Tomorrow",
+    "newKey": "upcoming.tomorrow.button",
+    "en": "Tomorrow",
+    "comment": "Button in upcoming",
+    "area": "upcoming",
+    "role": "button",
+    "usages": [
+      "UpcomingItem"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Tonight",
+    "newKey": "onboarding.tonight.button",
+    "en": "Tonight",
+    "comment": "Button in onboarding",
+    "area": "onboarding",
+    "role": "button",
+    "usages": [
+      "WelcomeView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Tonight, Needs you, and notifications",
+    "newKey": "onboarding.tonightNeedsYouAnd.label",
+    "en": "Tonight, Needs you, and notifications",
+    "comment": "Label in onboarding",
+    "area": "onboarding",
+    "role": "label",
+    "usages": [
+      "WelcomeContent"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Tool call: %@",
+    "newKey": "common.toolCall.label",
+    "en": "Tool call: %@",
+    "comment": "Label in common",
+    "area": "common",
+    "role": "label",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Tools",
+    "newKey": "settings.tools.button",
+    "en": "Tools",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "MCPSettingsPane"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Tools are only registered for services you have configured — with no Sonarr/Radarr set up, the server exposes none.",
+    "newKey": "settings.toolsAreOnlyRegistered.tooltip",
+    "en": "Tools are only registered for services you have configured — with no Sonarr/Radarr set up, the server exposes none.",
+    "comment": "Tooltip/description in settings",
+    "area": "settings",
+    "role": "tooltip",
+    "usages": [
+      "MCPSettingsPane"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Torrent",
+    "newKey": "queue.torrent.button",
+    "en": "Torrent",
+    "comment": "Button in queue",
+    "area": "queue",
+    "role": "button",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Torrents",
+    "newKey": "queue.torrents.button",
+    "en": "Torrents",
+    "comment": "Button in queue",
+    "area": "queue",
+    "role": "button",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Tracks",
+    "newKey": "detail.tracks.button",
+    "en": "Tracks",
+    "comment": "Button in detail",
+    "area": "detail",
+    "role": "button",
+    "usages": [
+      "LidarrDetailPanel"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Transmission",
+    "newKey": "settings.transmission.button",
+    "en": "Transmission",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "ServiceConfig",
+      "SettingsView",
+      "LocalToolBackend+ArrTools"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "True story",
+    "newKey": "common.trueStory.button",
+    "en": "True story",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Try demo mode",
+    "newKey": "onboarding.tryDemoMode.button",
+    "en": "Try demo mode",
+    "comment": "Button in onboarding",
+    "area": "onboarding",
+    "role": "button",
+    "usages": [
+      "WelcomeView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Try: Cozy Sunday afternoon…",
+    "newKey": "discover.tryCozySundayAfternoon.label",
+    "en": "Try: Cozy Sunday afternoon…",
+    "comment": "Label in common",
+    "area": "discover",
+    "role": "label",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Try: Crowd-pleaser…",
+    "newKey": "discover.tryCrowdPleaser.button",
+    "en": "Try: Crowd-pleaser…",
+    "comment": "Button in common",
+    "area": "discover",
+    "role": "button",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Try: Date night…",
+    "newKey": "discover.tryDateNight.button",
+    "en": "Try: Date night…",
+    "comment": "Button in common",
+    "area": "discover",
+    "role": "button",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Try: Friends over with pizza…",
+    "newKey": "common.tryFriendsOverWith.label",
+    "en": "Try: Friends over with pizza…",
+    "comment": "Label in common",
+    "area": "common",
+    "role": "label",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Try: Long flight…",
+    "newKey": "common.tryLongFlight.button",
+    "en": "Try: Long flight…",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Try: give me a quiz of cozy 90s comedies",
+    "newKey": "discover.tryGiveMeA.label",
+    "en": "Try: give me a quiz of cozy 90s comedies",
+    "comment": "Label in discover",
+    "area": "discover",
+    "role": "label",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Try: pokaż mi quiz na sobotę wieczór",
+    "newKey": "discover.tryExample.saturdayNight",
+    "en": "Try: surprise me with a Saturday-night quiz",
+    "comment": "Label in discover",
+    "area": "discover",
+    "role": "tooltip",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Try: surprise me with a quiz",
+    "newKey": "discover.trySurpriseMeWith.label",
+    "en": "Try: surprise me with a quiz",
+    "comment": "Label in discover",
+    "area": "discover",
+    "role": "label",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Type label…",
+    "newKey": "common.typeLabel.button",
+    "en": "Type label…",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Type name…",
+    "newKey": "common.typeName.button",
+    "en": "Type name…",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "URL",
+    "newKey": "settings.url.label",
+    "en": "URL",
+    "comment": "Label in settings",
+    "area": "settings",
+    "role": "label",
+    "usages": [
+      "ServiceFields"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Unaired",
+    "newKey": "detail.unaired.button",
+    "en": "Unaired",
+    "comment": "Button in detail",
+    "area": "detail",
+    "role": "button",
+    "usages": [
+      "EpisodeDetailOverlay"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Unknown",
+    "newKey": "queue.unknown.button",
+    "en": "Unknown",
+    "comment": "Button in queue",
+    "area": "queue",
+    "role": "button",
+    "usages": [
+      "QueueItem",
+      "SeasonRow",
+      "WhisparrClient",
+      "LidarrClient",
+      "SonarrClient",
+      "RadarrClient"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Unknown download protocol",
+    "newKey": "queue.unknownDownloadProtocol.label",
+    "en": "Unknown download protocol",
+    "comment": "Label in queue",
+    "area": "queue",
+    "role": "label",
+    "usages": [
+      "QueueAggregator"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Unlock",
+    "newKey": "paywall.unlock.button",
+    "en": "Unlock",
+    "comment": "Button in paywall",
+    "area": "paywall",
+    "role": "button",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Unlock ArrBarr Pro",
+    "newKey": "settings.unlockArrbarrPro.button",
+    "en": "Unlock ArrBarr Pro",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "SettingsView",
+      "iOSAppRoot"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Unlock Control",
+    "newKey": "paywall.unlockControl.button",
+    "en": "Unlock Control",
+    "comment": "Button in paywall",
+    "area": "paywall",
+    "role": "button",
+    "usages": [
+      "PaywallView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Unsaved Changes",
+    "newKey": "common.unsavedChanges.button",
+    "en": "Unsaved Changes",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Upcoming",
+    "newKey": "queue.upcoming.button",
+    "en": "Upcoming",
+    "comment": "Button in queue",
+    "area": "queue",
+    "role": "button",
+    "usages": [
+      "QueueTabContent",
+      "SettingsView",
+      "PopoverContentView",
+      "iOSAppRoot"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Upcoming window",
+    "newKey": "upcoming.upcomingWindow.button",
+    "en": "Upcoming window",
+    "comment": "Button in upcoming",
+    "area": "upcoming",
+    "role": "button",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Upgrade",
+    "newKey": "detail.upgrade.button",
+    "en": "Upgrade",
+    "comment": "Button in detail",
+    "area": "detail",
+    "role": "button",
+    "usages": [
+      "ListingBadgesView",
+      "QueueComparisonCard",
+      "MediaHeaderCard",
+      "QueueItemPrimitives",
+      "NotificationCoalescer"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Usenet",
+    "newKey": "queue.usenet.button",
+    "en": "Usenet",
+    "comment": "Button in queue",
+    "area": "queue",
+    "role": "button",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Username",
+    "newKey": "settings.username.button",
+    "en": "Username",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "ServiceFields"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "VIBE",
+    "newKey": "common.vibe.label",
+    "en": "VIBE",
+    "comment": "Label in common",
+    "area": "common",
+    "role": "label",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Version",
+    "newKey": "settings.version.button",
+    "en": "Version",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "SettingsView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Version %@",
+    "newKey": "common.version.label",
+    "en": "Version %@",
+    "comment": "Label in common",
+    "area": "common",
+    "role": "label",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "View",
+    "newKey": "onboarding.view.button",
+    "en": "View",
+    "comment": "Button in onboarding",
+    "area": "onboarding",
+    "role": "button",
+    "usages": [
+      "WelcomeView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "War",
+    "newKey": "discover.war.button",
+    "en": "War",
+    "comment": "Button in discover",
+    "area": "discover",
+    "role": "button",
+    "usages": [
+      "DiscoverItem"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Warning",
+    "newKey": "queue.warning.button",
+    "en": "Warning",
+    "comment": "Button in queue",
+    "area": "queue",
+    "role": "button",
+    "usages": [
+      "QueueItem",
+      "SeasonRow"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Watch",
+    "newKey": "discover.watch.button",
+    "en": "Watch",
+    "comment": "Button in discover",
+    "area": "discover",
+    "role": "button",
+    "usages": [
+      "DiscoverTabView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Watching is always free",
+    "newKey": "paywall.watchingIsAlwaysFree.button",
+    "en": "Watching is always free",
+    "comment": "Button in paywall",
+    "area": "paywall",
+    "role": "button",
+    "usages": [
+      "PaywallView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Website",
+    "newKey": "settings.website.button",
+    "en": "Website",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "SettingsView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Weighing options…",
+    "newKey": "chat.weighingOptions.button",
+    "en": "Weighing options…",
+    "comment": "Button in chat",
+    "area": "chat",
+    "role": "button",
+    "usages": [
+      "ShimmerThinkingLabel"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Welcome screen",
+    "newKey": "onboarding.welcomeScreen.button",
+    "en": "Welcome screen",
+    "comment": "Button in onboarding",
+    "area": "onboarding",
+    "role": "button",
+    "usages": [
+      "WelcomeContent"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Welcome to ArrBarr",
+    "newKey": "onboarding.welcomeToArrbarr.button",
+    "en": "Welcome to ArrBarr",
+    "comment": "Button in onboarding",
+    "area": "onboarding",
+    "role": "button",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Western",
+    "newKey": "discover.western.button",
+    "en": "Western",
+    "comment": "Button in discover",
+    "area": "discover",
+    "role": "button",
+    "usages": [
+      "DiscoverItem"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "What are you discovering?",
+    "newKey": "common.whatAreYouDiscovering.tooltip",
+    "en": "What are you discovering?",
+    "comment": "Tooltip/description in common",
+    "area": "common",
+    "role": "tooltip",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "What are you in the mood for?",
+    "newKey": "discover.whatAreYouIn.tooltip",
+    "en": "What are you in the mood for?",
+    "comment": "Tooltip/description in discover",
+    "area": "discover",
+    "role": "tooltip",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "What syncs",
+    "newKey": "settings.whatSyncs.button",
+    "en": "What syncs",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "ICloudSettingsView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "What's New in ArrBarr",
+    "newKey": "common.whatSNewIn.button",
+    "en": "What's New in ArrBarr",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "What's downloading right now?",
+    "newKey": "paywall.whatSDownloadingRight.tooltip",
+    "en": "What's downloading right now?",
+    "comment": "Tooltip/description in paywall",
+    "area": "paywall",
+    "role": "tooltip",
+    "usages": [
+      "PaywallHeroes"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "While open",
+    "newKey": "common.whileOpen.button",
+    "en": "While open",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Whisparr",
+    "newKey": "queue.whisparr.button",
+    "en": "Whisparr",
+    "comment": "Button in queue",
+    "area": "queue",
+    "role": "button",
+    "usages": [
+      "ServiceConfig",
+      "QueueItem",
+      "SettingsView",
+      "HistoryView",
+      "Chips"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Whisparr AI access is disabled in Settings.",
+    "newKey": "settings.whisparrAiAccessIs.tooltip",
+    "en": "Whisparr AI access is disabled in Settings.",
+    "comment": "Tooltip/description in settings",
+    "area": "settings",
+    "role": "tooltip",
+    "usages": [
+      "LocalToolBackend",
+      "LocalToolBackend+ArrTools"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Whisparr may provide 18+ content. Confirm that you are 18 or older.",
+    "newKey": "settings.whisparrMayProvide18.tooltip",
+    "en": "Whisparr may provide 18+ content. Confirm that you are 18 or older.",
+    "comment": "Tooltip/description in settings",
+    "area": "settings",
+    "role": "tooltip",
+    "usages": [
+      "ServiceFields"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Will query your indexers and start a download if a release matches.",
+    "newKey": "detail.willQueryYourIndexers.tooltip",
+    "en": "Will query your indexers and start a download if a release matches.",
+    "comment": "Tooltip/description in detail",
+    "area": "detail",
+    "role": "tooltip",
+    "usages": [
+      "EpisodeDetailOverlay",
+      "EpisodeRow"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Will query your indexers for every episode in this season — including upgrades for episodes already on disk.",
+    "newKey": "detail.willQueryYourIndexers2.tooltip",
+    "en": "Will query your indexers for every episode in this season — including upgrades for episodes already on disk.",
+    "comment": "Tooltip/description in detail",
+    "area": "detail",
+    "role": "tooltip",
+    "usages": [
+      "SeasonRow"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Will query your indexers for every missing episode across the entire series.",
+    "newKey": "detail.willQueryYourIndexers3.tooltip",
+    "en": "Will query your indexers for every missing episode across the entire series.",
+    "comment": "Tooltip/description in detail",
+    "area": "detail",
+    "role": "tooltip",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Will query your indexers for every missing episode in this season.",
+    "newKey": "detail.willQueryYourIndexers4.tooltip",
+    "en": "Will query your indexers for every missing episode in this season.",
+    "comment": "Tooltip/description in detail",
+    "area": "detail",
+    "role": "tooltip",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Will replace existing file",
+    "newKey": "common.willReplaceExistingFile.label",
+    "en": "Will replace existing file",
+    "comment": "Label in common",
+    "area": "common",
+    "role": "label",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Working…",
+    "newKey": "chat.working.button",
+    "en": "Working…",
+    "comment": "Button in chat",
+    "area": "chat",
+    "role": "button",
+    "usages": [
+      "ChatView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Your menu-bar companion for Radarr, Sonarr, and Lidarr.",
+    "newKey": "common.yourMenuBarCompanion.tooltip",
+    "en": "Your menu-bar companion for Radarr, Sonarr, and Lidarr.",
+    "comment": "Tooltip/description in common",
+    "area": "common",
+    "role": "tooltip",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Your picks",
+    "newKey": "discover.yourPicks.button",
+    "en": "Your picks",
+    "comment": "Button in discover",
+    "area": "discover",
+    "role": "button",
+    "usages": [
+      "DiscoverTabView",
+      "DiscoverMatchedListView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Z",
+    "newKey": "common.z.button",
+    "en": "Z",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "Z lat",
+    "newKey": "common.zLat.button",
+    "en": "Z lat",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "admin",
+    "newKey": "settings.admin.label",
+    "en": "admin",
+    "comment": "Label in settings",
+    "area": "settings",
+    "role": "label",
+    "usages": [
+      "ServiceFields"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "chat.empty.divider",
+    "newKey": "chat.orAsk.button",
+    "en": "OR ASK",
+    "comment": "Button in chat",
+    "area": "chat",
+    "role": "button",
+    "usages": [
+      "ChatEmptyStateView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "chat.empty.greeting",
+    "newKey": "chat.whatToWatchTonight.tooltip",
+    "en": "What to watch tonight?",
+    "comment": "Tooltip/description in chat",
+    "area": "chat",
+    "role": "tooltip",
+    "usages": [
+      "ChatEmptyStateView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "chat.empty.quiz.cta",
+    "newKey": "common.letSGo.button",
+    "en": "Let's go",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "chat.empty.quiz.cta.movies",
+    "newKey": "onboarding.movies.button",
+    "en": "Movies",
+    "comment": "Button in onboarding",
+    "area": "onboarding",
+    "role": "button",
+    "usages": [
+      "QuizFeatureCard"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "chat.empty.quiz.cta.series",
+    "newKey": "onboarding.series.button",
+    "en": "Series",
+    "comment": "Button in onboarding",
+    "area": "onboarding",
+    "role": "button",
+    "usages": [
+      "QuizFeatureCard"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "chat.empty.quiz.subtitle",
+    "newKey": "onboarding.swipeThroughPicksAdd.tooltip",
+    "en": "Swipe through picks, add to your library.",
+    "comment": "Tooltip/description in onboarding",
+    "area": "onboarding",
+    "role": "tooltip",
+    "usages": [
+      "QuizFeatureCard"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "chat.empty.quiz.title",
+    "newKey": "onboarding.quiz.button",
+    "en": "Quiz",
+    "comment": "Button in onboarding",
+    "area": "onboarding",
+    "role": "button",
+    "usages": [
+      "QuizFeatureCard"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "chat.empty.subhead",
+    "newKey": "chat.quizATipOr.tooltip",
+    "en": "Quiz, a tip, or type a question.",
+    "comment": "Tooltip/description in chat",
+    "area": "chat",
+    "role": "tooltip",
+    "usages": [
+      "ChatEmptyStateView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "chat.empty.suggest.personSwinton",
+    "newKey": "chat.moviesWithTildaSwinton.label",
+    "en": "Movies with Tilda Swinton",
+    "comment": "Label in chat",
+    "area": "chat",
+    "role": "label",
+    "usages": [
+      "ChatEmptyStateView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "chat.empty.suggest.queue",
+    "newKey": "chat.whatSDownloading.tooltip",
+    "en": "What's downloading?",
+    "comment": "Tooltip/description in chat",
+    "area": "chat",
+    "role": "tooltip",
+    "usages": [
+      "ChatEmptyStateView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "chat.empty.suggest.tasteMrRobot",
+    "newKey": "chat.suggestSomethingLikeMr.tooltip",
+    "en": "Suggest something like Mr. Robot?",
+    "comment": "Tooltip/description in chat",
+    "area": "chat",
+    "role": "tooltip",
+    "usages": [
+      "ChatEmptyStateView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "chat.empty.suggest.upcoming",
+    "newKey": "chat.whatSOutToday.tooltip",
+    "en": "What's out today?",
+    "comment": "Tooltip/description in chat",
+    "area": "chat",
+    "role": "tooltip",
+    "usages": [
+      "ChatEmptyStateView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "from",
+    "newKey": "common.from.label",
+    "en": "from",
+    "comment": "Label in common",
+    "area": "common",
+    "role": "label",
+    "usages": [],
+    "needsReview": true
+  },
+  {
+    "oldKey": "iCloud",
+    "newKey": "settings.icloud.label",
+    "en": "iCloud",
+    "comment": "Label in settings",
+    "area": "settings",
+    "role": "label",
+    "usages": [
+      "SettingsView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "iCloud storage is full — some settings couldn’t sync.",
+    "newKey": "settings.icloudStorageIsFull.tooltip",
+    "en": "iCloud storage is full — some settings couldn’t sync.",
+    "comment": "Tooltip/description in settings",
+    "area": "settings",
+    "role": "tooltip",
+    "usages": [],
+    "needsReview": false
+  },
+  {
+    "oldKey": "qBittorrent",
+    "newKey": "settings.qbittorrent.label",
+    "en": "qBittorrent",
+    "comment": "Label in settings",
+    "area": "settings",
+    "role": "label",
+    "usages": [
+      "ServiceConfig",
+      "SettingsView",
+      "DemoMocks+Queue",
+      "LocalToolBackend+ArrTools",
+      "NotificationCoalescer",
+      "DemoMocks"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "rTorrent",
+    "newKey": "settings.rtorrent.label",
+    "en": "rTorrent",
+    "comment": "Label in settings",
+    "area": "settings",
+    "role": "label",
+    "usages": [
+      "ServiceConfig",
+      "SettingsView",
+      "DemoMocks+Queue",
+      "LocalToolBackend+ArrTools"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "…lub opisz słownie",
+    "newKey": "discover.orDescribe.placeholder",
+    "en": "…or describe it in words",
+    "comment": "Label in common",
+    "area": "discover",
+    "role": "label",
+    "usages": [],
+    "needsReview": false
+  }
+]
