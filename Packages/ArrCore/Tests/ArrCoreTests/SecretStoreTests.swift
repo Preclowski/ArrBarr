@@ -113,7 +113,7 @@ struct SecretStoreSuite {
 
 /// SecretStore that records which accounts were re-written, to assert
 /// `reapplySyncAttribute` only touches keys that hold a value.
-final class RecordingSecretStore: SecretStore, @unchecked Sendable {
+fileprivate final class RecordingSecretStore: SecretStore, @unchecked Sendable {
     private var values: [String: String] = [:]
     private(set) var setLog: [String] = []
     func read(_ key: SecretKey) -> String? { values[key.account] }

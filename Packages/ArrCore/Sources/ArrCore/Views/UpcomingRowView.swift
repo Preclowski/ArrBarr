@@ -21,18 +21,10 @@ public struct UpcomingRowView: View {
         ) {
             HStack(spacing: 6) {
                 if item.hasFile {
-                    // "Downloaded" status pill — same shape as the queue status
-                    // badges (a tinted outlined chip), green for "already grabbed".
-                    Text("Downloaded", bundle: .module)
-                        .scaledFont(size: 9, weight: .semibold)
-                        .textCase(.lowercase)
-                        .foregroundStyle(.green)
-                        .padding(.horizontal, 5)
-                        .padding(.vertical, 1)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: Tokens.Radius.chip)
-                                .stroke(Color.green.opacity(0.55), lineWidth: 1)
-                        )
+                    // Same accent-tinted pill as the search view's library
+                    // hits — one visual for "you already own this" across
+                    // every surface (see `InLibraryBadge`).
+                    InLibraryBadge()
                 }
                 // Which arr this upcoming item comes from.
                 ServiceIcon(source: item.source, size: 13)

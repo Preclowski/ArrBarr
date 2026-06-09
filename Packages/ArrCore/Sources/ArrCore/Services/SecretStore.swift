@@ -30,7 +30,7 @@ public struct SecretKey: Sendable, Equatable {
     /// Every secret eligible for iCloud Keychain sync: API key + password for
     /// each service, plus the OpenAI and TMDB keys. `mcpBearer` is excluded —
     /// it is `deviceOnly` and must never replicate.
-    public static var syncable: [SecretKey] {
+    public static let syncable: [SecretKey] = {
         var keys: [SecretKey] = []
         for kind in ServiceKind.allCases {
             keys.append(.apiKey(for: kind))
@@ -39,7 +39,7 @@ public struct SecretKey: Sendable, Equatable {
         keys.append(.openAIKey)
         keys.append(.tmdbKey)
         return keys
-    }
+    }()
 }
 
 public protocol SecretStore: Sendable {
