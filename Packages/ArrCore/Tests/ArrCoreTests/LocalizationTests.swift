@@ -2,63 +2,19 @@ import Testing
 import Foundation
 @testable import ArrCore
 
-/// We no longer ship a runtime locale-switcher shim — string lookup goes
-/// through SwiftUI's native `Text(_:bundle:)` / `String(localized:bundle:)`,
-/// which read from the resource bundle Xcode compiles from xcstrings. So
-/// there is nothing to unit-test about resolution — Apple owns that. What
-/// we still want to guarantee is that the catalog itself has translations
-/// for every runtime-visible key in every shipped locale. This test parses
-/// `Localizable.xcstrings` directly, which sidesteps the fact that SwiftPM
-/// does not compile xcstrings into the test target's `Bundle.module`.
+/// String lookup goes through SwiftUI's native `Text(_:bundle:)` /
+/// `String(localized:bundle:)`, which read from the resource bundle Xcode
+/// compiles from `Localizable.xcstrings`. Apple owns resolution, so there is
+/// nothing to unit-test about that — and SwiftPM does not compile xcstrings
+/// into the test target's `Bundle.module` anyway.
+///
+/// What we DO guarantee is catalog integrity: every key carries a non-empty
+/// value in every shipped locale (en, pl, de, es, fr, nl), whether it's a
+/// plain `stringUnit` or a pluralised `variations.plural` entry. This test
+/// parses `Localizable.xcstrings` directly, mirroring `Tools/loc/loc_audit.py`.
 @Suite("Localizable.xcstrings catalog completeness")
 struct LocalizationCatalogTests {
-    /// Strings the app renders at runtime. Add new user-visible keys here
-    /// so missing translations get caught before they ship.
-    private let runtimeKeys: [String] = [
-        "Today",
-        "Tomorrow",
-        "Needs you",
-        "Tonight",
-        "Show indexer issues warning",
-        // "Show Tonight banner" / "Show Needs you" dropped — the
-        // ConfigStore booleans they used to label live as data only;
-        // the Settings section that toggled them with text labels
-        // moved to the section-order drag list (showing source
-        // names instead). No runtime render = no translation needed.
-        "Show history",
-        "Refresh",
-        "More options",
-        "Close",
-        "Open in browser",
-        "Resume",
-        "Pause",
-        "Remove from client",
-        "Quality",
-        "Size",
-        "Indexer",
-        "File",
-        "Custom formats",
-        "Existing file",
-        "Upgrade",
-        "Episodes",
-        "Multiple seasons",
-        "Season %02lld",
-        "%lld episodes",
-        "Replacing all %lld episodes",
-        "Restart required to apply the new language.",
-        "Quit and reopen the app to apply the new language.",
-        "Relaunch",
-        "Login (leave empty for API key)",
-        "Password or API key",
-        "Service problem",
-        "Spoiler",
-        "Adult content",
-        "Confirm (18+)",
-        "Whisparr may provide 18+ content. Confirm that you are 18 or older.",
-        "Website",
-        "Privacy Policy",
-        "NSFW filter",
-    ]
+    private static let shippedLocales = ["en", "pl", "de", "es", "fr", "nl"]
 
     private static let catalog: [String: Any] = {
         // #filePath is this test file; walk up to the package root, then into
@@ -72,25 +28,45 @@ struct LocalizationCatalogTests {
         return try! JSONSerialization.jsonObject(with: data) as! [String: Any]
     }()
 
-    @Test("Every runtime-visible key has a translated entry in every locale", arguments: [
-        "de", "es", "fr", "pl",
-    ])
+    /// A localization unit is complete when it has either a non-empty
+    /// `stringUnit.value` or a `variations.plural` whose every category value
+    /// is non-empty.
+    private func isComplete(_ unit: Any?) -> Bool {
+        guard let loc = unit as? [String: Any] else { return false }
+        if let su = loc["stringUnit"] as? [String: Any],
+           let value = su["value"] as? String, !value.isEmpty {
+            return true
+        }
+        if let variations = loc["variations"] as? [String: Any],
+           let plural = variations["plural"] as? [String: Any], !plural.isEmpty {
+            for case let cat as [String: Any] in plural.values {
+                guard let su = cat["stringUnit"] as? [String: Any],
+                      let value = su["value"] as? String, !value.isEmpty
+                else { return false }
+            }
+            return true
+        }
+        return false
+    }
+
+    @Test("Every catalog key has a non-empty value in every shipped locale",
+          arguments: shippedLocales)
     func everyKeyHasTranslation(_ locale: String) {
         let strings = Self.catalog["strings"] as! [String: [String: Any]]
         var missing: [String] = []
-        for key in runtimeKeys {
-            guard let entry = strings[key],
-                  let localizations = entry["localizations"] as? [String: Any],
-                  let loc = localizations[locale] as? [String: Any],
-                  let stringUnit = loc["stringUnit"] as? [String: Any],
-                  let value = stringUnit["value"] as? String,
-                  !value.isEmpty
-            else {
+        for (key, entry) in strings where !key.isEmpty {
+            let localizations = entry["localizations"] as? [String: Any]
+            if !isComplete(localizations?[locale]) {
                 missing.append(key)
-                continue
             }
-            _ = value
         }
-        #expect(missing.isEmpty, "Missing translations in \(locale): \(missing.joined(separator: ", "))")
+        let preview = missing.sorted().prefix(20).joined(separator: ", ")
+        #expect(missing.isEmpty, "Missing \(locale) for \(missing.count) keys: \(preview)")
+    }
+
+    @Test("Catalog has no empty-string key")
+    func catalogIsClean() {
+        let strings = Self.catalog["strings"] as! [String: [String: Any]]
+        #expect(strings[""] == nil, "empty-string key must be dropped")
     }
 }
