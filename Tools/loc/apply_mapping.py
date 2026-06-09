@@ -7,6 +7,13 @@ CATALOG = Path("Packages/ArrCore/Sources/ArrCore/Resources/Localizable.xcstrings
 
 def rebuild(old_catalog, mapping, keep_langs=("pl",)):
     old_strings = old_catalog["strings"]
+    # Guard: this rebuilds keyed by oldKey (the original English-text keys). If the
+    # input catalog has ALREADY been rewritten to dotted keys, none of the oldKeys
+    # match and every carried translation would be silently dropped. Refuse.
+    if mapping and not any(r["oldKey"] in old_strings for r in mapping):
+        raise SystemExit(
+            "apply_mapping: input catalog has no oldKeys from mapping — it looks "
+            "already migrated. Refusing to rebuild (would drop all translations).")
     new_strings = {}
     for rec in mapping:
         old_key, new_key = rec["oldKey"], rec["newKey"]

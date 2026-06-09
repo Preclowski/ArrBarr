@@ -168,7 +168,7 @@ public struct WelcomeView: View {
                     guard i != pageIndex else { return }
                     withAnimation(.easeInOut(duration: 0.22)) { pageIndex = i }
                 }
-                .help(Text("Page \(i + 1)", bundle: .module))
+                .help(Text(String(format: String(localized: "common.pageLld.label", bundle: .module), i + 1)))
             }
         }
     }

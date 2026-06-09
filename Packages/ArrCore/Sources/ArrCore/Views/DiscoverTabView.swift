@@ -436,7 +436,7 @@ public struct DiscoverTabView: View {
                 .buttonStyle(.plain)
             }
             if !radarrAvailable {
-                Text("Configure Radarr in Settings to save picks to your library — add-actions will open TMDB instead.",
+                Text("discover.configureRadarrInSettings.tooltip",
                      bundle: .module)
                     .scaledFont(size: 10)
                     .foregroundStyle(.tertiary)

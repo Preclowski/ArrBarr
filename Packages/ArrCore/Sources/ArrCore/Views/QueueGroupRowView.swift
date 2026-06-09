@@ -139,7 +139,7 @@ public struct QueueGroupRowView: View {
                     if showsPlay { onResume() } else { onPause() }
                 } label: {
                     if rep.status == .queued {
-                        Label { Text("Start now", bundle: .module) } icon: { Image(systemName: "play.fill") }
+                        Label { Text("queue.startNow.button", bundle: .module) } icon: { Image(systemName: "play.fill") }
                     } else if rep.isPaused {
                         Label { Text("queue.resume.button", bundle: .module) } icon: { Image(systemName: "play.fill") }
                     } else {
@@ -150,7 +150,7 @@ public struct QueueGroupRowView: View {
             Button(role: .destructive) {
                 requestDeleteConfirm()
             } label: {
-                Label { Text("Remove from queue", bundle: .module) } icon: { Image(systemName: "trash") }
+                Label { Text("queue.removeFromQueue.button", bundle: .module) } icon: { Image(systemName: "trash") }
             }
         }
         // macOS-only hover affordances: row tint + 600 ms delayed tooltip.
@@ -255,7 +255,7 @@ public struct QueueGroupRowView: View {
         }
         .buttonStyle(.plain)
         .help(rep.status == .queued
-              ? Text("Start now", bundle: .module)
+              ? Text("queue.startNow.button", bundle: .module)
               : (rep.isPaused ? Text("queue.resume.button", bundle: .module) : Text("queue.pause.button", bundle: .module)))
     }
     #endif
@@ -397,7 +397,7 @@ public struct QueueGroupTooltip: View {
                 Image(systemName: "arrow.up.doc.fill")
                     .scaledFont(size: 9)
                     .foregroundStyle(.indigo)
-                Text("Replacing all \(upgradeCount) episodes", bundle: .module)
+                Text(String(format: String(localized: "detail.replacingAllLldEpisodes.label", bundle: .module), upgradeCount))
                     .scaledFont(size: 9, weight: .semibold)
                     .textCase(.uppercase)
                     .tracking(0.5)

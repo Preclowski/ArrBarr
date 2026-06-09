@@ -320,7 +320,7 @@ struct SeasonRow: View {
                     Image(systemName: "magnifyingglass")
                         .scaledFont(size: 10, weight: .medium)
                     if missing > 0 {
-                        Text("Search \(missing)", bundle: .module)
+                        Text(String(format: String(localized: "search.searchLld.label", bundle: .module), missing))
                             .scaledFont(size: 11, weight: .medium)
                     } else {
                         Text("search.search.button", bundle: .module)
@@ -341,7 +341,7 @@ struct SeasonRow: View {
             Button { performSeasonSearch() } label: { Text("search.search.button", bundle: .module) }
             Button(role: .cancel) {} label: { Text("common.cancel.button", bundle: .module) }
         } message: {
-            Text("Will query your indexers for every episode in this season — including upgrades for episodes already on disk.", bundle: .module)
+            Text("detail.willQueryYourIndexers2.tooltip", bundle: .module)
         }
     }
 

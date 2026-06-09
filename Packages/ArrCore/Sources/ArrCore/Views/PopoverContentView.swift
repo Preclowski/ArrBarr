@@ -631,7 +631,7 @@ public struct PopoverContentView: View {
             Button { Task { await viewModel.refresh() } } label: { Text("common.refresh.button", bundle: .module) }
                 .keyboardShortcut("r", modifiers: .command)
             Divider()
-            Button { onOpenSettings() } label: { Text("Settings…", bundle: .module) }
+            Button { onOpenSettings() } label: { Text("common.settings2.button", bundle: .module) }
                 .keyboardShortcut(",", modifiers: .command)
             #if os(macOS)
             Button { onShowAbout() } label: { Text("settings.aboutArrbarr.button", bundle: .module) }

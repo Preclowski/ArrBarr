@@ -33,7 +33,7 @@ struct PopoverEmptyState<MoreMenu: View>: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 8))
 
-                Button { onOpenSettings() } label: { Text("Open Settings…", bundle: .module) }
+                Button { onOpenSettings() } label: { Text("common.openSettings.button", bundle: .module) }
                     .modifier(GlassProminentButtonStyle())
                     .controlSize(.regular)
             }

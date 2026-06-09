@@ -108,7 +108,7 @@ struct ExistingFileBanner: View {
                         Text(verbatim: score > 0 ? "+\(score)" : "\(score)")
                             .scaledFont(size: 11, weight: .medium)
                             .foregroundStyle(score > 0 ? .green : .red)
-                            .help(Text("Custom format score", bundle: .module))
+                            .help(Text("common.customFormatScore.button", bundle: .module))
                     }
                 }
             }

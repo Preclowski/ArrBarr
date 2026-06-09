@@ -20,7 +20,7 @@ public struct ChatUnavailableView: View {
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.secondary)
             if reason == .mcpNotConfigured, let onOpenSettings {
-                Button { onOpenSettings() } label: { Text("Open Settings…", bundle: .module) }
+                Button { onOpenSettings() } label: { Text("common.openSettings.button", bundle: .module) }
                     .controlSize(.small)
             }
         }

@@ -143,8 +143,8 @@ public struct ChatView: View {
 
     private var inputBar: some View {
         HStack(spacing: 8) {
-            TextField(text: $draft, prompt: Text("Ask anything…", bundle: .module), axis: .vertical) {
-                Text("Ask anything…", bundle: .module)
+            TextField(text: $draft, prompt: Text("chat.askAnything.button", bundle: .module), axis: .vertical) {
+                Text("chat.askAnything.button", bundle: .module)
             }
                 .textFieldStyle(.plain)
                 .focused($inputFocused)

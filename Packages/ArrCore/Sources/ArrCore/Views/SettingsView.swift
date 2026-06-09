@@ -174,7 +174,7 @@ public struct SettingsView: View {
                     }
                     if !configStore.openai.isConfigured {
                         Label {
-                            Text("Add base URL, API key and model — AI stays off until then.", bundle: .module)
+                            Text("settings.addBaseUrlApi.tooltip", bundle: .module)
                         } icon: {
                             Image(systemName: "exclamationmark.triangle.fill")
                         }
@@ -207,7 +207,7 @@ public struct SettingsView: View {
             Section {
                 SecureField(text: $configStore.tmdbApiKey,
                             prompt: Text(verbatim: "v4 Read Access Token")) {
-                    Text("TMDB Read Access Token", bundle: .module)
+                    Text("settings.tmdbReadAccessToken.button", bundle: .module)
                 }
                 .apiKeyField()
                 if !configStore.tmdbApiKey.isEmpty {
@@ -217,7 +217,7 @@ public struct SettingsView: View {
                 }
                 if let url = URL(string: "https://www.themoviedb.org/settings/api") {
                     Link(destination: url) {
-                        Label { Text("Get a free TMDB token", bundle: .module) } icon: { Image(systemName: "link") }
+                        Label { Text("settings.getAFreeTmdb.button", bundle: .module) } icon: { Image(systemName: "link") }
                             .font(.caption)
                     }
                 }
@@ -327,7 +327,7 @@ public struct SettingsView: View {
                         .contentShape(Rectangle())
                 }
                 .disabled(!canGoForward)
-                .help(Text("Forward", bundle: .module))
+                .help(Text("settings.forward.button", bundle: .module))
             }
             .buttonStyle(.borderless)
             .font(.body.weight(.medium))

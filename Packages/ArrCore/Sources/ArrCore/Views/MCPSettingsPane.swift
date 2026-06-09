@@ -19,11 +19,11 @@ struct MCPSettingsPane: View {
     var body: some View {
         Form {
             Section {
-                Toggle(isOn: $configStore.mcpEnabled) { Text("Enable MCP server", bundle: .module) }
+                Toggle(isOn: $configStore.mcpEnabled) { Text("settings.enableMcpServer.button", bundle: .module) }
             } header: {
-                Text("MCP Server", bundle: .module)
+                Text("settings.mcpServer.button", bundle: .module)
             } footer: {
-                Text("Exposes ArrBarr's tools over the Model Context Protocol so an external client (e.g. Claude Desktop) can drive your media stack. This is separate from the built-in AI assistant — changing these settings does not affect the in-app chat.", bundle: .module)
+                Text("chat.exposesArrbarrSTools.tooltip", bundle: .module)
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -47,12 +47,12 @@ struct MCPSettingsPane: View {
                           prompt: Text(verbatim: "0.0.0.0:8080"))
                     .technicalField()
             } label: {
-                Text("Listen address", bundle: .module)
+                Text("settings.listenAddress.button", bundle: .module)
             }
         } header: {
-            Text("Connection", bundle: .module)
+            Text("settings.connection.button", bundle: .module)
         } footer: {
-            Text("host:port to bind the server to. Use 0.0.0.0 to accept connections on every network interface, or 127.0.0.1 to keep it local.", bundle: .module)
+            Text("settings.hostPortToBind.tooltip", bundle: .module)
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -114,7 +114,7 @@ struct MCPSettingsPane: View {
                 }
             }
         } header: {
-            Text("Authentication", bundle: .module)
+            Text("settings.authentication.button", bundle: .module)
         } footer: {
             if configStore.mcpRequireAuth && configStore.mcpAuthToken.isEmpty {
                 warning("Generate a token — auth stays off until one is set.")
@@ -157,9 +157,9 @@ struct MCPSettingsPane: View {
             }
         } footer: {
             VStack(alignment: .leading, spacing: 4) {
-                Text(String(format: String(localized: "%1$lld of %2$lld tools exposed", bundle: .module),
+                Text(String(format: String(localized: "settings.toolsExposedCount.label", bundle: .module),
                             enabledToolCount, ChatToolCatalog.allToolNames.count))
-                Text("Tools are only registered for services you have configured — with no Sonarr/Radarr set up, the server exposes none.", bundle: .module)
+                Text("settings.toolsAreOnlyRegistered.tooltip", bundle: .module)
             }
             .font(.caption)
             .foregroundStyle(.secondary)

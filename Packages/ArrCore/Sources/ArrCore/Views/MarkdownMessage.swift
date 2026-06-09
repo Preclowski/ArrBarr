@@ -149,7 +149,7 @@ struct MarkdownMessage: View {
             .overlay {
                 if !spoilersRevealed {
                     Label {
-                        Text("Tap to reveal spoiler", bundle: .module)
+                        Text("chat.tapToRevealSpoiler.button", bundle: .module)
                     } icon: {
                         Image(systemName: "eye.slash.fill")
                     }

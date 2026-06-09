@@ -184,7 +184,7 @@ public struct SearchView: View {
                             HStack(spacing: 4) {
                                 Image(systemName: "chevron.down")
                                     .scaledFont(size: 9, weight: .semibold)
-                                Text("Show \(hiddenCount) more", bundle: .module)
+                                Text(String(format: String(localized: "common.showLldMore.label", bundle: .module), hiddenCount))
                                     .scaledFont(size: 11, weight: .medium)
                             }
                             .foregroundStyle(.secondary)

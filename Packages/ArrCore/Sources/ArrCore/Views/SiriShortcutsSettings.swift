@@ -20,7 +20,7 @@ public struct SiriShortcutsSettingsContent: View {
         } header: {
             Text("settings.siriShortcuts.button", bundle: .module)
         } footer: {
-            Text("Tap “Add to Siri” to set a phrase. The same actions appear in the Shortcuts app and Spotlight — no setup needed.", bundle: .module)
+            Text("settings.tapAddToSiri.tooltip", bundle: .module)
         }
         #else
         Section {

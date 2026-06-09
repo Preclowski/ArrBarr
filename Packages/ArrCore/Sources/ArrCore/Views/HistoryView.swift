@@ -75,7 +75,7 @@ public struct HistoryView: View {
             // anchoring the eye to the top.
             VStack(spacing: 8) {
                 ProgressView().controlSize(.small)
-                Text("Loading…", bundle: .module).font(.subheadline).foregroundStyle(.secondary)
+                Text("queue.loading.button", bundle: .module).font(.subheadline).foregroundStyle(.secondary)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if let error {

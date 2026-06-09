@@ -9,15 +9,10 @@ CALL_RE = re.compile(
     r'(Text\(\s*|String\(\s*localized:\s*|Label\(\s*|NSLocalizedString\(\s*)"((?:[^"\\]|\\.)*)"')
 
 def _unescape(s):
-    # Swift uses \u{XXXX} but Python's unicode_escape expects \uXXXX.
-    # Since mapping keys are plain ASCII, we only need basic unescaping;
-    # for any literal we can't decode, return it as-is (it won't match any key).
-    try:
-        # Convert Swift \u{XXXX} → \uXXXX first
-        s2 = re.sub(r'\\u\{([0-9a-fA-F]+)\}', lambda m: '\\u{:04x}'.format(int(m.group(1), 16)), s)
-        return s2.encode().decode("unicode_escape")
-    except (UnicodeDecodeError, ValueError):
-        return s
+    # Only undo the escapes Swift string literals actually use for our keys:
+    # \" -> " and \\ -> \. Do NOT use unicode_escape — it corrupts non-ASCII
+    # bytes (…, —, smart quotes) and breaks matching against UTF-8 catalog keys.
+    return s.replace('\\"', '"').replace('\\\\', '\\')
 
 def _escape(s):
     return s.replace("\\", "\\\\").replace('"', '\\"')

@@ -29,7 +29,7 @@ struct ApiKeyTestButton: View {
             case .testing:
                 ProgressView().controlSize(.small)
             case .success:
-                Label { Text("Connected", bundle: .module) } icon: { Image(systemName: "checkmark.circle.fill") }
+                Label { Text("settings.connected.button", bundle: .module) } icon: { Image(systemName: "checkmark.circle.fill") }
                     .font(.caption)
                     .foregroundStyle(.green)
                     .lineLimit(1)
@@ -59,8 +59,8 @@ struct ApiKeyTestButton: View {
         if desc.localizedCaseInsensitiveContains("401")
             || desc.localizedCaseInsensitiveContains("403")
             || desc.localizedCaseInsensitiveContains("unauthor") {
-            return String(localized: "Invalid key", bundle: .module)
+            return String(localized: "settings.invalidKey.button", bundle: .module)
         }
-        return String(localized: "Failed — check key & URL", bundle: .module)
+        return String(localized: "settings.failedCheckKeyUrl.button", bundle: .module)
     }
 }

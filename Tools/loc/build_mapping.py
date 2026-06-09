@@ -46,6 +46,8 @@ def slug(text, max_words=4):
     if not words:
         return "untitled"
     out = words[0].lower() + "".join(w.capitalize() for w in words[1:])
+    if out[0].isdigit():            # key segments must start with a letter
+        out = "n" + out
     return out[:40]
 
 def infer_role(text):

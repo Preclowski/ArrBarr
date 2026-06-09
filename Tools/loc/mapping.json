@@ -7341,5 +7341,209 @@
     "role": "label",
     "usages": [],
     "needsReview": false
+  },
+  {
+    "oldKey": "Connected",
+    "newKey": "settings.connected.button",
+    "en": "Connected",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "ApiKeyTestButton"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Invalid key",
+    "newKey": "settings.invalidKey.button",
+    "en": "Invalid key",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "ApiKeyTestButton"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Failed — check key & URL",
+    "newKey": "settings.failedCheckKeyUrl.button",
+    "en": "Failed — check key & URL",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "ApiKeyTestButton"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Custom format score",
+    "newKey": "common.customFormatScore.button",
+    "en": "Custom format score",
+    "comment": "Button in common",
+    "area": "common",
+    "role": "button",
+    "usages": [
+      "ExistingFileBanner"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Enable MCP server",
+    "newKey": "settings.enableMcpServer.button",
+    "en": "Enable MCP server",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "MCPSettingsPane"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "MCP Server",
+    "newKey": "settings.mcpServer.button",
+    "en": "MCP Server",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "MCPSettingsPane"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Listen address",
+    "newKey": "settings.listenAddress.button",
+    "en": "Listen address",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "MCPSettingsPane"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Connection",
+    "newKey": "settings.connection.button",
+    "en": "Connection",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "MCPSettingsPane"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "host:port to bind the server to. Use 0.0.0.0 to accept connections on every network interface, or 127.0.0.1 to keep it local.",
+    "newKey": "settings.hostPortToBind.tooltip",
+    "en": "host:port to bind the server to. Use 0.0.0.0 to accept connections on every network interface, or 127.0.0.1 to keep it local.",
+    "comment": "Tooltip/description in settings",
+    "area": "settings",
+    "role": "tooltip",
+    "usages": [
+      "MCPSettingsPane"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Authentication",
+    "newKey": "settings.authentication.button",
+    "en": "Authentication",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "MCPSettingsPane"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "%1$lld of %2$lld tools exposed",
+    "newKey": "settings.toolsExposedCount.label",
+    "en": "%1$lld of %2$lld tools exposed",
+    "comment": "Label in settings",
+    "area": "settings",
+    "role": "label",
+    "usages": [
+      "MCPSettingsPane"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Tap to reveal spoiler",
+    "newKey": "chat.tapToRevealSpoiler.button",
+    "en": "Tap to reveal spoiler",
+    "comment": "Button in chat",
+    "area": "chat",
+    "role": "button",
+    "usages": [
+      "MarkdownMessage"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Start now",
+    "newKey": "queue.startNow.button",
+    "en": "Start now",
+    "comment": "Button in queue",
+    "area": "queue",
+    "role": "button",
+    "usages": [
+      "QueueGroupRowView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Remove from queue",
+    "newKey": "queue.removeFromQueue.button",
+    "en": "Remove from queue",
+    "comment": "Button in queue",
+    "area": "queue",
+    "role": "button",
+    "usages": [
+      "QueueGroupRowView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "TMDB Read Access Token",
+    "newKey": "settings.tmdbReadAccessToken.button",
+    "en": "TMDB Read Access Token",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "SettingsView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Get a free TMDB token",
+    "newKey": "settings.getAFreeTmdb.button",
+    "en": "Get a free TMDB token",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "SettingsView"
+    ],
+    "needsReview": false
+  },
+  {
+    "oldKey": "Forward",
+    "newKey": "settings.forward.button",
+    "en": "Forward",
+    "comment": "Button in settings",
+    "area": "settings",
+    "role": "button",
+    "usages": [
+      "SettingsView"
+    ],
+    "needsReview": false
   }
 ]

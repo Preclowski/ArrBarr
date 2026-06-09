@@ -94,7 +94,7 @@ public struct DiscoverMatchedListView: View {
             Image(systemName: "rectangle.stack")
                 .scaledFont(size: 22, weight: .light)
                 .foregroundStyle(.tertiary)
-            Text("No picks yet — swipe right to collect", bundle: .module)
+            Text("discover.noPicksYetSwipe.label", bundle: .module)
                 .scaledFont(size: 12)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)

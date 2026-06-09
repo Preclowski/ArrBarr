@@ -116,7 +116,7 @@ public struct EpisodeQuickDetail: View {
         VStack(spacing: 12) {
             ProgressView()
                 .controlSize(.small)
-            Text("Loading episode…", bundle: .module)
+            Text("detail.loadingEpisode.button", bundle: .module)
                 .scaledFont(size: 11)
                 .foregroundStyle(.tertiary)
         }

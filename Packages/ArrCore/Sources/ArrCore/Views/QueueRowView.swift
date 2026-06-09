@@ -216,7 +216,7 @@ public struct QueueRowView: View {
                     if showsPlay { onResume() } else { onPause() }
                 } label: {
                     if item.status == .queued {
-                        Label { Text("Start now", bundle: .module) } icon: { Image(systemName: "play.fill") }
+                        Label { Text("queue.startNow.button", bundle: .module) } icon: { Image(systemName: "play.fill") }
                     } else if item.isPaused {
                         Label { Text("queue.resume.button", bundle: .module) } icon: { Image(systemName: "play.fill") }
                     } else {
@@ -227,7 +227,7 @@ public struct QueueRowView: View {
             Button(role: .destructive) {
                 requestDeleteConfirm()
             } label: {
-                Label { Text("Remove from queue", bundle: .module) } icon: { Image(systemName: "trash") }
+                Label { Text("queue.removeFromQueue.button", bundle: .module) } icon: { Image(systemName: "trash") }
             }
         }
         // Hover-only affordances live on macOS. On iOS the same information
@@ -306,7 +306,7 @@ public struct QueueRowView: View {
         }
         .buttonStyle(.plain)
         .help(item.status == .queued
-              ? Text("Start now", bundle: .module)
+              ? Text("queue.startNow.button", bundle: .module)
               : (item.isPaused ? Text("queue.resume.button", bundle: .module) : Text("queue.pause.button", bundle: .module)))
     }
     #endif
