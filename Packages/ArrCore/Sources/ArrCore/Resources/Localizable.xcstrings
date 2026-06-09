@@ -27763,6 +27763,174 @@
           }
         }
       }
+    },
+    "chat.empty.suggest.upcoming": {
+      "extractionState": "manual",
+      "comment": "Chat empty-state suggestion chip",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What's out today?"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Co dziś wychodzi?"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Was kommt heute raus?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Qué se estrena hoy?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quelles sorties aujourd'hui ?"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wat komt er vandaag uit?"
+          }
+        }
+      }
+    },
+    "chat.empty.suggest.queue": {
+      "extractionState": "manual",
+      "comment": "Chat empty-state suggestion chip",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What's downloading?"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Co się teraz ściąga?"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Was wird gerade geladen?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Qué se está descargando?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qu'est-ce qui se télécharge ?"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wat wordt er gedownload?"
+          }
+        }
+      }
+    },
+    "chat.empty.suggest.tasteMrRobot": {
+      "extractionState": "manual",
+      "comment": "Chat empty-state suggestion chip",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suggest something like Mr. Robot?"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Polecisz coś jak Mr. Robot?"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Empfiehl mir etwas wie Mr. Robot?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Me recomiendas algo como Mr. Robot?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suggère quelque chose comme Mr. Robot ?"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stel iets voor zoals Mr. Robot?"
+          }
+        }
+      }
+    },
+    "chat.empty.suggest.personSwinton": {
+      "extractionState": "manual",
+      "comment": "Chat empty-state suggestion chip",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Movies with Tilda Swinton"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Filmy z Tildą Swinton"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Filme mit Tilda Swinton"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Películas con Tilda Swinton"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Films avec Tilda Swinton"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Films met Tilda Swinton"
+          }
+        }
+      }
     }
   }
 }
