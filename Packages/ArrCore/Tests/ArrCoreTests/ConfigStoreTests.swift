@@ -143,4 +143,20 @@ struct ConfigStoreTests {
         #expect(reloaded.notifyLidarr == true)
     }
 
+    @Test("iCloudSyncEnabled defaults to true and persists")
+    @MainActor func iCloudSyncEnabledPersists() {
+        let suite = "test.cfg.icloud.\(UUID().uuidString)"
+        let d = UserDefaults(suiteName: suite)!
+        defer { UserDefaults.standard.removePersistentDomain(forName: suite) }
+
+        let store = ConfigStore(defaults: d, secrets: InMemorySecretStore())
+        #expect(store.iCloudSyncEnabled == true)
+
+        store.iCloudSyncEnabled = false
+        #expect(d.bool(forKey: "ArrBarr.iCloudSyncEnabled") == false)
+
+        let reloaded = ConfigStore(defaults: d, secrets: InMemorySecretStore())
+        #expect(reloaded.iCloudSyncEnabled == false)
+    }
+
 }

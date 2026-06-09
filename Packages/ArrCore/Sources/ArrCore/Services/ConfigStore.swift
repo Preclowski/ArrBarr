@@ -81,6 +81,7 @@ public final class ConfigStore: ObservableObject {
     @Published public var fontScale: Double = 1.0
     @Published public var aiKnowsAboutWhisparr: Bool = false
     @Published public var launchAtLogin: Bool = false
+    @Published public var iCloudSyncEnabled: Bool = true
     @Published public var appLanguage: String = "system"
     /// UI appearance preference: "system" / "light" / "dark".
     @Published public var appearance: String = "system"
@@ -237,6 +238,7 @@ public final class ConfigStore: ObservableObject {
     private static let fontScaleKey = "ArrBarr.fontScale"
     private static let aiKnowsAboutWhisparrKey = "ArrBarr.aiKnowsAboutWhisparr"
     private static let launchAtLoginKey = "ArrBarr.launchAtLogin"
+    private static let iCloudSyncEnabledKey = "ArrBarr.iCloudSyncEnabled"
     private static let appLanguageKey = "ArrBarr.appLanguage"
     private static let appearanceKey = "ArrBarr.appearance"
     private static let arrOrderKey = "ArrBarr.arrOrder"
@@ -354,6 +356,8 @@ public final class ConfigStore: ObservableObject {
         self.fontScale = storedScale > 0 ? storedScale : 1.0
         self.aiKnowsAboutWhisparr = defaults.object(forKey: Self.aiKnowsAboutWhisparrKey) != nil ? defaults.bool(forKey: Self.aiKnowsAboutWhisparrKey) : false
         self.launchAtLogin = defaults.object(forKey: Self.launchAtLoginKey) != nil ? defaults.bool(forKey: Self.launchAtLoginKey) : false
+        self.iCloudSyncEnabled = defaults.object(forKey: Self.iCloudSyncEnabledKey) != nil
+            ? defaults.bool(forKey: Self.iCloudSyncEnabledKey) : true
         self.appLanguage = defaults.string(forKey: Self.appLanguageKey) ?? "system"
         self.appearance = defaults.string(forKey: Self.appearanceKey) ?? "system"
         #if os(iOS)
@@ -449,6 +453,16 @@ public final class ConfigStore: ObservableObject {
         $launchAtLogin.dropFirst().sink { [weak self] val in
             self?.defaults.set(val, forKey: Self.launchAtLoginKey)
             LaunchAtLogin.set(enabled: val)
+        }.store(in: &cancellables)
+        $iCloudSyncEnabled.dropFirst().sink { [weak self] val in
+            guard let self else { return }
+            self.defaults.set(val, forKey: Self.iCloudSyncEnabledKey)
+            #if APPSTORE
+            // Preferences (KVS): start/stop the live coordinator.
+            KVSyncCoordinator.shared?.setEnabled(val)
+            // Secrets (iCloud Keychain): rewrite items to the new sync state.
+            self.secrets.reapplySyncAttribute(for: SecretKey.syncable)
+            #endif
         }.store(in: &cancellables)
         $arrOrder.dropFirst().sink { [weak self] val in
             self?.defaults.set(val, forKey: Self.arrOrderKey)

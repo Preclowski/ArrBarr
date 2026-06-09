@@ -28,4 +28,10 @@ struct SyncedKeysSuite {
         #expect(SyncedKeys.isSynced("ArrBarr.arrOrder"))
         #expect(!SyncedKeys.isSynced("ArrBarr.fontScale"))
     }
+
+    @Test("iCloudSyncEnabled is device-local — never in the sync allowlist")
+    func iCloudFlagNotSynced() {
+        #expect(!SyncedKeys.all.contains("ArrBarr.iCloudSyncEnabled"))
+        #expect(SyncedKeys.isSynced("ArrBarr.iCloudSyncEnabled") == false)
+    }
 }
