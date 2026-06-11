@@ -178,6 +178,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func applyMCPConfig() {
         let cs = configStore
         guard cs.mcpEnabled else { Task { await mcpController.stop() }; return }
+        if cs.mcpRequireAuth && cs.mcpAuthToken.isEmpty {
+            // First enable: mint a token instead of starting a server whose
+            // auth can never pass (the validator fails closed on an empty
+            // token). Persists to the Keychain via the ConfigStore sink, and
+            // the publisher re-triggers this method with the token in place.
+            cs.mcpAuthToken = MCPTokenStore.generate()
+            return
+        }
         let inputs = MCPServerController.BackendInputs(
             sonarr: cs.sonarr, radarr: cs.radarr, lidarr: cs.lidarr, whisparr: cs.whisparr,
             aiKnowsAboutWhisparr: cs.aiKnowsAboutWhisparr, tmdbApiKey: cs.tmdbApiKey,

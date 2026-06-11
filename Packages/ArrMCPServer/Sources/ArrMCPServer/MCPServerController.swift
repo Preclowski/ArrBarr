@@ -55,6 +55,17 @@ public actor MCPServerController {
             emit(.failed(message: "Invalid bind address: \(config.hostPort)")); return
         }
         let bindHost = String(parts[0])
+
+        // Never expose the tool surface (queue deletes, library writes) beyond
+        // loopback without a bearer token. The Origin check below only stops
+        // browser-based DNS rebinding — a direct client just omits the header.
+        let loopback = ["127.0.0.1", "localhost", "::1"].contains(bindHost.lowercased())
+        if !loopback && !config.requireAuth {
+            emit(.failed(message: "Refusing to bind \(config.hostPort) without authentication — enable the bearer token or bind to 127.0.0.1."))
+            logger.error("refused non-loopback bind without auth", metadata: ["bind": .string(config.hostPort)])
+            return
+        }
+
         let i = config.backendInputs
 
         let backend = LocalToolBackend(

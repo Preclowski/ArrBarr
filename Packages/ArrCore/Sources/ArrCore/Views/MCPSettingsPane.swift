@@ -104,7 +104,7 @@ struct MCPSettingsPane: View {
                             .buttonStyle(.borderless)
                             .disabled(configStore.mcpAuthToken.isEmpty)
                         Button { configStore.mcpAuthToken = MCPTokenStore.generate() } label: {
-                            Text(configStore.mcpAuthToken.isEmpty ? "Generate" : "Regenerate", bundle: .module)
+                            Text(configStore.mcpAuthToken.isEmpty ? "common.generate.button" : "common.regenerate.button", bundle: .module)
                                 .font(.caption)
                         }
                         .buttonStyle(.borderless)
@@ -117,9 +117,9 @@ struct MCPSettingsPane: View {
             Text("settings.authentication.button", bundle: .module)
         } footer: {
             if configStore.mcpRequireAuth && configStore.mcpAuthToken.isEmpty {
-                warning("Generate a token — auth stays off until one is set.")
+                warning("settings.mcpGenerateTokenFirst.warning")
             } else if !configStore.mcpRequireAuth && !configStore.mcpHostPort.hasPrefix("127.0.0.1") {
-                warning("Exposed on the network without authentication. Enable a bearer token.")
+                warning("settings.mcpNoAuthOnNetwork.warning")
             }
         }
     }

@@ -28393,6 +28393,174 @@
           }
         }
       }
+    },
+    "settings.mcpGenerateTokenFirst.warning": {
+      "extractionState": "manual",
+      "comment": "Footer warning in MCP settings when auth is on but no token exists",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Generate a token — requests are rejected until one is set."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wygeneruj token — do tego czasu wszystkie żądania są odrzucane."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Token generieren — bis eines gesetzt ist, werden alle Anfragen abgelehnt."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Genera un token: las solicitudes se rechazan hasta que haya uno."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Générez un jeton — les requêtes sont refusées tant qu'aucun n'est défini."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Genereer een token — verzoeken worden geweigerd totdat er een is ingesteld."
+          }
+        }
+      }
+    },
+    "settings.mcpNoAuthOnNetwork.warning": {
+      "extractionState": "manual",
+      "comment": "Footer warning in MCP settings when auth is off and bind is not localhost",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Without a bearer token the server only starts on 127.0.0.1."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bez tokenu bearer serwer uruchomi się tylko na 127.0.0.1."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ohne Bearer-Token startet der Server nur auf 127.0.0.1."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sin un token bearer, el servidor solo se inicia en 127.0.0.1."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sans jeton bearer, le serveur ne démarre que sur 127.0.0.1."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zonder bearer-token start de server alleen op 127.0.0.1."
+          }
+        }
+      }
+    },
+    "common.generate.button": {
+      "extractionState": "manual",
+      "comment": "Button generating the MCP bearer token",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Generate"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wygeneruj"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Generieren"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Generar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Générer"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Genereren"
+          }
+        }
+      }
+    },
+    "common.regenerate.button": {
+      "extractionState": "manual",
+      "comment": "Button regenerating the MCP bearer token",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Regenerate"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wygeneruj ponownie"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neu generieren"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Regenerar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Régénérer"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opnieuw genereren"
+          }
+        }
+      }
     }
   }
 }

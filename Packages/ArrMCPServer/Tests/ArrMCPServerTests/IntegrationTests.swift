@@ -25,3 +25,25 @@ import Foundation
     await client.disconnect()
     await controller.stop()
 }
+
+@Test func refusesNonLoopbackBindWithoutAuth() async throws {
+    let controller = MCPServerController()
+    actor StatusBox {
+        var statuses: [MCPServerController.Status] = []
+        func append(_ s: MCPServerController.Status) { statuses.append(s) }
+    }
+    let box = StatusBox()
+    await controller.setStatusHandler { s in Task { await box.append(s) } }
+    let inputs = MCPServerController.BackendInputs(
+        sonarr: .empty, radarr: .empty, lidarr: .empty, whisparr: .empty,
+        aiKnowsAboutWhisparr: false, tmdbApiKey: "", downloadClients: .init())
+    await controller.restart(with: .init(hostPort: "0.0.0.0:38420", requireAuth: false,
+        token: "", disabledTools: [], backendInputs: inputs))
+    // Give the detached status Tasks a beat to land in the box.
+    try await Task.sleep(nanoseconds: 200_000_000)
+    let statuses = await box.statuses
+    let failed = statuses.contains { if case .failed = $0 { true } else { false } }
+    let running = statuses.contains { if case .running = $0 { true } else { false } }
+    #expect(failed && !running)
+    await controller.stop()
+}

@@ -110,15 +110,16 @@ public final class ConfigStore: ObservableObject {
 
     // MARK: - MCP server (mock)
     //
-    // UI-only for now: these persist the user's intended MCP-server config
-    // (enable, bind address, basic auth, per-tool opt-out) but nothing spins
-    // up an actual server yet. The Settings "MCP" pane reads/writes these so
-    // the choices survive relaunch; wiring a real server later is a drop-in.
+    // MCP-server config (enable, bind address, bearer auth, per-tool opt-out).
+    // The Settings "MCP" pane reads/writes these; on macOS the AppDelegate's
+    // MCPServerController restarts the real server whenever they change.
     @Published public var mcpEnabled: Bool = false
     /// Bind target as a single `host:port` string. Defaults to localhost only;
     /// the user must opt into `0.0.0.0` to expose on the network.
     @Published public var mcpHostPort: String = "127.0.0.1:8080"
-    @Published public var mcpRequireAuth: Bool = false
+    /// Secure by default: the server requires a bearer token unless the user
+    /// explicitly opts out (and the server refuses non-loopback binds without it).
+    @Published public var mcpRequireAuth: Bool = true
     /// Bearer token for the MCP server. Backed by the Keychain (the secret never
     /// lives in UserDefaults); this property mirrors it for the Settings UI.
     @Published public var mcpAuthToken: String = MCPTokenStore.read() ?? ""
@@ -432,7 +433,10 @@ public final class ConfigStore: ObservableObject {
         self.tmdbApiKey = secrets.read(.tmdbKey) ?? (defaults.string(forKey: Self.tmdbApiKeyKey) ?? "")
         self.mcpEnabled = defaults.bool(forKey: Self.mcpEnabledKey)
         self.mcpHostPort = defaults.string(forKey: Self.mcpHostPortKey) ?? "127.0.0.1:8080"
-        self.mcpRequireAuth = defaults.bool(forKey: Self.mcpRequireAuthKey)
+        // Default-true migration: an absent key means the user never touched
+        // the toggle (the sink only writes on change), so they get the new
+        // secure default. An explicit stored false is respected.
+        self.mcpRequireAuth = (defaults.object(forKey: Self.mcpRequireAuthKey) as? Bool) ?? true
         self.mcpAuthToken = MCPTokenStore.read() ?? ""
         self.mcpDisabledTools = Set(defaults.stringArray(forKey: Self.mcpDisabledToolsKey) ?? [])
         // Drop legacy username/password keys (replaced by the Keychain token).
