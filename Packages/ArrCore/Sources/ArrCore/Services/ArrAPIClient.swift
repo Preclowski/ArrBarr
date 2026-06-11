@@ -1,5 +1,8 @@
 import Foundation
 
+/// Minimal `/system/status` shape — just enough for `testConnection()`.
+private struct ArrSystemStatus: Decodable { let version: String? }
+
 /// Common HTTP+auth boilerplate shared by every *arr* REST client
 /// (Sonarr/Radarr/Lidarr/Whisparr/...). Each conforming type supplies
 /// its `config` and `apiBase` ("/api/v3" for Sonarr/Radarr, "/api/v1"
@@ -10,6 +13,8 @@ public protocol ArrAPIClient: Sendable {
     /// API root path, e.g. "/api/v3" or "/api/v1".
     var apiBase: String { get }
     var http: HTTPClient { get }
+    /// Product name ("Sonarr", "Radarr", …) shown in connection-test results.
+    var serviceName: String { get }
 }
 
 extension ArrAPIClient {
@@ -70,5 +75,61 @@ extension ArrAPIClient {
         guard config.isConfigured else { throw HTTPError.notConfigured }
         let url = try http.url(base: config.baseURL, path: "\(apiBase)\(path)", query: query)
         _ = try await http.delete(url, headers: apiHeaders)
+    }
+
+    /// GET /system/status and report "<serviceName> <version>". Auth-gated,
+    /// so a wrong API key fails here. Powers the Settings "Test" button.
+    func testConnection() async throws -> String {
+        guard config.isConfigured else { throw HTTPError.notConfigured }
+        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
+        let url = try http.url(base: config.baseURL, path: "\(apiBase)/system/status")
+        let data = try await http.get(url, headers: apiHeaders)
+        let status = try? JSONDecoder().decode(ArrSystemStatus.self, from: data)
+        return status?.version.map { "\(serviceName) \($0)" } ?? "OK"
+    }
+
+    /// DELETE /queue/{id} — remove a queue item, optionally deleting the
+    /// download from the client and/or blocklisting the release.
+    func deleteQueueItem(id: Int, removeFromClient: Bool = true, blocklist: Bool = false) async throws {
+        guard config.isConfigured else { throw HTTPError.notConfigured }
+        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
+        let url = try http.url(
+            base: config.baseURL,
+            path: "\(apiBase)/queue/\(id)",
+            query: [
+                URLQueryItem(name: "removeFromClient", value: removeFromClient ? "true" : "false"),
+                URLQueryItem(name: "blocklist", value: blocklist ? "true" : "false"),
+            ]
+        )
+        _ = try await http.delete(url, headers: apiHeaders)
+    }
+
+    /// Force-grab a pending/delayed queue item now (the arr is holding it
+    /// before sending to the download client). `POST /queue/grab/{id}` — no
+    /// download-client involvement, so it works for items not yet in the client.
+    func grabQueueItem(id: Int) async throws {
+        if DemoMode.isActive { try? await Task.sleep(nanoseconds: 400_000_000); return }
+        try await post("/queue/grab/\(id)", body: [:])
+    }
+
+    /// GET /health — current server health records. Decode failures degrade
+    /// to [] so a quirky arr never breaks the health UI.
+    func fetchHealth() async throws -> [ArrHealthRecord] {
+        guard config.isConfigured else { throw HTTPError.notConfigured }
+        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
+        let url = try http.url(base: config.baseURL, path: "\(apiBase)/health")
+        let data = try await http.get(url, headers: apiHeaders)
+        return (try? JSONDecoder().decode([ArrHealthRecord].self, from: data)) ?? []
+    }
+
+    /// POST /command — fire an arr command (indexer searches, refreshes, …).
+    /// In demo mode no real work happens; a short sleep lets the UI's
+    /// spinner-fade play.
+    func postCommand(_ body: [String: Any]) async throws {
+        if DemoMode.isActive {
+            try? await Task.sleep(nanoseconds: 600_000_000)
+            return
+        }
+        try await post("/command", body: body)
     }
 }

@@ -3,6 +3,7 @@ import Foundation
 public actor SonarrClient: ArrAPIClient {
     public let config: ServiceConfig
     public let apiBase = "/api/v3"
+    public let serviceName = "Sonarr"
     public let http = HTTPClient()
 
     private struct CachedEpisodeFiles { let files: [SonarrEpisodeFile]; let expiry: Date }
@@ -11,16 +12,6 @@ public actor SonarrClient: ArrAPIClient {
 
     init(config: ServiceConfig) {
         self.config = config
-    }
-
-    func testConnection() async throws -> String {
-        guard config.isConfigured else { throw HTTPError.notConfigured }
-        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
-        let url = try http.url(base: config.baseURL, path: "\(apiBase)/system/status")
-        let data = try await http.get(url, headers: apiHeaders)
-        struct Status: Decodable { let version: String? }
-        let status = try? JSONDecoder().decode(Status.self, from: data)
-        return status?.version.map { "Sonarr \($0)" } ?? "OK"
     }
 
     func fetchQueue() async throws -> [QueueItem] {
@@ -165,30 +156,6 @@ public actor SonarrClient: ArrAPIClient {
             customFormats: (r.customFormats ?? []).map(\.name),
             customFormatScore: r.customFormatScore ?? 0
         )
-    }
-
-    func deleteQueueItem(id: Int, removeFromClient: Bool = true, blocklist: Bool = false) async throws {
-        guard config.isConfigured else { throw HTTPError.notConfigured }
-        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
-        let url = try http.url(
-            base: config.baseURL,
-            path: "\(apiBase)/queue/\(id)",
-            query: [
-                URLQueryItem(name: "removeFromClient", value: removeFromClient ? "true" : "false"),
-                URLQueryItem(name: "blocklist", value: blocklist ? "true" : "false"),
-            ]
-        )
-        _ = try await http.delete(url, headers: apiHeaders)
-    }
-
-    /// Force-grab a pending/delayed queue item now (no download-client item yet).
-    func grabQueueItem(id: Int) async throws {
-        if DemoMode.isActive { try? await Task.sleep(nanoseconds: 400_000_000); return }
-        guard config.isConfigured else { throw HTTPError.notConfigured }
-        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
-        let url = try http.url(base: config.baseURL, path: "\(apiBase)/queue/grab/\(id)")
-        let data = try JSONSerialization.data(withJSONObject: [String: Any]())
-        _ = try await http.post(url, headers: apiHeaders.merging(["Content-Type": "application/json"]) { $1 }, body: data)
     }
 
     func fetchSeriesDetails(id: Int) async throws -> SonarrSeriesDetail {
@@ -380,29 +347,6 @@ public actor SonarrClient: ArrAPIClient {
 
         try await mutateAndPut(!monitored)
         try await mutateAndPut(monitored)
-    }
-
-    private func postCommand(_ body: [String: Any]) async throws {
-        if DemoMode.isActive {
-            // Pretend the indexers are thinking. No real-world work happens
-            // — demo libraries are static — but the UI's spinner-fade gets
-            // a chance to play.
-            try? await Task.sleep(nanoseconds: 800_000_000)
-            return
-        }
-        guard config.isConfigured else { throw HTTPError.notConfigured }
-        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
-        let url = try http.url(base: config.baseURL, path: "\(apiBase)/command")
-        let data = try JSONSerialization.data(withJSONObject: body)
-        _ = try await http.post(url, headers: apiHeaders.merging(["Content-Type": "application/json"]) { $1 }, body: data)
-    }
-
-    func fetchHealth() async throws -> [ArrHealthRecord] {
-        guard config.isConfigured else { throw HTTPError.notConfigured }
-        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
-        let url = try http.url(base: config.baseURL, path: "\(apiBase)/health")
-        let data = try await http.get(url, headers: apiHeaders)
-        return (try? JSONDecoder().decode([ArrHealthRecord].self, from: data)) ?? []
     }
 
     /// LLM-suggested titles surface as cards. Mirrors Sonarr's

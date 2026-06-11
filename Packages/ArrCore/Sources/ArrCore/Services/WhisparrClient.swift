@@ -3,20 +3,11 @@ import Foundation
 public actor WhisparrClient: ArrAPIClient {
     public let config: ServiceConfig
     public let apiBase = "/api/v3"
+    public let serviceName = "Whisparr"
     public let http = HTTPClient()
 
     init(config: ServiceConfig) {
         self.config = config
-    }
-
-    func testConnection() async throws -> String {
-        guard config.isConfigured else { throw HTTPError.notConfigured }
-        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
-        let url = try http.url(base: config.baseURL, path: "\(apiBase)/system/status")
-        let data = try await http.get(url, headers: apiHeaders)
-        struct Status: Decodable { let version: String? }
-        let status = try? JSONDecoder().decode(Status.self, from: data)
-        return status?.version.map { "Whisparr \($0)" } ?? "OK"
     }
 
     func fetchQueue() async throws -> [QueueItem] {
@@ -101,14 +92,6 @@ public actor WhisparrClient: ArrAPIClient {
         return (try? JSONDecoder().decode([WhisparrLibraryRecord].self, from: data)) ?? []
     }
 
-    func fetchHealth() async throws -> [ArrHealthRecord] {
-        guard config.isConfigured else { throw HTTPError.notConfigured }
-        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
-        let url = try http.url(base: config.baseURL, path: "\(apiBase)/health")
-        let data = try await http.get(url, headers: apiHeaders)
-        return (try? JSONDecoder().decode([ArrHealthRecord].self, from: data)) ?? []
-    }
-
     func fetchMovieDetails(id: Int) async throws -> RadarrMovieDetail {
         guard config.isConfigured else { throw HTTPError.notConfigured }
         guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
@@ -116,29 +99,6 @@ public actor WhisparrClient: ArrAPIClient {
         let data = try await http.get(url, headers: apiHeaders)
         do { return try JSONDecoder().decode(RadarrMovieDetail.self, from: data) }
         catch { throw HTTPError.decoding(error) }
-    }
-
-    func deleteQueueItem(id: Int, removeFromClient: Bool = true, blocklist: Bool = false) async throws {
-        guard config.isConfigured else { throw HTTPError.notConfigured }
-        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
-        let url = try http.url(
-            base: config.baseURL,
-            path: "\(apiBase)/queue/\(id)",
-            query: [
-                URLQueryItem(name: "removeFromClient", value: removeFromClient ? "true" : "false"),
-                URLQueryItem(name: "blocklist", value: blocklist ? "true" : "false"),
-            ]
-        )
-        _ = try await http.delete(url, headers: apiHeaders)
-    }
-
-    /// Force-grab a pending/delayed queue item now (no download-client item yet).
-    func grabQueueItem(id: Int) async throws {
-        guard config.isConfigured else { throw HTTPError.notConfigured }
-        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
-        let url = try http.url(base: config.baseURL, path: "\(apiBase)/queue/grab/\(id)")
-        let data = try JSONSerialization.data(withJSONObject: [String: Any]())
-        _ = try await http.post(url, headers: apiHeaders.merging(["Content-Type": "application/json"]) { $1 }, body: data)
     }
 
     private static func unifyCalendar(_ r: WhisparrCalendarRecord, baseURL: String) -> UpcomingItem? {

@@ -3,6 +3,7 @@ import Foundation
 public actor RadarrClient: ArrAPIClient {
     public let config: ServiceConfig
     public let apiBase = "/api/v3"
+    public let serviceName = "Radarr"
     public let http = HTTPClient()
 
     private struct CachedMovieFile { let file: RadarrMovieFile; let expiry: Date }
@@ -11,16 +12,6 @@ public actor RadarrClient: ArrAPIClient {
 
     init(config: ServiceConfig) {
         self.config = config
-    }
-
-    func testConnection() async throws -> String {
-        guard config.isConfigured else { throw HTTPError.notConfigured }
-        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
-        let url = try http.url(base: config.baseURL, path: "\(apiBase)/system/status")
-        let data = try await http.get(url, headers: apiHeaders)
-        struct Status: Decodable { let version: String? }
-        let status = try? JSONDecoder().decode(Status.self, from: data)
-        return status?.version.map { "Radarr \($0)" } ?? "OK"
     }
 
     func fetchQueue() async throws -> [QueueItem] {
@@ -151,32 +142,6 @@ public actor RadarrClient: ArrAPIClient {
         )
     }
 
-    func deleteQueueItem(id: Int, removeFromClient: Bool = true, blocklist: Bool = false) async throws {
-        guard config.isConfigured else { throw HTTPError.notConfigured }
-        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
-        let url = try http.url(
-            base: config.baseURL,
-            path: "\(apiBase)/queue/\(id)",
-            query: [
-                URLQueryItem(name: "removeFromClient", value: removeFromClient ? "true" : "false"),
-                URLQueryItem(name: "blocklist", value: blocklist ? "true" : "false"),
-            ]
-        )
-        _ = try await http.delete(url, headers: apiHeaders)
-    }
-
-    /// Force-grab a pending/delayed queue item now (the arr is holding it before
-    /// sending to the download client). `POST /queue/grab/{id}` — no download
-    /// client involvement, so it works for items not yet in the client.
-    func grabQueueItem(id: Int) async throws {
-        if DemoMode.isActive { try? await Task.sleep(nanoseconds: 400_000_000); return }
-        guard config.isConfigured else { throw HTTPError.notConfigured }
-        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
-        let url = try http.url(base: config.baseURL, path: "\(apiBase)/queue/grab/\(id)")
-        let data = try JSONSerialization.data(withJSONObject: [String: Any]())
-        _ = try await http.post(url, headers: apiHeaders.merging(["Content-Type": "application/json"]) { $1 }, body: data)
-    }
-
     func fetchMovieDetails(id: Int) async throws -> RadarrMovieDetail {
         if DemoMode.isActive {
             try? await Task.sleep(nanoseconds: 250_000_000)
@@ -225,32 +190,15 @@ public actor RadarrClient: ArrAPIClient {
         return try await get("/credit", query: [URLQueryItem(name: "movieId", value: String(movieId))])
     }
 
-    func fetchHealth() async throws -> [ArrHealthRecord] {
-        guard config.isConfigured else { throw HTTPError.notConfigured }
-        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
-        let url = try http.url(base: config.baseURL, path: "\(apiBase)/health")
-        let data = try await http.get(url, headers: apiHeaders)
-        return (try? JSONDecoder().decode([ArrHealthRecord].self, from: data)) ?? []
-    }
-
     /// Force a manual indexer search for a specific movie. Mirrors the
     /// Sonarr per-episode search pattern — same `/command` endpoint,
     /// different name. Useful for "this movie didn't grab, try again"
     /// or upgrade-quality kicks.
     func searchMovie(movieId: Int) async throws {
-        if DemoMode.isActive {
-            try? await Task.sleep(nanoseconds: 600_000_000)
-            return
-        }
-        guard config.isConfigured else { throw HTTPError.notConfigured }
-        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
-        let body: [String: Any] = [
+        try await postCommand([
             "name": "MoviesSearch",
             "movieIds": [movieId],
-        ]
-        let url = try http.url(base: config.baseURL, path: "\(apiBase)/command")
-        let data = try JSONSerialization.data(withJSONObject: body)
-        _ = try await http.post(url, headers: apiHeaders.merging(["Content-Type": "application/json"]) { $1 }, body: data)
+        ])
     }
 
     /// LLM-suggested titles surface as cards. Mirrors Radarr's

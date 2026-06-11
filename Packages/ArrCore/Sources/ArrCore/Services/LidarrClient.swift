@@ -3,20 +3,11 @@ import Foundation
 public actor LidarrClient: ArrAPIClient {
     public let config: ServiceConfig
     public let apiBase = "/api/v1"
+    public let serviceName = "Lidarr"
     public let http = HTTPClient()
 
     init(config: ServiceConfig) {
         self.config = config
-    }
-
-    func testConnection() async throws -> String {
-        guard config.isConfigured else { throw HTTPError.notConfigured }
-        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
-        let url = try http.url(base: config.baseURL, path: "/api/v1/system/status")
-        let data = try await http.get(url, headers: apiHeaders)
-        struct Status: Decodable { let version: String? }
-        let status = try? JSONDecoder().decode(Status.self, from: data)
-        return status?.version.map { "Lidarr \($0)" } ?? "OK"
     }
 
     func fetchQueue() async throws -> [QueueItem] {
@@ -109,29 +100,6 @@ public actor LidarrClient: ArrAPIClient {
         }
     }
 
-    func deleteQueueItem(id: Int, removeFromClient: Bool = true, blocklist: Bool = false) async throws {
-        guard config.isConfigured else { throw HTTPError.notConfigured }
-        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
-        let url = try http.url(
-            base: config.baseURL,
-            path: "/api/v1/queue/\(id)",
-            query: [
-                URLQueryItem(name: "removeFromClient", value: removeFromClient ? "true" : "false"),
-                URLQueryItem(name: "blocklist", value: blocklist ? "true" : "false"),
-            ]
-        )
-        _ = try await http.delete(url, headers: apiHeaders)
-    }
-
-    /// Force-grab a pending/delayed queue item now (no download-client item yet).
-    func grabQueueItem(id: Int) async throws {
-        guard config.isConfigured else { throw HTTPError.notConfigured }
-        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
-        let url = try http.url(base: config.baseURL, path: "/api/v1/queue/grab/\(id)")
-        let data = try JSONSerialization.data(withJSONObject: [String: Any]())
-        _ = try await http.post(url, headers: apiHeaders.merging(["Content-Type": "application/json"]) { $1 }, body: data)
-    }
-
     func fetchAlbumDetails(id: Int) async throws -> LidarrAlbumDetail {
         if DemoMode.isActive {
             try? await Task.sleep(nanoseconds: 250_000_000)
@@ -218,27 +186,10 @@ public actor LidarrClient: ArrAPIClient {
     /// Trigger an indexer search for a single album. Mirrors Sonarr's
     /// `EpisodeSearch` / Radarr's `MoviesSearch` — same /command path.
     func searchAlbum(albumId: Int) async throws {
-        if DemoMode.isActive {
-            try? await Task.sleep(nanoseconds: 600_000_000)
-            return
-        }
-        guard config.isConfigured else { throw HTTPError.notConfigured }
-        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
-        let body: [String: Any] = [
+        try await postCommand([
             "name": "AlbumSearch",
             "albumIds": [albumId],
-        ]
-        let url = try http.url(base: config.baseURL, path: "/api/v1/command")
-        let data = try JSONSerialization.data(withJSONObject: body)
-        _ = try await http.post(url, headers: apiHeaders.merging(["Content-Type": "application/json"]) { $1 }, body: data)
-    }
-
-    func fetchHealth() async throws -> [ArrHealthRecord] {
-        guard config.isConfigured else { throw HTTPError.notConfigured }
-        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
-        let url = try http.url(base: config.baseURL, path: "/api/v1/health")
-        let data = try await http.get(url, headers: apiHeaders)
-        return (try? JSONDecoder().decode([ArrHealthRecord].self, from: data)) ?? []
+        ])
     }
 
     private static func unifyCalendar(_ r: LidarrCalendarRecord, baseURL: String) -> UpcomingItem? {
