@@ -8,7 +8,7 @@ import Foundation
 /// Activate by any of:
 ///   - Launch arg:        --demo  (persisted to UserDefaults on first sight)
 ///   - Env var:           ARRBARR_DEMO=1  (persisted to UserDefaults)
-///   - UserDefaults:      defaults write com.preclowski.ArrBarr ArrBarrDeveloperMode -bool true
+///   - UserDefaults:      defaults write pl.incred.ArrBarr ArrBarrDeveloperMode -bool true
 public enum DeveloperMode {
     public static let key = "ArrBarrDeveloperMode"
 
@@ -46,7 +46,7 @@ public enum DemoMode {
     /// configs, notification prefs, theme, the seed-done flag…). Demo settings
     /// live here so toggling e.g. Whisparr in demo never writes to the real
     /// profile in `.standard`.
-    public static let demoSuiteName = "com.preclowski.ArrBarr.demo"
+    public static let demoSuiteName = "pl.incred.ArrBarr.demo"
 
     /// Seed-done marker. Stored in whichever store the demo configs live in
     /// (the demo suite), so wiping the suite re-arms a fresh seed.

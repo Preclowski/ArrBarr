@@ -7,7 +7,7 @@ public enum WidgetDataStore {
     /// iOS App Group identifier. (macOS, shipped later, needs the
     /// team-id-prefixed form under app-sandbox — handled when the macOS
     /// widget target is added.)
-    public static let appGroupSuiteName = "group.com.preclowski.ArrBarr"
+    public static let appGroupSuiteName = "group.pl.incred.ArrBarr"
 
     public static func groupDefaults() -> UserDefaults? {
         UserDefaults(suiteName: appGroupSuiteName)

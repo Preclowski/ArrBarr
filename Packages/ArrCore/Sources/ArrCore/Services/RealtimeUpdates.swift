@@ -5,7 +5,7 @@ import os
 /// used to be swallowed silently ("polling is the safety net"), which made a
 /// non-working SignalR impossible to diagnose. Boundary logs here turn that
 /// into observable evidence: filter Console.app on subsystem
-/// `com.preclowski.ArrBarr`, category `Realtime`.
+/// `pl.incred.ArrBarr`, category `Realtime`.
 private let realtimeLog = Logger(category: "Realtime")
 
 // MARK: - Realtime push updates over Sonarr/Radarr's SignalR endpoint

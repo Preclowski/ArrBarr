@@ -12,11 +12,11 @@
 		953E24EE53AE7971D31F0FA0 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C345657BD587401B20496BE6 /* Assets.xcassets */; };
 		D2FECFB6447CD596A4FC0207 /* ArrBarrApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33A8662C0F95882A1E6A959B /* ArrBarrApp.swift */; };
 		FBP00001FBP00001FBP0001A /* ArrCore in Frameworks */ = {isa = PBXBuildFile; productRef = PRD00001PRD00001PRD0001A /* ArrCore */; };
-		MCP00001MCP00001MCP0001A /* ArrMCPServer in Frameworks */ = {isa = PBXBuildFile; productRef = MCPPD001MCPPD001MCPPD01A /* ArrMCPServer */; };
 		IOS00001IOS00001IOS0001A /* ArrBarriOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = IOS00010IOS00010IOS0010A /* ArrBarriOSApp.swift */; };
 		IOS00002IOS00002IOS0002A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = IOS00012IOS00012IOS0012A /* Assets.xcassets */; };
 		IOS00003IOS00003IOS0003A /* ArrCore in Frameworks */ = {isa = PBXBuildFile; productRef = IOS00020IOS00020IOS0020A /* ArrCore */; };
 		IOS00099IOS00099IOS0099A /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 7A1D7C152F00000100000005 /* AppIcon.icon */; };
+		MCP00001MCP00001MCP0001A /* ArrMCPServer in Frameworks */ = {isa = PBXBuildFile; productRef = MCPPD001MCPPD001MCPPD01A /* ArrMCPServer */; };
 		SKB00020SKB00020SKB0020A /* StoreKitBackend.swift in Sources */ = {isa = PBXBuildFile; fileRef = SKB00010SKB00010SKB0010A /* StoreKitBackend.swift */; };
 		SKB00030SKB00030SKB0030A /* StoreKitBackend.swift in Sources */ = {isa = PBXBuildFile; fileRef = SKB00010SKB00010SKB0010A /* StoreKitBackend.swift */; };
 		WDGBF001WDGBF001WDGBF01A /* ArrBarrWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = WDGFR010WDGFR010WDGFR01A /* ArrBarrWidgets.swift */; };
@@ -132,14 +132,6 @@
 			);
 			sourceTree = "<group>";
 		};
-		SKB00050SKB00050SKB0050A /* Shared */ = {
-			isa = PBXGroup;
-			children = (
-				SKB00010SKB00010SKB0010A /* StoreKitBackend.swift */,
-			);
-			path = Shared;
-			sourceTree = "<group>";
-		};
 		IOS00060IOS00060IOS0060A /* ArrBarriOS */ = {
 			isa = PBXGroup;
 			children = (
@@ -148,6 +140,14 @@
 				IOS00012IOS00012IOS0012A /* Assets.xcassets */,
 			);
 			path = ArrBarriOS;
+			sourceTree = "<group>";
+		};
+		SKB00050SKB00050SKB0050A /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				SKB00010SKB00010SKB0010A /* StoreKitBackend.swift */,
+			);
+			path = Shared;
 			sourceTree = "<group>";
 		};
 		WDGGR060WDGGR060WDGGR06A /* ArrBarrWidgets */ = {
@@ -234,7 +234,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
 				LastSwiftUpdateCheck = 2640;
-				LastUpgradeCheck = 1430;
+				LastUpgradeCheck = 2700;
 				TargetAttributes = {
 					981F7B6F6B019D53A2A452F0 = {
 						DevelopmentTeam = "";
@@ -346,6 +346,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
@@ -385,6 +387,7 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -406,6 +409,7 @@
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 6.0;
@@ -416,6 +420,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
@@ -450,14 +456,13 @@
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
 				DEAD_CODE_STRIPPING = YES;
-				DEPLOYMENT_POSTPROCESSING = YES;
-				STRIP_INSTALLED_PRODUCT = YES;
-				STRIP_STYLE = all;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEPLOYMENT_POSTPROCESSING = YES;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -472,6 +477,7 @@
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 6.0;
@@ -491,10 +497,99 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.preclowski.ArrBarr;
+				PRODUCT_BUNDLE_IDENTIFIER = pl.incred.ArrBarr;
 				SDKROOT = macosx;
 			};
 			name = Debug;
+		};
+		ASR00010ASR00010ASR0010A /* Release-AppStore */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = "";
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 0.10.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 6.0;
+			};
+			name = "Release-AppStore";
+		};
+		ASR00020ASR00020ASR0020A /* Release-AppStore */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = "ArrBarr/ArrBarr-AppStore.entitlements";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_PREVIEWS = YES;
+				INFOPLIST_FILE = ArrBarr/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = pl.incred.ArrBarr;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) APPSTORE";
+			};
+			name = "Release-AppStore";
+		};
+		ASR00030ASR00030ASR0030A /* Release-AppStore */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "ArrBarriOS/ArrBarriOS-AppStore.entitlements";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "";
+				DEVELOPMENT_TEAM = 9M6DR2Z85Y;
+				ENABLE_PREVIEWS = YES;
+				INFOPLIST_FILE = ArrBarriOS/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.10.0;
+				PRODUCT_BUNDLE_IDENTIFIER = pl.incred.ArrBarr.iOS;
+				PRODUCT_NAME = ArrBarr;
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) APPSTORE";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = "Release-AppStore";
 		};
 		E7AFBD3F229BC2E497429F73 /* Release */ = {
 			isa = XCBuildConfiguration;
@@ -509,7 +604,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.preclowski.ArrBarr;
+				PRODUCT_BUNDLE_IDENTIFIER = pl.incred.ArrBarr;
 				SDKROOT = macosx;
 			};
 			name = Release;
@@ -533,7 +628,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 0.10.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.preclowski.ArrBarr.iOS;
+				PRODUCT_BUNDLE_IDENTIFIER = pl.incred.ArrBarr.iOS;
 				PRODUCT_NAME = ArrBarr;
 				SDKROOT = iphoneos;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -562,7 +657,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 0.10.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.preclowski.ArrBarr.iOS;
+				PRODUCT_BUNDLE_IDENTIFIER = pl.incred.ArrBarr.iOS;
 				PRODUCT_NAME = ArrBarr;
 				SDKROOT = iphoneos;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -571,90 +666,6 @@
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
-		};
-		ASR00010ASR00010ASR0010A /* Release-AppStore */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_ANALYZER_NONNULL = YES;
-				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
-				CLANG_CXX_LIBRARY = "libc++";
-				CLANG_ENABLE_MODULES = YES;
-				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_ENABLE_OBJC_WEAK = YES;
-				CODE_SIGN_IDENTITY = "-";
-				CODE_SIGN_STYLE = Automatic;
-				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 1;
-				DEAD_CODE_STRIPPING = YES;
-				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = "";
-				ENABLE_HARDENED_RUNTIME = YES;
-				ENABLE_NS_ASSERTIONS = NO;
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				GCC_C_LANGUAGE_STANDARD = gnu11;
-				GCC_NO_COMMON_BLOCKS = YES;
-				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.10.0;
-				MTL_ENABLE_DEBUG_INFO = NO;
-				MTL_FAST_MATH = YES;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
-				SWIFT_COMPILATION_MODE = wholemodule;
-				SWIFT_OPTIMIZATION_LEVEL = "-O";
-				SWIFT_VERSION = 6.0;
-			};
-			name = "Release-AppStore";
-		};
-		ASR00020ASR00020ASR0020A /* Release-AppStore */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_ENTITLEMENTS = ArrBarr/ArrBarr-AppStore.entitlements;
-				COMBINE_HIDPI_IMAGES = YES;
-				ENABLE_PREVIEWS = YES;
-				INFOPLIST_FILE = ArrBarr/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/../Frameworks",
-				);
-				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.preclowski.ArrBarr;
-				SDKROOT = macosx;
-				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) APPSTORE";
-			};
-			name = "Release-AppStore";
-		};
-		ASR00030ASR00030ASR0030A /* Release-AppStore */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = ArrBarriOS/ArrBarriOS-AppStore.entitlements;
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Development";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_ASSET_PATHS = "";
-				DEVELOPMENT_TEAM = 9M6DR2Z85Y;
-				ENABLE_PREVIEWS = YES;
-				INFOPLIST_FILE = ArrBarriOS/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-				);
-				MARKETING_VERSION = 0.10.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.preclowski.ArrBarr.iOS;
-				PRODUCT_NAME = ArrBarr;
-				SDKROOT = iphoneos;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) APPSTORE";
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 6.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = "Release-AppStore";
 		};
 		WDGCF081WDGCF081WDGCF81A /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -673,7 +684,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 0.10.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.preclowski.ArrBarr.iOS.Widgets;
+				PRODUCT_BUNDLE_IDENTIFIER = pl.incred.ArrBarr.iOS.Widgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
@@ -701,7 +712,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 0.10.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.preclowski.ArrBarr.iOS.Widgets;
+				PRODUCT_BUNDLE_IDENTIFIER = pl.incred.ArrBarr.iOS.Widgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
@@ -729,7 +740,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 0.10.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.preclowski.ArrBarr.iOS.Widgets;
+				PRODUCT_BUNDLE_IDENTIFIER = pl.incred.ArrBarr.iOS.Widgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
@@ -787,13 +798,13 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		PKG00001PKG00001PKG0001A /* XCLocalSwiftPackageReference "Packages/ArrCore" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = Packages/ArrCore;
-		};
 		MCPPK001MCPPK001MCPPK01A /* XCLocalSwiftPackageReference "Packages/ArrMCPServer" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/ArrMCPServer;
+		};
+		PKG00001PKG00001PKG0001A /* XCLocalSwiftPackageReference "Packages/ArrCore" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/ArrCore;
 		};
 /* End XCLocalSwiftPackageReference section */
 
@@ -802,13 +813,13 @@
 			isa = XCSwiftPackageProductDependency;
 			productName = ArrCore;
 		};
-		PRD00001PRD00001PRD0001A /* ArrCore */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = ArrCore;
-		};
 		MCPPD001MCPPD001MCPPD01A /* ArrMCPServer */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = ArrMCPServer;
+		};
+		PRD00001PRD00001PRD0001A /* ArrCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ArrCore;
 		};
 		WDGPD020WDGPD020WDGPD02A /* ArrCore */ = {
 			isa = XCSwiftPackageProductDependency;

@@ -98,7 +98,7 @@ fastest via SwiftPM:
 - **Shared singletons** cross target boundaries: `ConfigStore.shared`,
   `QueueViewModel.shared`, `StoreManager.shared`, `ImageCache.shared`. The
   AppDelegate and the SwiftUI scenes observe the *same* instances.
-- **Demo mode**: isolated `UserDefaults` suite `com.preclowski.ArrBarr.demo` —
+- **Demo mode**: isolated `UserDefaults` suite `pl.incred.ArrBarr.demo` —
   toggling re-points `ConfigStore` live and wipes only the demo suite; the real
   profile is never touched. Launch with `--args --demo` (macOS) or
   `ARRBARR_DEMO_SUITE=1` (iOS).

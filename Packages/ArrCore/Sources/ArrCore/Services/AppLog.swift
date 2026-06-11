@@ -2,9 +2,9 @@ import os
 
 /// Single source of truth for ArrBarr's unified-logging identity, so Console /
 /// `log show` / `log stream` filtering is uniform across the whole app:
-/// `log stream --predicate 'subsystem == "com.preclowski.ArrBarr"'`.
+/// `log stream --predicate 'subsystem == "pl.incred.ArrBarr"'`.
 public enum AppLog {
-    public static let subsystem = "com.preclowski.ArrBarr"
+    public static let subsystem = "pl.incred.ArrBarr"
 }
 
 public extension Logger {

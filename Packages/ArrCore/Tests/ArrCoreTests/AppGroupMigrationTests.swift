@@ -88,7 +88,7 @@ struct AppGroupMigrationTests {
     func demoUntouched() throws {
         // Use a uniquely-named suite to stand in for the demo suite so this
         // test does not race with DemoIsolationTests (which also wipes the real
-        // "com.preclowski.ArrBarr.demo" suite). The invariant being tested is
+        // "pl.incred.ArrBarr.demo" suite). The invariant being tested is
         // that migrateToGroupSuite only ever touches `src` and `grp` — not any
         // other suite — which is equally proved with any third suite name.
         let src = fresh("test.mig.src3")

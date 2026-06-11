@@ -11,7 +11,7 @@ import Foundation
 /// Force-show for testing or "Show welcome screen" button in Settings:
 ///   - Launch arg:    --show-welcome
 ///   - Env var:       ARRBARR_SHOW_WELCOME=1
-///   - UserDefaults:  defaults write com.preclowski.ArrBarr ArrBarrShowWelcome -bool true
+///   - UserDefaults:  defaults write pl.incred.ArrBarr ArrBarrShowWelcome -bool true
 ///                    (one-shot — cleared after the welcome window opens so
 ///                    it doesn't loop on every launch)
 public enum WelcomeContent {

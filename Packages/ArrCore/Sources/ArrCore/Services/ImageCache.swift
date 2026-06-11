@@ -18,7 +18,7 @@ public actor ImageCache {
     init() {
         let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first
             ?? URL(fileURLWithPath: NSTemporaryDirectory())
-        let bundleId = Bundle.main.bundleIdentifier ?? "com.preclowski.ArrBarr"
+        let bundleId = Bundle.main.bundleIdentifier ?? "pl.incred.ArrBarr"
         cacheDir = caches.appendingPathComponent(bundleId, isDirectory: true)
             .appendingPathComponent("posters", isDirectory: true)
         try? FileManager.default.createDirectory(at: cacheDir, withIntermediateDirectories: true)
@@ -120,7 +120,7 @@ public actor ImageCache {
     public nonisolated static func posterCacheFileURL(for url: URL) -> URL? {
         let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first
             ?? URL(fileURLWithPath: NSTemporaryDirectory())
-        let bundleId = Bundle.main.bundleIdentifier ?? "com.preclowski.ArrBarr"
+        let bundleId = Bundle.main.bundleIdentifier ?? "pl.incred.ArrBarr"
         let dir = caches.appendingPathComponent(bundleId, isDirectory: true)
             .appendingPathComponent("posters", isDirectory: true)
         let file = dir.appendingPathComponent(cacheKey(for: url))
