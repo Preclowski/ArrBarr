@@ -18,10 +18,11 @@ public actor SabnzbdClient {
     enum Action: String { case pause, resume, delete }
 
     private let config: ServiceConfig
-    private let http = HTTPClient()
+    private let http: HTTPClient
 
-    init(config: ServiceConfig) {
+    init(config: ServiceConfig, session: URLSession = .shared) {
         self.config = config
+        self.http = HTTPClient(session: session)
     }
 
     func perform(_ action: Action, nzoId: String) async throws {
@@ -53,19 +54,31 @@ public actor SabnzbdClient {
 func testConnection() async throws -> String {
         guard config.isConfigured else { throw HTTPError.notConfigured }
         guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
+        // Probe an AUTH-GATED call (`mode=queue`), not `mode=version`. SABnzbd
+        // exempts only `version`/`auth` from the API key, so `version` returns
+        // 200 even with a wrong/empty key — a false "connected". `queue`
+        // requires the key and returns `{"status": false, "error": "API Key
+        // Incorrect"}` when it's wrong, which we surface as a failure.
         let url = try http.url(
             base: config.baseURL,
             path: "/api",
             query: [
-                URLQueryItem(name: "mode", value: "version"),
+                URLQueryItem(name: "mode", value: "queue"),
                 URLQueryItem(name: "output", value: "json"),
                 URLQueryItem(name: "apikey", value: config.apiKey),
             ]
         )
         let data = try await http.get(url)
-        struct Version: Decodable { let version: String? }
-        let v = try? JSONDecoder().decode(Version.self, from: data)
-        return v?.version.map { "SABnzbd \($0)" } ?? "OK"
+        if let resp = try? JSONDecoder().decode(SabActionResponse.self, from: data),
+           resp.status == false {
+            throw SabnzbdError.actionFailed(resp.error ?? "API Key Incorrect")
+        }
+        struct QueueVersion: Decodable {
+            struct Queue: Decodable { let version: String? }
+            let queue: Queue?
+        }
+        let v = try? JSONDecoder().decode(QueueVersion.self, from: data)
+        return v?.queue?.version.map { "SABnzbd \($0)" } ?? "OK"
     }
 
     private func fetchSlots() async throws -> [SabSlot] {
