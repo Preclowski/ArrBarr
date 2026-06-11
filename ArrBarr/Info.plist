@@ -28,15 +28,16 @@
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.utilities</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>$(MACOSX_DEPLOYMENT_TARGET)</string>
 	<key>LSUIElement</key>
 	<true/>
 	<key>NSAppTransportSecurity</key>
 	<dict>
-		<!-- Allow plain-HTTP only to local/private hosts (LAN, .local,
-		     RFC1918 IPs, VPN). Public HTTPS still works; public plain-HTTP
-		     servers are intentionally unsupported to satisfy App Store ATS. -->
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>

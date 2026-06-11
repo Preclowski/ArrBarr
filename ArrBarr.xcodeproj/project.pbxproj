@@ -11,6 +11,9 @@
 		7A1D7C162F00000100000005 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 7A1D7C152F00000100000005 /* AppIcon.icon */; };
 		953E24EE53AE7971D31F0FA0 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C345657BD587401B20496BE6 /* Assets.xcassets */; };
 		D2FECFB6447CD596A4FC0207 /* ArrBarrApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33A8662C0F95882A1E6A959B /* ArrBarrApp.swift */; };
+		PRV0B001PRV0B001PRV0B01A /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = PRVFR001PRVFR001PRVFR01A /* PrivacyInfo.xcprivacy */; };
+		PRV0B002PRV0B002PRV0B02A /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = PRVFR002PRVFR002PRVFR02A /* PrivacyInfo.xcprivacy */; };
+		PRV0B003PRV0B003PRV0B03A /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = PRVFR003PRVFR003PRVFR03A /* PrivacyInfo.xcprivacy */; };
 		FBP00001FBP00001FBP0001A /* ArrCore in Frameworks */ = {isa = PBXBuildFile; productRef = PRD00001PRD00001PRD0001A /* ArrCore */; };
 		IOS00001IOS00001IOS0001A /* ArrBarriOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = IOS00010IOS00010IOS0010A /* ArrBarriOSApp.swift */; };
 		IOS00002IOS00002IOS0002A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = IOS00012IOS00012IOS0012A /* Assets.xcassets */; };
@@ -66,6 +69,9 @@
 		WDGFR011WDGFR011WDGFR11A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		WDGFR012WDGFR012WDGFR12A /* ArrBarrWidgets.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ArrBarrWidgets.entitlements; sourceTree = "<group>"; };
 		WDGFR013WDGFR013WDGFR13A /* ArrBarrWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ArrBarrWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		PRVFR001PRVFR001PRVFR01A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		PRVFR002PRVFR002PRVFR02A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		PRVFR003PRVFR003PRVFR03A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -116,6 +122,7 @@
 				33A8662C0F95882A1E6A959B /* ArrBarrApp.swift */,
 				C345657BD587401B20496BE6 /* Assets.xcassets */,
 				E476A3C86CE13DD5526DF9D8 /* Info.plist */,
+				PRVFR001PRVFR001PRVFR01A /* PrivacyInfo.xcprivacy */,
 			);
 			path = ArrBarr;
 			sourceTree = "<group>";
@@ -138,6 +145,7 @@
 				IOS00010IOS00010IOS0010A /* ArrBarriOSApp.swift */,
 				IOS00011IOS00011IOS0011A /* Info.plist */,
 				IOS00012IOS00012IOS0012A /* Assets.xcassets */,
+				PRVFR002PRVFR002PRVFR02A /* PrivacyInfo.xcprivacy */,
 			);
 			path = ArrBarriOS;
 			sourceTree = "<group>";
@@ -156,6 +164,7 @@
 				WDGFR010WDGFR010WDGFR01A /* ArrBarrWidgets.swift */,
 				WDGFR012WDGFR012WDGFR12A /* ArrBarrWidgets.entitlements */,
 				WDGFR011WDGFR011WDGFR11A /* Info.plist */,
+				PRVFR003PRVFR003PRVFR03A /* PrivacyInfo.xcprivacy */,
 			);
 			path = ArrBarrWidgets;
 			sourceTree = "<group>";
@@ -282,6 +291,7 @@
 			files = (
 				953E24EE53AE7971D31F0FA0 /* Assets.xcassets in Resources */,
 				7A1D7C162F00000100000005 /* AppIcon.icon in Resources */,
+				PRV0B001PRV0B001PRV0B01A /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -291,6 +301,7 @@
 			files = (
 				IOS00002IOS00002IOS0002A /* Assets.xcassets in Resources */,
 				IOS00099IOS00099IOS0099A /* AppIcon.icon in Resources */,
+				PRV0B002PRV0B002PRV0B02A /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -298,6 +309,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				PRV0B003PRV0B003PRV0B03A /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -383,7 +395,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = 9M6DR2Z85Y;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
@@ -458,7 +470,7 @@
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEPLOYMENT_POSTPROCESSING = YES;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = 9M6DR2Z85Y;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -521,7 +533,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = 9M6DR2Z85Y;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
