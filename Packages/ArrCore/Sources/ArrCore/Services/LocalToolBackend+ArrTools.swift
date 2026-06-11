@@ -663,7 +663,9 @@ extension LocalToolBackend {
             if src == .whisparr && !aiKnowsAboutWhisparr {
                 return ToolCallOutput(text: "Whisparr AI access is disabled in Settings.")
             }
-            let cfg = all.first { $0.0 == src }!.1
+            guard let cfg = all.first(where: { $0.0 == src })?.1 else {
+                return ToolCallOutput(text: "Unknown service '\(requested)'. Use sonarr, radarr, lidarr or whisparr.")
+            }
             guard cfg.isConfigured else {
                 return ToolCallOutput(text: "\(src.displayName) is not configured.")
             }

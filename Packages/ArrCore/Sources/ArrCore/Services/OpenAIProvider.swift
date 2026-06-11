@@ -39,7 +39,9 @@ public struct OpenAIProvider: LLMProvider {
             history: history,
             replyLanguage: replyLanguage
         )
-        let url = URL(string: config.baseURL.trimmingCharacters(in: CharacterSet(charactersIn: "/")) + "/chat/completions")!
+        guard let url = URL(string: config.baseURL.trimmingCharacters(in: CharacterSet(charactersIn: "/")) + "/chat/completions") else {
+            throw OpenAIError.empty
+        }
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")

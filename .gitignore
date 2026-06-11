@@ -17,8 +17,6 @@ Package.resolved
 # Claude Code workspace
 .claude/
 .worktrees/
-CLAUDE.md
-docs/superpowers/
 
 # Logs / crash reports
 *.log

@@ -550,14 +550,14 @@ private struct CustomizeIllustration: View {
     private struct Row: Identifiable {
         let id: Int
         let symbol: String
-        let label: String
+        let label: Text
         let on: Bool
     }
 
     private let rows: [Row] = [
-        Row(id: 0, symbol: "moon.stars.fill",         label: "Tonight",   on: true),
-        Row(id: 1, symbol: "exclamationmark.bubble.fill", label: "Needs you", on: true),
-        Row(id: 2, symbol: "server.rack",             label: "Lidarr",    on: false),
+        Row(id: 0, symbol: "moon.stars.fill",         label: Text("onboarding.tonight.button", bundle: .module), on: true),
+        Row(id: 1, symbol: "exclamationmark.bubble.fill", label: Text("queue.needsYou.button", bundle: .module), on: true),
+        Row(id: 2, symbol: "server.rack",             label: Text(verbatim: "Lidarr"), on: false),
     ]
 
     public var body: some View {
@@ -568,7 +568,7 @@ private struct CustomizeIllustration: View {
                         .scaledFont(size: 11, weight: .regular)
                         .foregroundStyle(.secondary)
                         .frame(width: 14)
-                    Text(row.label)
+                    row.label
                         .scaledFont(size: 11)
                         .foregroundStyle(.primary)
                     Spacer()
