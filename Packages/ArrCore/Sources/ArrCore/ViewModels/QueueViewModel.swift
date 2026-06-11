@@ -228,6 +228,33 @@ public final class QueueViewModel {
         }
         .store(in: &intervalObservers)
 
+        // Re-probe a download client / AI service the moment its connection
+        // details change, so the status dot reflects the new credentials
+        // within seconds. The throttled sweep alone needs `downThreshold`
+        // failed sweeps a minute apart to flip a dot — a bad edit would stay
+        // green for minutes. Debounced so per-keystroke config writes from
+        // the Settings fields don't fire a probe per character.
+        for kind in MonitoredService.downloadClientKinds {
+            configStore.publisher(for: kind)
+                .dropFirst()
+                .removeDuplicates()
+                .debounce(for: .seconds(1.5), scheduler: DispatchQueue.main)
+                .sink { [weak self] _ in self?.reprobe(.arr(kind)) }
+                .store(in: &intervalObservers)
+        }
+        configStore.$openai
+            .dropFirst()
+            .removeDuplicates()
+            .debounce(for: .seconds(1.5), scheduler: DispatchQueue.main)
+            .sink { [weak self] _ in self?.reprobe(.openai) }
+            .store(in: &intervalObservers)
+        configStore.$tmdbApiKey
+            .dropFirst()
+            .removeDuplicates()
+            .debounce(for: .seconds(1.5), scheduler: DispatchQueue.main)
+            .sink { [weak self] _ in self?.reprobe(.tmdb) }
+            .store(in: &intervalObservers)
+
         // A successful "Test Connection" in Settings posts this — refresh now
         // so a freshly-saved key clears any stale per-arr error immediately.
         NotificationCenter.default.publisher(for: .arrBarrConfigValidated)
@@ -472,6 +499,26 @@ public final class QueueViewModel {
                     detail: outcome.detail,
                     message: outcome.message
                 )
+            }
+        }
+    }
+
+    /// Probe one service right now, bypassing the sweep throttle, and pin the
+    /// outcome immediately (no debounce — a deliberate probe of just-saved
+    /// settings is proof, the same way a manual "Test Connection" is). Called
+    /// when the service's connection details change in Settings. While the
+    /// probe is in flight the dot drops to grey so a stale green/red from the
+    /// previous credentials never lingers.
+    private func reprobe(_ service: MonitoredService) {
+        ConnectionHealth.shared.markUnknown(service)
+        guard service.isConfigured(in: configStore), !DemoMode.isActive else { return }
+        let inputs = buildProbeInputs()
+        Task { [connectionMonitor] in
+            let outcome = await connectionMonitor.probe(service, inputs)
+            if outcome.success {
+                ConnectionHealth.shared.forceOK(service, detail: outcome.detail)
+            } else {
+                ConnectionHealth.shared.forceDown(service, message: outcome.message ?? "")
             }
         }
     }

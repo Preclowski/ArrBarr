@@ -649,7 +649,7 @@ public final class ConfigStore: ObservableObject {
         source == .whisparr && blurWhisparrPosters
     }
 
-    private func publisher(for kind: ServiceKind) -> Published<ServiceConfig>.Publisher {
+    func publisher(for kind: ServiceKind) -> Published<ServiceConfig>.Publisher {
         switch kind {
         case .radarr: $radarr
         case .sonarr: $sonarr
