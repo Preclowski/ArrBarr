@@ -31,3 +31,6 @@ IconLayers/
 # Design source originals (build uses ServiceIcons.xcassets, not these)
 appicons/
 appicon-concepts/
+
+# Python tooling
+__pycache__/
