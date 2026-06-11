@@ -542,10 +542,10 @@ public struct SettingsView: View {
                             Text(verbatim: spec.title)
                                 .foregroundStyle(.primary)
                             Spacer()
+                            // Live health dot, not a "configured" checkmark —
+                            // a green tick next to an unreachable service lies.
                             if spec.config.wrappedValue.isConfigured {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .font(.footnote)
-                                    .foregroundStyle(.green)
+                                ConnectionStatusDot(service: .arr(spec.kind))
                             }
                             Image(systemName: "chevron.right")
                                 .font(.caption.weight(.semibold))
@@ -691,9 +691,9 @@ public struct SettingsView: View {
     }
 
     /// One row in the Media-managers / Download-clients submenu: brand icon +
-    /// name + a green check when configured, pushing a dedicated per-service
-    /// screen. Replaces the old single long form (every service stacked) —
-    /// each service now lives on its own screen one tap deep.
+    /// name + a live health dot when configured, pushing a dedicated
+    /// per-service screen. Replaces the old single long form (every service
+    /// stacked) — each service now lives on its own screen one tap deep.
     private func iosServiceLink<Content: View>(
         kind: ServiceKind,
         title: String,
@@ -711,9 +711,7 @@ public struct SettingsView: View {
                 Text(verbatim: title)
                 Spacer()
                 if configured {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.footnote)
-                        .foregroundStyle(.green)
+                    ConnectionStatusDot(service: .arr(kind))
                 }
             }
         }
