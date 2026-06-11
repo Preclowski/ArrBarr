@@ -6,6 +6,9 @@ import SwiftUI
 struct ApiKeyTestButton: View {
     /// Validation work — throws on an invalid key / unreachable endpoint.
     let test: () async throws -> Void
+    /// When set, the result is written through to the shared `ConnectionHealth`
+    /// and a persistent status dot is shown (OpenAI / TMDB).
+    var service: MonitoredService? = nil
 
     @State private var state: TestState = .idle
 
@@ -16,6 +19,9 @@ struct ApiKeyTestButton: View {
 
     var body: some View {
         HStack(spacing: 8) {
+            if let service {
+                ConnectionStatusDot(service: service)
+            }
             Button { Task { await run() } } label: {
                 Text("queue.testConnection.button", bundle: .module)
             }
@@ -49,8 +55,11 @@ struct ApiKeyTestButton: View {
         do {
             try await test()
             state = .success
+            if let service { ConnectionHealth.shared.forceOK(service, detail: nil) }
         } catch {
-            state = .failure(message(for: error))
+            let msg = message(for: error)
+            state = .failure(msg)
+            if let service { ConnectionHealth.shared.forceDown(service, message: msg) }
         }
     }
 

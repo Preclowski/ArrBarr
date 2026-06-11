@@ -66,6 +66,9 @@ public final class QueueViewModel {
     private let aggregator: QueueDataProviding
     private let configStore: ConfigStore
     private let coalescer: NotificationCoalescer
+    /// Actively probes the non-arr services (download clients + AI) the queue
+    /// fetch never touches, throttled internally to once a minute.
+    private let connectionMonitor = ConnectionHealthMonitor()
     private var foregroundTimer: Timer?
     private var backgroundTimer: Timer?
     private var intervalObservers: Set<AnyCancellable> = []
@@ -377,6 +380,9 @@ public final class QueueViewModel {
             self.errors = [:]
             self.unreachableArrs = []
             self.needsYou = Self.computeNeedsYou(queues: self.queues, errors: [:], health: DemoMocks.health)
+            for service in MonitoredService.allCases {
+                ConnectionHealth.shared.forceOK(service, detail: nil)
+            }
             self.lastError = nil
             return
         }
@@ -423,8 +429,98 @@ public final class QueueViewModel {
         }
         self.health = health
         self.unreachableArrs = updateUnreachable(errors: newErrors)
-        self.needsYou = Self.computeNeedsYou(queues: newQueues, errors: newErrors, health: health)
+        updateConnectionHealth(errors: newErrors)
+        var needs = Self.computeNeedsYou(queues: newQueues, errors: newErrors, health: health)
+        needs.append(contentsOf: serviceIssueRows())
+        self.needsYou = needs
         self.lastError = nil
+    }
+
+    // MARK: - Connection health
+
+    /// Drives the unified `ConnectionHealth` state each refresh.
+    ///  - Arrs are health-checked from the live queue fetch (a real probe every
+    ///    cycle): configured + no error → ok; configured + error → failure
+    ///    (debounced); unconfigured → unknown.
+    ///  - Download clients + AI services aren't fetched here, so they're probed
+    ///    by `connectionMonitor` (throttled to once a minute). Unconfigured ones
+    ///    are reset to unknown so a stale result doesn't linger.
+    private func updateConnectionHealth(errors: [QueueItem.Source: String]) {
+        for source in QueueItem.Source.allCases {
+            let service = MonitoredService.arr(source.serviceKind)
+            if service.isConfigured(in: configStore) {
+                ConnectionHealth.shared.record(
+                    service,
+                    success: errors[source] == nil,
+                    detail: nil,
+                    message: errors[source]
+                )
+            } else {
+                ConnectionHealth.shared.markUnknown(service)
+            }
+        }
+        for service in MonitoredService.probeTargets where !service.isConfigured(in: configStore) {
+            ConnectionHealth.shared.markUnknown(service)
+        }
+        let inputs = buildProbeInputs()
+        Task { [connectionMonitor] in
+            let outcomes = await connectionMonitor.probeIfDue(inputs, force: false)
+            for outcome in outcomes {
+                ConnectionHealth.shared.record(
+                    outcome.service,
+                    success: outcome.success,
+                    detail: outcome.detail,
+                    message: outcome.message
+                )
+            }
+        }
+    }
+
+    /// Build the Sendable probe snapshot for the configured download clients +
+    /// AI services, read on the main actor.
+    private func buildProbeInputs() -> ConnectionHealthMonitor.ProbeInputs {
+        var clients: [ServiceKind: ServiceConfig] = [:]
+        for kind in MonitoredService.downloadClientKinds where MonitoredService.arr(kind).isConfigured(in: configStore) {
+            clients[kind] = configStore.config(for: kind)
+        }
+        let openai = configStore.openai.isConfigured ? configStore.openai : nil
+        let tmdb = configStore.tmdbApiKey.isEmpty ? nil : configStore.tmdbApiKey
+        return .init(clients: clients, openai: openai, tmdbKey: tmdb)
+    }
+
+    /// "Needs you" rows for the non-arr services currently `.down` (download
+    /// clients + AI). Arr issues are already surfaced by `computeNeedsYou`, so
+    /// these never double-report.
+    private func serviceIssueRows() -> [NeedsYouItem] {
+        let label = String(localized: "queue.serviceProblem.button", bundle: .module)
+        return MonitoredService.probeTargets.compactMap { service in
+            guard case .down(let message) = ConnectionHealth.shared.state(for: service) else { return nil }
+            return NeedsYouItem(
+                serviceIssue: service,
+                title: service.displayName,
+                subtitle: label,
+                detailLines: [message]
+            )
+        }
+    }
+
+    /// The configured download client that backs `item`, used to pin it `.down`
+    /// when a queue action against it fails. Mirrors the client-selection order
+    /// in `QueueAggregator.performTorrent` / `performUsenet`.
+    private func failedDownloadClientKind(for item: QueueItem) -> ServiceKind? {
+        switch item.downloadProtocol {
+        case .usenet:
+            if configStore.sabnzbd.isConfigured { return .sabnzbd }
+            if configStore.nzbget.isConfigured { return .nzbget }
+        case .torrent:
+            if configStore.qbittorrent.isConfigured { return .qbittorrent }
+            if configStore.transmission.isConfigured { return .transmission }
+            if configStore.rtorrent.isConfigured { return .rtorrent }
+            if configStore.deluge.isConfigured { return .deluge }
+        case .unknown:
+            return nil
+        }
+        return nil
     }
 
     // MARK: - Derived state
@@ -596,7 +692,14 @@ public final class QueueViewModel {
             lastError = nil
             applyOptimisticUpdate(action, on: item)
         } catch {
-            lastError = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+            let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+            lastError = message
+            // A failed action is concrete proof the backing download client is
+            // unreachable / misconfigured — pin it red now (the next probe
+            // corrects it if it was transient).
+            if let kind = failedDownloadClientKind(for: item) {
+                ConnectionHealth.shared.forceDown(.arr(kind), message: message)
+            }
         }
     }
 
@@ -627,7 +730,12 @@ public final class QueueViewModel {
 
 public struct NeedsYouItem: Identifiable, Equatable {
     public let id: String
-    public let source: QueueItem.Source
+    /// The arr this row belongs to — `nil` for a non-arr connection issue
+    /// (download client / AI), which is identified by `service` instead.
+    public let source: QueueItem.Source?
+    /// Set only for a non-arr connection issue; drives the chip icon/label and
+    /// tells tap handlers there's no arr queue page to open.
+    public let service: MonitoredService?
     public let title: String
     /// Short headline pill — for a queue item the status name (Failed /
     /// Manual import required); for an arr-level issue a generic label.
@@ -645,6 +753,7 @@ public struct NeedsYouItem: Identifiable, Equatable {
         self.item = item
         self.id = "needsyou.\(item.id)"
         self.source = item.source
+        self.service = nil
         self.title = item.title
         self.subtitle = item.status == .warning
             ? String(localized: "queue.manualImportRequired.button", bundle: .module)
@@ -664,6 +773,24 @@ public struct NeedsYouItem: Identifiable, Equatable {
         self.item = nil
         self.id = id
         self.source = source
+        self.service = nil
+        self.title = title
+        self.subtitle = subtitle
+        self.detailLines = detailLines
+    }
+
+    /// A non-arr connection issue (a download client or AI service is
+    /// unreachable / misconfigured). Has no arr source and no queue item.
+    public init(
+        serviceIssue service: MonitoredService,
+        title: String,
+        subtitle: String,
+        detailLines: [String]
+    ) {
+        self.item = nil
+        self.id = "needsyou.service.\(service.id)"
+        self.source = nil
+        self.service = service
         self.title = title
         self.subtitle = subtitle
         self.detailLines = detailLines

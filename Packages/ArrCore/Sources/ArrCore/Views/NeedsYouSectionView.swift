@@ -41,10 +41,13 @@ public struct NeedsYouSectionView: View {
                                     .lineLimit(2)
                                 // Chevron telegraphs the drill-in
                                 // affordance — same pattern queue /
-                                // upcoming rows use.
-                                LinkChevron(size: 9)
+                                // upcoming rows use. Non-arr connection
+                                // issues have nowhere to drill, so no chevron.
+                                if needs.service == nil {
+                                    LinkChevron(size: 9)
+                                }
                                 Spacer(minLength: 4)
-                                sourceChip(needs.source)
+                                sourceChip(for: needs)
                             }
                             Text(needs.subtitle)
                                 .scaledFont(size: 11)
@@ -88,10 +91,11 @@ public struct NeedsYouSectionView: View {
         }
     }
 
-    private func sourceChip(_ source: QueueItem.Source) -> some View {
+    @ViewBuilder
+    private func sourceChip(for needs: NeedsYouItem) -> some View {
         HStack(spacing: 3) {
-            ServiceIcon(source: source, size: 9)
-            Text(source.displayName)
+            chipIcon(for: needs)
+            Text(chipLabel(for: needs))
                 .scaledFont(size: 10, weight: .medium)
         }
         .foregroundStyle(.secondary)
@@ -102,5 +106,22 @@ public struct NeedsYouSectionView: View {
                 .fill(Color.primary.opacity(0.07))
         )
         .padding(.top, 3)
+    }
+
+    @ViewBuilder
+    private func chipIcon(for needs: NeedsYouItem) -> some View {
+        if let source = needs.source {
+            ServiceIcon(source: source, size: 9)
+        } else if let kind = needs.service?.serviceKind {
+            ServiceIcon(kind: kind, size: 9)
+        } else {
+            // AI services (OpenAI / TMDB) have no brand asset.
+            Image(systemName: "sparkles")
+                .scaledFont(size: 9, weight: .semibold)
+        }
+    }
+
+    private func chipLabel(for needs: NeedsYouItem) -> String {
+        needs.source?.displayName ?? needs.service?.displayName ?? needs.title
     }
 }

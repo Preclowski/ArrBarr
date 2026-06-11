@@ -110,6 +110,7 @@ struct ServiceFields: View {
             }
 
             HStack(spacing: 8) {
+                ConnectionStatusDot(service: .arr(kind))
                 Button { runTest() } label: { Text("queue.testConnection.button", bundle: .module) }
                     .modifier(GlassButtonStyle())
                     .controlSize(.small)
@@ -181,13 +182,17 @@ struct ServiceFields: View {
                 let result = try await ConnectionTester.test(kind: kind, config: snapshot)
                 await MainActor.run {
                     testState = .success(result)
+                    ConnectionHealth.shared.forceOK(.arr(kind), detail: result)
                     // Kick a queue refresh so a just-entered key clears the
                     // stale "missing API key" banner right away.
                     NotificationCenter.default.post(name: .arrBarrConfigValidated, object: nil)
                 }
             } catch {
                 let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
-                await MainActor.run { testState = .failure(message) }
+                await MainActor.run {
+                    testState = .failure(message)
+                    ConnectionHealth.shared.forceDown(.arr(kind), message: message)
+                }
             }
         }
     }

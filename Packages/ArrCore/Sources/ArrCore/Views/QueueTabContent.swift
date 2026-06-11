@@ -131,7 +131,10 @@ struct QueueTabContent: View {
     }
 
     private func openNeedsYouQueue(_ needs: NeedsYouItem) {
-        let cfg = configStore.config(for: needs.source.serviceKind)
+        // Non-arr connection issues (download client / AI) have no arr queue
+        // page to open — the user fixes those in Settings.
+        guard let source = needs.source else { return }
+        let cfg = configStore.config(for: source.serviceKind)
         guard let url = ArrActivityURLBuilder.queueURL(forBase: cfg.baseURL),
               let scheme = url.scheme?.lowercased(),
               scheme == "http" || scheme == "https"

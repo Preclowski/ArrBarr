@@ -168,9 +168,9 @@ public struct SettingsView: View {
                         Text("settings.model.button", bundle: .module)
                     }
                     if !configStore.openai.apiKey.isEmpty && !configStore.openai.baseURL.isEmpty {
-                        ApiKeyTestButton {
+                        ApiKeyTestButton(test: {
                             try await OpenAIProvider(config: configStore.openai).testConnection()
-                        }
+                        }, service: .openai)
                     }
                     if !configStore.openai.isConfigured {
                         Label {
@@ -211,9 +211,9 @@ public struct SettingsView: View {
                 }
                 .apiKeyField()
                 if !configStore.tmdbApiKey.isEmpty {
-                    ApiKeyTestButton {
+                    ApiKeyTestButton(test: {
                         try await TMDBClient(apiKey: configStore.tmdbApiKey).testConnection()
-                    }
+                    }, service: .tmdb)
                 }
                 if let url = URL(string: "https://www.themoviedb.org/settings/api") {
                     Link(destination: url) {
