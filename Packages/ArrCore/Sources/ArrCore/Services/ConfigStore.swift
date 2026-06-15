@@ -92,7 +92,12 @@ public final class ConfigStore: ObservableObject {
     @Published public var arrOrder: [String] = ConfigStore.defaultArrOrder
     @Published public var showTonight: Bool = true
     @Published public var showNeedsYou: Bool = true
-    @Published public var showIndexerIssues: Bool = true
+    /// "Show warnings": when on, warning/notice-level arr health checks (broken
+    /// indexer, update available, …) join the always-shown errors in the
+    /// "Needs you" list; when off, only errors surface. (Legacy name —
+    /// originally an indexer-only toggle; the persisted key is unchanged so
+    /// existing preferences carry over.)
+    @Published public var showWarnings: Bool = true
     @Published public var collapsedArrs: Set<String> = []
     @Published public var tonightHours: Int = 168
     /// Last `WelcomeContent.currentVersion` the user dismissed. `nil` means
@@ -397,12 +402,12 @@ public final class ConfigStore: ObservableObject {
         self.arrOrder = Self.normalizeArrOrder(defaults.stringArray(forKey: Self.arrOrderKey))
         self.showTonight = defaults.object(forKey: Self.showTonightKey) != nil ? defaults.bool(forKey: Self.showTonightKey) : true
         self.showNeedsYou = defaults.object(forKey: Self.showNeedsYouKey) != nil ? defaults.bool(forKey: Self.showNeedsYouKey) : true
-        self.showIndexerIssues = defaults.object(forKey: Self.showIndexerIssuesKey) != nil ? defaults.bool(forKey: Self.showIndexerIssuesKey) : true
+        self.showWarnings = defaults.object(forKey: Self.showIndexerIssuesKey) != nil ? defaults.bool(forKey: Self.showIndexerIssuesKey) : true
         #if os(iOS)
-        // iOS settings are intentionally minimal: indexer warnings are off,
-        // foreground polling is a fixed 5s, and the theme always follows the
-        // system (no pickers for any of these).
-        self.showIndexerIssues = false
+        // iOS settings are intentionally minimal: warnings are off (errors
+        // only), foreground polling is a fixed 5s, and the theme always follows
+        // the system (no pickers for any of these).
+        self.showWarnings = false
         self.foregroundInterval = 5
         self.appearance = "system"
         #endif
@@ -506,7 +511,7 @@ public final class ConfigStore: ObservableObject {
         $showNeedsYou.dropFirst().sink { [weak self] val in
             self?.defaults.set(val, forKey: Self.showNeedsYouKey)
         }.store(in: &cancellables)
-        $showIndexerIssues.dropFirst().sink { [weak self] val in
+        $showWarnings.dropFirst().sink { [weak self] val in
             self?.defaults.set(val, forKey: Self.showIndexerIssuesKey)
         }.store(in: &cancellables)
         $collapsedArrs.dropFirst().sink { [weak self] val in
@@ -680,6 +685,29 @@ public final class ConfigStore: ObservableObject {
         case .transmission: return transmission
         case .rtorrent: return rtorrent
         case .deluge: return deluge
+        }
+    }
+
+    /// The download client a pause/resume would actually be routed to for a
+    /// given protocol — the first configured one in the SAME priority order
+    /// `QueueAggregator.performUsenet` / `performTorrent` use. `nil` when none
+    /// is configured. Pause/resume go straight to this client (not via the
+    /// arr), so its reachability is what gates those controls — distinct from
+    /// delete, which the arr performs server-side.
+    public func selectedDownloadClient(for proto: QueueItem.DownloadProtocol) -> ServiceKind? {
+        switch proto {
+        case .usenet:
+            if sabnzbd.isConfigured, !sabnzbd.apiKey.isEmpty { return .sabnzbd }
+            if nzbget.isConfigured { return .nzbget }
+            return nil
+        case .torrent:
+            if qbittorrent.isConfigured { return .qbittorrent }
+            if transmission.isConfigured { return .transmission }
+            if rtorrent.isConfigured { return .rtorrent }
+            if deluge.isConfigured { return .deluge }
+            return nil
+        case .unknown:
+            return nil
         }
     }
 

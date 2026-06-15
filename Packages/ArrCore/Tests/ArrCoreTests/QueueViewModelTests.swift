@@ -253,11 +253,12 @@ struct QueueViewModelOptimisticTests {
 @Suite("QueueViewModel unreachable tracking")
 @MainActor
 struct QueueViewModelUnreachableTests {
-    @Test("A configured arr is marked unreachable only after 3 consecutive failures")
+    @Test("A configured arr is marked unreachable only after 3 consecutive transport failures")
     func threeFailuresMarkUnreachable() async {
         let (sut, fake, _) = makeSUT { $0.sonarr = configuredArr }
         fake.fetchResult = AggregateResult(
-            radarr: [], sonarr: [], lidarr: [], whisparr: [], sonarrError: "boom"
+            radarr: [], sonarr: [], lidarr: [], whisparr: [],
+            sonarrError: "boom", unreachableSources: [.sonarr]
         )
         await sut.refresh()
         #expect(!sut.unreachableArrs.contains(.sonarr))
@@ -267,11 +268,28 @@ struct QueueViewModelUnreachableTests {
         #expect(sut.unreachableArrs.contains(.sonarr))
     }
 
-    @Test("A successful fetch resets the consecutive-failure counter")
+    @Test("An arr-origin HTTP error (no unreachableSources) never trips the offline tracker")
+    func arrOriginErrorIsNotUnreachable() async {
+        let (sut, fake, _) = makeSUT { $0.sonarr = configuredArr }
+        // A 500 the arr threw means it answered — an outage, not "off the LAN".
+        // The aggregator leaves `unreachableSources` empty for it, so the
+        // offline tracker must never trip no matter how many cycles fail.
+        fake.fetchResult = AggregateResult(
+            radarr: [], sonarr: [], lidarr: [], whisparr: [], sonarrError: "HTTP 500"
+        )
+        await sut.refresh()
+        await sut.refresh()
+        await sut.refresh()
+        #expect(!sut.unreachableArrs.contains(.sonarr))
+        #expect(!sut.isFullyOffline)
+    }
+
+    @Test("A reachable fetch resets the consecutive-failure counter")
     func successResetsCounter() async {
         let (sut, fake, _) = makeSUT { $0.sonarr = configuredArr }
         let errorResult = AggregateResult(
-            radarr: [], sonarr: [], lidarr: [], whisparr: [], sonarrError: "boom"
+            radarr: [], sonarr: [], lidarr: [], whisparr: [],
+            sonarrError: "boom", unreachableSources: [.sonarr]
         )
         fake.fetchResult = errorResult
         await sut.refresh()
@@ -293,7 +311,8 @@ struct QueueViewModelUnreachableTests {
     func unconfiguredNeverUnreachable() async {
         let (sut, fake, _) = makeSUT()       // sonarr left unconfigured
         fake.fetchResult = AggregateResult(
-            radarr: [], sonarr: [], lidarr: [], whisparr: [], sonarrError: "boom"
+            radarr: [], sonarr: [], lidarr: [], whisparr: [],
+            sonarrError: "boom", unreachableSources: [.sonarr]
         )
         await sut.refresh()
         await sut.refresh()

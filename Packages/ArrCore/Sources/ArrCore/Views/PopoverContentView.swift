@@ -470,12 +470,23 @@ public struct PopoverContentView: View {
             tabPills
                 .frame(maxWidth: .infinity)
                 .glassyFloatingBar()
+            // Quiet "you've left the LAN" chip — only present while the whole
+            // stack is unreachable, slotted between the tabs and the kebab so
+            // it reads as ambient status, not an alert.
+            if viewModel.isFullyOffline {
+                OfflineIndicator(viewModel: viewModel)
+                    .padding(.horizontal, 12)
+                    .frame(height: Self.pillHeight)
+                    .glassyFloatingBar()
+                    .transition(.opacity.combined(with: .scale(scale: 0.9)))
+            }
             moreMenu
                 .glassyFloatingBar()
         }
         .padding(.horizontal, 12)
         .padding(.top, 10)
         .padding(.bottom, 8)
+        .animation(.easeInOut(duration: 0.2), value: viewModel.isFullyOffline)
     }
 
     /// Reports each tab's frame in `tabPills`'s coordinate space so the

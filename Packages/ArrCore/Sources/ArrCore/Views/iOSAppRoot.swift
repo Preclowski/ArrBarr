@@ -176,6 +176,16 @@ private struct QueueTab: View {
         .refreshable { await viewModel.refresh() }
         // No nav-bar title — it only duplicated the tab-bar label below.
         .navigationBarTitleDisplayMode(.inline)
+        // Quiet offline chip where the (absent) title would sit. Only present
+        // while the whole stack is unreachable — pull-to-refresh and tapping
+        // the chip both re-probe.
+        .toolbar {
+            if viewModel.isFullyOffline {
+                ToolbarItem(placement: .topBarLeading) {
+                    OfflineIndicator(viewModel: viewModel)
+                }
+            }
+        }
         // Search-to-add now lives in a persistent top search bar instead of
         // a floating "+" button.
         .searchable(
@@ -248,6 +258,13 @@ private struct UpcomingTab: View {
             }
         }
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if viewModel.isFullyOffline {
+                ToolbarItem(placement: .topBarLeading) {
+                    OfflineIndicator(viewModel: viewModel)
+                }
+            }
+        }
         .refreshable { await viewModel.refresh() }
         .navigationDestination(item: $detailItem) { item in
             DetailView(item: item, onBack: { detailItem = nil }, viewModel: viewModel)

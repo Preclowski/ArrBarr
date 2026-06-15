@@ -141,12 +141,13 @@ struct ComputeNeedsYouTests {
         let result = QueueViewModel.computeNeedsYou(
             queues: [.radarr: radarr, .sonarr: sonarr, .lidarr: lidarr],
             errors: [:],
-            health: .empty
+            health: .empty,
+            showWarnings: true
         )
         #expect(result.map(\.id) == ["needsyou.r-fail", "needsyou.s-warn"])
     }
 
-    @Test("Warning/notice health records are NOT surfaced (only error-level)")
+    @Test("Warning health records are hidden when showWarnings is off")
     @MainActor
     func benignHealthIgnored() {
         let health = HealthResult(
@@ -155,11 +156,26 @@ struct ComputeNeedsYouTests {
             sonarr: [],
             lidarr: []
         )
-        let result = QueueViewModel.computeNeedsYou(queues: [:], errors: [:], health: health)
+        let result = QueueViewModel.computeNeedsYou(queues: [:], errors: [:], health: health, showWarnings: false)
         #expect(result.isEmpty)
     }
 
-    @Test("Error-level health records ARE surfaced as an arr issue")
+    @Test("Warning health records ARE surfaced when showWarnings is on")
+    @MainActor
+    func warningHealthSurfacedWhenEnabled() {
+        let health = HealthResult(
+            radarr: [ArrHealthRecord(source: "IndexerStatusCheck", type: "warning",
+                                     message: "Indexer X is down", wikiUrl: nil)],
+            sonarr: [],
+            lidarr: []
+        )
+        let result = QueueViewModel.computeNeedsYou(queues: [:], errors: [:], health: health, showWarnings: true)
+        #expect(result.count == 1)
+        #expect(result.first?.source == .radarr)
+        #expect(result.first?.detailLines == ["Indexer X is down"])
+    }
+
+    @Test("Error-level health records ARE surfaced even when showWarnings is off")
     @MainActor
     func errorHealthSurfaced() {
         let health = HealthResult(
@@ -168,7 +184,7 @@ struct ComputeNeedsYouTests {
             sonarr: [],
             lidarr: []
         )
-        let result = QueueViewModel.computeNeedsYou(queues: [:], errors: [:], health: health)
+        let result = QueueViewModel.computeNeedsYou(queues: [:], errors: [:], health: health, showWarnings: false)
         #expect(result.count == 1)
         #expect(result.first?.item == nil)
         #expect(result.first?.source == .radarr)
@@ -181,7 +197,8 @@ struct ComputeNeedsYouTests {
         let result = QueueViewModel.computeNeedsYou(
             queues: [:],
             errors: [.radarr: "HTTP 500"],
-            health: .empty
+            health: .empty,
+            showWarnings: false
         )
         #expect(result.count == 1)
         #expect(result.first?.item == nil)
@@ -205,7 +222,8 @@ struct ComputeNeedsYouTests {
         let result = QueueViewModel.computeNeedsYou(
             queues: [:],
             errors: [.sonarr: "HTTP 500"],
-            health: health
+            health: health,
+            showWarnings: false
         )
         // One grouped Sonarr entry, all three problems stacked beneath it.
         #expect(result.count == 1)
@@ -216,7 +234,7 @@ struct ComputeNeedsYouTests {
     @Test("Empty inputs return empty")
     @MainActor
     func empty() {
-        let result = QueueViewModel.computeNeedsYou(queues: [:], errors: [:], health: .empty)
+        let result = QueueViewModel.computeNeedsYou(queues: [:], errors: [:], health: .empty, showWarnings: true)
         #expect(result.isEmpty)
     }
 
@@ -229,7 +247,8 @@ struct ComputeNeedsYouTests {
                 .sonarr: [item("fail", source: .sonarr, status: .failed)],
             ],
             errors: [:],
-            health: .empty
+            health: .empty,
+            showWarnings: true
         )
         #expect(result.count == 2)
         let warning = result.first { $0.id == "needsyou.warn" }

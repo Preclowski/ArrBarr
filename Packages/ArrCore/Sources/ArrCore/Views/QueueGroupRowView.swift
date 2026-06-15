@@ -20,6 +20,9 @@ public struct QueueGroupRowView: View {
     /// True when the host already has a permanent detail pane (desktop
     /// window). Suppresses the long-hover tooltip popover.
     @Environment(\.suppressRowTooltip) private var suppressRowTooltip
+    /// True when the whole arr stack is unreachable — hide the mutating
+    /// controls (they'd fail without a live LAN connection).
+    @Environment(\.queueOffline) private var isOffline
     @State private var isHovering = false
     @State private var showTooltip = false
     @State private var hoverTask: Task<Void, Never>?
@@ -37,19 +40,13 @@ public struct QueueGroupRowView: View {
 
     private var rep: QueueItem { group.representative }
 
+    /// See QueueRowView.canControl — pause/resume need a configured AND
+    /// reachable download client (they bypass the arr); a `.down` client hides
+    /// them so the user isn't offered an action that can't reach home.
     private var canControl: Bool {
-        switch rep.downloadProtocol {
-        case .usenet:
-            return (configStore.sabnzbd.isConfigured && !configStore.sabnzbd.apiKey.isEmpty)
-                || configStore.nzbget.isConfigured
-        case .torrent:
-            return configStore.qbittorrent.isConfigured
-                || configStore.transmission.isConfigured
-                || configStore.rtorrent.isConfigured
-                || configStore.deluge.isConfigured
-        case .unknown:
-            return false
-        }
+        guard let kind = configStore.selectedDownloadClient(for: rep.downloadProtocol) else { return false }
+        if case .down = ConnectionHealth.shared.state(for: .arr(kind)) { return false }
+        return true
     }
 
     private var canPauseResume: Bool {
@@ -75,7 +72,7 @@ public struct QueueGroupRowView: View {
             // the list — same treatment as QueueRowView.
             #if os(macOS)
             .overlay {
-                if isHovering && canControl && canPauseResume {
+                if isHovering && canControl && canPauseResume && !isOffline {
                     posterControl.transition(.opacity)
                 }
             }
@@ -134,23 +131,26 @@ public struct QueueGroupRowView: View {
             onShowDetail?()
         }
         .contextMenu {
-            if canControl && canPauseResume {
-                Button {
-                    if showsPlay { onResume() } else { onPause() }
-                } label: {
-                    if rep.status == .queued {
-                        Label { Text("queue.startNow.button", bundle: .module) } icon: { Image(systemName: "play.fill") }
-                    } else if rep.isPaused {
-                        Label { Text("queue.resume.button", bundle: .module) } icon: { Image(systemName: "play.fill") }
-                    } else {
-                        Label { Text("queue.pause.button", bundle: .module) } icon: { Image(systemName: "pause.fill") }
+            // Offline → no mutating menu items; the header chip explains why.
+            if !isOffline {
+                if canControl && canPauseResume {
+                    Button {
+                        if showsPlay { onResume() } else { onPause() }
+                    } label: {
+                        if rep.status == .queued {
+                            Label { Text("queue.startNow.button", bundle: .module) } icon: { Image(systemName: "play.fill") }
+                        } else if rep.isPaused {
+                            Label { Text("queue.resume.button", bundle: .module) } icon: { Image(systemName: "play.fill") }
+                        } else {
+                            Label { Text("queue.pause.button", bundle: .module) } icon: { Image(systemName: "pause.fill") }
+                        }
                     }
                 }
-            }
-            Button(role: .destructive) {
-                requestDeleteConfirm()
-            } label: {
-                Label { Text("queue.removeFromQueue.button", bundle: .module) } icon: { Image(systemName: "trash") }
+                Button(role: .destructive) {
+                    requestDeleteConfirm()
+                } label: {
+                    Label { Text("queue.removeFromQueue.button", bundle: .module) } icon: { Image(systemName: "trash") }
+                }
             }
         }
         // macOS-only hover affordances: row tint + 600 ms delayed tooltip.
@@ -248,9 +248,12 @@ public struct QueueGroupRowView: View {
             ZStack {
                 RoundedRectangle(cornerRadius: Tokens.Radius.chip)
                     .fill(.black.opacity(0.5))
-                Image(systemName: showsPlay ? "play.fill" : "pause.fill")
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(.white)
+                DownloadProgressRing(
+                    systemName: showsPlay ? "play.fill" : "pause.fill",
+                    progress: aggregateProgress,
+                    diameter: 26,
+                    lineWidth: 2
+                )
             }
         }
         .buttonStyle(.plain)

@@ -64,9 +64,19 @@ public final class QueueAggregator: QueueDataProviding {
         async let lidarr = Self.safeFetch { try await lidarrClient.fetchQueue() }
         async let whisparr = Self.safeFetch { try await whisparrClient.fetchQueue() }
         let (r, s, l, w) = await (radarr, sonarr, lidarr, whisparr)
+        // Only *transport-level* failures (no response from the host) count as
+        // unreachable — an HTTP 502/500/401 means the server answered, so it's
+        // a service problem, not "we've left the LAN". This is what keeps the
+        // offline indicator from firing on an outage.
+        var unreachable: Set<QueueItem.Source> = []
+        if r.unreachable { unreachable.insert(.radarr) }
+        if s.unreachable { unreachable.insert(.sonarr) }
+        if l.unreachable { unreachable.insert(.lidarr) }
+        if w.unreachable { unreachable.insert(.whisparr) }
         return AggregateResult(
             radarr: r.items, sonarr: s.items, lidarr: l.items, whisparr: w.items,
-            radarrError: r.error, sonarrError: s.error, lidarrError: l.error, whisparrError: w.error
+            radarrError: r.error, sonarrError: s.error, lidarrError: l.error, whisparrError: w.error,
+            unreachableSources: unreachable
         )
     }
 
@@ -161,31 +171,85 @@ public final class QueueAggregator: QueueDataProviding {
             .sorted { $0.airDate < $1.airDate }
     }
 
-    private static func safeFetch(_ block: () async throws -> [QueueItem]) async -> (items: [QueueItem], error: String?) {
+    private static func safeFetch(_ block: () async throws -> [QueueItem]) async -> (items: [QueueItem], error: String?, unreachable: Bool) {
         do {
-            return (try await block(), nil)
+            return (try await block(), nil, false)
         } catch is CancellationError {
             // Refresh task was cancelled (e.g. user released pull-to-refresh,
             // or an overlapping refresh superseded this one). Not a real
             // failure — return no error so the caller keeps the last good data.
-            return ([], nil)
+            return ([], nil, false)
         } catch let error as URLError where error.code == .cancelled {
             // URLSession's cancellation variant (code -999) — same story.
-            return ([], nil)
+            return ([], nil, false)
         } catch HTTPError.notConfigured, HTTPError.missingApiKey {
             // The arr isn't set up — not a failure to surface. `fetchUpcoming`
             // and `fetchHealth` already swallow these; the queue must too,
             // otherwise an unconfigured Lidarr/Whisparr shows "Service not
             // configured" in the queue while Upcoming (which swallows it)
             // looks fine. Settings is where missing config/keys are reported.
-            return ([], nil)
+            return ([], nil, false)
         } catch {
             let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
             // Genuine failure (HTTP status, transport/timeout, decode). Log the
             // full reflection — a DecodingError's coding path or a URLError's
-            // numeric code — since the UI string drops it.
-            Self.logger.error("queue fetch failed: \(message, privacy: .public) | \(String(reflecting: error), privacy: .public)")
-            return ([], message)
+            // numeric code — since the UI string drops it. Keep it `.private`,
+            // though: a URLError embeds its failing URL, and for SABnzbd that
+            // URL carries `apikey=` in the query, which must not land in the
+            // public unified-log. `message` stays public (it's sanitized).
+            Self.logger.error("queue fetch failed: \(message, privacy: .public) | \(String(reflecting: error), privacy: .private)")
+            return ([], message, Self.isUnreachable(error))
+        }
+    }
+
+    /// Distinguishes "couldn't reach the arr" from "the arr itself answered
+    /// with an error". Only the former feeds the offline indicator.
+    ///
+    /// Subtlety that bit us: a status code alone can't always tell the two
+    /// apart, because a reverse proxy / split-horizon-DNS endpoint sits in
+    /// front. So we split by *who* produced the failure:
+    ///  • Transport failure (no route / refused / DNS / timeout) → unreachable.
+    ///  • Gateway statuses (502/503/504, Cloudflare 52x) and 404/410 → a proxy
+    ///    or the wrong endpoint answered, NOT the arr (a real arr never 404s
+    ///    its own `/api/v3/queue`) → unreachable. This is the away-behind-
+    ///    split-DNS case.
+    ///  • Arr-origin statuses (500 it threw, 401/403 bad key, 400/422 bad
+    ///    request) prove we're actually talking to the arr → reachable; those
+    ///    stay a "service problem" (and point the user at Settings/the arr).
+    nonisolated static func isUnreachable(_ error: Error) -> Bool {
+        switch error {
+        case HTTPError.transport(let inner):
+            return isConnectivityFailure(inner)
+        case HTTPError.status(let code, _):
+            // 408 request timeout, 404/410 wrong endpoint, 502/503/504 gateway,
+            // 522/523/524 Cloudflare — none come from the arr answering its own
+            // API, so treat as "couldn't reach the arr".
+            switch code {
+            case 404, 408, 410, 502, 503, 504, 522, 523, 524:
+                return true
+            default:
+                return false
+            }
+        case let urlError as URLError:
+            return isConnectivityFailure(urlError)
+        default:
+            // HTTPError.decoding / .badURL etc. → local failure, not a reach
+            // signal either way.
+            return false
+        }
+    }
+
+    nonisolated static func isConnectivityFailure(_ error: Error) -> Bool {
+        guard let urlError = error as? URLError else { return false }
+        switch urlError.code {
+        case .notConnectedToInternet, .networkConnectionLost,
+             .cannotConnectToHost, .cannotFindHost, .dnsLookupFailed,
+             .timedOut, .dataNotAllowed, .internationalRoamingOff:
+            return true
+        default:
+            // e.g. .secureConnectionFailed means the TLS handshake started —
+            // the host was reached — so that's not an unreachable signal.
+            return false
         }
     }
 
@@ -418,13 +482,18 @@ public struct AggregateResult: Equatable {
     var sonarrError: String?
     var lidarrError: String?
     var whisparrError: String?
+    /// Sources that failed at the transport level this fetch (host unreachable),
+    /// as opposed to those that answered with an HTTP/decode error. Drives the
+    /// offline indicator; empty for a healthy or merely outaged stack.
+    var unreachableSources: Set<QueueItem.Source>
 
     init(radarr: [QueueItem], sonarr: [QueueItem], lidarr: [QueueItem], whisparr: [QueueItem] = [],
          radarrError: String? = nil, sonarrError: String? = nil, lidarrError: String? = nil,
-         whisparrError: String? = nil) {
+         whisparrError: String? = nil, unreachableSources: Set<QueueItem.Source> = []) {
         self.radarr = radarr; self.sonarr = sonarr; self.lidarr = lidarr; self.whisparr = whisparr
         self.radarrError = radarrError; self.sonarrError = sonarrError; self.lidarrError = lidarrError
         self.whisparrError = whisparrError
+        self.unreachableSources = unreachableSources
     }
 
     var totalCount: Int { radarr.count + sonarr.count + lidarr.count + whisparr.count }

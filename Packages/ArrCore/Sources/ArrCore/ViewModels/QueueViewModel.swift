@@ -29,6 +29,10 @@ public final class QueueViewModel {
     public private(set) var tonight: [UpcomingItem] = []
     public private(set) var needsYou: [NeedsYouItem] = []
     public private(set) var unreachableArrs: Set<QueueItem.Source> = []
+    /// Timestamp of the last refresh in which at least one configured arr
+    /// returned fresh data. Drives the "last updated X ago" tooltip on the
+    /// offline indicator; `nil` until the first successful fetch.
+    public private(set) var lastSuccessfulRefresh: Date?
     /// User clicked "+N more" on the Tonight banner. Reset every time the popover closes.
     public private(set) var tonightExpanded: Bool = false
 
@@ -50,6 +54,24 @@ public final class QueueViewModel {
     /// sections that would each render their own empty placeholders.
     public var allEmpty: Bool {
         queues.values.allSatisfy { $0.isEmpty }
+    }
+
+    /// The arrs the user has actually configured. Drives `isFullyOffline`.
+    private var configuredArrs: Set<QueueItem.Source> {
+        Set(QueueItem.Source.allCases.filter {
+            configStore.config(for: $0.serviceKind).isConfigured
+        })
+    }
+
+    /// True when *every* configured arr is unreachable — the "I've left the
+    /// home network" case. A single arr hiccup keeps this false (its own
+    /// per-arr error / Needs-you row already covers that); only a blanket
+    /// outage flips it. False when nothing is configured. Drives the subtle
+    /// offline indicator in the header and gates mutating actions across the
+    /// queue UI (controls that can't succeed without a live LAN connection).
+    public var isFullyOffline: Bool {
+        let configured = configuredArrs
+        return !configured.isEmpty && configured.isSubset(of: unreachableArrs)
     }
 
     public private(set) var health: HealthResult = .empty
@@ -406,11 +428,12 @@ public final class QueueViewModel {
             self.health = DemoMocks.health
             self.errors = [:]
             self.unreachableArrs = []
-            self.needsYou = Self.computeNeedsYou(queues: self.queues, errors: [:], health: DemoMocks.health)
+            self.needsYou = Self.computeNeedsYou(queues: self.queues, errors: [:], health: DemoMocks.health, showWarnings: configStore.showWarnings)
             for service in MonitoredService.allCases {
                 ConnectionHealth.shared.forceOK(service, detail: nil)
             }
             self.lastError = nil
+            self.lastSuccessfulRefresh = Date()
             return
         }
         async let queueResult = aggregator.fetch()
@@ -455,9 +478,15 @@ public final class QueueViewModel {
             self.tonight = Self.tonightSlice(from: upcoming, hours: configStore.tonightHours)
         }
         self.health = health
-        self.unreachableArrs = updateUnreachable(errors: newErrors)
+        self.unreachableArrs = updateUnreachable(unreachable: queue.unreachableSources)
+        // Stamp the freshness clock whenever at least one configured arr
+        // returned without error — that's the data whose age the offline
+        // indicator reports.
+        if configuredArrs.contains(where: { newErrors[$0] == nil }) {
+            lastSuccessfulRefresh = Date()
+        }
         updateConnectionHealth(errors: newErrors)
-        var needs = Self.computeNeedsYou(queues: newQueues, errors: newErrors, health: health)
+        var needs = Self.computeNeedsYou(queues: newQueues, errors: newErrors, health: health, showWarnings: configStore.showWarnings)
         needs.append(contentsOf: serviceIssueRows())
         self.needsYou = needs
         self.lastError = nil
@@ -552,22 +581,11 @@ public final class QueueViewModel {
     }
 
     /// The configured download client that backs `item`, used to pin it `.down`
-    /// when a queue action against it fails. Mirrors the client-selection order
-    /// in `QueueAggregator.performTorrent` / `performUsenet`.
+    /// when a queue action against it fails. Same client-selection order as
+    /// `QueueAggregator.performTorrent` / `performUsenet` (via the shared
+    /// `ConfigStore.selectedDownloadClient`).
     private func failedDownloadClientKind(for item: QueueItem) -> ServiceKind? {
-        switch item.downloadProtocol {
-        case .usenet:
-            if configStore.sabnzbd.isConfigured { return .sabnzbd }
-            if configStore.nzbget.isConfigured { return .nzbget }
-        case .torrent:
-            if configStore.qbittorrent.isConfigured { return .qbittorrent }
-            if configStore.transmission.isConfigured { return .transmission }
-            if configStore.rtorrent.isConfigured { return .rtorrent }
-            if configStore.deluge.isConfigured { return .deluge }
-        case .unknown:
-            return nil
-        }
-        return nil
+        configStore.selectedDownloadClient(for: item.downloadProtocol)
     }
 
     // MARK: - Derived state
@@ -581,7 +599,8 @@ public final class QueueViewModel {
     static func computeNeedsYou(
         queues: [QueueItem.Source: [QueueItem]],
         errors: [QueueItem.Source: String],
-        health: HealthResult
+        health: HealthResult,
+        showWarnings: Bool
     ) -> [NeedsYouItem] {
         // Iterate per Source.allCases (enum-declaration order) instead
         // of `queues.values` so the rendered "Needs you" list keeps a
@@ -606,12 +625,15 @@ public final class QueueViewModel {
             //  • a fetch error (ArrBarr couldn't reach the arr — explains a
             //    stale/empty queue; unconfigured arrs don't reach here since
             //    QueueAggregator swallows notConfigured/missingApiKey), and
-            //  • error-level health checks the arr itself reports (e.g.
-            //    "Download clients unavailable"). Benign notices/warnings stay
-            //    on the header badge so this list isn't drowned in noise.
+            //  • health checks the arr itself reports. Errors always surface;
+            //    warnings/notices (broken indexer, update available, …) surface
+            //    only when the user opted into "Show warnings" — otherwise this
+            //    list stays errors-only and isn't drowned in noise.
             var problems: [String] = []
             if let error = errors[source] { problems.append(error) }
-            for record in health.records(for: source) where record.type?.lowercased() == "error" {
+            for record in health.records(for: source) {
+                let isError = record.type?.lowercased() == "error"
+                guard isError || showWarnings else { continue }
                 if let message = record.message, !message.isEmpty { problems.append(message) }
             }
             if !problems.isEmpty {
@@ -627,25 +649,28 @@ public final class QueueViewModel {
         return result
     }
 
-    /// Returns the set of arrs that have failed at least `unreachableThreshold` consecutive
-    /// refresh cycles. A nil error string for an arr resets that arr's counter.
-    private func updateUnreachable(errors: [QueueItem.Source: String]) -> Set<QueueItem.Source> {
-        var unreachable: Set<QueueItem.Source> = []
+    /// Returns the set of arrs that have failed *at the transport level* (host
+    /// unreachable) for at least `unreachableThreshold` consecutive refresh
+    /// cycles. A source that responded — even with an HTTP error — resets its
+    /// counter, so an outage (502/500) never reads as "offline". Drives
+    /// `isFullyOffline`.
+    private func updateUnreachable(unreachable: Set<QueueItem.Source>) -> Set<QueueItem.Source> {
+        var result: Set<QueueItem.Source> = []
         for source in QueueItem.Source.allCases {
             guard configStore.config(for: source.serviceKind).isConfigured else {
                 consecutiveFailures[source] = 0
                 continue
             }
-            if errors[source] != nil {
+            if unreachable.contains(source) {
                 consecutiveFailures[source, default: 0] += 1
                 if (consecutiveFailures[source] ?? 0) >= Self.unreachableThreshold {
-                    unreachable.insert(source)
+                    result.insert(source)
                 }
             } else {
                 consecutiveFailures[source] = 0
             }
         }
-        return unreachable
+        return result
     }
 
     private func applyOverrides(to items: [QueueItem]) -> [QueueItem] {
@@ -722,6 +747,11 @@ public final class QueueViewModel {
     /// from the items' downloadIds.
     public func deleteAll(_ items: [QueueItem]) async {
         guard !items.isEmpty else { return }
+        // Safety net for the away-from-LAN case: the UI hides these controls
+        // when fully offline, but block here too so any other caller (Siri /
+        // Shortcuts) can't fire an action that has no chance of reaching the
+        // arr.
+        guard !isFullyOffline else { return }
         guard StoreManager.shared.requirePro(.queueAction) else { return }
         do {
             try await aggregator.deleteAll(items)
@@ -733,6 +763,9 @@ public final class QueueViewModel {
     }
 
     private func runAction(_ action: QueueAggregator.Action, on item: QueueItem) async {
+        // See `deleteAll` — defend the same away-from-LAN case for single-item
+        // pause / resume / delete.
+        guard !isFullyOffline else { return }
         guard StoreManager.shared.requirePro(.queueAction) else { return }
         do {
             try await aggregator.perform(action, on: item)

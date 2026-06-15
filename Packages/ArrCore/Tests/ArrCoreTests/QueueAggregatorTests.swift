@@ -27,3 +27,37 @@ struct QueueAggregatorTests {
         #expect(result.whisparrError == nil)
     }
 }
+
+@Suite("QueueAggregator.isUnreachable")
+struct QueueAggregatorReachabilityTests {
+    @Test("Transport failures are unreachable")
+    func transportIsUnreachable() {
+        for code in [URLError.Code.cannotConnectToHost, .cannotFindHost,
+                     .dnsLookupFailed, .timedOut, .notConnectedToInternet,
+                     .networkConnectionLost] {
+            #expect(QueueAggregator.isUnreachable(URLError(code)))
+            #expect(QueueAggregator.isUnreachable(HTTPError.transport(URLError(code))))
+        }
+    }
+
+    @Test("Gateway and wrong-endpoint statuses are unreachable (split-DNS / proxy)")
+    func gatewayStatusesAreUnreachable() {
+        for code in [404, 408, 410, 502, 503, 504, 522, 523, 524] {
+            #expect(QueueAggregator.isUnreachable(HTTPError.status(code, body: nil)),
+                    "HTTP \(code) should read as unreachable")
+        }
+    }
+
+    @Test("Arr-origin statuses are NOT unreachable — the arr answered")
+    func arrOriginStatusesAreReachable() {
+        for code in [400, 401, 403, 422, 500] {
+            #expect(!QueueAggregator.isUnreachable(HTTPError.status(code, body: nil)),
+                    "HTTP \(code) is a service problem, not offline")
+        }
+    }
+
+    @Test("A successful TLS handshake that then fails is not an unreachable signal")
+    func tlsFailureIsReachable() {
+        #expect(!QueueAggregator.isUnreachable(URLError(.secureConnectionFailed)))
+    }
+}

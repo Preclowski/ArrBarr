@@ -938,12 +938,6 @@ public struct SettingsView: View {
                 themePicker
                 textSizePicker
                 notificationSoundPicker
-                // Popover-display toggle merged in here — used to
-                // live in its own "Popover" section but with the
-                // upcoming-window picker gone there was only one
-                // toggle left, which read as orphaned. App-level
-                // toggles all sit under one heading now.
-                Toggle(isOn: $configStore.showIndexerIssues) { Text("settings.showIndexerIssuesWarning.label", bundle: .module) }
             } header: {
                 Text("settings.application.button", bundle: .module)
             } footer: {
@@ -958,6 +952,13 @@ public struct SettingsView: View {
                     Text("settings.quitAndReopenThe.tooltip", bundle: .module)
                     #endif
                 }
+            }
+            Section {
+                Toggle(isOn: $configStore.showWarnings) { Text("settings.showWarnings.label", bundle: .module) }
+            } header: {
+                Text("settings.warnings.header", bundle: .module)
+            } footer: {
+                Text("settings.showWarnings.footer", bundle: .module)
             }
             Section {
                 ForEach(configStore.arrOrder, id: \.self) { key in

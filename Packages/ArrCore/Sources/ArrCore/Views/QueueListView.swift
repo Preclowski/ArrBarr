@@ -62,6 +62,9 @@ struct QueueListView: View {
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
+        // Propagate the away-from-LAN state so each row hides its mutating
+        // controls (the header chip is the single explanation).
+        .environment(\.queueOffline, viewModel.isFullyOffline)
         .environment(\.defaultMinListRowHeight, 0)
         // macOS List indents scroll content by default; zero it so rows /
         // banners are genuinely full-width (each brings its own padding).
@@ -81,35 +84,54 @@ struct QueueListView: View {
     @ViewBuilder
     private func arrSection(_ source: QueueItem.Source) -> some View {
         let arrError = viewModel.error(for: source)
+        // A failed refresh keeps the last-good snapshot (QueueViewModel
+        // `freshOrKept`). Show it here — dimmed, read-only — instead of
+        // blanking the section; the header carries the error and explains the
+        // staleness. Whether the failure is an outage, a 502 from a reverse
+        // proxy, or split-DNS junk while away, the user still sees what was
+        // last there rather than an empty list.
+        let isStale = arrError != nil
         let collapsed = arrError == nil && configStore.isCollapsed(source)
         Section {
-            if !collapsed, arrError == nil {
+            if !collapsed {
                 let rows = entries(for: source)
                 if rows.isEmpty {
-                    Text("queue.queueEmpty.button", bundle: .module)
-                        .scaledFont(size: 12)
-                        .foregroundStyle(.tertiary)
-                        .plainQueueRow(insets: EdgeInsets(top: 6, leading: 14, bottom: 6, trailing: 14))
+                    // "Queue empty" only when the arr actually answered. On a
+                    // failed refresh with nothing cached yet there's simply
+                    // nothing to show — the header error covers it.
+                    if !isStale {
+                        Text("queue.queueEmpty.button", bundle: .module)
+                            .scaledFont(size: 12)
+                            .foregroundStyle(.tertiary)
+                            .plainQueueRow(insets: EdgeInsets(top: 6, leading: 14, bottom: 6, trailing: 14))
+                    }
                 } else {
                     ForEach(rows) { entry in
                         rowView(for: entry)
+                            .opacity(isStale ? 0.55 : 1)
                             .plainQueueRow()
                             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                                 // Icon-only, Apple-Mail style (no "Delete" text).
-                                Button(role: .destructive) {
-                                    deleteClosure(for: entry)()
-                                } label: {
-                                    Image(systemName: "trash")
+                                // Hidden when fully offline OR when this arr's
+                                // data is stale — the delete can't reach the
+                                // arr, so don't offer the swipe.
+                                if !viewModel.isFullyOffline, !isStale {
+                                    Button(role: .destructive) {
+                                        deleteClosure(for: entry)()
+                                    } label: {
+                                        Image(systemName: "trash")
+                                    }
+                                    .accessibilityLabel(Text("queue.delete.button", bundle: .module))
                                 }
-                                .accessibilityLabel(Text("queue.delete.button", bundle: .module))
                             }
                             // Leading swipe → pause/resume. Only when there's a
                             // configured download client (arrs can't control the
                             // download) AND the item is in a downloading/paused
-                            // state, mirroring the row's hover/CTA gating.
+                            // state, mirroring the row's hover/CTA gating. Also
+                            // suppressed when fully offline or stale.
                             .swipeActions(edge: .leading, allowsFullSwipe: true) {
                                 let rep = repItem(for: entry)
-                                if canControl(rep), rep.status == .downloading || rep.status == .paused {
+                                if !viewModel.isFullyOffline, !isStale, canControl(rep), rep.status == .downloading || rep.status == .paused {
                                     Button {
                                         pauseResumeClosure(for: entry)()
                                     } label: {
@@ -135,7 +157,6 @@ struct QueueListView: View {
 
     @ViewBuilder
     private func sectionHeader(_ source: QueueItem.Source, error: String?, collapsed: Bool) -> some View {
-        let health = healthRecords(for: source)
         HStack(spacing: 6) {
             Image(systemName: "chevron.right")
                 .scaledFont(size: 9, weight: .semibold)
@@ -152,17 +173,10 @@ struct QueueListView: View {
                 Text(verbatim: "\(itemCount(source))")
                     .scaledFont(size: 11)
                     .foregroundStyle(.tertiary)
-                if !health.isEmpty {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .scaledFont(size: 10)
-                        .foregroundStyle(.orange)
-                        // Without this the badge was a bare orange triangle with
-                        // no explanation — the macOS QueueSectionView already
-                        // showed the messages on hover; the native-List refactor
-                        // dropped it. (Error-level health also now surfaces in
-                        // the "Needs you" list via computeNeedsYou.)
-                        .help(health.compactMap(\.message).joined(separator: "\n"))
-                }
+                // Per-arr health badge removed: arr health checks (errors always,
+                // warnings when "Show warnings" is on) now surface as actionable
+                // rows in the "Needs you" list instead of a bare hover-only
+                // triangle here — see QueueViewModel.computeNeedsYou.
             }
             Spacer()
             if let error {
@@ -280,21 +294,13 @@ struct QueueListView: View {
         }
     }
 
-    /// Mirrors QueueRowView.canControl — pause/resume is only possible with a
-    /// configured download client for the item's protocol (arrs can't do it).
+    /// Mirrors QueueRowView.canControl — pause/resume needs a download client
+    /// that's configured AND reachable (the action bypasses the arr and goes
+    /// straight to the client), so a `.down` client hides the swipe.
     private func canControl(_ item: QueueItem) -> Bool {
-        switch item.downloadProtocol {
-        case .usenet:
-            return (configStore.sabnzbd.isConfigured && !configStore.sabnzbd.apiKey.isEmpty)
-                || configStore.nzbget.isConfigured
-        case .torrent:
-            return configStore.qbittorrent.isConfigured
-                || configStore.transmission.isConfigured
-                || configStore.rtorrent.isConfigured
-                || configStore.deluge.isConfigured
-        case .unknown:
-            return false
-        }
+        guard let kind = configStore.selectedDownloadClient(for: item.downloadProtocol) else { return false }
+        if case .down = ConnectionHealth.shared.state(for: .arr(kind)) { return false }
+        return true
     }
 
     /// Toggle pause/resume on the entry's representative (the whole download /
@@ -332,15 +338,6 @@ struct QueueListView: View {
         }
     }
 
-    private func healthRecords(for source: QueueItem.Source) -> [ArrHealthRecord] {
-        guard configStore.showIndexerIssues else { return [] }
-        switch source {
-        case .sonarr: return viewModel.health.sonarr
-        case .radarr: return viewModel.health.radarr
-        case .lidarr: return viewModel.health.lidarr
-        case .whisparr: return viewModel.health.whisparr
-        }
-    }
 }
 
 // MARK: - Row chrome helper
