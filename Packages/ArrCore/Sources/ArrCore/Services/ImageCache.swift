@@ -47,7 +47,11 @@ public actor ImageCache {
         }
         inflight[key] = task
         let result = await task.value
-        inflight[key] = nil
+        // Only clear the slot if it still holds THIS task — while we were
+        // awaiting, a concurrent caller may have installed its own task for the
+        // same key, and clearing unconditionally would orphan it (defeating the
+        // in-flight dedup and triggering a duplicate fetch).
+        if inflight[key] == task { inflight[key] = nil }
         return result
     }
 

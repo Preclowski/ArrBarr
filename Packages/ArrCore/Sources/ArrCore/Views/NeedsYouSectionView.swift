@@ -1,101 +1,106 @@
 import SwiftUI
 
-public struct NeedsYouSectionView: View {
-    let items: [NeedsYouItem]
+/// The collapsible "Needs you" section HEADER, rendered as its own List row by
+/// QueueListView (with each item a SIBLING row) so the chevron lines up with —
+/// and the collapse animation matches — every other section header. Uses the
+/// shared `QueueHeaderRow`, so its chevron / icon slot / padding are byte-for-byte
+/// the arr + Next-week headers.
+struct NeedsYouHeader: View {
+    let count: Int
     let isCollapsed: Bool
-    let onToggleCollapse: () -> Void
-    var onItemTap: ((NeedsYouItem) -> Void)? = nil
+    let onToggle: () -> Void
 
-    public var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 6) {
-                Image(systemName: "chevron.right")
-                    .scaledFont(size: 9, weight: .semibold)
-                    .foregroundStyle(.tertiary)
-                    .rotationEffect(.degrees(isCollapsed ? 0 : 90))
-                    .frame(width: 10)
+    var body: some View {
+        QueueHeaderRow(
+            // Grey (.secondary) like the arr ServiceIcons — a section glyph, not
+            // an alarm. Size 11 (not 12): the filled bubble reads heavier than the
+            // arr icons / moon, so it's nudged down to match their weight.
+            icon: AnyView(
                 Image(systemName: "exclamationmark.bubble.fill")
-                    .foregroundStyle(.orange)
-                Text("queue.needsYou.button", bundle: .module)
-                    .scaledFont(size: 12, weight: .semibold)
-                    .foregroundStyle(.secondary)
-                Text(verbatim: "\(items.count)")
                     .scaledFont(size: 11)
-                    .foregroundStyle(.tertiary)
-                Spacer()
-            }
-            .padding(.horizontal, 12)
-            .contentShape(Rectangle())
-            .onTapGesture { onToggleCollapse() }
-            .accessibilityElement(children: .combine)
-            .accessibilityAddTraits(.isButton)
-            .accessibilityHint(Text(isCollapsed ? "Expand section" : "Collapse section", bundle: .module))
+                    .foregroundStyle(.secondary)
+            ),
+            title: String(localized: "queue.needsYou.button", bundle: .module),
+            count: count,
+            collapsed: isCollapsed,
+            onToggle: onToggle
+        )
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityHint(Text(isCollapsed ? "Expand section" : "Collapse section", bundle: .module))
+    }
+}
 
-            if !isCollapsed {
-                VStack(spacing: 4) {
-                    ForEach(items) { needs in
-                        VStack(alignment: .leading, spacing: 1) {
-                            HStack(spacing: 6) {
-                                Text(needs.title)
-                                    .scaledFont(size: 12, weight: .medium)
-                                    .lineLimit(2)
-                                // Chevron telegraphs the drill-in
-                                // affordance — same pattern queue /
-                                // upcoming rows use. Non-arr connection
-                                // issues have nowhere to drill, so no chevron.
-                                if needs.service == nil {
-                                    LinkChevron(size: 9)
-                                }
-                                Spacer(minLength: 4)
-                                sourceChip(for: needs)
-                            }
-                            Text(needs.subtitle)
-                                .scaledFont(size: 11)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
-                            // Surface the arr's own warning descriptions
-                            // — `statusMessages` already comes back as
-                            // "Title — Message" lines, ready to render.
-                            // Cap at 2 lines so a chatty arr (Sonarr's
-                            // import warnings can pile up) doesn't
-                            // dominate the popover.
-                            ForEach(Array(needs.detailLines.prefix(2).enumerated()), id: \.offset) { _, line in
-                                Text(line)
-                                    .scaledFont(size: 10)
-                                    .foregroundStyle(.tertiary)
-                                    .lineLimit(2)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
-                        }
-                        // Match the queue / upcoming row indent (12pt
-                        // horizontal) — the previous 28pt leading hung
-                        // items under the section icon, which read as
-                        // inconsistent next to the other sections.
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 4)
-                        .contentShape(Rectangle())
-                        .onTapGesture { onItemTap?(needs) }
-                        #if os(macOS)
-                        .onHover { hovering in
-                            if onItemTap != nil {
-                                if hovering { NSCursor.pointingHand.push() } else { NSCursor.pop() }
-                            }
-                        }
-                        #endif
-                        .help(Text("detail.openInBrowser.button", bundle: .module))
-                        // Drill-in chevron brightens on row hover.
-                        .linkRowHover()
-                    }
+/// A single "Needs you" entry, rendered as its own List row by QueueListView.
+struct NeedsYouRow: View {
+    let needs: NeedsYouItem
+    var onTap: (() -> Void)? = nil
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 1) {
+            HStack(spacing: 6) {
+                // No leading severity icon — the title text alone carries the
+                // message (the severity still drives merge grouping in the model).
+                Text(needs.title)
+                    .scaledFont(size: 12, weight: .medium)
+                    .lineLimit(2)
+                // "×N" when this row collapses several identical entries (e.g. one
+                // manual-import warning per episode of a season pack).
+                if needs.count > 1 {
+                    Text(verbatim: "×\(needs.count)")
+                        .scaledFont(size: 11, weight: .semibold)
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
                 }
+                // Drill-in chevron; non-arr connection issues have nowhere to
+                // drill, so no chevron.
+                if needs.service == nil {
+                    LinkChevron(size: 9)
+                }
+                Spacer(minLength: 4)
+                sourceChip
+            }
+            // Status name for a queue item; empty (hidden) for arr/service issues
+            // whose message is the title.
+            if !needs.subtitle.isEmpty {
+                Text(needs.subtitle)
+                    .scaledFont(size: 11)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+            // Cap at 2 lines so a chatty arr doesn't dominate the popover.
+            ForEach(Array(needs.detailLines.prefix(2).enumerated()), id: \.offset) { _, line in
+                Text(line)
+                    .scaledFont(size: 10)
+                    .foregroundStyle(.tertiary)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
+        // Indent the content under the section icon (past the chevron column),
+        // matching the "Next week" banner's item indent.
+        .padding(.leading, QueueHeaderMetrics.contentIndent)
+        .padding(.trailing, Tokens.Spacing.queueRowH)
+        .padding(.vertical, 4)
+        .contentShape(Rectangle())
+        .onTapGesture { onTap?() }
+        #if os(macOS)
+        .onHover { hovering in
+            if onTap != nil {
+                if hovering { NSCursor.pointingHand.push() } else { NSCursor.pop() }
+            }
+        }
+        #endif
+        .help(Text("detail.openInBrowser.button", bundle: .module))
+        // Drill-in chevron brightens on row hover.
+        .linkRowHover()
     }
 
     @ViewBuilder
-    private func sourceChip(for needs: NeedsYouItem) -> some View {
+    private var sourceChip: some View {
         HStack(spacing: 3) {
-            chipIcon(for: needs)
-            Text(chipLabel(for: needs))
+            chipIcon
+            Text(chipLabel)
                 .scaledFont(size: 10, weight: .medium)
         }
         .foregroundStyle(.secondary)
@@ -109,7 +114,7 @@ public struct NeedsYouSectionView: View {
     }
 
     @ViewBuilder
-    private func chipIcon(for needs: NeedsYouItem) -> some View {
+    private var chipIcon: some View {
         if let source = needs.source {
             ServiceIcon(source: source, size: 9)
         } else if let kind = needs.service?.serviceKind {
@@ -121,7 +126,7 @@ public struct NeedsYouSectionView: View {
         }
     }
 
-    private func chipLabel(for needs: NeedsYouItem) -> String {
+    private var chipLabel: String {
         needs.source?.displayName ?? needs.service?.displayName ?? needs.title
     }
 }

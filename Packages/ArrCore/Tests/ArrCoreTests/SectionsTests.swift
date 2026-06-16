@@ -172,7 +172,9 @@ struct ComputeNeedsYouTests {
         let result = QueueViewModel.computeNeedsYou(queues: [:], errors: [:], health: health, showWarnings: true)
         #expect(result.count == 1)
         #expect(result.first?.source == .radarr)
-        #expect(result.first?.detailLines == ["Indexer X is down"])
+        // Title IS the message (no app-name repeat); severity drives the icon.
+        #expect(result.first?.title == "Indexer X is down")
+        #expect(result.first?.severity == .warning)
     }
 
     @Test("Error-level health records ARE surfaced even when showWarnings is off")
@@ -188,7 +190,8 @@ struct ComputeNeedsYouTests {
         #expect(result.count == 1)
         #expect(result.first?.item == nil)
         #expect(result.first?.source == .radarr)
-        #expect(result.first?.detailLines == ["Download clients unavailable"])
+        #expect(result.first?.title == "Download clients unavailable")
+        #expect(result.first?.severity == .error)
     }
 
     @Test("A per-arr fetch error is surfaced as an arr issue so an empty queue is explained")
@@ -203,12 +206,61 @@ struct ComputeNeedsYouTests {
         #expect(result.count == 1)
         #expect(result.first?.item == nil)
         #expect(result.first?.source == .radarr)
-        #expect(result.first?.detailLines == ["HTTP 500"])
+        #expect(result.first?.title == "HTTP 500")
+        #expect(result.first?.severity == .error)
     }
 
-    @Test("Multiple problems for one arr group into a single entry, stacked")
+    @Test("An unreachable source's fetch error is NOT surfaced — it's the calm offline case")
     @MainActor
-    func arrIssuesGroupedPerSource() {
+    func unreachableErrorNotSurfaced() {
+        let result = QueueViewModel.computeNeedsYou(
+            queues: [:],
+            errors: [.radarr: "HTTP 502"],
+            health: .empty,
+            showWarnings: false,
+            unreachable: [.radarr]
+        )
+        #expect(result.isEmpty)
+    }
+
+    @Test("A reachable source's error IS still surfaced even when another is unreachable")
+    @MainActor
+    func reachableErrorStillSurfacedAlongsideUnreachable() {
+        let result = QueueViewModel.computeNeedsYou(
+            queues: [:],
+            errors: [.radarr: "HTTP 502", .sonarr: "HTTP 401"],
+            health: .empty,
+            showWarnings: false,
+            unreachable: [.radarr]   // sonarr reachable (bad key)
+        )
+        #expect(result.map(\.source) == [.sonarr])
+        #expect(result.first?.title == "HTTP 401")
+    }
+
+    @Test("Notice vs error carry different severities (icon), not different labels")
+    @MainActor
+    func noticeVsErrorSeverity() {
+        let health = HealthResult(
+            radarr: [
+                ArrHealthRecord(source: "UpdateCheck", type: "notice", message: "New update available", wikiUrl: nil),
+                ArrHealthRecord(source: "DownloadClientCheck", type: "error", message: "Client down", wikiUrl: nil),
+            ],
+            sonarr: [],
+            lidarr: []
+        )
+        let result = QueueViewModel.computeNeedsYou(queues: [:], errors: [:], health: health, showWarnings: true)
+        let problem = result.first { $0.title == "Client down" }
+        let notice = result.first { $0.title == "New update available" }
+        #expect(problem?.severity == .error)
+        #expect(notice?.severity == .notice)
+        // No app-name repeated as a title, no severity grouping → both are
+        // their own Radarr-tagged entries.
+        #expect(result.count == 2)
+    }
+
+    @Test("Multiple problems for one arr are separate entries (not grouped)")
+    @MainActor
+    func arrIssuesAreSeparateEntries() {
         let health = HealthResult(
             radarr: [],
             sonarr: [
@@ -225,10 +277,11 @@ struct ComputeNeedsYouTests {
             health: health,
             showWarnings: false
         )
-        // One grouped Sonarr entry, all three problems stacked beneath it.
-        #expect(result.count == 1)
-        #expect(result.first?.source == .sonarr)
-        #expect(result.first?.detailLines == ["HTTP 500", "Download clients unavailable", "Lists unavailable"])
+        // Three SEPARATE Sonarr entries (fetch error + 2 health), each its own
+        // message as the title — NOT one grouped row with stacked detailLines.
+        #expect(result.count == 3)
+        #expect(result.allSatisfy { $0.source == .sonarr })
+        #expect(Set(result.map(\.title)) == ["HTTP 500", "Download clients unavailable", "Lists unavailable"])
     }
 
     @Test("Empty inputs return empty")
@@ -255,5 +308,38 @@ struct ComputeNeedsYouTests {
         let failed = result.first { $0.id == "needsyou.fail" }
         #expect(warning?.subtitle == "queue.manualImportRequired.button")
         #expect(failed?.subtitle == QueueItem.Status.failed.displayName)
+    }
+
+    @Test("Identical repeated warnings collapse into one row with a ×N count")
+    @MainActor
+    func identicalEntriesMerge() {
+        // A season pack flags the SAME "manual import" warning once per episode:
+        // distinct QueueItems (distinct ids) but identical title/subtitle/detail.
+        func packWarning(_ id: String) -> QueueItem {
+            QueueItem(
+                id: id, source: .sonarr, arrQueueId: 0,
+                downloadId: nil, downloadProtocol: .unknown,
+                downloadClient: nil, indexer: nil,
+                title: "Attack on Titan (2013)", subtitle: nil,
+                status: .warning, progress: 0, sizeTotal: 0,
+                sizeLeft: 0, timeLeft: nil,
+                customFormats: [], customFormatScore: 0,
+                quality: nil, isUpgrade: false,
+                contentSlug: nil
+            )
+        }
+        let result = QueueViewModel.computeNeedsYou(
+            queues: [.sonarr: [packWarning("e1"), packWarning("e2"), packWarning("e3")]],
+            errors: [:],
+            health: .empty,
+            showWarnings: true
+        )
+        // Three identical episode warnings → one row, count 3, keeping the FIRST
+        // item's id so tap + ForEach diffing stay stable.
+        #expect(result.count == 1)
+        #expect(result.first?.count == 3)
+        #expect(result.first?.id == "needsyou.e1")
+        #expect(result.first?.item?.id == "e1")
+        #expect(result.first?.title == "Attack on Titan (2013)")
     }
 }

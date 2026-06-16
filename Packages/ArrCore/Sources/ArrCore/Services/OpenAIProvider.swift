@@ -130,6 +130,13 @@ public struct OpenAIProvider: LLMProvider {
         )
 
         var msgs: [ChatCompletionsRequest.Message] = [systemMessage]
+        // Track the tool-call IDs emitted by assistant messages WITHIN this
+        // window. `suffix(8)` can begin mid tool-sequence, slicing off the
+        // `assistant`+`tool_calls` that a `tool` result answers — and OpenAI
+        // rejects an orphaned tool message ("messages with role 'tool' must be
+        // a response to a preceding message with 'tool_calls'"). Only emit a
+        // tool result whose call survived into this window.
+        var emittedToolCallIDs = Set<String>()
         for msg in history.suffix(8) {
             switch msg.role {
             case .user:
@@ -141,6 +148,7 @@ public struct OpenAIProvider: LLMProvider {
                         encoding: .utf8
                     )) ?? "{}"
                     let tcID = call.id ?? "call_\(abs(msg.id.uuidString.hashValue))"
+                    emittedToolCallIDs.insert(tcID)
                     msgs.append(.init(
                         role: "assistant",
                         content: msg.content.isEmpty ? nil : msg.content,
@@ -156,6 +164,9 @@ public struct OpenAIProvider: LLMProvider {
                 }
             case .tool:
                 let tcID = msg.toolCall?.id ?? "call_\(abs(msg.id.uuidString.hashValue))"
+                // Drop orphaned tool results (their assistant call fell outside
+                // the window) so the request stays well-formed.
+                guard emittedToolCallIDs.contains(tcID) else { continue }
                 msgs.append(.init(
                     role: "tool",
                     content: msg.toolResult ?? "",

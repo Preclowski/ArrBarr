@@ -36,23 +36,30 @@ struct MCPCallRouter {
             }
             logger.info("tools/call", metadata: ["tool": .string(name)])
 
-            // Server-side confirmation for destructive tools, where the client
-            // supports elicitation. `requestElicitation` throws when the client
-            // didn't advertise the capability — in that case we proceed (the
-            // tool's `destructiveHint` annotation already warned the client).
+            // Destructive tools (indexer search / monitor → start downloads,
+            // library mutations) require interactive, per-call confirmation via
+            // MCP elicitation. We FAIL CLOSED: if the client can't confirm
+            // (didn't advertise elicitation) or the user declines, the tool does
+            // NOT run. An automated third-party client therefore gets read-only
+            // access by default and can never trigger downloads/grabs unattended.
             if MCPToolWhitelist.isDestructive(name) {
                 do {
                     let result = try await server.requestElicitation(
                         message: "Run \(name)? This may start downloads or change library state.",
                         requestedSchema: .init())
-                    if result.action != .accept {
+                    guard result.action == .accept else {
                         return CallTool.Result(
                             content: [.text(text: "Cancelled by user.", annotations: nil, _meta: nil)],
                             isError: false)
                     }
                 } catch {
-                    logger.debug("elicitation unsupported; proceeding",
-                                 metadata: ["tool": .string(name)])
+                    logger.notice("destructive tool blocked: client cannot confirm (no elicitation)",
+                                  metadata: ["tool": .string(name)])
+                    return CallTool.Result(
+                        content: [.text(
+                            text: "Tool '\(name)' changes server state and requires interactive confirmation, which this client does not support. It was not run.",
+                            annotations: nil, _meta: nil)],
+                        isError: true)
                 }
             }
 
@@ -64,8 +71,11 @@ struct MCPCallRouter {
                     content: [.text(text: out.text, annotations: nil, _meta: nil)],
                     isError: false)
             } catch {
+                // Use the sanitized `localizedDescription` — interpolating the
+                // raw error serializes a URLError's userInfo, which embeds the
+                // internal arr base URL (host:port/path). Don't disclose topology.
                 return CallTool.Result(
-                    content: [.text(text: "Error: \(error)", annotations: nil, _meta: nil)],
+                    content: [.text(text: "Error: \(error.localizedDescription)", annotations: nil, _meta: nil)],
                     isError: true)
             }
         }

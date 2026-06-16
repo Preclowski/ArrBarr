@@ -67,6 +67,12 @@ public struct FoundationModelsProvider: LLMProvider {
         for msg in history.suffix(6) where msg.role == .user {
             _ = try? await session.respond(to: msg.content)
         }
+        // The replay above re-feeds past user turns purely to seed context. If
+        // any of them nudges the model into a tool call, those calls land in
+        // the shared box too — drain and DISCARD them here so only the real
+        // prompt's calls reach the UI. Otherwise stale tool cards re-render on
+        // every message.
+        _ = await DynamicMCPToolBox.shared.drainResults()
 
         let result = try await session.respond(to: prompt)
         let (calls, texts, richs) = await DynamicMCPToolBox.shared.drainResults()

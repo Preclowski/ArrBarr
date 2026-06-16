@@ -94,6 +94,11 @@ struct UpgradeDiffView: View {
     /// and turns the comparison into a deliberate gesture.
     private var iosPeekBody: some View {
         let side = comparing ? current : incoming
+        // Custom formats follow the peek too: show only the displayed side's
+        // formats (NEW by default, CURRENT while held) instead of stacking
+        // gained + lost at once.
+        let sideFormats = (comparing ? current.formats : incoming.formats).sorted()
+        let otherFormats = Set(comparing ? incoming.formats : current.formats)
         return VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
                 (comparing
@@ -106,10 +111,20 @@ struct UpgradeDiffView: View {
                 Spacer(minLength: 0)
             }
             column(side: side, scoreHighlighted: !comparing && scoreImproved)
-            if !gained.isEmpty || !lost.isEmpty {
+            // Formats for the shown side only — NEW lists the incoming file's
+            // formats (gains, absent from the old file, in green +); CURRENT
+            // (while held) lists the old file's (losses, absent from the new
+            // file, in red −). Unchanged formats stay plain. The strip flips
+            // with the peek instead of showing old + new simultaneously.
+            if !sideFormats.isEmpty {
                 TooltipFlowLayout(spacing: 3) {
-                    ForEach(gained, id: \.self) { TagChip(text: "+\($0)", color: .green) }
-                    ForEach(lost, id: \.self) { TagChip(text: "−\($0)", color: .red) }
+                    ForEach(sideFormats, id: \.self) { f in
+                        let changed = !otherFormats.contains(f)
+                        TagChip(
+                            text: changed ? (comparing ? "−\(f)" : "+\(f)") : f,
+                            color: changed ? (comparing ? .red : .green) : .primary
+                        )
+                    }
                 }
             }
             if showFilenames, let name = side.filename, !name.isEmpty {

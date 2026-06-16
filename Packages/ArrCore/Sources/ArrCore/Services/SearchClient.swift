@@ -184,12 +184,24 @@ public actor SearchClient {
         }
     }
 
+    /// The arr returns the freshly-created record — including its
+    /// internal `id` — in the POST response. Pull that id so the caller
+    /// can navigate straight to the new item's detail without a second
+    /// round-trip or a racy library-map refresh. Best-effort: nil if the
+    /// body isn't the expected object.
+    private static func newRecordId(from data: Data) -> Int? {
+        (try? JSONSerialization.jsonObject(with: data) as? [String: Any])?["id"] as? Int
+    }
+
+    /// Returns the new Radarr movie id on success (nil in demo mode or if
+    /// the response can't be parsed).
+    @discardableResult
     func addMovie(_ result: SearchResult, qualityProfileId: Int, rootFolderPath: String,
-                  monitor: RadarrMonitorMode) async throws {
+                  monitor: RadarrMonitorMode) async throws -> Int? {
         try ensureRefCompatible(result)
         if DemoMode.isActive {
             try? await Task.sleep(nanoseconds: 500_000_000)
-            return
+            return nil
         }
         guard config.isConfigured else { throw HTTPError.notConfigured }
         guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
@@ -204,16 +216,20 @@ public actor SearchClient {
             "addOptions": ["searchForMovie": true]
         ]
         let data = try JSONSerialization.data(withJSONObject: body)
-        _ = try await http.post(url, headers: headers.merging(["Content-Type": "application/json"]) { $1 }, body: data)
+        let response = try await http.post(url, headers: headers.merging(["Content-Type": "application/json"]) { $1 }, body: data)
+        return Self.newRecordId(from: response)
     }
 
+    /// Returns the new Sonarr series id on success (nil in demo mode or if
+    /// the response can't be parsed).
+    @discardableResult
     func addSeries(_ result: SearchResult, qualityProfileId: Int, rootFolderPath: String,
                    monitor: SonarrMonitorMode, seriesType: SonarrSeriesType,
-                   seasonFolder: Bool) async throws {
+                   seasonFolder: Bool) async throws -> Int? {
         try ensureRefCompatible(result)
         if DemoMode.isActive {
             try? await Task.sleep(nanoseconds: 500_000_000)
-            return
+            return nil
         }
         guard config.isConfigured else { throw HTTPError.notConfigured }
         guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
@@ -256,20 +272,24 @@ public actor SearchClient {
             "seriesType": seriesType.rawValue,
             "seasonFolder": seasonFolder,
             "addOptions": [
-                "monitor": monitor.rawValue,
+                "monitor": monitor.apiValue,
                 "searchForMissingEpisodes": true
             ]
         ]
         let data = try JSONSerialization.data(withJSONObject: body)
-        _ = try await http.post(url, headers: headers.merging(["Content-Type": "application/json"]) { $1 }, body: data)
+        let response = try await http.post(url, headers: headers.merging(["Content-Type": "application/json"]) { $1 }, body: data)
+        return Self.newRecordId(from: response)
     }
 
+    /// Returns the new Whisparr movie id on success (nil in demo mode or if
+    /// the response can't be parsed).
+    @discardableResult
     func addScene(_ result: SearchResult, qualityProfileId: Int, rootFolderPath: String,
-                  monitor: RadarrMonitorMode = .movieOnly) async throws {
+                  monitor: RadarrMonitorMode = .movieOnly) async throws -> Int? {
         try ensureRefCompatible(result)
         if DemoMode.isActive {
             try? await Task.sleep(nanoseconds: 500_000_000)
-            return
+            return nil
         }
         guard config.isConfigured else { throw HTTPError.notConfigured }
         guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
@@ -290,15 +310,19 @@ public actor SearchClient {
             body["foreignId"] = foreignId
         }
         let data = try JSONSerialization.data(withJSONObject: body)
-        _ = try await http.post(url, headers: headers.merging(["Content-Type": "application/json"]) { $1 }, body: data)
+        let response = try await http.post(url, headers: headers.merging(["Content-Type": "application/json"]) { $1 }, body: data)
+        return Self.newRecordId(from: response)
     }
 
+    /// Returns the new Lidarr artist id on success (nil in demo mode or if
+    /// the response can't be parsed).
+    @discardableResult
     func addArtist(_ result: SearchResult, qualityProfileId: Int, metadataProfileId: Int,
-                   rootFolderPath: String, monitor: String = "all") async throws {
+                   rootFolderPath: String, monitor: String = "all") async throws -> Int? {
         try ensureRefCompatible(result)
         if DemoMode.isActive {
             try? await Task.sleep(nanoseconds: 500_000_000)
-            return
+            return nil
         }
         guard config.isConfigured else { throw HTTPError.notConfigured }
         guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
@@ -316,7 +340,8 @@ public actor SearchClient {
             ]
         ]
         let data = try JSONSerialization.data(withJSONObject: body)
-        _ = try await http.post(url, headers: headers.merging(["Content-Type": "application/json"]) { $1 }, body: data)
+        let response = try await http.post(url, headers: headers.merging(["Content-Type": "application/json"]) { $1 }, body: data)
+        return Self.newRecordId(from: response)
     }
 
     // MARK: - Unify

@@ -25,6 +25,10 @@ public struct PosterMetadataRow<TrailingAccessory: View>: View {
     /// don't).
     let title: String
     let metadataSegments: [String]
+    /// Optional second metadata line, rendered below the first. Lets a row
+    /// split overflowing metadata across two lines (e.g. Upcoming on iOS:
+    /// episode info on line 1, rating/runtime/type on line 2). Empty = one line.
+    let metadataSegments2: [String]
     /// Optional pill / badge rendered inline next to the title — used
     /// by Search rows to surface an "In library" tag without burning a
     /// metadata segment (a coloured chip reads at a glance; an extra
@@ -48,6 +52,7 @@ public struct PosterMetadataRow<TrailingAccessory: View>: View {
         posterFallbackSymbol: String = "",
         title: String,
         metadataSegments: [String],
+        metadataSegments2: [String] = [],
         titleBadge: AnyView? = nil,
         disabled: Bool = false,
         onTap: @escaping () -> Void,
@@ -61,6 +66,7 @@ public struct PosterMetadataRow<TrailingAccessory: View>: View {
         self.posterFallbackSymbol = posterFallbackSymbol
         self.title = title
         self.metadataSegments = metadataSegments
+        self.metadataSegments2 = metadataSegments2
         self.titleBadge = titleBadge
         self.disabled = disabled
         self.onTap = onTap
@@ -97,7 +103,11 @@ public struct PosterMetadataRow<TrailingAccessory: View>: View {
                         }
                     }
                     if !metadataSegments.isEmpty {
-                        metadataLine
+                        metadataLine(metadataSegments)
+                            .scaledFont(size: 10)
+                    }
+                    if !metadataSegments2.isEmpty {
+                        metadataLine(metadataSegments2)
                             .scaledFont(size: 10)
                     }
                 }
@@ -121,9 +131,9 @@ public struct PosterMetadataRow<TrailingAccessory: View>: View {
     }
 
     @ViewBuilder
-    private var metadataLine: some View {
+    private func metadataLine(_ segments: [String]) -> some View {
         HStack(spacing: 4) {
-            ForEach(Array(metadataSegments.enumerated()), id: \.offset) { idx, seg in
+            ForEach(Array(segments.enumerated()), id: \.offset) { idx, seg in
                 if idx > 0 {
                     SeparatorDot()
                 }

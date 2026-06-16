@@ -154,7 +154,7 @@ public struct PaywallView: View {
                     .buttonStyle(.plain)
                 Button { Task { await store.restore() } } label: { Text("paywall.restorePurchases.button", bundle: .module) }
                     .buttonStyle(.plain)
-                Link(destination: URL(string: "https://arrbarr.app/privacy-policy")!) {
+                Link(destination: URL(string: "https://arrbarr.app/privacy")!) {
                     Text("settings.privacyPolicy.button", bundle: .module)
                 }
             }

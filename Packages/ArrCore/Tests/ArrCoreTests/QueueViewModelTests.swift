@@ -12,6 +12,7 @@ import Observation
 private final class FakeAggregator: QueueDataProviding {
     var fetchResult = AggregateResult(radarr: [], sonarr: [], lidarr: [], whisparr: [])
     var upcomingResult: [UpcomingItem] = []
+    var upcomingFailed: Set<QueueItem.Source> = []
     var healthResult: HealthResult = .empty
     var historyResult = HistoryResult(items: [], error: nil)
 
@@ -31,7 +32,7 @@ private final class FakeAggregator: QueueDataProviding {
         await onFetch?()
         return fetchResult
     }
-    func fetchUpcoming() async -> [UpcomingItem] { upcomingResult }
+    func fetchUpcoming() async -> (items: [UpcomingItem], failed: Set<QueueItem.Source>) { (upcomingResult, upcomingFailed) }
     func fetchHealth() async -> HealthResult { healthResult }
     func fetchHistory(for source: QueueItem.Source) async -> HistoryResult { historyResult }
     func perform(_ action: QueueAggregator.Action, on item: QueueItem) async throws {
@@ -318,6 +319,43 @@ struct QueueViewModelUnreachableTests {
         await sut.refresh()
         await sut.refresh()
         #expect(!sut.unreachableArrs.contains(.sonarr))
+    }
+}
+
+@Suite("QueueViewModel upcoming per-source keep-last-good")
+@MainActor
+struct QueueViewModelUpcomingTests {
+    private func upcoming(_ id: String, source: QueueItem.Source) -> UpcomingItem {
+        UpcomingItem(id: id, source: source, title: id, subtitle: nil,
+                     airDate: Date().addingTimeInterval(3600), releaseType: nil,
+                     hasFile: false, overview: nil)
+    }
+
+    @Test("A failed calendar source keeps its last-known entries; reachable ones refresh")
+    func failedSourceKeepsEntries() async {
+        let (sut, fake, _) = makeSUT { $0.sonarr = configuredArr; $0.radarr = configuredArr }
+        fake.upcomingResult = [upcoming("movie", source: .radarr), upcoming("ep", source: .sonarr)]
+        await sut.refresh()
+        #expect(Set(sut.upcoming.map(\.id)) == ["movie", "ep"])
+
+        // Radarr's calendar fails; Sonarr returns a fresh episode.
+        fake.upcomingResult = [upcoming("ep2", source: .sonarr)]
+        fake.upcomingFailed = [.radarr]
+        await sut.refresh()
+        // Radarr's movie is preserved (not gutted); Sonarr's slice is replaced.
+        #expect(Set(sut.upcoming.map(\.id)) == ["movie", "ep2"])
+    }
+
+    @Test("A reachable source that returns nothing clears its own slice")
+    func reachableEmptyClears() async {
+        let (sut, fake, _) = makeSUT { $0.sonarr = configuredArr; $0.radarr = configuredArr }
+        fake.upcomingResult = [upcoming("movie", source: .radarr), upcoming("ep", source: .sonarr)]
+        await sut.refresh()
+        // Sonarr now reachable but genuinely empty (NOT failed) → its slice clears.
+        fake.upcomingResult = [upcoming("movie", source: .radarr)]
+        fake.upcomingFailed = []
+        await sut.refresh()
+        #expect(Set(sut.upcoming.map(\.id)) == ["movie"])
     }
 }
 

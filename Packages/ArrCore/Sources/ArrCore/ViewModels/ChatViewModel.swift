@@ -114,46 +114,64 @@ public final class ChatViewModel {
                 }
 
                 // --- View-model-executes path (e.g. OpenAI provider) ---
-                let toolCall = response.toolCalls.first
-                let assistantMsg = ChatMessage(role: .assistant, content: response.text, toolCall: toolCall)
-                messages.append(assistantMsg)
-                guard let call = toolCall else { return }
+                let toolCalls = response.toolCalls
+                guard !toolCalls.isEmpty else {
+                    messages.append(ChatMessage(role: .assistant, content: response.text))
+                    return
+                }
 
-                // Destructive-tool gate. For tools that queue indexer
-                // traffic / change arr state (`_search_*`, `_monitor_*`,
-                // `_add_*`, `_delete_*`), pause and surface a confirm
-                // card. Cancel returns "(cancelled by user)" so the
-                // model can adapt its plan.
-                var confirmedArgs = call.arguments
-                if MCPToolWhitelist.isDestructive(call.name) {
-                    guard let args = await awaitConfirm(call) else {
-                        messages.append(ChatMessage(
-                            role: .tool,
-                            content: call.name,
-                            toolCall: call,
-                            toolResult: "(cancelled by user)"
-                        ))
-                        nextPrompt = "Tool \(call.name) was cancelled by the user."
-                        continue
+                // The model can return SEVERAL tool calls in one turn
+                // (parallel tool-calling). Execute all of them — dropping the
+                // extras leaves the next request with tool_calls that were
+                // never answered and confuses strict providers. Each call gets
+                // its own assistant carrier so every tool result has a matching
+                // preceding tool_call in the OpenAI history; the prose rides on
+                // the first carrier only.
+                var resultSummaries: [String] = []
+                for (index, call) in toolCalls.enumerated() {
+                    messages.append(ChatMessage(
+                        role: .assistant,
+                        content: index == 0 ? response.text : "",
+                        toolCall: call
+                    ))
+
+                    // Destructive-tool gate. For tools that queue indexer
+                    // traffic / change arr state (`_search_*`, `_monitor_*`,
+                    // `_add_*`, `_delete_*`), pause and surface a confirm
+                    // card. Cancel returns "(cancelled by user)" so the
+                    // model can adapt its plan.
+                    var confirmedArgs = call.arguments
+                    if MCPToolWhitelist.isDestructive(call.name) {
+                        guard let args = await awaitConfirm(call) else {
+                            messages.append(ChatMessage(
+                                role: .tool,
+                                content: call.name,
+                                toolCall: call,
+                                toolResult: "(cancelled by user)"
+                            ))
+                            resultSummaries.append("Tool \(call.name) was cancelled by the user.")
+                            continue
+                        }
+                        confirmedArgs = args
                     }
-                    confirmedArgs = args
-                }
 
-                let output: ToolCallOutput
-                do {
-                    output = try await invokeTool(call.name, confirmedArgs)
-                } catch {
-                    output = ToolCallOutput(text: "(tool error: \(error.localizedDescription))")
+                    let output: ToolCallOutput
+                    do {
+                        output = try await invokeTool(call.name, confirmedArgs)
+                    } catch {
+                        output = ToolCallOutput(text: "(tool error: \(error.localizedDescription))")
+                    }
+                    let confirmedCall = ToolCall(id: call.id, name: call.name, arguments: confirmedArgs)
+                    messages.append(ChatMessage(
+                        role: .tool,
+                        content: call.name,
+                        toolCall: confirmedCall,
+                        toolResult: output.text,
+                        richContent: output.rich
+                    ))
+                    resultSummaries.append("Tool \(call.name) returned: \(output.text)")
                 }
-                let confirmedCall = ToolCall(id: call.id, name: call.name, arguments: confirmedArgs)
-                messages.append(ChatMessage(
-                    role: .tool,
-                    content: call.name,
-                    toolCall: confirmedCall,
-                    toolResult: output.text,
-                    richContent: output.rich
-                ))
-                nextPrompt = "Tool \(call.name) returned: \(output.text)"
+                nextPrompt = resultSummaries.joined(separator: "\n")
             }
             if roundsLeft == 0 {
                 lastError = "Reached the maximum number of tool-call rounds."

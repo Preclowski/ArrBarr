@@ -19,6 +19,8 @@ public actor DelugeClient {
     private let http: HTTPClient
     private var loggedIn = false
     private var requestId = 0
+    /// In-flight login, shared so concurrent actions await one `auth.login`.
+    private var loginTask: Task<Void, Error>?
 
     init(config: ServiceConfig, session: URLSession? = nil) {
         self.config = config
@@ -73,7 +75,15 @@ public actor DelugeClient {
     private func ensureLoggedIn() async throws {
         guard config.isConfigured else { throw HTTPError.notConfigured }
         if loggedIn { return }
+        if let task = loginTask { try await task.value; return }
 
+        let task = Task { try await self.performLogin() }
+        loginTask = task
+        defer { loginTask = nil }
+        try await task.value
+    }
+
+    private func performLogin() async throws {
         let resp = try await rpc(method: "auth.login", params: [config.password])
         guard resp["result"] as? Bool == true else {
             throw DelugeError.authFailed

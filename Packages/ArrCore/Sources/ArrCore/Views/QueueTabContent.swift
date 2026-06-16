@@ -11,7 +11,6 @@ struct QueueTabContent: View {
     @Binding var detailItem: QueueItem?
     @Binding var historySource: QueueItem.Source?
     @Binding var searchResult: SearchResult?
-    @Binding var bannerCollapseTask: Task<Void, Never>?
 
     private var sonarrConfigured: Bool { configStore.sonarr.isVisible }
     private var radarrConfigured: Bool { configStore.radarr.isVisible }
@@ -85,25 +84,17 @@ struct QueueTabContent: View {
             .scrollBounceBehavior(.basedOnSize)
             .frame(maxHeight: .infinity)
         } else {
-            VStack(spacing: 0) {
-                // "Next week" banner pinned above the List (full-width — it's a
-                // normal view, not a List row, so no macOS row-inset margins).
-                if queueScope == nil, configStore.showTonight, !viewModel.tonight.isEmpty {
-                    tonightBanner
-                        .padding(.vertical, 6)
-                }
-                QueueListView(
-                    viewModel: viewModel,
-                    scope: queueScope,
-                    onShowDetail: { item in
-                        withAnimation(.smooth(duration: 0.22)) { detailItem = item }
-                    },
-                    onNeedsYouTap: { needs in openNeedsYouQueue(needs) },
-                    onShowHistory: { source in historySource = source }
-                )
-                // Keep the last row clear of the floating filter bar.
-                .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 58) }
-            }
+            QueueListView(
+                viewModel: viewModel,
+                scope: queueScope,
+                onShowDetail: { item in
+                    withAnimation(.smooth(duration: 0.22)) { detailItem = item }
+                },
+                onNeedsYouTap: { needs in openNeedsYouQueue(needs) },
+                onShowHistory: { source in historySource = source }
+            )
+            // Keep the last row clear of the floating filter bar.
+            .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 58) }
         }
     }
 
@@ -217,180 +208,5 @@ struct QueueTabContent: View {
         .glassyFloatingBar()
     }
 
-    // MARK: - Tonight banner
-
-    private var tonightBanner: some View {
-        let items = viewModel.tonight
-        // Header renamed "Upcoming" → "Next week" so it no longer
-        // shadows the Upcoming tab label. Default visible count is 4
-        // (was 3); overflow is gated by a chevron expander that
-        // auto-collapses after 30s of inactivity — the banner is a
-        // peek surface, not a destination, so it shouldn't sit
-        // expanded forever.
-        let visible = viewModel.tonightExpanded ? items : Array(items.prefix(4))
-        let overflow = items.count - visible.count
-        let collapsed = configStore.isCollapsed(ConfigStore.tonightOrderKey)
-        return HStack(alignment: .top, spacing: 6) {
-            // Section chevron mirroring QueueSectionView — keeps the
-            // banner aligned with the rest of the popover's collapsible
-            // sections (Sonarr / Radarr / Needs you) instead of being
-            // the one panel you can't tuck away.
-            tonightChevron(collapsed: collapsed)
-            VStack(alignment: .leading, spacing: 2) {
-                // Moon glyph inlined with the header text instead of a
-                // separate left-column icon — content rows now start
-                // right after the chevron, matching the indent in
-                // Needs You / queue sections.
-                tonightHeaderLabel
-                if !collapsed {
-                    ForEach(visible) { item in
-                        TonightBannerRow(
-                            item: item,
-                            timeString: Self.tonightTimeFormatter.string(from: item.airDate),
-                            onTap: { openUpcomingDetail(item) }
-                        )
-                    }
-                    if overflow > 0 && !viewModel.tonightExpanded {
-                        tonightShowMoreButton
-                    }
-                }
-            }
-            Spacer()
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(Color.purple.opacity(0.06))
-    }
-
-    /// Collapse/expand chevron for the banner — rotates 0°→90° on expand,
-    /// mirroring QueueSectionView's section headers.
-    private func tonightChevron(collapsed: Bool) -> some View {
-        Button {
-            withAnimation(.smooth(duration: 0.22)) {
-                configStore.toggleCollapsed(ConfigStore.tonightOrderKey)
-            }
-        } label: {
-            Image(systemName: "chevron.right")
-                .scaledFont(size: 9, weight: .semibold)
-                .foregroundStyle(.tertiary)
-                .rotationEffect(.degrees(collapsed ? 0 : 90))
-                .frame(width: 10, height: 10)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .padding(.top, 3)
-        .accessibilityLabel(Text(collapsed ? "Expand section" : "Collapse section", bundle: .module))
-    }
-
-    /// "🌙 Next week" header — tapping it toggles collapse, same as the chevron.
-    private var tonightHeaderLabel: some View {
-        HStack(spacing: 5) {
-            Image(systemName: "moon.stars.fill")
-                .scaledFont(size: 11)
-                .foregroundStyle(.purple)
-            Text("queue.nextWeek.button", bundle: .module)
-                .scaledFont(size: 11, weight: .semibold)
-                .foregroundStyle(.secondary)
-        }
-        .contentShape(Rectangle())
-        .onTapGesture {
-            withAnimation(.smooth(duration: 0.22)) {
-                configStore.toggleCollapsed(ConfigStore.tonightOrderKey)
-            }
-        }
-    }
-
-    /// Overflow expander — reveals the hidden upcoming rows and arms the
-    /// 30s auto-collapse timer.
-    private var tonightShowMoreButton: some View {
-        Button {
-            withAnimation(.smooth(duration: 0.22)) {
-                viewModel.setTonightExpanded(true)
-            }
-            scheduleBannerCollapse()
-        } label: {
-            HStack(spacing: 3) {
-                Text("queue.showMore.button", bundle: .module)
-                    .scaledFont(size: 10)
-                Image(systemName: "chevron.down")
-                    .scaledFont(size: 9, weight: .medium)
-            }
-            .foregroundStyle(.tertiary)
-        }
-        .buttonStyle(.plain)
-        .padding(.top, 2)
-    }
-
-    /// Sends the tonight-banner item into the detail-view pipeline.
-    /// Same call shape as `UpcomingRowView.openDetail` — a synthetic
-    /// `QueueItem` posted via `DetailRequest` so the existing
-    /// `arrBarrOpenDetail` listener picks it up and renders DetailView.
-    private func openUpcomingDetail(_ item: UpcomingItem) {
-        guard let entityId = item.entityId else { return }
-        DetailRequest.post(
-            DetailRequest.syntheticItem(
-                source: item.source,
-                entityId: entityId,
-                title: item.title,
-                posterURL: item.posterURL,
-                posterRequiresAuth: item.posterRequiresAuth
-            )
-        )
-    }
-
-    /// 30s auto-collapse for the expanded "Next week" banner. Any new
-    /// expand cancels the prior timer and restarts the countdown, so a
-    /// user who keeps re-engaging never gets surprised by the
-    /// collapse.
-    private func scheduleBannerCollapse() {
-        bannerCollapseTask?.cancel()
-        bannerCollapseTask = Task { @MainActor [viewModel] in
-            try? await Task.sleep(nanoseconds: 30_000_000_000)
-            if Task.isCancelled { return }
-            withAnimation(.smooth(duration: 0.22)) {
-                viewModel.setTonightExpanded(false)
-            }
-        }
-    }
-
-    private static let tonightTimeFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.dateStyle = .none
-        f.timeStyle = .short
-        return f
-    }()
 }
 
-/// A single row in the "Next week" banner: air time, source glyph, title,
-/// optional subtitle. Extracted from `tonightBanner`'s `ForEach` closure so
-/// the banner getter stays under the 100ms type-check warn threshold.
-private struct TonightBannerRow: View {
-    let item: UpcomingItem
-    let timeString: String
-    let onTap: () -> Void
-
-    var body: some View {
-        Button(action: onTap) {
-            HStack(spacing: 4) {
-                Text(timeString)
-                    .scaledFont(size: 11, weight: .medium, monospacedDigit: true)
-                    .foregroundStyle(.secondary)
-                ServiceIcon(source: item.source, size: 10)
-                    .foregroundStyle(.secondary)
-                Text(item.title)
-                    .scaledFont(size: 12, weight: .medium)
-                    .lineLimit(1)
-                if let subtitle = item.subtitle, !subtitle.isEmpty {
-                    Text(subtitle)
-                        .scaledFont(size: 11)
-                        .foregroundStyle(.tertiary)
-                        .lineLimit(1)
-                }
-                Spacer(minLength: 0)
-            }
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .disabled(item.entityId == nil)
-    }
-}

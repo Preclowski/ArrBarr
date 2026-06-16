@@ -7,7 +7,7 @@ import os
 @MainActor
 protocol QueueDataProviding {
     func fetch() async -> AggregateResult
-    func fetchUpcoming() async -> [UpcomingItem]
+    func fetchUpcoming() async -> (items: [UpcomingItem], failed: Set<QueueItem.Source>)
     func fetchHealth() async -> HealthResult
     func fetchHistory(for source: QueueItem.Source) async -> HistoryResult
     func perform(_ action: QueueAggregator.Action, on item: QueueItem) async throws
@@ -150,7 +150,7 @@ public final class QueueAggregator: QueueDataProviding {
         return client
     }
 
-    func fetchUpcoming() async -> [UpcomingItem] {
+    func fetchUpcoming() async -> (items: [UpcomingItem], failed: Set<QueueItem.Source>) {
         let radarrCfg = configStore.radarr
         let sonarrCfg = configStore.sonarr
         let lidarrCfg = configStore.lidarr
@@ -165,10 +165,16 @@ public final class QueueAggregator: QueueDataProviding {
         async let lidarr = Self.safeFetchUpcoming { try await lidarrClient.fetchCalendar() }
         async let whisparr = Self.safeFetchUpcoming { try await whisparrClient.fetchCalendar() }
         let (r, s, l, w) = await (radarr, sonarr, lidarr, whisparr)
+        var failed: Set<QueueItem.Source> = []
+        if r.failed { failed.insert(.radarr) }
+        if s.failed { failed.insert(.sonarr) }
+        if l.failed { failed.insert(.lidarr) }
+        if w.failed { failed.insert(.whisparr) }
         let startOfToday = Calendar.current.startOfDay(for: Date())
-        return (r + s + l + w)
+        let items = (r.items + s.items + l.items + w.items)
             .filter { $0.airDate >= startOfToday }
             .sorted { $0.airDate < $1.airDate }
+        return (items, failed)
     }
 
     private static func safeFetch(_ block: () async throws -> [QueueItem]) async -> (items: [QueueItem], error: String?, unreachable: Bool) {
@@ -255,8 +261,23 @@ public final class QueueAggregator: QueueDataProviding {
 
     private static let logger = Logger(category: "QueueFetch")
 
-    private static func safeFetchUpcoming(_ block: () async throws -> [UpcomingItem]) async -> [UpcomingItem] {
-        do { return try await block() } catch { return [] }
+    private static func safeFetchUpcoming(_ block: () async throws -> [UpcomingItem]) async -> (items: [UpcomingItem], failed: Bool) {
+        do {
+            return (try await block(), false)
+        } catch HTTPError.notConfigured, HTTPError.missingApiKey {
+            // Not set up → genuinely empty, nothing to preserve.
+            return ([], false)
+        } catch is CancellationError {
+            return ([], false)
+        } catch let error as URLError where error.code == .cancelled {
+            return ([], false)
+        } catch {
+            // Real failure (transport / HTTP / decode). Flag it so the caller
+            // keeps this source's last-known calendar instead of dropping it —
+            // otherwise a blocked Radarr silently erases its movies from a
+            // merged "Upcoming".
+            return ([], true)
+        }
     }
 
     func perform(_ action: Action, on item: QueueItem) async throws {

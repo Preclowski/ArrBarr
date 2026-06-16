@@ -43,6 +43,12 @@ public struct EpisodeQuickDetail: View {
     /// pushes (so its toolbar back-target reads the same tab name).
     var originLabel: LocalizedStringKey = "Details"
 
+    @Environment(\.isDetachedWindow) private var isDetachedWindow
+    /// Pops this episode push in the detached window, where the wrapped
+    /// EpisodeDetailOverlay's own back button (its only back affordance there)
+    /// fires `onClose`. The attached panel pops via the native nav chevron.
+    @Environment(\.dismiss) private var dismiss
+
     @State private var sonarrDetail: SonarrSeriesDetail?
     @State private var fullEpisode: SonarrEpisodeDetail?
     @State private var episodeFileMap: [Int: SonarrEpisodeFile] = [:]
@@ -77,7 +83,7 @@ public struct EpisodeQuickDetail: View {
                     apiKey: configStore.sonarr.apiKey,
                     episodeFile: displayEpisode.episodeFileId.flatMap { episodeFileMap[$0] },
                     queueItem: item,
-                    onClose: { },
+                    onClose: { dismiss() },
                     onSearch: { episodeId in
                         let client = SonarrClient(config: configStore.sonarr)
                         try? await client.searchEpisodes(episodeIds: [episodeId])
@@ -91,7 +97,7 @@ public struct EpisodeQuickDetail: View {
                 )
             }
         }
-        .navigationTitle(sonarrDetail?.title ?? splitTitleAndYear(item.title).title)
+        .conditionalNavTitle(sonarrDetail?.title ?? splitTitleAndYear(item.title).title, apply: !isDetachedWindow)
         // Series push nests under THIS view (see `seriesPush`), so back
         // returns to the episode rather than the queue.
         .navigationDestination(item: $seriesPush) { req in

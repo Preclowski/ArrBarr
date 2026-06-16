@@ -237,9 +237,10 @@ public final class SearchViewModel {
         isAdding = true; addError = nil
         defer { isAdding = false }
         do {
-            try await client.addScene(result, qualityProfileId: qualityProfileId,
-                                      rootFolderPath: rootFolderPath, monitor: monitor)
+            let arrId = try await client.addScene(result, qualityProfileId: qualityProfileId,
+                                                  rootFolderPath: rootFolderPath, monitor: monitor)
             whisparrResults.removeAll { $0.id == result.id }
+            navigateToAdded(result, source: .whisparr, arrId: arrId)
         } catch {
             addError = error.localizedDescription
         }
@@ -252,9 +253,10 @@ public final class SearchViewModel {
         isAdding = true; addError = nil
         defer { isAdding = false }
         do {
-            try await client.addMovie(result, qualityProfileId: qualityProfileId,
-                                      rootFolderPath: rootFolderPath, monitor: monitor)
+            let arrId = try await client.addMovie(result, qualityProfileId: qualityProfileId,
+                                                 rootFolderPath: rootFolderPath, monitor: monitor)
             radarrResults.removeAll { $0.id == result.id }
+            navigateToAdded(result, source: .radarr, arrId: arrId)
         } catch {
             addError = error.localizedDescription
         }
@@ -268,10 +270,11 @@ public final class SearchViewModel {
         isAdding = true; addError = nil
         defer { isAdding = false }
         do {
-            try await client.addSeries(result, qualityProfileId: qualityProfileId,
-                                       rootFolderPath: rootFolderPath, monitor: monitor,
-                                       seriesType: seriesType, seasonFolder: seasonFolder)
+            let arrId = try await client.addSeries(result, qualityProfileId: qualityProfileId,
+                                                  rootFolderPath: rootFolderPath, monitor: monitor,
+                                                  seriesType: seriesType, seasonFolder: seasonFolder)
             sonarrResults.removeAll { $0.id == result.id }
+            navigateToAdded(result, source: .sonarr, arrId: arrId)
         } catch {
             addError = error.localizedDescription
         }
@@ -284,13 +287,30 @@ public final class SearchViewModel {
         isAdding = true; addError = nil
         defer { isAdding = false }
         do {
-            try await client.addArtist(result, qualityProfileId: qualityProfileId,
-                                       metadataProfileId: metadataProfileId,
-                                       rootFolderPath: rootFolderPath)
+            let arrId = try await client.addArtist(result, qualityProfileId: qualityProfileId,
+                                                  metadataProfileId: metadataProfileId,
+                                                  rootFolderPath: rootFolderPath)
             lidarrResults.removeAll { $0.id == result.id }
+            navigateToAdded(result, source: .lidarr, arrId: arrId)
         } catch {
             addError = error.localizedDescription
         }
+    }
+
+    /// After a successful add, drop the user on the freshly-added item's
+    /// detail card. Uses the arr-internal id returned by the POST (the only
+    /// thing `DetailView` needs to refetch the full record). No-op when the
+    /// arr didn't hand back an id (demo mode / unparseable response) — the
+    /// add still succeeded, we just can't deep-link to it.
+    private func navigateToAdded(_ result: SearchResult, source: QueueItem.Source, arrId: Int?) {
+        guard let arrId else { return }
+        DetailRequest.post(DetailRequest.syntheticItem(
+            source: source,
+            entityId: arrId,
+            title: result.title,
+            posterURL: result.posterURL,
+            posterRequiresAuth: false
+        ))
     }
 
     private func client(for source: QueueItem.Source) -> SearchClient? {

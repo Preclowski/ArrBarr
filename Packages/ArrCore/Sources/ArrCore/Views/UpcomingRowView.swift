@@ -15,7 +15,8 @@ public struct UpcomingRowView: View {
             posterBlurred: configStore.shouldBlurPoster(for: item.source),
             posterFallbackSymbol: item.source.symbol,
             title: item.title,
-            metadataSegments: metadataSegments,
+            metadataSegments: episodeSegments,
+            metadataSegments2: ratingSegments,
             disabled: item.entityId == nil,
             onTap: openDetail
         ) {
@@ -54,14 +55,21 @@ public struct UpcomingRowView: View {
         #endif
     }
 
-    /// Dot-joined metadata mirroring `SearchResultRow`. Order: subtitle
-    /// (S00E00 etc) → releaseType (Airing / Digital / In Cinemas) →
-    /// IMDb → runtime. airDate is deliberately *not* here — the upcoming
-    /// list groups by day with the date as a section header, so showing
-    /// it again per row would just be noise.
-    private var metadataSegments: [String] {
+    /// Row layout is three lines on every platform: title / episode / rating.
+    /// Splitting episode info from the rating line stops a series row from
+    /// cramming `S04E03 · Title · Airing · IMDb · runtime` onto one overflowing
+    /// line. Movies (no episode subtitle) collapse to title + rating.
+    ///
+    /// Episode info (S00E00 · title) — its own line.
+    private var episodeSegments: [String] {
+        [item.subtitle.flatMap { $0.isEmpty ? nil : $0 }].compactMap { $0 }
+    }
+
+    /// Release type / IMDb / runtime — the rating line below the episode line.
+    /// airDate is deliberately omitted: the list groups by day with the date as
+    /// a section header, so repeating it per row would just be noise.
+    private var ratingSegments: [String] {
         [
-            item.subtitle.flatMap { $0.isEmpty ? nil : $0 },
             item.releaseType.flatMap { $0.isEmpty ? nil : $0 },
             item.imdb.map { String(format: "IMDb %.1f", $0) },
             item.runtime.flatMap { $0 > 0 ? "\($0) min" : nil },

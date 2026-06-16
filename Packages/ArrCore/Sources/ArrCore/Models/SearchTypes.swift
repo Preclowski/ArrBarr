@@ -107,6 +107,18 @@ public enum RadarrMonitorMode: String, CaseIterable, Identifiable {
 public enum SonarrMonitorMode: String, CaseIterable, Identifiable {
     case all, future, missing, existing, first, latest, none
     public var id: String { rawValue }
+    /// Value Sonarr expects for `addOptions.monitor`. Sonarr's
+    /// `MonitorTypes` enum serialises to camelCase (`firstSeason`,
+    /// `latestSeason`) — sending our short `first`/`latest` raw values
+    /// makes Sonarr reject the POST with HTTP 400 ("could not be converted
+    /// to NzbDrone.Core.Tv.MonitorTypes"). The rest map 1:1.
+    var apiValue: String {
+        switch self {
+        case .first: return "firstSeason"
+        case .latest: return "latestSeason"
+        default: return rawValue
+        }
+    }
     var displayName: String {
         switch self {
         case .all: return "All"

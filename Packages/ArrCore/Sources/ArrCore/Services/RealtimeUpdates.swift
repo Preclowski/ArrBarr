@@ -400,7 +400,8 @@ actor SignalRConnection {
         // after it is queued for `listen` to handle.
         var buffer = ""
         while true {
-            let msg = try await ws.receive()
+            // Handshake reply should arrive promptly — a shorter watchdog here.
+            let msg = try await receiveWithTimeout(ws, seconds: 30)
             switch msg {
             case .string(let s): buffer += s
             case .data(let d):   buffer += String(data: d, encoding: .utf8) ?? ""
@@ -454,6 +455,29 @@ actor SignalRConnection {
         }
     }
 
+    /// `URLSessionWebSocketTask.receive()` has no deadline. If a proxy accepts
+    /// the WebSocket upgrade but the hub then goes silent (or the socket
+    /// half-opens without a TCP RST), the read blocks forever and that arr
+    /// silently stops receiving pushes until the next forced reconnect/wake.
+    /// Race the read against a watchdog so a stalled socket throws and the
+    /// reconnect loop recovers. Any received frame resets the window, so this
+    /// behaves as an idle timeout (Servarr's SignalR keepalive pings well
+    /// inside 60 s on a healthy connection).
+    private func receiveWithTimeout(
+        _ ws: URLSessionWebSocketTask, seconds: UInt64
+    ) async throws -> URLSessionWebSocketTask.Message {
+        try await withThrowingTaskGroup(of: URLSessionWebSocketTask.Message.self) { group in
+            group.addTask { try await ws.receive() }
+            group.addTask {
+                try await Task.sleep(nanoseconds: seconds * 1_000_000_000)
+                throw URLError(.timedOut)
+            }
+            defer { group.cancelAll() }
+            guard let result = try await group.next() else { throw URLError(.timedOut) }
+            return result
+        }
+    }
+
     /// Step 4 — read frames forever, dispatch `RealtimeEvent`s. Each
     /// receive can carry multiple frames concatenated with 0x1E
     /// separators, so we split before parsing. `pending` carries any
@@ -466,7 +490,7 @@ actor SignalRConnection {
             try await handleFrame(frame, ws: ws)
         }
         while !Task.isCancelled {
-            let msg = try await ws.receive()
+            let msg = try await receiveWithTimeout(ws, seconds: 60)
             let text: String
             switch msg {
             case .string(let s):

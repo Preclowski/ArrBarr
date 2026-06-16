@@ -20,6 +20,10 @@ public actor QbittorrentClient {
     private let session: URLSession
     private let http: HTTPClient
     private var loggedIn = false
+    /// In-flight login handshake, shared so a burst of concurrent actions
+    /// awaits ONE `/auth/login` instead of each racing its own (a later SID
+    /// cookie could otherwise clobber an earlier one → 403).
+    private var loginTask: Task<Void, Error>?
 
     init(config: ServiceConfig, session: URLSession? = nil) {
         self.config = config
@@ -88,7 +92,16 @@ public actor QbittorrentClient {
         // API-key mode authenticates per-request via the Bearer header, so
         // there's no session login to establish.
         if usesApiKey || loggedIn { return }
+        // Join an already-running handshake rather than starting a second one.
+        if let task = loginTask { try await task.value; return }
 
+        let task = Task { try await self.performLogin() }
+        loginTask = task
+        defer { loginTask = nil }
+        try await task.value
+    }
+
+    private func performLogin() async throws {
         let url = try http.url(base: config.baseURL, path: "/api/v2/auth/login")
         let data = try await http.post(
             url,

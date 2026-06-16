@@ -20,10 +20,25 @@ struct QueueListView: View {
     /// the matching queue item's detail.
     var onNeedsYouTap: ((NeedsYouItem) -> Void)? = nil
     var onShowHistory: ((QueueItem.Source) -> Void)? = nil
-    // The "Next week" banner is NOT a List row — the host pins it above the
-    // List so it dodges macOS List row-inset margins we couldn't zero out.
+
+    #if os(macOS)
+    /// 30s auto-collapse timer for the expanded "Next week" peek. Local to the
+    /// list now (was a binding threaded from PopoverContentView); it survives
+    /// body re-evals while the queue list stays mounted.
+    @State private var bannerCollapseTask: Task<Void, Never>?
+    #endif
+
+    /// The ONE listRowInsets every section header uses. Explicit + non-all-zero
+    /// (the macOS plain List substitutes a default ~16pt leading for an all-zero
+    /// `EdgeInsets()`, but honors this verbatim including `leading: 0`). Combined
+    /// with each header's `.padding(.horizontal, queueRowH)`, this puts every
+    /// chevron at exactly `queueRowH` — they line up.
+    static let headerRowInsets = EdgeInsets(top: 6, leading: 0, bottom: 4, trailing: 0)
 
     private enum Entry: Hashable {
+        #if os(macOS)
+        case tonight
+        #endif
         case needsYou
         case arr(QueueItem.Source)
     }
@@ -33,6 +48,13 @@ struct QueueListView: View {
     private var orderedEntries: [Entry] {
         if let scope { return isVisible(scope) ? [.arr(scope)] : [] }
         return configStore.arrOrder.compactMap { key -> Entry? in
+            #if os(macOS)
+            // "Next week" peek — macOS-only (iOS has a dedicated Upcoming tab).
+            if key == ConfigStore.tonightOrderKey {
+                guard configStore.showTonight, !viewModel.tonight.isEmpty else { return nil }
+                return .tonight
+            }
+            #endif
             if key == ConfigStore.needsYouOrderKey {
                 guard configStore.showNeedsYou, !viewModel.needsYou.isEmpty else { return nil }
                 return .needsYou
@@ -48,19 +70,38 @@ struct QueueListView: View {
 
     var body: some View {
         List {
+            // No Sections — every header + row is a plain List row. macOS List
+            // gives Sections inconsistent spacing / leading insets / expand
+            // animations (different for single-row groups like Needs-you vs
+            // multi-row arr groups), which is exactly what skewed the chevrons,
+            // the closed-section heights and the open animation. Flat rows are
+            // uniform.
             ForEach(orderedEntries, id: \.self) { entry in
                 switch entry {
+                #if os(macOS)
+                case .tonight:
+                    tonightSection()
+                #endif
                 case .needsYou:
-                    Section { needsYouBanner.plainQueueRow() }
+                    needsYouSection()
                 case .arr(let source):
                     arrSection(source)
                 }
             }
             if orderedEntries.isEmpty {
-                Section { emptyState.plainQueueRow() }
+                emptyState.plainQueueRow()
             }
         }
+        #if os(macOS)
+        // Tear down the "Next week" auto-collapse timer when the list unmounts
+        // (tab switch / filtering swaps this view out) so it can't fire a stray
+        // collapse off-screen or strand an uncancellable task across remounts.
+        .onDisappear { bannerCollapseTask?.cancel(); bannerCollapseTask = nil }
+        #endif
         .listStyle(.plain)
+        // No separator lines anywhere — rows hide theirs via `plainQueueRow`; this
+        // also kills the section-boundary line between arrs.
+        .listSectionSeparator(.hidden)
         .scrollContentBackground(.hidden)
         // Propagate the away-from-LAN state so each row hides its mutating
         // controls (the header chip is the single explanation).
@@ -91,24 +132,45 @@ struct QueueListView: View {
         // proxy, or split-DNS junk while away, the user still sees what was
         // last there rather than an empty list.
         let isStale = arrError != nil
-        let collapsed = arrError == nil && configStore.isCollapsed(source)
-        Section {
-            if !collapsed {
+        // Unreachable (transport / 502 / split-DNS) is the calm away case; a
+        // *reachable* error (401/500 — the arr answered) stays a loud, actionable
+        // problem. The two get different chrome below.
+        let isUnreachable = viewModel.lastUnreachable.contains(source)
+        // Offline sections stay collapsible (chevron + tap), unlike a genuine error.
+        let collapsed = (arrError == nil || isUnreachable) && configStore.isCollapsed(source)
+        // Header + rows as plain List rows (no Section wrapper). Same inset and
+        // mechanism as the Needs-you / Next-week headers → chevrons line up.
+        if !hideHeader {
+            sectionHeader(source, error: arrError, isUnreachable: isUnreachable, collapsed: collapsed)
+                .plainQueueRow(insets: Self.headerRowInsets)
+        }
+        if !collapsed {
                 let rows = entries(for: source)
                 if rows.isEmpty {
-                    // "Queue empty" only when the arr actually answered. On a
-                    // failed refresh with nothing cached yet there's simply
-                    // nothing to show — the header error covers it.
-                    if !isStale {
+                    if isUnreachable {
+                        // Calm "can't reach this server" line instead of a blank
+                        // body — quiet, no error styling.
+                        Text("queue.serverUnreachable.label", bundle: .module)
+                            .scaledFont(size: 12)
+                            .foregroundStyle(.tertiary)
+                            .plainQueueRow(insets: EdgeInsets(top: 6, leading: 14, bottom: 6, trailing: 14))
+                    } else if !isStale {
+                        // "Queue empty" only when the arr actually answered.
                         Text("queue.queueEmpty.button", bundle: .module)
                             .scaledFont(size: 12)
                             .foregroundStyle(.tertiary)
                             .plainQueueRow(insets: EdgeInsets(top: 6, leading: 14, bottom: 6, trailing: 14))
                     }
+                    // A reachable error with nothing cached → render nothing; the
+                    // header badge already explains it.
                 } else {
                     ForEach(rows) { entry in
                         rowView(for: entry)
-                            .opacity(isStale ? 0.55 : 1)
+                            // Per-section offline: a stale/unreachable arr's rows
+                            // can't be acted on, so block their right-click menu
+                            // (and poster control) even when only THIS arr is down
+                            // — the List-level value only covers the all-arrs case.
+                            .environment(\.queueOffline, viewModel.isFullyOffline || isStale)
                             .plainQueueRow()
                             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                                 // Icon-only, Apple-Mail style (no "Delete" text).
@@ -144,42 +206,33 @@ struct QueueListView: View {
                     }
                 }
             }
-        } header: {
-            if !hideHeader {
-                sectionHeader(source, error: arrError, collapsed: collapsed)
-                    // Zero the platform section-header inset so the header
-                    // aligns with the (also-zeroed) rows; both then carry their
-                    // own `queueRowH` padding instead of the wider default.
-                    .listRowInsets(EdgeInsets(top: 6, leading: 0, bottom: 4, trailing: 0))
-            }
-        }
     }
 
     @ViewBuilder
-    private func sectionHeader(_ source: QueueItem.Source, error: String?, collapsed: Bool) -> some View {
-        HStack(spacing: 6) {
-            Image(systemName: "chevron.right")
-                .scaledFont(size: 9, weight: .semibold)
-                .foregroundStyle(.tertiary)
-                .rotationEffect(.degrees(collapsed ? 0 : 90))
-                .frame(width: 10)
-                .opacity(error == nil ? 1 : 0)
-            ServiceIcon(source: source, size: 12)
-                .foregroundStyle(.secondary)
-            Text(verbatim: source.displayName)
-                .scaledFont(size: 12, weight: .semibold)
-                .foregroundStyle(.secondary)
-            if error == nil {
-                Text(verbatim: "\(itemCount(source))")
-                    .scaledFont(size: 11)
-                    .foregroundStyle(.tertiary)
-                // Per-arr health badge removed: arr health checks (errors always,
-                // warnings when "Show warnings" is on) now surface as actionable
-                // rows in the "Needs you" list instead of a bare hover-only
-                // triangle here — see QueueViewModel.computeNeedsYou.
+    private func sectionHeader(_ source: QueueItem.Source, error: String?, isUnreachable: Bool, collapsed: Bool) -> some View {
+        QueueHeaderRow(
+            icon: AnyView(ServiceIcon(source: source, size: 12).foregroundStyle(.secondary)),
+            title: source.displayName,
+            // Count only when healthy; per-arr health surfaces as "Needs you"
+            // rows now (not a hover badge here).
+            count: error == nil ? itemCount(source) : nil,
+            collapsed: collapsed,
+            // Offline is a collapsible state like any other — only a genuine
+            // (reachable) error hides the chevron.
+            showChevron: error == nil || isUnreachable,
+            onToggle: {
+                guard error == nil || isUnreachable else { return }
+                withAnimation(.smooth(duration: 0.22)) { configStore.toggleCollapsed(source) }
             }
-            Spacer()
-            if let error {
+        ) {
+            if isUnreachable {
+                // Calm, muted "offline" — the expected away/proxy case, not an
+                // alarm. No orange, no HTTP code; the body shows the last state.
+                Label { Text("offline.indicator.label", bundle: .module).textCase(.lowercase) } icon: { Image(systemName: "network.slash") }
+                    .scaledFont(size: 11)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            } else if let error {
                 Label(error, systemImage: "exclamationmark.triangle.fill")
                     .scaledFont(size: 11)
                     .foregroundStyle(.orange)
@@ -197,39 +250,150 @@ struct QueueListView: View {
                 .buttonStyle(.plain)
             }
         }
-        .padding(.horizontal, Tokens.Spacing.queueRowH)
-        .textCase(nil)
-        .contentShape(Rectangle())
-        .onTapGesture {
-            guard error == nil else { return }
-            withAnimation(.smooth(duration: 0.22)) { configStore.toggleCollapsed(source) }
-        }
     }
 
-    private var needsYouBanner: some View {
-        NeedsYouSectionView(
-            items: viewModel.needsYou,
-            isCollapsed: configStore.isCollapsed(ConfigStore.needsYouOrderKey),
-            onToggleCollapse: {
+    /// "Needs you" as a header row + one sibling row per entry (like arr
+    /// sections) — so collapse animates as native row insert/remove instead of
+    /// one growing cell (kills the "content slides from the top" jump), and the
+    /// header chevron lines up with the others.
+    @ViewBuilder
+    private func needsYouSection() -> some View {
+        let collapsed = configStore.isCollapsed(ConfigStore.needsYouOrderKey)
+        NeedsYouHeader(
+            count: viewModel.needsYou.count,
+            isCollapsed: collapsed,
+            onToggle: {
                 withAnimation(.smooth(duration: 0.22)) {
                     configStore.toggleCollapsed(ConfigStore.needsYouOrderKey)
                 }
-            },
-            onItemTap: { needs in
-                if let onNeedsYouTap {
-                    onNeedsYouTap(needs)
-                } else if let itemId = needs.item?.id {
-                    let match = QueueItem.Source.allCases.lazy
-                        .compactMap { viewModel.items(for: $0).first(where: { $0.id == itemId }) }
-                        .first
-                    if let match { onShowDetail(match) }
-                }
-                // arr-level issue rows (needs.item == nil) have no queue
-                // detail to push; the popover wires onNeedsYouTap to open the
-                // arr's queue page instead.
             }
         )
+        .plainQueueRow(insets: Self.headerRowInsets)
+        if !collapsed {
+            ForEach(viewModel.needsYou) { needs in
+                NeedsYouRow(needs: needs, onTap: { needsYouItemTapped(needs) })
+                    .plainQueueRow()
+            }
+        }
     }
+
+    private func needsYouItemTapped(_ needs: NeedsYouItem) {
+        if let onNeedsYouTap {
+            onNeedsYouTap(needs)
+        } else if let itemId = needs.item?.id {
+            let match = QueueItem.Source.allCases.lazy
+                .compactMap { viewModel.items(for: $0).first(where: { $0.id == itemId }) }
+                .first
+            if let match { onShowDetail(match) }
+        }
+        // arr-level issue rows (needs.item == nil) have no queue detail to push;
+        // the popover wires onNeedsYouTap to open the arr's queue page instead.
+    }
+
+    #if os(macOS)
+    /// "Next week" peek — a header row + each upcoming item as a SIBLING List row
+    /// (like the arr / Needs-you sections), so collapse animates as native row
+    /// insert/remove instead of one growing cell sliding content in from the top.
+    @ViewBuilder
+    private func tonightSection() -> some View {
+        let items = viewModel.tonight
+        let visible = viewModel.tonightExpanded ? items : Array(items.prefix(4))
+        let overflow = items.count - visible.count
+        let collapsed = configStore.isCollapsed(ConfigStore.tonightOrderKey)
+        QueueHeaderRow(
+            icon: AnyView(
+                Image(systemName: "moon.stars.fill")
+                    .scaledFont(size: 11)
+                    .foregroundStyle(.purple)
+            ),
+            title: String(localized: "queue.nextWeek.button", bundle: .module),
+            collapsed: collapsed,
+            onToggle: {
+                withAnimation(.smooth(duration: 0.22)) {
+                    configStore.toggleCollapsed(ConfigStore.tonightOrderKey)
+                }
+            }
+        )
+        .plainQueueRow(insets: Self.headerRowInsets)
+        if !collapsed {
+            ForEach(Array(visible.enumerated()), id: \.element.id) { offset, item in
+                TonightBannerRow(
+                    item: item,
+                    timeString: Self.tonightTimeFormatter.string(from: item.airDate),
+                    onTap: { openUpcomingDetail(item) }
+                )
+                // A little air between the header and the first content row.
+                .padding(.top, offset == 0 ? 4 : 0)
+                // Align the rows under the moon, past the chevron column.
+                .padding(.leading, QueueHeaderMetrics.contentIndent)
+                .padding(.trailing, Tokens.Spacing.queueRowH)
+                .plainQueueRow()
+            }
+            if overflow > 0 && !viewModel.tonightExpanded {
+                tonightShowMoreButton
+                    .padding(.leading, QueueHeaderMetrics.contentIndent)
+                    .plainQueueRow()
+            }
+        }
+    }
+
+    /// Overflow expander — reveals the hidden upcoming rows and arms the 30s
+    /// auto-collapse timer.
+    private var tonightShowMoreButton: some View {
+        Button {
+            withAnimation(.smooth(duration: 0.22)) {
+                viewModel.setTonightExpanded(true)
+            }
+            scheduleBannerCollapse()
+        } label: {
+            HStack(spacing: 3) {
+                Text("queue.showMore.button", bundle: .module)
+                    .scaledFont(size: 10)
+                Image(systemName: "chevron.down")
+                    .scaledFont(size: 9, weight: .medium)
+            }
+            .foregroundStyle(.tertiary)
+        }
+        .buttonStyle(.plain)
+        .padding(.top, 2)
+    }
+
+    /// Sends the tonight-banner item into the detail pipeline — a synthetic
+    /// `QueueItem` posted via `DetailRequest`, picked up by the popover's
+    /// `arrBarrOpenDetail` listener (same shape as `UpcomingRowView.openDetail`).
+    private func openUpcomingDetail(_ item: UpcomingItem) {
+        guard let entityId = item.entityId else { return }
+        DetailRequest.post(
+            DetailRequest.syntheticItem(
+                source: item.source,
+                entityId: entityId,
+                title: item.title,
+                posterURL: item.posterURL,
+                posterRequiresAuth: item.posterRequiresAuth
+            )
+        )
+    }
+
+    /// 30s auto-collapse for the expanded "Next week" peek. Any new expand
+    /// cancels the prior timer and restarts the countdown.
+    private func scheduleBannerCollapse() {
+        bannerCollapseTask?.cancel()
+        bannerCollapseTask = Task { @MainActor [viewModel] in
+            try? await Task.sleep(nanoseconds: 30_000_000_000)
+            if Task.isCancelled { return }
+            withAnimation(.smooth(duration: 0.22)) {
+                viewModel.setTonightExpanded(false)
+            }
+        }
+    }
+
+    private static let tonightTimeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateStyle = .none
+        f.timeStyle = .short
+        return f
+    }()
+    #endif
 
     private var emptyState: some View {
         VStack(spacing: 14) {
@@ -356,3 +520,39 @@ private extension View {
             .listRowBackground(Color.clear)
     }
 }
+
+#if os(macOS)
+/// A single row in the "Next week" peek: air time, source glyph, title,
+/// optional subtitle. Its own view so the `tonightSection` builder stays under
+/// the 100ms type-check warn threshold.
+private struct TonightBannerRow: View {
+    let item: UpcomingItem
+    let timeString: String
+    let onTap: () -> Void
+
+    var body: some View {
+        Button(action: onTap) {
+            HStack(spacing: 4) {
+                Text(timeString)
+                    .scaledFont(size: 11, weight: .medium, monospacedDigit: true)
+                    .foregroundStyle(.secondary)
+                ServiceIcon(source: item.source, size: 10)
+                    .foregroundStyle(.secondary)
+                Text(item.title)
+                    .scaledFont(size: 12, weight: .medium)
+                    .lineLimit(1)
+                if let subtitle = item.subtitle, !subtitle.isEmpty {
+                    Text(subtitle)
+                        .scaledFont(size: 11)
+                        .foregroundStyle(.tertiary)
+                        .lineLimit(1)
+                }
+                Spacer(minLength: 0)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(item.entityId == nil)
+    }
+}
+#endif

@@ -7,17 +7,28 @@ public struct PopoverContentView: View {
     let onOpenSettings: () -> Void
     let onShowAbout: () -> Void
     let onQuit: () -> Void
+    /// Closes the detached window. `nil` in the menu-bar panel (nothing to close).
+    /// When set AND we're in the detached window, an × is shown as the last item
+    /// of the tab bar's right island (the native traffic lights are hidden).
+    var onCloseWindow: (() -> Void)? = nil
+    @Environment(\.isDetachedWindow) private var isDetachedWindow
+    /// Closes the MenuBarExtra popover. No-op in the detached NSWindow (it has no
+    /// presenting container); used to dismiss the menu-bar panel right after the
+    /// user detaches, so it doesn't linger behind the new window.
+    @Environment(\.dismiss) private var dismiss
 
     public init(
         viewModel: QueueViewModel,
         onOpenSettings: @escaping () -> Void,
         onShowAbout: @escaping () -> Void = {},
-        onQuit: @escaping () -> Void
+        onQuit: @escaping () -> Void,
+        onCloseWindow: (() -> Void)? = nil
     ) {
         self.viewModel = viewModel
         self.onOpenSettings = onOpenSettings
         self.onShowAbout = onShowAbout
         self.onQuit = onQuit
+        self.onCloseWindow = onCloseWindow
     }
 
     @State private var selectedTab: Tab = .queue
@@ -64,9 +75,6 @@ public struct PopoverContentView: View {
     /// posted by the `discover_in_quiz` chat tool.
     @State private var discoverViewModel = DiscoverViewModel.shared
     @State private var showDiscoverOverlay = false
-    /// Auto-collapse timer for the "Next week" banner — the banner
-    /// snaps back to the 4-item peek 30s after the user expands it.
-    @State private var bannerCollapseTask: Task<Void, Never>?
 
     private var sonarrConfigured: Bool { configStore.sonarr.isVisible }
     private var radarrConfigured: Bool { configStore.radarr.isVisible }
@@ -140,6 +148,15 @@ public struct PopoverContentView: View {
                 if !available && selectedTab == .chat {
                     selectedTab = .queue
                 }
+            }
+            // Switching tabs clears any pushed detail / search / history so a
+            // detail opened on one tab (e.g. an Upcoming item in the detached
+            // window) can't leave its title chrome lingering on another tab.
+            // Mirrors iOS's per-tab NavigationStack isolation.
+            .onChange(of: selectedTab) { _, _ in
+                detailItem = nil
+                searchResult = nil
+                historySource = nil
             }
             .background {
                 // Hidden keyboard shortcut for cmd+, (Settings). cmd+N
@@ -296,8 +313,7 @@ public struct PopoverContentView: View {
                                 queueFilterFocused: $queueFilterFocused,
                                 detailItem: $detailItem,
                                 historySource: $historySource,
-                                searchResult: $searchResult,
-                                bannerCollapseTask: $bannerCollapseTask
+                                searchResult: $searchResult
                             )
                         case .upcoming: UpcomingTabContent(viewModel: viewModel)
                         case .chat:
@@ -459,14 +475,17 @@ public struct PopoverContentView: View {
     }
 
     private var tabBar: some View {
-        // Two floating glass capsules: the tab cluster (Queue / Upcoming
-        // / Chat / Add) and the kebab overflow menu. The cluster pill
-        // stretches to fill all space up to the kebab; tabs inside keep
-        // intrinsic widths and are evenly distributed by `Spacer`s, so
-        // long labels (Polish "Nadchodzące") aren't squeezed but the
-        // pill chrome still spans the whole row instead of orphaning a
-        // dead empty strip between the last tab and the kebab.
+        // A row of floating glass capsules, all the SAME height: the tab cluster
+        // (Queue / Upcoming / Chat / Add) sets the height via its natural size;
+        // the optional windowed-mode close island (far left), the optional
+        // offline chip, and the accessory island (detach toggle + kebab) match it
+        // through `pillHeight`. The cluster pill stretches to fill all space
+        // between, so long labels (Polish "Nadchodzące") aren't squeezed and the
+        // chrome spans the whole row.
         HStack(spacing: 8) {
+            // Detached mode uses the real macOS traffic lights (floating top-left,
+            // only the red × active) instead of a custom in-bar close dot, so the
+            // tab bar is now identical in both surfaces — no leading close island.
             tabPills
                 .frame(maxWidth: .infinity)
                 .glassyFloatingBar()
@@ -480,14 +499,50 @@ public struct PopoverContentView: View {
                     .glassyFloatingBar()
                     .transition(.opacity.combined(with: .scale(scale: 0.9)))
             }
-            moreMenu
-                .glassyFloatingBar()
+            // One island: the detach/attach toggle sits left of the kebab,
+            // both inside a single glass capsule (like the tab cluster nests
+            // its buttons in one capsule).
+            HStack(spacing: 0) {
+                #if os(macOS)
+                detachToggleButton
+                #endif
+                moreMenu
+                #if os(macOS)
+                // Detached window's close affordance: last item of the right
+                // island (the native traffic lights are hidden). Absent in the
+                // menu-bar panel, which dismisses itself on focus loss.
+                if isDetachedWindow, let onCloseWindow {
+                    windowCloseButton(action: onCloseWindow)
+                }
+                #endif
+            }
+            // Small horizontal breathing room so the island's glyphs don't sit
+            // flush against the capsule rim (read as cramped otherwise).
+            .padding(.horizontal, 4)
+            .glassyFloatingBar()
         }
         .padding(.horizontal, 12)
         .padding(.top, 10)
         .padding(.bottom, 8)
         .animation(.easeInOut(duration: 0.2), value: viewModel.isFullyOffline)
     }
+
+    #if os(macOS)
+    /// The detached window's × close button — styled like the detach + kebab
+    /// glyphs it sits beside (bare secondary glyph in the shared island capsule).
+    private func windowCloseButton(action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: "xmark")
+                .scaledFont(size: 12, weight: .semibold)
+                .foregroundStyle(.secondary)
+                .frame(width: Self.pillHeight, height: Self.pillHeight)
+                .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .help(Text("Close window", bundle: .module))
+        .accessibilityLabel(Text("Close window", bundle: .module))
+    }
+    #endif
 
     /// Reports each tab's frame in `tabPills`'s coordinate space so the
     /// rounded selection indicator can slide between them with the
@@ -510,7 +565,9 @@ public struct PopoverContentView: View {
             // Edge Spacer at start + between every tab gives n+1 evenly
             // sized flex slots — the cluster's extra width is split as
             // uniform gutters, so tabs visually breathe across the full
-            // pill instead of clumping left.
+            // pill instead of clumping left. (The windowed-mode close
+            // button now lives in its OWN island left of the cluster — see
+            // `tabBar` — not as a pseudo-tab here.)
             Spacer(minLength: 0)
             ForEach(Array(visibleTabs.enumerated()), id: \.element) { _, tab in
                 Button {
@@ -565,13 +622,11 @@ public struct PopoverContentView: View {
                         }
                     }
                     .fixedSize(horizontal: true, vertical: false)
-                    // Horizontal/vertical padding sets the breathing
-                    // room INSIDE the selection pill — the pill is
-                    // sized to the tab's bounds minus a 3pt rim, so
-                    // text-to-pill-edge ends up ~15pt horizontal,
-                    // ~6pt vertical. Earlier 14/7 had the pill
-                    // hugging the text too closely; bumped for more
-                    // air, closer to Music app's tab metrics.
+                    // Horizontal/vertical padding sets the breathing room INSIDE
+                    // the selection pill. The tab cluster's resulting natural
+                    // height (~32 at default scale) is the canonical bar height;
+                    // the accessory / close / offline islands grow to match it
+                    // via `pillHeight` (they don't shrink the tabs).
                     .padding(.horizontal, 18)
                     .padding(.vertical, 9)
                     .contentShape(Rectangle())
@@ -601,29 +656,54 @@ public struct PopoverContentView: View {
             // implicit background ZStack's bounds didn't end up matching
             // the HStack's bounds in every layout pass; `.position()`
             // inside an explicit GeometryReader removes that ambiguity.
-            GeometryReader { _ in
-                if let frame = tabFrames[selectedTab] {
-                    // Indicator pill spreads horizontally past the tab's
-                    // text + padding box (+12 each side) so it reads as a
-                    // real tab slot rather than a tight chip hugging the
-                    // text. Vertically it must stay *inside* the tab's box —
-                    // the surrounding glass bar is only as tall as the tab
-                    // button, so any positive vertical growth makes the pill
-                    // spill above/below the bar. Inset 6pt (3pt rim top and
-                    // bottom) keeps it a clean capsule within the bar.
+            GeometryReader { geo in
+                if let rect = selectionPillRect(in: geo.size) {
                     TabPillBackground()
-                        .frame(width: max(0, frame.width + 24), height: max(0, frame.height - 6))
-                        .position(x: frame.midX, y: frame.midY)
+                        .frame(width: rect.width, height: rect.height)
+                        .position(x: rect.midX, y: rect.midY)
                 }
             }
         )
     }
 
-    /// Canonical height for every floating pill in this toolbar. Tabs
-    /// pill uses the same rule via its per-tab `.padding(.vertical, 7)`
-    /// + 12pt font, which lands around 28pt. Keep this constant in sync
-    /// if the tab metrics ever move.
-    private static let pillHeight: CGFloat = 28
+    /// Geometry for the selected-tab indicator. Fills the tab's *slot* — its
+    /// label box plus ~half the gutter to each neighbour — so the pill reads as a
+    /// full segment in both surfaces. This replaced a fixed `width + 24`, which
+    /// under-filled the roomy popover gutters yet over-filled (spilled past the
+    /// bar) when the detached close-island squeezed the tabs. Measuring the real
+    /// gaps from `tabFrames` makes the fill mode-agnostic.
+    private func selectionPillRect(in container: CGSize) -> CGRect? {
+        guard let frame = tabFrames[selectedTab] else { return nil }
+        let ordered = visibleTabs
+            .compactMap { tab in tabFrames[tab].map { (tab, $0) } }
+            .sorted { $0.1.minX < $1.1.minX }
+        guard let idx = ordered.firstIndex(where: { $0.0 == selectedTab }) else { return nil }
+
+        // Breathing room kept between adjacent pills so they don't visually touch.
+        let gap: CGFloat = 3
+        // Inner edges meet a neighbour: stop halfway across the gutter (minus the
+        // breathing gap). Outer edges of the end tabs reach halfway to the bar's
+        // inner edge, so every pill is symmetric regardless of gutter size.
+        let leftEdge = idx > 0
+            ? (ordered[idx - 1].1.maxX + frame.minX) / 2 + gap
+            : frame.minX / 2
+        let rightEdge = idx < ordered.count - 1
+            ? (ordered[idx + 1].1.minX + frame.maxX) / 2 - gap
+            : (frame.maxX + container.width) / 2
+
+        // Vertically inset 6pt (3pt rim top + bottom) to stay a clean capsule
+        // inside the bar, which is only as tall as the tab button.
+        let height = max(0, frame.height - 6)
+        return CGRect(x: leftEdge, y: frame.midY - height / 2,
+                      width: max(0, rightEdge - leftEdge), height: height)
+    }
+
+    /// Height of the accessory / close / offline islands — set to MATCH the tab
+    /// cluster's natural height (its per-tab `.padding(.vertical, 9)` + 12pt font
+    /// lands around 32pt), so every capsule in the toolbar is the same height
+    /// (the tabs keep their natural size; these grow up to them). Keep in sync if
+    /// the tab vertical padding / font ever moves.
+    private static let pillHeight: CGFloat = 32
 
     /// Overflow menu — capsule of equal width and height = a perfect
     /// circle. The frame has to live OUTSIDE the Menu, not inside the
@@ -646,12 +726,8 @@ public struct PopoverContentView: View {
                 .keyboardShortcut(",", modifiers: .command)
             #if os(macOS)
             Button { onShowAbout() } label: { Text("settings.aboutArrbarr.button", bundle: .module) }
-            // Shortcut to the Settings "Show in Dock as a window" toggle. Label
-            // reflects current state so the same item detaches from the panel
-            // and re-attaches from the detached window.
-            Button { configStore.detachedWindow.toggle() } label: {
-                Text(configStore.detachedWindow ? "Reattach to menu bar" : "Detach into a window", bundle: .module)
-            }
+            // The detach/re-attach toggle now lives in the header island next to
+            // the kebab (see detachToggleButton), so it's dropped from here.
             #endif
             Divider()
             Button { onQuit() } label: { Text("common.quitArrbarr.button", bundle: .module) }
@@ -667,6 +743,33 @@ public struct PopoverContentView: View {
         .contentShape(Capsule())
         .help(Text("common.moreOptions.button", bundle: .module))
     }
+
+    #if os(macOS)
+    /// Detach the popover into a free-floating window — or, when already
+    /// detached, re-attach it to the menu bar. Pure data toggle on the shared
+    /// ConfigStore; AppDelegate observes `$detachedWindow` and opens/closes the
+    /// window. Glyph + tooltip flip on `isDetachedWindow`. Bare (no glass) — the
+    /// wrapping island capsule supplies the chrome.
+    private var detachToggleButton: some View {
+        Button {
+            let wasInPopover = !isDetachedWindow
+            configStore.detachedWindow.toggle()
+            // Detaching from the menu-bar panel: dismiss the popover so it doesn't
+            // hang around behind the freshly-opened window. (Re-attaching from the
+            // window is handled by AppDelegate closing the NSWindow.)
+            if wasInPopover { dismiss() }
+        } label: {
+            Image(systemName: isDetachedWindow ? "menubar.arrow.up.rectangle" : "macwindow.on.rectangle")
+                .scaledFont(size: 12, weight: .semibold)
+                .foregroundStyle(.secondary)
+                .frame(width: Self.pillHeight, height: Self.pillHeight)
+                .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .help(Text(isDetachedWindow ? "common.reattachToMenuBar.button" : "common.detachIntoAWindow.button", bundle: .module))
+        .accessibilityLabel(Text(isDetachedWindow ? "common.reattachToMenuBar.button" : "common.detachIntoAWindow.button", bundle: .module))
+    }
+    #endif
 
 }
 

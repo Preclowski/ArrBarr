@@ -80,6 +80,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             SpotlightIndexer.reindex(configStore: configStore)
         }
 
+        // Warm the chat empty-state poster deck (sample URLs + prefetch their
+        // images) so opening Chat shows it instantly instead of loading on
+        // first entry. No-op unless the chat tab is available.
+        LibraryPosterSampler.warmUp(configStore: configStore)
+
         // Wake handler — WebSockets don't survive a Mac sleep cycle
         // reliably; the OS can take 30-90 s to surface the dead socket,
         // during which SignalR pushes silently drop. Force a tear-and-
@@ -318,7 +323,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         appendPlain("Made by 🥨\n\n", size: 12, color: .labelColor)
         // Order: app first, then privacy, then source.
         appendLine(String(localized: "Website", bundle: bundle), "https://arrbarr.app")
-        appendLine(String(localized: "Privacy Policy", bundle: bundle), "https://arrbarr.app/privacy-policy")
+        appendLine(String(localized: "Privacy Policy", bundle: bundle), "https://arrbarr.app/privacy")
         appendLine("GitHub", "https://github.com/Preclowski/ArrBarr")
         appendPlain("\n")
         result.append(NSAttributedString(string: "Dashboard Icons · CC BY 4.0", attributes: [
@@ -583,7 +588,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             viewModel: queueVM,
             onOpenSettings: { [weak self] in self?.openSettings() },
             onShowAbout: { [weak self] in self?.showAbout() },
-            onQuit: { NSApp.terminate(nil) }
+            onQuit: { NSApp.terminate(nil) },
+            // No native traffic lights in the detached window — PopoverContentView
+            // adds an × as the last item of the tab bar's right island instead.
+            // This just closes (hides) the window; `applicationShouldHandleReopen`
+            // reopens it from the Dock and `detachedWindow` stays true (no re-attach).
+            onCloseWindow: { [weak self] in self?.mainWindow?.close() }
         )
         .environmentObject(configStore)
         .background(WindowGlassBackground().ignoresSafeArea())
@@ -600,13 +610,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // title + surfaced toolbar buttons we don't want up there. DetailView
         // draws its own back button + title in-content instead (`.isDetachedWindow`).
         let hosting = NSHostingController(rootView: view)
+        // Drop the titlebar safe-area inset so the SwiftUI content fills to the very
+        // top — the tab bar then sits on the SAME row as the traffic lights, which
+        // float top-left. PopoverContentView adds a leading inset in detached mode
+        // so the tabs/header clear the lights (they sit beside the tabs, not above).
+        if #available(macOS 13.3, *) { hosting.safeAreaRegions = [] }
         let win = NSWindow(contentViewController: hosting)
-        win.title = "ArrBarr"
+        // Empty title: `.fullSizeContentView` + transparent, hidden titlebar makes
+        // the bar itself invisible, but a non-empty `title` can still paint text
+        // over the content header. Keep it blank so nothing overlaps.
+        win.title = ""
         // Fixed 400×600 (PopoverContentView is a hard-sized, internally-scrolling
         // layout — no `.resizable`, which would only add empty gutters).
         // `.fullSizeContentView` + transparent titlebar lets the glass backdrop
         // fill the whole window including under the (now SwiftUI-owned) titlebar.
-        win.styleMask = [.titled, .closable, .miniaturizable, .fullSizeContentView]
+        //
+        // Hide the whole native traffic-light cluster — the detached window draws
+        // its own × in the tab bar's right island (see PopoverContentView). We keep
+        // `.titled` + `.closable` so the window can still become key (text fields
+        // focus) and Cmd-W works, but no system buttons are shown.
+        win.styleMask = [.titled, .closable, .fullSizeContentView]
+        win.standardWindowButton(.closeButton)?.isHidden = true
+        win.standardWindowButton(.miniaturizeButton)?.isHidden = true
+        win.standardWindowButton(.zoomButton)?.isHidden = true
         win.setContentSize(NSSize(width: 400, height: 600))
         win.isOpaque = false
         win.backgroundColor = .clear

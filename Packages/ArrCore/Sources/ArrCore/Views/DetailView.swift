@@ -21,9 +21,6 @@ public struct DetailView: View {
     var autoDrillToEpisode: Bool = true
     var viewModel: QueueViewModel
     @EnvironmentObject var configStore: ConfigStore
-    /// True only in the macOS detached window — drives the in-content back
-    /// button (the hand-built NSWindow doesn't render NavigationStack's chevron).
-    @Environment(\.isDetachedWindow) private var isDetachedWindow
 
     public init(
         item: QueueItem,
@@ -132,18 +129,14 @@ public struct DetailView: View {
     // the item's protocol, and only Pause/Resume when the focused item
     // is actually in a download-or-paused state.
     private var canControl: Bool {
-        switch item.downloadProtocol {
-        case .usenet:
-            return (configStore.sabnzbd.isConfigured && !configStore.sabnzbd.apiKey.isEmpty)
-                || configStore.nzbget.isConfigured
-        case .torrent:
-            return configStore.qbittorrent.isConfigured
-                || configStore.transmission.isConfigured
-                || configStore.rtorrent.isConfigured
-                || configStore.deluge.isConfigured
-        case .unknown:
-            return false
-        }
+        // Pause/resume go straight to the download client; need one that's
+        // configured AND reachable. And don't offer them when the item's arr is
+        // unavailable — the data is stale, the action can't land. Both cases
+        // hide the CTA (and the episode-row pause/resume/delete callbacks below).
+        guard let kind = configStore.selectedDownloadClient(for: item.downloadProtocol) else { return false }
+        if case .down = ConnectionHealth.shared.state(for: .arr(kind)) { return false }
+        if viewModel.lastUnreachable.contains(item.source) { return false }
+        return true
     }
 
     private var canPauseResume: Bool {
@@ -219,6 +212,9 @@ public struct DetailView: View {
         // badge stays in the hero (see headerCard's titleBadge param)
         // because macOS NavigationStack toolbar refuses to render non-
         // interactive views — we ran the experiment three times.
+        // iOS-only toolbar host: macOS self-draws these in `header` (the popover
+        // has no NSToolbar for `.toolbar` actions; the detached window self-draws).
+        #if os(iOS)
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
                 if let url = arrWebURL(for: item, in: configStore) {
@@ -227,9 +223,7 @@ public struct DetailView: View {
                     }
                     .help(Text("detail.openInBrowser.button", bundle: .module))
                 }
-                // iOS keeps delete in the toolbar (to the RIGHT of Safari).
-                // macOS surfaces it next to the Resume CTA instead.
-                #if os(iOS)
+                // Delete to the RIGHT of Safari; macOS surfaces it by the CTA.
                 if hasActiveDownloads && canControl {
                     Button { PanelActivation.bringForward(); ctaPendingDelete = true } label: {
                         Image(systemName: "trash")
@@ -237,16 +231,25 @@ public struct DetailView: View {
                     .tint(.red)
                     .help(Text("queue.cancelDownload.button", bundle: .module))
                 }
-                #endif
             }
         }
+        #endif
         // Toolbar title carries the *item* identity — title + year —
         // instead of the generic source name, so the user always sees
         // what they're looking at in the chevron header. The hero card
         // below drops its own title/year duplication to stay clean.
-        .navigationTitle(navTitleString)
+        // In the DETACHED window we draw our own header (back + title + Safari),
+        // so the NavigationStack title would stack a duplicate bar on top —
+        // suppress it there. The menu-bar panel + iOS keep the native chevron.
         #if os(iOS)
+        .navigationTitle(navTitleString)
         .navigationBarTitleDisplayMode(.inline)
+        #else
+        // macOS draws its own header (see `header`); hide the popover's native
+        // NavigationStack chevron + title so they aren't duplicated. The detached
+        // window has none to begin with (hand-built NSWindow), so this is a no-op
+        // there.
+        .toolbar(.hidden, for: .windowToolbar)
         #endif
         // Episode drill-down — push EpisodeDetailOverlay as another
         // NavigationStack level so the user gets a native `< Sonarr`
@@ -344,29 +347,36 @@ public struct DetailView: View {
 
     @ViewBuilder
     private var header: some View {
-        // Inline header was removed in the MenuBarExtra(.window) migration —
-        // both the menu-bar panel and iOS push DetailView into a NavigationStack
-        // that renders `<` + title for free. The macOS *detached* window is a
-        // hand-built NSWindow, where that automatic chevron does NOT render, so
-        // there we draw our own in-content back button (matching the pattern
-        // EpisodeDetailOverlay / History / Search already use). The panel keeps
-        // `EmptyView` + the native chevron.
-        if isDetachedWindow {
-            HStack(spacing: 6) {
-                FloatingBackButton(action: onBack)
-                    .keyboardShortcut(.cancelAction)
-                Text(navTitleString)
-                    .scaledFont(size: 15, weight: .semibold)
-                    .foregroundStyle(.primary)
-                    .lineLimit(1)
-                Spacer(minLength: 0)
+        // macOS draws its OWN header (back + title + Safari) on BOTH surfaces so
+        // the menu-bar popover matches the detached window and iOS. The detached
+        // NSWindow never renders the native chevron; in the popover we hide the
+        // native chevron (`.toolbar(.hidden, for: .windowToolbar)` in `body`) and
+        // replace it with this. iOS keeps the native nav bar + `.toolbar` instead.
+        #if os(macOS)
+        HStack(spacing: 6) {
+            FloatingBackButton(action: onBack)
+                .keyboardShortcut(.cancelAction)
+            Text(navTitleString)
+                .scaledFont(size: 15, weight: .semibold)
+                .foregroundStyle(.primary)
+                .lineLimit(1)
+            Spacer(minLength: 0)
+            if let url = arrWebURL(for: item, in: configStore) {
+                Button { PlatformURLOpener.open(url) } label: {
+                    Image(systemName: "safari")
+                        .scaledFont(size: 14, weight: .medium)
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .help(Text("detail.openInBrowser.button", bundle: .module))
             }
-            .padding(.horizontal, 12)
-            .padding(.top, 10)
-            .padding(.bottom, 4)
-        } else {
-            EmptyView()
         }
+        .padding(.horizontal, 12)
+        .padding(.top, 10)
+        .padding(.bottom, 4)
+        #else
+        EmptyView()
+        #endif
     }
 
     // MARK: - Download CTA strip
@@ -776,6 +786,18 @@ public struct DetailView: View {
         guard !key.isEmpty, let tmdbId, tmdbId > 0 else { return }
         guard let credits = try? await TMDBClient(apiKey: key).tvCredits(tvId: tmdbId) else { return }
         cast = CastMember.from(tmdbCast: credits.cast)
+    }
+}
+
+extension View {
+    /// Applies `.navigationTitle` only when `apply` is true. The detail surfaces
+    /// (DetailView / EpisodeDetailOverlay / EpisodeQuickDetail) use this to DROP
+    /// the macOS NavigationStack title in the DETACHED window, where they already
+    /// draw their own in-content header — the nav title would otherwise stack a
+    /// second, duplicate title bar on top.
+    @ViewBuilder
+    func conditionalNavTitle(_ title: String, apply: Bool) -> some View {
+        if apply { navigationTitle(title) } else { self }
     }
 }
 

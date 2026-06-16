@@ -126,10 +126,26 @@ public final class KVSyncCoordinator: ObservableObject {
     public func pushAllToKV() {
         for key in SyncedKeys.all {
             if let value = defaults.object(forKey: key) {
-                kv.set(value, forKey: key)
+                // Skip keys whose KVS value already matches. Re-pushing an
+                // identical value posts an inbound change on other devices,
+                // which (if their suppression flag has already reset) can
+                // re-push it back: a sync loop that also burns KVS quota.
+                // Equality short-circuits the bounce.
+                if !Self.kvEqual(kv.object(forKey: key), value) {
+                    kv.set(value, forKey: key)
+                }
             }
         }
         if accountAvailable { lastSyncDate = Date() }
+    }
+
+    /// Value equality for the property-list types stored in UserDefaults / KVS
+    /// (String, NSNumber, Data, Array, Dictionary). Used to suppress redundant
+    /// pushes that would otherwise bounce between devices.
+    private static func kvEqual(_ a: Any?, _ b: Any?) -> Bool {
+        if a == nil, b == nil { return true }
+        guard let a, let b else { return false }
+        return (a as AnyObject).isEqual(b)
     }
 
     /// Apply the given inbound KVS keys (allowlist-filtered) into UserDefaults,

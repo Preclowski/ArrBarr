@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 /// The App Group suite shared between the host app and the widget extension,
 /// plus extension-safe config reads. `nonisolated` throughout — a widget
@@ -11,6 +12,55 @@ public enum WidgetDataStore {
 
     public static func groupDefaults() -> UserDefaults? {
         UserDefaults(suiteName: appGroupSuiteName)
+    }
+
+    // MARK: - Upcoming snapshot
+
+    /// Last-known "Upcoming" calendar, cached in the App Group so it survives a
+    /// relaunch and shows immediately on cold start — even when the arrs are
+    /// unreachable (away from the home LAN). Calendar entries are stable
+    /// (air dates for the week ahead), so a stale snapshot is genuinely useful
+    /// offline; the live fetch replaces it the moment a refresh succeeds.
+    /// On-disk JSON file rather than UserDefaults: `UserDefaults` buffers writes
+    /// and may not flush before a hard kill / crash, so the snapshot could be
+    /// lost across a restart. An atomic file write lands on disk immediately and
+    /// survives any termination. Prefers the shared App Group container (so the
+    /// widget can read it too); falls back to the app's own Application Support
+    /// — both persist across restarts.
+    private static func upcomingSnapshotURL() -> URL? {
+        let fm = FileManager.default
+        // App Group container (shared with the widget) ONLY when its directory
+        // actually exists or can be created. On macOS the group isn't
+        // provisioned yet (no entitlement), yet `containerURL` still hands back a
+        // path whose directory is MISSING — an atomic write there silently fails.
+        // So verify we can ensure the directory; otherwise fall back to the app's
+        // own Application Support (always writable, survives restarts).
+        if let group = fm.containerURL(forSecurityApplicationGroupIdentifier: appGroupSuiteName),
+           (try? fm.createDirectory(at: group, withIntermediateDirectories: true)) != nil {
+            return group.appendingPathComponent("upcoming-snapshot.json")
+        }
+        guard let dir = try? fm.url(for: .applicationSupportDirectory, in: .userDomainMask,
+                                    appropriateFor: nil, create: true) else { return nil }
+        return dir.appendingPathComponent("upcoming-snapshot.json")
+    }
+
+    private static let snapshotLog = Logger(subsystem: AppLog.subsystem, category: "Snapshot")
+
+    public static func saveUpcoming(_ items: [UpcomingItem]) {
+        guard let url = upcomingSnapshotURL(), let data = try? JSONEncoder().encode(items) else { return }
+        do {
+            try data.write(to: url, options: .atomic)
+        } catch {
+            snapshotLog.error("upcoming snapshot write failed: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    public static func loadUpcoming() -> [UpcomingItem] {
+        guard let url = upcomingSnapshotURL(),
+              let data = try? Data(contentsOf: url),
+              let items = try? JSONDecoder().decode([UpcomingItem].self, from: data)
+        else { return [] }
+        return items
     }
 
     /// Reads a service config from the group suite and merges secrets back in

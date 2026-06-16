@@ -5,7 +5,14 @@ import Security
 /// never synced. Thin wrapper over `SecretStore` so there is one Keychain code
 /// path; kept as a named type because several call sites read it as a static.
 public enum MCPTokenStore {
-    private static let store = KeychainSecretStore()
+    /// Device-only, never synced. Mirror `ConfigStore`'s secret backend: an
+    /// ad-hoc/OSS build's file Keychain prompts on every rebuild and may not
+    /// persist the write, so only entitled App Store builds use the Keychain —
+    /// everything else (incl. `swift test`) uses UserDefaults. Without this the
+    /// MCP server could fail to read back its own bearer token after relaunch
+    /// (auth then breaks on exactly the self-hosted builds most likely to run it).
+    private static let store: SecretStore =
+        ConfigStore.makeDefaultSecretStore(defaults: .standard)
 
     public static func read() -> String? {
         if let token = store.read(.mcpBearer) { return token }

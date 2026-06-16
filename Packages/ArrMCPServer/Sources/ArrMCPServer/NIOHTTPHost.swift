@@ -194,7 +194,12 @@ private final class HTTPHandler: ChannelInboundHandler, @unchecked Sendable {
     typealias OutboundOut = HTTPServerResponsePart
 
     private let app: NIOHTTPHost
-    private struct RequestState { var head: HTTPRequestHead; var bodyBuffer: ByteBuffer }
+    /// Hard cap on accumulated request-body size. MCP JSON-RPC payloads are
+    /// tiny; this bounds the memory + pre-auth JSON parse a single request can
+    /// drive — without it a client could stream a multi-GB body (buffered whole
+    /// before any validation/auth runs) and exhaust memory.
+    private static let maxBodyBytes = 1 * 1024 * 1024  // 1 MB
+    private struct RequestState { var head: HTTPRequestHead; var bodyBuffer: ByteBuffer; var oversized = false }
     private var requestState: RequestState?
 
     init(app: NIOHTTPHost) { self.app = app }
@@ -204,11 +209,27 @@ private final class HTTPHandler: ChannelInboundHandler, @unchecked Sendable {
         case .head(let head):
             requestState = RequestState(head: head, bodyBuffer: context.channel.allocator.buffer(capacity: 0))
         case .body(var buffer):
+            guard let state = requestState, !state.oversized else { return }
+            if state.bodyBuffer.readableBytes + buffer.readableBytes > Self.maxBodyBytes {
+                // Over the cap — stop buffering, free what we held, and reject
+                // on `.end` (writing a response mid-stream here isn't clean).
+                requestState?.oversized = true
+                requestState?.bodyBuffer.clear()
+                return
+            }
             requestState?.bodyBuffer.writeBuffer(&buffer)
         case .end:
             guard let state = requestState else { return }
             requestState = nil
             nonisolated(unsafe) let ctx = context
+            if state.oversized {
+                Task {
+                    await self.writeResponse(
+                        .error(statusCode: 413, .invalidRequest("Payload Too Large")),
+                        version: state.head.version, context: ctx)
+                }
+                return
+            }
             Task { await self.handleRequest(state: state, context: ctx) }
         }
     }

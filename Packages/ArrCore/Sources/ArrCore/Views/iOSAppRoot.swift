@@ -11,8 +11,8 @@ import CoreSpotlight
 /// each with its own `NavigationStack` for drill-down.
 ///
 /// Construction lives inside `ArrCore` so the iOS app target can
-/// reach the package's section views (NeedsYouSectionView,
-/// QueueSectionView, etc.) without us having to expose every
+/// reach the package's section views (NeedsYouHeader / NeedsYouRow,
+/// QueueListView, etc.) without us having to expose every
 /// internal initialiser publicly.
 public struct iOSAppRoot: View {
     @State private var viewModel: QueueViewModel
@@ -80,6 +80,8 @@ public struct iOSAppRoot: View {
             viewModel.startForegroundPolling()
             // Index the library into Spotlight (fire-and-forget, batched).
             SpotlightIndexer.reindex(configStore: configStore)
+            // Warm the chat empty-state poster deck so it's instant on entry.
+            LibraryPosterSampler.warmUp(configStore: configStore)
         }
         .onChange(of: scenePhase) { _, phase in
             switch phase {

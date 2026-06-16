@@ -1,7 +1,7 @@
 import Foundation
 import SwiftUI
 
-public struct UpcomingItem: Identifiable, Equatable, Sendable {
+public struct UpcomingItem: Identifiable, Equatable, Sendable, Codable {
     /// Calendar entries share the same arr-source identity as queue rows;
     /// keeping two parallel enums made every cross-section helper translate
     /// back and forth. `QueueItem.Source` already carries `symbol` and

@@ -620,7 +620,7 @@ public struct SettingsView: View {
                 Link(destination: URL(string: "https://arrbarr.app")!) {
                     Label { Text("settings.website.button", bundle: .module) } icon: { Image(systemName: "globe") }
                 }
-                Link(destination: URL(string: "https://arrbarr.app/privacy-policy")!) {
+                Link(destination: URL(string: "https://arrbarr.app/privacy")!) {
                     Label { Text("settings.privacyPolicy.button", bundle: .module) } icon: { Image(systemName: "hand.raised") }
                 }
                 Text(verbatim: "Made by 🥨")
@@ -815,7 +815,7 @@ public struct SettingsView: View {
                 Link(destination: URL(string: "https://arrbarr.app")!) {
                     Label { Text("settings.website.button", bundle: .module) } icon: { Image(systemName: "globe") }
                 }
-                Link(destination: URL(string: "https://arrbarr.app/privacy-policy")!) {
+                Link(destination: URL(string: "https://arrbarr.app/privacy")!) {
                     Label { Text("settings.privacyPolicy.button", bundle: .module) } icon: { Image(systemName: "hand.raised") }
                 }
                 Text(verbatim: "Made by 🥨")

@@ -29,6 +29,12 @@ public final class QueueViewModel {
     public private(set) var tonight: [UpcomingItem] = []
     public private(set) var needsYou: [NeedsYouItem] = []
     public private(set) var unreachableArrs: Set<QueueItem.Source> = []
+    /// Sources that failed *this* fetch at the transport/gateway level (host
+    /// unreachable / 502 / split-DNS). Immediate — unlike the 3-cycle-debounced
+    /// `unreachableArrs` (which drives the menu-bar badge and the global offline
+    /// chip) — so a section flips to the calm "can't reach — showing last state"
+    /// treatment at once instead of reading as a loud error for three cycles.
+    public private(set) var lastUnreachable: Set<QueueItem.Source> = []
     /// Timestamp of the last refresh in which at least one configured arr
     /// returned fresh data. Drives the "last updated X ago" tooltip on the
     /// offline indicator; `nil` until the first successful fetch.
@@ -199,6 +205,17 @@ public final class QueueViewModel {
     /// its `.shared` default argument keeps MainActor isolation, which a
     /// `convenience` delegation would lose.
     private func commonSetup(autostart: Bool) {
+        // Cold-start with the last-known "Upcoming" snapshot so the week's
+        // schedule is on screen immediately — including when the arrs are
+        // unreachable (away from the home LAN). The first successful refresh
+        // replaces it. Skipped in demo mode (which seeds its own data).
+        if autostart, !DemoMode.isActive {
+            let cached = WidgetDataStore.loadUpcoming()
+            if !cached.isEmpty {
+                self.upcoming = cached
+                self.tonight = Self.tonightSlice(from: cached, hours: configStore.tonightHours)
+            }
+        }
         // Coalesce bursts of queue events (Sonarr can emit several within
         // milliseconds during an import) so we don't fan out N near-
         // simultaneous HTTP refreshes.
@@ -428,6 +445,7 @@ public final class QueueViewModel {
             self.health = DemoMocks.health
             self.errors = [:]
             self.unreachableArrs = []
+            self.lastUnreachable = []
             self.needsYou = Self.computeNeedsYou(queues: self.queues, errors: [:], health: DemoMocks.health, showWarnings: configStore.showWarnings)
             for service in MonitoredService.allCases {
                 ConnectionHealth.shared.forceOK(service, detail: nil)
@@ -471,13 +489,33 @@ public final class QueueViewModel {
         notifyNewItems(queues: newQueues, errors: newErrors)
         self.queues = newQueues
         self.errors = newErrors
-        // Same keep-last-good guard for upcoming: a failed refresh returns an
-        // empty list, which would otherwise blank the Upcoming tab.
-        if !(upcoming.isEmpty && !newErrors.isEmpty) {
-            self.upcoming = upcoming
-            self.tonight = Self.tonightSlice(from: upcoming, hours: configStore.tonightHours)
+        // Per-source keep-last-good for the calendar. A source whose calendar
+        // fetch FAILED keeps its previously-known entries (so a blocked Radarr
+        // keeps its movies in the merged "Upcoming"); a reachable source — even
+        // one that genuinely returned nothing — replaces its own slice. Without
+        // this, one unreachable arr silently erased its half of the schedule
+        // AND the cache then saved the gutted result.
+        let freshUpcomingBySource = Dictionary(grouping: upcoming.items, by: { $0.source })
+        let startOfTodayUpcoming = Calendar.current.startOfDay(for: Date())
+        var mergedUpcoming: [UpcomingItem] = []
+        for source in QueueItem.Source.allCases {
+            if upcoming.failed.contains(source) {
+                mergedUpcoming += self.upcoming.filter { $0.source == source }
+            } else {
+                mergedUpcoming += freshUpcomingBySource[source] ?? []
+            }
         }
+        mergedUpcoming = mergedUpcoming
+            .filter { $0.airDate >= startOfTodayUpcoming }
+            .sorted { $0.airDate < $1.airDate }
+        self.upcoming = mergedUpcoming
+        self.tonight = Self.tonightSlice(from: mergedUpcoming, hours: configStore.tonightHours)
+        // Persist so cold-start / offline shows the week's schedule even when the
+        // arrs are unreachable — now with the failed sources' last-known entries
+        // preserved, not gutted.
+        WidgetDataStore.saveUpcoming(mergedUpcoming)
         self.health = health
+        self.lastUnreachable = queue.unreachableSources
         self.unreachableArrs = updateUnreachable(unreachable: queue.unreachableSources)
         // Stamp the freshness clock whenever at least one configured arr
         // returned without error — that's the data whose age the offline
@@ -486,7 +524,7 @@ public final class QueueViewModel {
             lastSuccessfulRefresh = Date()
         }
         updateConnectionHealth(errors: newErrors)
-        var needs = Self.computeNeedsYou(queues: newQueues, errors: newErrors, health: health, showWarnings: configStore.showWarnings)
+        var needs = Self.computeNeedsYou(queues: newQueues, errors: newErrors, health: health, showWarnings: configStore.showWarnings, unreachable: queue.unreachableSources)
         needs.append(contentsOf: serviceIssueRows())
         self.needsYou = needs
         self.lastError = nil
@@ -568,15 +606,9 @@ public final class QueueViewModel {
     /// clients + AI). Arr issues are already surfaced by `computeNeedsYou`, so
     /// these never double-report.
     private func serviceIssueRows() -> [NeedsYouItem] {
-        let label = String(localized: "queue.serviceProblem.button", bundle: .module)
         return MonitoredService.probeTargets.compactMap { service in
             guard case .down(let message) = ConnectionHealth.shared.state(for: service) else { return nil }
-            return NeedsYouItem(
-                serviceIssue: service,
-                title: service.displayName,
-                subtitle: label,
-                detailLines: [message]
-            )
+            return NeedsYouItem(serviceIssue: service, message: message)
         }
     }
 
@@ -600,7 +632,8 @@ public final class QueueViewModel {
         queues: [QueueItem.Source: [QueueItem]],
         errors: [QueueItem.Source: String],
         health: HealthResult,
-        showWarnings: Bool
+        showWarnings: Bool,
+        unreachable: Set<QueueItem.Source> = []
     ) -> [NeedsYouItem] {
         // Iterate per Source.allCases (enum-declaration order) instead
         // of `queues.values` so the rendered "Needs you" list keeps a
@@ -611,7 +644,6 @@ public final class QueueViewModel {
         // .map(NeedsYouItem.init)` chain: that chain was the single most
         // expensive expression to type-check in the whole package
         // (~250 ms). The loop is equivalent and effectively free.
-        let problemLabel = String(localized: "queue.serviceProblem.button", bundle: .module)
         var result: [NeedsYouItem] = []
         for source in QueueItem.Source.allCases {
             // Queue items that need manual intervention.
@@ -629,24 +661,51 @@ public final class QueueViewModel {
             //    warnings/notices (broken indexer, update available, …) surface
             //    only when the user opted into "Show warnings" — otherwise this
             //    list stays errors-only and isn't drowned in noise.
-            var problems: [String] = []
-            if let error = errors[source] { problems.append(error) }
-            for record in health.records(for: source) {
-                let isError = record.type?.lowercased() == "error"
-                guard isError || showWarnings else { continue }
-                if let message = record.message, !message.isEmpty { problems.append(message) }
+            // ONE entry per problem — NOT grouped by app (the trailing chip names
+            // it, so the title must not repeat the app name) or by severity (each
+            // row carries its own severity icon). An *unreachable* source
+            // (transport / 502 / split-DNS) is the calm "you've left the LAN"
+            // case, not an actionable problem, so its fetch error is dropped here.
+            if let error = errors[source], !unreachable.contains(source) {
+                result.append(NeedsYouItem(arrIssue: source, id: "needsyou.fetch.\(source.rawValue)", message: error, severity: .error))
             }
-            if !problems.isEmpty {
-                result.append(NeedsYouItem(
-                    arrIssue: source,
-                    id: "needsyou.issues.\(source.rawValue)",
-                    title: source.displayName,
-                    subtitle: problemLabel,
-                    detailLines: problems
-                ))
+            for record in health.records(for: source) {
+                guard let message = record.message, !message.isEmpty else { continue }
+                let severity: NeedsYouItem.Severity = switch record.type?.lowercased() {
+                case "error": .error
+                case "warning": .warning
+                default: .notice
+                }
+                // Errors always; warnings/notices only when the user opted in.
+                guard severity == .error || showWarnings else { continue }
+                result.append(NeedsYouItem(arrIssue: source, id: "needsyou.health.\(source.rawValue).\(message)", message: message, severity: severity))
             }
         }
-        return result
+        // Collapse byte-identical entries into one row carrying a ×N count. A
+        // pack's "Manual import required" warning lands once per EPISODE, so a
+        // 24-episode season would otherwise be 24 identical rows. Group by the
+        // rendered content (source/service + title + subtitle + detailLines),
+        // keep the FIRST — its id/item is the stable representative the tap
+        // handler opens — and bump its count. Control chars separate the fields
+        // so no real title can forge a collision.
+        var merged: [NeedsYouItem] = []
+        var indexByKey: [String: Int] = [:]
+        for entry in result {
+            let key = [
+                entry.source?.rawValue ?? "",
+                entry.service?.id ?? "",
+                entry.title,
+                entry.subtitle,
+                entry.detailLines.joined(separator: "\u{1F}"),
+            ].joined(separator: "\u{1E}")
+            if let idx = indexByKey[key] {
+                merged[idx].count += 1
+            } else {
+                indexByKey[key] = merged.count
+                merged.append(entry)
+            }
+        }
+        return merged
     }
 
     /// Returns the set of arrs that have failed *at the transport level* (host
@@ -809,6 +868,10 @@ public final class QueueViewModel {
 }
 
 public struct NeedsYouItem: Identifiable, Equatable {
+    /// Per-entry severity — drives the leading icon (the list isn't grouped by
+    /// severity; each row carries its own).
+    public enum Severity: Equatable { case error, warning, notice }
+
     public let id: String
     /// The arr this row belongs to — `nil` for a non-arr connection issue
     /// (download client / AI), which is identified by `service` instead.
@@ -816,18 +879,25 @@ public struct NeedsYouItem: Identifiable, Equatable {
     /// Set only for a non-arr connection issue; drives the chip icon/label and
     /// tells tap handlers there's no arr queue page to open.
     public let service: MonitoredService?
+    /// For a queue item, the media title. For an arr/service issue, the issue
+    /// MESSAGE itself — the app is identified by the trailing chip (icon +
+    /// name), so the title must not repeat the app name.
     public let title: String
-    /// Short headline pill — for a queue item the status name (Failed /
-    /// Manual import required); for an arr-level issue a generic label.
+    /// Status name for a queue item (Failed / Manual import required); empty for
+    /// arr/service issues (their message is the title, severity is the icon).
     public let subtitle: String
-    /// The *why* rendered under the headline so the user can act without
-    /// drilling in — the arr's status messages, or the error/health text.
+    /// Extra "why" lines for a queue item (the arr's status messages). Empty for
+    /// arr/service issues — their single message is the title.
     public let detailLines: [String]
+    public let severity: Severity
     /// The underlying queue item when this row represents one; `nil` for
     /// arr-level issues (connection / health problems) that have no queue row.
-    /// Consumers use it to drill into the item's detail — arr-issue rows fall
-    /// back to opening the arr's queue page instead.
     public let item: QueueItem?
+    /// How many byte-identical entries this row collapses (1 = un-merged). A
+    /// season pack surfaces one "Manual import required" warning per EPISODE, so
+    /// `computeNeedsYou` dedupes identical rows and bumps this; the view shows
+    /// "×N" when > 1.
+    public var count: Int = 1
 
     public init(_ item: QueueItem) {
         self.item = item
@@ -839,40 +909,40 @@ public struct NeedsYouItem: Identifiable, Equatable {
             ? String(localized: "queue.manualImportRequired.button", bundle: .module)
             : item.status.displayName
         self.detailLines = item.statusMessages
+        self.severity = item.status == .failed ? .error : .warning
     }
 
-    /// An arr-level problem (couldn't reach the service, or the arr reports an
-    /// error-level health check) rather than a single stuck download.
+    /// A single arr-level problem (a reachable fetch error, or one health-check
+    /// message). One entry per message — not grouped by app or severity.
     public init(
         arrIssue source: QueueItem.Source,
         id: String,
-        title: String,
-        subtitle: String,
-        detailLines: [String]
+        message: String,
+        severity: Severity
     ) {
         self.item = nil
         self.id = id
         self.source = source
         self.service = nil
-        self.title = title
-        self.subtitle = subtitle
-        self.detailLines = detailLines
+        self.title = message
+        self.subtitle = ""
+        self.detailLines = []
+        self.severity = severity
     }
 
     /// A non-arr connection issue (a download client or AI service is
-    /// unreachable / misconfigured). Has no arr source and no queue item.
+    /// unreachable / misconfigured). The message is the title; the chip names it.
     public init(
         serviceIssue service: MonitoredService,
-        title: String,
-        subtitle: String,
-        detailLines: [String]
+        message: String
     ) {
         self.item = nil
         self.id = "needsyou.service.\(service.id)"
         self.source = nil
         self.service = service
-        self.title = title
-        self.subtitle = subtitle
-        self.detailLines = detailLines
+        self.title = message
+        self.subtitle = ""
+        self.detailLines = []
+        self.severity = .error
     }
 }

@@ -45,8 +45,13 @@ struct PauseResumeButton: View {
                         .controlSize(.small)
                         .tint(.white)
                 } else {
-                    Image(systemName: isPaused ? "play.fill" : "pause.fill")
-                        .scaledFont(size: Self.iconSize, weight: .semibold)
+                    DownloadProgressRing(
+                        systemName: isPaused ? "play.fill" : "pause.fill",
+                        progress: progress,
+                        // Sized to the label's line height so the ring sits
+                        // inline with the text and doesn't inflate the capsule.
+                        diameter: Self.labelSize + 4
+                    )
                     Text(isPaused
                             ? String(localized: "queue.resumeDownload.button", bundle: .module)
                             : String(localized: "detail.pauseDownload.button", bundle: .module))
@@ -59,6 +64,8 @@ struct PauseResumeButton: View {
         }
         .buttonStyle(.plain)
         .disabled(inFlight)
-        .liquidGlassProgressCTA(progress: progress, tint: tint)
+        // Progress reads off the circular ring around the glyph (per user
+        // direction), so the capsule itself carries no horizontal fill.
+        .liquidGlassProgressCTA(progress: 0, tint: tint)
     }
 }

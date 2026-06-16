@@ -57,6 +57,10 @@ public struct EpisodeDetailOverlay: View {
     @State private var showSearchConfirm = false
     /// Own poster lightbox — set when the user taps the hero poster.
     @State private var enlargedPoster: URL?
+    /// The detached NSWindow draws no NavigationStack chevron, so we render our
+    /// own back header there (mirrors DetailView) — otherwise the episode detail
+    /// is a navigation trap with no way back.
+    @Environment(\.isDetachedWindow) private var isDetachedWindow
 
     private var hasAired: Bool {
         guard let air = episode.airDateUtc.flatMap(parseArrDate) else { return true }
@@ -131,10 +135,33 @@ public struct EpisodeDetailOverlay: View {
         // need to mask it ourselves. The view fills the popover, lets
         // glass shine through.
         VStack(spacing: 0) {
-            // Inline header removed — EpisodeDetailOverlay is now pushed
-            // onto a NavigationStack so the system provides `<` + title.
-            // `seriesTitle` becomes the nav title via `.navigationTitle`
-            // on body so the user sees which series this episode is in.
+            // The attached panel + iOS get the NavigationStack's `<` + title for
+            // free. The detached NSWindow renders no chevron, so there we draw
+            // our own back header (back + title + Safari) — same pattern as
+            // DetailView — otherwise this episode view is a navigation trap.
+            if isDetachedWindow {
+                HStack(spacing: 6) {
+                    FloatingBackButton(action: onClose)
+                        .keyboardShortcut(.cancelAction)
+                    Text(navTitleString)
+                        .scaledFont(size: 15, weight: .semibold)
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                    Spacer(minLength: 0)
+                    if let url = warningActionURL {
+                        Button { PlatformURLOpener.open(url) } label: {
+                            Image(systemName: "safari")
+                                .scaledFont(size: 14, weight: .medium)
+                                .foregroundStyle(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                        .help(Text("detail.openInBrowser.button", bundle: .module))
+                    }
+                }
+                .padding(.horizontal, 12)
+                .padding(.top, 10)
+                .padding(.bottom, 8)
+            }
             ScrollView {
                 content
                     .padding(.horizontal, 14)
@@ -164,7 +191,9 @@ public struct EpisodeDetailOverlay: View {
             apiKey: posterRequiresAuth ? apiKey : nil,
             aspectRatio: 2.0 / 3.0
         )
-        .navigationTitle(navTitleString)
+        // Suppressed in the detached window (we draw our own header above);
+        // the panel + iOS keep the native title.
+        .conditionalNavTitle(navTitleString, apply: !isDetachedWindow)
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
@@ -176,7 +205,9 @@ public struct EpisodeDetailOverlay: View {
         // bug. Single placement, cluster ordered left-to-right.
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
-                if let url = warningActionURL {
+                // Detached window surfaces Safari in the self-drawn header above
+                // (the toolbar bar doesn't render in the hand-built NSWindow).
+                if !isDetachedWindow, let url = warningActionURL {
                     Button { PlatformURLOpener.open(url) } label: {
                         Image(systemName: "safari")
                     }
@@ -221,7 +252,9 @@ public struct EpisodeDetailOverlay: View {
         let canPauseResume = (queueItem?.status == .downloading || queueItem?.status == .paused)
             && ((queueItem?.isPaused == true && onResumeEpisode != nil)
                 || (queueItem?.isPaused == false && onPauseEpisode != nil))
-        let canSearch = onSearch != nil && episode.hasFile != true && hasAired
+        // Never offer "search" for an episode that's already downloading —
+        // it has an active queue item; searching again is wrong/confusing.
+        let canSearch = onSearch != nil && episode.hasFile != true && hasAired && queueItem == nil
         // Trash + Safari moved to the toolbar; bottom strip only
         // renders if the primary verb (pause/resume or search) needs a
         // place.
@@ -233,7 +266,9 @@ public struct EpisodeDetailOverlay: View {
         let canPauseResume = (queueItem?.status == .downloading || queueItem?.status == .paused)
             && ((queueItem?.isPaused == true && onResumeEpisode != nil)
                 || (queueItem?.isPaused == false && onPauseEpisode != nil))
-        let canSearch = onSearch != nil && episode.hasFile != true && hasAired
+        // Never offer "search" for an episode that's already downloading —
+        // it has an active queue item; searching again is wrong/confusing.
+        let canSearch = onSearch != nil && episode.hasFile != true && hasAired && queueItem == nil
         // Bottom strip is now reserved for the single primary verb
         // (pause/resume or search). Trash + Safari live in the toolbar —
         // no more competing affordances stacked into the same row.
