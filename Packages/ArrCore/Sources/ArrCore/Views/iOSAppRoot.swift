@@ -133,11 +133,6 @@ private struct QueueTab: View {
     @State private var searchVM = SearchViewModel()
     @State private var searchResult: SearchResult?
 
-    private var searchConfigured: Bool {
-        configStore.sonarr.isVisible || configStore.radarr.isVisible ||
-        configStore.lidarr.isVisible || configStore.whisparr.isVisible
-    }
-
     private var isSearching: Bool { !searchVM.query.trimmingCharacters(in: .whitespaces).isEmpty }
 
     var body: some View {

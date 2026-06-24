@@ -188,12 +188,12 @@ struct UpgradeDiffView: View {
             Text(side.quality ?? "—")
                 .scaledFont(size: 12, weight: .semibold)
             if let score = side.score {
-                // Render the integer verbatim — interpolating it straight into
-                // a localized string applies the locale's grouping separator
-                // ("1 250"), which reads as a glitch on a raw score.
-                Text(verbatim: String(localized: "queue.score.button", bundle: .module) + " \(score)")
+                // Bare signed score (no "Score" label) — render the integer
+                // verbatim so the locale's grouping separator doesn't sneak in.
+                // Negative scores read red; the highlighted (gained) side green.
+                Text(verbatim: "\(score > 0 ? "+" : "")\(score)")
                     .scaledFont(size: 10)
-                    .foregroundStyle(scoreHighlighted ? .green : .secondary)
+                    .foregroundStyle(score < 0 ? .red : (scoreHighlighted ? .green : .secondary))
             }
             if let size = side.size, size > 0 {
                 Text(ByteCountFormatter.string(fromByteCount: size, countStyle: .file))

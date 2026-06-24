@@ -107,9 +107,12 @@ public struct UpgradeDiffTable: View {
                 let delta = nScore - oScore
                 GridRow {
                     label("queue.score.button")
-                    oldCell(oldScore != nil ? formatScore(oScore) : nil)
+                    // Dedicated score cells: a negative score reads red on
+                    // either side (matching the tooltip diff + queue list),
+                    // not the neutral grey/primary every other value uses.
+                    oldScoreCell(oldScore != nil ? oScore : nil)
                     arrowCell(showArrow: oldScore != nil && delta != 0)
-                    newCell(formatScore(nScore))
+                    newScoreCell(nScore)
                     deltaCell(text: oldScore != nil && delta != 0 ? "\(delta > 0 ? "+" : "")\(delta)" : nil,
                               isPositive: delta > 0)
                 }
@@ -159,7 +162,7 @@ public struct UpgradeDiffTable: View {
             if newScore != 0 {
                 GridRow {
                     label("queue.score.button")
-                    newCell(formatScore(newScore))
+                    newScoreCell(newScore)
                 }
             }
             if !newFormats.isEmpty {
@@ -278,6 +281,32 @@ public struct UpgradeDiffTable: View {
     private func newCell(_ text: String) -> some View {
         Text(text)
             .scaledFont(size: 11, weight: .semibold)
+            .lineLimit(1)
+            .gridColumnAlignment(.leading)
+    }
+
+    /// Old/original-file score — like `oldCell` but a negative score reads red
+    /// (positive / zero stay secondary like every other old value).
+    @ViewBuilder
+    private func oldScoreCell(_ score: Int?) -> some View {
+        if let score {
+            Text(formatScore(score))
+                .scaledFont(size: 11)
+                .foregroundStyle(score < 0 ? Color.red : Color.secondary)
+                .lineLimit(1)
+                .gridColumnAlignment(.leading)
+        } else {
+            Color.clear.gridCellUnsizedAxes([.horizontal, .vertical])
+        }
+    }
+
+    /// Incoming-file score — like `newCell` but a negative score reads red
+    /// (positive / zero keep the semibold primary treatment).
+    @ViewBuilder
+    private func newScoreCell(_ score: Int) -> some View {
+        Text(formatScore(score))
+            .scaledFont(size: 11, weight: .semibold)
+            .foregroundStyle(score < 0 ? Color.red : Color.primary)
             .lineLimit(1)
             .gridColumnAlignment(.leading)
     }

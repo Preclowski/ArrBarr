@@ -5,12 +5,14 @@ import SwiftUI
 
 struct RadarrDetailPanel<Header: View>: View {
     let item: QueueItem
-    var viewModel: QueueViewModel
     let radarrDetail: RadarrMovieDetail?
     let radarrMovieFile: ArrFile?
     let siblings: [QueueItem]
     let hasActiveDownloads: Bool
     let loadError: String?
+    /// Detail fetch still in flight — sections with no data yet show a
+    /// skeleton instead of nothing, so the view fills in element-by-element.
+    var isLoading: Bool = false
     let header: Header
     /// Cast (from Radarr `/credit`) — horizontal headshot strip under header.
     var cast: [CastMember] = []
@@ -24,6 +26,8 @@ struct RadarrDetailPanel<Header: View>: View {
 
             if !cast.isEmpty {
                 CastRow(cast: cast)
+            } else if isLoading {
+                SkeletonCastRow()
             }
 
             // Active downloads first; the existing-file banner reads like a

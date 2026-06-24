@@ -166,17 +166,6 @@ public struct DiscoverTabView: View {
         .glassPill()
     }
 
-    private func dispatch(_ item: DiscoverItem) {
-        switch item.action {
-        case .addToRadarr:
-            onAddToRadarr(item.result)
-        case .addToSonarr:
-            onAddToSonarr(item.result)
-        case .openDetail(let source, let arrId):
-            onOpenDetail(item, source, arrId)
-        }
-    }
-
     // MARK: - Swiping content (cards + CTAs)
 
     @ViewBuilder
@@ -350,22 +339,6 @@ public struct DiscoverTabView: View {
             .modifier(GlassProminentButtonStyle())
             .keyboardShortcut(.rightArrow, modifiers: [])
             .help(Text("discover.saveToPicks.button", bundle: .module))
-        }
-    }
-
-    private var rightActionIcon: String {
-        guard let item = viewModel.current else { return "plus" }
-        switch item.action {
-        case .addToRadarr: return "plus"
-        case .addToSonarr: return "tv"
-        case .openDetail:  return "play.fill"
-        }
-    }
-    private var rightActionLabel: LocalizedStringKey {
-        guard let item = viewModel.current else { return "Pick" }
-        switch item.action {
-        case .addToRadarr, .addToSonarr: return "Pick"
-        case .openDetail:                return "Watch"
         }
     }
 

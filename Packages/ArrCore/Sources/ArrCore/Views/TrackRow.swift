@@ -3,8 +3,6 @@ import SwiftUI
 struct TrackRow: View {
     let track: LidarrTrackDetail
 
-    @State private var isHovering = false
-
     /// Title colour. Flipped to match `EpisodeRow.episodeTitleStyle`
     /// post-redesign: on-disk tracks (your library, ready to play)
     /// take the brightest tone; missing tracks dim out from that
@@ -15,12 +13,10 @@ struct TrackRow: View {
         return AnyShapeStyle(Color.primary.opacity(0.75))
     }
 
-    private var rowBackground: Color {
-        if isHovering { return Color.primary.opacity(0.06) }
-        return .clear
-    }
-
     public var body: some View {
+        // No hover affordance: a track isn't a navigation target (no
+        // per-track detail), so it gets neither the series list's
+        // chevron nor the old background-tint hover — just a static row.
         HStack(spacing: 6) {
             Text(track.trackNumber ?? String(track.absoluteTrackNumber ?? 0))
                 .scaledFont(size: 10, weight: .semibold, monospacedDigit: true)
@@ -43,20 +39,5 @@ struct TrackRow: View {
         }
         .padding(.horizontal, 6)
         .padding(.vertical, 4)
-        // Spacer between title and duration leaves a transparent gap;
-        // without an explicit hit shape the right-hand half of the row
-        // doesn't register hover, so the hover-tint flickers in and
-        // out as the cursor crosses the Spacer. contentShape claims
-        // the full row width as one hover region.
-        .contentShape(Rectangle())
-        .background(
-            RoundedRectangle(cornerRadius: Tokens.Radius.chip)
-                .fill(rowBackground)
-        )
-        #if os(macOS)
-        .onHover { hovering in
-            withAnimation(.easeInOut(duration: 0.12)) { isHovering = hovering }
-        }
-        #endif
     }
 }

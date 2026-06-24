@@ -73,11 +73,42 @@ public final class QueueAggregator: QueueDataProviding {
         if s.unreachable { unreachable.insert(.sonarr) }
         if l.unreachable { unreachable.insert(.lidarr) }
         if w.unreachable { unreachable.insert(.whisparr) }
+        // Overlay live progress from the download clients on top of the arr's
+        // polled `/queue` value — the arr stays the fallback (no client / no
+        // match / client unreachable). Cached + batched in DownloadProgressService.
+        let clientProgress = await DownloadProgressService.shared.snapshot(configs: downloadClientConfigs())
         return AggregateResult(
-            radarr: r.items, sonarr: s.items, lidarr: l.items, whisparr: w.items,
+            radarr: Self.overlay(r.items, with: clientProgress),
+            sonarr: Self.overlay(s.items, with: clientProgress),
+            lidarr: Self.overlay(l.items, with: clientProgress),
+            whisparr: Self.overlay(w.items, with: clientProgress),
             radarrError: r.error, sonarrError: s.error, lidarrError: l.error, whisparrError: w.error,
             unreachableSources: unreachable
         )
+    }
+
+    /// Configs for every download-client kind, handed to `DownloadProgressService`
+    /// (which builds + caches the source clients and never re-logs in needlessly).
+    private func downloadClientConfigs() -> [ServiceKind: ServiceConfig] {
+        var configs: [ServiceKind: ServiceConfig] = [:]
+        for kind in MonitoredService.downloadClientKinds {
+            configs[kind] = configStore.config(for: kind)
+        }
+        return configs
+    }
+
+    /// Replace each item's arr-polled progress with the client's live value when
+    /// we have it (matched by lowercased download id); no match keeps the arr value.
+    /// `internal` + `nonisolated` (not private/MainActor) so it's unit-testable
+    /// as the pure function it is — it touches no aggregator state.
+    nonisolated static func overlay(_ items: [QueueItem], with progress: [String: DownloadProgress]) -> [QueueItem] {
+        guard !progress.isEmpty else { return items }
+        return items.map { item in
+            guard let id = item.downloadId?.lowercased(), let p = progress[id] else { return item }
+            var copy = item
+            copy.progress = p.progress
+            return copy
+        }
     }
 
     func fetchHealth() async -> HealthResult {

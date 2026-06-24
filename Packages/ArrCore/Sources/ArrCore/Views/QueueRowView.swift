@@ -316,35 +316,6 @@ public struct QueueRowView: View {
               : (item.isPaused ? Text("queue.resume.button", bundle: .module) : Text("queue.pause.button", bundle: .module)))
     }
     #endif
-
-    // MARK: - Custom format tags
-
-    private var customFormatsTooltip: String {
-        var parts = item.customFormats.map { "[\($0)]" }
-        if item.customFormatScore != 0 {
-            let sign = item.customFormatScore > 0 ? "+" : ""
-            parts.append("\(sign)\(item.customFormatScore)")
-        }
-        return parts.joined(separator: " ")
-    }
-
-    // MARK: - Display helpers
-
-    private var metaLine: String {
-        var parts: [String] = []
-        if let q = item.quality, !q.isEmpty { parts.append(q) }
-        if let t = formattedTimeLeft, !t.isEmpty, t != "00:00:00" { parts.append(t) }
-        let sizeStr = ByteCountFormatter.string(fromByteCount: item.sizeTotal, countStyle: .file)
-        parts.append(sizeStr)
-        return parts.joined(separator: " · ")
-    }
-
-    private var formattedTimeLeft: String? {
-        guard let raw = item.timeLeft, !raw.isEmpty else { return nil }
-        // Arr APIs sometimes return "HH:mm:ss.fffffff" — trim sub-second precision.
-        return String(raw.prefix { $0 != "." })
-    }
-
 }
 
 
@@ -410,15 +381,6 @@ public struct QueueItemTooltip: View {
         }
     }
 
-    @ViewBuilder
-    private var cfChipDiff: some View {
-        CustomFormatDiff(
-            newFormats: item.customFormats,
-            existingFormats: item.existingCustomFormats
-        )
-        .padding(.top, 2)
-    }
-
     private var header: some View {
         VStack(alignment: .leading, spacing: 1) {
             // Match QueueRowView's title pattern: title + Upgrade tag
@@ -430,8 +392,10 @@ public struct QueueItemTooltip: View {
                 Text(item.title)
                     .scaledFont(size: 13, weight: .semibold)
                     .lineLimit(2)
-                MediaBadgeCluster(isUpgrade: item.isUpgrade, size: .medium)
                 Spacer(minLength: 4)
+                // Upgrade/New badge sits on the right next to the download
+                // client (not crowding the title on the left).
+                MediaBadgeCluster(isUpgrade: item.isUpgrade, size: .medium)
                 if let client = item.downloadClient {
                     DownloadClientLabel(name: client, size: 10)
                 }

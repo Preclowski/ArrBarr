@@ -1,6 +1,6 @@
 import Foundation
 
-public actor QbittorrentClient {
+public actor QbittorrentClient: DownloadProgressSource {
     enum Action {
         case pause, resume, delete, forceStart
 
@@ -74,6 +74,18 @@ public actor QbittorrentClient {
     func contains(hash: String) async throws -> Bool {
         let torrents = try await fetchTorrents()
         return torrents.contains { $0.hash.lowercased() == hash.lowercased() }
+    }
+
+    /// Batch live progress for every torrent, keyed by lowercased hash (the arr
+    /// stores the same hash upper-cased, so the overlay lowercases both sides).
+    /// Reuses the existing `/torrents/info` fetch — `progress` + `dlspeed` are
+    /// already in the payload, just unused until now.
+    public func fetchProgress() async throws -> [String: DownloadProgress] {
+        let torrents = try await fetchTorrents()
+        return Dictionary(
+            torrents.map { ($0.hash.lowercased(), DownloadProgress(progress: $0.progress, downloadSpeed: $0.dlspeed)) },
+            uniquingKeysWith: { _, new in new }
+        )
     }
 
     private func fetchTorrents() async throws -> [QbitTorrent] {

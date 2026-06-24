@@ -59,6 +59,11 @@ public struct MediaHeaderCard: View {
     /// doesn't duplicate it. Tooltips / popovers keep the in-card title
     /// (no nav chrome there to host it).
     var showTitle: Bool = true
+    /// While true, the right column shows skeleton placeholders for the
+    /// metadata that's still loading (the runtime/cert row + overview)
+    /// instead of sitting empty until the detail fetch lands. Defaults off,
+    /// so callers that always pass complete data are unaffected.
+    var metadataLoading: Bool = false
 
     public init(
         title: String,
@@ -79,7 +84,8 @@ public struct MediaHeaderCard: View {
         trailing: AnyView? = nil,
         titleBadge: AnyView? = nil,
         onPosterTap: ((URL?) -> Void)? = nil,
-        showTitle: Bool = true
+        showTitle: Bool = true,
+        metadataLoading: Bool = false
     ) {
         self.title = title
         self.subtitle = subtitle
@@ -100,6 +106,7 @@ public struct MediaHeaderCard: View {
         self.titleBadge = titleBadge
         self.onPosterTap = onPosterTap
         self.showTitle = showTitle
+        self.metadataLoading = metadataLoading
     }
 
     public var body: some View {
@@ -134,6 +141,8 @@ public struct MediaHeaderCard: View {
                 // Row 1 — metadata: runtime · network · certification.
                 if hasMetadataRow {
                     metadataRow
+                } else if metadataLoading {
+                    SkeletonBar(width: 150, height: 11)
                 }
                 // Row 2 — ratings (IMDb / TMDB / RT / MC for movies, the
                 // single Rating pill for series), on their OWN row UNDER
@@ -156,6 +165,9 @@ public struct MediaHeaderCard: View {
                 // down below the poster on its own.
                 if let overview, !overview.isEmpty {
                     ExpandableOverview(text: overview)
+                        .padding(.top, 2)
+                } else if metadataLoading {
+                    SkeletonLines(count: 3)
                         .padding(.top, 2)
                 }
                 if let trailing {

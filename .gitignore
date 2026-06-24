@@ -3,6 +3,7 @@ xcuserdata/
 DerivedData/
 build/
 build-ios/
+build-ios-sim/
 build-appstore/
 *.xcworkspace/
 

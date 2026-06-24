@@ -9,7 +9,7 @@ public enum NzbgetError: LocalizedError {
     }
 }
 
-public actor NzbgetClient {
+public actor NzbgetClient: DownloadProgressSource {
     enum Action { case pause, resume, delete }
 
     private let config: ServiceConfig
@@ -59,6 +59,36 @@ public actor NzbgetClient {
             return "NZBGet \(version)"
         }
         return "OK"
+    }
+
+    /// Batch live progress via `listgroups`. `listgroups` carries no per-group
+    /// download rate (that's the global `status` method), so only progress is
+    /// overlaid — computed from the 64-bit `…SizeLo/Hi` byte fields. Keyed by the
+    /// NZBID as a string (the arr's download id for an NZBGet item).
+    public func fetchProgress() async throws -> [String: DownloadProgress] {
+        guard config.isConfigured else { return [:] }
+        let body: [String: Any] = ["method": "listgroups", "params": [0]]
+        let jsonData = try JSONSerialization.data(withJSONObject: body)
+        let url = try http.url(base: config.baseURL, path: "/jsonrpc")
+        let data = try await http.post(url, headers: authHeaders(contentType: "application/json"), body: jsonData)
+        guard let resp = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let groups = resp["result"] as? [[String: Any]] else { return [:] }
+        var map: [String: DownloadProgress] = [:]
+        for group in groups {
+            guard let nzbId = group["NZBID"] as? Int else { continue }
+            let total = Self.int64(group, lo: "FileSizeLo", hi: "FileSizeHi")
+            let remaining = Self.int64(group, lo: "RemainingSizeLo", hi: "RemainingSizeHi")
+            let progress = total > 0 ? Double(total - remaining) / Double(total) : 0
+            map[String(nzbId).lowercased()] = DownloadProgress(progress: progress)
+        }
+        return map
+    }
+
+    /// Reassemble a 64-bit byte count from NZBGet's split low/high 32-bit fields.
+    private static func int64(_ d: [String: Any], lo: String, hi: String) -> Int64 {
+        let low = Int64((d[lo] as? Int) ?? 0) & 0xFFFFFFFF
+        let high = Int64((d[hi] as? Int) ?? 0)
+        return (high << 32) | low
     }
 
     private func authHeaders(contentType: String) -> [String: String] {

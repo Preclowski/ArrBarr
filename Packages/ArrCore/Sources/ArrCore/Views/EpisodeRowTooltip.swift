@@ -66,12 +66,6 @@ struct EpisodeRowTooltip: View {
         }
     }
 
-    private var episodeCode: String {
-        String(format: "S%02dE%02d",
-               episode.seasonNumber ?? 0,
-               episode.episodeNumber ?? 0)
-    }
-
     /// Formats to show in the chip strip — queue item's tags if a
     /// download is in flight, otherwise the on-disk file's tags.
     private var primaryFormats: [String]? {

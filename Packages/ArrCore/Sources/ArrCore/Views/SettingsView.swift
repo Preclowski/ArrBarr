@@ -1118,14 +1118,6 @@ public struct SettingsView: View {
         }
     }
 
-    private static func formatTonight(hours: Int) -> String {
-        if hours < 24 {
-            return String.localizedStringWithFormat(NSLocalizedString("unit.hours", bundle: .module, comment: ""), hours)
-        }
-        let days = hours / 24
-        if days == 1 { return String(localized: "settings.twentyFourHours.label", bundle: .module) }
-        return String.localizedStringWithFormat(NSLocalizedString("unit.days", bundle: .module, comment: ""), days)
-    }
 }
 
 private struct ProLockOverlay: View {

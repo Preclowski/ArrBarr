@@ -2,13 +2,15 @@ import SwiftUI
 
 struct LidarrDetailPanel: View {
     let item: QueueItem
-    var viewModel: QueueViewModel
     @EnvironmentObject var configStore: ConfigStore
     let lidarrAlbum: LidarrAlbumDetail?
     let lidarrTracks: [LidarrTrackDetail]
     let siblings: [QueueItem]
     let hasActiveDownloads: Bool
     let loadError: String?
+    /// Album fetch still in flight — overview + track list show a skeleton
+    /// instead of nothing, so the view fills in element-by-element.
+    var isLoading: Bool = false
     @Binding var enlargedPoster: URL?
     @Binding var selectedDiscNumber: Int?
     let arrWebURLForItem: (QueueItem) -> URL?
@@ -18,6 +20,8 @@ struct LidarrDetailPanel: View {
             lidarrHeaderCard
             if let overview = lidarrAlbum?.overview, !overview.isEmpty {
                 ExpandableOverview(text: overview)
+            } else if isLoading {
+                SkeletonLines(count: 3)
             }
 
             if hasActiveDownloads {
@@ -29,7 +33,6 @@ struct LidarrDetailPanel: View {
             }
 
             if !lidarrTracks.isEmpty {
-                Divider().padding(.vertical, 2)
                 Text("detail.tracks.button", bundle: .module)
                     .scaledFont(size: 11, weight: .semibold)
                     .foregroundStyle(.secondary)
@@ -63,6 +66,14 @@ struct LidarrDetailPanel: View {
                     .padding(.top, 6)
                     .padding(.bottom, 4)
                 }
+            } else if isLoading {
+                Text("detail.tracks.button", bundle: .module)
+                    .scaledFont(size: 11, weight: .semibold)
+                    .foregroundStyle(.secondary)
+                    .textCase(.uppercase)
+                    .tracking(0.5)
+                SkeletonRows(count: 8)
+                    .padding(.top, 6)
             }
             if let err = loadError {
                 LoadErrorLine(message: err)

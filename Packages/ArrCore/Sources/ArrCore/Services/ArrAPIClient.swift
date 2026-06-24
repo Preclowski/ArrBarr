@@ -70,6 +70,19 @@ extension ArrAPIClient {
         try await get("/qualityprofile")
     }
 
+    /// Interactive / manual search: candidate releases on the indexers for a
+    /// movie / episode / album. `query` carries the keying param (movieId /
+    /// episodeId / albumId). Shared by every arr (Sonarr/Radarr/Lidarr/Whisparr).
+    func fetchReleases(query: [URLQueryItem]) async throws -> [Release] {
+        try await get("/release", query: query)
+    }
+
+    /// Grab a release returned by `fetchReleases` — hands it to the arr's
+    /// download client. arr identifies the release by guid + indexerId.
+    func grabRelease(guid: String, indexerId: Int) async throws {
+        _ = try await post("/release", body: ["guid": guid, "indexerId": indexerId])
+    }
+
     /// DELETE <apiBase><path>?key=val&...
     func delete(_ path: String, query: [URLQueryItem] = []) async throws {
         guard config.isConfigured else { throw HTTPError.notConfigured }

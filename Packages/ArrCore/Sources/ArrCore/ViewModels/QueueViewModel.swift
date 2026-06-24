@@ -478,7 +478,7 @@ public final class QueueViewModel {
         // surface separately (banner / unreachable state).
         func freshOrKept(_ source: QueueItem.Source, _ fresh: [QueueItem]) -> [QueueItem] {
             if newErrors[source] != nil { return self.queues[source] ?? [] }
-            return applyOverrides(to: fresh)
+            return applyOverrides(to: fresh, previous: self.queues[source] ?? [])
         }
         let newQueues: [QueueItem.Source: [QueueItem]] = [
             .radarr:   freshOrKept(.radarr, queue.radarr),
@@ -732,9 +732,25 @@ public final class QueueViewModel {
         return result
     }
 
-    private func applyOverrides(to items: [QueueItem]) -> [QueueItem] {
+    /// Lays the user's in-flight optimistic actions over a freshly fetched
+    /// source queue. Two jobs:
+    ///
+    ///  1. **Present items** — replay a pending status override (pause→paused,
+    ///     resume→downloading) until the arr's own fetch reports the same
+    ///     status, then drop the override; a `.deleted` override hides the row.
+    ///  2. **Vanished items** — re-inject a "ghost". When the user force-starts
+    ///     a *queued* item, the arr briefly drops it from `/queue` entirely
+    ///     (it sits between the download client's queue and its active list)
+    ///     and re-adds it ~10–15 s later as downloading. Without this the row
+    ///     blinks out and pops back — an ugly hole. So any item still carrying
+    ///     a live *status* override that's missing from the fresh fetch is
+    ///     re-inserted at roughly its previous position, in its optimistic
+    ///     state, until the override expires or the arr returns it. Never for
+    ///     `.deleted` (those should stay gone) and never past the 30 s expiry
+    ///     (so a genuinely-removed item isn't held on screen forever).
+    private func applyOverrides(to fresh: [QueueItem], previous: [QueueItem]) -> [QueueItem] {
         let now = Date()
-        return items.compactMap { item in
+        var result: [QueueItem] = fresh.compactMap { item in
             guard let override = optimisticOverrides[item.id] else { return item }
             if override.expiry < now {
                 optimisticOverrides.removeValue(forKey: item.id)
@@ -753,6 +769,21 @@ public final class QueueViewModel {
                 return nil
             }
         }
+        // Bridge the queued→active gap: keep a just-actioned row on screen while
+        // the arr momentarily drops it from its queue.
+        let freshIds = Set(fresh.map { $0.id })
+        for (idx, prev) in previous.enumerated() where !freshIds.contains(prev.id) {
+            guard let override = optimisticOverrides[prev.id] else { continue }
+            guard override.expiry >= now, case .status(let status) = override.kind else {
+                // Expired status override on a vanished row → stop tracking it.
+                if override.expiry < now { optimisticOverrides.removeValue(forKey: prev.id) }
+                continue
+            }
+            var ghost = prev
+            ghost.status = status
+            result.insert(ghost, at: min(idx, result.count))
+        }
+        return result
     }
 
     // MARK: - Notifications

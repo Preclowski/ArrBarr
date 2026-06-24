@@ -12,13 +12,6 @@ public struct DetailView: View {
     /// Using a context label (where they came from) rather than the
     /// item title avoids title duplication with the hero card below.
     var originLabel: LocalizedStringKey = "Details"
-    /// When `true` (default — legacy behaviour) and the item carries an
-    /// episodeNumber, `load()` auto-pushes the matching episode via
-    /// `selectedEpisode`. The new EpisodeQuickDetail flow disables this
-    /// when DetailView is pushed from the episode hero's series-tap
-    /// (user already saw the episode and explicitly asked for the
-    /// series), otherwise we'd bounce them right back to the episode.
-    var autoDrillToEpisode: Bool = true
     var viewModel: QueueViewModel
     @EnvironmentObject var configStore: ConfigStore
 
@@ -26,13 +19,11 @@ public struct DetailView: View {
         item: QueueItem,
         onBack: @escaping () -> Void,
         originLabel: LocalizedStringKey = "Details",
-        autoDrillToEpisode: Bool = true,
         viewModel: QueueViewModel
     ) {
         self.item = item
         self.onBack = onBack
         self.originLabel = originLabel
-        self.autoDrillToEpisode = autoDrillToEpisode
         self.viewModel = viewModel
     }
 
@@ -43,7 +34,29 @@ public struct DetailView: View {
         let pool = viewModel.items(for: item.source)
         guard let id = item.entityId else { return [item] }
         let matched = pool.filter { $0.entityId == id }
-        return matched.isEmpty ? [item] : matched
+        if !matched.isEmpty { return matched }
+        // No live queue rows for this entity. If we opened on a REAL queue row
+        // (non-zero arrQueueId) it has since LEFT the queue — finished
+        // importing, or was removed — so don't resurrect its stale snapshot
+        // (frozen at e.g. "importing") as an active download: return empty so
+        // `hasActiveDownloads` flips false and the panel shows the library
+        // view (the `onChange` below refetches the now-on-disk file). A
+        // synthetic open (chat / upcoming tap, arrQueueId == 0) was never in
+        // the queue, so it keeps showing its single item.
+        return item.arrQueueId != 0 ? [] : [item]
+    }
+
+    /// episode-id → active queue item for this series, for SeasonDetailView's
+    /// per-episode download indicators (mirrors SonarrDetailPanel's map).
+    private var sonarrQueueByEpisodeId: [Int: QueueItem] {
+        var map: [Int: QueueItem] = [:]
+        for q in siblings where q.arrQueueId != 0 {
+            guard let sn = q.seasonNumber, let en = q.episodeNumber else { continue }
+            if let ep = sonarrEpisodes.first(where: { $0.seasonNumber == sn && $0.episodeNumber == en }) {
+                map[ep.id] = q
+            }
+        }
+        return map
     }
 
     /// Fresh snapshot of `item` pulled from the live `viewModel.items`
@@ -58,6 +71,15 @@ public struct DetailView: View {
         viewModel.items(for: item.source)
             .first { $0.id == item.id || $0.arrQueueId == item.arrQueueId }
             ?? item
+    }
+
+    /// Whether the opened item is still a live queue row. Flips false the
+    /// moment an import finishes (or the row is removed) and the arr drops it
+    /// from `/queue` — the cue to refetch so the detail swaps the stale
+    /// download view for the freshly-imported on-disk file.
+    private var isInLiveQueue: Bool {
+        viewModel.items(for: item.source)
+            .contains { $0.id == item.id || $0.arrQueueId == item.arrQueueId }
     }
 
     /// True when at least one sibling is a real queue row (non-zero arrQueueId).
@@ -96,24 +118,14 @@ public struct DetailView: View {
     /// overlay on top of the detail surface so it dismisses without
     /// leaving the popover.
     @State private var enlargedPoster: URL?
-    /// Episode drill-down — set when the user taps a row in a season's
-    /// expanded list. Renders `EpisodeDetailOverlay` on top of the
-    /// series detail.
-    @State private var selectedEpisode: SonarrEpisodeDetail?
-    /// Auto-drill fires exactly once per detail instance. Without this,
-    /// popping back from the episode re-runs the drill (selectedEpisode is
-    /// nil again) and the episode immediately re-pushes — trapping the user
-    /// so they can never reach the series view / queue.
-    @State private var didAutoDrill = false
-    /// Lazily-fetched episode-file payload. Driven off
-    /// Currently-shown season number for Sonarr detail. Drives the
-    /// pill bar — only one season's episode list is rendered at a
-    /// time. `nil` means "no explicit pick yet", which the view
-    /// resolves to the latest season (or the first with unaired
-    /// missing episodes — that's where the user usually wants to
-    /// land).
-    @State private var selectedSeasonNumber: Int?
-
+    /// Season drill-down — set when the user taps a season row. Pushes
+    /// `SeasonDetailView` (its episodes + that season's search buttons).
+    @State private var seasonDrill: SeasonDrill?
+    /// Manual-search push target (movie / album) when not downloading.
+    @State private var manualSearchTarget: ManualSearchTarget?
+    /// Automatic-search in flight / just-queued feedback for the bottom CTA.
+    @State private var autoSearching = false
+    @State private var autoDidSearch = false
     /// Currently-shown disc number for Lidarr multi-disc albums.
     /// Mirrors `selectedSeasonNumber` — drives the disc pill bar,
     /// only one disc's track list is rendered at a time. `nil` =
@@ -165,12 +177,19 @@ public struct DetailView: View {
                     // Strip only renders when pause/resume is actionable —
                     // Trash and Safari live in the toolbar now, so the
                     // bar would otherwise be empty.
-                    let hasCTA = hasActiveDownloads && canControl && canPauseResume
-                    if hasCTA {
-                        // Floating CTA — no material backdrop / divider
-                        // so the glass pill reads as an island on top of
-                        // the content (chat-input pattern).
-                        downloadCTAStrip
+                    // Floating CTA — no material backdrop / divider so the glass
+                    // pill reads as an island on top of the content.
+                    if hasActiveDownloads {
+                        if canControl && canPauseResume {
+                            downloadCTAStrip
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 10)
+                                .frame(maxWidth: .infinity)
+                        }
+                    } else if hasBottomSearchCTA {
+                        // Library item that isn't downloading — offer search:
+                        // movie/album → Manual; series → Manual + Automatic (season).
+                        bottomSearchCTA
                             .padding(.horizontal, 14)
                             .padding(.vertical, 10)
                             .frame(maxWidth: .infinity)
@@ -183,16 +202,6 @@ public struct DetailView: View {
             // below) so the system renders `<` + series title for free.
             .opacity(enlargedPoster != nil ? 0 : 1)
             .allowsHitTesting(enlargedPoster == nil)
-            .onAppear {
-                // Seed the pill bar with the *clicked* queue item's
-                // season when the user drilled in from a season-3
-                // episode in queue — opening to a different season
-                // would leave them hunting for the one they just
-                // clicked.
-                if selectedSeasonNumber == nil, let sn = item.seasonNumber, sn > 0 {
-                    selectedSeasonNumber = sn
-                }
-            }
 
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -204,6 +213,15 @@ public struct DetailView: View {
             aspectRatio: item.source == .lidarr ? 1.0 : 2.0 / 3.0
         )
         .task(id: item.id) { await load() }
+        // When the row leaves the arr queue (import finished / removed) while
+        // the detail is open, the queue view stops backing it — refetch so the
+        // panel flips from the stale download state to the on-disk library
+        // file. Silent (no spinner): the surface is already populated.
+        .onChange(of: isInLiveQueue) { _, stillQueued in
+            if !stillQueued, item.arrQueueId != 0 {
+                Task { await load(showSpinner: false) }
+            }
+        }
         // Secondary actions live in the system toolbar — destructive
         // cancel + open-in-browser. Primary action (pause/resume) stays
         // on the sticky bottom CTA so the main verb sits under the
@@ -251,38 +269,26 @@ public struct DetailView: View {
         // there.
         .toolbar(.hidden, for: .windowToolbar)
         #endif
-        // Episode drill-down — push EpisodeDetailOverlay as another
-        // NavigationStack level so the user gets a native `< Sonarr`
-        // back chevron and the series view is visibly waiting below.
-        .navigationDestination(item: $selectedEpisode) { ep in
-            let activeQueueItem = siblings.first {
-                $0.seasonNumber == ep.seasonNumber
-                    && $0.episodeNumber == ep.episodeNumber
-                    && $0.arrQueueId != 0
-            }
-            EpisodeDetailOverlay(
-                episode: ep,
-                seriesTitle: sonarrDetail?.title ?? item.title,
-                originLabel: originLabel,
-                posterURL: arrPosterURL(images: sonarrDetail?.images, for: item, in: configStore) ?? item.posterURL,
-                posterRequiresAuth: item.posterRequiresAuth,
-                apiKey: configStore.sonarr.apiKey,
-                episodeFile: ep.episodeFileId.flatMap { sonarrEpisodeFiles[$0] },
-                queueItem: activeQueueItem,
-                onClose: { selectedEpisode = nil },
-                onSearch: { episodeId in
-                    let client = SonarrClient(config: configStore.sonarr)
-                    try? await client.searchEpisodes(episodeIds: [episodeId])
-                },
-                warningActionURL: activeQueueItem.flatMap { arrWebURL(for: $0, in: configStore) },
-                // Gate pause/resume/delete on a configured download client —
-                // same rule the movie CTA uses. Without it the episode would
-                // show a Resume button that can't actually do anything.
-                onPauseEpisode: canControl ? { q in Task { await viewModel.pause(q) } } : nil,
-                onResumeEpisode: canControl ? { q in Task { await viewModel.resume(q) } } : nil,
-                onDeleteEpisode: canControl ? { q in Task { await viewModel.delete(q) } } : nil,
-                seriesYear: sonarrDetail?.year ?? splitTitleAndYear(item.title).year
+        // Season drill-down — push SeasonDetailView (its episodes + that season's
+        // search buttons). The bottom search CTA there is unambiguous because the
+        // user is *inside* the season.
+        .navigationDestination(item: $seasonDrill) { drill in
+            SeasonDetailView(
+                drill: drill,
+                sonarrDetail: sonarrDetail,
+                episodes: sonarrEpisodes.filter { $0.seasonNumber == drill.seasonNumber },
+                queueByEpisodeId: sonarrQueueByEpisodeId,
+                fileByEpisodeFileId: sonarrEpisodeFiles,
+                seriesPosterURL: arrPosterURL(images: sonarrDetail?.images, for: item, in: configStore) ?? item.posterURL,
+                seriesPosterRequiresAuth: item.posterRequiresAuth,
+                seriesPosterAPIKey: configStore.sonarr.apiKey,
+                onBack: { seasonDrill = nil },
+                viewModel: viewModel
             )
+        }
+        // Manual-search ("Download") drill-down — releases for this movie/album.
+        .navigationDestination(item: $manualSearchTarget) { target in
+            ReleaseListView(target: target, onBack: { manualSearchTarget = nil })
         }
         // Inline confirmation — replaces `.confirmationDialog` because
         // the system dialog steals focus from MenuBarExtra(.window),
@@ -302,22 +308,6 @@ public struct DetailView: View {
                 }
             }
         )
-    }
-
-    /// Content-type title — "Movie details" / "Series details" /
-    /// "Album details". Replaces the prior origin-tab label because
-    /// the user already knows which tab they came from; the question
-    /// answered here is "what *is* this surface". Whisparr piggybacks
-    /// on the Radarr layout so it shares the movie copy. Pause /
-    /// Resume / Remove are NOT folded into this title anymore —
-    /// post-review they live inline next to `ProgressLine` (Music
-    /// "now playing" pattern, see `DownloadSection.inlineActions`).
-    private var detailTitleKey: LocalizedStringKey {
-        switch item.source {
-        case .radarr, .whisparr: return "Movie details"
-        case .sonarr:            return "Series details"
-        case .lidarr:            return "Album details"
-        }
     }
 
     /// Item-level title for the system toolbar — "{title} ({year})" when
@@ -396,6 +386,93 @@ public struct DetailView: View {
     /// does the CTA flip colour/label, so users don't see a stale
     /// "Pause" sitting on a paused item.
 
+    /// What the bottom "Manual search" opens — a movie / album release list.
+    /// nil for a Sonarr series: its search lives per-season inside SeasonDetailView.
+    private var manualTarget: ManualSearchTarget? {
+        guard let entityId = item.entityId else { return nil }
+        switch item.source {
+        case .radarr, .whisparr: return .movie(source: item.source, movieId: entityId, title: navTitleString)
+        case .lidarr: return .album(albumId: entityId, title: navTitleString)
+        case .sonarr: return nil
+        }
+    }
+
+    private var hasBottomSearchCTA: Bool { manualTarget != nil }
+
+    /// Bottom search CTA when the item isn't downloading — Manual + Automatic
+    /// search for every library kind (movie / album / season).
+    @ViewBuilder
+    private var bottomSearchCTA: some View {
+        if let target = manualTarget {
+            HStack(spacing: 8) {
+                manualSearchButton(target)
+                automaticSearchButton
+            }
+        }
+    }
+
+    private func manualSearchButton(_ target: ManualSearchTarget) -> some View {
+        Button { manualSearchTarget = target } label: {
+            searchCTALabel(icon: "magnifyingglass", text: "Manual search")
+        }
+        .modifier(GlassProminentButtonStyle())
+    }
+
+    @ViewBuilder
+    private var automaticSearchButton: some View {
+        Button {
+            guard !autoSearching else { return }
+            Task {
+                autoSearching = true
+                await runAutomaticSearch()
+                autoSearching = false
+                autoDidSearch = true
+                try? await Task.sleep(nanoseconds: 1_600_000_000)
+                autoDidSearch = false
+            }
+        } label: {
+            if autoSearching {
+                HStack { ProgressView().controlSize(.small) }
+                    .frame(maxWidth: .infinity).padding(.vertical, 7)
+            } else if autoDidSearch {
+                searchCTALabel(icon: "checkmark", text: "detail.searchQueued.button")
+            } else {
+                searchCTALabel(icon: "magnifyingglass", text: "Automatic search")
+            }
+        }
+        .modifier(GlassProminentButtonStyle())
+        .disabled(autoSearching)
+    }
+
+    /// Fire the arr's own "search now" command for this movie / album — the
+    /// indexer search runs server-side. (Series search is per-season in
+    /// SeasonDetailView, so Sonarr never reaches the bottom CTA here.)
+    private func runAutomaticSearch() async {
+        guard let entityId = item.entityId else { return }
+        do {
+            switch item.source {
+            case .radarr:
+                try await RadarrClient(config: configStore.radarr).searchMovie(movieId: entityId)
+            case .whisparr:
+                try await WhisparrClient(config: configStore.whisparr)
+                    .postCommand(["name": "MoviesSearch", "movieIds": [entityId]])
+            case .lidarr:
+                try await LidarrClient(config: configStore.lidarr).searchAlbum(albumId: entityId)
+            case .sonarr:
+                break
+            }
+        } catch {}
+    }
+
+    private func searchCTALabel(icon: String, text: LocalizedStringKey) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon).scaledFont(size: 11, weight: .semibold)
+            Text(text, bundle: .module).scaledFont(size: 12, weight: .semibold)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 7)
+    }
+
     @ViewBuilder
     private var downloadCTAStrip: some View {
         let hasDownloadControls = hasActiveDownloads && canControl
@@ -450,8 +527,12 @@ public struct DetailView: View {
         }
     }
 
+    #if os(macOS)
+    /// Compact glass-capsule trash that matches the Resume/Pause CTA shape
+    /// (same height + capsule + glass), so the two read as a pair instead of
+    /// a round button next to a square one.
     @ViewBuilder
-    private var cancelProminent: some View {
+    private var cancelGlassCompact: some View {
         Button {
             PanelActivation.bringForward(); ctaPendingDelete = true
         } label: {
@@ -466,70 +547,20 @@ public struct DetailView: View {
         }
         .modifier(GlassProminentButtonStyle())
         .tint(.red)
-    }
-
-    #if os(macOS)
-    /// Compact glass-capsule trash that matches the Resume/Pause CTA shape
-    /// (same height + capsule + glass), so the two read as a pair instead of
-    /// a round button next to a square one.
-    @ViewBuilder
-    private var cancelGlassCompact: some View {
-        Button {
-            PanelActivation.bringForward(); ctaPendingDelete = true
-        } label: {
-            Image(systemName: "trash")
-                .scaledFont(size: 12, weight: .semibold)
-                .padding(.vertical, 10)
-                .padding(.horizontal, 16)
-        }
-        .buttonStyle(.plain)
-        .liquidGlassProgressCTA(progress: 0, tint: .red)
         .help(Text("queue.cancelDownload.button", bundle: .module))
         .accessibilityLabel(Text("queue.cancelDownload.button", bundle: .module))
     }
     #endif
 
-    @ViewBuilder
-    private func safariProminent(url: URL) -> some View {
-        Button {
-            PlatformURLOpener.open(url)
-        } label: {
-            HStack(spacing: 6) {
-                Image(systemName: "safari")
-                    .scaledFont(size: 11, weight: .semibold)
-                Text("detail.openInBrowser.button", bundle: .module)
-                    .scaledFont(size: 12, weight: .semibold)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 7)
-        }
-        .modifier(GlassProminentButtonStyle())
-        .help(Text("detail.openInBrowser.button", bundle: .module))
-    }
-
-    @ViewBuilder
-    private func safariSecondary(url: URL) -> some View {
-        Button {
-            PlatformURLOpener.open(url)
-        } label: {
-            Image(systemName: "safari")
-                .scaledFont(size: 13, weight: .medium)
-                .padding(.horizontal, 4)
-                .padding(.vertical, 7)
-        }
-        .buttonStyle(.bordered)
-        .help(Text("detail.openInBrowser.button", bundle: .module))
-        .accessibilityLabel(Text("detail.openInBrowser.button", bundle: .module))
-    }
-
     // MARK: - Content switch
 
     @ViewBuilder
     private var content: some View {
-        if loading {
-            HStack { Spacer(); ProgressView().controlSize(.small); Spacer() }
-                .padding(.vertical, 60)
-        } else {
+        // No monolithic spinner: the panel renders immediately from the lean
+        // `item` (poster / title / queue status), and each data-driven section
+        // shows its own skeleton (via `metadataLoading` on the hero +
+        // `isLoading` on the panel) until its fetch lands — so the view fills
+        // in element-by-element instead of gating behind one centred spinner.
             switch item.source {
             case .radarr, .whisparr:
                 let titleFallback = splitTitleAndYear(item.title)
@@ -548,72 +579,70 @@ public struct DetailView: View {
                     existingTrailer: nil,
                     posterUrl: arrPosterURL(images: radarrDetail?.images, for: item, in: configStore),
                     fallbackSymbol: "film",
-                    posterAspect: 2.0/3.0
+                    posterAspect: 2.0/3.0,
+                    metadataLoading: loading
                 )
                 RadarrDetailPanel(
                     item: item,
-                    viewModel: viewModel,
                     radarrDetail: radarrDetail,
                     radarrMovieFile: radarrMovieFile,
                     siblings: siblings,
                     hasActiveDownloads: hasActiveDownloads,
                     loadError: loadError,
+                    isLoading: loading,
                     header: movieHeader,
                     cast: cast,
                     arrWebURLForItem: { q in arrWebURL(for: q, in: configStore) }
                 )
             case .sonarr:
-                // While an episode is pushed (incl. the auto-drill from a queue
-                // tap), keep the series body a spinner so the season list
-                // doesn't flash behind the push. Back from the episode clears
-                // `selectedEpisode` → the season view renders.
-                if selectedEpisode != nil {
-                    HStack { Spacer(); ProgressView().controlSize(.small); Spacer() }
-                        .padding(.vertical, 60)
-                } else {
-                    let titleFallback = splitTitleAndYear(item.title)
-                    let seriesHeader = headerCard(
-                        title: sonarrDetail?.title ?? titleFallback.title,
-                        year: sonarrDetail?.year ?? titleFallback.year,
-                        runtime: sonarrDetail?.runtime,
-                        genres: sonarrDetail?.genres ?? [],
-                        certification: sonarrDetail?.network,
-                        ratings: sonarrRatingChipsFor(sonarrDetail),
-                        overview: sonarrDetail?.overview,
-                        existingTrailer: nil,
-                        posterUrl: arrPosterURL(images: sonarrDetail?.images, for: item, in: configStore),
-                        fallbackSymbol: "tv",
-                        posterAspect: 2.0/3.0
-                    )
-                    SonarrDetailPanel(
-                        item: item,
-                        viewModel: viewModel,
-                        siblings: siblings,
-                        loadError: loadError,
-                        header: seriesHeader,
-                        cast: cast,
-                        sonarrDetail: $sonarrDetail,
-                        sonarrEpisodes: sonarrEpisodes,
-                        sonarrEpisodeFiles: sonarrEpisodeFiles,
-                        selectedSeasonNumber: $selectedSeasonNumber,
-                        selectedEpisode: $selectedEpisode
-                    )
-                }
+                let titleFallback = splitTitleAndYear(item.title)
+                let seriesHeader = headerCard(
+                    title: sonarrDetail?.title ?? titleFallback.title,
+                    year: sonarrDetail?.year ?? titleFallback.year,
+                    runtime: sonarrDetail?.runtime,
+                    genres: sonarrDetail?.genres ?? [],
+                    certification: sonarrDetail?.network,
+                    ratings: sonarrRatingChipsFor(sonarrDetail),
+                    overview: sonarrDetail?.overview,
+                    existingTrailer: nil,
+                    posterUrl: arrPosterURL(images: sonarrDetail?.images, for: item, in: configStore),
+                    fallbackSymbol: "tv",
+                    posterAspect: 2.0/3.0,
+                    metadataLoading: loading
+                )
+                SonarrDetailPanel(
+                    item: item,
+                    siblings: siblings,
+                    loadError: loadError,
+                    isLoading: loading,
+                    header: seriesHeader,
+                    cast: cast,
+                    sonarrDetail: $sonarrDetail,
+                    sonarrEpisodes: sonarrEpisodes,
+                    sonarrEpisodeFiles: sonarrEpisodeFiles,
+                    onTapSeason: { season in
+                        seasonDrill = SeasonDrill(
+                            seriesId: item.entityId ?? 0,
+                            seasonNumber: season.seasonNumber,
+                            seriesTitle: sonarrDetail?.title ?? titleFallback.title,
+                            seriesYear: sonarrDetail?.year ?? titleFallback.year
+                        )
+                    }
+                )
             case .lidarr:
                 LidarrDetailPanel(
                     item: item,
-                    viewModel: viewModel,
                     lidarrAlbum: lidarrAlbum,
                     lidarrTracks: lidarrTracks,
                     siblings: siblings,
                     hasActiveDownloads: hasActiveDownloads,
                     loadError: loadError,
+                    isLoading: loading,
                     enlargedPoster: $enlargedPoster,
                     selectedDiscNumber: $selectedDiscNumber,
                     arrWebURLForItem: { q in arrWebURL(for: q, in: configStore) }
                 )
             }
-        }
     }
 
     private func movieRatingChipsFor(_ detail: RadarrMovieDetail?) -> [RatingChip] {
@@ -648,7 +677,8 @@ public struct DetailView: View {
         existingTrailer: AnyView?,
         posterUrl: URL?,
         fallbackSymbol: String,
-        posterAspect: CGFloat
+        posterAspect: CGFloat,
+        metadataLoading: Bool = false
     ) -> some View {
         MediaHeaderCard(
             title: title,
@@ -677,22 +707,17 @@ public struct DetailView: View {
             },
             // Title + year live in the nav-bar title now; hero hides
             // its in-card title to avoid duplication.
-            showTitle: false
+            showTitle: false,
+            metadataLoading: metadataLoading
         )
-    }
-
-    /// Title-adjacent badge cluster. See `MediaBadgeCluster`.
-    @ViewBuilder
-    private var titleBadges: some View {
-        MediaBadgeCluster(isUpgrade: item.isUpgrade, size: .medium)
     }
 
     // MARK: - Loading
 
-    private func load() async {
-        loading = true
+    private func load(showSpinner: Bool = true) async {
+        if showSpinner { loading = true }
         loadError = nil
-        defer { loading = false }
+        defer { if showSpinner { loading = false } }
         guard let entityId = item.entityId else {
             loadError = "No entity id"
             return
@@ -721,22 +746,6 @@ public struct DetailView: View {
                 sonarrEpisodes = try await eps
                 sonarrEpisodeFiles = await files
                 await fetchSeriesCast(seriesId: entityId, tmdbId: sonarrDetail?.tmdbId)
-                // Auto-drill straight to the episode overlay when
-                // the incoming queue item identifies a specific
-                // episode. Clicking "Foo S02E04" in queue should
-                // land on that episode's detail, not the series
-                // splash — the user already picked a specific row.
-                if autoDrillToEpisode,
-                   !didAutoDrill,
-                   selectedEpisode == nil,
-                   let sn = item.seasonNumber, sn > 0,
-                   let en = item.episodeNumber,
-                   let ep = sonarrEpisodes.first(where: {
-                       $0.seasonNumber == sn && $0.episodeNumber == en
-                   }) {
-                    didAutoDrill = true
-                    selectedEpisode = ep
-                }
             case .lidarr:
                 let client = LidarrClient(config: configStore.lidarr)
                 async let a = client.fetchAlbumDetails(id: entityId)

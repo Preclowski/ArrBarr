@@ -34,14 +34,20 @@ public struct EpisodeDetailOverlay: View {
     /// by DetailView from the same `viewModel.pause/resume/delete`
     /// pipeline the season list uses. Drives the sticky bottom CTA
     /// strip on download/paused episodes.
-    let onPauseEpisode: ((QueueItem) -> Void)?
-    let onResumeEpisode: ((QueueItem) -> Void)?
+    // Async so the Pause/Resume CTA can show an in-flight spinner until the
+    // action (and its queue refresh) completes.
+    let onPauseEpisode: ((QueueItem) async -> Void)?
+    let onResumeEpisode: ((QueueItem) async -> Void)?
     let onDeleteEpisode: ((QueueItem) -> Void)?
     /// Set when this episode was opened directly from queue (no series
     /// view in the back stack). Tap on the series title fires this so
     /// the caller can push a series DetailView. `nil` = series title is
     /// inert text (matches the "opened from inside Series" flow).
     let onTapSeries: (() -> Void)?
+    /// Set when the season is reachable from here — tapping the hero's "Season N"
+    /// link drills to it (from the queue) or pops back to it (from the season
+    /// list). nil leaves the season as inert context text.
+    let onTapSeason: (() -> Void)?
     /// Optional series year for the nav-bar title (`Series (2019) · S03E04`).
     /// Falls back to bare `Series · S03E04` when unknown.
     let seriesYear: Int?
@@ -50,6 +56,12 @@ public struct EpisodeDetailOverlay: View {
     /// actionable inside the arr's own UI (manual import, blocklist,
     /// edit grab), so a one-click jump there is the actionable bit.
     let warningActionURL: URL?
+    /// Detail fetch still in flight (opened straight from the queue, full
+    /// episode metadata not yet loaded) — show skeletons for the episode
+    /// title / overview instead of a bare dash, so the hero fills in rather
+    /// than gating behind a spinner. Defaults off for the from-series flow,
+    /// which always passes a fully-loaded episode.
+    var isLoadingDetails: Bool = false
 
     @State private var isSearching = false
     @State private var ctaPendingDelete = false
@@ -57,6 +69,11 @@ public struct EpisodeDetailOverlay: View {
     @State private var showSearchConfirm = false
     /// Own poster lightbox — set when the user taps the hero poster.
     @State private var enlargedPoster: URL?
+    /// Manual-search ("Download") push target for this episode. Wrapped in a
+    /// distinct type so its `.navigationDestination` doesn't collide with the
+    /// parent DetailView's `ManualSearchTarget` destination in the same stack
+    /// (SwiftUI ignores all but the root-most destination for a given type).
+    @State private var manualSearchTarget: EpisodeReleaseSearch?
     /// The detached NSWindow draws no NavigationStack chevron, so we render our
     /// own back header there (mirrors DetailView) — otherwise the episode detail
     /// is a navigation trap with no way back.
@@ -67,22 +84,21 @@ public struct EpisodeDetailOverlay: View {
         return air <= Date()
     }
 
-    private var episodeCode: String {
-        String(format: "S%02dE%02d",
-               episode.seasonNumber ?? 0,
-               episode.episodeNumber ?? 0)
-    }
-
     /// Nav-bar title carries the season/episode number in long form —
     /// `Season 3 · Episode 5` (localized "Sezon 3 · Odcinek 5"). The
     /// episode NAME lives in the content hero; the series identity is
     /// the year-bearing drill-in link.
     private var navTitleString: String {
-        let seasonText = String(format: String(localized: "detail.seasonLld.label", bundle: .module),
-                                episode.seasonNumber ?? 0)
-        let episodeText = String(format: String(localized: "detail.episodeLld.label", bundle: .module),
-                                 episode.episodeNumber ?? 0)
-        return "\(seasonText) · \(episodeText)"
+        // Header carries only "Episode N" now — the season moved to a tappable
+        // link in the hero (see `content`).
+        String(format: String(localized: "detail.episodeLld.label", bundle: .module),
+               episode.episodeNumber ?? 0)
+    }
+
+    /// "Season N" for the hero's season drill-in link.
+    private var seasonLabel: String {
+        String(format: String(localized: "detail.seasonLld.label", bundle: .module),
+               episode.seasonNumber ?? 0)
     }
 
     /// Series title with year for the content drill-in link —
@@ -104,11 +120,13 @@ public struct EpisodeDetailOverlay: View {
         onClose: @escaping () -> Void,
         onSearch: ((Int) async -> Void)?,
         warningActionURL: URL? = nil,
-        onPauseEpisode: ((QueueItem) -> Void)? = nil,
-        onResumeEpisode: ((QueueItem) -> Void)? = nil,
+        onPauseEpisode: ((QueueItem) async -> Void)? = nil,
+        onResumeEpisode: ((QueueItem) async -> Void)? = nil,
         onDeleteEpisode: ((QueueItem) -> Void)? = nil,
         onTapSeries: (() -> Void)? = nil,
-        seriesYear: Int? = nil
+        onTapSeason: (() -> Void)? = nil,
+        seriesYear: Int? = nil,
+        isLoadingDetails: Bool = false
     ) {
         self.episode = episode
         self.seriesTitle = seriesTitle
@@ -125,7 +143,9 @@ public struct EpisodeDetailOverlay: View {
         self.onResumeEpisode = onResumeEpisode
         self.onDeleteEpisode = onDeleteEpisode
         self.onTapSeries = onTapSeries
+        self.onTapSeason = onTapSeason
         self.seriesYear = seriesYear
+        self.isLoadingDetails = isLoadingDetails
     }
 
     public var body: some View {
@@ -135,33 +155,36 @@ public struct EpisodeDetailOverlay: View {
         // need to mask it ourselves. The view fills the popover, lets
         // glass shine through.
         VStack(spacing: 0) {
-            // The attached panel + iOS get the NavigationStack's `<` + title for
-            // free. The detached NSWindow renders no chevron, so there we draw
-            // our own back header (back + title + Safari) — same pattern as
-            // DetailView — otherwise this episode view is a navigation trap.
-            if isDetachedWindow {
-                HStack(spacing: 6) {
-                    FloatingBackButton(action: onClose)
-                        .keyboardShortcut(.cancelAction)
-                    Text(navTitleString)
-                        .scaledFont(size: 15, weight: .semibold)
-                        .foregroundStyle(.primary)
-                        .lineLimit(1)
-                    Spacer(minLength: 0)
-                    if let url = warningActionURL {
-                        Button { PlatformURLOpener.open(url) } label: {
-                            Image(systemName: "safari")
-                                .scaledFont(size: 14, weight: .medium)
-                                .foregroundStyle(.secondary)
-                        }
-                        .buttonStyle(.plain)
-                        .help(Text("detail.openInBrowser.button", bundle: .module))
+            // macOS self-draws the header (back + title + Safari) on BOTH
+            // surfaces. The detached NSWindow renders no native chevron; the
+            // popover's chevron is suppressed because the parent DetailView hides
+            // the window toolbar — so without this the episode view is a back-less
+            // trap there. iOS keeps the native nav bar + `.toolbar`.
+            #if os(macOS)
+            HStack(spacing: 6) {
+                FloatingBackButton(action: onClose)
+                    .keyboardShortcut(.cancelAction)
+                Text(navTitleString)
+                    .scaledFont(size: 15, weight: .semibold)
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+                Spacer(minLength: 0)
+                if let url = warningActionURL {
+                    Button { PlatformURLOpener.open(url) } label: {
+                        Image(systemName: "safari")
+                            .scaledFont(size: 14, weight: .medium)
+                            .foregroundStyle(.secondary)
                     }
+                    .buttonStyle(.plain)
+                    .help(Text("detail.openInBrowser.button", bundle: .module))
                 }
-                .padding(.horizontal, 12)
-                .padding(.top, 10)
-                .padding(.bottom, 8)
             }
+            .padding(.horizontal, 12)
+            .padding(.top, 10)
+            // 4pt (matches DetailView / SeasonDetailView headers) so the hero
+            // doesn't shift a few px down when pushing season → episode.
+            .padding(.bottom, 4)
+            #endif
             ScrollView {
                 content
                     .padding(.horizontal, 14)
@@ -191,11 +214,17 @@ public struct EpisodeDetailOverlay: View {
             apiKey: posterRequiresAuth ? apiKey : nil,
             aspectRatio: 2.0 / 3.0
         )
-        // Suppressed in the detached window (we draw our own header above);
-        // the panel + iOS keep the native title.
-        .conditionalNavTitle(navTitleString, apply: !isDetachedWindow)
+        // Manual-search ("Download") drill-down — releases for this episode.
+        .navigationDestination(item: $manualSearchTarget) { wrapper in
+            ReleaseListView(target: wrapper.target, onBack: { manualSearchTarget = nil })
+        }
         #if os(iOS)
+        .navigationTitle(navTitleString)
         .navigationBarTitleDisplayMode(.inline)
+        #else
+        // macOS self-draws the header above; hide the native chevron + title so
+        // they aren't duplicated (and stay consistent with the parent DetailView).
+        .toolbar(.hidden, for: .windowToolbar)
         #endif
         // Secondary actions (Trash, Safari) lifted to the system
         // toolbar — matches the DetailView pattern so the user finds
@@ -252,13 +281,12 @@ public struct EpisodeDetailOverlay: View {
         let canPauseResume = (queueItem?.status == .downloading || queueItem?.status == .paused)
             && ((queueItem?.isPaused == true && onResumeEpisode != nil)
                 || (queueItem?.isPaused == false && onPauseEpisode != nil))
-        // Never offer "search" for an episode that's already downloading —
-        // it has an active queue item; searching again is wrong/confusing.
-        let canSearch = onSearch != nil && episode.hasFile != true && hasAired && queueItem == nil
-        // Trash + Safari moved to the toolbar; bottom strip only
-        // renders if the primary verb (pause/resume or search) needs a
-        // place.
-        return canPauseResume || canSearch
+        // Library episode that isn't downloading → offer manual search
+        // ("Download"). Aired-only so we don't query indexers for future eps.
+        let canManualSearch = hasAired && queueItem == nil
+        // Trash + Safari moved to the toolbar; bottom strip only renders if a
+        // primary verb (pause/resume, download, search) needs a place.
+        return canPauseResume || canManualSearch
     }
 
     @ViewBuilder
@@ -266,50 +294,55 @@ public struct EpisodeDetailOverlay: View {
         let canPauseResume = (queueItem?.status == .downloading || queueItem?.status == .paused)
             && ((queueItem?.isPaused == true && onResumeEpisode != nil)
                 || (queueItem?.isPaused == false && onPauseEpisode != nil))
-        // Never offer "search" for an episode that's already downloading —
-        // it has an active queue item; searching again is wrong/confusing.
-        let canSearch = onSearch != nil && episode.hasFile != true && hasAired && queueItem == nil
-        // Bottom strip is now reserved for the single primary verb
-        // (pause/resume or search). Trash + Safari live in the toolbar —
-        // no more competing affordances stacked into the same row.
+        // Auto-search (queues an EpisodeSearch command); manual "Download" opens
+        // the indexer release list. Manual works for upgrades too (file present),
+        // so it isn't gated on `!hasFile` the way auto-search is.
+        // Standardised: automatic search appears under the SAME rule as manual
+        // search — episode not downloading + aired (works for upgrades too, so
+        // it isn't gated on `!hasFile`).
+        let canSearch = onSearch != nil && hasAired && queueItem == nil
+        let canManualSearch = hasAired && queueItem == nil
         HStack(spacing: 8) {
             if canPauseResume, let q = queueItem {
                 ctaPauseResume(q: q)
                 #if os(macOS)
-                // macOS: delete next to Resume as a matching glass capsule.
-                // iOS keeps it in the nav toolbar (right of Safari).
+                // macOS: delete next to Resume — same prominent capsule shape as
+                // the Download CTA, tinted red. iOS keeps it in the nav toolbar.
                 if onDeleteEpisode != nil {
-                    ctaTrash
+                    ctaCancelProminent
                 }
                 #endif
-            } else if canSearch {
-                ctaSearch
+            } else if canManualSearch {
+                ctaDownload
+                if canSearch { ctaSearch }
             }
         }
     }
 
     @ViewBuilder
-    private func ctaPauseResume(q: QueueItem) -> some View {
-        PauseResumeButton(isPaused: q.isPaused, progress: q.progress, tint: q.status.tint) {
-            if q.isPaused { onResumeEpisode?(q) } else { onPauseEpisode?(q) }
+    private var ctaDownload: some View {
+        Button {
+            manualSearchTarget = EpisodeReleaseSearch(target: .episode(episodeId: episode.id, title: navTitleString))
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "magnifyingglass")
+                    .scaledFont(size: 11, weight: .semibold)
+                Text("Manual search", bundle: .module)
+                    .scaledFont(size: 12, weight: .semibold)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 7)
         }
+        .modifier(GlassProminentButtonStyle())
     }
 
     @ViewBuilder
-    private var ctaTrash: some View {
-        // Glass capsule matching the Resume/Pause CTA height + shape.
-        Button {
-            PanelActivation.bringForward(); ctaPendingDelete = true
-        } label: {
-            Image(systemName: "trash")
-                .scaledFont(size: 12, weight: .semibold)
-                .padding(.vertical, 10)
-                .padding(.horizontal, 16)
+    private func ctaPauseResume(q: QueueItem) -> some View {
+        // Shared button: prominent glass capsule (Manual-search shape) with a
+        // progress ring glyph + in-flight spinner; tint follows status.
+        PauseResumeButton(isPaused: q.isPaused, progress: q.progress, tint: q.status.tint) {
+            if q.isPaused { await onResumeEpisode?(q) } else { await onPauseEpisode?(q) }
         }
-        .buttonStyle(.plain)
-        .liquidGlassProgressCTA(progress: 0, tint: .red)
-        .help(Text("queue.cancelDownload.button", bundle: .module))
-        .accessibilityLabel(Text("queue.cancelDownload.button", bundle: .module))
     }
 
     @ViewBuilder
@@ -342,7 +375,7 @@ public struct EpisodeDetailOverlay: View {
                 } else {
                     Image(systemName: "magnifyingglass")
                         .scaledFont(size: 11, weight: .semibold)
-                    Text("detail.searchThisEpisode.tooltip", bundle: .module)
+                    Text("Automatic search", bundle: .module)
                         .scaledFont(size: 12, weight: .semibold)
                 }
             }
@@ -351,59 +384,6 @@ public struct EpisodeDetailOverlay: View {
         }
         .modifier(GlassProminentButtonStyle())
         .disabled(isSearching)
-    }
-
-    @ViewBuilder
-    private func ctaSafariProminent(url: URL) -> some View {
-        Button { PlatformURLOpener.open(url) } label: {
-            HStack(spacing: 6) {
-                Image(systemName: "safari")
-                    .scaledFont(size: 11, weight: .semibold)
-                Text("detail.openInBrowser.button", bundle: .module)
-                    .scaledFont(size: 12, weight: .semibold)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 7)
-        }
-        .modifier(GlassProminentButtonStyle())
-        .help(Text("detail.openInBrowser.button", bundle: .module))
-    }
-
-    @ViewBuilder
-    private func ctaSafariSecondary(url: URL) -> some View {
-        Button { PlatformURLOpener.open(url) } label: {
-            Image(systemName: "safari")
-                .scaledFont(size: 13, weight: .medium)
-                .padding(.horizontal, 4)
-                .padding(.vertical, 7)
-        }
-        .buttonStyle(.bordered)
-        .help(Text("detail.openInBrowser.button", bundle: .module))
-    }
-
-    private var header: some View {
-        // Variant A header — back chevron + origin breadcrumb. No
-        // trailing xmark: a single dismiss affordance per view is the
-        // Apple-HIG rule (back chevron + Esc keyboard shortcut cover
-        // every dismiss path).
-        HStack(spacing: 6) {
-            FloatingBackButton(action: onClose)
-                .keyboardShortcut(.cancelAction)
-            Text(originLabel, bundle: .module)
-                .scaledFont(size: 15, weight: .semibold)
-                .foregroundStyle(.primary)
-                .lineLimit(1)
-            Spacer()
-            Image(systemName: "tv")
-                .scaledFont(size: 11)
-                .foregroundStyle(.tertiary)
-            Text(verbatim: "Sonarr")
-                .scaledFont(size: 11)
-                .foregroundStyle(.tertiary)
-        }
-        .padding(.horizontal, 12)
-        .padding(.top, 10)
-        .padding(.bottom, 8)
     }
 
     @ViewBuilder
@@ -456,6 +436,27 @@ public struct EpisodeDetailOverlay: View {
                         // is over the title button, not just the glyph.
                         .linkRowHover()
                     }
+                    // Season context — drill to it (from the queue) or back to
+                    // it (from the season list). The nav bar now shows only
+                    // "Episode N", so the season lives here as a chevron link.
+                    if let onTapSeason {
+                        Button(action: onTapSeason) {
+                            HStack(spacing: 4) {
+                                Text(verbatim: seasonLabel)
+                                    .scaledFont(size: 12, weight: .medium)
+                                    .lineLimit(1)
+                                LinkChevron(size: 9)
+                            }
+                            .foregroundStyle(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                        .linkRowHover()
+                    } else {
+                        Text(verbatim: seasonLabel)
+                            .scaledFont(size: 12, weight: .medium)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
                     // SxxExx moved to the nav-bar title. "Unaired" only
                     // renders when relevant — no empty row left behind.
                     if !hasAired {
@@ -469,24 +470,37 @@ public struct EpisodeDetailOverlay: View {
                     // Episode name as the in-content hero, under the
                     // series link. The season/episode number lives in the
                     // nav-bar header now.
-                    Text(episode.title ?? "—")
-                        .scaledFont(size: 17, weight: .semibold)
-                        .lineLimit(3)
-                    if let runtime = episode.runtime, runtime > 0 {
-                        Text(verbatim: "\(runtime) min")
-                            .scaledFont(size: 11)
-                            .foregroundStyle(.secondary)
+                    if let title = episode.title, !title.isEmpty {
+                        Text(title)
+                            .scaledFont(size: 17, weight: .semibold)
+                            .lineLimit(3)
+                    } else if isLoadingDetails {
+                        SkeletonBar(width: 200, height: 18)
+                    } else {
+                        Text(verbatim: "—")
+                            .scaledFont(size: 17, weight: .semibold)
                     }
-                    // Air date directly above the overview, both beside the
-                    // poster (tooltip layout) so the synopsis starts next to
-                    // the artwork — matching movie / series detail.
-                    if let air = episode.airDateUtc.flatMap(parseArrDate) {
-                        Text(EpisodeDetailOverlay.airFormatter.string(from: air))
-                            .scaledFont(size: 11)
-                            .foregroundStyle(.secondary)
+                    // Runtime · air date on a single line (mirrors the movie /
+                    // series hero's metadata row); the synopsis follows below.
+                    let metaSegments: [String] = [
+                        (episode.runtime ?? 0) > 0 ? "\(episode.runtime!) min" : nil,
+                        episode.airDateUtc.flatMap(parseArrDate)
+                            .map { EpisodeDetailOverlay.airFormatter.string(from: $0) },
+                    ].compactMap { $0 }
+                    if !metaSegments.isEmpty {
+                        HStack(spacing: 6) {
+                            ForEach(Array(metaSegments.enumerated()), id: \.offset) { idx, seg in
+                                if idx > 0 { SeparatorDot() }
+                                Text(verbatim: seg)
+                            }
+                        }
+                        .scaledFont(size: 11)
+                        .foregroundStyle(.secondary)
                     }
                     if let overview = episode.overview, !overview.isEmpty {
                         ExpandableOverview(text: overview)
+                    } else if isLoadingDetails {
+                        SkeletonLines(count: 3)
                     }
                 }
                 Spacer(minLength: 0)
@@ -527,7 +541,12 @@ public struct EpisodeDetailOverlay: View {
         } else if let q = queueItem {
             queueFileSection(q)
         } else if let existing = episodeFile {
-            ExistingFileBanner(episodeFile: existing)
+            // In library (on disk, not downloading) — lead with the same
+            // "library" badge the movie detail wears.
+            VStack(alignment: .leading, spacing: 6) {
+                InLibraryBadge()
+                ExistingFileBanner(episodeFile: existing)
+            }
         }
     }
 
@@ -595,10 +614,10 @@ public struct EpisodeDetailOverlay: View {
     }
 
     private func performSearch() {
-        guard let onSearch, let id = Optional(episode.id), !isSearching else { return }
+        guard let onSearch, !isSearching else { return }
         isSearching = true
         Task {
-            await onSearch(id)
+            await onSearch(episode.id)
             await MainActor.run {
                 isSearching = false
                 didSearch = true
@@ -614,4 +633,12 @@ public struct EpisodeDetailOverlay: View {
         f.timeStyle = .short
         return f
     }()
+}
+
+/// Distinct wrapper so the episode's manual-search `.navigationDestination`
+/// doesn't share a value type with the parent DetailView's `ManualSearchTarget`
+/// destination in the same NavigationStack (which SwiftUI can't disambiguate).
+private struct EpisodeReleaseSearch: Identifiable, Hashable {
+    let target: ManualSearchTarget
+    var id: String { target.id }
 }

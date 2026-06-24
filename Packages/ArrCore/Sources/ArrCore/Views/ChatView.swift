@@ -323,33 +323,6 @@ private struct MessageBubble: View {
         }
     }
 
-    @ViewBuilder
-    private func chevronExpandable(label: String) -> some View {
-        Button {
-            withAnimation(.smooth(duration: 0.18)) { expanded.toggle() }
-        } label: {
-            HStack(spacing: 4) {
-                Image(systemName: expanded ? "chevron.down" : "chevron.right")
-                    .scaledFont(size: 9, weight: .semibold)
-                    .foregroundStyle(.secondary)
-                Text(verbatim: label)
-                    .scaledFont(size: 11, weight: .semibold)
-                    .foregroundStyle(.secondary)
-            }
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        if expanded, let result = message.toolResult, !result.isEmpty {
-            Text(result)
-                .font(.system(size: 11).monospaced())
-                .foregroundStyle(.secondary)
-                .textSelection(.enabled)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.leading, 13)
-                .padding(.top, 2)
-        }
-    }
-
     /// Display category derived from `ChatMessage`. Tool messages all come
     /// from the LLM now; tap-to-add takes a different (overlay-based) path
     /// that doesn't write to the chat.

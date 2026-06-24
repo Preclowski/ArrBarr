@@ -112,10 +112,6 @@ public struct DownloadProgressCard: View {
         if existingOverride != nil { return hasExistingMetadata }
         return item.isUpgrade && hasExistingMetadata
     }
-    private var tagsDiffer: Bool {
-        Set(item.customFormats) != Set(effectiveExistingFormats)
-    }
-
     public var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             // Status + spec row sits ABOVE the progress bar (per user

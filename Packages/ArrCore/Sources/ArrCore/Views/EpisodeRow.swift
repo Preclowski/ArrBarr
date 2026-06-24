@@ -12,11 +12,6 @@ struct EpisodeRow: View {
     /// "available" rows surface their points instead of the air date the
     /// user already knows.
     var episodeFile: SonarrEpisodeFile? = nil
-    /// Optional search trigger. Provided by DetailView (Sonarr), wired
-    /// to `SonarrClient.searchEpisodes`. Only meaningful when the episode
-    /// is missing — otherwise the indicator falls through to the file
-    /// state (green check) and no action surface appears.
-    var onSearch: ((Int) async -> Void)? = nil
     /// Tap the row body (not the state indicator) to drill into the
     /// episode detail surface. `nil` keeps the row passive (the
     /// legacy behaviour) for callers that don't want this drill-down.
@@ -35,15 +30,6 @@ struct EpisodeRow: View {
     var seriesPosterAPIKey: String? = nil
 
     @State private var isHovering = false
-    @State private var isSearching = false
-    /// Brief feedback after the command was accepted by Sonarr. The
-    /// indexer search happens in the background; user just gets a quick
-    /// "got it" pulse, then back to normal.
-    @State private var didSearch = false
-    /// Gates the .alert. Search is treated as a destructive action —
-    /// it consumes indexer quota and can kick off a download — so we
-    /// always confirm before firing, matching the season/series flows.
-    @State private var showSearchConfirm = false
     @State private var showDeleteConfirm = false
     /// Long-hover popover (same 600 ms gate as queue rows). Shows
     /// quality / size / score + upgrade diff when there's something
@@ -51,8 +37,6 @@ struct EpisodeRow: View {
     /// the tooltip would just repeat the row text.
     @State private var showTooltip = false
     @State private var hoverTask: Task<Void, Never>?
-
-    private var isMissing: Bool { episode.hasFile != true }
 
     /// Gate for the long-hover popover. We only surface a tooltip
     /// when there's actually something to show — either an active
@@ -99,17 +83,23 @@ struct EpisodeRow: View {
             onTap?(episode)
         } label: {
             HStack(spacing: 6) {
-                // Title leads, full-width. Episode code moved to the
-                // right gutter — used to sit in a fixed 18pt slot
-                // ahead of the title which crammed against long
-                // titles and broke awkwardly when font-scale bumped
-                // wrapped them to a second line. Right-gutter
-                // placement matches Mail/Music idiom: identifier on
-                // the trailing edge, content fills the row.
+                // `S02E04` identifier leads the title (Music/TV idiom:
+                // the episode number prefixes the name). Monospaced +
+                // fixed 6-char width so titles align down the column;
+                // kept subordinate to the title via size/secondary
+                // colour so it reads as a prefix, not a competing label.
+                Text(episodeCode)
+                    .scaledFont(size: 10, weight: .semibold, monospacedDigit: true)
+                    .foregroundStyle(.secondary)
                 Text(episode.title ?? "—")
                     .scaledFont(size: 11)
                     .foregroundStyle(episodeTitleStyle)
                     .lineLimit(1)
+                // Drill-in affordance — same `LinkChevron` every other tappable
+                // row uses (static dark, brightens on row hover via `.linkRowHover`).
+                if onTap != nil {
+                    LinkChevron(size: 8)
+                }
                 // Per-row Upgrade / New tag — same component the
                 // queue rows use, sized .small so it stays subordinate
                 // to the title. Only shown when there's an active
@@ -147,13 +137,6 @@ struct EpisodeRow: View {
                         .scaledFont(size: 10)
                         .foregroundStyle(.tertiary)
                 }
-                // Episode code on the trailing edge — `S02E04`
-                // (full season + episode for unambiguous reference,
-                // matches the tooltip header and other rows that
-                // surface episode identity).
-                Text(episodeCode)
-                    .scaledFont(size: 9, weight: .semibold, monospacedDigit: true)
-                    .foregroundStyle(.tertiary)
                 stateIndicator
                     .frame(width: 14, height: 14, alignment: .center)
             }
@@ -169,16 +152,15 @@ struct EpisodeRow: View {
         // no separate progress widget needed. Falls back to the
         // hover-tint for non-queue rows.
         .background(
+            // Only the active-download progress fill — no hover tint (a hover
+            // chevron next to the title signals "tap to open" instead).
             ZStack(alignment: .leading) {
                 if let q = queueItem {
                     GeometryReader { geo in
                         Rectangle()
-                            .fill(q.status.tint.opacity(isHovering ? 0.22 : 0.16))
+                            .fill(q.status.tint.opacity(0.16))
                             .frame(width: geo.size.width * max(0.02, min(1, q.progress)))
                     }
-                } else if isHovering {
-                    Rectangle()
-                        .fill(Color.primary.opacity(0.06))
                 }
             }
             .clipShape(RoundedRectangle(cornerRadius: Tokens.Radius.chip))
@@ -194,9 +176,10 @@ struct EpisodeRow: View {
         // tint (status fill for in-progress, transparent otherwise),
         // matching Mail / Music row-hover treatment.
         .overlay(alignment: .trailing) {
-            let hasOverlay = (queueItem != nil) || (onSearch != nil && hasAired)
-            if isHovering, hasOverlay {
-                searchActionOverlay
+            // Only active downloads get hover actions now (pause/resume/trash);
+            // per-episode search moved to the DetailView bottom CTA.
+            if isHovering, queueItem != nil {
+                hoverActionOverlay
                     .transition(.opacity)
             }
         }
@@ -228,16 +211,6 @@ struct EpisodeRow: View {
         // pattern Apple uses across Finder / Mail / Photos. Replaces
         // the bespoke `InlineConfirmCard` popovers we had on the row.
         .confirmationDialog(
-            Text("detail.searchThisEpisode.tooltip", bundle: .module),
-            isPresented: $showSearchConfirm,
-            titleVisibility: .visible
-        ) {
-            Button { performSearch() } label: { Text("search.search.button", bundle: .module) }
-            Button(role: .cancel) {} label: { Text("common.cancel.button", bundle: .module) }
-        } message: {
-            Text("detail.willQueryYourIndexers.tooltip", bundle: .module)
-        }
-        .confirmationDialog(
             Text("queue.cancelThisDownload.tooltip", bundle: .module),
             isPresented: $showDeleteConfirm,
             titleVisibility: .visible
@@ -249,35 +222,24 @@ struct EpisodeRow: View {
         } message: {
             Text(String(format: String(localized: "detail.thisWillRemoveFrom.tooltip", bundle: .module), queueItem?.title ?? episode.title ?? ""))
         }
+        // Publishes row-hover to the `LinkChevron` above so it brightens whenever
+        // the cursor is anywhere over the row, not just on the 8pt glyph.
+        .linkRowHover()
     }
 
-    /// Hover overlay on the trailing edge — same gradient + icon
-    /// language as QueueRowView. Content depends on state: when an
-    /// active queue item is present, surface pause/resume/trash;
-    /// otherwise (no queue), surface a search icon.
+    /// Hover overlay on the trailing edge — pause/resume/trash for an active
+    /// download. Same bare-icon language as QueueRowView. (Per-episode search
+    /// moved to the DetailView bottom CTA, so non-queue rows have no overlay.)
     #if os(macOS)
-    /// Unified action cluster: primary icon (state-dependent) +
-    /// optional ⋯ menu for secondary actions. No gradient, no pill, no
-    /// inline label — same shape across queue rows, episode rows, and
-    /// the detail surface. Destructive confirms use the native
-    /// `.confirmationDialog` attached at the row level (see body).
     @ViewBuilder
-    private var searchActionOverlay: some View {
-        HStack(spacing: 2) {
-            if let q = queueItem {
+    private var hoverActionOverlay: some View {
+        if let q = queueItem {
+            HStack(spacing: 2) {
                 queueActionIcons(for: q)
-            } else if isSearching {
-                ProgressView()
-                    .controlSize(.mini)
-                    .frame(width: 22, height: 22)
-            } else {
-                IconButton(symbol: "magnifyingglass", helpKey: "Search episode") {
-                    showSearchConfirm = true
-                }
             }
+            .rowActionBackdrop()
+            .padding(.trailing, 6)
         }
-        .rowActionBackdrop()
-        .padding(.trailing, 6)
     }
 
     @ViewBuilder
@@ -310,48 +272,14 @@ struct EpisodeRow: View {
 
     @ViewBuilder
     private var stateIndicator: some View {
-        if isSearching {
-            ProgressView().controlSize(.mini)
-        } else if didSearch {
-            Image(systemName: "checkmark")
-                .scaledFont(size: 10, weight: .semibold)
-                .foregroundStyle(.green)
-        } else if !hasAired {
+        // Only the not-aired (scheduled) glyph remains. "Missing" no longer gets a
+        // bare circle — the dimmed title already says "not in your library", and
+        // the season row carries the per-season "X/Y · missing" count.
+        if !hasAired {
             Image(systemName: "calendar")
                 .scaledFont(size: 10)
                 .foregroundStyle(.tertiary)
                 .help(Text("detail.notAiredYet.button", bundle: .module))
-        } else if episode.hasFile != true && queueItem == nil {
-            // Missing-aired with no active download — the only state
-            // that still warrants an indicator glyph. Downloading
-            // episodes are now signalled by the row's background
-            // tint (see `rowBackground`), not an icon.
-            Image(systemName: "circle")
-                .scaledFont(size: 10)
-                .foregroundStyle(Color.secondary.opacity(0.5))
-        }
-    }
-
-    /// Surface the alert; actual work happens in `performSearch` after
-    /// the user taps Search in the alert. Keeps "indexer search" from
-    /// being a single careless tap on the magnifyingglass — the model
-    /// you've configured may have rate-limited indexer pulls.
-    private func fireSearch() {
-        guard !isSearching else { return }
-        showSearchConfirm = true
-    }
-
-    private func performSearch() {
-        guard let onSearch, !isSearching else { return }
-        isSearching = true
-        Task {
-            await onSearch(episode.id)
-            await MainActor.run {
-                isSearching = false
-                didSearch = true
-            }
-            try? await Task.sleep(nanoseconds: 1_200_000_000)
-            await MainActor.run { didSearch = false }
         }
     }
 

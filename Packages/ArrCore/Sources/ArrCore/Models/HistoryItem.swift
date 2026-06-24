@@ -41,7 +41,9 @@ public struct HistoryItem: Identifiable, Equatable {
 
         public var symbol: String {
             switch self {
-            case .grabbed: return "arrow.down.circle.fill"
+            // Outline (not filled) so "grabbed" (download just started / sent to
+            // the client) doesn't read as the finished `tray…fill` import below.
+            case .grabbed: return "arrow.down.circle"
             case .imported: return "tray.and.arrow.down.fill"
             case .failed: return "xmark.circle.fill"
             case .deleted: return "trash.fill"

@@ -59,6 +59,12 @@ public struct EpisodeQuickDetail: View {
     /// collapsing straight to the queue. Sibling `navigationDestination`
     /// bindings at the root don't nest, which is what broke "back".
     @State private var seriesPush: SeriesPushRequest?
+    /// All of the series' episodes (kept from `load`) so the hero's season link
+    /// can push a fully-populated `SeasonDetailView`.
+    @State private var allEpisodes: [SonarrEpisodeDetail] = []
+    /// Season drill-down — pushed when the user taps the hero's "Season N" link.
+    /// Nests under THIS view (like `seriesPush`) so back returns to the episode.
+    @State private var seasonPush: SeasonDrill?
 
     public init(
         item: QueueItem,
@@ -71,32 +77,39 @@ public struct EpisodeQuickDetail: View {
     }
 
     public var body: some View {
-        Group {
-            if fullEpisode == nil && loadError == nil {
-                loadingState
-            } else {
-                EpisodeDetailOverlay(
-                    episode: displayEpisode,
+        // No full-view spinner: render the overlay immediately from the stub
+        // built off the queue row (hero = series · SxxExx · poster · download
+        // status); `isLoadingDetails` skeletons the episode title / overview
+        // until the Sonarr fetch lands.
+        EpisodeDetailOverlay(
+            episode: displayEpisode,
+            seriesTitle: sonarrDetail?.title ?? splitTitleAndYear(item.title).title,
+            posterURL: arrPosterURL(images: sonarrDetail?.images, for: item, in: configStore) ?? item.posterURL,
+            posterRequiresAuth: item.posterRequiresAuth,
+            apiKey: configStore.sonarr.apiKey,
+            episodeFile: displayEpisode.episodeFileId.flatMap { episodeFileMap[$0] },
+            queueItem: liveQueueItem,
+            onClose: { dismiss() },
+            onSearch: { episodeId in
+                let client = SonarrClient(config: configStore.sonarr)
+                try? await client.searchEpisodes(episodeIds: [episodeId])
+            },
+            warningActionURL: arrWebURL(for: item, in: configStore),
+            onPauseEpisode: { q in await viewModel.pause(q); await viewModel.refresh() },
+            onResumeEpisode: { q in await viewModel.resume(q); await viewModel.refresh() },
+            onDeleteEpisode: { q in Task { await viewModel.delete(q) } },
+            onTapSeries: { seriesPush = SeriesPushRequest(item: item) },
+            onTapSeason: {
+                seasonPush = SeasonDrill(
+                    seriesId: item.entityId ?? 0,
+                    seasonNumber: item.seasonNumber ?? 0,
                     seriesTitle: sonarrDetail?.title ?? splitTitleAndYear(item.title).title,
-                    posterURL: arrPosterURL(images: sonarrDetail?.images, for: item, in: configStore) ?? item.posterURL,
-                    posterRequiresAuth: item.posterRequiresAuth,
-                    apiKey: configStore.sonarr.apiKey,
-                    episodeFile: displayEpisode.episodeFileId.flatMap { episodeFileMap[$0] },
-                    queueItem: item,
-                    onClose: { dismiss() },
-                    onSearch: { episodeId in
-                        let client = SonarrClient(config: configStore.sonarr)
-                        try? await client.searchEpisodes(episodeIds: [episodeId])
-                    },
-                    warningActionURL: arrWebURL(for: item, in: configStore),
-                    onPauseEpisode: { q in Task { await viewModel.pause(q) } },
-                    onResumeEpisode: { q in Task { await viewModel.resume(q) } },
-                    onDeleteEpisode: { q in Task { await viewModel.delete(q) } },
-                    onTapSeries: { seriesPush = SeriesPushRequest(item: item) },
                     seriesYear: sonarrDetail?.year ?? splitTitleAndYear(item.title).year
                 )
-            }
-        }
+            },
+            seriesYear: sonarrDetail?.year ?? splitTitleAndYear(item.title).year,
+            isLoadingDetails: fullEpisode == nil && loadError == nil
+        )
         .conditionalNavTitle(sonarrDetail?.title ?? splitTitleAndYear(item.title).title, apply: !isDetachedWindow)
         // Series push nests under THIS view (see `seriesPush`), so back
         // returns to the episode rather than the queue.
@@ -105,28 +118,55 @@ public struct EpisodeQuickDetail: View {
                 item: req.item,
                 onBack: { seriesPush = nil },
                 originLabel: originLabel,
-                // Don't auto-drill back into the episode the user just
-                // left to view the series.
-                autoDrillToEpisode: false,
+                viewModel: viewModel
+            )
+        }
+        // Season push nests under THIS view too, so back returns to the episode.
+        .navigationDestination(item: $seasonPush) { drill in
+            SeasonDetailView(
+                drill: drill,
+                sonarrDetail: sonarrDetail,
+                episodes: allEpisodes.filter { $0.seasonNumber == drill.seasonNumber },
+                queueByEpisodeId: seasonQueueByEpisodeId,
+                fileByEpisodeFileId: episodeFileMap,
+                seriesPosterURL: arrPosterURL(images: sonarrDetail?.images, for: item, in: configStore) ?? item.posterURL,
+                seriesPosterRequiresAuth: item.posterRequiresAuth,
+                seriesPosterAPIKey: configStore.sonarr.apiKey,
+                onBack: { seasonPush = nil },
                 viewModel: viewModel
             )
         }
         .task(id: item.id) { await load() }
+        // When the episode leaves the queue (import done / removed) while the
+        // detail is open, refetch so the overlay swaps the stale download view
+        // for the on-disk file (fresh `fullEpisode.hasFile` + episode-file map).
+        .onChange(of: isInLiveQueue) { _, stillQueued in
+            if !stillQueued, item.arrQueueId != 0 {
+                Task { await load() }
+            }
+        }
     }
 
-    /// Spinner + breadcrumb while the Sonarr fetch is in flight. Same
-    /// pattern as DetailView (`if loading { ProgressView }`) so the
-    /// user never sees half-populated hero metadata popping in field by
-    /// field while data lands.
-    private var loadingState: some View {
-        VStack(spacing: 12) {
-            ProgressView()
-                .controlSize(.small)
-            Text("detail.loadingEpisode.button", bundle: .module)
-                .scaledFont(size: 11)
-                .foregroundStyle(.tertiary)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    /// Live queue row pulled from the view model, mirroring `DetailView`. The
+    /// `item` handed in via `navigationDestination` is a static open-time
+    /// snapshot (the binding never re-reads the queue), so reading the pool
+    /// here lets every background refresh advance the progress bar.
+    ///
+    /// Returns nil once the row leaves the queue (import finished / removed) —
+    /// we deliberately DON'T fall back to the captured snapshot, which is
+    /// frozen at e.g. "importing" and would otherwise keep the overlay stuck on
+    /// a dead download forever. nil lets `EpisodeDetailOverlay` fall through to
+    /// the on-disk file section (which the `onChange` refetch below populates).
+    private var liveQueueItem: QueueItem? {
+        viewModel.items(for: item.source)
+            .first { $0.id == item.id || $0.arrQueueId == item.arrQueueId }
+    }
+
+    /// Whether the opened row is still a live queue row — flips false the moment
+    /// the import completes and the arr drops it, cueing a detail refetch.
+    private var isInLiveQueue: Bool {
+        viewModel.items(for: item.source)
+            .contains { $0.id == item.id || $0.arrQueueId == item.arrQueueId }
     }
 
     /// Either the fetched-from-Sonarr episode (full data) or a stub
@@ -147,6 +187,20 @@ public struct EpisodeQuickDetail: View {
         )
     }
 
+    /// episode-id → active queue item for this series — feeds SeasonDetailView's
+    /// per-episode download indicators when pushed from the hero's season link.
+    private var seasonQueueByEpisodeId: [Int: QueueItem] {
+        guard let id = item.entityId else { return [:] }
+        var map: [Int: QueueItem] = [:]
+        for q in viewModel.items(for: .sonarr) where q.entityId == id && q.arrQueueId != 0 {
+            guard let sn = q.seasonNumber, let en = q.episodeNumber else { continue }
+            if let ep = allEpisodes.first(where: { $0.seasonNumber == sn && $0.episodeNumber == en }) {
+                map[ep.id] = q
+            }
+        }
+        return map
+    }
+
     private func load() async {
         guard let seriesId = item.entityId else { return }
         let client = SonarrClient(config: configStore.sonarr)
@@ -158,6 +212,7 @@ public struct EpisodeQuickDetail: View {
             let episodes = try await episodesReq
             let files = try await filesReq
             self.sonarrDetail = detail
+            self.allEpisodes = episodes
             self.fullEpisode = episodes.first {
                 $0.seasonNumber == item.seasonNumber
                     && $0.episodeNumber == item.episodeNumber

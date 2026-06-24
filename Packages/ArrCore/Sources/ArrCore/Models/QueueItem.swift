@@ -57,7 +57,9 @@ public struct QueueItem: Identifiable, Equatable, Hashable, Sendable {
     public let episodeTitle: String?
     public let releaseName: String?
     public var status: Status
-    public let progress: Double
+    /// `var` so `QueueAggregator` can overlay the download client's live value
+    /// (fresher than the arr's polled `/queue` progress) — see DownloadProgress.
+    public var progress: Double
     public let sizeTotal: Int64
     public let sizeLeft: Int64
     public let timeLeft: String?

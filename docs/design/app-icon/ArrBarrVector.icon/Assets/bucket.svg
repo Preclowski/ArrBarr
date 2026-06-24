@@ -1,0 +1,27 @@
+<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+<g id="layer-bucket">
+    <!-- bucket body (cream), flat bottom -->
+    <path d="M232,430 L792,430 L694,860 L330,860 Z" fill="#F1E5CC"/>
+    <!-- red stripes (tapered) -->
+    <g fill="#C2392E">
+      <path d="M232,430 L294,430 L353,760 L307,760 Z"/>
+      <path d="M356,430 L419,430 L444,760 L398,760 Z"/>
+      <path d="M481,430 L543,430 L535,760 L489,760 Z"/>
+      <path d="M605,430 L668,430 L626,760 L580,760 Z"/>
+      <path d="M730,430 L792,430 L717,760 L671,760 Z"/>
+    </g>
+    <!-- rim strip -->
+    <path d="M232,430 L792,430 L788,448 L236,448 Z" fill="#E7D6B2"/>
+    <!-- gold band -->
+    <path d="M307,760 L717,760 L694,860 L330,860 Z" fill="#C9A24B"/>
+    <!-- gold band: central peak (medallion) -->
+    <path d="M438,761 Q475,722 512,718 Q549,722 586,761 Z" fill="#D4AF5C"/>
+    <!-- band top edge (dark gold) -->
+    <path d="M307,760 L438,760 L448,773 L310,773 Z" fill="#A8842E"/>
+    <path d="M586,760 L717,760 L714,773 L576,773 Z" fill="#A8842E"/>
+    <!-- band highlight -->
+    <path d="M311,777 L713,777 L710,791 L314,791 Z" fill="#E0C067"/>
+    <!-- band bottom shading -->
+    <path d="M327,846 L697,846 L694,860 L330,860 Z" fill="#A8842E"/>
+  </g>
+</svg>

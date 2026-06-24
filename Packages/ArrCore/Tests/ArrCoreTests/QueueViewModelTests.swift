@@ -235,6 +235,56 @@ struct QueueViewModelOptimisticTests {
         #expect(sut.items(for: .sonarr).first?.status == .paused)
     }
 
+    @Test("A force-started queued item the arr briefly drops stays on screen")
+    func ghostRetainedThroughQueuedToActiveGap() async {
+        let (sut, fake, _) = makeSUT()
+        let before = makeItem("before", source: .sonarr, status: .downloading)
+        let queued = makeItem("q", source: .sonarr, status: .queued)
+        let after = makeItem("after", source: .sonarr, status: .downloading)
+        fake.fetchResult = AggregateResult(radarr: [], sonarr: [before, queued, after], lidarr: [], whisparr: [])
+        await sut.refresh()
+
+        // Force-start the queued item → optimistic .downloading.
+        await sut.resume(queued)
+        #expect(fake.performedActions.map(\.0) == [.continueDownload])
+        #expect(sut.items(for: .sonarr).first { $0.id == "q" }?.status == .downloading)
+
+        // The arr now momentarily drops "q" from /queue entirely (the gap).
+        fake.fetchResult = AggregateResult(radarr: [], sonarr: [before, after], lidarr: [], whisparr: [])
+        await sut.refresh()
+        let rows = sut.items(for: .sonarr)
+        // Still present, still in its optimistic state, and re-inserted at its
+        // original middle position — not blinked out, not shoved to the end.
+        #expect(rows.map(\.id) == ["before", "q", "after"])
+        #expect(rows.first { $0.id == "q" }?.status == .downloading)
+
+        // The arr returns it as downloading — real data flows through, no dup.
+        fake.fetchResult = AggregateResult(
+            radarr: [], sonarr: [before, makeItem("q", source: .sonarr, status: .downloading), after],
+            lidarr: [], whisparr: []
+        )
+        await sut.refresh()
+        let final = sut.items(for: .sonarr)
+        #expect(final.map(\.id) == ["before", "q", "after"])
+        #expect(final.filter { $0.id == "q" }.count == 1)
+    }
+
+    @Test("A deleted row the arr still returns briefly stays gone (not re-injected)")
+    func deletedRowIsNotResurrectedAsGhost() async {
+        let (sut, fake, _) = makeSUT()
+        let item = makeItem("a", source: .sonarr, status: .downloading)
+        fake.fetchResult = AggregateResult(radarr: [], sonarr: [item], lidarr: [], whisparr: [])
+        await sut.refresh()
+        await sut.delete(item)
+        #expect(sut.items(for: .sonarr).isEmpty)
+
+        // The arr momentarily drops it (or keeps returning it) — either way a
+        // delete override must never re-inject a ghost the way a status one does.
+        fake.fetchResult = AggregateResult(radarr: [], sonarr: [], lidarr: [], whisparr: [])
+        await sut.refresh()
+        #expect(sut.items(for: .sonarr).isEmpty)
+    }
+
     @Test("A failed action surfaces lastError and leaves the row untouched")
     func failedActionSurfacesError() async {
         let (sut, fake, _) = makeSUT()

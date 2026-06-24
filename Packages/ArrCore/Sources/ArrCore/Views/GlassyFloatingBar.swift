@@ -22,15 +22,6 @@ public extension View {
         modifier(GlassPillModifier())
     }
 
-    /// Experimental liquid-glass CTA pill — same chrome shape as the
-    /// chat input bar (`glassyFloatingBar`) but with a tint-colored
-    /// glow and an inline progress fill, intended for the sticky
-    /// "Pause download" / "Resume download" verb. Replaces the
-    /// `GlassProminentButtonStyle + progressFillCTA` stack with one
-    /// modifier that owns the whole look.
-    func liquidGlassProgressCTA(progress: Double, tint: Color) -> some View {
-        modifier(LiquidGlassProgressCTAModifier(progress: progress, tint: tint))
-    }
 }
 
 private struct GlassPillModifier: ViewModifier {
@@ -56,82 +47,6 @@ private struct GlassPillModifier: ViewModifier {
                 )
         }
         #endif
-    }
-}
-
-private struct LiquidGlassProgressCTAModifier: ViewModifier {
-    let progress: Double
-    let tint: Color
-    @State private var hovering = false
-
-    func body(content: Content) -> some View {
-        let clamped = max(0, min(1, progress))
-        // Progress slab — Rectangle for sharp vertical edge; outer
-        // capsule clips the leading round.
-        let progressFill = GeometryReader { proxy in
-            HStack(spacing: 0) {
-                Rectangle()
-                    .fill(tint.opacity(0.62))
-                    .frame(width: proxy.size.width * clamped)
-                Color.clear
-            }
-        }
-        // Bare content — white text on top of the tinted progress
-        // slab. NO synthetic gloss / rim gradient (those scream Aqua);
-        // a single hairline glass border is added below.
-        let baseContent = content
-            .foregroundStyle(.white)
-            .background(progressFill)
-            .clipShape(Capsule())
-        // Hairline glass border — barely-there bright stroke that just
-        // outlines the capsule edge. Same role the system glass plays
-        // when it sits over busy content (Notification Center pills,
-        // Music mini-player chrome).
-        let glassEdge = Capsule()
-            .stroke(Color.white.opacity(0.18), lineWidth: 0.5)
-
-        Group {
-            #if os(macOS)
-            if #available(macOS 26.0, *) {
-                // System Liquid Glass — real refraction + automatic rim.
-                // Tint lowered so the unfilled trailing portion reads as
-                // transparent glass over the popover content rather than a
-                // dim flat slab.
-                baseContent
-                    .glassEffect(.regular.tint(tint.opacity(hovering ? 0.26 : 0.16)), in: .capsule)
-                    .overlay(glassEdge)
-                    .shadow(color: .black.opacity(0.20), radius: 6, y: 2)
-            } else {
-                // Pre-26 fallback — single ultraThinMaterial, very light
-                // tint base. We can't fake refraction.
-                baseContent
-                    .background(tint.opacity(hovering ? 0.22 : 0.13), in: Capsule())
-                    .background(.ultraThinMaterial, in: Capsule())
-                    .overlay(glassEdge)
-                    .shadow(color: .black.opacity(0.20), radius: 6, y: 2)
-            }
-            #else
-            if #available(iOS 26.0, *) {
-                baseContent
-                    .glassEffect(.regular.tint(tint.opacity(0.16)), in: .capsule)
-                    .overlay(glassEdge)
-                    .shadow(color: .black.opacity(0.20), radius: 6, y: 2)
-            } else {
-                baseContent
-                    .background(tint.opacity(0.13), in: Capsule())
-                    .background(.ultraThinMaterial, in: Capsule())
-                    .overlay(glassEdge)
-                    .shadow(color: .black.opacity(0.20), radius: 6, y: 2)
-            }
-            #endif
-        }
-        // Hover affordance for the macOS detail CTAs (Resume/Pause download +
-        // trash) — these glass buttons previously had no hover state at all:
-        // stronger tint + a hair brighter + a touch larger.
-        .brightness(hovering ? 0.06 : 0)
-        .scaleEffect(hovering ? 1.015 : 1.0)
-        .animation(.easeInOut(duration: 0.12), value: hovering)
-        .onHover { hovering = $0 }
     }
 }
 

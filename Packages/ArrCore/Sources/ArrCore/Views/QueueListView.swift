@@ -165,47 +165,61 @@ struct QueueListView: View {
                     // header badge already explains it.
                 } else {
                     ForEach(rows) { entry in
-                        rowView(for: entry)
-                            // Per-section offline: a stale/unreachable arr's rows
-                            // can't be acted on, so block their right-click menu
-                            // (and poster control) even when only THIS arr is down
-                            // — the List-level value only covers the all-arrs case.
-                            .environment(\.queueOffline, viewModel.isFullyOffline || isStale)
-                            .plainQueueRow()
-                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                // Icon-only, Apple-Mail style (no "Delete" text).
-                                // Hidden when fully offline OR when this arr's
-                                // data is stale — the delete can't reach the
-                                // arr, so don't offer the swipe.
-                                if !viewModel.isFullyOffline, !isStale {
-                                    Button(role: .destructive) {
-                                        deleteClosure(for: entry)()
-                                    } label: {
-                                        Image(systemName: "trash")
-                                    }
-                                    .accessibilityLabel(Text("queue.delete.button", bundle: .module))
-                                }
-                            }
-                            // Leading swipe → pause/resume. Only when there's a
-                            // configured download client (arrs can't control the
-                            // download) AND the item is in a downloading/paused
-                            // state, mirroring the row's hover/CTA gating. Also
-                            // suppressed when fully offline or stale.
-                            .swipeActions(edge: .leading, allowsFullSwipe: true) {
-                                let rep = repItem(for: entry)
-                                if !viewModel.isFullyOffline, !isStale, canControl(rep), rep.status == .downloading || rep.status == .paused {
-                                    Button {
-                                        pauseResumeClosure(for: entry)()
-                                    } label: {
-                                        Image(systemName: rep.isPaused ? "play.fill" : "pause.fill")
-                                    }
-                                    .tint(rep.isPaused ? .green : .orange)
-                                    .accessibilityLabel(Text(rep.isPaused ? "Resume" : "Pause", bundle: .module))
-                                }
-                            }
+                        swipeableRow(for: entry, isStale: isStale)
                     }
                 }
             }
+    }
+
+    /// A queue row plus its swipe actions. Native `.swipeActions` are **iOS-only**:
+    /// on macOS the same SwiftUI `List` + swipe-to-delete throws an AppKit
+    /// `NSTableView` layout exception when the deleted row's batch update comes
+    /// out inconsistent (confirmed from a crash report — `_NSViewLayout` →
+    /// `_crashOnException`). macOS already deletes via the row's hover action, so
+    /// the swipe there was both crashy and redundant. `allowsFullSwipe: false` so
+    /// a full swipe *reveals* the button instead of auto-committing a destructive
+    /// delete (also dodges the same auto-commit race on iOS).
+    @ViewBuilder
+    private func swipeableRow(for entry: QueueRowEntry, isStale: Bool) -> some View {
+        let row = rowView(for: entry)
+            // Per-section offline: a stale/unreachable arr's rows can't be acted
+            // on, so block their right-click menu (and poster control) even when
+            // only THIS arr is down — the List-level value only covers all-arrs.
+            .environment(\.queueOffline, viewModel.isFullyOffline || isStale)
+            .plainQueueRow()
+        #if os(iOS)
+        row
+            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                // Icon-only, Apple-Mail style. Hidden when fully offline OR this
+                // arr's data is stale — the delete can't reach the arr.
+                if !viewModel.isFullyOffline, !isStale {
+                    Button(role: .destructive) {
+                        deleteClosure(for: entry)()
+                    } label: {
+                        Image(systemName: "trash")
+                    }
+                    .accessibilityLabel(Text("queue.delete.button", bundle: .module))
+                }
+            }
+            // Leading swipe → pause/resume: only with a configured download
+            // client AND a downloading/paused item, mirroring the row's hover/CTA
+            // gating; suppressed when fully offline or stale.
+            .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                let rep = repItem(for: entry)
+                if !viewModel.isFullyOffline, !isStale, canControl(rep), rep.status == .downloading || rep.status == .paused {
+                    Button {
+                        pauseResumeClosure(for: entry)()
+                    } label: {
+                        Image(systemName: rep.isPaused ? "play.fill" : "pause.fill")
+                    }
+                    .tint(rep.isPaused ? .green : .orange)
+                    .accessibilityLabel(Text(rep.isPaused ? "Resume" : "Pause", bundle: .module))
+                }
+            }
+        #else
+        // macOS: no native swipe — delete / pause live in the row's hover actions.
+        row
+        #endif
     }
 
     @ViewBuilder
@@ -302,9 +316,9 @@ struct QueueListView: View {
         let collapsed = configStore.isCollapsed(ConfigStore.tonightOrderKey)
         QueueHeaderRow(
             icon: AnyView(
-                Image(systemName: "moon.stars.fill")
+                Image(systemName: "calendar")
                     .scaledFont(size: 11)
-                    .foregroundStyle(.purple)
+                    .foregroundStyle(.secondary)
             ),
             title: String(localized: "queue.nextWeek.button", bundle: .module),
             collapsed: collapsed,
@@ -449,6 +463,9 @@ struct QueueListView: View {
         }
     }
 
+    // Swipe-only helpers — only the iOS row renders swipe actions; macOS uses
+    // hover actions, so these would otherwise warn as unused there.
+    #if os(iOS)
     /// Representative item for an entry (single → itself, group → rep). Used
     /// to gate the leading pause/resume swipe.
     private func repItem(for entry: QueueRowEntry) -> QueueItem {
@@ -478,6 +495,7 @@ struct QueueListView: View {
             }
         }
     }
+    #endif
 
     // MARK: - Data
 

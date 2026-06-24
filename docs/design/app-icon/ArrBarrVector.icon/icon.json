@@ -1,0 +1,50 @@
+{
+  "fill" : {
+    "solid" : "display-p3:0.96841,0.88675,0.77348,1.00000"
+  },
+  "groups" : [
+    {
+      "layers" : [
+        {
+          "blend-mode-specializations" : [
+            {
+              "value" : "multiply"
+            },
+            {
+              "appearance" : "tinted",
+              "value" : "normal"
+            }
+          ],
+          "glass" : false,
+          "image-name" : "pirate.svg",
+          "name" : "Pirate"
+        },
+        {
+          "glass" : true,
+          "image-name" : "bucket.svg",
+          "name" : "Bucket"
+        },
+        {
+          "glass" : false,
+          "hidden" : false,
+          "image-name" : "popcorn.svg",
+          "name" : "Popcorn"
+        }
+      ],
+      "name" : "IconLayers",
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.5
+      },
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.5
+      }
+    }
+  ],
+  "supported-platforms" : {
+    "squares" : [
+      "macOS"
+    ]
+  }
+}

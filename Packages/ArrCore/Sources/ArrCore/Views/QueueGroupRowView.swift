@@ -207,13 +207,6 @@ public struct QueueGroupRowView: View {
         return "\(String(localized: "queue.seasonPack.button", bundle: .module)) · \(episodeCountText)"
     }
 
-    /// Used in the alert; same logic as `seasonLabel` but always returns
-    /// something readable.
-    private var headerLabel: String {
-        if let s = seasonLabel { return "\(rep.title) — \(s)" }
-        return rep.title
-    }
-
     private var episodeCountText: String {
         String.localizedStringWithFormat(NSLocalizedString("unit.episodes", bundle: .module, comment: ""), group.memberCount)
     }

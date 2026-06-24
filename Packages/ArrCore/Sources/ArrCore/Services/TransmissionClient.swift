@@ -11,7 +11,7 @@ public enum TransmissionError: LocalizedError {
     }
 }
 
-public actor TransmissionClient {
+public actor TransmissionClient: DownloadProgressSource {
     enum Action { case pause, resume, delete }
 
     private let config: ServiceConfig
@@ -55,6 +55,33 @@ public actor TransmissionClient {
             }
         }
         return "OK"
+    }
+
+    /// Batch live progress via `torrent-get` (kebab method — works on all
+    /// shipping Transmission versions; 4.1.0's snake-case `torrent_get` stays
+    /// backward-compatible). Fields are read in BOTH casings (`percentDone` for
+    /// 2.x–4.0.x, `percent_done` for 4.1.0+) so it survives either server.
+    /// Keyed by lowercased hash to match the arr's download id.
+    public func fetchProgress() async throws -> [String: DownloadProgress] {
+        guard config.isConfigured else { return [:] }
+        let url = try http.url(base: config.baseURL, path: "/transmission/rpc")
+        let bodyDict: [String: Any] = [
+            "method": "torrent-get",
+            "arguments": ["fields": ["hashString", "percentDone", "rateDownload"]],
+        ]
+        let body = try JSONSerialization.data(withJSONObject: bodyDict)
+        let data = try await rpcRequest(url: url, body: body)
+        guard let resp = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let args = resp["arguments"] as? [String: Any],
+              let torrents = args["torrents"] as? [[String: Any]] else { return [:] }
+        var map: [String: DownloadProgress] = [:]
+        for t in torrents {
+            guard let hash = (t["hashString"] ?? t["hash_string"]) as? String else { continue }
+            let pct = ((t["percentDone"] ?? t["percent_done"]) as? Double) ?? 0
+            let rate = ((t["rateDownload"] ?? t["rate_download"]) as? Int).map(Int64.init)
+            map[hash.lowercased()] = DownloadProgress(progress: pct, downloadSpeed: rate)
+        }
+        return map
     }
 
     private func rpcRequest(url: URL, body: Data, retried: Bool = false) async throws -> Data {

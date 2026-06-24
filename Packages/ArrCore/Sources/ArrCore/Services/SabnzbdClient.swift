@@ -14,7 +14,7 @@ private struct SabActionResponse: Decodable {
     let error: String?
 }
 
-public actor SabnzbdClient {
+public actor SabnzbdClient: DownloadProgressSource {
     enum Action: String { case pause, resume, delete }
 
     private let config: ServiceConfig
@@ -49,6 +49,18 @@ public actor SabnzbdClient {
     func contains(nzoId: String) async throws -> Bool {
         let slots = try await fetchSlots()
         return slots.contains { $0.nzo_id == nzoId }
+    }
+
+    /// Batch live progress for every queued nzb, keyed by lowercased nzo id (to
+    /// match `QueueItem.downloadId` the same case-insensitive way as torrents).
+    /// `percentage` is SAB's own "%" string; SAB exposes no reliable per-slot
+    /// speed, so `downloadSpeed` stays nil.
+    public func fetchProgress() async throws -> [String: DownloadProgress] {
+        let slots = try await fetchSlots()
+        return Dictionary(
+            slots.map { ($0.nzo_id.lowercased(), DownloadProgress(progress: (Double($0.percentage) ?? 0) / 100)) },
+            uniquingKeysWith: { _, new in new }
+        )
     }
 
 func testConnection() async throws -> String {

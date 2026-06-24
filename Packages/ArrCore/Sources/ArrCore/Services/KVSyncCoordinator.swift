@@ -20,7 +20,6 @@ public final class KVSyncCoordinator: ObservableObject {
     private let kv: KeyValueSyncing
     private let reload: () -> Void
     private var isApplyingRemote = false
-    private let logger = Logger(category: "KVSync")
     private var observers: [NSObjectProtocol] = []
 
     /// Timestamp of the last successful push or pull. `nil` until first sync.

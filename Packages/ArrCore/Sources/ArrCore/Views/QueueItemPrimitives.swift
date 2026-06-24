@@ -587,12 +587,6 @@ public struct MediaTooltipChrome<Content: View>: View {
         return title
     }
 
-    /// Show the divider only when the content slot has something to
-    /// separate from the header. EmptyView in the slot → no divider
-    /// (avoids floating horizontal line under a bare title).
-    private var shouldShowDivider: Bool {
-        Content.self != EmptyView.self
-    }
 }
 
 // MARK: -

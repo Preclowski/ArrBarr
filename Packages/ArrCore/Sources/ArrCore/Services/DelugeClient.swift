@@ -11,7 +11,7 @@ public enum DelugeError: LocalizedError {
     }
 }
 
-public actor DelugeClient {
+public actor DelugeClient: DownloadProgressSource {
     enum Action { case pause, resume, delete }
 
     private let config: ServiceConfig
@@ -70,6 +70,28 @@ public actor DelugeClient {
             return "Deluge \(version)"
         }
         return "OK"
+    }
+
+    /// Batch live progress via `core.get_torrents_status({}, [keys])`, which
+    /// returns `{ infohash: { progress, download_payload_rate } }`. Deluge's
+    /// `progress` is a 0…100 float, so it's scaled to 0…1. Keyed by lowercased
+    /// hash to match the arr's download id.
+    public func fetchProgress() async throws -> [String: DownloadProgress] {
+        guard config.isConfigured else { return [:] }
+        try await ensureLoggedIn()
+        let resp = try await rpc(
+            method: "core.get_torrents_status",
+            params: [[String: Any](), ["progress", "download_payload_rate"]]
+        )
+        guard let result = resp["result"] as? [String: Any] else { return [:] }
+        var map: [String: DownloadProgress] = [:]
+        for (hash, value) in result {
+            guard let status = value as? [String: Any] else { continue }
+            let progress = ((status["progress"] as? Double) ?? 0) / 100
+            let rate = (status["download_payload_rate"] as? Int).map(Int64.init)
+            map[hash.lowercased()] = DownloadProgress(progress: progress, downloadSpeed: rate)
+        }
+        return map
     }
 
     private func ensureLoggedIn() async throws {

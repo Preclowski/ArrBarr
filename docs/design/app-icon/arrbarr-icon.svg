@@ -1,0 +1,183 @@
+<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <!--
+    ArrBarr app icon — simplified flat redraw of the original popcorn-bucket PNG.
+    Layers are independent groups so they can be split into separate SVGs for
+    Icon Composer (liquid glass per layer):
+      layer-background : solid fill (Icon Composer provides this itself — drop it there)
+      layer-bucket     : striped bucket + gold band
+      layer-pirate     : skull & crossbones emblem
+      layer-popcorn    : popcorn heap + spilled kernels
+    Kernel tones: A #F5E5B8, B #EDD89F, C #FAEFD4, D #E9CE8E
+  -->
+
+  <g id="layer-background">
+    <rect width="1024" height="1024" fill="#F7E2C5"/>
+  </g>
+
+  <g id="layer-bucket">
+    <!-- bucket body (cream), flat bottom -->
+    <path d="M232,430 L792,430 L694,860 L330,860 Z" fill="#F1E5CC"/>
+    <!-- red stripes (tapered) -->
+    <g fill="#C2392E">
+      <path d="M232,430 L294,430 L353,760 L307,760 Z"/>
+      <path d="M356,430 L419,430 L444,760 L398,760 Z"/>
+      <path d="M481,430 L543,430 L535,760 L489,760 Z"/>
+      <path d="M605,430 L668,430 L626,760 L580,760 Z"/>
+      <path d="M730,430 L792,430 L717,760 L671,760 Z"/>
+    </g>
+    <!-- rim strip -->
+    <path d="M232,430 L792,430 L788,448 L236,448 Z" fill="#E7D6B2"/>
+    <!-- gold band -->
+    <path d="M307,760 L717,760 L694,860 L330,860 Z" fill="#C9A24B"/>
+    <!-- gold band: central peak (medallion) -->
+    <path d="M438,761 Q475,722 512,718 Q549,722 586,761 Z" fill="#D4AF5C"/>
+    <!-- band top edge (dark gold) -->
+    <path d="M307,760 L438,760 L448,773 L310,773 Z" fill="#A8842E"/>
+    <path d="M586,760 L717,760 L714,773 L576,773 Z" fill="#A8842E"/>
+    <!-- band highlight -->
+    <path d="M311,777 L713,777 L710,791 L314,791 Z" fill="#E0C067"/>
+    <!-- band bottom shading -->
+    <path d="M327,846 L697,846 L694,860 L330,860 Z" fill="#A8842E"/>
+  </g>
+
+  <g id="layer-pirate" fill="#3A2A14">
+    <!-- crossbones -->
+    <g transform="translate(512,784)">
+      <g transform="rotate(26)">
+        <rect x="-96" y="-8" width="192" height="16" rx="8"/>
+        <circle cx="-91" cy="-8" r="10"/><circle cx="-91" cy="8" r="10"/>
+        <circle cx="91" cy="-8" r="10"/><circle cx="91" cy="8" r="10"/>
+      </g>
+      <g transform="rotate(-26)">
+        <rect x="-96" y="-8" width="192" height="16" rx="8"/>
+        <circle cx="-91" cy="-8" r="10"/><circle cx="-91" cy="8" r="10"/>
+        <circle cx="91" cy="-8" r="10"/><circle cx="91" cy="8" r="10"/>
+      </g>
+    </g>
+    <!-- skull (eyes + nose cut out via evenodd) -->
+    <path fill-rule="evenodd" transform="translate(512,780) scale(1.12) translate(-512,-780)" d="M512,736
+      c-26,0 -39,17 -39,35 c0,14 8,24 16,29 l0,11 c0,8 46,8 46,0 l0,-11
+      c8,-5 16,-15 16,-29 c0,-18 -13,-35 -39,-35 z
+      M498,770 a7.5,7.5 0 1 0 0.1,0 z
+      M526,770 a7.5,7.5 0 1 0 0.1,0 z
+      M512,783 l-6,11 h12 z"/>
+  </g>
+
+  <g id="layer-popcorn">
+    <!-- individual kernels (back rows first), 4 alternating cream tones -->
+    <!-- peak row -->
+    <g fill="#F5E5B8">
+      <circle cx="470" cy="212" r="40"/><circle cx="448" cy="192" r="22"/><circle cx="490" cy="190" r="20"/><circle cx="470" cy="180" r="18"/>
+    </g>
+    <g fill="#EDD89F">
+      <circle cx="548" cy="218" r="38"/><circle cx="527" cy="199" r="21"/><circle cx="567" cy="197" r="19"/><circle cx="548" cy="188" r="17"/>
+    </g>
+    <!-- second row -->
+    <g fill="#FAEFD4">
+      <circle cx="388" cy="266" r="42"/><circle cx="365" cy="245" r="23"/><circle cx="409" cy="243" r="21"/><circle cx="388" cy="232" r="19"/>
+    </g>
+    <g fill="#EDD89F">
+      <circle cx="464" cy="255" r="40"/><circle cx="442" cy="235" r="22"/><circle cx="484" cy="233" r="20"/><circle cx="464" cy="223" r="18"/>
+    </g>
+    <g fill="#E9CE8E">
+      <circle cx="542" cy="252" r="42"/><circle cx="519" cy="231" r="23"/><circle cx="563" cy="229" r="21"/><circle cx="542" cy="218" r="19"/>
+    </g>
+    <g fill="#F5E5B8">
+      <circle cx="620" cy="266" r="40"/><circle cx="598" cy="246" r="22"/><circle cx="640" cy="244" r="20"/><circle cx="620" cy="234" r="18"/>
+    </g>
+    <!-- middle row -->
+    <g fill="#EDD89F">
+      <circle cx="298" cy="342" r="42"/><circle cx="275" cy="321" r="23"/><circle cx="319" cy="319" r="21"/><circle cx="298" cy="308" r="19"/>
+    </g>
+    <g fill="#E9CE8E">
+      <circle cx="372" cy="326" r="44"/><circle cx="348" cy="304" r="24"/><circle cx="394" cy="302" r="22"/><circle cx="372" cy="291" r="20"/>
+    </g>
+    <g fill="#F5E5B8">
+      <circle cx="450" cy="318" r="42"/><circle cx="427" cy="297" r="23"/><circle cx="471" cy="295" r="21"/><circle cx="450" cy="284" r="19"/>
+    </g>
+    <g fill="#FAEFD4">
+      <circle cx="530" cy="320" r="44"/><circle cx="506" cy="298" r="24"/><circle cx="552" cy="296" r="22"/><circle cx="530" cy="285" r="20"/>
+    </g>
+    <g fill="#EDD89F">
+      <circle cx="608" cy="326" r="42"/><circle cx="585" cy="305" r="23"/><circle cx="629" cy="303" r="21"/><circle cx="608" cy="292" r="19"/>
+    </g>
+    <g fill="#E9CE8E">
+      <circle cx="684" cy="342" r="40"/><circle cx="662" cy="322" r="22"/><circle cx="704" cy="320" r="20"/><circle cx="684" cy="310" r="18"/>
+    </g>
+    <g fill="#F5E5B8">
+      <circle cx="737" cy="372" r="34"/><circle cx="718" cy="355" r="19"/><circle cx="754" cy="353" r="17"/><circle cx="737" cy="345" r="15"/>
+    </g>
+    <!-- front row (overlaps rim) -->
+    <g fill="#E9CE8E">
+      <circle cx="262" cy="412" r="40"/><circle cx="240" cy="392" r="22"/><circle cx="282" cy="390" r="20"/><circle cx="262" cy="380" r="18"/>
+    </g>
+    <g fill="#F5E5B8">
+      <circle cx="334" cy="406" r="44"/><circle cx="310" cy="384" r="24"/><circle cx="356" cy="382" r="22"/><circle cx="334" cy="371" r="20"/>
+    </g>
+    <g fill="#FAEFD4">
+      <circle cx="410" cy="400" r="42"/><circle cx="387" cy="379" r="23"/><circle cx="431" cy="377" r="21"/><circle cx="410" cy="366" r="19"/>
+    </g>
+    <g fill="#EDD89F">
+      <circle cx="486" cy="404" r="44"/><circle cx="462" cy="382" r="24"/><circle cx="508" cy="380" r="22"/><circle cx="486" cy="369" r="20"/>
+    </g>
+    <g fill="#E9CE8E">
+      <circle cx="560" cy="400" r="42"/><circle cx="537" cy="379" r="23"/><circle cx="581" cy="377" r="21"/><circle cx="560" cy="366" r="19"/>
+    </g>
+    <g fill="#F5E5B8">
+      <circle cx="634" cy="404" r="44"/><circle cx="610" cy="382" r="24"/><circle cx="656" cy="380" r="22"/><circle cx="634" cy="369" r="20"/>
+    </g>
+    <g fill="#FAEFD4">
+      <circle cx="705" cy="408" r="40"/><circle cx="683" cy="388" r="22"/><circle cx="725" cy="386" r="20"/><circle cx="705" cy="376" r="18"/>
+    </g>
+    <g fill="#EDD89F">
+      <circle cx="757" cy="420" r="34"/><circle cx="738" cy="403" r="19"/><circle cx="774" cy="401" r="17"/><circle cx="757" cy="393" r="15"/>
+    </g>
+    <!-- per-kernel highlights -->
+    <g fill="#FCF5E1">
+      <circle cx="460" cy="196" r="13"/><circle cx="538" cy="203" r="12"/>
+      <circle cx="377" cy="249" r="13"/><circle cx="454" cy="239" r="13"/>
+      <circle cx="531" cy="235" r="13"/><circle cx="610" cy="250" r="13"/>
+      <circle cx="287" cy="325" r="13"/><circle cx="361" cy="308" r="14"/>
+      <circle cx="439" cy="301" r="13"/><circle cx="519" cy="302" r="14"/>
+      <circle cx="597" cy="309" r="13"/><circle cx="674" cy="326" r="13"/>
+      <circle cx="728" cy="358" r="11"/><circle cx="252" cy="396" r="13"/>
+      <circle cx="323" cy="388" r="14"/><circle cx="399" cy="383" r="13"/>
+      <circle cx="475" cy="386" r="14"/><circle cx="549" cy="383" r="13"/>
+      <circle cx="623" cy="386" r="14"/><circle cx="695" cy="392" r="13"/>
+      <circle cx="748" cy="406" r="11"/>
+    </g>
+    <!-- butter dots in crevices -->
+    <g fill="#E0B560">
+      <circle cx="430" cy="290" r="10"/><circle cx="505" cy="288" r="10"/>
+      <circle cx="580" cy="295" r="10"/><circle cx="335" cy="355" r="11"/>
+      <circle cx="412" cy="345" r="11"/><circle cx="490" cy="348" r="11"/>
+      <circle cx="568" cy="345" r="11"/><circle cx="645" cy="355" r="10"/>
+      <circle cx="298" cy="420" r="11"/><circle cx="372" cy="418" r="11"/>
+      <circle cx="448" cy="415" r="11"/><circle cx="523" cy="418" r="11"/>
+      <circle cx="597" cy="415" r="11"/><circle cx="670" cy="420" r="10"/>
+      <circle cx="733" cy="418" r="9"/><circle cx="509" cy="235" r="9"/>
+    </g>
+    <!-- deep accents -->
+    <g fill="#C9994E">
+      <circle cx="468" cy="300" r="6"/><circle cx="545" cy="300" r="6"/>
+      <circle cx="390" cy="360" r="6"/><circle cx="620" cy="360" r="6"/>
+      <circle cx="508" cy="360" r="6"/>
+    </g>
+    <!-- spilled kernels (bottom right) -->
+    <g fill="#F5E5B8">
+      <circle cx="785" cy="838" r="26"/><circle cx="771" cy="825" r="14"/><circle cx="798" cy="824" r="13"/><circle cx="785" cy="817" r="11"/>
+    </g>
+    <g fill="#FAEFD4">
+      <circle cx="838" cy="806" r="22"/><circle cx="826" cy="795" r="12"/><circle cx="849" cy="794" r="11"/>
+    </g>
+    <g fill="#EDD89F">
+      <circle cx="854" cy="860" r="24"/><circle cx="841" cy="848" r="13"/><circle cx="865" cy="847" r="12"/>
+    </g>
+    <g fill="#FCF5E1">
+      <circle cx="778" cy="828" r="9"/><circle cx="832" cy="798" r="8"/><circle cx="847" cy="851" r="8"/>
+    </g>
+    <g fill="#E0B560">
+      <circle cx="794" cy="848" r="7"/><circle cx="846" cy="814" r="6"/><circle cx="862" cy="869" r="7"/>
+    </g>
+  </g>
+</svg>

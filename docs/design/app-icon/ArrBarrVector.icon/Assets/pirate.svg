@@ -1,0 +1,24 @@
+<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+<g id="layer-pirate" fill="#3A2A14">
+    <!-- crossbones -->
+    <g transform="translate(512,784)">
+      <g transform="rotate(26)">
+        <rect x="-96" y="-8" width="192" height="16" rx="8"/>
+        <circle cx="-91" cy="-8" r="10"/><circle cx="-91" cy="8" r="10"/>
+        <circle cx="91" cy="-8" r="10"/><circle cx="91" cy="8" r="10"/>
+      </g>
+      <g transform="rotate(-26)">
+        <rect x="-96" y="-8" width="192" height="16" rx="8"/>
+        <circle cx="-91" cy="-8" r="10"/><circle cx="-91" cy="8" r="10"/>
+        <circle cx="91" cy="-8" r="10"/><circle cx="91" cy="8" r="10"/>
+      </g>
+    </g>
+    <!-- skull (eyes + nose cut out via evenodd) -->
+    <path fill-rule="evenodd" transform="translate(512,780) scale(1.12) translate(-512,-780)" d="M512,736
+      c-26,0 -39,17 -39,35 c0,14 8,24 16,29 l0,11 c0,8 46,8 46,0 l0,-11
+      c8,-5 16,-15 16,-29 c0,-18 -13,-35 -39,-35 z
+      M498,770 a7.5,7.5 0 1 0 0.1,0 z
+      M526,770 a7.5,7.5 0 1 0 0.1,0 z
+      M512,783 l-6,11 h12 z"/>
+  </g>
+</svg>
