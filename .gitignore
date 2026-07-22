@@ -1,16 +1,20 @@
 # Xcode
 xcuserdata/
 DerivedData/
-build/
-build-ios/
-build-ios-sim/
-build-appstore/
-*.xcworkspace/
+# Every derived-data root we point -derivedDataPath at (build, build-ios,
+# build-ios-sim, build-appstore, build-*-review, …). Nothing tracked starts
+# with "build".
+build*/
 
 # Swift Package Manager
 .swiftpm/
 .build/
-Package.resolved
+# Package.resolved is NOT ignored — all three of them (the two package
+# manifests plus the one Xcode keeps under project.xcworkspace) are the pinned
+# dependency graph. A release DMG has to be reproducible from its tag, which it
+# cannot be if CI re-resolves the graph on every run. Note that
+# project.xcworkspace is therefore only partly ignored: xcuserdata/ above still
+# strips the per-user state inside it.
 
 # macOS
 .DS_Store

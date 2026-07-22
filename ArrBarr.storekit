@@ -5,16 +5,16 @@
     {
       "displayPrice" : "9.99",
       "familyShareable" : false,
-      "internalID" : "ARRBARR_PRO",
+      "internalID" : "ARRBARR_CONTROL",
       "localizations" : [
         {
           "description" : "Unlock all ArrBarr features forever.",
-          "displayName" : "ArrBarr Pro",
+          "displayName" : "ArrBarr Control",
           "locale" : "en_US"
         }
       ],
       "productID" : "app.arrbarr.pro",
-      "referenceName" : "ArrBarr Pro",
+      "referenceName" : "ArrBarr Control",
       "type" : "NonConsumable"
     }
   ],

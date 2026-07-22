@@ -1,0 +1,52 @@
+name: Feature request
+description: Suggest something ArrBarr should do.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ArrBarr is a companion to the *arr web UIs, not a replacement for them.
+        The best requests are things you'd want to do *at a glance* from the
+        menu bar, or on your phone.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do?
+      description: Describe the situation, not the solution — it's often solvable in a way you hadn't considered.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would you like ArrBarr to do?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which part of the app?
+      options:
+        - Queue
+        - Upcoming / calendar
+        - History
+        - Search and add
+        - Detail views
+        - AI chat
+        - Quiz / discovery
+        - MCP server
+        - Settings
+        - iOS app
+        - iOS widgets
+        - Siri / Shortcuts
+        - Something else
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Anything you've tried instead?
+      description: Workarounds, other apps, or the arr web UI.

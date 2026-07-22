@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/Preclowski/ArrBarr/security/advisories/new
+    about: Report privately. Please do not open a public issue — ArrBarr holds *arr API keys and can bind a local HTTP port.
+  - name: Question or idea
+    url: https://github.com/Preclowski/ArrBarr/discussions
+    about: For setup help and open-ended questions, start a discussion instead.
+  - name: Problem with Sonarr, Radarr, Lidarr or a download client
+    url: https://wiki.servarr.com
+    about: If the *arr web UI shows the same behaviour, it isn't an ArrBarr bug — report it upstream.

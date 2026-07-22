@@ -8,17 +8,142 @@ on:
   release:
     types: [published]
 
+# Read-only by default. Only the `release` job — which uploads the DMG — asks
+# for `contents: write`, so a pull request from a fork can never get a token
+# that can write to this repository.
 permissions:
-  contents: write
+  contents: read
+
+# One run per ref. PR runs are superseded by newer pushes; release runs are
+# never cancelled, because a half-cancelled release leaves a tag with no DMG.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  # Pinned, not discovered. `ls -d /Applications/Xcode_26*.app | tail -1` used to
+  # pick whatever the runner image happened to ship, so a GitHub image refresh
+  # silently changed the compiler that built a signed release. Bump this
+  # deliberately, together with the Xcode the project is developed against.
+  XCODE_VERSION: "26.4.1"
 
 jobs:
+  # ---------------------------------------------------------------------------
+  # Tests. The `ArrBarr` scheme has an empty <Testables> section, so
+  # `xcodebuild -scheme ArrBarr test` fails with "not currently configured for
+  # the test action" no matter what the code does. The real suites live in the
+  # two SwiftPM packages and run far faster there.
+  # ---------------------------------------------------------------------------
+  test:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: |
+          set -euo pipefail
+          APP="/Applications/Xcode_${XCODE_VERSION}.app"
+          if [ ! -d "$APP" ]; then
+            echo "::error::Xcode ${XCODE_VERSION} is not on this runner image. Installed: $(ls -d /Applications/Xcode*.app | tr '\n' ' ')"
+            exit 1
+          fi
+          sudo xcode-select -s "$APP"
+          xcodebuild -version
+
+      - name: Cache SwiftPM dependencies
+        uses: actions/cache@v4
+        with:
+          # `repositories` must be cached alongside `checkouts`: a checkout is a
+          # git clone whose alternates point into the repositories cache, so a
+          # checkout restored without it is an unreadable repo.
+          path: |
+            Packages/ArrCore/.build/checkouts
+            Packages/ArrCore/.build/repositories
+            Packages/ArrMCPServer/.build/checkouts
+            Packages/ArrMCPServer/.build/repositories
+          key: spm-test-${{ runner.os }}-${{ env.XCODE_VERSION }}-${{ hashFiles('Packages/ArrCore/Package.resolved', 'Packages/ArrMCPServer/Package.resolved') }}
+          restore-keys: spm-test-${{ runner.os }}-${{ env.XCODE_VERSION }}-
+
+      # Guards the property that makes a release reproducible: the tracked
+      # Package.resolved files must be complete, current, and free of floating
+      # refs. A branch pin here means the signed DMG is built against whatever
+      # landed upstream that morning, which is how swift-markdown used to be
+      # wired up.
+      - name: Verify dependency pins
+        run: |
+          set -euo pipefail
+          RESOLVED=(
+            ArrBarr.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
+            Packages/ArrCore/Package.resolved
+            Packages/ArrMCPServer/Package.resolved
+          )
+          for f in "${RESOLVED[@]}"; do
+            test -f "$f" || { echo "::error::$f is missing — it must be committed, not git-ignored."; exit 1; }
+          done
+
+          # Compare pin sets rather than whole files: `originHash` is SwiftPM
+          # bookkeeping and can churn between toolchains, which would make this
+          # check flaky for no benefit.
+          pins() {
+            ruby -rjson -e '
+              JSON.parse(File.read(ARGV[0]))["pins"].map { |p|
+                s = p["state"]
+                "#{p["identity"]} #{s["version"] || "branch:#{s["branch"]}"} #{s["revision"]}"
+              }.sort.each { |l| puts l }
+            ' "$1"
+          }
+
+          for f in "${RESOLVED[@]}"; do
+            if pins "$f" | grep -q "branch:"; then
+              echo "::error::$f pins a branch. Pin a released version instead:"
+              pins "$f" | grep "branch:"
+              exit 1
+            fi
+          done
+
+          for pkg in Packages/ArrCore Packages/ArrMCPServer; do
+            before="$(pins "$pkg/Package.resolved")"
+            swift package resolve --package-path "$pkg"
+            if [ "$before" != "$(pins "$pkg/Package.resolved")" ]; then
+              echo "::error::$pkg/Package.resolved is stale. Run 'swift package resolve --package-path $pkg' and commit the result."
+              diff <(echo "$before") <(pins "$pkg/Package.resolved") || true
+              exit 1
+            fi
+          done
+
+      - name: Test ArrCore
+        run: swift test --package-path Packages/ArrCore
+
+      - name: Test ArrMCPServer
+        run: swift test --package-path Packages/ArrMCPServer
+
+  # ---------------------------------------------------------------------------
+  # Release build. Produces the DMG on release events and hands it to the
+  # `release` job as a workflow artifact (a single file, so no symlink or
+  # permission-bit round-trip can damage the signed .app inside it).
+  # ---------------------------------------------------------------------------
   build:
     runs-on: macos-26
     steps:
       - uses: actions/checkout@v4
 
       - name: Select Xcode
-        run: sudo xcode-select -s "$(ls -d /Applications/Xcode_26*.app | sort -V | tail -1)"
+        run: |
+          set -euo pipefail
+          APP="/Applications/Xcode_${XCODE_VERSION}.app"
+          if [ ! -d "$APP" ]; then
+            echo "::error::Xcode ${XCODE_VERSION} is not on this runner image. Installed: $(ls -d /Applications/Xcode*.app | tr '\n' ' ')"
+            exit 1
+          fi
+          sudo xcode-select -s "$APP"
+          xcodebuild -version
+
+      - name: Cache SwiftPM dependencies
+        uses: actions/cache@v4
+        with:
+          path: build/SourcePackages
+          key: spm-xcode-${{ runner.os }}-${{ env.XCODE_VERSION }}-${{ hashFiles('ArrBarr.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+          restore-keys: spm-xcode-${{ runner.os }}-${{ env.XCODE_VERSION }}-
 
       - name: Build
         env:
@@ -29,9 +154,19 @@ jobs:
           # Until both secrets are set, the build falls back to ad-hoc signing.
           MACOS_CERT_P12: ${{ secrets.MACOS_CERT_P12 }}
           MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
+          # CFBundleVersion. App Store Connect permanently rejects a re-upload of
+          # a build number already used for a marketing version, so it must move
+          # on every build; the run number is monotonic and never reused. The
+          # project default (1) is what a local `xcodebuild` / Xcode build gets.
+          ARRBARR_BUILD_NUMBER: ${{ github.run_number }}
+          # Signing team, empty in the project so forks build ad-hoc instead of
+          # inheriting an identity they cannot use. Set the ARRBARR_TEAM_ID repo
+          # variable to sign Release-AppStore builds with a real team.
+          ARRBARR_DEVELOPMENT_TEAM: ${{ vars.ARRBARR_TEAM_ID }}
         run: |
+          set -euo pipefail
           SIGN_IDENTITY="-"
-          if [ -n "$MACOS_CERT_P12" ]; then
+          if [ -n "${MACOS_CERT_P12:-}" ]; then
             KEYCHAIN="$RUNNER_TEMP/build.keychain"
             KEYCHAIN_PW="$(uuidgen)"
             security create-keychain -p "$KEYCHAIN_PW" "$KEYCHAIN"
@@ -52,50 +187,147 @@ jobs:
             -configuration Release \
             -derivedDataPath build \
             CODE_SIGN_IDENTITY="$SIGN_IDENTITY" \
+            ARRBARR_BUILD_NUMBER="$ARRBARR_BUILD_NUMBER" \
+            ARRBARR_DEVELOPMENT_TEAM="$ARRBARR_DEVELOPMENT_TEAM" \
             build
 
-      - name: Test
+      # The Homebrew cask's `version` comes from the git tag, while the app's
+      # CFBundleShortVersionString comes from MARKETING_VERSION in the pbxproj.
+      # Homebrew compares the two to decide whether an install is outdated, so a
+      # mismatch ships a cask that either never upgrades or upgrades forever.
+      # Fail here, before anything is published.
+      - name: Verify tag matches MARKETING_VERSION
+        if: github.event_name == 'release'
         run: |
-          xcodebuild -project ArrBarr.xcodeproj \
-            -scheme ArrBarr \
-            -configuration Debug \
-            -derivedDataPath build \
-            test
+          set -euo pipefail
+          TAG="${{ github.event.release.tag_name }}"
+          case "$TAG" in
+            v[0-9]*.[0-9]*.[0-9]*) ;;
+            *) echo "::error::Release tag '$TAG' is not of the form vMAJOR.MINOR.PATCH."; exit 1 ;;
+          esac
+          EXPECTED="${TAG#v}"
+          PLIST="build/Build/Products/Release/ArrBarr.app/Contents/Info.plist"
+          SHORT="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$PLIST")"
+          BUILD="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$PLIST")"
+          echo "tag=$TAG  CFBundleShortVersionString=$SHORT  CFBundleVersion=$BUILD"
+          if [ "$SHORT" != "$EXPECTED" ]; then
+            echo "::error::Tag '$TAG' implies version $EXPECTED, but the built app reports $SHORT. Update MARKETING_VERSION in ArrBarr.xcodeproj (all targets) or retag."
+            exit 1
+          fi
+          if [ -z "$BUILD" ] || [ "$BUILD" = "0" ]; then
+            echo "::error::CFBundleVersion is '$BUILD' — ARRBARR_BUILD_NUMBER did not reach the build."
+            exit 1
+          fi
 
       - name: Create DMG
         if: github.event_name == 'release'
         run: |
+          set -euo pipefail
           mkdir -p dmg-staging
           cp -R build/Build/Products/Release/ArrBarr.app dmg-staging/
           ln -s /Applications dmg-staging/Applications
+          # Apache-2.0 §4(d) requires the NOTICE text of swift-nio and swift-log
+          # to travel with the binary, so the attribution file ships in the DMG,
+          # not only in the repository.
+          cp LICENSE dmg-staging/LICENSE.txt
+          cp THIRD-PARTY-LICENSES.md dmg-staging/THIRD-PARTY-LICENSES.md
           hdiutil create -volname "ArrBarr" \
             -srcfolder dmg-staging \
             -ov -format UDZO \
             ArrBarr.dmg
 
-      - name: Upload to Release
+      - name: Upload DMG artifact
         if: github.event_name == 'release'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release upload "${{ github.event.release.tag_name }}" ArrBarr.dmg
+        uses: actions/upload-artifact@v4
+        with:
+          name: ArrBarr-dmg
+          path: ArrBarr.dmg
+          if-no-files-found: error
+          retention-days: 7
 
-      - name: Update Homebrew Cask
-        if: github.event_name == 'release'
+  # ---------------------------------------------------------------------------
+  # Publishing. Runs only for published releases, and only once BOTH the test
+  # and build jobs are green — a genuine test failure therefore blocks the
+  # release outright and cannot be bypassed. Conversely, nothing in here is
+  # gated on anything unrelated, so artifacts can no longer be silently skipped.
+  # ---------------------------------------------------------------------------
+  release:
+    runs-on: macos-26
+    needs: [test, build]
+    if: github.event_name == 'release'
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download DMG artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ArrBarr-dmg
+
+      # Everything that can go wrong with the cask goes wrong HERE, before the
+      # DMG is attached to the release. Previously a missed `sed` made `git
+      # commit` fail after the upload had already happened, leaving a published
+      # release whose Homebrew cask still pointed at the previous version.
+      - name: Prepare Homebrew cask
         env:
           TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
         run: |
+          set -euo pipefail
+          if [ -z "${TAP_TOKEN:-}" ]; then
+            echo "::error::HOMEBREW_TAP_TOKEN is not set — cannot update the cask."
+            exit 1
+          fi
           SHA=$(shasum -a 256 ArrBarr.dmg | awk '{print $1}')
           VERSION="${{ github.event.release.tag_name }}"
           VERSION="${VERSION#v}"
 
-          git clone https://x-access-token:${TAP_TOKEN}@github.com/Preclowski/homebrew-arrbarr.git tap
-          cd tap
+          # Not a shallow clone: the push step may need to rebase onto whatever
+          # landed in the tap meanwhile, and `git pull --rebase` cannot do that
+          # in a depth-1 repository.
+          git clone "https://x-access-token:${TAP_TOKEN}@github.com/Preclowski/homebrew-arrbarr.git" tap
+          CASK="tap/Casks/arrbarr.rb"
+          test -f "$CASK" || { echo "::error::$CASK not found in the tap."; exit 1; }
 
-          sed -i '' "s/version \".*\"/version \"${VERSION}\"/" Casks/arrbarr.rb
-          sed -i '' "s/sha256 \".*\"/sha256 \"${SHA}\"/" Casks/arrbarr.rb
+          # Assert the stanzas exist before rewriting them: a cask that switched
+          # to `sha256 :no_check`, or renamed the file, must fail loudly rather
+          # than be "updated" to an unchanged file.
+          grep -qE '^[[:space:]]*version "' "$CASK" || { echo "::error::No quoted version stanza in $CASK."; exit 1; }
+          grep -qE '^[[:space:]]*sha256 "'  "$CASK" || { echo "::error::No quoted sha256 stanza in $CASK."; exit 1; }
 
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add Casks/arrbarr.rb
-          git commit -m "Update ArrBarr to ${VERSION}"
-          git push
+          # Anchored to the start of the line so a stray quoted string elsewhere
+          # in the cask (livecheck, caveats, zap stanzas) is never clobbered.
+          sed -i '' -E "s|^([[:space:]]*)version \".*\"|\1version \"${VERSION}\"|" "$CASK"
+          sed -i '' -E "s|^([[:space:]]*)sha256 \".*\"|\1sha256 \"${SHA}\"|"      "$CASK"
+
+          grep -qF "version \"${VERSION}\"" "$CASK" || { echo "::error::version substitution did not take."; exit 1; }
+          grep -qF "sha256 \"${SHA}\"" "$CASK"      || { echo "::error::sha256 substitution did not take."; exit 1; }
+          ruby -c "$CASK"
+          if git -C tap diff --quiet; then
+            echo "::error::Cask is unchanged after substitution — is ${VERSION} already released?"
+            exit 1
+          fi
+          git -C tap --no-pager diff
+
+          # Style is advisory: a pre-existing rubocop nit in the tap must not
+          # block a release that is otherwise correct.
+          brew style "$CASK" || echo "::warning::brew style reported issues in the cask (not blocking)."
+
+          git -C tap config user.name "github-actions[bot]"
+          git -C tap config user.email "github-actions[bot]@users.noreply.github.com"
+          git -C tap add Casks/arrbarr.rb
+          git -C tap commit -m "Update ArrBarr to ${VERSION}"
+
+      - name: Upload DMG to release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "${{ github.event.release.tag_name }}" ArrBarr.dmg --clobber
+
+      - name: Push Homebrew cask
+        run: |
+          set -euo pipefail
+          git -C tap push || {
+            echo "Push rejected — rebasing onto the tap's latest main and retrying."
+            git -C tap pull --rebase
+            git -C tap push
+          }

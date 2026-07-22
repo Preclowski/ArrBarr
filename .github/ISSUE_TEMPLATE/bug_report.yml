@@ -1,0 +1,87 @@
+name: Bug report
+description: Something in ArrBarr behaves incorrectly.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please do **not** report security vulnerabilities here — use
+        [private vulnerability reporting](https://github.com/Preclowski/ArrBarr/security/advisories/new)
+        instead. See [SECURITY.md](https://github.com/Preclowski/ArrBarr/blob/main/SECURITY.md).
+
+        Never paste an *arr API key, a download-client password, or an
+        OpenAI/TMDB key into an issue. Redact them from logs and screenshots.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you expect, and what did you get instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open the popover
+        2. …
+        3. …
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Where does it happen?
+      options:
+        - macOS menu-bar app
+        - macOS detached window
+        - iOS app
+        - iOS widget
+        - MCP server
+        - Not sure
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: ArrBarr version
+      description: Settings → About. Include how you installed it (Homebrew, DMG, built from source).
+      placeholder: "1.0.0, Homebrew"
+    validations:
+      required: true
+
+  - type: input
+    id: os-version
+    attributes:
+      label: OS version
+      placeholder: "macOS 26.4 / iOS 18.5"
+    validations:
+      required: true
+
+  - type: textarea
+    id: services
+    attributes:
+      label: Which services are involved?
+      description: Media managers and download clients, with their versions if you know them.
+      placeholder: "Sonarr 4.0.x, qBittorrent 5.0.x"
+
+  - type: checkboxes
+    id: demo-mode
+    attributes:
+      label: Does it also happen in demo mode?
+      description: "Launch with: `open /Applications/ArrBarr.app --args --demo`. This tells us whether it's a UI bug or a service-integration bug."
+      options:
+        - label: Yes, it reproduces in demo mode
+        - label: No, it needs my real services
+        - label: I didn't try
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log output
+      description: "From Console.app, filtered on the ArrBarr subsystem. Redact keys and hostnames first. This is rendered as code, so no backticks needed."
+      render: text
