@@ -7,7 +7,7 @@ All notable changes to ArrBarr are documented here. The format follows
 Releases before 0.10.0 are described on the
 [Releases page](https://github.com/Preclowski/ArrBarr/releases).
 
-## [1.0.0] — unreleased
+## [1.0.0] — 2026-07-22
 
 The 1.0 release is a large one: 370-odd commits since 0.10.0 turned a macOS
 menu-bar queue monitor into a three-target app with an AI chat, a discovery
