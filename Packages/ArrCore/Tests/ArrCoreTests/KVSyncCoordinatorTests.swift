@@ -92,7 +92,12 @@ struct KVSyncCoordinatorSuite {
         let (defaults, name) = makeDefaults()
         defer { UserDefaults.standard.removePersistentDomain(forName: name) }
         let kv = FakeKVStore()
-        let coord = KVSyncCoordinator(defaults: defaults, kv: kv, reload: {})
+        // `lastSyncDate` is only stamped when an iCloud account is present, so
+        // the default `identityCheck` would make this assertion depend on
+        // whether the machine running the tests happens to be signed in — it
+        // passes on a dev Mac and fails on a CI runner. Pin the seam.
+        let coord = KVSyncCoordinator(defaults: defaults, kv: kv, reload: {},
+                                      identityCheck: { true })
 
         #expect(coord.isRunning == false)
         #expect(coord.lastSyncDate == nil)
