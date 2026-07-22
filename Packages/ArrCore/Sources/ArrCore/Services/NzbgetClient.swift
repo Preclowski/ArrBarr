@@ -42,9 +42,31 @@ public actor NzbgetClient: DownloadProgressSource {
         let url = try http.url(base: config.baseURL, path: "/jsonrpc")
         let data = try await http.post(url, headers: authHeaders(contentType: "application/json"), body: jsonData)
 
-        if let resp = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-           let result = resp["result"] as? Bool, !result {
-            throw NzbgetError.actionFailed("Command \(command) returned false")
+        // A body we can't read is a failure, not a silent success — an NZBGet
+        // behind a reverse proxy answers 200 with an HTML login page.
+        guard let resp = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw NzbgetError.actionFailed(
+                String(localized: "The server sent an unreadable response.", bundle: .module)
+            )
+        }
+        // A JSON-RPC-*level* failure comes back as HTTP 200 with an `error`
+        // member and NO `result` key at all, so the `result == false` check
+        // below never fires for it and a rejected command used to report
+        // success. Check `error` first and surface the server's own message —
+        // it's the only text that says what actually went wrong. Matching on
+        // the concrete shapes (struct, non-empty string) also keeps a legal
+        // JSON-RPC `"error": null` on success from tripping this.
+        if let error = resp["error"] as? [String: Any] {
+            let detail = (error["message"] as? String) ?? (error["name"] as? String)
+            throw NzbgetError.actionFailed(detail ?? Self.rejectionMessage(command))
+        }
+        if let error = resp["error"] as? String, !error.isEmpty {
+            throw NzbgetError.actionFailed(error)
+        }
+        // `editqueue` answers a bare `false` when the edit didn't apply, with
+        // no message anywhere — say what that usually means instead.
+        if let result = resp["result"] as? Bool, !result {
+            throw NzbgetError.actionFailed(Self.rejectionMessage(command))
         }
     }
 
@@ -82,6 +104,18 @@ public actor NzbgetClient: DownloadProgressSource {
             map[String(nzbId).lowercased()] = DownloadProgress(progress: progress)
         }
         return map
+    }
+
+    /// Wording for a command NZBGet refused without explaining why: a bare
+    /// `result: false`, or an `error` member carrying no message.
+    private static func rejectionMessage(_ command: String) -> String {
+        String(
+            format: String(
+                localized: "The server rejected %@ — the download may have already finished or been removed.",
+                bundle: .module
+            ),
+            command
+        )
     }
 
     /// Reassemble a 64-bit byte count from NZBGet's split low/high 32-bit fields.

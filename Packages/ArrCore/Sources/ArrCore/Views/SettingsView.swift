@@ -314,6 +314,8 @@ public struct SettingsView: View {
     private var detailTopBar: some View {
         HStack(spacing: 12) {
             HStack(spacing: 0) {
+                // Icon-only nav pair: `.help` is a hover tooltip, so without
+                // explicit labels VoiceOver announces "chevron backward".
                 Button { goBack() } label: {
                     Image(systemName: "chevron.backward")
                         .frame(width: 30, height: 24)
@@ -321,6 +323,7 @@ public struct SettingsView: View {
                 }
                 .disabled(!canGoBack)
                 .help(Text("settings.back.button", bundle: .module))
+                .accessibilityLabel(Text("settings.back.button", bundle: .module))
                 Divider().frame(height: 15)
                 Button { goForward() } label: {
                     Image(systemName: "chevron.forward")
@@ -329,6 +332,7 @@ public struct SettingsView: View {
                 }
                 .disabled(!canGoForward)
                 .help(Text("settings.forward.button", bundle: .module))
+                .accessibilityLabel(Text("settings.forward.button", bundle: .module))
             }
             .buttonStyle(.borderless)
             .font(.body.weight(.medium))
@@ -368,9 +372,11 @@ public struct SettingsView: View {
     /// Apple-style search field living at the top of the sidebar body.
     private var sidebarSearchField: some View {
         HStack(spacing: 6) {
+            // Decorative — the field itself is labelled "Search".
             Image(systemName: "magnifyingglass")
                 .foregroundStyle(.secondary)
                 .font(.system(size: 13))
+                .accessibilityHidden(true)
             TextField(text: $macSearch) { Text("search.search.button", bundle: .module) }
                 .textFieldStyle(.plain)
                 .font(.system(size: 13))
@@ -379,6 +385,7 @@ public struct SettingsView: View {
                     Image(systemName: "xmark.circle.fill").foregroundStyle(.tertiary)
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(Text("Clear search", bundle: .module))
             }
         }
         .padding(.horizontal, 8)
@@ -467,6 +474,8 @@ public struct SettingsView: View {
                 Image(systemName: entry.systemImage)
             }
         }
+        // Row glyph is decoration for the title next to it.
+        .accessibilityLabel(Text(verbatim: entry.title))
         .tag(entry.section)
     }
 
@@ -544,7 +553,11 @@ public struct SettingsView: View {
                         macSelection = .service(spec.kind)
                     } label: {
                         HStack(spacing: 10) {
+                            // Brand mark and drill-in chevron are decoration
+                            // around the service name — announcing the asset
+                            // name / "chevron right" adds nothing.
                             ServiceIcon(kind: spec.kind, size: 18)
+                                .accessibilityHidden(true)
                             Text(verbatim: spec.title)
                                 .foregroundStyle(.primary)
                             Spacer()
@@ -556,6 +569,7 @@ public struct SettingsView: View {
                             Image(systemName: "chevron.right")
                                 .font(.caption.weight(.semibold))
                                 .foregroundStyle(.tertiary)
+                                .accessibilityHidden(true)
                         }
                         .contentShape(Rectangle())
                     }
@@ -713,8 +727,10 @@ public struct SettingsView: View {
                 .navigationBarTitleDisplayMode(.inline)
         } label: {
             HStack(spacing: 10) {
+                // Brand mark repeats the name printed beside it.
                 ServiceIcon(kind: kind, size: 18)
                     .foregroundStyle(.primary)
+                    .accessibilityHidden(true)
                 Text(verbatim: title)
                 Spacer()
                 if configured {
@@ -923,6 +939,7 @@ public struct SettingsView: View {
         HStack(spacing: 6) {
             ServiceIcon(kind: kind, size: 12)
                 .foregroundStyle(.secondary)
+                .accessibilityHidden(true)
             Text(title, bundle: .module)
         }
     }
@@ -1015,6 +1032,7 @@ public struct SettingsView: View {
                 .buttonStyle(.plain)
                 .foregroundStyle(.secondary)
                 .help(Text("settings.play.button", bundle: .module))
+                .accessibilityLabel(Text("settings.play.button", bundle: .module))
             }
         }
         .onChange(of: configStore.notificationSoundName) { _, newValue in
@@ -1053,9 +1071,13 @@ public struct SettingsView: View {
             // "you can drag this" affordance (the iOS native grip only shows
             // in edit mode; macOS has none), but the actual drag is `.onMove`.
             HStack(spacing: 8) {
+                // Grip glyph + service mark are decoration around the row
+                // title; reordering is `.onMove`, which ships its own
+                // VoiceOver affordance.
                 Image(systemName: "line.3.horizontal")
                     .foregroundStyle(.tertiary)
                     .scaledFont(size: 11)
+                    .accessibilityHidden(true)
                 Group {
                     if let source = QueueItem.Source(rawValue: key) {
                         ServiceIcon(source: source, size: 13)
@@ -1065,13 +1087,17 @@ public struct SettingsView: View {
                 }
                 .foregroundStyle(.secondary)
                 .frame(width: 16)
+                .accessibilityHidden(true)
                 Text(spec.title)
                 Spacer()
                 if let toggle = visibilityToggle(for: key) {
+                    // `.labelsHidden()` hides the label from the accessibility
+                    // tree too — the switch would announce as a bare "off".
                     Toggle("", isOn: toggle)
                         .labelsHidden()
                         .controlSize(.small)
                         .toggleStyle(.switch)
+                        .accessibilityLabel(Text(visibilityToggleLabel(for: key) ?? spec.title, bundle: .module))
                 }
             }
             .frame(height: Self.arrRowHeight)
@@ -1092,6 +1118,16 @@ public struct SettingsView: View {
     private func visibilityToggle(for key: String) -> Binding<Bool>? {
         if key == ConfigStore.tonightOrderKey { return $configStore.showTonight }
         if key == ConfigStore.needsYouOrderKey { return $configStore.showNeedsYou }
+        return nil
+    }
+
+    /// VoiceOver label for the row's visibility switch. The switch is
+    /// `.labelsHidden()`, so it has no name of its own — these say what the
+    /// toggle actually does ("Show Tonight banner") rather than repeating the
+    /// row title, which reads as a duplicate of the element right before it.
+    private func visibilityToggleLabel(for key: String) -> LocalizedStringKey? {
+        if key == ConfigStore.tonightOrderKey { return "common.showTonightBanner.button" }
+        if key == ConfigStore.needsYouOrderKey { return "common.showNeedsYou.button" }
         return nil
     }
 
@@ -1134,7 +1170,9 @@ private struct ProLockOverlay: View {
         ZStack {
             Color.black.opacity(0.04)
             VStack(spacing: 8) {
+                // Decorative — the Unlock button underneath says it in words.
                 Image(systemName: "lock.fill").font(.title2).foregroundStyle(.secondary)
+                    .accessibilityHidden(true)
                 Button { store.gate(feature) } label: {
                     Text("settings.unlockArrbarrPro.button", bundle: .module)
                 }

@@ -62,6 +62,7 @@ public struct PaywallView: View {
             }
             .buttonStyle(.plain)
             .padding(14)
+            .accessibilityLabel(Text("settings.close.button", bundle: .module))
         }
         #endif
     }
@@ -84,8 +85,10 @@ public struct PaywallView: View {
 
     private var freeChip: some View {
         HStack(spacing: 6) {
+            // Decorative — the chip's own sentence carries the message.
             Image(systemName: "eye")
                 .scaledFont(size: 11, weight: .semibold)
+                .accessibilityHidden(true)
             Text("paywall.watchingIsAlwaysFree.button", bundle: .module)
                 .scaledFont(size: 11, weight: .medium)
         }
@@ -101,9 +104,12 @@ public struct PaywallView: View {
         VStack(alignment: .leading, spacing: 9) {
             ForEach(benefitKeys, id: \.self) { key in
                 HStack(alignment: .firstTextBaseline, spacing: 9) {
+                    // Bullet glyph — every line has one, so announcing
+                    // "checkmark" before each benefit is pure repetition.
                     Image(systemName: "checkmark")
                         .scaledFont(size: 11, weight: .bold)
                         .foregroundStyle(.green)
+                        .accessibilityHidden(true)
                     Text(LocalizedStringKey(key), bundle: .module)
                         .scaledFont(size: 13)
                         .fixedSize(horizontal: false, vertical: true)

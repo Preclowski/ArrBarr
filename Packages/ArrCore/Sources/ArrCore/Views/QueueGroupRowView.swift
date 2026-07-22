@@ -96,8 +96,10 @@ public struct QueueGroupRowView: View {
                             .truncationMode(.tail)
 
                         // Chevron next to title — same drill-in
-                        // affordance as QueueRowView.
+                        // affordance as QueueRowView. Hidden from VoiceOver;
+                        // the row's `.isButton` trait carries it instead.
                         LinkChevron(size: 9)
+                            .accessibilityHidden(true)
 
                         Spacer(minLength: 4)
 
@@ -139,6 +141,17 @@ public struct QueueGroupRowView: View {
         // Drop the open-detail tap when there's no target (queue multi-select
         // mode) so it doesn't swallow the List's selection click.
         .modifier(RowTapToOpen(action: onShowDetail))
+        // Same treatment as QueueRowView: one element instead of a stream of
+        // fragments, the pack's *aggregate* completion as the value (that's
+        // what the bar draws), and an explicit button trait because the row
+        // is a tap gesture rather than a Button.
+        .accessibilityElement(children: .combine)
+        .accessibilityValue(Text(aggregateProgress, format: .percent.precision(.fractionLength(0))))
+        .accessibilityAddTraits(onShowDetail != nil ? .isButton : [])
+        .accessibilityAddTraits(selectionState == .selected ? .isSelected : [])
+        .accessibilityHint(onShowDetail != nil
+                           ? Text("Show download details", bundle: .module)
+                           : Text(verbatim: ""))
         .contextMenu {
             // Offline → no mutating menu items; the header chip explains why.
             if !isOffline {
@@ -262,6 +275,11 @@ public struct QueueGroupRowView: View {
         .help(rep.status == .queued
               ? Text("queue.startNow.button", bundle: .module)
               : (rep.isPaused ? Text("queue.resume.button", bundle: .module) : Text("queue.pause.button", bundle: .module)))
+        // `.help` is a tooltip, not a label — the glyph alone would
+        // announce as "play fill" / "pause fill".
+        .accessibilityLabel(rep.status == .queued
+                            ? Text("queue.startNow.button", bundle: .module)
+                            : (rep.isPaused ? Text("queue.resume.button", bundle: .module) : Text("queue.pause.button", bundle: .module)))
     }
     #endif
 

@@ -1,5 +1,41 @@
 import Foundation
 
+// MARK: - Destructive-tool confirmation
+
+/// How the caller's user answered the confirmation prompt for a gated tool.
+public enum ToolConfirmationOutcome: Sendable {
+    /// Approved — run with these arguments. Handing the arguments back (rather
+    /// than a bare `true`) leaves room for a confirm UI that lets the user edit
+    /// them before the call goes out; none does today.
+    case approved(JSONValue)
+    /// The user said no.
+    case declined
+    /// Nobody could be asked. Distinct from `.declined` because the caller may
+    /// want to explain itself differently — an MCP client that never advertised
+    /// elicitation isn't a user refusing, it's a client that cannot ask.
+    case unavailable
+}
+
+/// Asks whoever is driving a tool call to confirm a destructive one.
+public typealias ToolConfirmationHandler = @Sendable (ToolCall) async -> ToolConfirmationOutcome
+
+/// Ambient confirmation channel for the current task.
+///
+/// The gate lives in `LocalToolBackend.callTool`, but the call sites reach it
+/// through closures whose signatures they don't own (`ChatViewModelFactory`
+/// hands both chat providers a plain `(name, args)` passthrough), so the
+/// handler travels as a task-local rather than a parameter. Every call site
+/// binds it immediately around its own call, so the value never has to survive
+/// a framework we don't control.
+///
+/// Unbound — the default — means "no user is reachable", and the gate then
+/// refuses every destructive tool. That is the fail-closed direction: a call
+/// site that forgets to bind a handler loses the ability to mutate, it does not
+/// silently gain the ability to mutate unconfirmed.
+public enum ToolConfirmationContext {
+    @TaskLocal public static var handler: ToolConfirmationHandler?
+}
+
 /// In-process tool backend. Uses ArrCore's existing Sonarr/Radarr clients.
 /// Exposes the same 6 tools as mcp-arr, but with zero external dependencies.
 public actor LocalToolBackend: ToolBackend {
@@ -39,6 +75,16 @@ public actor LocalToolBackend: ToolBackend {
         )
     }
 
+    /// THE choke point. Every tool call — chat (OpenAI or Foundation Models),
+    /// MCP server, App Intents — lands here, and a tool that isn't on
+    /// `MCPToolWhitelist.readOnlyTools` does not execute without an explicit
+    /// user confirmation obtained through `ToolConfirmationContext`.
+    ///
+    /// The gate used to be re-implemented at each of the three call sites,
+    /// which meant a new call site that forgot it bypassed the gate entirely.
+    /// Call sites still decide HOW to ask (confirm card / MCP elicitation);
+    /// deciding WHETHER to ask, and refusing when the answer never comes, is
+    /// this method's job alone.
     public func callTool(name: String, arguments: JSONValue) async throws -> ToolCallOutput {
         // Guard Whisparr tools when the toggle is off
         if name.hasPrefix("whisparr_") && !aiKnowsAboutWhisparr {
@@ -48,6 +94,35 @@ public actor LocalToolBackend: ToolBackend {
         if name.hasPrefix("tmdb_") && !tmdbEnabled {
             return ToolCallOutput(text: "TMDB API key is not configured in Settings → AI → Discovery.")
         }
+        // A name we don't implement can't run whatever the user answers, so
+        // reject it plainly instead of raising a confirmation for a tool that
+        // doesn't exist. Still fail-closed — nothing executes either way.
+        guard ChatToolCatalog.allToolNames.contains(name) else {
+            throw LocalToolError.unknownTool(name)
+        }
+        // Read-only tools run straight through — that is the whole point of
+        // keeping the allowlist tight. Everything else has to be confirmed.
+        // The guards above run first so we never prompt for a tool that is
+        // switched off and would only return a canned "not configured" line.
+        guard MCPToolWhitelist.isDestructive(name) else {
+            return try await run(name: name, arguments: arguments)
+        }
+        guard let confirm = ToolConfirmationContext.handler else {
+            throw LocalToolError.confirmationUnavailable(name)
+        }
+        switch await confirm(ToolCall(name: name, arguments: arguments)) {
+        case .approved(let approvedArguments):
+            return try await run(name: name, arguments: approvedArguments)
+        case .declined:
+            throw LocalToolError.confirmationDeclined(name)
+        case .unavailable:
+            throw LocalToolError.confirmationUnavailable(name)
+        }
+    }
+
+    /// Dispatch to the actual implementation. Private so the gate above is the
+    /// only way in — an extension or a future call site cannot reach past it.
+    private func run(name: String, arguments: JSONValue) async throws -> ToolCallOutput {
         switch name {
         case "sonarr_search":       return try await searchSeries(arguments)
         case "radarr_search":       return try await searchMovie(arguments)
@@ -81,6 +156,9 @@ public actor LocalToolBackend: ToolBackend {
         case "lidarr_monitor_album":        return try await lidarrMonitorAlbum(arguments)
         case "lidarr_search_album":         return try await lidarrSearchAlbumTool(arguments)
         default:
+            // `callTool` already rejected anything outside the directory, so
+            // reaching here means the directory lists a tool this switch never
+            // implemented. Same error, deliberate backstop.
             throw LocalToolError.unknownTool(name)
         }
     }
@@ -315,10 +393,24 @@ public struct DownloadClientConfigs: Sendable {
 
 public enum LocalToolError: Error, Equatable, Sendable, LocalizedError {
     case unknownTool(String)
+    /// The user was asked to confirm a destructive tool and said no.
+    case confirmationDeclined(String)
+    /// A destructive tool was requested with no way to ask the user — no
+    /// handler bound, or the caller reported it cannot prompt. The tool did
+    /// not run.
+    case confirmationUnavailable(String)
 
+    // Plain English on purpose: these strings go to the LLM / an MCP client
+    // as tool-call text, not into the app's own UI, so they live outside the
+    // string catalog like the rest of the tool output in this file.
     public var errorDescription: String? {
         switch self {
-        case .unknownTool(let name): return "Unknown tool: \(name)"
+        case .unknownTool(let name):
+            return "Unknown tool: \(name)"
+        case .confirmationDeclined(let name):
+            return "Tool '\(name)' was cancelled by the user."
+        case .confirmationUnavailable(let name):
+            return "Tool '\(name)' changes server state and requires confirmation, which was not available. It was not run."
         }
     }
 }

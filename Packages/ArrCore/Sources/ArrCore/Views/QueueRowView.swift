@@ -58,6 +58,10 @@ struct SelectionCircle: View {
             .foregroundStyle(selected ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.tertiary))
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .contentShape(Rectangle())
+            // The ring mirrors the row's selection state, which the row
+            // itself publishes via the `.isSelected` trait — announcing
+            // "checkmark circle fill" on top of that is just noise.
+            .accessibilityHidden(true)
     }
 }
 
@@ -181,7 +185,10 @@ public struct QueueRowView: View {
 
                         // Chevron next to title telegraphs "this drills
                         // into a detail view" without relying on hover.
+                        // Hidden from VoiceOver — the row's own `.isButton`
+                        // trait + hint say the same thing.
                         LinkChevron(size: 9)
+                            .accessibilityHidden(true)
 
                         Spacer(minLength: 4)
 
@@ -255,6 +262,18 @@ public struct QueueRowView: View {
         // multi-select mode passes `onShowDetail: nil`, which drops the gesture
         // entirely so the List's own selection click isn't swallowed.
         .modifier(RowTapToOpen(action: onShowDetail))
+        // VoiceOver would otherwise walk this row as a dozen disconnected
+        // fragments (title, badge, status word, quality, size, score, every
+        // custom-format chip). Merge them into one element, hand the progress
+        // bar's fill over as the element's value, and — since the row is a
+        // bare tap gesture, not a Button — say out loud that it's tappable.
+        .accessibilityElement(children: .combine)
+        .accessibilityValue(Text(max(0.0, min(1.0, item.progress)), format: .percent.precision(.fractionLength(0))))
+        .accessibilityAddTraits(onShowDetail != nil ? .isButton : [])
+        .accessibilityAddTraits(selectionState == .selected ? .isSelected : [])
+        .accessibilityHint(onShowDetail != nil
+                           ? Text("Show download details", bundle: .module)
+                           : Text(verbatim: ""))
         .contextMenu {
             // Offline → no mutating menu items; the header chip explains why.
             if !isOffline {
@@ -359,6 +378,11 @@ public struct QueueRowView: View {
         .help(item.status == .queued
               ? Text("queue.startNow.button", bundle: .module)
               : (item.isPaused ? Text("queue.resume.button", bundle: .module) : Text("queue.pause.button", bundle: .module)))
+        // `.help` is a tooltip, not a label — without this the button
+        // announces as "play fill" / "pause fill".
+        .accessibilityLabel(item.status == .queued
+                            ? Text("queue.startNow.button", bundle: .module)
+                            : (item.isPaused ? Text("queue.resume.button", bundle: .module) : Text("queue.pause.button", bundle: .module)))
     }
     #endif
 }
@@ -556,6 +580,12 @@ public struct ThinProgressBar: View {
             }
         }
         .frame(height: height)
+        // Two rectangles carry the whole "how far along is this" story, so
+        // there is literally nothing for VoiceOver to read. Name the bar and
+        // publish the fill as its value — the one number that matters.
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text("Download progress", bundle: .module))
+        .accessibilityValue(Text(max(0.0, min(1.0, progress)), format: .percent.precision(.fractionLength(0))))
     }
 }
 

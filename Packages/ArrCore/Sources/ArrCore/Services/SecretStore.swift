@@ -64,9 +64,12 @@ public extension SecretStore {
 public struct KeychainSecretStore: SecretStore {
     public static let service = "pl.incred.ArrBarr"
     /// Shared Keychain access group (team-prefixed) so the app and its iOS widget
-    /// extension read the same items. Only applied under `#if APPSTORE`, where the
-    /// `keychain-access-groups` entitlement is present. The team prefix is fixed
-    /// for this developer account.
+    /// extension read the same items. Applied only when the signature actually
+    /// provisions the `keychain-access-groups` entitlement — the App Store
+    /// entitlement files carry it, the OSS ones cannot (it is restricted, so it
+    /// needs a profile issued by Apple, and those builds sign ad-hoc). The team
+    /// prefix is fixed for this developer account, so a fork signed by another
+    /// team fails the probe and stays on `UserDefaultsSecretStore`.
     public static let accessGroup = "9M6DR2Z85Y.pl.incred.ArrBarr.shared"
     private static let logger = Logger(category: "SecretStore")
 
@@ -94,6 +97,21 @@ public struct KeychainSecretStore: SecretStore {
     /// The identifying query fields + storage policy for a key. Exposed so tests
     /// can assert the synchronizable/accessibility gating without touching the
     /// real Keychain.
+    ///
+    /// `kSecUseDataProtectionKeychain` is set UNCONDITIONALLY and must stay that
+    /// way: this store may never touch the legacy file Keychain, whose per-item
+    /// ACL is bound to the code signature and so prompts for the login password
+    /// on every rebuild of an ad-hoc-signed app. The data-protection Keychain has
+    /// no ACLs, so every call here either succeeds or fails silently — there is
+    /// no prompt path.
+    ///
+    /// The shared access group is added whenever the runtime probe says the
+    /// entitlement is genuinely provisioned. When it is not, this type is simply
+    /// never instantiated for real work — `ConfigStore.makeDefaultSecretStore`
+    /// hands out `UserDefaultsSecretStore` instead.
+    ///
+    /// iCloud Keychain sync stays App-Store-only: it rides on the paid
+    /// KVS/iCloud entitlements that only that build carries.
     public static func baseQuery(for key: SecretKey) -> [String: Any] {
         let synchronizable = AppCapabilities.isAppStore && key.synced && Self.syncEnabledProvider()
         var q: [String: Any] = [
@@ -101,13 +119,13 @@ public struct KeychainSecretStore: SecretStore {
             kSecAttrService as String: service,
             kSecAttrAccount as String: key.account,
             kSecAttrSynchronizable as String: synchronizable,
+            kSecUseDataProtectionKeychain as String: true,
             kSecAttrAccessible as String: key.deviceOnly
                 ? (kSecAttrAccessibleWhenUnlockedThisDeviceOnly as String)
                 : (kSecAttrAccessibleAfterFirstUnlock as String),
         ]
-        if AppCapabilities.isAppStore {
+        if AppCapabilities.keychainSharingAvailable {
             q[kSecAttrAccessGroup as String] = Self.accessGroup
-            q[kSecUseDataProtectionKeychain as String] = true
         }
         return q
     }
@@ -147,14 +165,18 @@ public struct KeychainSecretStore: SecretStore {
     }
 }
 
-/// UserDefaults-backed `SecretStore` for builds WITHOUT stable code signing
-/// (local ad-hoc Debug, github/OSS Release). On macOS the file Keychain prompts
-/// for the login password on every rebuild of an ad-hoc-signed app (the
-/// signature is unstable, so "Always Allow" never sticks), which makes the
-/// Keychain unusable for day-to-day local/OSS builds. Those builds therefore
-/// keep secrets in the (sandboxed) UserDefaults plist — the same place they
-/// lived before the Keychain refactor — while only the stably-signed, entitled
-/// App Store build uses `KeychainSecretStore` (synced + prompt-free).
+/// UserDefaults-backed `SecretStore` — the fallback for builds whose signature
+/// does not provision the shared Keychain access group: local ad-hoc Debug, the
+/// self-signed OSS DMG, forks signed by another team. Those builds cannot reach
+/// the data-protection Keychain at all (`errSecMissingEntitlement`), and the
+/// legacy file Keychain is off-limits because its ACL is bound to an unstable
+/// ad-hoc signature — macOS would ask for the login password on every rebuild,
+/// and "Always Allow" never sticks. So they keep secrets in the (sandboxed)
+/// UserDefaults plist, exactly where they lived before the Keychain refactor.
+/// A build whose profile does provision the group (the App Store configs) uses
+/// `KeychainSecretStore` instead, and
+/// `ConfigStore.migratePlaintextSecretsIntoKeychain` lifts anything this store
+/// still holds over to it on the first such launch.
 public struct UserDefaultsSecretStore: SecretStore, @unchecked Sendable {
     private let defaults: UserDefaults
     public init(defaults: UserDefaults) { self.defaults = defaults }

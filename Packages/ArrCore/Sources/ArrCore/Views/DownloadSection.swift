@@ -96,42 +96,6 @@ struct DownloadSection: View {
         singleItemContent(item)
     }
 
-    /// Quality · time-left · size · download-client meta line —
-    /// rendered as plain text under the progress card. Same content
-    /// as the old `ProgressLine.detailsRow` but extracted so the
-    /// card can stay focused on the bar itself.
-    @ViewBuilder
-    private func detailsLine(item: QueueItem) -> some View {
-        let segments: [String] = [
-            item.quality.flatMap { $0.isEmpty ? nil : $0 },
-            formattedTimeLeft(item),
-            item.sizeTotal > 0 ? sizeText(item) : nil,
-        ].compactMap { $0 }
-        if !segments.isEmpty || (!showListingBadges && item.downloadClient != nil) {
-            HStack(spacing: 4) {
-                ForEach(Array(segments.enumerated()), id: \.offset) { idx, seg in
-                    if idx > 0 { SeparatorDot() }
-                    Text(verbatim: seg)
-                        .scaledFont(size: 11)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer(minLength: 6)
-                // Client moved into the card header.
-            }
-        }
-    }
-
-    private func sizeText(_ item: QueueItem) -> String {
-        let done = max(0, item.sizeTotal - item.sizeLeft)
-        return "\(ByteCountFormatter.string(fromByteCount: done, countStyle: .file)) / \(ByteCountFormatter.string(fromByteCount: item.sizeTotal, countStyle: .file))"
-    }
-
-    private func formattedTimeLeft(_ item: QueueItem) -> String? {
-        guard let raw = item.timeLeft, !raw.isEmpty else { return nil }
-        let trimmed = String(raw.prefix { $0 != "." })
-        return trimmed == "00:00:00" ? nil : trimmed
-    }
-
     @ViewBuilder
     private func singleItemContent(_ item: QueueItem) -> some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -144,9 +108,9 @@ struct DownloadSection: View {
             // every other surface (queue tooltip, episode tooltip)
             // and the user only needs to read one diff format.
             DownloadProgressCard(item: item, showUpgradeDiff: true, showHeader: true, showProgressFill: false)
-            // `detailsLine` (quality · time · size · client) dropped
-            // — the card now carries quality / size / score and
-            // client in its header. Repeating those tokens below
+            // No quality · time · size · client meta line under the
+            // card — the card carries quality / size / score and the
+            // client in its own header. Repeating those tokens below
             // was the duplicate the user spotted.
             if !item.statusMessages.isEmpty {
                 QueueStatusMessagesBanner(

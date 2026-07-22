@@ -22,7 +22,7 @@ public actor LidarrClient: ArrAPIClient {
             base: config.baseURL,
             path: "/api/v1/queue",
             query: [
-                URLQueryItem(name: "pageSize", value: "1000"),
+                URLQueryItem(name: "pageSize", value: String(Self.queuePageSize)),
                 URLQueryItem(name: "includeArtist", value: "true"),
                 URLQueryItem(name: "includeAlbum", value: "true"),
                 URLQueryItem(name: "includeUnknownArtistItems", value: "true"),
@@ -33,21 +33,33 @@ public actor LidarrClient: ArrAPIClient {
         let page: ArrQueuePage<LidarrQueueRecord>
         do { page = try JSONDecoder().decode(ArrQueuePage<LidarrQueueRecord>.self, from: data) }
         catch { throw HTTPError.decoding(error) }
+        warnIfQueueTruncated(returned: page.records.count, totalRecords: page.totalRecords)
         let baseURL = config.baseURL
 
         // Lidarr's /queue doesn't embed the on-disk files, so side-load the
-        // album's track files (one call per album, cached) and hand them to
-        // `unify` — the album equivalent of Sonarr's per-series episode-file
-        // map. An album with files on disk is an upgrade; its tracks aggregate
-        // into the existing-file diff.
-        let albumIds = Set(page.records.compactMap { $0.album?.id ?? $0.albumId }.filter { $0 > 0 })
+        // album's track files (one call per album, cached, at most
+        // `maxConcurrentSideLoads` in flight) and hand them to `unify` — the
+        // album equivalent of Sonarr's per-series episode-file map. An album
+        // with files on disk is an upgrade; its tracks aggregate into the
+        // existing-file diff.
+        let albumIds = Array(Set(page.records.compactMap { $0.album?.id ?? $0.albumId }.filter { $0 > 0 }))
         var fileMap: [Int: [LidarrTrackFile]] = [:]
         await withTaskGroup(of: (Int, [LidarrTrackFile]).self) { group in
-            for aid in albumIds {
+            var next = 0
+            while next < min(Self.maxConcurrentSideLoads, albumIds.count) {
+                let aid = albumIds[next]
                 group.addTask { (aid, (try? await self.fetchTrackFiles(albumId: aid)) ?? []) }
+                next += 1
             }
+            // Each completion frees a slot — top the group back up so exactly
+            // `maxConcurrentSideLoads` requests stay in flight until we run out.
             for await (aid, files) in group {
                 fileMap[aid] = files
+                if next < albumIds.count {
+                    let nextId = albumIds[next]
+                    group.addTask { (nextId, (try? await self.fetchTrackFiles(albumId: nextId)) ?? []) }
+                    next += 1
+                }
             }
         }
         return page.records.map { Self.unify($0, baseURL: baseURL, fileMap: fileMap) }
@@ -257,8 +269,8 @@ public actor LidarrClient: ArrAPIClient {
     }
 
     private static func unify(_ r: LidarrQueueRecord, baseURL: String, fileMap: [Int: [LidarrTrackFile]]) -> QueueItem {
-        let total = Int64(r.size ?? 0)
-        let left = Int64(r.sizeleft ?? 0)
+        let total = clampedBytes(r.size)
+        let left = clampedBytes(r.sizeleft)
         let progress = total > 0 ? max(0, min(1, 1.0 - Double(left) / Double(total))) : 0.0
 
         let artistName = r.artist?.artistName ?? r.album?.artist?.artistName
@@ -290,7 +302,7 @@ public actor LidarrClient: ArrAPIClient {
             title: displayTitle,
             subtitle: nil,
             releaseName: r.title,
-            status: parseStatus(arrStatus: r.status, trackedState: r.trackedDownloadState),
+            status: parseStatus(arrStatus: r.status, trackedState: r.trackedDownloadState, trackedStatus: r.trackedDownloadStatus),
             progress: progress,
             sizeTotal: total,
             sizeLeft: left,

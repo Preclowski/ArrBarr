@@ -22,7 +22,7 @@ public actor SonarrClient: ArrAPIClient {
             base: config.baseURL,
             path: "\(apiBase)/queue",
             query: [
-                URLQueryItem(name: "pageSize", value: "1000"),
+                URLQueryItem(name: "pageSize", value: String(Self.queuePageSize)),
                 URLQueryItem(name: "includeSeries", value: "true"),
                 URLQueryItem(name: "includeEpisode", value: "true"),
                 URLQueryItem(name: "includeUnknownSeriesItems", value: "true"),
@@ -36,16 +36,30 @@ public actor SonarrClient: ArrAPIClient {
         } catch {
             throw HTTPError.decoding(error)
         }
+        warnIfQueueTruncated(returned: page.records.count, totalRecords: page.totalRecords)
 
         let baseURL = config.baseURL
-        let seriesIds = Set(page.records.compactMap { $0.series?.id ?? $0.seriesId })
+        // One `/episodefile?seriesId=` call per distinct series, but throttled
+        // to `maxConcurrentSideLoads` — see that constant for why an uncapped
+        // group makes the tail of a big queue time out instead of going faster.
+        let seriesIds = Array(Set(page.records.compactMap { $0.series?.id ?? $0.seriesId }))
         var fileMap: [Int: SonarrEpisodeFile] = [:]
         await withTaskGroup(of: [SonarrEpisodeFile].self) { group in
-            for sid in seriesIds {
+            var next = 0
+            while next < min(Self.maxConcurrentSideLoads, seriesIds.count) {
+                let sid = seriesIds[next]
                 group.addTask { (try? await self.fetchEpisodeFiles(seriesId: sid)) ?? [] }
+                next += 1
             }
+            // Each completion frees a slot — top the group back up so exactly
+            // `maxConcurrentSideLoads` requests stay in flight until we run out.
             for await files in group {
                 for f in files { fileMap[f.id] = f }
+                if next < seriesIds.count {
+                    let sid = seriesIds[next]
+                    group.addTask { (try? await self.fetchEpisodeFiles(seriesId: sid)) ?? [] }
+                    next += 1
+                }
             }
         }
         return page.records.map { Self.unify($0, baseURL: baseURL, fileMap: fileMap) }
@@ -88,7 +102,10 @@ public actor SonarrClient: ArrAPIClient {
         guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
 
         let now = Date()
-        let end = Calendar.current.date(byAdding: .day, value: 14, to: now)!
+        // 30 days, same window as Radarr/Lidarr/Whisparr — a shorter one here
+        // made the merged Upcoming list simply stop showing episodes two weeks
+        // out while still listing movies a month out.
+        let end = Calendar.current.date(byAdding: .day, value: 30, to: now)!
         let fmt = ISO8601DateFormatter()
         fmt.formatOptions = [.withFullDate]
 
@@ -437,8 +454,8 @@ public actor SonarrClient: ArrAPIClient {
     }
 
     private static func unify(_ r: SonarrQueueRecord, baseURL: String, fileMap: [Int: SonarrEpisodeFile]) -> QueueItem {
-        let total = Int64(r.size ?? 0)
-        let left = Int64(r.sizeleft ?? 0)
+        let total = clampedBytes(r.size)
+        let left = clampedBytes(r.sizeleft)
         let progress: Double
         if total > 0 {
             progress = max(0, min(1, 1.0 - Double(left) / Double(total)))
@@ -497,7 +514,7 @@ public actor SonarrClient: ArrAPIClient {
             episodeNumber: episodeNumber,
             episodeTitle: episodeTitle,
             releaseName: r.title,
-            status: parseStatus(arrStatus: r.status, trackedState: r.trackedDownloadState),
+            status: parseStatus(arrStatus: r.status, trackedState: r.trackedDownloadState, trackedStatus: r.trackedDownloadStatus),
             progress: progress,
             sizeTotal: total,
             sizeLeft: left,

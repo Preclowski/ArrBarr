@@ -227,23 +227,43 @@ struct DynamicMCPTool: Tool {
         }
         let toolCall = ToolCall(name: spec.name, arguments: argsValue)
 
-        // Destructive-tool gate (mirror of OpenAI path in ChatViewModel).
-        // For tools that fire indexer searches / flip arr state, suspend
-        // here until the user confirms or cancels via ConfirmActionCard.
-        var confirmedArgs = argsValue
+        // Destructive-tool gate, presentation half (mirror of the OpenAI path
+        // in ChatViewModel). The backend refuses to RUN an unconfirmed tool;
+        // this surfaces the ConfirmActionCard first and then hands the answer
+        // down through ToolConfirmationContext, which the backend reads.
+        let preApproved: JSONValue?
         if MCPToolWhitelist.isDestructive(spec.name) {
             guard let args = await confirmDestructive(toolCall) else {
                 let result = "(cancelled by user)"
                 await DynamicMCPToolBox.shared.record(call: toolCall, result: result, rich: nil)
                 return result
             }
-            confirmedArgs = args
+            preApproved = args
+        } else {
+            preApproved = nil
+        }
+        let confirmedArgs = preApproved ?? argsValue
+
+        // Same shape as ChatViewModel's: hand back the approval we already
+        // hold, and fall back to asking when the backend gates something we
+        // didn't.
+        let confirmAgain = confirmDestructive
+        let confirm: ToolConfirmationHandler = { pending in
+            if let preApproved { return .approved(preApproved) }
+            guard let args = await confirmAgain(pending) else { return .declined }
+            return .approved(args)
         }
 
         let confirmedCall = ToolCall(id: toolCall.id, name: spec.name, arguments: confirmedArgs)
         let output: ToolCallOutput
         do {
-            output = try await invokeTool(spec.name, confirmedArgs)
+            output = try await ToolConfirmationContext.$handler.withValue(confirm) {
+                try await invokeTool(spec.name, confirmedArgs)
+            }
+        } catch LocalToolError.confirmationDeclined(_) {
+            let result = "(cancelled by user)"
+            await DynamicMCPToolBox.shared.record(call: confirmedCall, result: result, rich: nil)
+            return result
         } catch {
             let errOutput = ToolCallOutput(text: "(tool error: \(error.localizedDescription))")
             await DynamicMCPToolBox.shared.record(call: confirmedCall, result: errOutput.text, rich: nil)

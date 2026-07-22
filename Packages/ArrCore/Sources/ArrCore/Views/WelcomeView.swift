@@ -68,16 +68,21 @@ public struct WelcomeView: View {
                 .padding(.trailing, 10)
         }
         .overlay(alignment: .leading) {
+            // `.opacity(0)` hides the arrow from the eye but NOT from the
+            // accessibility tree — without the matching `accessibilityHidden`
+            // VoiceOver offers a "Previous" button that can't be pressed.
             edgeArrow(direction: .previous)
                 .padding(.leading, 6)
                 .opacity(pageIndex > 0 ? 1 : 0)
                 .allowsHitTesting(pageIndex > 0)
+                .accessibilityHidden(pageIndex == 0)
         }
         .overlay(alignment: .trailing) {
             edgeArrow(direction: .next)
                 .padding(.trailing, 6)
                 .opacity(!isLastPage ? 1 : 0)
                 .allowsHitTesting(!isLastPage)
+                .accessibilityHidden(isLastPage)
         }
         // The window has .fullSizeContentView with a transparent titlebar, but
         // NSHostingController still reserves safe-area inset for the title-bar
@@ -151,12 +156,19 @@ public struct WelcomeView: View {
 
     @ViewBuilder
     private var heroIllustration: some View {
-        switch current.id {
-        case "menubar":   MenuBarIllustration().frame(height: 110)
-        case "tonight":   TonightIllustration().frame(height: 100)
-        case "customize": CustomizeIllustration().frame(height: 110)
-        default:          EmptyView()
+        Group {
+            switch current.id {
+            case "menubar":   MenuBarIllustration().frame(height: 110)
+            case "tonight":   TonightIllustration().frame(height: 100)
+            case "customize": CustomizeIllustration().frame(height: 110)
+            default:          EmptyView()
+            }
         }
+        // Mock chrome, not content: fake menu-bar clock, fake show titles,
+        // fake toggles. VoiceOver reading "ArrBarr, File, View, 9:41, Pioneer
+        // One…" would sound like real library data. The page title and body
+        // above already say what the picture shows.
+        .accessibilityHidden(true)
     }
 
     // MARK: - Page dots (clickable, hover effect)
@@ -169,6 +181,10 @@ public struct WelcomeView: View {
                     withAnimation(.easeInOut(duration: 0.22)) { pageIndex = i }
                 }
                 .help(Text(String(format: String(localized: "common.pageLld.label", bundle: .module), i + 1)))
+                // A bare Capsule has nothing to announce — name the page it
+                // jumps to and mark the one we're on as selected.
+                .accessibilityLabel(Text(String(format: String(localized: "common.pageLld.label", bundle: .module), i + 1)))
+                .accessibilityAddTraits(i == pageIndex ? .isSelected : [])
             }
         }
     }
@@ -201,6 +217,7 @@ public struct WelcomeView: View {
         }
         .buttonStyle(.plain)
         .help(String(localized: "settings.close.button", bundle: .module))
+        .accessibilityLabel(Text("settings.close.button", bundle: .module))
         .keyboardShortcut(.cancelAction)
     }
 
@@ -308,6 +325,10 @@ private struct EdgeArrowButton: View {
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
         .help(direction == .previous ? "Previous" : "Next")
+        // Bare chevron: without this the button announces as "chevron left".
+        .accessibilityLabel(Text(direction == .previous
+                                 ? "onboarding.previous.button"
+                                 : "onboarding.next.button", bundle: .module))
     }
 }
 

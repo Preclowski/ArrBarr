@@ -61,6 +61,21 @@ struct LocalToolBackendTests {
         LocalToolBackend(sonarr: sonarrConfig(), radarr: radarrConfig(), lidarr: lidarrConfig())
     }
 
+    /// Runs `body` standing in for a user who taps Confirm.
+    ///
+    /// `callTool` refuses every tool outside `MCPToolWhitelist.readOnlyTools`
+    /// unless a handler is bound, so a test that exercises a *mutating* tool's
+    /// argument handling has to supply one. Approving with the arguments it was
+    /// handed is what the chat confirm card does today.
+    private func approvingConfirmation<T: Sendable>(
+        _ body: @Sendable () async throws -> T
+    ) async rethrows -> T {
+        let approve: ToolConfirmationHandler = { .approved($0.arguments) }
+        return try await ToolConfirmationContext.$handler.withValue(approve) {
+            try await body()
+        }
+    }
+
     @Test("listTools returns the full catalog when sonarr/radarr/lidarr are configured")
     func listToolsReturnsCatalog() async throws {
         let tools = try await backend().listTools()
@@ -171,13 +186,16 @@ struct LocalToolBackendTests {
         LocalStubProtocol.handlers["/api/v5/series"] = (200, Data("{}".utf8))
         LocalStubProtocol.handlers["/api/v3/command"] = (201, Data("{\"id\":1}".utf8))
 
-        let output = try await backend().callTool(
-            name: "sonarr_monitor_season",
-            arguments: .object([
-                "seriesId": .number(241),
-                "seasonNumbers": .array([.number(10), .number(11)]),
-            ])
-        )
+        let b = backend()
+        let output = try await approvingConfirmation {
+            try await b.callTool(
+                name: "sonarr_monitor_season",
+                arguments: .object([
+                    "seriesId": .number(241),
+                    "seasonNumbers": .array([.number(10), .number(11)]),
+                ])
+            )
+        }
         #expect(output.text.hasPrefix("OK"))
         // Both requested seasons must be reported — the old single-int
         // schema silently dropped season 11.
@@ -195,15 +213,42 @@ struct LocalToolBackendTests {
         LocalStubProtocol.handlers["/api/v5/series"] = (200, Data("{}".utf8))
         LocalStubProtocol.handlers["/api/v3/command"] = (201, Data("{\"id\":1}".utf8))
 
-        let output = try await backend().callTool(
-            name: "sonarr_monitor_season",
-            arguments: .object([
-                "seriesId": .number(241),
-                "seasonNumber": .number(3),
-            ])
-        )
+        let b = backend()
+        let output = try await approvingConfirmation {
+            try await b.callTool(
+                name: "sonarr_monitor_season",
+                arguments: .object([
+                    "seriesId": .number(241),
+                    "seasonNumber": .number(3),
+                ])
+            )
+        }
         #expect(output.text.hasPrefix("OK"))
         #expect(output.text.contains("3"))
+    }
+
+    @Test("callTool refuses a destructive tool when no confirmation handler is bound")
+    func destructiveToolWithoutHandlerRefuses() async throws {
+        // No `approvingConfirmation` wrapper: this is the fail-closed path a
+        // call site hits when it forgets to bind a handler. Nothing is stubbed
+        // because nothing should reach the network.
+        await #expect(throws: LocalToolError.confirmationUnavailable("sonarr_monitor_season")) {
+            _ = try await backend().callTool(
+                name: "sonarr_monitor_season",
+                arguments: .object(["seriesId": .number(241), "seasonNumber": .number(1)])
+            )
+        }
+    }
+
+    @Test("callTool runs a read-only tool with no handler bound")
+    func readOnlyToolNeedsNoHandler() async throws {
+        // The other half of the gate: gating everything would be safe and
+        // useless. `sonarr_search` is on the allowlist, so an unattended caller
+        // still gets it — here it reaches the not-configured short-circuit,
+        // which only executes if the gate let it through.
+        let b = LocalToolBackend(sonarr: .empty, radarr: radarrConfig())
+        let output = try await b.callTool(name: "sonarr_search", arguments: .object(["query": .string("Severance")]))
+        #expect(output.text == "Sonarr is not configured.")
     }
 
     @Test("callTool sonarr_search empty query returns prompt string")

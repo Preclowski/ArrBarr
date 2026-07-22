@@ -18,6 +18,7 @@
 		<string>de</string>
 		<string>es</string>
 		<string>fr</string>
+		<string>nl</string>
 		<string>pl</string>
 	</array>
 	<key>CFBundleName</key>
@@ -54,7 +55,7 @@
 		<string>_https._tcp</string>
 	</array>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>ArrBarr needs to find your Sonarr, Radarr and Lidarr servers running on your home Wi-Fi.</string>
+	<string>ArrBarr needs to find your Sonarr, Radarr, Lidarr and Whisparr servers running on your home Wi-Fi.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

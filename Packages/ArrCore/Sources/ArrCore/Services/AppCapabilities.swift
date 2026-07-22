@@ -25,19 +25,29 @@ public enum AppCapabilities {
 
     private nonisolated(unsafe) static var cachedProbe: Bool?
 
-    /// Whether the shared Keychain access group is actually usable at runtime.
-    /// Only probes in App Store builds (OSS/dev never probes → never prompts,
-    /// always resolves to UserDefaults storage). Cached after first evaluation.
+    /// Whether the shared Keychain access group is actually usable at runtime —
+    /// i.e. whether this binary's signature provisions `keychain-access-groups`.
+    ///
+    /// Probed in EVERY build flavor, not just App Store ones. That is safe
+    /// because the probe (and `KeychainSecretStore`) talk exclusively to the
+    /// *data-protection* Keychain, which has no per-item ACLs and therefore no
+    /// prompt path at all: it either succeeds silently or fails silently with
+    /// `errSecMissingEntitlement`. The login-password prompt that used to make
+    /// the Keychain unusable for OSS builds is a property of the *legacy file*
+    /// Keychain, whose ACL is pinned to the code signature and so re-prompts on
+    /// every rebuild of an ad-hoc-signed app — we never touch it (see
+    /// `KeychainSecretStore.baseQuery`).
+    ///
+    /// Net effect: the *signature* decides, not the build flag. Today only the
+    /// App Store entitlement files carry `keychain-access-groups` — it is a
+    /// restricted entitlement, so Apple has to issue a provisioning profile for
+    /// it, which the ad-hoc and self-signed identities the OSS builds use can
+    /// never have. Those builds fail the probe, without any prompt, and stay on
+    /// `UserDefaultsSecretStore`. Any config later given a provisioned profile
+    /// upgrades itself, with no change here. Cached after first evaluation.
     public static var keychainSharingAvailable: Bool {
         if let cached = cachedProbe { return cached }
-        let result: Bool
-        if let override = keychainProbeOverride {
-            result = override()
-        } else if !isAppStore {
-            result = false
-        } else {
-            result = probeKeychainAccessGroup()
-        }
+        let result = keychainProbeOverride?() ?? probeKeychainAccessGroup()
         cachedProbe = result
         return result
     }

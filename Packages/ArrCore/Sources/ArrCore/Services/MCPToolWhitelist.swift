@@ -1,45 +1,73 @@
 import Foundation
 
-/// Destructive-action gating for chat tools. When the LLM picks a tool
-/// whose name matches one of these patterns, the chat pipeline pauses
-/// and surfaces a ConfirmActionCard — the user has to explicitly tap
-/// Confirm before the tool actually runs. Cancel returns the call as
-/// "cancelled by user" so the model can adjust its plan.
+/// Destructive-action gating for the tool catalog. A tool that is not on the
+/// read-only allowlist below cannot run until a human says yes: the chat
+/// pauses and surfaces a ConfirmActionCard, the MCP server raises an
+/// elicitation. Cancel comes back as "cancelled by user" so the model can
+/// adjust its plan.
 ///
 /// We previously stripped this whole module out (every shipping tool
 /// became read-only after `*_add_*` got dropped). It came back when we
 /// added `*_search_*` and `*_monitor_*` tools — both queue indexer
 /// traffic and can trigger downloads, so the user wants veto power
 /// before the LLM lobs one on its own.
+///
+/// The rule used to be a DENYLIST of name patterns (`_add_`, `_monitor_`,
+/// `<arr>*_search_*`, …). It covered every tool we ship, but only by luck of
+/// naming: it was fail-OPEN by construction, so a future `queue_purge` or
+/// `sonarr_blocklist_release` would have matched nothing and run unconfirmed.
+/// It is now an ALLOWLIST — anything not listed needs confirmation, so a newly
+/// added tool stays gated until somebody deliberately vouches for it.
 public enum MCPToolWhitelist {
 
-    /// True when the named tool can trigger downloads / indexer traffic
-    /// / arr state mutations. Pattern-based so we don't have to keep
-    /// this list and the tool catalog in lockstep; new tools picking
-    /// up these conventions are gated automatically.
+    /// Every tool that only READS: metadata lookups, library listings,
+    /// calendar / queue / health reporting, TMDB queries, and the two
+    /// suggestion tools (they resolve titles for display and seed the Quiz
+    /// overlay — neither adds anything; the user still swipes or taps).
+    ///
+    /// Spelled out name by name on purpose: growing the catalog must not
+    /// silently widen what an unattended MCP client is allowed to run. Keep in
+    /// sync with `ChatToolCatalog.toolDirectory` — a stale name left here is
+    /// harmless, a mutating name added here is not.
+    ///
+    /// NOT listed, i.e. gated: `sonarr_monitor_season` / `lidarr_monitor_album`
+    /// (flip monitoring AND fire an immediate season/album search) and
+    /// `sonarr_search_episodes` / `radarr_search_movie` / `lidarr_search_album`
+    /// (manual indexer searches — they grab releases). Note the bare
+    /// `<arr>_search` tools ARE read-only: they are metadata lookups that
+    /// surface add candidates as cards, hit no indexer and start no grab.
+    public static let readOnlyTools: Set<String> = [
+        // Sonarr / Radarr / Lidarr / Whisparr — lookups and library listings
+        "sonarr_search",
+        "sonarr_get_series",
+        "radarr_search",
+        "radarr_get_movies",
+        "lidarr_search",
+        "lidarr_get_artists",
+        "lidarr_get_artist_albums",
+        "whisparr_search",
+        "whisparr_get_movies",
+        // TMDB — pure metadata API calls, no arr state involved
+        "tmdb_search_person",
+        "tmdb_person_movie_credits",
+        "tmdb_person_tv_credits",
+        "tmdb_discover_movies",
+        "tmdb_discover_series",
+        // Cross-cutting: suggestions, calendar, diagnostics, queue
+        "suggest_titles",
+        "discover_in_quiz",
+        "get_calendar",
+        "health",
+        "get_title_details",
+        "custom_formats",
+        "list_download_queue",
+    ]
+
+    /// True when the named tool needs an explicit user confirmation before it
+    /// runs — i.e. it can trigger downloads / indexer traffic / arr state
+    /// mutations. Fail-closed: a name we don't recognise counts as
+    /// destructive, because "unknown" is exactly the case we got wrong before.
     public static func isDestructive(_ name: String) -> Bool {
-        // Indexer searches grab releases — but ONLY the infix form on an *arr
-        // tool (`sonarr_search_episodes`, `radarr_search_movie`,
-        // `lidarr_search_album`). The bare `<arr>_search` tools are metadata
-        // LOOKUPS that surface add candidates (the user taps a card to add); they
-        // query no indexer and start no grab, so they are read-only and NOT gated.
-        // Scope the `_search_` rule to the arr prefixes so read-only lookups like
-        // `tmdb_search_person` (a pure TMDB API call) are not falsely gated.
-        let indexerArrs = ["sonarr", "radarr", "lidarr", "whisparr"]
-        if indexerArrs.contains(where: { name.hasPrefix($0) }), name.contains("_search_") {
-            return true
-        }
-
-        // Monitor / add / delete / remove mutate arr state wherever the action
-        // word sits (monitor fires an immediate SeasonSearch/AlbumSearch when
-        // state=true). Gate both the infix (`_action_`) and the bare trailing
-        // suffix (`_action`) so a future bare `sonarr_delete` is caught too.
-        for action in ["monitor", "add", "delete", "remove"] {
-            if name.contains("_\(action)_") || name.hasSuffix("_\(action)") {
-                return true
-            }
-        }
-
-        return false
+        !readOnlyTools.contains(name)
     }
 }

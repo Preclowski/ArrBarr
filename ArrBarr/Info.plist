@@ -18,6 +18,7 @@
 		<string>de</string>
 		<string>es</string>
 		<string>fr</string>
+		<string>nl</string>
 		<string>pl</string>
 	</array>
 	<key>CFBundleName</key>
@@ -42,6 +43,8 @@
 		<true/>
 	</dict>
 	<key>NSHumanReadableCopyright</key>
-	<string>© 2026 ArrBarr</string>
+	<string>© 2026 Konrad Preclowski. Released under the MIT License.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>ArrBarr talks to your Sonarr, Radarr, Lidarr and Whisparr servers and your download clients, which normally run on your local network.</string>
 </dict>
 </plist>

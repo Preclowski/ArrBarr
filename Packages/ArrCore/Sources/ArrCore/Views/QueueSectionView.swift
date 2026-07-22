@@ -35,16 +35,21 @@ public struct QueueSectionView: View {
     private var headerRow: some View {
         HStack(spacing: 6) {
             if onToggleCollapse != nil {
+                // Disclosure state is already spelled out by the header's
+                // Expand/Collapse hint below.
                 Image(systemName: "chevron.right")
                     .scaledFont(size: 9, weight: .semibold)
                     .foregroundStyle(.tertiary)
                     .rotationEffect(.degrees(isCollapsed ? 0 : 90))
                     .frame(width: 10)
+                    .accessibilityHidden(true)
             } else {
                 Color.clear.frame(width: 10, height: 10)
             }
+            // Decorative service glyph — `title` right next to it names the arr.
             Image(systemName: symbol)
                 .foregroundStyle(.secondary)
+                .accessibilityHidden(true)
             Text(title)
                 .scaledFont(size: 12, weight: .semibold)
                 .foregroundStyle(.secondary)
@@ -68,6 +73,7 @@ public struct QueueSectionView: View {
                         Text("queue.showHistory.button", bundle: .module)
                         Image(systemName: "chevron.right")
                             .scaledFont(size: 8, weight: .semibold)
+                            .accessibilityHidden(true)
                     }
                     .scaledFont(size: 10)
                     .foregroundStyle(hoveringHistory ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.tertiary))
@@ -159,5 +165,9 @@ public struct QueueSectionView: View {
             .scaledFont(size: 10)
             .foregroundStyle(.orange)
             .help(health.compactMap(\.message).joined(separator: "\n"))
+            // Orange triangle + hover tooltip is a mouse-only signal; give
+            // VoiceOver the same warning text as the badge's value.
+            .accessibilityLabel(Text("queue.serviceProblem.button", bundle: .module))
+            .accessibilityValue(Text(verbatim: health.compactMap(\.message).joined(separator: ", ")))
     }
 }

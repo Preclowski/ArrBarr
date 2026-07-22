@@ -1,7 +1,12 @@
 import Foundation
+import os
 
 /// Minimal `/system/status` shape — just enough for `testConnection()`.
 private struct ArrSystemStatus: Decodable { let version: String? }
+
+/// Shares QueueAggregator's category so one predicate covers the whole
+/// queue-refresh path in Console / `log show`.
+private let arrLog = Logger(category: "QueueFetch")
 
 /// Common HTTP+auth boilerplate shared by every *arr* REST client
 /// (Sonarr/Radarr/Lidarr/Whisparr/...). Each conforming type supplies
@@ -23,6 +28,34 @@ extension ArrAPIClient {
         ["X-Api-Key": config.apiKey]
     }
 
+    /// `pageSize` every client asks `/queue` for. Servarr paginates the queue
+    /// and offers no "give me everything" sentinel, so this has to be a
+    /// number; 1000 covers any sane install. `warnIfQueueTruncated` makes the
+    /// pathological case audible instead of silently dropping rows.
+    static var queuePageSize: Int { 1000 }
+
+    /// Cap on how many per-entity side-load GETs (episode files, track files)
+    /// a single queue refresh keeps in flight.
+    ///
+    /// `URLSession.shared` allows 6 connections per host and the poster loader
+    /// competes for the same pool, so an uncapped task group over a 40-series
+    /// queue doesn't fan out — it stacks 34 requests behind the first 6, long
+    /// enough for the tail to hit `HTTPClient.requestTimeout`. Those failures
+    /// are swallowed by `try?`, and the upgrade-diff quietly disappears from
+    /// the rows. Four saturates the pool while leaving lanes for posters.
+    static var maxConcurrentSideLoads: Int { 4 }
+
+    /// Shout when the arr says its queue holds more rows than the single page
+    /// we asked for returned. We deliberately don't page — a >1000-item queue
+    /// is pathological — but the rows past the cut are invisible in the UI,
+    /// which reads to the user as "my download vanished".
+    func warnIfQueueTruncated(returned: Int, totalRecords: Int) {
+        guard totalRecords > returned else { return }
+        arrLog.notice(
+            "\(serviceName, privacy: .public) queue truncated: showing \(returned, privacy: .public) of \(totalRecords, privacy: .public) records (pageSize=\(Self.queuePageSize, privacy: .public))"
+        )
+    }
+
     /// GET <apiBase><path> and decode the JSON body as T.
     func get<T: Decodable & Sendable>(_ path: String, query: [URLQueryItem] = []) async throws -> T {
         guard config.isConfigured else { throw HTTPError.notConfigured }
@@ -37,6 +70,10 @@ extension ArrAPIClient {
     /// errors to keep the UI happy). New code should prefer plain `get`.
     func getOrDefault<T: Decodable & Sendable>(_ path: String, query: [URLQueryItem] = [], default fallback: T) async throws -> T {
         guard config.isConfigured else { return fallback }
+        // Same key check every sibling makes — without it a key-less config
+        // spends a round-trip to collect a 401 and then degrades to `fallback`
+        // anyway, so short-circuit it here.
+        guard !config.apiKey.isEmpty else { return fallback }
         let url = try http.url(base: config.baseURL, path: "\(apiBase)\(path)", query: query)
         let data = try await http.get(url, headers: apiHeaders)
         return (try? JSONDecoder().decode(T.self, from: data)) ?? fallback
@@ -86,6 +123,9 @@ extension ArrAPIClient {
     /// DELETE <apiBase><path>?key=val&...
     func delete(_ path: String, query: [URLQueryItem] = []) async throws {
         guard config.isConfigured else { throw HTTPError.notConfigured }
+        // Matches `post`/`deleteQueueItem`: a missing key is a configuration
+        // problem, and saying so beats surfacing the arr's bare 401.
+        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
         let url = try http.url(base: config.baseURL, path: "\(apiBase)\(path)", query: query)
         _ = try await http.delete(url, headers: apiHeaders)
     }

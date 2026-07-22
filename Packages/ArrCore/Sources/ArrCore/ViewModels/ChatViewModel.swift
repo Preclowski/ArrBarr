@@ -135,12 +135,14 @@ public final class ChatViewModel {
                         toolCall: call
                     ))
 
-                    // Destructive-tool gate. For tools that queue indexer
-                    // traffic / change arr state (`_search_*`, `_monitor_*`,
-                    // `_add_*`, `_delete_*`), pause and surface a confirm
-                    // card. Cancel returns "(cancelled by user)" so the
-                    // model can adapt its plan.
-                    var confirmedArgs = call.arguments
+                    // Destructive-tool gate, presentation half. The backend is
+                    // what refuses to RUN an unconfirmed tool (see
+                    // LocalToolBackend.callTool); we put the confirm card up
+                    // first so the user sees the call in context, then hand
+                    // that answer down through ToolConfirmationContext.
+                    // Cancel returns "(cancelled by user)" so the model can
+                    // adapt its plan.
+                    let preApproved: JSONValue?
                     if MCPToolWhitelist.isDestructive(call.name) {
                         guard let args = await awaitConfirm(call) else {
                             messages.append(ChatMessage(
@@ -152,12 +154,40 @@ public final class ChatViewModel {
                             resultSummaries.append("Tool \(call.name) was cancelled by the user.")
                             continue
                         }
-                        confirmedArgs = args
+                        preApproved = args
+                    } else {
+                        preApproved = nil
+                    }
+                    let confirmedArgs = preApproved ?? call.arguments
+
+                    // What the backend's gate calls. Usually the card above
+                    // already ran for this very call, so we hand back the
+                    // approval we're holding. It only asks again if the
+                    // backend gates something this loop didn't — the
+                    // fail-closed direction, and still worth a card.
+                    let confirm: ToolConfirmationHandler = { [weak self] pending in
+                        if let preApproved { return .approved(preApproved) }
+                        guard let self else { return .unavailable }
+                        guard let args = await self.awaitConfirm(pending) else { return .declined }
+                        return .approved(args)
                     }
 
                     let output: ToolCallOutput
                     do {
-                        output = try await invokeTool(call.name, confirmedArgs)
+                        output = try await ToolConfirmationContext.$handler.withValue(confirm) {
+                            try await invokeTool(call.name, confirmedArgs)
+                        }
+                    } catch LocalToolError.confirmationDeclined(_) {
+                        // Vetoed at the backend gate rather than the card
+                        // above — render it identically.
+                        messages.append(ChatMessage(
+                            role: .tool,
+                            content: call.name,
+                            toolCall: call,
+                            toolResult: "(cancelled by user)"
+                        ))
+                        resultSummaries.append("Tool \(call.name) was cancelled by the user.")
+                        continue
                     } catch {
                         output = ToolCallOutput(text: "(tool error: \(error.localizedDescription))")
                     }

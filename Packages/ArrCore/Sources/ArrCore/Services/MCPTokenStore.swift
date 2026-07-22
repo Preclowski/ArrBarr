@@ -5,12 +5,12 @@ import Security
 /// never synced. Thin wrapper over `SecretStore` so there is one Keychain code
 /// path; kept as a named type because several call sites read it as a static.
 public enum MCPTokenStore {
-    /// Device-only, never synced. Mirror `ConfigStore`'s secret backend: an
-    /// ad-hoc/OSS build's file Keychain prompts on every rebuild and may not
-    /// persist the write, so only entitled App Store builds use the Keychain —
-    /// everything else (incl. `swift test`) uses UserDefaults. Without this the
-    /// MCP server could fail to read back its own bearer token after relaunch
-    /// (auth then breaks on exactly the self-hosted builds most likely to run it).
+    /// Device-only, never synced. Deliberately reuses `ConfigStore`'s backend
+    /// selection instead of repeating it: builds whose signature provisions the
+    /// shared access group get the Keychain, ad-hoc ones (incl. `swift test`)
+    /// get UserDefaults. Picking differently here would let the MCP server fail
+    /// to read back its own bearer token after a relaunch — auth would break on
+    /// exactly the self-hosted builds most likely to run it.
     private static let store: SecretStore =
         ConfigStore.makeDefaultSecretStore(defaults: .standard)
 

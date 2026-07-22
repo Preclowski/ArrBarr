@@ -238,11 +238,22 @@ public actor PosterStore {
         }
         guard let fetched = await fetchStoring(url, tier: tier, apiKey: apiKey),
               let image = PlatformImage(data: fetched.data) else {
-            negativeCache[Self.memoryKey(url, tier)] = Date().addingTimeInterval(Self.negativeTTL)
+            noteFailure(Self.memoryKey(url, tier))
             return nil
         }
         store(image, key: Self.memoryKey(url, tier))
         return image
+    }
+
+    /// Start this poster's cool-off, sweeping out every marker that has already
+    /// expired. The sweep is the point: reads only ever look up the one key they
+    /// are about to fetch, so an expired entry for a poster nothing asks for
+    /// again is never touched — and a library prefetch that misses on a few
+    /// hundred URLs would hold all of them for the life of the process.
+    private func noteFailure(_ key: String) {
+        let now = Date()
+        negativeCache = negativeCache.filter { $0.value > now }
+        negativeCache[key] = now.addingTimeInterval(Self.negativeTTL)
     }
 
     /// Download, resize to the tier and store it. Returns the stored bytes —

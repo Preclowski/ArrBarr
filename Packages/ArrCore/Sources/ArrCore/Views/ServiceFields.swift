@@ -36,6 +36,34 @@ struct ServiceFields: View {
         )
     }
 
+    /// URLs almost never arrive clean. A copy out of a terminal or a
+    /// docker-compose line drags whitespace or a newline along; a copy out of
+    /// the arr's own address bar drags its `#/…` hash route along. Both make
+    /// `URL(string:)` return nil, which flips `ServiceConfig.isConfigured` to
+    /// false — and `QueueAggregator` deliberately swallows `.notConfigured`,
+    /// so the arr then contributes nothing with no error surfaced anywhere.
+    /// Sanitising on assignment (rather than validating on submit) keeps that
+    /// failure mode from ever existing.
+    private var baseURLBinding: Binding<String> {
+        Binding(
+            get: { config.baseURL },
+            set: { config.baseURL = Self.sanitizedBaseURL($0) }
+        )
+    }
+
+    private static func sanitizedBaseURL(_ raw: String) -> String {
+        var url = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        // "http://host:8989/#/activity/queue" → "http://host:8989". The arrs
+        // are hash-routed SPAs, so every URL the user can see in their browser
+        // carries a fragment we have to drop — along with the "/" in front of
+        // it, which would otherwise leave a stray trailing slash.
+        if let hash = url.firstIndex(of: "#") {
+            url = String(url[..<hash])
+            if url.hasSuffix("/") { url = String(url.dropLast()) }
+        }
+        return url
+    }
+
     private enum TestState: Equatable {
         case idle
         case testing
@@ -60,7 +88,7 @@ struct ServiceFields: View {
         }
 
         if config.enabled {
-            TextField(text: $config.baseURL, prompt: Text(verbatim: kind.urlPlaceholder)) {
+            TextField(text: baseURLBinding, prompt: Text(verbatim: kind.urlPlaceholder)) {
                 Text("settings.url.label", bundle: .module)
             }
             .urlField()

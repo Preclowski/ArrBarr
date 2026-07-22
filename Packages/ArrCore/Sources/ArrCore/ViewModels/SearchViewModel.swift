@@ -152,10 +152,10 @@ public final class SearchViewModel {
     }
 
     private func search(generation: Int) async {
-        async let r = fetchOne(client: radarrClient)
-        async let s = fetchOne(client: sonarrClient)
-        async let l = fetchOne(client: lidarrClient)
-        async let w = fetchOne(client: whisparrClient)
+        async let r = fetchOne(client: radarrClient, generation: generation)
+        async let s = fetchOne(client: sonarrClient, generation: generation)
+        async let l = fetchOne(client: lidarrClient, generation: generation)
+        async let w = fetchOne(client: whisparrClient, generation: generation)
         let (rRes, sRes, lRes, wRes) = await (r, s, l, w)
 
         // Generation gate. If the user kept typing while we were
@@ -172,7 +172,10 @@ public final class SearchViewModel {
         isSearching = false
     }
 
-    private func fetchOne(client: SearchClient?) async -> [SearchResult] {
+    /// One source's lookup. `generation` is the same gate `search` applies to
+    /// the results: an error from a fetch the user has already typed past must
+    /// not paint itself over the search that replaced it.
+    private func fetchOne(client: SearchClient?, generation: Int) async -> [SearchResult] {
         guard let client else { return [] }
         do {
             async let fetchResults = client.lookup(input: parsedInput)
@@ -192,7 +195,17 @@ public final class SearchViewModel {
                 return result
             }
         } catch {
-            errorMessage = error.localizedDescription
+            // A superseded keystroke cancelled this lookup — not a failure the
+            // user should ever read. `HTTPClient.perform` rethrows
+            // `CancellationError` bare and URLSession reports its own teardown
+            // as `URLError.cancelled`; arr lookups take 1-3s, so typing hits
+            // this constantly and the raw text ("The operation couldn't be
+            // completed. (Swift.CancellationError error 1.)") used to land in
+            // the search UI.
+            if error is CancellationError || (error as? URLError)?.code == .cancelled {
+                return []
+            }
+            if searchGeneration == generation { errorMessage = error.localizedDescription }
             return []
         }
     }

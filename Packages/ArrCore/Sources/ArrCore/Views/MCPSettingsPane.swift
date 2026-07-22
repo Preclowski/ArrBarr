@@ -71,6 +71,7 @@ struct MCPSettingsPane: View {
                     Text(verbatim: url).font(.callout.monospaced()).textSelection(.enabled)
                     Button { copy(url) } label: { Image(systemName: "doc.on.doc") }
                         .buttonStyle(.borderless)
+                        .accessibilityLabel(Text("Copy server URL", bundle: .module))
                 }
             } label: {
                 Label { Text("settings.running.button", bundle: .module) }
@@ -103,6 +104,7 @@ struct MCPSettingsPane: View {
                         Button { copy(configStore.mcpAuthToken) } label: { Image(systemName: "doc.on.doc") }
                             .buttonStyle(.borderless)
                             .disabled(configStore.mcpAuthToken.isEmpty)
+                            .accessibilityLabel(Text("Copy token", bundle: .module))
                         Button { configStore.mcpAuthToken = MCPTokenStore.generate() } label: {
                             Text(configStore.mcpAuthToken.isEmpty ? "common.generate.button" : "common.regenerate.button", bundle: .module)
                                 .font(.caption)
@@ -179,10 +181,14 @@ struct MCPSettingsPane: View {
             }
             Spacer(minLength: 8)
             appIcons(tool.services)
+            // `.labelsHidden()` strips the switch from the accessibility tree
+            // as well — every tool row would announce as an anonymous "off".
             Toggle("", isOn: toolBinding(tool.name))
                 .labelsHidden()
                 .toggleStyle(.switch)
                 .controlSize(.small)
+                .accessibilityLabel(Text(verbatim: tool.name))
+                .accessibilityHint(Text(LocalizedStringKey(tool.summary), bundle: .module))
         }
         .padding(.vertical, 2)
     }
@@ -208,6 +214,11 @@ struct MCPSettingsPane: View {
                         .map(\.displayName).joined(separator: ", ")))
             }
         }
+        // Which apps a tool drives is real information, but it's encoded as a
+        // strip of brand marks plus a "+2" chip. Collapse the whole strip into
+        // one element that simply names them.
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(verbatim: services.map(\.displayName).joined(separator: ", ")))
     }
 
     // MARK: - Bindings / mutations

@@ -63,18 +63,18 @@ public enum WidgetDataStore {
         return items
     }
 
-    /// Reads a service config from the group suite and merges secrets back in
-    /// from the Keychain (shared access group under APPSTORE). Returns an empty
-    /// (unconfigured) config if the group suite is unavailable or the app
-    /// hasn't migrated yet.
+    /// Reads a service config from the group suite and merges the secrets back
+    /// in from wherever the app put them. Returns an empty (unconfigured) config
+    /// if the group suite is unavailable or the app hasn't migrated yet.
     public static func serviceConfig(_ kind: ServiceKind) -> ServiceConfig {
         guard let d = groupDefaults() else { return .empty }
         var cfg = ConfigStore.decodeServiceConfig(kind, from: d)
-        // Match the app's secret backend: shared-group Keychain under APPSTORE,
-        // otherwise the UserDefaults group suite (where the app stored them).
-        let secrets: SecretStore = (AppCapabilities.isAppStore && AppCapabilities.keychainSharingAvailable)
-            ? KeychainSecretStore()
-            : UserDefaultsSecretStore(defaults: d)
+        // Ask ConfigStore for the backend rather than re-deriving it: the two
+        // must agree exactly, and they last disagreed when only this side still
+        // required an App Store build. A Developer ID build writes to the shared
+        // Keychain, so a copy of the old rule here would read blank keys and the
+        // widget would silently render as unconfigured.
+        let secrets = ConfigStore.makeDefaultSecretStore(defaults: d)
         cfg.apiKey = secrets.read(.apiKey(for: kind)) ?? cfg.apiKey
         cfg.password = secrets.read(.password(for: kind)) ?? cfg.password
         return cfg

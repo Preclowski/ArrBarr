@@ -237,13 +237,40 @@ extension LocalToolBackend {
     }
 
     private static func probeDownloadClient(_ kind: DownloadClientKind, _ cfg: ServiceConfig) async throws -> String {
+        // qBittorrent and Deluge authenticate with a session cookie, so when
+        // they aren't handed a URLSession they build their own — and a
+        // URLSession keeps *itself* alive until it is invalidated. `health` is
+        // read-only, so it isn't behind the destructive-tool gate and an MCP
+        // client is free to poll it every 30s; letting those two clients own
+        // their sessions stranded one apiece per call, cookie jar and delegate
+        // queue included. Own the session here and tear it down on the way out.
+        // The other four run on `URLSession.shared` and have nothing to leak.
+        let cookieSession = Self.cookieSession(for: kind)
+        defer { cookieSession?.finishTasksAndInvalidate() }
         switch kind {
-        case .qbittorrent:  return try await QbittorrentClient(config: cfg).testConnection()
+        case .qbittorrent:  return try await QbittorrentClient(config: cfg, session: cookieSession).testConnection()
         case .transmission: return try await TransmissionClient(config: cfg).testConnection()
         case .nzbget:       return try await NzbgetClient(config: cfg).testConnection()
         case .sabnzbd:      return try await SabnzbdClient(config: cfg).testConnection()
         case .rtorrent:     return try await RtorrentClient(config: cfg).testConnection()
-        case .deluge:       return try await DelugeClient(config: cfg).testConnection()
+        case .deluge:       return try await DelugeClient(config: cfg, session: cookieSession).testConnection()
+        }
+    }
+
+    /// A throwaway session with private cookie storage for the two clients that
+    /// log in with a cookie, nil for the rest. Per-probe rather than one shared
+    /// jar: qBittorrent's SID and Deluge's session cookie would otherwise share
+    /// storage whenever both live on the same host.
+    private static func cookieSession(for kind: DownloadClientKind) -> URLSession? {
+        switch kind {
+        case .qbittorrent, .deluge:
+            let cfg = URLSessionConfiguration.default
+            cfg.httpCookieStorage = HTTPCookieStorage()
+            cfg.httpCookieAcceptPolicy = .always
+            cfg.httpShouldSetCookies = true
+            return URLSession(configuration: cfg)
+        case .transmission, .nzbget, .sabnzbd, .rtorrent:
+            return nil
         }
     }
 

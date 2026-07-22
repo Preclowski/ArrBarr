@@ -71,8 +71,6 @@ struct ProgressLine: View {
     }
 
     private var formattedTimeLeft: String? {
-        guard let raw = item.timeLeft, !raw.isEmpty else { return nil }
-        let trimmed = String(raw.prefix { $0 != "." })
-        return trimmed == "00:00:00" ? nil : trimmed
+        TimeLeftFormatter.format(item.timeLeft)
     }
 }

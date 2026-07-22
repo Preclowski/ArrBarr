@@ -308,36 +308,52 @@ public final class ConfigStore: ObservableObject {
         self.defaults = defaults
         let store = secrets ?? Self.makeDefaultSecretStore(defaults: defaults)
         self.secrets = store
-        if AppCapabilities.isAppStore && AppCapabilities.keychainSharingAvailable {
-            // Stably-signed + entitled: secrets belong in the (iCloud-synced) Keychain.
+        // Branch on the store we actually got, not on the capability flags: an
+        // injected store (tests, previews) must never be mistaken for the
+        // Keychain, and the plaintext sweep below would alias onto itself if the
+        // "Keychain" were really another UserDefaults store.
+        if store is KeychainSecretStore {
+            // Signed with a real team identity: the Keychain is reachable and
+            // prompt-free, so no secret may stay in plaintext. Two legacy
+            // locations, drained in order — the pre-SecretStore config blobs,
+            // then the UserDefaults secret store that unentitled builds use.
             Self.migrateSecretsToKeychain(defaults: defaults, secrets: store)
+            Self.migratePlaintextSecretsIntoKeychain(defaults: defaults, keychain: store)
         } else {
-            // Ad-hoc / OSS build: the file Keychain prompts on every rebuild, so
-            // secrets live in UserDefaults. If a previous build pushed them into the
-            // Keychain (and blanked them here), pull them back out once.
+            // Ad-hoc / self-signed build: the data-protection Keychain rejects us
+            // outright, so secrets live in UserDefaults. If a previous build
+            // pushed them into the Keychain (and blanked them here), pull them
+            // back out once.
             Self.recoverSecretsFromKeychainIfNeeded(defaults: defaults, secrets: store)
         }
         applyValues(from: defaults)
         setupSinks()
     }
 
-    /// Production secret backend: the iCloud-synced Keychain only in App Store
-    /// builds (stably signed + entitled, so no password prompts); UserDefaults
-    /// otherwise, because an ad-hoc-signed build's file-Keychain access prompts
-    /// for the login password on every rebuild.
+    /// Production secret backend: the data-protection Keychain whenever this
+    /// binary's signature actually provisions the shared access group.
+    /// `keychainSharingAvailable` decides that with a silent probe that cannot
+    /// prompt (see `AppCapabilities`). The build flavor is deliberately not part
+    /// of the test — the signature is the only thing that governs whether the
+    /// Keychain answers at all.
+    ///
+    /// Ad-hoc / self-signed builds — every OSS config today — fail the probe and
+    /// fall back to UserDefaults: they can't reach the data-protection Keychain
+    /// at all, and the legacy file Keychain is off-limits because its ACL is
+    /// pinned to a signature that changes on every rebuild (login-password
+    /// prompt each time).
     nonisolated static func makeDefaultSecretStore(defaults: UserDefaults) -> SecretStore {
-        if AppCapabilities.isAppStore && AppCapabilities.keychainSharingAvailable {
-            return KeychainSecretStore()
-        }
-        return UserDefaultsSecretStore(defaults: defaults)
+        AppCapabilities.keychainSharingAvailable
+            ? KeychainSecretStore()
+            : UserDefaultsSecretStore(defaults: defaults)
     }
 
-    /// One-time recovery for non-App-Store builds: if an earlier build migrated
-    /// secrets INTO the Keychain (and blanked them in UserDefaults), read them
-    /// back out into `secrets` (UserDefaults) so the app works without per-launch
-    /// Keychain prompts. Prompts once for the items the old build created, then
-    /// clears the migration flag so it never runs again. A cancelled prompt
-    /// leaves the flag set so the next launch can retry.
+    /// One-time recovery for builds that fell back to UserDefaults: if an earlier
+    /// build migrated secrets INTO the Keychain (and blanked them here), read
+    /// them back out into `secrets` so the app still works, then clear the
+    /// migration flag so it never runs again. Cannot prompt — `KeychainSecretStore`
+    /// is data-protection-only, so an unentitled read just fails silently and
+    /// leaves the flag set for the next launch to retry.
     nonisolated static func recoverSecretsFromKeychainIfNeeded(defaults: UserDefaults, secrets: SecretStore) {
         guard defaults.bool(forKey: secretsMigratedKey) else { return }
         let keychain = KeychainSecretStore()
@@ -864,6 +880,58 @@ public final class ConfigStore: ObservableObject {
         }
 
         if allVerified { defaults.set(true, forKey: secretsMigratedKey) }
+    }
+
+    /// Lift every secret still sitting in the plaintext `UserDefaultsSecretStore`
+    /// into the Keychain, now that the Keychain is reachable. This is the upgrade
+    /// path for an install that previously ran an ad-hoc build (or any build
+    /// before the Keychain was enabled outside the App Store) — without it the
+    /// user would open the app to blank API keys.
+    ///
+    /// Deliberately NOT flag-guarded: it is idempotent and free in the steady
+    /// state (every lookup misses on the first `UserDefaults` read, so the
+    /// Keychain is not touched at all), which also makes it self-healing if a
+    /// Keychain write failed on an earlier launch.
+    ///
+    /// The delete ordering is paranoid on purpose: write → read back → and only
+    /// then drop the plaintext copy. A rejected or unverifiable write leaves the
+    /// plaintext value exactly where it was and is retried next launch, so no
+    /// secret can be lost in the gap.
+    ///
+    /// Two suites are swept. `MCPTokenStore` builds its store on `.standard`
+    /// while ConfigStore uses the App Group suite, so the MCP bearer token lives
+    /// in a different plist from everything else. The `.standard` sweep is
+    /// skipped in demo mode — the demo profile must never reach into the real
+    /// one.
+    nonisolated static func migratePlaintextSecretsIntoKeychain(defaults: UserDefaults,
+                                                               keychain: SecretStore) {
+        var suites: [UserDefaults] = [defaults]
+        if !DemoMode.isActive, defaults !== UserDefaults.standard { suites.append(.standard) }
+
+        func lift(_ key: SecretKey, from plaintext: UserDefaultsSecretStore) {
+            guard let value = plaintext.read(key) else { return }
+            // Keychain already authoritative for this key (the steady state after
+            // the first successful run, or after `migrateSecretsToKeychain` just
+            // moved it): the plaintext copy is a stale duplicate — drop it.
+            if let existing = keychain.read(key), !existing.isEmpty {
+                plaintext.delete(key)
+                return
+            }
+            keychain.set(value, for: key)
+            guard keychain.read(key) == value else { return }
+            plaintext.delete(key)
+        }
+
+        for suite in suites {
+            let plaintext = UserDefaultsSecretStore(defaults: suite)
+            for kind in ServiceKind.allCases {
+                lift(.apiKey(for: kind), from: plaintext)
+                lift(.password(for: kind), from: plaintext)
+            }
+            lift(.openAIKey, from: plaintext)
+            lift(.tmdbKey, from: plaintext)
+            lift(.mcpBearer, from: plaintext)
+        }
     }
 
 }

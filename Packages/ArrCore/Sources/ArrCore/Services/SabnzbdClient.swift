@@ -40,9 +40,18 @@ public actor SabnzbdClient: DownloadProgressSource {
             ]
         )
         let data = try await http.get(url)
-        let resp = try? JSONDecoder().decode(SabActionResponse.self, from: data)
-        if resp?.status == false {
-            throw SabnzbdError.actionFailed(resp?.error ?? "Unknown SABnzbd error")
+        // A body we can't decode is a failure, not a silent success: `try?`
+        // here reported the action as done for anything that wasn't SAB JSON
+        // at all (a reverse-proxy login page, a truncated reply) while the
+        // queue never moved. Same handling as `fetchSlots` below.
+        let resp: SabActionResponse
+        do {
+            resp = try JSONDecoder().decode(SabActionResponse.self, from: data)
+        } catch {
+            throw HTTPError.decoding(error)
+        }
+        if resp.status == false {
+            throw SabnzbdError.actionFailed(resp.error ?? "Unknown SABnzbd error")
         }
     }
 

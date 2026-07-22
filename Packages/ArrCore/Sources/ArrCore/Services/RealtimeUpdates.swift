@@ -53,6 +53,13 @@ public enum RealtimeEvent: Sendable, Equatable {
 /// browser tabs and handles the reconnect dance gracefully.
 public actor RealtimeManager {
     private var connections: [QueueItem.Source: SignalRConnection] = [:]
+    /// Monotonic token identifying the newest connection-mutating run
+    /// (`reconfigure` / `forceReconnect` / `shutdown`). An actor is not a
+    /// mutex: every `await` in those methods is a suspension point at which
+    /// another call can start *and finish*. Each run captures the generation
+    /// it started with and bails as soon as a newer one has taken over,
+    /// rather than resuming and writing its stale connections back.
+    private var generation: UInt64 = 0
     private var onEvent: @Sendable (RealtimeEvent) async -> Void
     /// Cached configs from the last `reconfigure` call. Lets
     /// `forceReconnect` rebuild every connection with the current
@@ -102,11 +109,25 @@ public actor RealtimeManager {
             (.lidarr, lidarr),
             (.whisparr, whisparr),
         ]
-        // `await` stops inline (not detached) so a rapid second call to
-        // `reconfigure` can't observe the new connection before the old
-        // one has finished tearing down. Stops are cheap (cancellation
-        // + WS close). Starts can fire-and-forget since runLoop is the
-        // long-lived part — its setup races are absorbed by the actor.
+        generation &+= 1
+        let myGeneration = generation
+        // Actor isolation does NOT make this method atomic: `await stop()`
+        // suspends, and a second `reconfigure` (Settings publishes its config
+        // as the user types) then runs to completion on top of us. Two rules
+        // keep that safe:
+        //   1. Take the old connection OUT of `connections` *before* awaiting
+        //      its stop, so a reentrant call sees "nothing here" and builds
+        //      its own instead of stopping the same object a second time.
+        //   2. Bail after every suspension once `generation` has moved on,
+        //      instead of overwriting the newer run's connection with ours.
+        // Skipping (2) leaks a *live* socket: an overwritten connection is
+        // unreachable but not deallocated, because `start()`'s
+        // `Task { await self?.runLoop() }` holds a strong `self` until the
+        // loop exits — and only `stop()` can end it. Each interleaving would
+        // strand one WebSocket with its 15 s ping pump and reconnect loop for
+        // the life of the process.
+        // Starts stay fire-and-forget: `runLoop` is the long-lived part and
+        // its setup races are absorbed by the actor.
         for (source, cfg) in desired {
             let want = cfg.isConfigured && !cfg.apiKey.isEmpty && !DemoMode.isActive
             let have = connections[source] != nil
@@ -117,19 +138,19 @@ public actor RealtimeManager {
                 connections[source] = conn
                 Task { await conn.start() }
             case (false, true):
-                if let existing = connections[source] {
-                    await existing.stop()
-                }
-                connections[source] = nil
+                let existing = connections.removeValue(forKey: source)
+                await existing?.stop()
+                guard myGeneration == generation else { return }
             case (true, true):
-                if connections[source]?.matches(cfg) == false {
-                    if let existing = connections[source] {
-                        await existing.stop()
-                    }
-                    let conn = makeConnection(source: source, config: cfg)
-                    connections[source] = conn
-                    Task { await conn.start() }
-                }
+                // Same URL + key → keep the live socket; only a real change
+                // is worth a teardown.
+                if connections[source]?.matches(cfg) == true { continue }
+                let existing = connections.removeValue(forKey: source)
+                await existing?.stop()
+                guard myGeneration == generation else { return }
+                let conn = makeConnection(source: source, config: cfg)
+                connections[source] = conn
+                Task { await conn.start() }
             case (false, false):
                 break
             }
@@ -156,10 +177,16 @@ public actor RealtimeManager {
     }
 
     public func shutdown() async {
-        for (_, conn) in connections {
+        generation &+= 1
+        // Drain the dictionary before awaiting the stops — same reentrancy
+        // rule as `reconfigure`. Otherwise a call that resumes mid-shutdown
+        // could install a connection that the trailing `removeAll()` would
+        // then drop unstopped; the bumped generation sends it home instead.
+        let stopping = connections
+        connections.removeAll()
+        for (_, conn) in stopping {
             await conn.stop()
         }
-        connections.removeAll()
     }
 
     /// Tear down every connection and immediately reopen with the
@@ -169,10 +196,18 @@ public actor RealtimeManager {
     /// we have nothing cached yet (`reconfigure` was never called).
     public func forceReconnect() async {
         guard let cfg = lastConfigs else { return }
-        for (_, conn) in connections {
+        generation &+= 1
+        let myGeneration = generation
+        // Drain first, then stop — see `reconfigure`. And if a `reconfigure`
+        // overtook us while we were awaiting the stops it has already brought
+        // the world up to date; rebuilding on top of it would orphan its
+        // sockets.
+        let stopping = connections
+        connections.removeAll()
+        for (_, conn) in stopping {
             await conn.stop()
         }
-        connections.removeAll()
+        guard myGeneration == generation else { return }
         await reconfigure(
             sonarr: cfg.sonarr, radarr: cfg.radarr,
             lidarr: cfg.lidarr, whisparr: cfg.whisparr
@@ -195,15 +230,34 @@ actor SignalRConnection {
     private var task: Task<Void, Never>?
     private var ws: URLSessionWebSocketTask?
     private var pingTask: Task<Void, Never>?
-    /// Bumped each time a connection cycle reaches the listen phase
-    /// successfully. Used by the reconnect loop to know whether the
-    /// previous attempt actually got off the ground — proper exits
-    /// from `listen` reset backoff, failures before handshake don't.
+    /// Set once a cycle reaches the listen phase. Purely diagnostic — it
+    /// tells the failure log whether we died before or after the handshake.
+    /// It is deliberately NOT what resets the backoff; see `listenStartedAt`.
     private var lastReachedListen = false
-    /// Counts failed-before-handshake attempts in a row. After a
-    /// threshold we throttle further so a bad reverse-proxy can't
-    /// pin us at the 30s ceiling forever — we drop to once-every-
-    /// 5-minutes and let polling stay primary.
+    /// When the current cycle started listening, on a monotonic clock.
+    /// Reaching the handshake proves nothing about a connection's health: a
+    /// reverse proxy (or an *arr behind Cloudflare, or a ~1 s idle timeout)
+    /// can accept the upgrade, answer `{}` and hang up — every single time.
+    /// Treating that as success reset the backoff and the failure counter on
+    /// every cycle, which pinned us at one negotiate POST + one WebSocket
+    /// upgrade *per second, per arr*, forever, with the 30 s ceiling and the
+    /// 5-minute cold start unreachable. So a cycle now only counts once the
+    /// connection has actually LIVED — `minimumHealthyLifetime` on the wire,
+    /// or at least one frame received.
+    private var listenStartedAt: ContinuousClock.Instant?
+    /// Whether the current cycle received a frame that wasn't a Close. The
+    /// cheapest possible proof that the hub is genuinely talking to us —
+    /// Servarr's own keepalive ping alone is enough.
+    private var receivedFrameThisCycle = false
+    /// How long a connection must survive before the cycle counts as healthy
+    /// without having received anything. Comfortably past the "accepted the
+    /// upgrade, then closed" pathologies (sub-second to a couple of seconds),
+    /// and a healthy hub pings well inside it anyway.
+    private static let minimumHealthyLifetime: Duration = .seconds(30)
+    /// Counts cycles that never produced a living connection, in a row. After
+    /// a threshold we throttle further so a bad reverse-proxy can't pin us at
+    /// the 30s ceiling forever — we drop to once-every-5-minutes and let
+    /// polling stay primary.
     private var consecutiveFailures = 0
 
     init(
@@ -242,13 +296,13 @@ actor SignalRConnection {
         ws = nil
     }
 
-    /// Reconnect loop with exponential backoff. Backoff is reset on a
-    /// reached-handshake cycle (so a flaky network that recovers fast
-    /// goes back to 1 s), not on `runOnce` returning, which only
-    /// happens on cancellation. Beyond `failureCeilingBeforeColdStart`
-    /// consecutive *pre-handshake* failures we drop to a 5-minute
-    /// retry cadence — there's no point pounding a misconfigured
-    /// reverse proxy when polling is doing the real work anyway.
+    /// Reconnect loop with exponential backoff. Backoff is reset on a cycle
+    /// whose connection actually lived (so a flaky network that recovers fast
+    /// goes back to 1 s), not on `runOnce` returning, which only happens on
+    /// cancellation. Beyond `failureCeilingBeforeColdStart` consecutive dead
+    /// cycles we drop to a 5-minute retry cadence — there's no point pounding
+    /// a misconfigured reverse proxy when polling is doing the real work
+    /// anyway.
     private func runLoop() async {
         var backoffNs: UInt64 = 1_000_000_000  // 1 s
         let maxBackoffNs: UInt64 = 30_000_000_000  // 30 s
@@ -256,6 +310,8 @@ actor SignalRConnection {
         let failureCeilingBeforeColdStart = 10
         while !Task.isCancelled {
             lastReachedListen = false
+            listenStartedAt = nil
+            receivedFrameThisCycle = false
             do {
                 try await runOnce()
             } catch is CancellationError {
@@ -268,8 +324,13 @@ actor SignalRConnection {
                 // tells us whether we died before or after the handshake.
                 realtimeLog.error("[\(self.source.rawValue, privacy: .public)] cycle failed (reachedHandshake=\(self.lastReachedListen, privacy: .public)): \(error.localizedDescription, privacy: .public)")
             }
-            if lastReachedListen {
-                // We did real work — connection ran for a while. Reset.
+            // "Did real work" means the connection LIVED, not that it
+            // handshook: a hub that greets us and immediately hangs up is a
+            // failure, however polite. Either evidence counts — a frame we
+            // received, or `minimumHealthyLifetime` spent on the wire.
+            let lived = receivedFrameThisCycle
+                || (listenStartedAt.map { ContinuousClock.now - $0 >= Self.minimumHealthyLifetime } ?? false)
+            if lived {
                 backoffNs = 1_000_000_000
                 consecutiveFailures = 0
             } else {
@@ -304,9 +365,12 @@ actor SignalRConnection {
         // them (under load Servarr happily batches `{}<RS>{type:1...}<RS>`
         // into one receive).
         let pending = try await consumeHandshake(ws: ws)
-        // We're past the protocol handshake. Mark the cycle as
-        // "real" so backoff resets when listen eventually exits.
+        // We're past the protocol handshake — which the failure log cares
+        // about, but which on its own earns no backoff reset. Start the
+        // lifetime clock instead and let `runLoop` judge the cycle when it
+        // ends.
         lastReachedListen = true
+        listenStartedAt = .now
         realtimeLog.debug("[\(self.source.rawValue, privacy: .public)] handshake ok — listening (pending=\(pending.count, privacy: .public))")
         startPingPump(ws: ws)
         try await listen(ws: ws, pending: pending)
@@ -340,7 +404,10 @@ actor SignalRConnection {
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.httpBody = Data("{}".utf8)
 
-        realtimeLog.debug("[\(self.source.rawValue, privacy: .public)] negotiate POST \(url.absoluteString, privacy: .public)")
+        // Scheme/host/path only — never the query. The preserved user query
+        // can carry a legacy `?apikey=`, and `.public` on the full URL would
+        // write that key into the unified log. Same redaction as the WS log.
+        realtimeLog.debug("[\(self.source.rawValue, privacy: .public)] negotiate POST \(components.scheme ?? "?", privacy: .public)://\(components.host ?? "?", privacy: .public)\(components.path, privacy: .public)")
         let (data, response) = try await session.data(for: req)
         let status = (response as? HTTPURLResponse)?.statusCode ?? -1
         guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
@@ -517,10 +584,15 @@ actor SignalRConnection {
         switch Self.parse(frame: frame, source: source) {
         case .close:
             // Server sent a Close (type 7) — break out so reconnect retries.
+            // Deliberately does NOT count as a received frame: a hub that
+            // greets us and hangs up must not buy the cycle a backoff reset.
             throw URLError(.cancelled)
         case .ignored:
-            break
+            // Keepalive ping (or anything we don't act on) — still proof the
+            // hub is alive and talking, which is what the backoff cares about.
+            receivedFrameThisCycle = true
         case .events(let events):
+            receivedFrameThisCycle = true
             for event in events {
                 realtimeLog.debug("[\(self.source.rawValue, privacy: .public)] event \(String(describing: event), privacy: .public)")
                 await onEvent(event)

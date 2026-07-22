@@ -14,12 +14,6 @@ public enum Tokens {
     /// outer gutter used between major popover sections, `row` is the
     /// horizontal inset inside a list row, etc.
     public enum Spacing {
-        /// 2 pt — between badge and its content, very tight chip rows.
-        public static let micro: CGFloat = 2
-        /// 4 pt — between sibling chips, icon + label, tight HStacks.
-        public static let tight: CGFloat = 4
-        /// 6 pt — default inline gap, button content spacing.
-        public static let snug: CGFloat = 6
         /// 8 pt — comfortable inline gap, between paragraph and meta row.
         public static let regular: CGFloat = 8
         /// 12 pt — section-level horizontal inset for popover content.

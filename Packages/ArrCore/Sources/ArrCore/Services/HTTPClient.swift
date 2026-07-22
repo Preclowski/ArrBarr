@@ -24,7 +24,20 @@ public enum HTTPError: LocalizedError {
             // "This series has already been added", an invalid quality
             // profile, or a missing root folder). Surfacing just "HTTP 400"
             // hides all of that. Parse the server message and append it.
-            if let detail = Self.serverMessage(from: body) {
+            let detail = Self.serverMessage(from: body)
+            // …except on 401/403, where Servarr answers with an *empty* body:
+            // a wrong or missing API key renders as a bare "HTTP 401" that
+            // names neither the cause nor the fix. Say both, and keep any
+            // detail the service did send (download clients usually do).
+            if code == 401 || code == 403 {
+                let hint = String(
+                    localized: "Authentication failed. Check the API key or password in Settings.",
+                    bundle: .module
+                )
+                if let detail { return "HTTP \(code): \(hint) (\(detail))" }
+                return "HTTP \(code): \(hint)"
+            }
+            if let detail {
                 return "HTTP \(code): \(detail)"
             }
             return "HTTP \(code)"
@@ -108,12 +121,23 @@ public struct HTTPClient {
 
     func url(base: String, path: String, query: [URLQueryItem] = []) throws -> URL {
         guard var components = URLComponents(string: base) else { throw HTTPError.badURL }
-        let normalizedBasePath = components.path.hasSuffix("/")
-            ? String(components.path.dropLast())
-            : components.path
+        // Strip *every* trailing slash, not just one: a base pasted as
+        // "https://host/sonarr//" would otherwise join into a path with a
+        // double slash, which reverse proxies in front of an arr can 404.
+        var normalizedBasePath = components.path
+        while normalizedBasePath.hasSuffix("/") { normalizedBasePath.removeLast() }
         components.path = normalizedBasePath + path
         if !query.isEmpty {
             components.queryItems = (components.queryItems ?? []) + query
+        }
+        // URLComponents leaves "+" literal in the query (it's a legal sub-delim),
+        // but ASP.NET — which every arr runs on — decodes a literal "+" as a
+        // space, so searching "Disney+", "Apple TV+" or "C++" would silently
+        // query the wrong term. Re-encode just that one character on the
+        // already-encoded query, leaving everything URLComponents got right
+        // (space, "&", "=", unicode) exactly as it is.
+        if let encodedQuery = components.percentEncodedQuery {
+            components.percentEncodedQuery = encodedQuery.replacingOccurrences(of: "+", with: "%2B")
         }
         guard let url = components.url else { throw HTTPError.badURL }
         return url
@@ -187,10 +211,24 @@ public struct HTTPClient {
         return data
     }
 
+    /// Characters an `application/x-www-form-urlencoded` field may carry
+    /// literally — RFC 3986's unreserved set. Everything else is
+    /// percent-encoded, non-ASCII included (Foundation escapes non-ASCII
+    /// bytes regardless of the allowed set, so "é" still becomes %C3%A9).
+    ///
+    /// Deliberately NOT `.urlQueryAllowed`: that set *permits* "&", "=" and
+    /// "+", so a qBittorrent password like `p&ss=w+rd` used to be spliced
+    /// into extra form fields ("password=p", "ss=w+rd") and the login failed
+    /// with an unexplained 403 loop.
+    private static let formFieldAllowed: CharacterSet =
+        CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "-._~"))
+
     static func encodeForm(_ dict: [String: String]) -> String {
-        dict.map { key, value in
-            let k = key.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? key
-            let v = value.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? value
+        // Sorted by key so the body is deterministic: field order means
+        // nothing to a form parser, but it makes this testable.
+        dict.sorted { $0.key < $1.key }.map { key, value in
+            let k = key.addingPercentEncoding(withAllowedCharacters: Self.formFieldAllowed) ?? key
+            let v = value.addingPercentEncoding(withAllowedCharacters: Self.formFieldAllowed) ?? value
             return "\(k)=\(v)"
         }.joined(separator: "&")
     }

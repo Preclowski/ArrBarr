@@ -162,11 +162,19 @@ public struct ScoreLabel: View {
                     .foregroundStyle(Color.green.opacity(0.55))
             }
             .scaledFont(size: size, weight: weight, monospacedDigit: true)
+            // Sighted users read the green/red tint as "score"; VoiceOver
+            // would just hear two bare numbers. Name the thing, hand the
+            // digits over as its value.
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(Text("common.customFormatScore.button", bundle: .module))
+            .accessibilityValue(Text(verbatim: "\(scoreSign)\(score) (\(deltaSign)\(delta))"))
         } else if score != 0 {
             let sign = score > 0 ? "+" : ""
             Text(verbatim: "\(sign)\(score)")
                 .scaledFont(size: size, weight: weight)
                 .foregroundStyle(score > 0 ? Color.green : Color.red)
+                .accessibilityLabel(Text("common.customFormatScore.button", bundle: .module))
+                .accessibilityValue(Text(verbatim: "\(sign)\(score)"))
         }
     }
 }
@@ -246,8 +254,11 @@ public struct QueueStatusMessagesBanner: View {
                     HStack(spacing: 3) {
                         Text(expanded ? "discover.showLess.button" : "queue.showMore.button", bundle: .module)
                             .scaledFont(size: 11, weight: .medium)
+                        // Disclosure glyph — the button's own text already
+                        // says which way it goes.
                         Image(systemName: expanded ? "chevron.up" : "chevron.down")
                             .scaledFont(size: 9, weight: .semibold)
+                            .accessibilityHidden(true)
                     }
                     .foregroundStyle(tint)
                 }
@@ -262,6 +273,7 @@ public struct QueueStatusMessagesBanner: View {
                         Text("detail.openInBrowser.button", bundle: .module)
                         Image(systemName: "arrow.up.right.square")
                             .scaledFont(size: 10, weight: .medium)
+                            .accessibilityHidden(true)
                     }
                     .scaledFont(size: 11, weight: .medium)
                     .foregroundStyle(tint)
@@ -370,6 +382,9 @@ public struct ExistingFileDiffRow: View {
             Image(systemName: "arrow.turn.down.right")
                 .scaledFont(size: 9, weight: .semibold)
                 .foregroundStyle(.tertiary)
+                // Pure typographic scaffolding — announcing the glyph would
+                // just prefix the row with "arrow turn down right".
+                .accessibilityHidden(true)
             content
             Spacer(minLength: 0)
         }
@@ -468,9 +483,12 @@ public struct CustomFormatDiff: View {
 
         if !removed.isEmpty {
             HStack(spacing: 4) {
+                // The minus sign IS the semantics here — spell it out so the
+                // chips that follow aren't mistaken for formats being added.
                 Text(verbatim: "−")
                     .scaledFont(size: 10, weight: .semibold)
                     .foregroundStyle(.red)
+                    .accessibilityLabel(Text("Removed custom formats", bundle: .module))
                 TooltipFlowLayout(spacing: 3) {
                     ForEach(removed, id: \.self) { TagChip(text: $0, color: .red) }
                 }
@@ -668,8 +686,11 @@ public struct StatusIconLabel: View {
         // status row reads as one cohesive strip of chips instead of
         // free-floating text next to bordered pills.
         HStack(spacing: 3) {
+            // Icon and word carry the SAME meaning — announcing both makes
+            // VoiceOver read "pause circle fill, Paused".
             Image(systemName: status.symbol)
                 .scaledFont(size: iconSize)
+                .accessibilityHidden(true)
             Text(LocalizedStringKey(status.displayName))
                 .scaledFont(size: labelSize, weight: labelWeight)
         }

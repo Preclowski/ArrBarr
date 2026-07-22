@@ -1,7 +1,9 @@
-import XCTest
+import Testing
+import Foundation
 @testable import ArrCore
 
-final class DiscoverItemTests: XCTestCase {
+@Suite("DiscoverItem & DiscoverFilter")
+struct DiscoverItemTests {
     private func mockSearchResult(id: Int = 42, title: String = "Drive",
                                   year: Int? = 2011) -> SearchResult {
         SearchResult(
@@ -13,12 +15,14 @@ final class DiscoverItemTests: XCTestCase {
         )
     }
 
-    func test_dedupKey_usesTmdbIdFromForeignId() {
+    @Test("dedupKey prefers the TMDB id carried in foreignId")
+    func dedupKeyUsesTmdbIdFromForeignId() {
         let item = DiscoverItem(result: mockSearchResult(id: 42), action: .addToRadarr)
-        XCTAssertEqual(item.dedupKey, "tmdb:42")
+        #expect(item.dedupKey == "tmdb:42")
     }
 
-    func test_dedupKey_fallsBackToTitleYearWhenNoForeignId() {
+    @Test("dedupKey falls back to title+year when there is no foreignId")
+    func dedupKeyFallsBackToTitleYear() {
         let result = SearchResult(
             id: 0, foreignId: "", title: "Untitled", subtitle: nil,
             year: 1999, rating: nil, imdb: nil, rottenTomatoes: nil,
@@ -27,57 +31,63 @@ final class DiscoverItemTests: XCTestCase {
             posterURL: nil, source: .radarr, inLibraryArrId: nil
         )
         let item = DiscoverItem(result: result, action: .addToRadarr)
-        XCTAssertEqual(item.dedupKey, "title:untitled|1999")
+        #expect(item.dedupKey == "title:untitled|1999")
     }
 
-    func test_filter_passesItem_whenNoConstraints() {
+    @Test("An unconstrained filter passes everything through")
+    func filterPassesItemWhenNoConstraints() {
         let filter = DiscoverFilter()
-        XCTAssertTrue(filter.matches(year: 2011, monitored: false))
+        #expect(filter.matches(year: 2011, monitored: false))
     }
 
-    func test_filter_passesItem_inDecadeRange() {
+    @Test("A decade filter passes only years inside the range")
+    func filterPassesItemInDecadeRange() {
         let filter = DiscoverFilter(decade: .twoThousandTens)
-        XCTAssertTrue(filter.matches(year: 2011, monitored: false))
-        XCTAssertFalse(filter.matches(year: 1995, monitored: false))
-        XCTAssertFalse(filter.matches(year: nil, monitored: false))
+        #expect(filter.matches(year: 2011, monitored: false))
+        #expect(!filter.matches(year: 1995, monitored: false))
+        #expect(!filter.matches(year: nil, monitored: false))
     }
 
-    func test_filter_monitoredOnly_excludesUnmonitored() {
+    @Test("monitoredOnly excludes unmonitored and unknown-monitoring items")
+    func filterMonitoredOnlyExcludesUnmonitored() {
         let filter = DiscoverFilter(monitoredOnly: true)
-        XCTAssertTrue(filter.matches(year: 2011, monitored: true))
-        XCTAssertFalse(filter.matches(year: 2011, monitored: false))
-        XCTAssertFalse(filter.matches(year: 2011, monitored: nil))
+        #expect(filter.matches(year: 2011, monitored: true))
+        #expect(!filter.matches(year: 2011, monitored: false))
+        #expect(!filter.matches(year: 2011, monitored: nil))
     }
 
-    func test_filter_genreIntersection_andStatus() {
+    @Test("Genre intersection and owned status must both hold")
+    func filterGenreIntersectionAndStatus() {
         var f = DiscoverFilter()
         f.genres = [.comedy]
         f.status = .owned
 
-        XCTAssertTrue(f.matches(year: 2010, monitored: true, hasFile: true,
-                                genres: ["Comedy", "Drama"]))
-        XCTAssertFalse(f.matches(year: 2010, monitored: true, hasFile: false,
-                                 genres: ["Comedy"]),
-                       "status=owned requires hasFile=true")
-        XCTAssertFalse(f.matches(year: 2010, monitored: true, hasFile: true,
-                                 genres: ["Drama"]),
-                       "genre intersection must be non-empty")
+        #expect(f.matches(year: 2010, monitored: true, hasFile: true,
+                          genres: ["Comedy", "Drama"]))
+        #expect(!f.matches(year: 2010, monitored: true, hasFile: false,
+                           genres: ["Comedy"]),
+                "status=owned requires hasFile=true")
+        #expect(!f.matches(year: 2010, monitored: true, hasFile: true,
+                           genres: ["Drama"]),
+                "genre intersection must be non-empty")
     }
 
-    func test_filter_ratingAndRuntime_areExposed() {
+    @Test("Rating and runtime tiers expose their thresholds")
+    func filterRatingAndRuntimeAreExposed() {
         var f = DiscoverFilter()
         f.rating = .highlyRated
         f.runtime = .short
-        XCTAssertEqual(f.rating.minRating, 7.5)
-        XCTAssertEqual(f.runtime.lessThan, 90)
+        #expect(f.rating.minRating == 7.5)
+        #expect(f.runtime.lessThan == 90)
     }
 
-    func test_filter_runtimeOverload_excludesByRuntime() {
+    @Test("The runtime overload rejects items past the tier's ceiling")
+    func filterRuntimeOverloadExcludesByRuntime() {
         var f = DiscoverFilter()
         f.runtime = .short
-        XCTAssertTrue(f.matches(year: 2010, monitored: true, hasFile: true,
-                                genres: ["Comedy"], runtime: 85))
-        XCTAssertFalse(f.matches(year: 2010, monitored: true, hasFile: true,
-                                 genres: ["Comedy"], runtime: 95))
+        #expect(f.matches(year: 2010, monitored: true, hasFile: true,
+                          genres: ["Comedy"], runtime: 85))
+        #expect(!f.matches(year: 2010, monitored: true, hasFile: true,
+                           genres: ["Comedy"], runtime: 95))
     }
 }

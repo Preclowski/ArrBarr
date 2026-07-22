@@ -17,7 +17,16 @@ public actor DelugeClient: DownloadProgressSource {
     private let config: ServiceConfig
     private let session: URLSession
     private let http: HTTPClient
+    /// Whether `auth.login` has established a live session cookie. Cleared
+    /// again by `invalidateSession(generation:)` when Deluge rejects an RPC:
+    /// the cookie expires (and every session dies with a daemon restart) while
+    /// this actor stays cached for the app's lifetime.
     private var loggedIn = false
+    /// Bumped by every successful login. An RPC captures the generation it was
+    /// sent under, so a rejection can only invalidate *that* session — a burst
+    /// of stale RPCs re-authenticates once instead of each tearing down the
+    /// session the previous one just established.
+    private var sessionGeneration = 0
     private var requestId = 0
     /// In-flight login, shared so concurrent actions await one `auth.login`.
     private var loginTask: Task<Void, Error>?
@@ -39,8 +48,6 @@ public actor DelugeClient: DownloadProgressSource {
     }
 
     func perform(_ action: Action, hash: String) async throws {
-        try await ensureLoggedIn()
-
         let method: String
         let params: [Any]
 
@@ -56,7 +63,7 @@ public actor DelugeClient: DownloadProgressSource {
             params = [hash, false]
         }
 
-        let resp = try await rpc(method: method, params: params)
+        let resp = try await authenticated { try await rpc(method: method, params: params) }
         if let error = resp["error"] as? [String: Any],
            let message = error["message"] as? String {
             throw DelugeError.actionFailed(message)
@@ -64,8 +71,7 @@ public actor DelugeClient: DownloadProgressSource {
     }
 
     func testConnection() async throws -> String {
-        try await ensureLoggedIn()
-        let resp = try await rpc(method: "daemon.info", params: [])
+        let resp = try await authenticated { try await rpc(method: "daemon.info", params: []) }
         if let version = resp["result"] as? String {
             return "Deluge \(version)"
         }
@@ -78,11 +84,20 @@ public actor DelugeClient: DownloadProgressSource {
     /// hash to match the arr's download id.
     public func fetchProgress() async throws -> [String: DownloadProgress] {
         guard config.isConfigured else { return [:] }
-        try await ensureLoggedIn()
-        let resp = try await rpc(
-            method: "core.get_torrents_status",
-            params: [[String: Any](), ["progress", "download_payload_rate"]]
-        )
+        let resp = try await authenticated {
+            try await rpc(
+                method: "core.get_torrents_status",
+                params: [[String: Any](), ["progress", "download_payload_rate"]]
+            )
+        }
+        // Deluge reports failures in-band (HTTP 200 + an `error` envelope), so
+        // dropping them here would render an expired session — or a daemon that
+        // lost its connection to the core — as "nothing is downloading": an
+        // overlay that quietly dies instead of reporting why.
+        if let error = resp["error"] as? [String: Any],
+           let message = error["message"] as? String {
+            throw DelugeError.actionFailed(message)
+        }
         guard let result = resp["result"] as? [String: Any] else { return [:] }
         var map: [String: DownloadProgress] = [:]
         for (hash, value) in result {
@@ -92,6 +107,50 @@ public actor DelugeClient: DownloadProgressSource {
             map[hash.lowercased()] = DownloadProgress(progress: progress, downloadSpeed: rate)
         }
         return map
+    }
+
+    /// Runs one authenticated RPC, re-authenticating and retrying it exactly
+    /// once if Deluge rejects the session.
+    ///
+    /// Deluge signals that *in-band*: an expired session cookie comes back as
+    /// **HTTP 200** carrying `{"error": {"message": "Not authenticated",
+    /// "code": 1}}`, so the HTTP layer never sees a bad status and the response
+    /// has to be inspected here. `QueueAggregator` / `DownloadProgressService`
+    /// cache this actor for the app's lifetime, so without the retry every
+    /// pause/resume failed — and the progress overlay went blank — until
+    /// ArrBarr was relaunched.
+    ///
+    /// Retrying exactly once is deliberate and bounds the recursion: a second
+    /// rejection means the password is wrong, not the cookie stale.
+    private func authenticated(_ send: () async throws -> [String: Any]) async throws -> [String: Any] {
+        try await ensureLoggedIn()
+        let generation = sessionGeneration
+        let resp = try await send()
+        guard let error = resp["error"] as? [String: Any], Self.isAuthError(error) else { return resp }
+
+        invalidateSession(generation: generation)
+        // Goes back through `ensureLoggedIn`, so this joins a handshake another
+        // caller may already have started rather than racing it.
+        try await ensureLoggedIn()
+        return try await send()
+    }
+
+    /// Deluge's web API reports an expired session as code 1 / "Not
+    /// authenticated". Both fields are matched so a daemon that sets only one
+    /// still recovers; a false positive costs a single extra login before the
+    /// same error surfaces on the retry anyway.
+    private static func isAuthError(_ error: [String: Any]) -> Bool {
+        if let code = error["code"] as? Int, code == 1 { return true }
+        return ((error["message"] as? String) ?? "").lowercased().contains("not authenticated")
+    }
+
+    /// Drops the cached session so the next `ensureLoggedIn` re-runs
+    /// `auth.login` — unless another caller already logged in since
+    /// `generation` was captured, in which case that fresh session is left
+    /// untouched.
+    private func invalidateSession(generation: Int) {
+        guard generation == sessionGeneration else { return }
+        loggedIn = false
     }
 
     private func ensureLoggedIn() async throws {
@@ -111,6 +170,7 @@ public actor DelugeClient: DownloadProgressSource {
             throw DelugeError.authFailed
         }
         loggedIn = true
+        sessionGeneration += 1
     }
 
     private func rpc(method: String, params: [Any]) async throws -> [String: Any] {

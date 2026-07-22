@@ -49,12 +49,6 @@ public struct ServiceIcon: View {
         self.size = size
     }
 
-    public init(kind: ServiceKind, fallbackSymbol: String, size: CGFloat) {
-        self.brandName = kind.brandIconName
-        self.fallbackSymbol = fallbackSymbol
-        self.size = size
-    }
-
     public init(kind: ServiceKind, size: CGFloat) {
         self.brandName = kind.brandIconName
         self.fallbackSymbol = kind.symbol

@@ -1,7 +1,9 @@
 import Foundation
 
-/// A capability that requires ArrBarr Pro. Each case carries the localized
-/// copy shown as the contextual line in the paywall ("what you just tried").
+/// A capability that requires ArrBarr Control — the paid tier, which is always
+/// called "Control" in anything the user reads (the `Pro` in these type and
+/// property names is internal only). Each case carries the localized copy shown
+/// as the contextual line in the paywall ("what you just tried").
 public enum ProFeature: String, CaseIterable, Sendable {
     case chat
     case downloadClients
@@ -11,10 +13,10 @@ public enum ProFeature: String, CaseIterable, Sendable {
     /// Short headline for the contextual paywall line.
     public var localizedTitleKey: String {
         switch self {
-        case .chat:            return "Chat is a Pro feature"
-        case .downloadClients: return "Download clients are a Pro feature"
-        case .addTitle:        return "Adding titles is a Pro feature"
-        case .queueAction:     return "Managing downloads is a Pro feature"
+        case .chat:            return "Chat is a Control feature"
+        case .downloadClients: return "Download clients are a Control feature"
+        case .addTitle:        return "Adding titles is a Control feature"
+        case .queueAction:     return "Managing downloads is a Control feature"
         }
     }
 

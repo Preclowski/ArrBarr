@@ -164,6 +164,7 @@ public struct EpisodeDetailOverlay: View {
             HStack(spacing: 6) {
                 FloatingBackButton(action: onClose)
                     .keyboardShortcut(.cancelAction)
+                    .accessibilityLabel(Text("settings.back.button", bundle: .module))
                 Text(navTitleString)
                     .scaledFont(size: 15, weight: .semibold)
                     .foregroundStyle(.primary)
@@ -177,6 +178,7 @@ public struct EpisodeDetailOverlay: View {
                     }
                     .buttonStyle(.plain)
                     .help(Text("detail.openInBrowser.button", bundle: .module))
+                    .accessibilityLabel(Text("detail.openInBrowser.button", bundle: .module))
                 }
             }
             .padding(.horizontal, 12)
@@ -241,6 +243,7 @@ public struct EpisodeDetailOverlay: View {
                         Image(systemName: "safari")
                     }
                     .help(Text("detail.openInBrowser.button", bundle: .module))
+                    .accessibilityLabel(Text("detail.openInBrowser.button", bundle: .module))
                 }
                 // iOS: delete in the toolbar, to the RIGHT of Safari.
                 // macOS surfaces it next to the Resume CTA instead.
@@ -251,6 +254,10 @@ public struct EpisodeDetailOverlay: View {
                     }
                     .tint(.red)
                     .help(Text("queue.cancelDownload.button", bundle: .module))
+                    .accessibilityLabel(Text("queue.cancelDownload.button", bundle: .module))
+                    // Destructive and irreversible — say what it actually does
+                    // before the user double-taps a bare trash can.
+                    .accessibilityHint(Text("This will remove the download from the client.", bundle: .module))
                 }
                 #endif
             }
@@ -327,6 +334,7 @@ public struct EpisodeDetailOverlay: View {
             HStack(spacing: 6) {
                 Image(systemName: "magnifyingglass")
                     .scaledFont(size: 11, weight: .semibold)
+                    .accessibilityHidden(true)
                 Text("Manual search", bundle: .module)
                     .scaledFont(size: 12, weight: .semibold)
             }
@@ -343,6 +351,10 @@ public struct EpisodeDetailOverlay: View {
         PauseResumeButton(isPaused: q.isPaused, progress: q.progress, tint: q.status.tint) {
             if q.isPaused { await onResumeEpisode?(q) } else { await onPauseEpisode?(q) }
         }
+        // The button's progress ring is the only place this episode's
+        // completion is shown on the CTA strip — publish it as the value so
+        // VoiceOver announces "Pause download, 62%".
+        .accessibilityValue(Text(max(0.0, min(1.0, q.progress)), format: .percent.precision(.fractionLength(0))))
     }
 
     @ViewBuilder
@@ -351,6 +363,7 @@ public struct EpisodeDetailOverlay: View {
             HStack(spacing: 6) {
                 Image(systemName: "trash")
                     .scaledFont(size: 11, weight: .semibold)
+                    .accessibilityHidden(true)
                 Text("queue.cancelDownload.button", bundle: .module)
                     .scaledFont(size: 12, weight: .semibold)
             }
@@ -359,6 +372,9 @@ public struct EpisodeDetailOverlay: View {
         }
         .modifier(GlassProminentButtonStyle())
         .tint(.red)
+        // Destructive: spell out the consequence, since "Cancel download"
+        // alone doesn't say the client loses the transfer.
+        .accessibilityHint(Text("This will remove the download from the client.", bundle: .module))
     }
 
     @ViewBuilder
@@ -370,11 +386,13 @@ public struct EpisodeDetailOverlay: View {
                 } else if didSearch {
                     Image(systemName: "checkmark")
                         .scaledFont(size: 11, weight: .semibold)
+                        .accessibilityHidden(true)
                     Text("detail.searchQueued.button", bundle: .module)
                         .scaledFont(size: 12, weight: .semibold)
                 } else {
                     Image(systemName: "magnifyingglass")
                         .scaledFont(size: 11, weight: .semibold)
+                        .accessibilityHidden(true)
                     Text("Automatic search", bundle: .module)
                         .scaledFont(size: 12, weight: .semibold)
                 }
@@ -384,6 +402,12 @@ public struct EpisodeDetailOverlay: View {
         }
         .modifier(GlassProminentButtonStyle())
         .disabled(isSearching)
+        // While the search is in flight the label is a bare spinner.
+        .accessibilityLabel(isSearching
+                            ? Text("detail.searchingForRelease.label", bundle: .module)
+                            : (didSearch ? Text("detail.searchQueued.button", bundle: .module)
+                                         : Text("Automatic search", bundle: .module)))
+        .accessibilityHint(Text("Will query your indexers and start a download if a release matches.", bundle: .module))
     }
 
     @ViewBuilder
@@ -414,6 +438,9 @@ public struct EpisodeDetailOverlay: View {
                     .buttonStyle(.plain)
                     .disabled(posterURL == nil)
                     .help(Text("detail.showPoster.button", bundle: .module))
+                    // RemotePoster hides itself from VoiceOver, so the button
+                    // wrapping it has no label at all without this.
+                    .accessibilityLabel(Text("detail.showPoster.button", bundle: .module))
                 VStack(alignment: .leading, spacing: 6) {
                     // Series title (with year) shows in content as a
                     // drill-in link — the episode's series context. Only
@@ -428,6 +455,7 @@ public struct EpisodeDetailOverlay: View {
                                     .scaledFont(size: 12, weight: .medium)
                                     .lineLimit(2)
                                 LinkChevron(size: 9)
+                                    .accessibilityHidden(true)
                             }
                             .foregroundStyle(.secondary)
                         }
@@ -446,6 +474,7 @@ public struct EpisodeDetailOverlay: View {
                                     .scaledFont(size: 12, weight: .medium)
                                     .lineLimit(1)
                                 LinkChevron(size: 9)
+                                    .accessibilityHidden(true)
                             }
                             .foregroundStyle(.secondary)
                         }

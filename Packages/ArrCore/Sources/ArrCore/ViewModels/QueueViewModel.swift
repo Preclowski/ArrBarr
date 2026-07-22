@@ -252,11 +252,19 @@ public final class QueueViewModel {
         // Re-subscribe when any arr's connection details change. The
         // manager diffs internally so unchanged arrs keep their open
         // sockets.
+        //
+        // Debounced for the same reason as the download-client probes below:
+        // the Settings fields write to `ConfigStore` per keystroke, so typing
+        // `http://nas:8989` emitted ~15 configs — each one a full teardown and
+        // re-dial of that arr's SignalR connection against a half-typed host,
+        // all of them overlapping inside `reconfigure`.
         Publishers.CombineLatest4(
             configStore.$sonarr, configStore.$radarr,
             configStore.$lidarr, configStore.$whisparr
         )
         .dropFirst()
+        .removeDuplicates { $0 == $1 }
+        .debounce(for: .seconds(1.5), scheduler: DispatchQueue.main)
         .sink { [weak self] sonarr, radarr, lidarr, whisparr in
             Task { [weak self] in
                 await self?.realtime.reconfigure(
@@ -303,8 +311,20 @@ public final class QueueViewModel {
             .store(in: &intervalObservers)
     }
 
-    deinit {
+    /// `isolated` so the body runs on the main actor: a plain `deinit` is
+    /// nonisolated and can neither read the timer properties nor legally call
+    /// `invalidate()`, which Foundation requires on the run loop that installed
+    /// the timer (`RunLoop.main`, see `commonModeTimer`).
+    isolated deinit {
         Task { [realtime] in await realtime.shutdown() }
+        // A scheduled `Timer` is owned by the run loop, not by us — dropping
+        // the view-model doesn't stop it. Without these, every discarded
+        // instance leaves timers firing on `RunLoop.main` forever, each
+        // retaining its closure (and re-arming the poll cadence) for the life
+        // of the process.
+        foregroundTimer?.invalidate()
+        backgroundTimer?.invalidate()
+        realtimeDebounce?.invalidate()
     }
 
     /// Hook up the realtime callback and subscribe to the initial

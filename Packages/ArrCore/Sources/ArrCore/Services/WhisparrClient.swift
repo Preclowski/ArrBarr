@@ -18,7 +18,7 @@ public actor WhisparrClient: ArrAPIClient {
             base: config.baseURL,
             path: "\(apiBase)/queue",
             query: [
-                URLQueryItem(name: "pageSize", value: "1000"),
+                URLQueryItem(name: "pageSize", value: String(Self.queuePageSize)),
                 URLQueryItem(name: "includeMovie", value: "true"),
                 URLQueryItem(name: "includeUnknownMovieItems", value: "true"),
             ]
@@ -28,6 +28,7 @@ public actor WhisparrClient: ArrAPIClient {
         let page: ArrQueuePage<WhisparrQueueRecord>
         do { page = try JSONDecoder().decode(ArrQueuePage<WhisparrQueueRecord>.self, from: data) }
         catch { throw HTTPError.decoding(error) }
+        warnIfQueueTruncated(returned: page.records.count, totalRecords: page.totalRecords)
         let baseURL = config.baseURL
         return page.records.map { Self.unify($0, baseURL: baseURL) }
     }
@@ -146,8 +147,8 @@ public actor WhisparrClient: ArrAPIClient {
     }
 
     private static func unify(_ r: WhisparrQueueRecord, baseURL: String) -> QueueItem {
-        let total = Int64(r.size ?? 0)
-        let left = Int64(r.sizeleft ?? 0)
+        let total = clampedBytes(r.size)
+        let left = clampedBytes(r.sizeleft)
         let progress = total > 0 ? max(0, min(1, 1.0 - Double(left) / Double(total))) : 0.0
 
         let movieTitle: String
@@ -169,7 +170,7 @@ public actor WhisparrClient: ArrAPIClient {
             title: movieTitle,
             subtitle: nil,
             releaseName: r.title,
-            status: parseStatus(arrStatus: r.status, trackedState: r.trackedDownloadState),
+            status: parseStatus(arrStatus: r.status, trackedState: r.trackedDownloadState, trackedStatus: r.trackedDownloadStatus),
             progress: progress,
             sizeTotal: total,
             sizeLeft: left,

@@ -331,10 +331,8 @@ public final class QueueAggregator: QueueDataProviding {
         }
 
         switch item.downloadProtocol {
-        case .usenet:
-            try await performUsenet(action, downloadId: downloadId)
-        case .torrent:
-            try await performTorrent(action, downloadId: downloadId)
+        case .usenet, .torrent:
+            try await performViaClient(action, on: item, downloadId: downloadId)
         case .unknown:
             throw AggregateError.downloadProtocolUnknown
         }
@@ -387,54 +385,100 @@ public final class QueueAggregator: QueueDataProviding {
         }
     }
 
-    private func performUsenet(_ action: Action, downloadId: String) async throws {
-        let sabCfg = configStore.sabnzbd
-        if sabCfg.isConfigured, !sabCfg.apiKey.isEmpty {
-            let sab = SabnzbdClient(config: sabCfg)
-            try await sab.perform(sabAction(action), nzoId: downloadId)
-            return
+    /// Sends a client-side action (pause / resume / force-start) to the client
+    /// that actually owns this download.
+    ///
+    /// The arr already tells us which one, in `QueueItem.downloadClient` — its
+    /// *user-chosen name* for the client, e.g. "qBittorrent" or "Transmission
+    /// (4K)". Honouring it matters as soon as two clients are configured: with
+    /// the old fixed priority order, a Sonarr row backed by Transmission had its
+    /// hash sent to qBittorrent, which answers 200 OK for a hash it doesn't know
+    /// and does nothing — so the row flipped to "paused" optimistically and
+    /// silently snapped back on the next refresh.
+    private func performViaClient(_ action: Action, on item: QueueItem, downloadId: String) async throws {
+        let configured = configuredClients(for: item.downloadProtocol)
+        guard let kind = Self.route(clientNamed: item.downloadClient, among: configured) else {
+            throw AggregateError.downloadClientNotConfigured(item.downloadProtocol)
         }
-
-        let nzbgetCfg = configStore.nzbget
-        if nzbgetCfg.isConfigured {
-            let nzbget = NzbgetClient(config: nzbgetCfg)
-            try await nzbget.perform(nzbgetAction(action), nzbId: downloadId)
-            return
+        let cfg = configStore.config(for: kind)
+        switch kind {
+        case .sabnzbd:
+            try await SabnzbdClient(config: cfg).perform(sabAction(action), nzoId: downloadId)
+        case .nzbget:
+            try await NzbgetClient(config: cfg).perform(nzbgetAction(action), nzbId: downloadId)
+        case .qbittorrent:
+            try await qbitClient(for: cfg).perform(qbitAction(action), hash: downloadId)
+        case .transmission:
+            try await transmissionClient(for: cfg).perform(transmissionAction(action), hash: downloadId)
+        case .rtorrent:
+            try await RtorrentClient(config: cfg).perform(rtorrentAction(action), hash: downloadId)
+        case .deluge:
+            try await delugeClient(for: cfg).perform(delugeAction(action), hash: downloadId)
+        case .radarr, .sonarr, .lidarr, .whisparr:
+            // Unreachable — `candidateKinds` only ever yields download clients.
+            throw AggregateError.downloadClientNotConfigured(item.downloadProtocol)
         }
-
-        throw AggregateError.downloadClientNotConfigured(.usenet)
     }
 
-    private func performTorrent(_ action: Action, downloadId: String) async throws {
-        let qbitCfg = configStore.qbittorrent
-        if qbitCfg.isConfigured {
-            let qbit = qbitClient(for: qbitCfg)
-            try await qbit.perform(qbitAction(action), hash: downloadId)
-            return
+    /// The configured download clients that can serve `proto`, in the historical
+    /// priority order. Doubles as the candidate set for name matching and as the
+    /// fallback order when the name identifies none of them.
+    private func configuredClients(for proto: QueueItem.DownloadProtocol) -> [ServiceKind] {
+        Self.candidateKinds(for: proto).filter { kind in
+            let cfg = configStore.config(for: kind)
+            guard cfg.isConfigured else { return false }
+            // SABnzbd is key-authenticated: a URL without a key can't perform
+            // anything, so it must not shadow a working NZBGet.
+            return kind.requiresApiKey ? !cfg.apiKey.isEmpty : true
         }
+    }
 
-        let transCfg = configStore.transmission
-        if transCfg.isConfigured {
-            let client = transmissionClient(for: transCfg)
-            try await client.perform(transmissionAction(action), hash: downloadId)
-            return
+    /// Every client that *could* serve `proto`, in the fallback priority order.
+    /// `internal` because `ConfigStore.selectedDownloadClient` — which decides
+    /// whose reachability gates the pause/resume controls — has to agree with
+    /// this list to stay in step with `route`.
+    nonisolated static func candidateKinds(for proto: QueueItem.DownloadProtocol) -> [ServiceKind] {
+        switch proto {
+        case .usenet:  return [.sabnzbd, .nzbget]
+        case .torrent: return [.qbittorrent, .transmission, .rtorrent, .deluge]
+        case .unknown: return []
         }
+    }
 
-        let rtCfg = configStore.rtorrent
-        if rtCfg.isConfigured {
-            let client = RtorrentClient(config: rtCfg)
-            try await client.perform(rtorrentAction(action), hash: downloadId)
-            return
+    /// Picks which of `configured` (already filtered to the item's protocol, in
+    /// priority order) owns a download the arr labelled `name`.
+    ///
+    /// `name` is free text the user typed into the arr, so matching is lenient:
+    /// exact display name first, then a token found anywhere in the name, so a
+    /// renamed instance ("qBit — 4K", "Transmission-sonarr") still lands right.
+    /// No match — or nothing to disambiguate — falls back to the first
+    /// configured client, i.e. exactly the previous fixed-order behaviour.
+    /// `internal` + `nonisolated` (not private/MainActor) so it's unit-testable
+    /// as the pure function it is — it touches no aggregator state.
+    nonisolated static func route(clientNamed name: String?, among configured: [ServiceKind]) -> ServiceKind? {
+        guard let fallback = configured.first else { return nil }
+        guard configured.count > 1 else { return fallback }
+        let needle = (name ?? "").trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !needle.isEmpty else { return fallback }
+        if let exact = configured.first(where: { $0.displayName.lowercased() == needle }) { return exact }
+        if let fuzzy = configured.first(where: { kind in
+            nameTokens(kind).contains { needle.contains($0) }
+        }) { return fuzzy }
+        return fallback
+    }
+
+    /// Substrings that identify a client inside an arbitrary user-chosen name.
+    /// Deliberately narrow — "torrent" alone would match every torrent client.
+    private nonisolated static func nameTokens(_ kind: ServiceKind) -> [String] {
+        switch kind {
+        case .sabnzbd:      return ["sabnzbd", "sab"]
+        case .nzbget:       return ["nzbget"]
+        case .qbittorrent:  return ["qbittorrent", "qbit"]
+        case .transmission: return ["transmission"]
+        case .rtorrent:     return ["rtorrent", "rutorrent"]
+        case .deluge:       return ["deluge"]
+        case .radarr, .sonarr, .lidarr, .whisparr: return []
         }
-
-        let delugeCfg = configStore.deluge
-        if delugeCfg.isConfigured {
-            let client = delugeClient(for: delugeCfg)
-            try await client.perform(delugeAction(action), hash: downloadId)
-            return
-        }
-
-        throw AggregateError.downloadClientNotConfigured(.torrent)
     }
 
     // Reuse qBittorrent client to avoid re-login on every action.

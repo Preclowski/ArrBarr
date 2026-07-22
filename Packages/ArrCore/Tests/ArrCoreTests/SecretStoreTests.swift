@@ -1,6 +1,35 @@
 import Testing
 import Foundation
+import Security
 @testable import ArrCore
+
+/// Can this process reach the data-protection Keychain at all? An unsigned or
+/// ad-hoc-signed binary — which every `swift test` runner is — gets
+/// `errSecMissingEntitlement` back for *any* data-protection item, with or
+/// without an access group. `KeychainSecretStore` is deliberately
+/// data-protection-only (it must never touch the legacy file Keychain, which
+/// prompts for the login password on every rebuild), so its round-trip is
+/// simply untestable here — and it is never handed out in that environment
+/// either, because `ConfigStore.makeDefaultSecretStore` falls back to
+/// UserDefaults.
+///
+/// Measured directly instead of read off `AppCapabilities` so a probe override
+/// left set by a concurrently running suite cannot flip the gate.
+private let dataProtectionKeychainReachable: Bool = {
+    let q: [String: Any] = [
+        kSecClass as String: kSecClassGenericPassword,
+        kSecAttrService as String: KeychainSecretStore.service,
+        kSecAttrAccount as String: "secret.__reachability_probe__",
+        kSecUseDataProtectionKeychain as String: true,
+        kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly as String,
+    ]
+    SecItemDelete(q as CFDictionary)
+    var add = q
+    add[kSecValueData as String] = Data("1".utf8)
+    let status = SecItemAdd(add as CFDictionary, nil)
+    SecItemDelete(q as CFDictionary)
+    return status == errSecSuccess
+}()
 
 @Suite("SecretStore", .serialized)
 struct SecretStoreSuite {
@@ -34,7 +63,10 @@ struct SecretStoreSuite {
         }
     }
 
-    @Test("baseQuery synchronizable + access group follow AppCapabilities.isAppStore")
+    /// iCloud Keychain sync is the one thing still tied to the build flavor —
+    /// it rides on entitlements only the App Store build carries. Where the item
+    /// physically lives is not: see `AppCapabilitiesSuite` for the access group.
+    @Test("baseQuery: synchronizable follows isAppStore, data protection does not")
     func keychainGatingRuntime() {
         let originalAppStore = AppCapabilities.isAppStore
         let originalProvider = KeychainSecretStore.syncEnabledProvider
@@ -47,15 +79,18 @@ struct SecretStoreSuite {
         AppCapabilities.configure(isAppStore: true)
         let on = KeychainSecretStore.baseQuery(for: .openAIKey)
         #expect(on[kSecAttrSynchronizable as String] as? Bool == true)
-        #expect(on[kSecAttrAccessGroup as String] as? String == KeychainSecretStore.accessGroup)
-        #expect(on[kSecUseDataProtectionKeychain as String] as? Bool == true)
         #expect(KeychainSecretStore.baseQuery(for: .mcpBearer)[kSecAttrSynchronizable as String] as? Bool == false)
 
         AppCapabilities.configure(isAppStore: false)
         let off = KeychainSecretStore.baseQuery(for: .openAIKey)
         #expect(off[kSecAttrSynchronizable as String] as? Bool == false)
-        #expect(off[kSecAttrAccessGroup as String] == nil)
-        #expect(off[kSecUseDataProtectionKeychain as String] == nil)
+
+        // The attribute that must NOT track the flavor. Dropping it in any build
+        // would route that build's writes to the legacy file Keychain, whose ACL
+        // is pinned to the code signature — an ad-hoc build would then ask for
+        // the login password on every single rebuild.
+        #expect(on[kSecUseDataProtectionKeychain as String] as? Bool == true)
+        #expect(off[kSecUseDataProtectionKeychain as String] as? Bool == true)
     }
 
     @Test("Keychain accessibility: MCP device-only, synced after-first-unlock")
@@ -83,7 +118,9 @@ struct SecretStoreSuite {
         #expect(KeychainSecretStore.baseQuery(for: .openAIKey)[kSecAttrSynchronizable as String] as? Bool == true)
     }
 
-    @Test("Real Keychain round-trips a non-conflicting key")
+    @Test("Real Keychain round-trips a non-conflicting key",
+          .enabled(if: dataProtectionKeychainReachable,
+                   "unentitled binary: the data-protection Keychain rejects every call"))
     func keychainRoundTrips() {
         // Use a DEDICATED throwaway account — never a real SecretKey (.tmdbKey,
         // .apiKey(for:), …). A real key would collide with the user's actual

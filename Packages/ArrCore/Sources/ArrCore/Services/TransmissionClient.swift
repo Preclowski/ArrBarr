@@ -32,10 +32,17 @@ public actor TransmissionClient: DownloadProgressSource {
         let body = try rpcBody(action: action, hash: hash)
         let data = try await rpcRequest(url: url, body: body)
 
-        if let resp = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-           let result = resp["result"] as? String, result != "success" {
-            throw TransmissionError.actionFailed(result)
+        // An unreadable body is a failure, not a silent success: `try?` here
+        // swallowed proxy error pages and truncated replies and reported the
+        // action as done while the torrent never moved. Transmission always
+        // answers with a `result` string, so its absence is equally wrong.
+        guard let resp = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let result = resp["result"] as? String else {
+            throw TransmissionError.actionFailed(
+                String(localized: "The server sent an unreadable response.", bundle: .module)
+            )
         }
+        guard result == "success" else { throw TransmissionError.actionFailed(result) }
     }
 
     func testConnection() async throws -> String {
@@ -84,11 +91,20 @@ public actor TransmissionClient: DownloadProgressSource {
         return map
     }
 
+    /// Hand-rolled rather than routed through `HTTPClient.perform` because the
+    /// 409 handshake below needs a *response header*
+    /// (`X-Transmission-Session-Id`), which `perform` doesn't surface. It still
+    /// has to behave like `perform` in the two ways that matter off the happy
+    /// path: a bounded timeout and bare cancellation.
     private func rpcRequest(url: URL, body: Data, retried: Bool = false) async throws -> Data {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = body
+        // Without this the request inherits URLSession's 60s default, and since
+        // `QueueAggregator.fetch()` awaits the progress snapshot, one half-open
+        // Transmission freezes *every* queue refresh for a minute.
+        request.timeoutInterval = http.timeout
 
         if !config.username.isEmpty {
             let cred = "\(config.username):\(config.password)"
@@ -101,6 +117,13 @@ public actor TransmissionClient: DownloadProgressSource {
         let (data, response): (Data, URLResponse)
         do {
             (data, response) = try await session.data(for: request)
+        } catch is CancellationError {
+            // Cancellation is normal teardown (overlapping refresh, released
+            // pull-to-refresh), not a transport failure — rethrow it bare so
+            // callers can recognise and ignore it, exactly as HTTPClient does.
+            throw CancellationError()
+        } catch let error as URLError where error.code == .cancelled {
+            throw error
         } catch {
             throw HTTPError.transport(error)
         }

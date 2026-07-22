@@ -14,7 +14,15 @@ let package = Package(
     dependencies: [
         // Official Swift Markdown parser (swiftlang), built on cmark-gfm — used
         // to render assistant chat messages (incl. GFM tables) properly.
-        .package(url: "https://github.com/swiftlang/swift-markdown.git", branch: "main"),
+        //
+        // Pinned to an exact release tag, never a branch: a signed DMG must be
+        // reproducible from the tag that produced it, and a branch pin means the
+        // release build compiles whatever landed upstream that morning. As a
+        // bonus, 0.8.0 depends on swift-cmark by *version* (main tracks its `gfm`
+        // branch), so this pin removes the last floating ref from the graph.
+        // Bumping is a deliberate one-line change — same posture as the MCP SDK
+        // pin in ArrMCPServer.
+        .package(url: "https://github.com/swiftlang/swift-markdown.git", exact: "0.8.0"),
     ],
     targets: [
         .target(

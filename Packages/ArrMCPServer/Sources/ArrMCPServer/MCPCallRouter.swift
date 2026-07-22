@@ -38,38 +38,45 @@ struct MCPCallRouter {
 
             // Destructive tools (indexer search / monitor → start downloads,
             // library mutations) require interactive, per-call confirmation via
-            // MCP elicitation. We FAIL CLOSED: if the client can't confirm
-            // (didn't advertise elicitation) or the user declines, the tool does
-            // NOT run. An automated third-party client therefore gets read-only
-            // access by default and can never trigger downloads/grabs unattended.
-            if MCPToolWhitelist.isDestructive(name) {
+            // MCP elicitation. The backend decides WHICH tools are gated and
+            // refuses to run them unconfirmed; this closure is only the HOW —
+            // the elicitation round-trip. We FAIL CLOSED: if the client can't
+            // confirm (didn't advertise elicitation) or the user declines, the
+            // tool does NOT run. An automated third-party client therefore gets
+            // read-only access by default and can never trigger downloads/grabs
+            // unattended.
+            let confirm: ToolConfirmationHandler = { call in
                 do {
                     let result = try await server.requestElicitation(
-                        message: "Run \(name)? This may start downloads or change library state.",
+                        message: "Run \(call.name)? This may start downloads or change library state.",
                         requestedSchema: .init())
-                    guard result.action == .accept else {
-                        return CallTool.Result(
-                            content: [.text(text: "Cancelled by user.", annotations: nil, _meta: nil)],
-                            isError: false)
-                    }
+                    return result.action == .accept ? .approved(call.arguments) : .declined
                 } catch {
-                    logger.notice("destructive tool blocked: client cannot confirm (no elicitation)",
-                                  metadata: ["tool": .string(name)])
-                    return CallTool.Result(
-                        content: [.text(
-                            text: "Tool '\(name)' changes server state and requires interactive confirmation, which this client does not support. It was not run.",
-                            annotations: nil, _meta: nil)],
-                        isError: true)
+                    return .unavailable
                 }
             }
 
             do {
-                let out = try await backend.callTool(
-                    name: name,
-                    arguments: JSONValueBridge.argumentsToJSON(params.arguments))
+                let out = try await ToolConfirmationContext.$handler.withValue(confirm) {
+                    try await backend.callTool(
+                        name: name,
+                        arguments: JSONValueBridge.argumentsToJSON(params.arguments))
+                }
                 return CallTool.Result(
                     content: [.text(text: out.text, annotations: nil, _meta: nil)],
                     isError: false)
+            } catch LocalToolError.confirmationDeclined(_) {
+                return CallTool.Result(
+                    content: [.text(text: "Cancelled by user.", annotations: nil, _meta: nil)],
+                    isError: false)
+            } catch LocalToolError.confirmationUnavailable(_) {
+                logger.notice("destructive tool blocked: client cannot confirm (no elicitation)",
+                              metadata: ["tool": .string(name)])
+                return CallTool.Result(
+                    content: [.text(
+                        text: "Tool '\(name)' changes server state and requires interactive confirmation, which this client does not support. It was not run.",
+                        annotations: nil, _meta: nil)],
+                    isError: true)
             } catch {
                 // Use the sanitized `localizedDescription` — interpolating the
                 // raw error serializes a URLError's userInfo, which embeds the

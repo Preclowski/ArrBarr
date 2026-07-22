@@ -38,17 +38,51 @@ public actor MCPServerController {
         case stopped, running(url: String), failed(message: String)
     }
 
+    /// What the caller last asked for. `restart`/`stop` are fire-and-forget from
+    /// a debounced Settings sink, so several can be in flight at once; they
+    /// collapse into this single slot so the newest request wins.
+    private enum DesiredState: Sendable {
+        case stopped
+        case running(Config)
+    }
+
     private let logger = Logger(label: "arrbarr.mcp")
     private var host: NIOHTTPHost?
     private var onStatus: (@Sendable (Status) -> Void)?
+    private var pendingState: DesiredState?
+    private var isApplying = false
 
     public init() {}
 
     public func setStatusHandler(_ handler: @escaping @Sendable (Status) -> Void) { onStatus = handler }
 
     /// (Re)start the server with a fresh config. Stops any running instance first.
-    public func restart(with config: Config) async {
-        await stop()
+    public func restart(with config: Config) async { await apply(.running(config)) }
+
+    /// Stop the server, superseding any queued restart.
+    public func stop() async { await apply(.stopped) }
+
+    /// Serialises every state change. Actor isolation alone is not enough: each
+    /// `performRestart` suspends at the awaited bind, so without this two
+    /// restarts would interleave — both see `host == nil`, both bind the same
+    /// port, one gets EADDRINUSE — and whichever finished last would decide the
+    /// published status, potentially showing `.failed` while the winner serves.
+    private func apply(_ desired: DesiredState) async {
+        pendingState = desired
+        guard !isApplying else { return }
+        isApplying = true
+        defer { isApplying = false }
+        while let next = pendingState {
+            pendingState = nil
+            switch next {
+            case .stopped: await performStop()
+            case .running(let config): await performRestart(with: config)
+            }
+        }
+    }
+
+    private func performRestart(with config: Config) async {
+        await performStop()
 
         let parts = config.hostPort.split(separator: ":")
         guard parts.count == 2, let port = Int(parts[1]) else {
@@ -102,19 +136,26 @@ public actor MCPServerController {
 
         let host = NIOHTTPHost(host: bindHost, port: port, validationPipeline: pipeline,
                                logger: logger) { _, _ in await router.makeServer() }
+        // Take ownership before the awaited bind, so the host is never a live
+        // object that nothing references while `start()` is suspended.
+        self.host = host
         do {
             try await host.start()
-            self.host = host
             let url = "http://\(bindHost):\(port)/mcp"
             emit(.running(url: url))
             logger.notice("MCP server started", metadata: ["url": .string(url)])
         } catch {
+            // `start()` already reaped its own event-loop group; this is the
+            // belt-and-braces teardown (a no-op after a failed bind) so no
+            // half-built host is ever dropped on the floor.
+            await host.stop()
+            self.host = nil
             emit(.failed(message: "\(error)"))
             logger.error("MCP server failed to start", metadata: ["error": .string("\(error)")])
         }
     }
 
-    public func stop() async {
+    private func performStop() async {
         await host?.stop()
         host = nil
         emit(.stopped)

@@ -1,82 +1,95 @@
-import XCTest
+import Testing
+import Foundation
 @testable import ArrCore
 
-final class DiscoverLLMPromptTests: XCTestCase {
+@Suite("DiscoverLLMPrompt")
+struct DiscoverLLMPromptTests {
 
     // MARK: - build
 
-    func test_build_movie_includesMoodAndCount_andExclusionList() {
+    @Test("A movie prompt carries the mood, the exact count and the exclusion list")
+    func buildMovieIncludesMoodCountAndExclusions() {
         let p = DiscoverLLMPrompt.build(
             mood: "cozy 90s comedy",
             count: 12,
             exclude: ["Toy Story", "Heat"],
             kindHint: .movie
         )
-        XCTAssertTrue(p.contains("Mood: cozy 90s comedy"))
-        XCTAssertTrue(p.contains("Return exactly 12 distinct movies"))
-        XCTAssertTrue(p.contains("Toy Story, Heat"))
-        XCTAssertTrue(p.contains("Return only movies"))
-        XCTAssertFalse(p.contains("filters"))    // no structured filter schema anymore
-        XCTAssertFalse(p.contains("decade"))     // no era constraint anymore
+        #expect(p.contains("Mood: cozy 90s comedy"))
+        #expect(p.contains("Return exactly 12 distinct movies"))
+        #expect(p.contains("Toy Story, Heat"))
+        #expect(p.contains("Return only movies"))
+        #expect(!p.contains("filters"))    // no structured filter schema anymore
+        #expect(!p.contains("decade"))     // no era constraint anymore
     }
 
-    func test_build_show_returnsOnlyTVShows() {
+    @Test("A show prompt asks for TV shows only")
+    func buildShowReturnsOnlyTVShows() {
         let p = DiscoverLLMPrompt.build(
             mood: "moody crime",
             count: 8,
             exclude: [],
             kindHint: .show
         )
-        XCTAssertTrue(p.contains("Return only TV shows"))
-        XCTAssertTrue(p.contains("Return exactly 8 distinct TV shows"))
+        #expect(p.contains("Return only TV shows"))
+        #expect(p.contains("Return exactly 8 distinct TV shows"))
     }
 
-    func test_build_emptyExclusion_omitsExclusionSection() {
+    @Test("An empty exclusion list omits the exclusion section entirely")
+    func buildEmptyExclusionOmitsSection() {
         let p = DiscoverLLMPrompt.build(
             mood: "anything",
             count: 5,
             exclude: [],
             kindHint: .movie
         )
-        XCTAssertFalse(p.contains("Do NOT include"))
+        #expect(!p.contains("Do NOT include"))
     }
 
     // MARK: - parse
 
-    func test_parse_titlesOnly_returnsSuggestions() throws {
+    @Test("A titles-only payload parses into ordered suggestions")
+    func parseTitlesOnlyReturnsSuggestions() throws {
         let raw = #"""
         {"titles":[{"title":"Heat","year":1995},{"title":"Inception","year":2010}]}
         """#
         let resp = try DiscoverLLMPrompt.parse(raw)
-        XCTAssertEqual(resp.suggestions.count, 2)
-        XCTAssertEqual(resp.suggestions[0].title, "Heat")
-        XCTAssertEqual(resp.suggestions[0].year, 1995)
-        XCTAssertEqual(resp.suggestions[1].title, "Inception")
+        #expect(resp.suggestions.count == 2)
+        #expect(resp.suggestions[0].title == "Heat")
+        #expect(resp.suggestions[0].year == 1995)
+        #expect(resp.suggestions[1].title == "Inception")
     }
 
-    func test_parse_titleKindAnnotation_isHonoured() throws {
+    @Test("A per-title kind annotation is honoured")
+    func parseTitleKindAnnotationIsHonoured() throws {
         let raw = #"""
         {"titles":[{"title":"Breaking Bad","year":2008,"kind":"show"}]}
         """#
         let resp = try DiscoverLLMPrompt.parse(raw)
-        XCTAssertEqual(resp.suggestions.first?.kind, .show)
+        #expect(resp.suggestions.first?.kind == .show)
     }
 
-    func test_parse_stripsMarkdownFences() throws {
+    @Test("Markdown fences wrapped around the JSON are stripped")
+    func parseStripsMarkdownFences() throws {
         let raw = """
         ```json
         {"titles":[{"title":"Akira","year":1988}]}
         ```
         """
         let resp = try DiscoverLLMPrompt.parse(raw)
-        XCTAssertEqual(resp.suggestions.first?.title, "Akira")
+        #expect(resp.suggestions.first?.title == "Akira")
     }
 
-    func test_parse_noJSON_throws() {
-        XCTAssertThrowsError(try DiscoverLLMPrompt.parse("hello there")) { err in
-            guard case DiscoverLLMPrompt.ParseError.noJSONObjectFound = err else {
-                return XCTFail("Unexpected error: \(err)")
-            }
+    @Test("A reply with no JSON object at all throws noJSONObjectFound")
+    func parseWithoutJSONThrows() {
+        let error = #expect(throws: DiscoverLLMPrompt.ParseError.self) {
+            try DiscoverLLMPrompt.parse("hello there")
+        }
+        // ParseError can't be compared with `==` — `.malformedJSON` wraps an
+        // `any Error` — so the specific case is pattern-matched instead.
+        guard case .noJSONObjectFound? = error else {
+            Issue.record("Unexpected error: \(String(describing: error))")
+            return
         }
     }
 }

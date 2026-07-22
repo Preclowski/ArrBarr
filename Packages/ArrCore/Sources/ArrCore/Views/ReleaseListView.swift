@@ -39,6 +39,7 @@ struct ReleaseListView: View {
             HStack(spacing: 6) {
                 FloatingBackButton(action: onBack)
                     .keyboardShortcut(.cancelAction)
+                    .accessibilityLabel(Text("settings.back.button", bundle: .module))
                 Text(verbatim: target.title)
                     .scaledFont(size: 15, weight: .semibold)
                     .foregroundStyle(.primary)
@@ -108,8 +109,10 @@ struct ReleaseListView: View {
 
     private func statusState(symbol: String, text: Text) -> some View {
         VStack(spacing: 8) {
+            // Decorative empty/error glyph — the line under it says it.
             Image(systemName: symbol)
                 .scaledFont(size: 22, weight: .regular)
+                .accessibilityHidden(true)
             text.scaledFont(size: 12)
         }
         .foregroundStyle(.secondary)
@@ -223,9 +226,12 @@ private struct ReleaseRow: View {
                             .foregroundStyle(.secondary)
                             .monospacedDigit()
                         if release.isRejected {
+                            // Orange triangle is the ONLY rejection signal on
+                            // the row — name it rather than hide it.
                             Image(systemName: "exclamationmark.triangle.fill")
                                 .scaledFont(size: 9, weight: .semibold)
                                 .foregroundStyle(.orange)
+                                .accessibilityLabel(Text("Rejected", bundle: .module))
                         }
                     }
                 }
@@ -237,6 +243,9 @@ private struct ReleaseRow: View {
         }
         .buttonStyle(.plain)
         .disabled(isGrabbing || isGrabbed)
+        // Grabbing a release sends it straight to the download client — not
+        // something to discover by pressing an unlabelled row.
+        .accessibilityHint(Text("It will be sent to your download client.", bundle: .module))
         #if os(macOS)
         .onHover { isHovering in
             hovering = isHovering
@@ -261,15 +270,20 @@ private struct ReleaseRow: View {
     private var grabIndicator: some View {
         if isGrabbing {
             ProgressView().controlSize(.small)
+                .accessibilityLabel(Text("Sending to download client", bundle: .module))
         } else if isGrabbed {
+            // Green tick is the only "this one is already on its way" cue.
             Image(systemName: "checkmark.circle.fill")
                 .scaledFont(size: 15, weight: .regular)
                 .foregroundStyle(.green)
+                .accessibilityLabel(Text("Sent to download client", bundle: .module))
         } else {
+            // Resting affordance duplicating the row's own action.
             Image(systemName: "arrow.down.circle")
                 .scaledFont(size: 15, weight: .regular)
                 .foregroundStyle(.secondary)
                 .opacity(hovering ? 1 : 0.45)
+                .accessibilityHidden(true)
         }
     }
 }

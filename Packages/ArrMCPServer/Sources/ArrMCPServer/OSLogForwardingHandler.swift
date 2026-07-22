@@ -23,14 +23,20 @@ public struct OSLogForwardingHandler: LogHandler {
         set { metadata[key] = newValue }
     }
 
-    public func log(level: Logging.Logger.Level,
-                    message: Logging.Logger.Message,
-                    metadata explicit: Logging.Logger.Metadata?,
-                    source: String, file: String, function: String, line: UInt) {
-        let merged = self.metadata.merging(explicit ?? [:]) { _, new in new }
-        let suffix = merged.isEmpty ? ""
+    /// swift-log 1.13 made `log(event:)` the protocol requirement and demoted
+    /// the flat-parameter `log(level:message:metadata:source:…)` to a
+    /// deprecated shim, so implement this one directly — satisfying the
+    /// protocol through the shim is what the deprecation warns about.
+    ///
+    /// `LogEvent` also carries an `error`, which the flat API had nowhere to
+    /// put. NIO and the MCP SDK attach one to their failure lines, and it is
+    /// usually the only part that says what actually went wrong.
+    public func log(event: LogEvent) {
+        let merged = self.metadata.merging(event.metadata ?? [:]) { _, new in new }
+        var suffix = merged.isEmpty ? ""
             : " " + merged.sorted { $0.key < $1.key }.map { "\($0.key)=\($0.value)" }.joined(separator: " ")
-        osLogger.log(level: level.osLogType, "\(message, privacy: .public)\(suffix, privacy: .public)")
+        if let error = event.error { suffix += " error=\(error)" }
+        osLogger.log(level: event.level.osLogType, "\(event.message, privacy: .public)\(suffix, privacy: .public)")
     }
 }
 

@@ -56,6 +56,11 @@ public enum SpotlightIndexer {
     /// the throttle alone can't stop two passes overlapping — which would fetch
     /// the same posters twice (neither has written its files yet).
     @MainActor private static var isReindexing = false
+    /// The in-flight pass, so it can be stopped. A fill round sleeps 30s between
+    /// attempts and keeps going while there is artwork left, so without a handle
+    /// there is nothing anyone can do about a pass that has outlived its
+    /// usefulness — and it holds the whole record array the entire time.
+    @MainActor private static var indexingTask: Task<Void, Never>?
 
     /// Re-index the configured libraries. Fire-and-forget; runs detached so it
     /// never blocks launch. Throttled to once / 2 min so launch + foreground
@@ -79,7 +84,13 @@ public enum SpotlightIndexer {
             radarrIcon = SourceThumbnail.data(for: .radarr)
             sonarrIcon = SourceThumbnail.data(for: .sonarr)
         }
-        Task.detached(priority: .utility) {
+        indexingTask = Task.detached(priority: .utility) {
+            // EVERY exit path has to put the flag back down — a pass that ends
+            // early or gets cancelled would otherwise leave `isReindexing` true
+            // and disable re-indexing for the rest of the process lifetime. An
+            // unstructured `Task` doesn't inherit cancellation, so this still
+            // runs when the pass above it was cancelled.
+            defer { Task { @MainActor in isReindexing = false } }
             // Both libraries are indexed first, then artwork is filled in for
             // whatever fell back — otherwise Radarr's prefetch would hold up
             // Sonarr's index for the length of a download pass.
@@ -93,10 +104,21 @@ public enum SpotlightIndexer {
             // stop when nothing is missing, and failures leave `.miss` markers
             // that take the URL out of the work list.
             while await fillMissingThumbnails(records) {
-                try? await Task.sleep(nanoseconds: 30 * NSEC_PER_SEC)
+                // Cancellation makes the sleep throw straight away, and `try?`
+                // would swallow it into another full round — so leave here
+                // rather than spinning the fill loop with no delay.
+                do { try await Task.sleep(nanoseconds: 30 * NSEC_PER_SEC) }
+                catch { return }
             }
-            await MainActor.run { isReindexing = false }
         }
+    }
+
+    /// Stop the in-flight pass. The flag it holds is cleared by the task's own
+    /// `defer`, so a later `reindex()` is free to start over.
+    @MainActor
+    public static func cancelIndexing() {
+        indexingTask?.cancel()
+        indexingTask = nil
     }
 
     /// Remove ArrBarr's own Spotlight entries (the Radarr/Sonarr library items
@@ -107,6 +129,10 @@ public enum SpotlightIndexer {
     /// external tool can't reach ArrBarr's index.
     @MainActor
     public static func clearIndex() async {
+        // Stop any pass first, or a fill round already in flight re-indexes its
+        // rows and re-downloads their posters seconds after the user asked for
+        // all of it to go away.
+        cancelIndexing()
         let index = CSSearchableIndex.default()
         await withCheckedContinuation { cont in
             index.deleteSearchableItems(withDomainIdentifiers: [domainRadarr, domainSonarr]) { _ in
@@ -214,6 +240,7 @@ public enum SpotlightIndexer {
     /// i.e. there is probably more to fetch.
     @discardableResult
     private static func fillMissingThumbnails(_ records: [IndexedRecord]) async -> Bool {
+        guard !Task.isCancelled else { return false }
         guard !ProcessInfo.processInfo.isLowPowerModeEnabled else { return false }
 
         // Index into `records` + the poster to fetch, capped at the per-run

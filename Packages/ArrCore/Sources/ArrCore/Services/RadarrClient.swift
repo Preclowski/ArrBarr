@@ -22,7 +22,7 @@ public actor RadarrClient: ArrAPIClient {
             base: config.baseURL,
             path: "\(apiBase)/queue",
             query: [
-                URLQueryItem(name: "pageSize", value: "1000"),
+                URLQueryItem(name: "pageSize", value: String(Self.queuePageSize)),
                 URLQueryItem(name: "includeMovie", value: "true"),
                 URLQueryItem(name: "includeUnknownMovieItems", value: "true"),
             ]
@@ -32,6 +32,7 @@ public actor RadarrClient: ArrAPIClient {
         let page: ArrQueuePage<RadarrQueueRecord>
         do { page = try JSONDecoder().decode(ArrQueuePage<RadarrQueueRecord>.self, from: data) }
         catch { throw HTTPError.decoding(error) }
+        warnIfQueueTruncated(returned: page.records.count, totalRecords: page.totalRecords)
         let baseURL = config.baseURL
 
         let movieIds = Set(page.records.compactMap { $0.movieId ?? $0.movie?.id }
@@ -253,8 +254,8 @@ public actor RadarrClient: ArrAPIClient {
     }
 
     private static func unify(_ r: RadarrQueueRecord, baseURL: String, fileMap: [Int: RadarrMovieFile]) -> QueueItem {
-        let total = Int64(r.size ?? 0)
-        let left = Int64(r.sizeleft ?? 0)
+        let total = clampedBytes(r.size)
+        let left = clampedBytes(r.sizeleft)
         let progress = total > 0 ? max(0, min(1, 1.0 - Double(left) / Double(total))) : 0.0
 
         let movieTitle: String
@@ -278,7 +279,7 @@ public actor RadarrClient: ArrAPIClient {
             title: movieTitle,
             subtitle: nil,
             releaseName: r.title,
-            status: parseStatus(arrStatus: r.status, trackedState: r.trackedDownloadState),
+            status: parseStatus(arrStatus: r.status, trackedState: r.trackedDownloadState, trackedStatus: r.trackedDownloadStatus),
             progress: progress,
             sizeTotal: total,
             sizeLeft: left,
@@ -301,14 +302,63 @@ public actor RadarrClient: ArrAPIClient {
     }
 }
 
+/// Parses the assorted date shapes an arr puts on the wire.
+///
+/// Order matters: `ISO8601DateFormatter` with `.withFullDate` is *lenient* —
+/// it happily accepts "2024-03-15T14:30:00" by matching the date prefix and
+/// silently discarding the time — so the zone-less date-time shape has to be
+/// tried before it, or "airs at 20:00" renders as midnight.
 func parseArrDate(_ string: String) -> Date? {
     let iso = ISO8601DateFormatter()
+
+    // Well-formed ISO8601 carrying its own zone ("…Z" / "…+02:00"), with and
+    // without fractional seconds. The zone in the string wins.
     iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
     if let d = iso.date(from: string) { return d }
     iso.formatOptions = [.withInternetDateTime]
     if let d = iso.date(from: string) { return d }
+
+    // Zone-less date-time ("2024-03-15T14:30:00"). Read as UTC: every arr
+    // timestamp that carries a time is a UTC instant (hence Sonarr's
+    // `airDateUtc`) — it just loses its "Z" when .NET serializes a DateTime
+    // whose Kind is unspecified. Fractional seconds are tolerated and dropped.
+    iso.formatOptions = [.withFullDate, .withTime, .withColonSeparatorInTime]
+    iso.timeZone = TimeZone(secondsFromGMT: 0)
+    if let d = iso.date(from: string) { return d }
+
+    // Date-only ("2024-03-15"). Unlike the above this is a *calendar day*, not
+    // an instant, so anchor it at LOCAL midnight. Parsed as 00:00 UTC it lands
+    // before local midnight for every user west of Greenwich, and the Upcoming
+    // list — which filters on `Calendar.current.startOfDay(for: Date())` — hid
+    // today's releases across all of the Americas.
+    //
+    // The zone comes from `Calendar.current`, not `TimeZone.current`: the two
+    // disagree whenever `NSTimeZone.default` has been overridden, because
+    // `TimeZone.current` reports the *system* zone and ignores the override
+    // while `Calendar.current` honours it. Taking it from the same calendar the
+    // Upcoming filter uses is what actually guarantees the two agree.
     iso.formatOptions = [.withFullDate]
+    iso.timeZone = Calendar.current.timeZone
     return iso.date(from: string)
+}
+
+/// Non-trapping Double → Int64 for byte counts off the wire.
+///
+/// `Int64(someDouble)` is a *fatal error* for NaN, infinity or anything
+/// outside Int64's range, and `1e300` is perfectly legal JSON — so a buggy or
+/// hostile arr could kill the app just by answering a queue request. Clamp
+/// into `0...Int64.max` instead; a nonsense size renders as a wrong number,
+/// which beats a crash.
+func clampedBytes(_ value: Double?) -> Int64 {
+    // NaN fails every comparison, so `!(value > 0)` catches it here too.
+    guard let value, value > 0 else { return 0 }
+    // `Double(Int64.max)` rounds up to exactly 2^63, so `<` here means the
+    // truncating initializer below is guaranteed to be in range. It also
+    // catches `.infinity`, which clamps to the maximum like any other
+    // over-large size rather than collapsing to zero — 1e300 and ∞ must not
+    // land on opposite ends of the range.
+    guard value < Double(Int64.max) else { return Int64.max }
+    return Int64(value)
 }
 
 func parseProtocol(_ raw: String?) -> QueueItem.DownloadProtocol {
@@ -319,26 +369,52 @@ func parseProtocol(_ raw: String?) -> QueueItem.DownloadProtocol {
     }
 }
 
-func parseStatus(arrStatus: String?, trackedState: String?) -> QueueItem.Status {
+/// Maps an arr queue record onto our unified status. Shared by all four
+/// clients, so keep it free of per-arr assumptions.
+///
+/// `trackedStatus` is Servarr's `trackedDownloadStatus` (ok / warning /
+/// error) — its verdict on the grab as a whole — while `trackedState` is the
+/// finer-grained stage. Both are needed: `status` alone stays "completed" once
+/// the bytes have landed even if the import then blew up.
+func parseStatus(arrStatus: String?, trackedState: String?, trackedStatus: String? = nil) -> QueueItem.Status {
     let status = arrStatus?.lowercased()
     if status == "paused" { return .paused }
 
-    if let tracked = trackedState?.lowercased() {
-        switch tracked {
+    func resolve() -> QueueItem.Status {
+        if let tracked = trackedState?.lowercased() {
+            switch tracked {
+            case "downloading": return .downloading
+            // Sonarr v4 / Radarr v5 spell failure differently depending on
+            // where the grab died — the transfer itself (downloadFailed /
+            // downloadFailedPending / failedPending) or the import step
+            // (importFailed) — plus a terminal "failed". Every one of them is
+            // a dead download, not a finished one.
+            case "downloadfailed", "downloadfailedpending", "failedpending", "failed", "importfailed":
+                return .failed
+            case "importing", "importpending": return .importing
+            case "imported": return .completed
+            // `ignored` = the arr deliberately stopped tracking this grab
+            // (manually ignored, or a release it can't match). Not an error,
+            // but not progress either.
+            case "importblocked", "ignored": return .warning
+            default: break
+            }
+        }
+        switch status {
         case "downloading": return .downloading
-        case "downloadfailed", "failedpending": return .failed
-        case "importing", "importpending": return .importing
-        case "imported": return .completed
-        case "importblocked": return .warning
-        default: break
+        case "queued", "delay": return .queued
+        case "completed": return .completed
+        case "warning": return .warning
+        case "failed": return .failed
+        default: return .unknown
         }
     }
-    switch status {
-    case "downloading": return .downloading
-    case "queued", "delay": return .queued
-    case "completed": return .completed
-    case "warning": return .warning
-    case "failed": return .failed
-    default: return .unknown
-    }
+
+    let resolved = resolve()
+    // Backstop for state names we don't know yet: an errored grab must never
+    // render as a green "Completed" pill. An unrecognised state falls through
+    // to `status`, which for a finished-but-failed download is "completed" —
+    // exactly the case that had users believing a failed grab had worked.
+    if resolved == .completed, trackedStatus?.lowercased() == "error" { return .failed }
+    return resolved
 }

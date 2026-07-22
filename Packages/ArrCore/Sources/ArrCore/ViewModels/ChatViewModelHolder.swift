@@ -22,6 +22,16 @@ public final class ChatViewModelHolder {
         let next = Self.signature(store: store)
         guard next != lastSignature else { return }
         lastSignature = next
+        // Resolve any confirmation gate BEFORE dropping the VM. The old one may
+        // be holding a CheckedContinuation for a destructive tool the user
+        // hasn't answered yet (edit an arr / download-client / OpenAI field in
+        // Settings with a confirm card up and you land exactly here), and a
+        // continuation that is deallocated unresumed hangs its tool call
+        // forever — provider session and all — plus logs a leaked-continuation
+        // warning. `clear()` refuses outright in that state; here we can't
+        // refuse (the config the VM was built from is already gone), so cancel
+        // is the honest reading: the user walked away from the card.
+        vm.cancelPending()
         vm = ChatViewModelFactory.make(
             sonarr: store.sonarr,
             radarr: store.radarr,
