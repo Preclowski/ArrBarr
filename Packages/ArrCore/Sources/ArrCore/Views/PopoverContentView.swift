@@ -32,6 +32,9 @@ public struct PopoverContentView: View {
     }
 
     @State private var selectedTab: Tab = .queue
+    /// Queue multi-select mode, entered from the "⋯" menu and threaded into
+    /// QueueTabContent → QueueListView (the native-`List` selection).
+    @State private var queueSelecting = false
     @State private var historySource: QueueItem.Source?
     @State private var historyRefreshNonce = 0
     @State private var searchViewModel = SearchViewModel()
@@ -81,6 +84,18 @@ public struct PopoverContentView: View {
     private var lidarrConfigured: Bool { configStore.lidarr.isVisible }
     private var whisparrConfigured: Bool { configStore.whisparr.isVisible }
     private var anyArrConfigured: Bool { sonarrConfigured || radarrConfigured || lidarrConfigured || whisparrConfigured }
+
+    /// An overlay is up, so the tab content behind it is parked — see the four
+    /// modifiers at the call site.
+    private var tabContentParked: Bool {
+        searchResult != nil || detailItem != nil || showDiscoverOverlay
+    }
+
+    /// Same, one layer up: Discover parks under SearchAddPanel / DetailView but
+    /// *not* under itself.
+    private var discoverParked: Bool {
+        searchResult != nil || detailItem != nil
+    }
 
     private var isFiltering: Bool {
         !queueFilter.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -138,6 +153,16 @@ public struct PopoverContentView: View {
                     whisparrConfig: configStore.whisparr
                 )
                 chatHolder.reconfigure(store: configStore)
+                // The panel is on screen (menu-bar popover opened, or the
+                // detached window is visible) — poll at the fast foreground
+                // cadence and refresh right now. macOS had no foreground tier
+                // before: it sat on the 30 s background timer even while open.
+                viewModel.startForegroundPolling()
+            }
+            .onDisappear {
+                // Panel closed — drop back to the background cadence so we're
+                // not hammering the arrs every few seconds while hidden.
+                viewModel.stopForegroundPolling()
             }
             .onChange(of: ChatViewModelHolder.signature(store: configStore)) { _, _ in
                 chatHolder.reconfigure(store: configStore)
@@ -281,6 +306,9 @@ public struct PopoverContentView: View {
         // don't need an opaque background on the overlay itself — the
         // popover's native chrome shines through, matching the rest of the
         // app.
+        // Named because each parked layer states the same condition four times
+        // over, once per mechanism, and a four-line stack of raw `!=  nil ||`
+        // chains hides the one that's missing.
         NavigationStack {
         ZStack {
             VStack(spacing: 0) {
@@ -311,7 +339,8 @@ public struct PopoverContentView: View {
                                 queueFilterFocused: $queueFilterFocused,
                                 detailItem: $detailItem,
                                 historySource: $historySource,
-                                searchResult: $searchResult
+                                searchResult: $searchResult,
+                                selecting: $queueSelecting
                             )
                         case .upcoming: UpcomingTabContent(viewModel: viewModel)
                         case .chat:
@@ -322,45 +351,41 @@ public struct PopoverContentView: View {
                     PopoverEmptyState(onOpenSettings: onOpenSettings) { moreMenu }
                 }
             }
-            // Tab content stays mounted under both overlays (SearchAddPanel
-            // + DetailView) so scroll positions, expanded sections, and
-            // other transient view-state survive a round-trip. Opacity-hide
-            // keeps it visually out of the way; allowsHitTesting(false)
-            // prevents stray clicks from leaking through to it.
-            .opacity((searchResult != nil || detailItem != nil || showDiscoverOverlay) ? 0 : 1)
-            .allowsHitTesting(!(searchResult != nil || detailItem != nil || showDiscoverOverlay))
+            // Tab content stays mounted under the overlays (SearchAddPanel,
+            // DetailView, Discover) so scroll positions, expanded sections and
+            // other transient view-state survive a round-trip.
+            //
+            // Parking it takes all four: invisible, unclickable, inert, and out
+            // of the accessibility tree. They are four independent mechanisms,
+            // and skipping one leaks in a way the others hide. `.disabled` is
+            // the one that silences the queue filter TextField's pointer
+            // region — neither opacity nor hit-testing touches the cursor, so
+            // an invisible field kept handing the I-beam to whatever was drawn
+            // over it, which is exactly where SearchAddPanel puts its Add CTAs.
+            .opacity(tabContentParked ? 0 : 1)
+            .allowsHitTesting(!tabContentParked)
+            .disabled(tabContentParked)
+            .accessibilityHidden(tabContentParked)
 
             if showDiscoverOverlay {
                 DiscoverTabView(
                     viewModel: discoverViewModel,
                     llmAvailable: chatAvailable,
                     radarrAvailable: radarrConfigured,
-                    onAddToRadarr: { result in
-                        // Reuse the existing search-add flow: post the
-                        // tap-to-add notification and let SearchAddPanel
-                        // overlay handle profile / folder defaults.
-                        SearchAddRequest.post(result)
-                    },
-                    onAddToSonarr: { result in
-                        SearchAddRequest.post(result)
-                    },
-                    onOpenDetail: { _, source, arrId in
-                        DetailRequest.post(DetailRequest.syntheticItem(
-                            source: source,
-                            entityId: arrId,
-                            title: ""
-                        ))
-                    },
                     onClose: {
                         withAnimation(.smooth(duration: 0.22)) { showDiscoverOverlay = false }
                     }
                 )
-                // Hide (but keep mounted) when SearchAddPanel or
-                // DetailView opens on top — otherwise the picks list
-                // bleeds through under the detail surface, which has
-                // no opaque background of its own.
-                .opacity((searchResult != nil || detailItem != nil) ? 0 : 1)
-                .allowsHitTesting(!(searchResult != nil || detailItem != nil))
+                // Parked (but kept mounted) when SearchAddPanel or DetailView
+                // opens on top — otherwise the picks list bleeds through under
+                // the detail surface, which has no opaque background of its
+                // own. Same four as above: Discover doesn't own a TextField
+                // today, so nothing leaks *yet*, but a half-parked layer is
+                // how this bug arrived in the first place.
+                .opacity(discoverParked ? 0 : 1)
+                .allowsHitTesting(!discoverParked)
+                .disabled(discoverParked)
+                .accessibilityHidden(discoverParked)
                 .transition(.opacity)
             }
 
@@ -686,6 +711,13 @@ public struct PopoverContentView: View {
     /// circle to wrap.
     private var moreMenu: some View {
         Menu {
+            // Queue multi-select — only on the Queue tab, and only with rows to act on.
+            if selectedTab == .queue, viewModel.activeCount > 0 {
+                Button { queueSelecting = true } label: {
+                    Label { Text("queue.selectMultiple.button", bundle: .module) } icon: { Image(systemName: "checkmark.circle") }
+                }
+                Divider()
+            }
             // Manual refresh — mirrors the hidden ⌘R button above so the
             // shortcut is also discoverable in the menu (same dual-
             // registration pattern as Settings' ⌘,).

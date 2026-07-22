@@ -85,6 +85,10 @@ public final class ConfigStore: ObservableObject {
     /// real window (titlebar + traffic lights), and the menu-bar icon is hidden.
     /// When false (default) it's a menu-bar-only accessory. Ignored on iOS.
     @Published public var detachedWindow: Bool = false
+    /// macOS only: a clicked Spotlight result opens the title's detail inside
+    /// ArrBarr (default) instead of the arr's web UI in the browser. iOS always
+    /// opens in-app — it has a window to host the detail either way.
+    @Published public var spotlightOpensInApp: Bool = true
     @Published public var iCloudSyncEnabled: Bool = true
     @Published public var appLanguage: String = "system"
     /// UI appearance preference: "system" / "light" / "dark".
@@ -269,6 +273,7 @@ public final class ConfigStore: ObservableObject {
     private static let aiKnowsAboutWhisparrKey = "ArrBarr.aiKnowsAboutWhisparr"
     private static let launchAtLoginKey = "ArrBarr.launchAtLogin"
     private static let detachedWindowKey = "ArrBarr.detachedWindow"
+    private static let spotlightOpensInAppKey = "ArrBarr.spotlightOpensInApp"
     nonisolated static let iCloudSyncEnabledKey = "ArrBarr.iCloudSyncEnabled"
     nonisolated private static let appLanguageKey = "ArrBarr.appLanguage"
     private static let appearanceKey = "ArrBarr.appearance"
@@ -389,6 +394,8 @@ public final class ConfigStore: ObservableObject {
         self.aiKnowsAboutWhisparr = defaults.object(forKey: Self.aiKnowsAboutWhisparrKey) != nil ? defaults.bool(forKey: Self.aiKnowsAboutWhisparrKey) : false
         self.launchAtLogin = defaults.object(forKey: Self.launchAtLoginKey) != nil ? defaults.bool(forKey: Self.launchAtLoginKey) : false
         self.detachedWindow = defaults.bool(forKey: Self.detachedWindowKey)
+        self.spotlightOpensInApp = defaults.object(forKey: Self.spotlightOpensInAppKey) != nil
+            ? defaults.bool(forKey: Self.spotlightOpensInAppKey) : true
         self.iCloudSyncEnabled = defaults.object(forKey: Self.iCloudSyncEnabledKey) != nil
             ? defaults.bool(forKey: Self.iCloudSyncEnabledKey) : true
         self.appLanguage = defaults.string(forKey: Self.appLanguageKey) ?? "system"
@@ -492,6 +499,9 @@ public final class ConfigStore: ObservableObject {
         }.store(in: &cancellables)
         $detachedWindow.dropFirst().sink { [weak self] val in
             self?.defaults.set(val, forKey: Self.detachedWindowKey)
+        }.store(in: &cancellables)
+        $spotlightOpensInApp.dropFirst().sink { [weak self] val in
+            self?.defaults.set(val, forKey: Self.spotlightOpensInAppKey)
         }.store(in: &cancellables)
         $iCloudSyncEnabled.dropFirst().sink { [weak self] val in
             guard let self else { return }

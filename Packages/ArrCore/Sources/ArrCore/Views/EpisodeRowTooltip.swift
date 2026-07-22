@@ -49,20 +49,66 @@ struct EpisodeRowTooltip: View {
     private var tooltipContent: some View {
         VStack(alignment: .leading, spacing: 6) {
             header
-            infoGrid
-            if let formats = primaryFormats, !formats.isEmpty {
-                customFormatChipStrip(
-                    tags: formats,
-                    score: primaryScore != 0 ? primaryScore : nil
-                )
-                if let q = queueItem, q.isUpgrade {
-                    CustomFormatDiff(
-                        newFormats: q.customFormats,
-                        existingFormats: existingFormats
+            if let q = queueItem, q.isUpgrade, let file = episodeFile {
+                // Active upgrade — render the same side-by-side diff
+                // (quality/score/size + gained/lost format chips + both
+                // file names) every other surface uses, so the Sonarr
+                // episode tooltip reads identically to the movie/album
+                // detail and the single-item queue tooltip. UpgradeDiffView
+                // already carries the CF chip diff and the release / on-disk
+                // file names, so no separate chip strip is needed here.
+                upgradeDiffBlock(new: q, existing: file)
+            } else {
+                infoGrid
+                if let formats = primaryFormats, !formats.isEmpty {
+                    customFormatChipStrip(
+                        tags: formats,
+                        score: primaryScore != 0 ? primaryScore : nil
                     )
-                    .padding(.top, 2)
                 }
             }
+        }
+    }
+
+    /// Upgrade-in-flight body: a compact status + client line above the
+    /// shared `UpgradeDiffView`. Feeds the on-disk `episodeFile` as the
+    /// "current" side and the queued release as the "incoming" side so
+    /// both file names render (Sonarr ships the existing file separately
+    /// from the queue record, hence the `episodeFile` join here).
+    @ViewBuilder
+    private func upgradeDiffBlock(new q: QueueItem, existing file: SonarrEpisodeFile) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                StatusIconLabel(status: q.status,
+                                iconSize: 10,
+                                labelSize: 11,
+                                labelWeight: .semibold)
+                if let client = q.downloadClient {
+                    DownloadClientLabel(name: client)
+                }
+                Spacer(minLength: 0)
+            }
+            UpgradeDiffView(
+                current: .init(
+                    quality: file.quality?.name,
+                    score: file.customFormatScore,
+                    size: file.size,
+                    formats: (file.customFormats ?? []).map(\.name),
+                    // Match the queue path's `existingFileName` (last path
+                    // component) so the old name reads the same whether the
+                    // user is on the tooltip, the episode detail, or the
+                    // queue list.
+                    filename: file.relativePath.map { URL(fileURLWithPath: $0).lastPathComponent }
+                ),
+                incoming: .init(
+                    quality: q.quality,
+                    score: q.customFormatScore,
+                    size: q.sizeTotal > 0 ? q.sizeTotal : nil,
+                    formats: q.customFormats,
+                    filename: q.releaseName
+                ),
+                showFilenames: true
+            )
         }
     }
 

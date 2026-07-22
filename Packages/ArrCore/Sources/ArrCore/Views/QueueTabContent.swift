@@ -11,6 +11,9 @@ struct QueueTabContent: View {
     @Binding var detailItem: QueueItem?
     @Binding var historySource: QueueItem.Source?
     @Binding var searchResult: SearchResult?
+    /// Queue multi-select mode — owned by PopoverContentView (toggled from its
+    /// "⋯" menu), threaded down to the native-`List` queue.
+    @Binding var selecting: Bool
 
     private var sonarrConfigured: Bool { configStore.sonarr.isVisible }
     private var radarrConfigured: Bool { configStore.radarr.isVisible }
@@ -24,9 +27,11 @@ struct QueueTabContent: View {
 
     private var queueContent: some View {
         // Filter bar + scope chips float at the bottom (Apple's recent
-        // search/Spotlight direction). Same ZStack-not-safeAreaInset
-        // recipe as `SearchView` — see the comment there for why
-        // safeAreaInset re-mounts the TextField on every keystroke.
+        // search/Spotlight direction). ZStack and not `safeAreaInset`:
+        // the inset modifier reacts to any identity change in the parent
+        // tree — and the results branch below re-renders on every
+        // keystroke — which re-mounts the TextField and drops focus
+        // mid-typing. `ChatView` carries the long-form note.
         // Bar does double duty: filters live queue rows AND fires the
         // arr search for library / add-new hits (rendered as separate
         // sections below the queue when the filter is non-empty).
@@ -73,7 +78,11 @@ struct QueueTabContent: View {
                 VStack(alignment: .leading, spacing: 0) {
                     searchModeHeader
                     searchResults
-                    if searchAvailable, searchViewModel.isSearching {
+                    // Only while nothing is rendered yet. With rows up this
+                    // spinner sits below the fold and the user sees no
+                    // loading state at all on a re-search — that case is
+                    // covered inside QueueSearchResultsView instead.
+                    if searchAvailable, searchViewModel.isSearching, !searchViewModel.hasResults {
                         loadingIndicator
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 24)
@@ -91,7 +100,8 @@ struct QueueTabContent: View {
                     withAnimation(.smooth(duration: 0.22)) { detailItem = item }
                 },
                 onNeedsYouTap: { needs in openNeedsYouQueue(needs) },
-                onShowHistory: { source in historySource = source }
+                onShowHistory: { source in historySource = source },
+                selecting: $selecting
             )
             // Keep the last row clear of the floating filter bar.
             .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 58) }
@@ -205,7 +215,7 @@ struct QueueTabContent: View {
         .padding(.vertical, 10)
         .contentShape(Capsule())
         .onTapGesture { queueFilterFocused.wrappedValue = true }
-        .glassyFloatingBar()
+        .glassyFloatingBar(focused: queueFilterFocused.wrappedValue)
     }
 
 }

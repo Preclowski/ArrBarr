@@ -119,6 +119,7 @@ public struct QuizFeatureCard: View {
         RemotePoster(
             url: url,
             apiKey: nil,
+            tier: .icon,
             size: Self.posterSize,
             cornerRadius: 4,
             fallbackSymbol: "film",

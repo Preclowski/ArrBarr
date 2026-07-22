@@ -339,11 +339,24 @@ public final class QueueViewModel {
     @MainActor
     private func scheduleRealtimeRefresh() {
         realtimeDebounce?.invalidate()
-        realtimeDebounce = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: false) { [weak self] _ in
+        realtimeDebounce = Self.commonModeTimer(interval: 0.25, repeats: false) { [weak self] in
             Task { await self?.refresh() }
         }
     }
     @MainActor private var realtimeDebounce: Timer?
+
+    /// Timer registered in `.common` run loop mode so it keeps firing while the
+    /// menu-bar panel is tracking events — a `.default`-mode timer (what
+    /// `Timer.scheduledTimer` installs) pauses during scroll/interaction. Paired
+    /// with the AppDelegate's App Nap opt-out, this is what makes the poll
+    /// cadence actually hold instead of silently stretching out.
+    private static func commonModeTimer(
+        interval: TimeInterval, repeats: Bool, _ fire: @escaping () -> Void
+    ) -> Timer {
+        let timer = Timer(timeInterval: interval, repeats: repeats) { _ in fire() }
+        RunLoop.main.add(timer, forMode: .common)
+        return timer
+    }
 
     func fetchHistory(for source: QueueItem.Source) async -> HistoryResult {
         if DemoMode.isActive {
@@ -357,7 +370,7 @@ public final class QueueViewModel {
         foregroundTimer?.invalidate()
         let interval = configStore.foregroundInterval
         guard interval > 0 else { return }
-        foregroundTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
+        foregroundTimer = Self.commonModeTimer(interval: interval, repeats: true) { [weak self] in
             Task { await self?.refresh() }
         }
     }
@@ -391,7 +404,7 @@ public final class QueueViewModel {
         backgroundTimer?.invalidate()
         let interval = configStore.backgroundInterval
         guard interval > 0 else { return }
-        backgroundTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
+        backgroundTimer = Self.commonModeTimer(interval: interval, repeats: true) { [weak self] in
             Task { await self?.refresh() }
         }
     }
@@ -400,7 +413,7 @@ public final class QueueViewModel {
         backgroundTimer?.invalidate()
         let interval = configStore.backgroundInterval
         guard interval > 0 else { return }
-        backgroundTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
+        backgroundTimer = Self.commonModeTimer(interval: interval, repeats: true) { [weak self] in
             Task { await self?.refresh() }
         }
     }

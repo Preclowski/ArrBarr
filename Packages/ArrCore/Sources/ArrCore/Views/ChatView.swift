@@ -17,7 +17,8 @@ public struct ChatView: View {
         // ZStack — not `safeAreaInset` — because the inset modifier reacts
         // to any identity change in its parent view tree (e.g. messages's
         // empty-vs-populated branches re-render on every keystroke), which
-        // re-mounted the TextField and lost focus mid-typing in `SearchView`.
+        // re-mounted the TextField and lost focus mid-typing on the search
+        // surface — the same trap `QueueTabContent`'s filter bar sidesteps.
         // The ZStack here keeps the bar as a stable sibling. The messages
         // ScrollView already pads its content for the bar's height (see
         // `messages` below) so nothing scrolls under it.
@@ -161,7 +162,7 @@ public struct ChatView: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
-        .glassyFloatingBar()
+        .glassyFloatingBar(focused: inputFocused)
     }
 
     private func send() {

@@ -178,6 +178,15 @@ public actor WhisparrClient: ArrAPIClient {
             customFormatScore: r.customFormatScore ?? 0,
             quality: r.quality?.name,
             isUpgrade: r.movie?.movieFile != nil || (r.movie?.hasFile ?? false),
+            // Whisparr is a Radarr fork: `includeMovie=true` embeds the
+            // on-disk `movieFile`, so populate the existing-file diff
+            // fields straight from it (mirrors RadarrClient's embedded
+            // `movie.movieFile` fallback). No side-load needed.
+            existingCustomFormats: (r.movie?.movieFile?.customFormats ?? []).map(\.name),
+            existingCustomFormatScore: r.movie?.movieFile?.customFormatScore,
+            existingQuality: r.movie?.movieFile?.quality?.name,
+            existingSize: r.movie?.movieFile?.size,
+            existingFileName: r.movie?.movieFile?.relativePath.map { URL(fileURLWithPath: $0).lastPathComponent },
             contentSlug: r.movie?.titleSlug,
             entityId: r.movieId ?? r.movie?.id,
             posterURL: poster,

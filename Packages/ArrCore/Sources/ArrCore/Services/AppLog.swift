@@ -9,7 +9,7 @@ public enum AppLog {
 
 public extension Logger {
     /// An os.Logger on the shared ArrBarr subsystem. Pass a per-module
-    /// `category` (e.g. "ImageCache", "Realtime"). Prefer this over spelling
+    /// `category` (e.g. "PosterStore", "Realtime"). Prefer this over spelling
     /// out the subsystem string at each call site.
     ///
     /// Level note: os `.info`/`.debug` are NOT persisted to `log show` (only

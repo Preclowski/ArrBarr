@@ -28,6 +28,39 @@ public extension QueueItem.Status {
     }
 }
 
+/// Attaches the row's open-detail tap only when an action is set. With a nil
+/// action the gesture is omitted (not just a no-op closure) so it doesn't
+/// swallow the click `List(selection:)` needs in queue multi-select mode.
+/// (Shared by `QueueGroupRowView`, which has the same row-tap.)
+struct RowTapToOpen: ViewModifier {
+    let action: (() -> Void)?
+    func body(content: Content) -> some View {
+        if let action {
+            content.onTapGesture(perform: action)
+        } else {
+            content
+        }
+    }
+}
+
+/// Whether (and how) a queue row shows its multi-select circle in the poster
+/// slot. `.hidden` keeps the poster (normal mode); the others swap it for a
+/// hollow / filled selection ring.
+enum RowSelectionState { case hidden, unselected, selected }
+
+/// The selection ring that takes the poster's place (same footprint) in
+/// multi-select mode — accent + filled when selected, hollow tertiary otherwise.
+struct SelectionCircle: View {
+    let selected: Bool
+    var body: some View {
+        Image(systemName: selected ? "checkmark.circle.fill" : "circle")
+            .font(.system(size: 20))
+            .foregroundStyle(selected ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.tertiary))
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .contentShape(Rectangle())
+    }
+}
+
 public struct QueueRowView: View {
     let item: QueueItem
 
@@ -50,6 +83,9 @@ public struct QueueRowView: View {
     let onResume: () -> Void
     let onDelete: () -> Void
     var onShowDetail: (() -> Void)? = nil
+    /// Multi-select state — `.hidden` (default) shows the poster; otherwise the
+    /// poster slot becomes the selection circle.
+    var selectionState: RowSelectionState = .hidden
     @EnvironmentObject var configStore: ConfigStore
     /// Surfaces that have a permanent detail pane (the desktop window) set
     /// this to `true` so we skip the redundant long-hover tooltip. The
@@ -101,25 +137,33 @@ public struct QueueRowView: View {
 
     public var body: some View {
         HStack(alignment: .top, spacing: 10) {
-            PosterBlurContainer(blurred: configStore.shouldBlurPoster(for: item.source), cornerRadius: Tokens.Radius.chip) {
-                RemotePoster(
-                    url: item.posterURL,
-                    apiKey: item.posterRequiresAuth ? apiKeyForSource : nil,
-                    size: posterSize,
-                    cornerRadius: Tokens.Radius.chip,
-                    fallbackSymbol: item.source.symbol
-                )
-            }
-            // macOS: pause/resume lives ON the poster (hover-revealed). The row
-            // has no delete button — cancelling a download is intentionally out
-            // of the glanceable queue list.
-            #if os(macOS)
-            .overlay {
-                if isHovering && canControl && canPauseResume && !isOffline {
-                    posterControl.transition(.opacity)
+            // Multi-select mode replaces the poster with a selection ring (same
+            // footprint, so the row never shifts).
+            if selectionState != .hidden {
+                SelectionCircle(selected: selectionState == .selected)
+                    .frame(width: posterSize.width, height: posterSize.height)
+            } else {
+                PosterBlurContainer(blurred: configStore.shouldBlurPoster(for: item.source), cornerRadius: Tokens.Radius.chip) {
+                    RemotePoster(
+                        url: item.posterURL,
+                        apiKey: item.posterRequiresAuth ? apiKeyForSource : nil,
+                        tier: .icon,
+                        size: posterSize,
+                        cornerRadius: Tokens.Radius.chip,
+                        fallbackSymbol: item.source.symbol
+                    )
                 }
+                // macOS: pause/resume lives ON the poster (hover-revealed). The row
+                // has no delete button — cancelling a download is intentionally out
+                // of the glanceable queue list.
+                #if os(macOS)
+                .overlay {
+                    if isHovering && canControl && canPauseResume && !isOffline {
+                        posterControl.transition(.opacity)
+                    }
+                }
+                #endif
             }
-            #endif
 
             VStack(alignment: .leading, spacing: 4) {
                 VStack(alignment: .leading, spacing: 1) {
@@ -207,9 +251,10 @@ public struct QueueRowView: View {
         // this order the row-wide tap-gesture swallowed clicks on the
         // trash icon and the action never fired.
         .contentShape(Rectangle())
-        .onTapGesture {
-            onShowDetail?()
-        }
+        // Row-tap opens the detail — but ONLY when there's a target. The queue's
+        // multi-select mode passes `onShowDetail: nil`, which drops the gesture
+        // entirely so the List's own selection click isn't swallowed.
+        .modifier(RowTapToOpen(action: onShowDetail))
         .contextMenu {
             // Offline → no mutating menu items; the header chip explains why.
             if !isOffline {

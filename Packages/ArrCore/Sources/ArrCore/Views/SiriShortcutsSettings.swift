@@ -8,6 +8,7 @@ import AppIntents
 @available(iOS 16.0, macOS 13.0, *)
 public struct SiriShortcutsSettingsContent: View {
     @Environment(\.openURL) private var openURL
+    @EnvironmentObject private var configStore: ConfigStore
     @State private var clearingIntents = false
     @State private var clearedIntents = false
     public init() {}
@@ -31,6 +32,16 @@ public struct SiriShortcutsSettingsContent: View {
                 .foregroundStyle(.secondary)
         } header: {
             Text("settings.siriShortcuts.button", bundle: .module)
+        }
+        #endif
+        #if os(macOS)
+        // iOS has no equivalent switch — it always opens the detail in-app.
+        Section {
+            Toggle(isOn: $configStore.spotlightOpensInApp) {
+                Text("settings.spotlightOpensInArrbarr.button", bundle: .module)
+            }
+        } footer: {
+            Text("settings.spotlightOpensInArrbarr.tooltip", bundle: .module)
         }
         #endif
         Section {

@@ -296,6 +296,20 @@ public struct LidarrAlbum: Decodable {
     let images: [ArrImage]?
 }
 
+/// One on-disk track file (`/api/v1/trackfile?albumId=N`). Lidarr's queue is
+/// per-album, so an album upgrade replaces N of these — the client aggregates
+/// them into the album-level existing-file diff fields (quality / size / score
+/// / formats). Only the fields the diff needs are decoded; extra JSON is
+/// ignored.
+public struct LidarrTrackFile: Decodable {
+    let id: Int
+    let albumId: Int?
+    let customFormats: [ArrCustomFormat]?
+    let customFormatScore: Int?
+    let quality: ArrQuality?
+    let size: Int64?
+}
+
 public struct LidarrCalendarRecord: Decodable {
     let id: Int
     let title: String
@@ -355,6 +369,50 @@ public struct ArrHealthRecord: Decodable, Equatable {
     let type: String?
     let message: String?
     let wikiUrl: String?
+}
+
+// MARK: - Commands
+
+/// One entry from `GET /command` — the server's own view of what it is busy
+/// with. We only care about indexer searches: whether one is in flight for a
+/// given record is otherwise unknowable client-side, because `POST /command`
+/// is fire-and-forget here and `addOptions.searchForMovie` fires entirely
+/// server-side, where the app never sees a command id at all.
+public struct ArrCommand: Decodable, Equatable {
+    let name: String?
+    let status: String?
+    let body: Body?
+
+    /// The command's payload. Every arr spells its record ids differently
+    /// (Radarr `movieIds`, Lidarr `albumIds`, singular variants on some
+    /// versions), so all the plausible spellings are decoded and any hit
+    /// counts — cheaper and more version-proof than branching per product.
+    struct Body: Decodable, Equatable {
+        let movieIds: [Int]?
+        let movieId: Int?
+        let albumIds: [Int]?
+        let albumId: Int?
+    }
+
+    /// `queued` and `started` both mean "not finished". Anything else
+    /// (completed / failed / aborted) is over.
+    var isRunning: Bool {
+        guard let status = status?.lowercased() else { return false }
+        return status == "queued" || status == "started"
+    }
+
+    /// Matched on the name *containing* "search" rather than an exact list —
+    /// the add-triggered search, the CTA search and their per-product names
+    /// (`MoviesSearch`, `AlbumSearch`, …) all share that substring, and a new
+    /// arr release coining another one shouldn't silently stop matching.
+    func isSearch(for entityId: Int) -> Bool {
+        guard isRunning, name?.lowercased().contains("search") == true else { return false }
+        guard let body else { return false }
+        return body.movieIds?.contains(entityId) == true
+            || body.movieId == entityId
+            || body.albumIds?.contains(entityId) == true
+            || body.albumId == entityId
+    }
 }
 
 // MARK: - Calendar

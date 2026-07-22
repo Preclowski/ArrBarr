@@ -59,12 +59,13 @@ struct CastRow: View {
     @ViewBuilder
     private func avatar(_ person: CastMember) -> some View {
         let size: CGFloat = 52
-        // RemotePoster routes through the shared ImageCache (memory + disk,
-        // OS-purgeable) — same caching as posters — instead of AsyncImage's
-        // default URLCache. cornerRadius = size/2 makes the headshot circular.
+        // RemotePoster routes through the shared PosterStore (memory + disk)
+        // instead of AsyncImage's default URLCache. A 52 pt headshot fits the
+        // icon tier even at @3x. cornerRadius = size/2 makes it circular.
         RemotePoster(
             url: person.imageURL,
             apiKey: nil,
+            tier: .icon,
             size: CGSize(width: size, height: size),
             cornerRadius: size / 2,
             fallbackSymbol: "person.fill"

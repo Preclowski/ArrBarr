@@ -135,6 +135,17 @@ extension ArrAPIClient {
         return (try? JSONDecoder().decode([ArrHealthRecord].self, from: data)) ?? []
     }
 
+    /// GET /diskspace — every filesystem the server can see, with free/total
+    /// bytes. Shared by all arrs (v1 and v3). Decode failures degrade to [] so a
+    /// quirky server never breaks the status page.
+    func fetchDiskSpace() async throws -> [DiskSpace] {
+        guard config.isConfigured else { throw HTTPError.notConfigured }
+        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
+        let url = try http.url(base: config.baseURL, path: "\(apiBase)/diskspace")
+        let data = try await http.get(url, headers: apiHeaders)
+        return (try? JSONDecoder().decode([DiskSpace].self, from: data)) ?? []
+    }
+
     /// POST /command — fire an arr command (indexer searches, refreshes, …).
     /// In demo mode no real work happens; a short sleep lets the UI's
     /// spinner-fade play.
@@ -144,5 +155,19 @@ extension ArrAPIClient {
             return
         }
         try await post("/command", body: body)
+    }
+
+    /// True while the server has a queued or running indexer search touching
+    /// this record. Asking the server is the only honest answer: `postCommand`
+    /// discards the command id, and a search started by
+    /// `addOptions.searchForMovie` never had a client-visible id to begin with.
+    ///
+    /// Never throws — a search indicator is not worth surfacing an error over,
+    /// and "can't tell" degrades to "not searching", which unblocks the UI
+    /// rather than wedging it.
+    func isSearchRunning(entityId: Int) async -> Bool {
+        if DemoMode.isActive { return false }
+        let commands: [ArrCommand] = (try? await getOrDefault("/command", default: [])) ?? []
+        return commands.contains { $0.isSearch(for: entityId) }
     }
 }

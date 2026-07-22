@@ -110,12 +110,6 @@ public extension Notification.Name {
     /// non-empty String. PopoverContentView listens and opens the Discover
     /// overlay in quiz mode with the given mood pre-loaded.
     static let arrBarrOpenDiscoverQuiz = Notification.Name("ArrBarr.OpenDiscoverQuiz")
-
-    /// Posted by PopoverContentView after opening the Discover overlay via
-    /// the `openPicks: true` path (tapping the picks icon on a resume card).
-    /// DiscoverTabView listens and flips `showMatched = true` so the user
-    /// lands directly in the matched-picks list instead of the swipe deck.
-    static let arrBarrShowDiscoverPicks = Notification.Name("ArrBarr.ShowDiscoverPicks")
 }
 
 public enum SearchAddRequest {

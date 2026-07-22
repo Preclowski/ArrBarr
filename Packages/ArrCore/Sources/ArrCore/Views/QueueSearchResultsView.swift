@@ -28,8 +28,17 @@ struct QueueSearchResultsView: View {
         )
         let newOnes = scopedSources.flatMap { newResults(for: $0) }
         let combined = SearchRelevance.sortedByRelevance(library + newOnes, input: searchViewModel.parsedInput)
+        // Refining a query ("matrix" → "matrix 2") keeps the previous rows up
+        // while the new lookups run — deliberately, so typing doesn't flicker
+        // list ↔ spinner. But those rows still answer the *old* query, and a
+        // loader appended under them lands below the fold. Fade them and float
+        // a spinner over their top edge instead: no layout shift, and a
+        // re-search always reads as "these are being replaced".
+        let reloading = searchViewModel.isSearching && !combined.isEmpty
 
         VStack(alignment: .leading, spacing: 0) {
+            // Queue rows filter locally on every keystroke, so they are never
+            // stale — they stay at full opacity while the lookups catch up.
             VStack(spacing: 2) {
                 ForEach(queueRows) { entry in
                     switch entry {
@@ -40,15 +49,26 @@ struct QueueSearchResultsView: View {
                     }
                 }
             }
-            ForEach(combined) { r in
-                SearchResultRow(result: r) {
-                    if r.inLibraryArrId != nil {
-                        DetailRequest.tap(r)
-                    } else {
-                        onSelectAddResult(r)
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(combined) { r in
+                    SearchResultRow(result: r) {
+                        if r.inLibraryArrId != nil {
+                            DetailRequest.tap(r)
+                        } else {
+                            onSelectAddResult(r)
+                        }
                     }
                 }
             }
+            .opacity(reloading ? 0.3 : 1)
+            .overlay(alignment: .top) {
+                if reloading {
+                    ProgressView()
+                        .controlSize(.small)
+                        .padding(.top, 14)
+                }
+            }
+            .animation(.easeInOut(duration: 0.15), value: reloading)
         }
     }
 

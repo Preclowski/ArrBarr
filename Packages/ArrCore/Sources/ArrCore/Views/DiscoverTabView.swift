@@ -4,150 +4,226 @@ public struct DiscoverTabView: View {
     var viewModel: DiscoverViewModel
     let llmAvailable: Bool
     let radarrAvailable: Bool
-    let onAddToRadarr: (SearchResult) -> Void
-    let onAddToSonarr: (SearchResult) -> Void
-    let onOpenDetail: (DiscoverItem, QueueItem.Source, Int) -> Void
     let onClose: () -> Void
-    let onRequestMore: (_ mood: String, _ kept: [DiscoverItem], _ skipped: [DiscoverItem], _ disliked: [DiscoverItem]) -> Void
+    let onRequestMore: (_ mood: String, _ kept: [DiscoverItem], _ skipped: [DiscoverItem]) -> Void
 
-    @State private var showMatched: Bool = false
     @State private var dragOffset: CGSize = .zero
-    @State private var isCardHovered: Bool = false
     @State private var isDragging: Bool = false
 
     public init(viewModel: DiscoverViewModel,
                 llmAvailable: Bool,
                 radarrAvailable: Bool,
-                onAddToRadarr: @escaping (SearchResult) -> Void,
-                onAddToSonarr: @escaping (SearchResult) -> Void,
-                onOpenDetail: @escaping (DiscoverItem, QueueItem.Source, Int) -> Void,
                 onClose: @escaping () -> Void,
-                onRequestMore: @escaping (_ mood: String, _ kept: [DiscoverItem], _ skipped: [DiscoverItem], _ disliked: [DiscoverItem]) -> Void = { _, _, _, _ in }) {
+                onRequestMore: @escaping (_ mood: String, _ kept: [DiscoverItem], _ skipped: [DiscoverItem]) -> Void = { _, _, _ in }) {
         self.viewModel = viewModel
         self.llmAvailable = llmAvailable
         self.radarrAvailable = radarrAvailable
-        self.onAddToRadarr = onAddToRadarr
-        self.onAddToSonarr = onAddToSonarr
-        self.onOpenDetail = onOpenDetail
         self.onClose = onClose
         self.onRequestMore = onRequestMore
     }
 
     public var body: some View {
-        quizMode
-            .onReceive(NotificationCenter.default.publisher(for: .arrBarrShowDiscoverPicks)) { _ in
-                withAnimation(.smooth(duration: 0.22)) {
-                    showMatched = true
+        swipeSurface
+    }
+
+    // MARK: - Immersive swipe surface
+
+    /// Full-bleed poster deck. The card fills the whole popover; the back
+    /// button + mood chip float over the top edge, and the two round verdict
+    /// buttons (✕ dislike, + add) float over the bottom edge.
+    private var swipeSurface: some View {
+        swipeBackground
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .overlay(alignment: .top) { floatingTopChrome }
+            .overlay(alignment: .bottom) {
+                if viewModel.current != nil {
+                    actionButtons
                 }
-                viewModel.acknowledgeUnseenPicks()
             }
     }
 
-    // MARK: - Quiz mode
-
-    private var quizMode: some View {
-        VStack(spacing: 0) {
-            quizTopBar
-            if showMatched {
-                DiscoverMatchedListView(
-                    items: viewModel.matched,
-                    onRemove: { item in viewModel.removeMatch(id: item.dedupKey) }
-                )
-            } else {
-                swipingContent
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                if viewModel.current != nil {
-                    ctaIsland
-                }
-            }
+    @ViewBuilder
+    private var swipeBackground: some View {
+        if viewModel.current != nil {
+            cardStack
+        } else if viewModel.isLoading {
+            loadingState
+        } else {
+            emptyStackState
         }
     }
 
-    /// Sticky bottom CTA "island" — same shape as DetailView's
-    /// downloadCTAStrip: thinMaterial panel spanning edge-to-edge with
-    /// a hairline divider on top. Keeps Skip / Watch / List visually
-    /// grouped on a single surface instead of floating in dead space.
-    private var ctaIsland: some View {
-        cardActionRow
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
-            .frame(maxWidth: .infinity)
-            .background(
-                Rectangle()
-                    .fill(.thinMaterial)
-                    .overlay(alignment: .top) {
-                        Divider().opacity(0.4)
-                    }
-            )
+    private var loadingState: some View {
+        VStack {
+            Spacer()
+            ShimmerThinkingLabel()
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
+
+    private var floatingTopChrome: some View {
+        ZStack {
+            if !activeFilterSummary.isEmpty {
+                filterSummaryChip
+                    .frame(maxWidth: 220)
+            }
+            HStack {
+                GlassCircleButton(
+                    systemName: "chevron.left",
+                    tint: .primary,
+                    diameter: 34,
+                    accessibilityKey: "settings.back.button",
+                    action: onClose
+                )
+                Spacer()
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.top, 12)
+    }
+
+    /// The two round, icon-only verdict buttons. ⏩ = skip to the next card
+    /// (neutral), + = add to collection (accent). Each lifts as the drag heads
+    /// its way; colours mirror the swipe tint (right = accent, left = neutral).
+    private var actionButtons: some View {
+        HStack(spacing: 30) {
+            GlassCircleButton(
+                systemName: "forward.fill",
+                tint: .secondary,
+                extraScale: 0.16 * leftDragProgress,
+                accessibilityKey: "Skip",
+                action: handleSkip
+            )
+            GlassCircleButton(
+                systemName: "plus",
+                tint: .accentColor,
+                extraScale: 0.16 * rightDragProgress,
+                accessibilityKey: "discover.addToLibrary.button",
+                action: handleAdd
+            )
+        }
+        .padding(.bottom, Layout.buttonBottomPadding)
+    }
+
+    private var rightDragProgress: CGFloat { max(0, min(1, dragOffset.width / 90)) }
+    private var leftDragProgress: CGFloat { max(0, min(1, -dragOffset.width / 90)) }
+
+    // MARK: - Card stack
+
+    private var cardStack: some View {
+        let stack = visibleStack.enumerated().map { ($0, $1) }
+        return GeometryReader { proxy in
+            ZStack {
+                ForEach(stack.reversed(), id: \.1.id) { (idx, item) in
+                    let isTop = (idx == 0)
+                    DiscoverCardStackItem(
+                        item: item,
+                        isTop: isTop,
+                        cardWidth: proxy.size.width,
+                        cardHeight: proxy.size.height,
+                        dragOffset: dragOffset,
+                        bottomInset: Layout.cardBottomInset,
+                        animationKey: viewModel.current?.dedupKey,
+                        gesture: isTop ? dragGesture : nil,
+                        onMore: { openCard(for: item) }
+                    )
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+        }
+    }
+
+    private var visibleStack: [DiscoverItem] {
+        let curr = viewModel.current.map { [$0] } ?? []
+        // One peek card is enough for a seamless swap — it sits hidden
+        // behind the top card and scales up to fill as the top flies off.
+        let peek = Array(viewModel.queue.prefix(1))
+        return curr + peek
+    }
+
+    // MARK: - Gestures / verdicts
+
+    private var dragGesture: some Gesture {
+        DragGesture()
+            .onChanged { value in
+                if !isDragging { isDragging = true }
+                dragOffset = value.translation
+            }
+            .onEnded { value in
+                let threshold: CGFloat = 90
+                if value.translation.width > threshold {
+                    // Right = "I want this" → open the add-to-collection card.
+                    // Does not advance — a cancelled add returns to this card.
+                    handleAdd()
+                } else if value.translation.width < -threshold {
+                    // Left = skip → next card (the only action that advances).
+                    handleSkip()
+                } else {
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
+                        dragOffset = .zero
+                    }
+                    isDragging = false
+                }
+            }
+    }
+
+    /// Right verdict: open the add-to-collection card for the current title.
+    /// Records the pick (for the resume-card count) but deliberately does NOT
+    /// advance the deck — whether the user adds or cancels, they return to the
+    /// same card. The add/detail surface (owned → DetailView, fresh →
+    /// SearchAddPanel) covers the popover while it's up.
+    private func handleAdd() {
+        guard let item = viewModel.current else { return }
+        isDragging = false
+        dragOffset = .zero
+        viewModel.markPicked()
+        openCard(for: item)
+    }
+
+    /// Left verdict: skip to the next card. Fly the current card off to the
+    /// left, THEN drop it and advance — the peek card scales up to fill
+    /// instead of the next card sliding in.
+    private func handleSkip() {
+        let flyDistance: CGFloat = 1000
+        withAnimation(.easeOut(duration: 0.55)) {
+            dragOffset = CGSize(width: -flyDistance, height: 0)
+        }
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 550_000_000)
+            viewModel.skip()
+            dragOffset = .zero
+            isDragging = false
+        }
+    }
+
+    /// Open the full movie/series card. `Więcej` calls this to *peek* (no
+    /// advance); `handleAdd` calls it as the committing add action. Owned
+    /// items land on DetailView (already in the library), fresh discoveries
+    /// on the SearchAddPanel (the add flow). Both hide the deck while up and
+    /// return to it on Back (PopoverContentView owns that swap).
+    private func openCard(for item: DiscoverItem) {
+        if let arrId = item.result.inLibraryArrId {
+            DetailRequest.post(
+                DetailRequest.syntheticItem(
+                    source: item.result.source,
+                    entityId: arrId,
+                    title: item.result.title,
+                    posterURL: item.result.posterURL,
+                    posterRequiresAuth: false
+                )
+            )
+        } else {
+            SearchAddRequest.post(item.result)
+        }
+    }
+
+    // MARK: - Top-chrome pieces
 
     private var activeFilterSummary: String {
         let mood = viewModel.moodText.trimmingCharacters(in: .whitespaces)
         guard !mood.isEmpty else { return "" }
         return mood.count > 40 ? String(mood.prefix(40)) + "\u{2026}" : mood
-    }
-
-    private var quizTopBar: some View {
-        // Three-zone header: back-button left, centered title/filter,
-        // picks-count pill right. Centring via ZStack so the centre
-        // element doesn't shift when the side widths change.
-        ZStack {
-            if showMatched {
-                Text("discover.yourPicks.button", bundle: .module)
-                    .scaledFont(size: 15, weight: .semibold)
-                    .foregroundStyle(.primary)
-                    .lineLimit(1)
-            } else if !activeFilterSummary.isEmpty {
-                filterSummaryChip
-            }
-            HStack(spacing: 6) {
-                FloatingBackButton(action: {
-                    if showMatched {
-                        withAnimation(.smooth(duration: 0.22)) { showMatched = false }
-                    } else {
-                        onClose()
-                    }
-                })
-                Spacer()
-                if !showMatched && !viewModel.matched.isEmpty {
-                    picksCountPill
-                }
-            }
-        }
-        .padding(.horizontal, 12)
-        .padding(.top, 10)
-        .padding(.bottom, 4)
-    }
-
-    /// Pill showing the shortlist count: `★ N`. Only rendered when at
-    /// least one pick exists — there's no useful zero-state for it.
-    /// Tinted accent when there are unseen picks so the user notices
-    /// without an attention-grabbing pulse animation.
-    private var picksCountPill: some View {
-        Button {
-            withAnimation(.smooth(duration: 0.22)) {
-                showMatched = true
-            }
-            viewModel.acknowledgeUnseenPicks()
-        } label: {
-            HStack(spacing: 4) {
-                Image(systemName: "star.fill")
-                    .scaledFont(size: 10, weight: .semibold)
-                Text(verbatim: "\(viewModel.matched.count)")
-                    .scaledFont(size: 12, weight: .semibold)
-                    .monospacedDigit()
-            }
-            .foregroundStyle(viewModel.hasUnseenPicks ? Color.accentColor : Color.secondary)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 5)
-            // Without this the Button only hit-tests the star glyph + the
-            // digits — the transparent padding / inter-element gap fell
-            // through. Make the whole padded pill the tap target.
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .glassPill()
-        .help(Text("discover.yourPicks.button", bundle: .module))
     }
 
     private var filterSummaryChip: some View {
@@ -166,182 +242,6 @@ public struct DiscoverTabView: View {
         .glassPill()
     }
 
-    // MARK: - Swiping content (cards + CTAs)
-
-    @ViewBuilder
-    private var swipingContent: some View {
-        if viewModel.isLoading && viewModel.current == nil {
-            VStack {
-                Spacer()
-                ShimmerThinkingLabel()
-                Spacer()
-            }
-        } else if viewModel.current != nil {
-            cardStack
-                .padding(.horizontal, 28)
-                .padding(.top, 6)
-                .padding(.bottom, 28)
-            // cardActionRow no longer sits here — it's pinned at the
-            // bottom of quizMode as `ctaIsland` (thinMaterial strip,
-            // same pattern as DetailView's downloadCTAStrip).
-        } else {
-            emptyStackState
-        }
-    }
-
-    private var cardStack: some View {
-        let stack = visibleStack.enumerated().map { ($0, $1) }
-        return GeometryReader { proxy in
-            // Reserve ~12% vertical for the peek stack at the bottom.
-            let availableH = proxy.size.height * 0.88
-            // True 2:3 poster aspect (restored from 1.4 → 1.5).
-            let h = min(availableH, proxy.size.width * 1.5)
-            let w = h / 1.5
-            ZStack {
-                ForEach(stack.reversed(), id: \.1.id) { (idx, item) in
-                    let isTop = (idx == 0)
-                    let tmdbId = Int(item.result.foreignId) ?? item.result.id
-                    DiscoverCardStackItem(
-                        item: item,
-                        idx: idx,
-                        stackCount: stack.count,
-                        cardWidth: w,
-                        cardHeight: h,
-                        dragOffset: dragOffset,
-                        credits: isTop ? viewModel.creditsCache[tmdbId] : nil,
-                        tmdbId: tmdbId,
-                        stackRotation: stackRotation(for: item, idx: idx),
-                        animationKey: viewModel.current?.dedupKey,
-                        isHovered: isTop ? $isCardHovered : .constant(false),
-                        hoverState: isCardHovered,
-                        gesture: isTop ? dragGesture : nil,
-                        onHoverForCredits: { viewModel.fetchCreditsIfNeeded(for: $0) }
-                    )
-                }
-            }
-            // Center the stack vertically so empty space splits above + below.
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-        }
-    }
-
-    private func stackRotation(for item: DiscoverItem, idx: Int) -> Angle {
-        // Top card sits flat. Peek cards tilt a few degrees in alternating
-        // directions, deterministic per item so the layout doesn't shuffle.
-        guard idx > 0 else { return .zero }
-        // FNV-1a-ish hash → -1..+1
-        var h: UInt32 = 2166136261
-        for byte in item.dedupKey.utf8 { h ^= UInt32(byte); h = h &* 16777619 }
-        let normalized = Double(h % 200) / 100.0 - 1.0  // -1..+1
-        let degrees = normalized * 3.5  // ±3.5° max
-        return .degrees(degrees)
-    }
-
-    private var dragGesture: some Gesture {
-        DragGesture()
-            .onChanged { value in
-                // Suppress hover/drawer the moment a drag starts so the
-                // card actually moves under the cursor instead of being
-                // gated off by isCardHovered.
-                if !isDragging { isDragging = true }
-                if isCardHovered { isCardHovered = false }
-                dragOffset = value.translation
-            }
-            .onEnded { value in
-                let threshold: CGFloat = 90
-                if value.translation.width > threshold {
-                    completeSwipe(right: true, fromTranslation: value.translation)
-                } else if value.translation.width < -threshold {
-                    // Left drag = thumbs-down. Same semantic as the
-                    // left button — tagged for "fewer like this", not
-                    // a silent skip.
-                    handleMarkDisliked()
-                } else {
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
-                        dragOffset = .zero
-                    }
-                }
-                isDragging = false
-            }
-    }
-
-    private func completeSwipe(right: Bool, fromTranslation t: CGSize) {
-        let flyDistance: CGFloat = 1000
-        let target = CGSize(width: right ? flyDistance : -flyDistance, height: t.height)
-        withAnimation(.easeOut(duration: 0.55)) {
-            dragOffset = target
-        }
-        Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 550_000_000)
-            await viewModel.swipe(right: right)
-            dragOffset = .zero
-            isDragging = false
-        }
-    }
-
-    private func handleMarkDisliked() {
-        // Same fly-off animation as a left-swipe so the gesture+button
-        // feedback are consistent.
-        let flyDistance: CGFloat = 1000
-        let target = CGSize(width: -flyDistance, height: 0)
-        withAnimation(.easeOut(duration: 0.45)) {
-            dragOffset = target
-        }
-        viewModel.markDisliked()
-        Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 450_000_000)
-            withAnimation(.spring(response: 0.32, dampingFraction: 0.85)) {
-                dragOffset = .zero
-            }
-        }
-    }
-
-    private var visibleStack: [DiscoverItem] {
-        let curr = viewModel.current.map { [$0] } ?? []
-        let peek = Array(viewModel.queue.prefix(2))
-        return curr + peek
-    }
-
-    private var cardActionRow: some View {
-        // Two-button verdict: thumbs-down (red, taggs "fewer like this")
-        // and thumbs-up (accent, drops the card into the shortlist).
-        // No immediate add to library — the user reviews the shortlist
-        // (`DiscoverMatchedListView`) and adds from there.
-        HStack(spacing: 8) {
-            Button {
-                handleMarkDisliked()
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "hand.thumbsdown.fill")
-                        .scaledFont(size: 13, weight: .semibold)
-                    Text("discover.no.button", bundle: .module)
-                        .scaledFont(size: 12, weight: .semibold)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 7)
-            }
-            .modifier(GlassProminentButtonStyle())
-            .tint(.red)
-            .keyboardShortcut(.leftArrow, modifiers: [])
-            .help(Text("discover.fewerLikeThis.button", bundle: .module))
-
-            Button {
-                completeSwipe(right: true, fromTranslation: .zero)
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "hand.thumbsup.fill")
-                        .scaledFont(size: 13, weight: .semibold)
-                    Text("discover.yes.button", bundle: .module)
-                        .scaledFont(size: 12, weight: .semibold)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 7)
-            }
-            .modifier(GlassProminentButtonStyle())
-            .keyboardShortcut(.rightArrow, modifiers: [])
-            .help(Text("discover.saveToPicks.button", bundle: .module))
-        }
-    }
-
     // MARK: - Empty stack
 
     @ViewBuilder
@@ -354,17 +254,6 @@ public struct DiscoverTabView: View {
             Text("discover.noMoreCards.button", bundle: .module)
                 .scaledFont(size: 12)
                 .foregroundStyle(.secondary)
-            if viewModel.matched.count > 0 {
-                Button {
-                    withAnimation(.smooth) { showMatched = true }
-                    viewModel.acknowledgeUnseenPicks()
-                } label: {
-                    Text("discover.showYourPicks.button", bundle: .module)
-                        .scaledFont(size: 11, weight: .semibold)
-                        .foregroundStyle(Color.accentColor)
-                }
-                .buttonStyle(.plain)
-            }
             Button {
                 onClose()
             } label: {
@@ -377,8 +266,7 @@ public struct DiscoverTabView: View {
                 Button {
                     onRequestMore(viewModel.moodText,
                                   viewModel.sessionMatched,
-                                  viewModel.sessionSkipped,
-                                  viewModel.sessionDisliked)
+                                  viewModel.sessionSkipped)
                 } label: {
                     HStack(spacing: 6) {
                         Image(systemName: "sparkles")
@@ -462,54 +350,107 @@ public struct DiscoverTabView: View {
     }
 }
 
-/// A single card in the Quiz swipe stack: the poster card plus its full
-/// transform chain (scale / offset / rotation / opacity / gesture).
-/// Extracted from `DiscoverTabView.cardStack`'s `ForEach` closure so that
-/// closure stays trivial to type-check — the long modifier chain lived
-/// inline and pushed the getter over the 100ms warn threshold.
+// MARK: - Layout constants
+
+private enum Layout {
+    static let buttonDiameter: CGFloat = 62
+    static let buttonBottomPadding: CGFloat = 24
+    /// Space the card reserves at its bottom so the metadata clears the
+    /// floating action buttons.
+    static let cardBottomInset: CGFloat = buttonDiameter + buttonBottomPadding + 20
+}
+
+// MARK: - Card stack item
+
+/// A single card in the Quiz swipe deck plus its transform chain. The top
+/// card carries the drag (offset / rotation); the lone peek card sits hidden
+/// behind it and scales up to fill as the top flies off. Extracted from
+/// `cardStack`'s `ForEach` so that closure stays trivial to type-check.
 private struct DiscoverCardStackItem<G: Gesture>: View {
     let item: DiscoverItem
-    let idx: Int
-    let stackCount: Int
+    let isTop: Bool
     let cardWidth: CGFloat
     let cardHeight: CGFloat
     let dragOffset: CGSize
-    let credits: TMDBCredits?
-    let tmdbId: Int
-    let stackRotation: Angle
+    let bottomInset: CGFloat
     let animationKey: String?
-    @Binding var isHovered: Bool
-    let hoverState: Bool
     let gesture: G?
-    let onHoverForCredits: (Int) -> Void
-
-    private var isTop: Bool { idx == 0 }
+    let onMore: () -> Void
 
     var body: some View {
+        let dragProgress = min(1, abs(dragOffset.width) / 90)
+        let scale: CGFloat = isTop ? 1.0 : (0.94 + 0.06 * dragProgress)
         DiscoverCardView(item: item,
-                         isHovered: $isHovered,
                          dragOffset: isTop ? dragOffset : .zero,
-                         credits: credits)
+                         bottomInset: bottomInset,
+                         onMore: onMore)
             .frame(width: cardWidth, height: cardHeight)
-            .scaleEffect(1.0 - CGFloat(idx) * 0.04, anchor: .top)
+            .scaleEffect(scale)
             .offset(x: isTop ? dragOffset.width : 0,
-                    y: CGFloat(idx) * 22 + (isTop ? dragOffset.height * 0.3 : 0))
-            .rotationEffect(
-                isTop
-                    ? .degrees(Double(dragOffset.width / 18))
-                    : stackRotation,
-                anchor: isTop ? .bottom : .center
-            )
-            .opacity(idx == 0 ? 1.0 : 1.0 - Double(idx) * 0.15)
+                    y: isTop ? dragOffset.height * 0.3 : 0)
+            .rotationEffect(isTop ? .degrees(Double(dragOffset.width / 22)) : .zero,
+                            anchor: .center)
             .allowsHitTesting(isTop)
-            .zIndex(Double(stackCount - idx))
+            .zIndex(isTop ? 1 : 0)
             .gesture(gesture)
             .animation(.spring(response: 0.32, dampingFraction: 0.85),
                        value: animationKey)
-            .onChange(of: hoverState) { _, hovering in
-                if hovering && isTop && tmdbId > 0 {
-                    onHoverForCredits(tmdbId)
-                }
-            }
+    }
+}
+
+// MARK: - Circular glass button
+
+/// A round, icon-only glass button that stays legible over arbitrary poster
+/// art. Same readable-glass recipe as `selectionModeBar` (ultra-thin material
+/// + white sheen + bright rim + shadow), shaped as a circle. Used for the
+/// swipe verdict buttons and the floating back button.
+private struct GlassCircleButton: View {
+    let systemName: String
+    let tint: Color
+    var diameter: CGFloat = Layout.buttonDiameter
+    /// Transient scale added while a drag heads toward this button.
+    var extraScale: CGFloat = 0
+    let accessibilityKey: LocalizedStringKey
+    let action: () -> Void
+
+    @State private var hovering = false
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: systemName)
+                .font(.system(size: diameter * 0.40, weight: .bold))
+                .foregroundStyle(tint)
+                .frame(width: diameter, height: diameter)
+                .background(glassCircle)
+                .overlay(Circle().strokeBorder(Color.white.opacity(0.42), lineWidth: 0.75))
+                .shadow(color: .black.opacity(0.35), radius: 10, y: 4)
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .scaleEffect((hovering ? 1.07 : 1.0) + extraScale)
+        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: extraScale)
+        .animation(.easeOut(duration: 0.12), value: hovering)
+        .accessibilityLabel(Text(accessibilityKey, bundle: .module))
+        .help(Text(accessibilityKey, bundle: .module))
+        #if os(macOS)
+        .onHover { h in
+            hovering = h
+            if h { NSCursor.pointingHand.push() } else { NSCursor.pop() }
+        }
+        #endif
+    }
+
+    private var glassCircle: some View {
+        Circle()
+            .fill(.ultraThinMaterial)
+            .overlay(
+                Circle().fill(
+                    LinearGradient(
+                        colors: [Color.white.opacity(0.18), Color.white.opacity(0.03)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+            )
     }
 }

@@ -140,7 +140,10 @@ public struct UpcomingItemTooltip: View {
             Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 10, verticalSpacing: 3) {
                 row("Airs", value: item.airDateFormatted(locale: configStore.currentLocale))
                 if let t = item.releaseType, !t.isEmpty {
-                    row("Type", value: t)
+                    // Dotted key (not the bare literal "Type") — the string
+                    // catalog symbol generator rejects "Type" as too close to a
+                    // Swift reserved word.
+                    row("upcoming.type.label", value: t)
                 }
                 if let r = item.runtime, r > 0 {
                     row("Runtime", value: "\(r) min")

@@ -68,9 +68,32 @@ public struct DetailView: View {
     /// `item`, or the button label keeps saying "Pause download"
     /// after the user already paused.
     private var focused: QueueItem {
-        viewModel.items(for: item.source)
-            .first { $0.id == item.id || $0.arrQueueId == item.arrQueueId }
-            ?? item
+        let pool = viewModel.items(for: item.source)
+        return pool.first { isSameRow($0) } ?? pool.first { isSameEntity($0) } ?? item
+    }
+
+    /// Same *queue row* as the one the detail was opened on. The `arrQueueId`
+    /// leg is guarded against 0: a synthetic item carries 0, and so would any
+    /// non-queue row, so an unguarded `==` makes the two indistinguishable.
+    private func isSameRow(_ candidate: QueueItem) -> Bool {
+        candidate.id == item.id || (candidate.arrQueueId != 0 && candidate.arrQueueId == item.arrQueueId)
+    }
+
+    /// Same arr *record*, matched when the detail was opened before anything
+    /// was downloading — straight after "Add to Radarr", where the synthetic
+    /// item carries the arr record id but no queue id. When the arr's own
+    /// search then grabs a release, the resulting queue row shares only
+    /// `entityId`; without this leg `focused` stays pinned to the opening
+    /// snapshot and the detail never notices its own download starting.
+    ///
+    /// Deliberately excludes Sonarr: there `entityId` is the *series* id and
+    /// every episode row of that series carries it, so this would latch onto
+    /// an arbitrary episode. Sonarr also never reaches the search CTA (its
+    /// search is per-season, in SeasonDetailView).
+    private func isSameEntity(_ candidate: QueueItem) -> Bool {
+        guard item.arrQueueId == 0, item.source != .sonarr,
+              let entityId = item.entityId else { return false }
+        return candidate.entityId == entityId
     }
 
     /// Whether the opened item is still a live queue row. Flips false the
@@ -78,8 +101,7 @@ public struct DetailView: View {
     /// from `/queue` — the cue to refetch so the detail swaps the stale
     /// download view for the freshly-imported on-disk file.
     private var isInLiveQueue: Bool {
-        viewModel.items(for: item.source)
-            .contains { $0.id == item.id || $0.arrQueueId == item.arrQueueId }
+        viewModel.items(for: item.source).contains { isSameRow($0) || isSameEntity($0) }
     }
 
     /// True when at least one sibling is a real queue row (non-zero arrQueueId).
@@ -126,6 +148,14 @@ public struct DetailView: View {
     /// Automatic-search in flight / just-queued feedback for the bottom CTA.
     @State private var autoSearching = false
     @State private var autoDidSearch = false
+    /// The *server* is running an indexer search for this record. Covers the
+    /// search the user fires from the CTA and, crucially, the one the arr
+    /// starts by itself on add (`addOptions.searchForMovie`) — which the app
+    /// never triggered and so has no other way to know about.
+    @State private var searchRunning = false
+    /// Bumped to restart the watcher after firing a search, so a search
+    /// started long after the view opened still gets watched.
+    @State private var searchWatchToken = 0
     /// Currently-shown disc number for Lidarr multi-disc albums.
     /// Mirrors `selectedSeasonNumber` — drives the disc pill bar,
     /// only one disc's track list is rendered at a time. `nil` =
@@ -200,8 +230,15 @@ public struct DetailView: View {
             // zoom-in, not a navigation level. Episode drill-down moved
             // to a NavigationStack push (see `.navigationDestination`
             // below) so the system renders `<` + series title for free.
+            //
+            // Parked on all four mechanisms while it's up (see
+            // PopoverContentView for why hiding alone isn't parking). The
+            // lightbox itself is applied outside this ZStack, so disabling the
+            // content underneath can't reach its dismiss gestures.
             .opacity(enlargedPoster != nil ? 0 : 1)
             .allowsHitTesting(enlargedPoster == nil)
+            .disabled(enlargedPoster != nil)
+            .accessibilityHidden(enlargedPoster != nil)
 
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -213,6 +250,7 @@ public struct DetailView: View {
             aspectRatio: item.source == .lidarr ? 1.0 : 2.0 / 3.0
         )
         .task(id: item.id) { await load() }
+        .task(id: searchWatchToken) { await watchSearchState() }
         // When the row leaves the arr queue (import finished / removed) while
         // the detail is open, the queue view stops backing it — refetch so the
         // panel flips from the stale download state to the on-disk library
@@ -220,6 +258,17 @@ public struct DetailView: View {
         .onChange(of: isInLiveQueue) { _, stillQueued in
             if !stillQueued, item.arrQueueId != 0 {
                 Task { await load(showSpinner: false) }
+            }
+            // A grab is the search's real conclusion, and it lands here before
+            // the command list catches up — drop the indicator now rather than
+            // letting it linger over a row that's visibly downloading. Also
+            // refetch: an item added seconds ago opened on a synthetic stub, so
+            // this is the first point where there's a real record to show.
+            if stillQueued {
+                withAnimation(.easeInOut(duration: 0.2)) { searchRunning = false }
+                if item.arrQueueId == 0 {
+                    Task { await load(showSpinner: false) }
+                }
             }
         }
         // Secondary actions live in the system toolbar — destructive
@@ -404,9 +453,20 @@ public struct DetailView: View {
     @ViewBuilder
     private var bottomSearchCTA: some View {
         if let target = manualTarget {
-            HStack(spacing: 8) {
-                manualSearchButton(target)
-                automaticSearchButton
+            VStack(spacing: 6) {
+                if searchRunning {
+                    HStack(spacing: 6) {
+                        ProgressView().controlSize(.small)
+                        Text("detail.searchingForRelease.label", bundle: .module)
+                            .scaledFont(size: 11)
+                            .foregroundStyle(.secondary)
+                    }
+                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+                }
+                HStack(spacing: 8) {
+                    manualSearchButton(target)
+                    automaticSearchButton
+                }
             }
         }
     }
@@ -416,17 +476,26 @@ public struct DetailView: View {
             searchCTALabel(icon: "magnifyingglass", text: "Manual search")
         }
         .modifier(GlassProminentButtonStyle())
+        // Locked while the server is already sweeping indexers: an interactive
+        // search hits the same trackers and would race the automatic one.
+        .disabled(searchRunning)
     }
 
     @ViewBuilder
     private var automaticSearchButton: some View {
         Button {
-            guard !autoSearching else { return }
+            guard !autoSearching, !searchRunning else { return }
             Task {
                 autoSearching = true
                 await runAutomaticSearch()
                 autoSearching = false
                 autoDidSearch = true
+                // Assume it's running rather than waiting for the next poll to
+                // notice — the command was just accepted, and a CTA that goes
+                // idle for three seconds before the indicator appears reads as
+                // "nothing happened" and invites a second tap.
+                searchRunning = true
+                searchWatchToken += 1
                 try? await Task.sleep(nanoseconds: 1_600_000_000)
                 autoDidSearch = false
             }
@@ -441,7 +510,43 @@ public struct DetailView: View {
             }
         }
         .modifier(GlassProminentButtonStyle())
-        .disabled(autoSearching)
+        .disabled(autoSearching || searchRunning)
+    }
+
+    /// Poll the arr for "is a search for this record still running".
+    ///
+    /// Bounded on purpose. The window restarts on every poll that *sees* a
+    /// running search, so a slow indexer keeps the indicator alive for as long
+    /// as it needs, but a detail left open on a settled item stops polling
+    /// instead of tapping the server forever.
+    private func watchSearchState() async {
+        guard let entityId = item.entityId, item.source != .sonarr,
+              let client = searchClient() else { return }
+        var deadline = Date().addingTimeInterval(Self.searchWatchWindow)
+        while !Task.isCancelled, Date() < deadline {
+            let running = await client.isSearchRunning(entityId: entityId)
+            if running != searchRunning {
+                withAnimation(.easeInOut(duration: 0.2)) { searchRunning = running }
+            }
+            if running { deadline = Date().addingTimeInterval(Self.searchWatchWindow) }
+            try? await Task.sleep(nanoseconds: 3_000_000_000)
+        }
+        if searchRunning {
+            withAnimation(.easeInOut(duration: 0.2)) { searchRunning = false }
+        }
+    }
+
+    /// How long to keep asking before assuming nothing is running. Comfortably
+    /// longer than a normal indexer sweep, and refreshed while one is live.
+    private static let searchWatchWindow: TimeInterval = 180
+
+    private func searchClient() -> (any ArrAPIClient)? {
+        switch item.source {
+        case .radarr: return RadarrClient(config: configStore.radarr)
+        case .whisparr: return WhisparrClient(config: configStore.whisparr)
+        case .lidarr: return LidarrClient(config: configStore.lidarr)
+        case .sonarr: return nil
+        }
     }
 
     /// Fire the arr's own "search now" command for this movie / album — the

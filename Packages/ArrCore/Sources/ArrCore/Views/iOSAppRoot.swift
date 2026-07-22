@@ -132,6 +132,9 @@ private struct QueueTab: View {
     @State private var detailItem: QueueItem?
     @State private var searchVM = SearchViewModel()
     @State private var searchResult: SearchResult?
+    /// Queue multi-select mode (iOS owns it locally — no "⋯" menu here yet, so
+    /// it can't be entered on iOS for now; macOS drives it from PopoverContentView).
+    @State private var selecting = false
 
     private var isSearching: Bool { !searchVM.query.trimmingCharacters(in: .whitespaces).isEmpty }
 
@@ -159,7 +162,11 @@ private struct QueueTab: View {
                                 onSelectAddResult: { searchResult = $0 }
                             )
                             .padding(.vertical, 8)
-                            if searchVM.isSearching {
+                            // Only until the first rows land — once they do,
+                            // this spinner is below the fold and a re-search
+                            // looks like nothing happened. QueueSearchResultsView
+                            // takes over the loading state from there.
+                            if searchVM.isSearching, !searchVM.hasResults {
                                 ProgressView()
                                     .controlSize(.small)
                                     .padding(.vertical, 16)
@@ -224,7 +231,8 @@ private struct QueueTab: View {
         QueueListView(
             viewModel: viewModel,
             scope: nil,
-            onShowDetail: { detailItem = $0 }
+            onShowDetail: { detailItem = $0 },
+            selecting: $selecting
         )
     }
 }

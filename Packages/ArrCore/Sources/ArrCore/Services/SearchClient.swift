@@ -196,8 +196,13 @@ public actor SearchClient {
     /// Returns the new Radarr movie id on success (nil in demo mode or if
     /// the response can't be parsed).
     @discardableResult
+    /// - Parameter searchOnAdd: hands the arr `addOptions.searchForMovie`, i.e.
+    ///   whether it should start hunting indexers the moment the record lands.
+    ///   No default on purpose — every caller states its intent, because this is
+    ///   the difference between "added, sitting there" and "added, already
+    ///   downloading", and it used to be an invisible hardcoded `true`.
     func addMovie(_ result: SearchResult, qualityProfileId: Int, rootFolderPath: String,
-                  monitor: RadarrMonitorMode) async throws -> Int? {
+                  monitor: RadarrMonitorMode, searchOnAdd: Bool) async throws -> Int? {
         try ensureRefCompatible(result)
         if DemoMode.isActive {
             try? await Task.sleep(nanoseconds: 500_000_000)
@@ -213,7 +218,7 @@ public actor SearchClient {
             "rootFolderPath": rootFolderPath,
             "monitored": true,
             "monitor": monitor.rawValue,
-            "addOptions": ["searchForMovie": true]
+            "addOptions": ["searchForMovie": searchOnAdd]
         ]
         let data = try JSONSerialization.data(withJSONObject: body)
         let response = try await http.post(url, headers: headers.merging(["Content-Type": "application/json"]) { $1 }, body: data)
@@ -223,9 +228,11 @@ public actor SearchClient {
     /// Returns the new Sonarr series id on success (nil in demo mode or if
     /// the response can't be parsed).
     @discardableResult
+    /// - Parameter searchOnAdd: see `addMovie` — Sonarr spells it
+    ///   `searchForMissingEpisodes`.
     func addSeries(_ result: SearchResult, qualityProfileId: Int, rootFolderPath: String,
                    monitor: SonarrMonitorMode, seriesType: SonarrSeriesType,
-                   seasonFolder: Bool) async throws -> Int? {
+                   seasonFolder: Bool, searchOnAdd: Bool) async throws -> Int? {
         try ensureRefCompatible(result)
         if DemoMode.isActive {
             try? await Task.sleep(nanoseconds: 500_000_000)
@@ -273,7 +280,7 @@ public actor SearchClient {
             "seasonFolder": seasonFolder,
             "addOptions": [
                 "monitor": monitor.apiValue,
-                "searchForMissingEpisodes": true
+                "searchForMissingEpisodes": searchOnAdd
             ]
         ]
         let data = try JSONSerialization.data(withJSONObject: body)
@@ -284,8 +291,10 @@ public actor SearchClient {
     /// Returns the new Whisparr movie id on success (nil in demo mode or if
     /// the response can't be parsed).
     @discardableResult
+    /// - Parameter searchOnAdd: see `addMovie` — Whisparr shares Radarr's
+    ///   `searchForMovie` spelling.
     func addScene(_ result: SearchResult, qualityProfileId: Int, rootFolderPath: String,
-                  monitor: RadarrMonitorMode = .movieOnly) async throws -> Int? {
+                  monitor: RadarrMonitorMode = .movieOnly, searchOnAdd: Bool) async throws -> Int? {
         try ensureRefCompatible(result)
         if DemoMode.isActive {
             try? await Task.sleep(nanoseconds: 500_000_000)
@@ -301,7 +310,7 @@ public actor SearchClient {
             "rootFolderPath": rootFolderPath,
             "monitored": true,
             "monitor": monitor.rawValue,
-            "addOptions": ["searchForMovie": true]
+            "addOptions": ["searchForMovie": searchOnAdd]
         ]
         let foreignId = result.foreignId
         if let tmdbId = Int(foreignId), tmdbId != 0 {
@@ -317,8 +326,11 @@ public actor SearchClient {
     /// Returns the new Lidarr artist id on success (nil in demo mode or if
     /// the response can't be parsed).
     @discardableResult
+    /// - Parameter searchOnAdd: see `addMovie` — Lidarr spells it
+    ///   `searchForMissingAlbums`.
     func addArtist(_ result: SearchResult, qualityProfileId: Int, metadataProfileId: Int,
-                   rootFolderPath: String, monitor: String = "all") async throws -> Int? {
+                   rootFolderPath: String, monitor: String = "all",
+                   searchOnAdd: Bool) async throws -> Int? {
         try ensureRefCompatible(result)
         if DemoMode.isActive {
             try? await Task.sleep(nanoseconds: 500_000_000)
@@ -336,7 +348,7 @@ public actor SearchClient {
             "monitored": true,
             "addOptions": [
                 "monitor": monitor,
-                "searchForMissingAlbums": true
+                "searchForMissingAlbums": searchOnAdd
             ]
         ]
         let data = try JSONSerialization.data(withJSONObject: body)

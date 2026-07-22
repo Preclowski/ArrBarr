@@ -14,6 +14,10 @@ import SwiftUI
 public struct PosterMetadataRow<TrailingAccessory: View>: View {
     let posterURL: URL?
     let posterAPIKey: String?
+    /// Every caller so far is a list row at 26×38, comfortably inside the icon
+    /// tier even at @3x — but it is a parameter rather than a constant so a
+    /// future caller with a bigger poster doesn't silently get a soft one.
+    let posterTier: PosterTier
     let posterSize: CGSize
     let posterCornerRadius: CGFloat
     let posterBlurred: Bool
@@ -46,6 +50,7 @@ public struct PosterMetadataRow<TrailingAccessory: View>: View {
     public init(
         posterURL: URL?,
         posterAPIKey: String?,
+        posterTier: PosterTier = .icon,
         posterSize: CGSize,
         posterCornerRadius: CGFloat = 3,
         posterBlurred: Bool,
@@ -60,6 +65,7 @@ public struct PosterMetadataRow<TrailingAccessory: View>: View {
     ) {
         self.posterURL = posterURL
         self.posterAPIKey = posterAPIKey
+        self.posterTier = posterTier
         self.posterSize = posterSize
         self.posterCornerRadius = posterCornerRadius
         self.posterBlurred = posterBlurred
@@ -80,6 +86,7 @@ public struct PosterMetadataRow<TrailingAccessory: View>: View {
                     RemotePoster(
                         url: posterURL,
                         apiKey: posterAPIKey,
+                        tier: posterTier,
                         size: posterSize,
                         cornerRadius: posterCornerRadius,
                         fallbackSymbol: posterFallbackSymbol

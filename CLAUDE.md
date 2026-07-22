@@ -96,7 +96,7 @@ fastest via SwiftPM:
   models/services use `String(localized: "Key", bundle: .module)`. Never inline
   user-facing literals. (The old `loc("…")` helper is gone.)
 - **Shared singletons** cross target boundaries: `ConfigStore.shared`,
-  `QueueViewModel.shared`, `StoreManager.shared`, `ImageCache.shared`. The
+  `QueueViewModel.shared`, `StoreManager.shared`, `PosterStore.shared`. The
   AppDelegate and the SwiftUI scenes observe the *same* instances.
 - **Demo mode**: isolated `UserDefaults` suite `pl.incred.ArrBarr.demo` —
   toggling re-points `ConfigStore` live and wipes only the demo suite; the real

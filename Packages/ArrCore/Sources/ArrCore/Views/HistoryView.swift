@@ -150,13 +150,6 @@ public struct HistoryView: View {
     }
 }
 
-public struct HistoryHeightKey: PreferenceKey {
-    public static let defaultValue: CGFloat = 0
-    public static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        value = max(value, nextValue())
-    }
-}
-
 public struct HistoryRowView: View {
     let item: HistoryItem
     /// Show the item's arr icon (used by the "All" history filter where rows

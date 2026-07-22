@@ -1,4 +1,5 @@
 import SwiftUI
+import os
 
 /// Wraps a poster (or any view) and blurs it when `blurred` is true. Used to
 /// hide NSFW Whisparr posters. There's no tap-to-reveal — toggle is a global
@@ -30,6 +31,13 @@ public struct PosterBlurContainer<Content: View>: View {
 public struct RemotePoster: View {
     let url: URL?
     let apiKey: String?
+    /// How large a copy to fetch and keep. Stated explicitly rather than
+    /// inferred from `size`, because `size` cannot see the two things that
+    /// decide it: `fill` ignores `size` entirely, and the lightbox scales its
+    /// poster up to 5× after layout. Defaults to `.card` — the safe direction,
+    /// since a too-small tier shows as a blurry poster while a too-large one
+    /// only costs bytes (and DEBUG builds log both, see `load`).
+    var tier: PosterTier = .card
     var size: CGSize = CGSize(width: 40, height: 60)
     var cornerRadius: CGFloat = 4
     var fallbackSymbol: String? = "photo"
@@ -74,7 +82,9 @@ public struct RemotePoster: View {
                 .stroke(Color.primary.opacity(0.08), lineWidth: 0.5)
         )
         .accessibilityHidden(true)
-        .task(id: url) {
+        // The tier is part of the request's identity: switching it has to
+        // re-load, not keep showing the previously sized copy.
+        .task(id: PosterRequest(url: url, tier: tier)) {
             await load()
         }
     }
@@ -87,14 +97,65 @@ public struct RemotePoster: View {
             return
         }
         isLoading = true
-        let key = apiKey
-        let result = await ImageCache.shared.image(for: url, apiKey: key)
+        // Paint the smaller copy we already hold, then sharpen. The icon tier
+        // covers the whole library, so a detail view that used to sit on a grey
+        // rectangle for the length of a download now opens with its poster.
+        // Skipped when this view already shows something (a recycled row would
+        // otherwise visibly step *down* in quality first).
+        if image == nil, let preview = await PosterStore.shared.cachedPreview(for: url, below: tier) {
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                image = preview
+                isLoading = false
+            }
+        }
+        let result = await PosterStore.shared.image(for: url, tier: tier, apiKey: apiKey)
+        // The view may have been recycled onto a different title while we were
+        // downloading; landing this poster there would show the wrong artwork.
+        guard !Task.isCancelled else { return }
         await MainActor.run {
-            image = result
-            failed = (result == nil)
+            // Never replace a poster with nothing: if the bigger copy failed,
+            // the preview on screen is still the best we have.
+            if result != nil || image == nil { image = result }
+            failed = (result == nil && image == nil)
             isLoading = false
         }
+        #if DEBUG
+        if let result { warnOnTierMismatch(result) }
+        #endif
     }
+
+    #if DEBUG
+    /// Tier is a hand-made choice per call site, so make a wrong one visible
+    /// instead of silently blurry (too small) or silently expensive (too big).
+    private func warnOnTierMismatch(_ image: PlatformImage) {
+        guard !fill, size.width > 0, size.height > 0 else { return }
+        let scale: CGFloat
+        #if os(macOS)
+        scale = NSScreen.main?.backingScaleFactor ?? 2
+        #else
+        scale = UIScreen.main.scale
+        #endif
+        let needed = max(size.width, size.height) * scale
+        let have = max(image.size.width, image.size.height)
+        if have < needed / 1.25 {
+            Logger(category: "RemotePoster").notice(
+                "under-sampled: \(tier.rawValue, privacy: .public) gives \(Int(have), privacy: .public)px for \(Int(needed), privacy: .public)px"
+            )
+        } else if have > needed * 2.5 {
+            Logger(category: "RemotePoster").notice(
+                "over-sampled: \(tier.rawValue, privacy: .public) gives \(Int(have), privacy: .public)px for \(Int(needed), privacy: .public)px"
+            )
+        }
+    }
+    #endif
+}
+
+/// Identity of a poster request — `.task(id:)` must re-run when either half
+/// changes.
+private struct PosterRequest: Equatable {
+    let url: URL?
+    let tier: PosterTier
 }
 
 private struct RemotePosterFrame: ViewModifier {

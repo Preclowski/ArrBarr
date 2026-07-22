@@ -15,6 +15,9 @@ public struct QueueGroupRowView: View {
     let onResume: () -> Void
     let onDelete: () -> Void
     var onShowDetail: (() -> Void)? = nil
+    /// Multi-select state — `.hidden` shows the poster; otherwise the poster
+    /// slot becomes the selection circle (a pack row selects the whole pack).
+    var selectionState: RowSelectionState = .hidden
 
     @EnvironmentObject var configStore: ConfigStore
     /// True when the host already has a permanent detail pane (desktop
@@ -59,24 +62,30 @@ public struct QueueGroupRowView: View {
 
     public var body: some View {
         HStack(alignment: .top, spacing: 10) {
-            PosterBlurContainer(blurred: configStore.shouldBlurPoster(for: rep.source), cornerRadius: Tokens.Radius.chip) {
-                RemotePoster(
-                    url: rep.posterURL,
-                    apiKey: rep.posterRequiresAuth ? configStore.sonarr.apiKey : nil,
-                    size: CGSize(width: 40, height: 60),
-                    cornerRadius: Tokens.Radius.chip,
-                    fallbackSymbol: "tv"
-                )
-            }
-            // macOS: pause/resume on the poster (hover-revealed); no delete in
-            // the list — same treatment as QueueRowView.
-            #if os(macOS)
-            .overlay {
-                if isHovering && canControl && canPauseResume && !isOffline {
-                    posterControl.transition(.opacity)
+            if selectionState != .hidden {
+                SelectionCircle(selected: selectionState == .selected)
+                    .frame(width: 40, height: 60)
+            } else {
+                PosterBlurContainer(blurred: configStore.shouldBlurPoster(for: rep.source), cornerRadius: Tokens.Radius.chip) {
+                    RemotePoster(
+                        url: rep.posterURL,
+                        apiKey: rep.posterRequiresAuth ? configStore.sonarr.apiKey : nil,
+                        tier: .icon,
+                        size: CGSize(width: 40, height: 60),
+                        cornerRadius: Tokens.Radius.chip,
+                        fallbackSymbol: "tv"
+                    )
                 }
+                // macOS: pause/resume on the poster (hover-revealed); no delete in
+                // the list — same treatment as QueueRowView.
+                #if os(macOS)
+                .overlay {
+                    if isHovering && canControl && canPauseResume && !isOffline {
+                        posterControl.transition(.opacity)
+                    }
+                }
+                #endif
             }
-            #endif
 
             VStack(alignment: .leading, spacing: 4) {
                 VStack(alignment: .leading, spacing: 1) {
@@ -127,9 +136,9 @@ public struct QueueGroupRowView: View {
         // overlay's own buttons receive clicks instead of the row
         // tap-gesture swallowing them.
         .contentShape(Rectangle())
-        .onTapGesture {
-            onShowDetail?()
-        }
+        // Drop the open-detail tap when there's no target (queue multi-select
+        // mode) so it doesn't swallow the List's selection click.
+        .modifier(RowTapToOpen(action: onShowDetail))
         .contextMenu {
             // Offline → no mutating menu items; the header chip explains why.
             if !isOffline {
@@ -401,10 +410,15 @@ public struct QueueGroupTooltip: View {
             }
             // Same side-by-side diff as everywhere else (current → incoming),
             // built from the pack's uniform existing fingerprint vs the shared
-            // incoming release.
+            // incoming release. The incoming pack release name rides along via
+            // `showFilenames` so the diff card carries the new file name (the
+            // per-episode old file names it replaces are listed on each row of
+            // the episode list below — a pack is one release replacing N files,
+            // so there's no single old name to show here).
             UpgradeDiffView(
                 current: .init(quality: uniform.quality, score: uniform.score, size: nil, formats: uniform.formats),
-                incoming: .init(quality: rep.quality, score: rep.customFormatScore, size: nil, formats: rep.customFormats)
+                incoming: .init(quality: rep.quality, score: rep.customFormatScore, size: nil, formats: rep.customFormats, filename: rep.releaseName),
+                showFilenames: true
             )
         }
         .padding(8)
@@ -419,15 +433,16 @@ public struct QueueGroupTooltip: View {
     /// existing files (variant B/C), each upgrade row also gets a single
     /// inline "↑ replaces …" line with chips.
     private var episodeQueueList: some View {
-        let showPerRow = uniformExistingFile == nil
         // Every member of the (now only) `.pack` group shares one physical
         // release — quality + new-format chips would just repeat the pack
-        // header on every row, so hide them.
-        return VStack(alignment: .leading, spacing: 4) {
+        // header on every row, so hide them. Each upgrade row does show the
+        // per-episode old file name it replaces (`showExistingFile`), since a
+        // pack replaces N distinct on-disk files the summary card can't name.
+        VStack(alignment: .leading, spacing: 4) {
             ForEach(group.items) { it in
                 TooltipQueueRow(
                     item: it,
-                    showExistingFile: showPerRow,
+                    showExistingFile: true,
                     showNewFileMeta: false
                 )
             }
@@ -477,7 +492,10 @@ public struct QueueGroupTooltip: View {
             if let indexer = rep.indexer, !indexer.isEmpty {
                 row("Indexer", value: indexer)
             }
-            if let file = rep.releaseName, !file.isEmpty {
+            // The new pack release name lives inside the upgrade summary's
+            // diff card when we render one (uniform upgrade). Only surface it
+            // here otherwise so it isn't shown twice.
+            if uniformExistingFile == nil, let file = rep.releaseName, !file.isEmpty {
                 row("File", value: file, mono: true, wraps: true)
             }
         }
@@ -529,12 +547,11 @@ public struct QueueGroupTooltip: View {
 /// when the episode is replacing an existing file.
 public struct TooltipQueueRow: View {
     let item: QueueItem
-    /// When true, render an inline "↑ replaces …" line under the row
-    /// for upgrade items, with quality · size · score and existing
-    /// custom-format chips wrapping on the same line. Used for season
-    /// packs with mixed existing files (Variant B/C) where the per-row
-    /// detail is necessary; suppressed when a top-level summary card
-    /// already covers it (Variant A).
+    /// When true, render the name of the on-disk file this episode
+    /// replaces as a `⇱ …` mono sub-line under the row (upgrade rows
+    /// only). A season pack is one release replacing N distinct files,
+    /// so the shared summary card can't name them — each row names its
+    /// own, keeping the old→new file diff complete for the pack.
     var showExistingFile: Bool = false
     /// When false, the row hides quality + new-custom-format chips —
     /// they would otherwise repeat the pack header's identical info on
@@ -597,6 +614,22 @@ public struct TooltipQueueRow: View {
                     ForEach(item.customFormats, id: \.self) { TagChip(text: $0) }
                 }
                 .padding(.top, 1)
+            }
+            // Old file this episode replaces — same `⇱` mono grammar the
+            // single-item UpgradeDiffView uses for its replaced-file line,
+            // truncated in the middle to stay dense in the pack list.
+            if showExistingFile, item.isUpgrade, let old = item.existingFileName, !old.isEmpty {
+                HStack(alignment: .firstTextBaseline, spacing: 4) {
+                    Text(verbatim: "⇱")
+                        .scaledFont(size: 11, weight: .semibold)
+                        .foregroundStyle(.tertiary)
+                    Text(old)
+                        .scaledFont(size: 10, design: .monospaced)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
+                .padding(.horizontal, 6)
             }
         }
     }

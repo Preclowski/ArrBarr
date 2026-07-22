@@ -280,28 +280,35 @@ public struct PosterLightbox: View {
                 .contentShape(Rectangle())
                 .onTapGesture { onDismiss() }
 
-            // Poster scales to fit the available popover space
-            // (24 / 48pt margins) while respecting `aspectRatio`.
+            // Poster grows to the window edges. No insets: the macOS popover is
+            // 400×600 and a 2:3 poster is exactly that ratio, so dropping the
+            // margins fills the window pixel-perfect with nothing cropped.
             GeometryReader { geo in
-                // Tighter insets than before — the poster filled only the
-                // middle of the popover with a big margin all round. Trim
-                // the cushion so it reads close to full-bleed but keeps a
-                // thin breathing edge.
-                let maxW = geo.size.width - 28
-                let maxH = geo.size.height - 48
-                let posterW = min(maxW, maxH * aspectRatio)
+                let posterW = min(geo.size.width, geo.size.height * aspectRatio)
                 let posterH = posterW / aspectRatio
+                // Still *fit*, not fill — Lidarr art is square (aspectRatio 1),
+                // and covering a 2:3 window with it would eat a third of the
+                // cover. Square art letterboxes and keeps its card treatment;
+                // only artwork that genuinely reaches both edges goes full-bleed.
+                let fullBleed = posterW >= geo.size.width - 0.5 && posterH >= geo.size.height - 0.5
                 RemotePoster(
                     url: url,
                     apiKey: apiKey,
+                    // The lightbox zooms to 5×, so it is the one place that wants
+                    // the source at full resolution — held in memory for the
+                    // sheet's lifetime, never written to disk.
+                    tier: .full,
                     size: CGSize(width: posterW, height: posterH),
-                    cornerRadius: Tokens.Radius.panel,
+                    // Rounded corners over a full-bleed image would just carve
+                    // notches out of the artwork with nothing behind them.
+                    cornerRadius: fullBleed ? 0 : Tokens.Radius.panel,
                     fallbackSymbol: "photo"
                 )
                 .frame(width: posterW, height: posterH)
                 .scaleEffect(zoom)
                 .offset(offset)
-                .shadow(color: .black.opacity(0.5), radius: 20, y: 8)
+                // Likewise the lift shadow: it needs a surface to fall on.
+                .shadow(color: .black.opacity(fullBleed ? 0 : 0.5), radius: 20, y: 8)
                 // Pinch to zoom (iOS finger / macOS trackpad), drag to pan
                 // once zoomed. `.onChanged` drives the live scale; the two
                 // gestures run simultaneously so you can pinch-and-pan.
@@ -339,19 +346,39 @@ public struct PosterLightbox: View {
                 }
                 .position(x: geo.size.width / 2, y: geo.size.height / 2)
             }
+            // Only the artwork bleeds past the safe area — without this the
+            // GeometryReader is inset by it and the poster stops short of the
+            // notch and home indicator, i.e. "full screen" minus two strips.
+            // Scoped to the poster on purpose: the close button below has to
+            // stay *inside* the safe area, and it can only do that if the stack
+            // around it still respects one.
+            .ignoresSafeArea()
 
-            // xmark dropped on both platforms — MenuBarExtra(.window)
-            // gives macOS a native back chevron just like iOS, and
-            // the scrim tap still covers tap-anywhere dismiss. Esc
-            // keyboard shortcut moved to a hidden Button below so it
-            // survives without painting a visible affordance.
+            // The xmark used to be dropped here, on the grounds that the scrim
+            // and the native back chevron were both visible behind the poster.
+            // Full-bleed took away both — the artwork now covers the popover to
+            // the last pixel — so with no visible affordance the only ways out
+            // (tap anywhere, Esc) are invisible ones you have to already know.
+            // Hence a real button, which also carries the Esc shortcut that the
+            // zero-sized placeholder used to hold.
+            Button(action: onDismiss) {
+                Image(systemName: "xmark")
+                    .scaledFont(size: 12, weight: .semibold)
+                    .frame(width: 28, height: 28)
+                    .contentShape(Circle())
+            }
+            .buttonStyle(.plain)
+            .glassPill()
             #if os(macOS)
-            Button("", action: onDismiss)
-                .keyboardShortcut(.cancelAction)
-                .opacity(0)
-                .frame(width: 0, height: 0)
-                .accessibilityHidden(true)
+            .keyboardShortcut(.cancelAction)
             #endif
+            .help(Text("detail.closePoster.button", bundle: .module))
+            .accessibilityLabel(Text("detail.closePoster.button", bundle: .module))
+            // Poster art is unpredictable — a light sky behind the glass pill
+            // would swallow it — so lean on the same shadow the pill loses when
+            // the artwork goes full-bleed.
+            .shadow(color: .black.opacity(0.45), radius: 8, y: 2)
+            .padding(12)
         }
     }
 }

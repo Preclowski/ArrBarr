@@ -198,11 +198,31 @@ public struct QueueStatusMessagesBanner: View {
     /// re-navigate from the popover's header.
     let actionURL: URL?
 
+    /// A stalled/rejected download can carry a wall of `statusMessages`
+    /// (import-rejection reasons, tracker errors) that otherwise swamps the
+    /// detail view. Collapse to a few lines by default with a Show more / Show
+    /// less toggle; the height probe below only surfaces the toggle when the
+    /// warning genuinely overflows, so short warnings stay button-free.
+    @State private var expanded = false
+    @State private var clampedHeight: CGFloat = 0
+    @State private var fullHeight: CGFloat = 0
+    private let collapsedLineLimit = 3
+
     public init(messages: [String], tint: Color, actionURL: URL? = nil) {
         self.messages = messages
         self.tint = tint
         self.actionURL = actionURL
     }
+
+    /// Join into one block so `lineLimit` clamps the whole warning rather than
+    /// each message line independently.
+    private var text: String { messages.joined(separator: "\n") }
+
+    /// True when the collapsed render is shorter than the full render — i.e.
+    /// there's genuinely more to reveal. Measured from fixed hidden probes (not
+    /// the visible text), so it stays valid while expanded and "Show less"
+    /// doesn't vanish. +0.5 slop for sub-pixel text-layout rounding.
+    private var isTruncated: Bool { fullHeight > clampedHeight + 0.5 }
 
     public var body: some View {
         // Warning icon dropped: the status pill rendered immediately
@@ -210,14 +230,30 @@ public struct QueueStatusMessagesBanner: View {
         // visual stutter. The tinted backdrop alone carries the
         // "this is the warning explanation" signal.
         VStack(alignment: .leading, spacing: 6) {
-            VStack(alignment: .leading, spacing: 2) {
-                ForEach(messages, id: \.self) { line in
-                    Text(line)
-                        .scaledFont(size: 11)
-                        .foregroundStyle(.primary)
-                        .fixedSize(horizontal: false, vertical: true)
+            Text(text)
+                .scaledFont(size: 11)
+                .foregroundStyle(.primary)
+                .lineSpacing(2)
+                .lineLimit(expanded ? nil : collapsedLineLimit)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(alignment: .topLeading) { heightProbes }
+
+            if isTruncated {
+                Button {
+                    withAnimation(.smooth(duration: 0.18)) { expanded.toggle() }
+                } label: {
+                    HStack(spacing: 3) {
+                        Text(expanded ? "discover.showLess.button" : "queue.showMore.button", bundle: .module)
+                            .scaledFont(size: 11, weight: .medium)
+                        Image(systemName: expanded ? "chevron.up" : "chevron.down")
+                            .scaledFont(size: 9, weight: .semibold)
+                    }
+                    .foregroundStyle(tint)
                 }
+                .buttonStyle(.plain)
             }
+
             if let actionURL {
                 Button {
                     PlatformURLOpener.open(actionURL)
@@ -243,6 +279,46 @@ public struct QueueStatusMessagesBanner: View {
                 .stroke(tint.opacity(0.25), lineWidth: 0.5)
         )
     }
+
+    /// Two hidden, non-interactive measuring sticks at the banner's real width:
+    /// one clamped to `collapsedLineLimit`, one unlimited. Their height gap is
+    /// what tells us the warning overflows the collapsed view — a layout probe,
+    /// not a brittle character-count guess.
+    private var heightProbes: some View {
+        ZStack(alignment: .topLeading) {
+            probe(lineLimit: collapsedLineLimit)
+                .background(GeometryReader { g in
+                    Color.clear.preference(key: BannerClampedHeightKey.self, value: g.size.height)
+                })
+            probe(lineLimit: nil)
+                .background(GeometryReader { g in
+                    Color.clear.preference(key: BannerFullHeightKey.self, value: g.size.height)
+                })
+        }
+        .onPreferenceChange(BannerClampedHeightKey.self) { clampedHeight = $0 }
+        .onPreferenceChange(BannerFullHeightKey.self) { fullHeight = $0 }
+    }
+
+    private func probe(lineLimit: Int?) -> some View {
+        Text(text)
+            .scaledFont(size: 11)
+            .lineSpacing(2)
+            .lineLimit(lineLimit)
+            .fixedSize(horizontal: false, vertical: true)
+            .opacity(0)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+    }
+}
+
+private struct BannerClampedHeightKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = nextValue() }
+}
+
+private struct BannerFullHeightKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = nextValue() }
 }
 
 /// "Replacing <existing spec>" line — Apple Software Update pattern.
@@ -251,38 +327,6 @@ public struct QueueStatusMessagesBanner: View {
 /// silence; if everything's identical, the whole line falls back to
 /// a single muted "Same spec, retagged" / "Re-downloading identical
 /// release" message. The principle: equality is silence.
-/// Wraps a NEW/OLD diff section in a labeled column — small uppercase
-/// caption above the content, a vertical tint-coloured rail down the
-/// left side, and dimmed-secondary content treatment. Used on the
-/// EXISTING half of upgrade diffs so the user can tell which side is
-/// the file being replaced at a glance.
-public struct DiffSection<Content: View>: View {
-    let captionKey: LocalizedStringKey
-    let tint: Color
-    let content: () -> Content
-
-    public init(captionKey: LocalizedStringKey, tint: Color = .orange, @ViewBuilder content: @escaping () -> Content) {
-        self.captionKey = captionKey
-        self.tint = tint
-        self.content = content
-    }
-
-    public var body: some View {
-        HStack(alignment: .top, spacing: 8) {
-            Capsule()
-                .fill(tint.opacity(0.55))
-                .frame(width: 2)
-            VStack(alignment: .leading, spacing: 4) {
-                Text(captionKey, bundle: .module)
-                    .scaledFont(size: 9, weight: .semibold)
-                    .foregroundStyle(tint.opacity(0.85))
-                    .tracking(0.6)
-                content()
-            }
-        }
-    }
-}
-
 public struct ExistingFileDiffRow: View {
     let existingQuality: String?
     let existingSize: Int64?

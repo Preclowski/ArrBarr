@@ -48,6 +48,7 @@ public struct SettingsView: View {
     /// not a sidebar row of its own.
     enum SettingsSection: Hashable {
         case general
+        case status
         case mediaManagers
         case downloadClients
         case service(ServiceKind)
@@ -394,6 +395,8 @@ public struct SettingsView: View {
     private var structuredSidebar: some View {
         Label { Text("settings.general.button", bundle: .module) } icon: { Image(systemName: "gearshape") }
             .tag(SettingsSection.general)
+        Label { Text("settings.status.button", bundle: .module) } icon: { Image(systemName: "waveform.path.ecg") }
+            .tag(SettingsSection.status)
         Label { Text("settings.mediaManagers.button", bundle: .module) } icon: { Image(systemName: "server.rack") }
             .tag(SettingsSection.mediaManagers)
         Label { Text("settings.downloadClients.button", bundle: .module) } icon: { Image(systemName: "arrow.down.circle") }
@@ -427,6 +430,7 @@ public struct SettingsView: View {
     private var sidebarEntries: [SidebarEntry] {
         var items: [SidebarEntry] = [
             .init(section: .general, title: String(localized: "settings.general.button", bundle: .module), kind: nil, systemImage: "gearshape"),
+            .init(section: .status, title: String(localized: "settings.status.button", bundle: .module), kind: nil, systemImage: "waveform.path.ecg"),
             .init(section: .mediaManagers, title: String(localized: "settings.mediaManagers.button", bundle: .module), kind: nil, systemImage: "server.rack"),
             .init(section: .downloadClients, title: String(localized: "settings.downloadClients.button", bundle: .module), kind: nil, systemImage: "arrow.down.circle"),
         ]
@@ -501,6 +505,7 @@ public struct SettingsView: View {
     private func navTitle(for section: SettingsSection) -> Text {
         switch section {
         case .general: return Text("settings.general.button", bundle: .module)
+        case .status: return Text("settings.status.button", bundle: .module)
         case .mediaManagers: return Text("settings.mediaManagers.button", bundle: .module)
         case .downloadClients: return Text("settings.downloadClients.button", bundle: .module)
         case .service(let kind): return Text(verbatim: kind.displayName)
@@ -516,6 +521,7 @@ public struct SettingsView: View {
     private func detailPane(for section: SettingsSection) -> some View {
         switch section {
         case .general: generalPane
+        case .status: ServerStatusView()
         case .mediaManagers: serviceHubPane(mediaManagerSpecs, locked: false)
         case .downloadClients: serviceHubPane(downloadClientSpecs, locked: true)
         case .service(let kind): singleServicePane(for: kind)
@@ -656,6 +662,7 @@ public struct SettingsView: View {
     private var iOSCombinedForm: some View {
         List {
             iosSettingsLink("General", systemImage: "gearshape") { iosGeneralForm }
+            iosSettingsLink("settings.status.button", systemImage: "waveform.path.ecg") { ServerStatusView() }
             iosSettingsLink("Media managers", systemImage: "server.rack") { iosMediaManagersForm }
             iosSettingsLink("Download clients", systemImage: "arrow.down.circle") { iosDownloadClientsForm }
             iosSettingsLink("Assistant", systemImage: "sparkles") { iosAIForm }

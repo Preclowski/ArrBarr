@@ -95,11 +95,15 @@ public struct SearchResult: Identifiable, Equatable, Sendable {
 public enum RadarrMonitorMode: String, CaseIterable, Identifiable {
     case movieOnly, movieAndCollection, none
     public var id: String { rawValue }
+    /// Localized through the catalog, not returned raw. A bare English string
+    /// here reaches the UI via `Text(someString)`, which takes the
+    /// *non-localizing* StringProtocol overload — so the catalog is never
+    /// consulted and the label stays English in every language.
     var displayName: String {
         switch self {
-        case .movieOnly: return "Movie Only"
-        case .movieAndCollection: return "Movie & Collection"
-        case .none: return "None"
+        case .movieOnly: return String(localized: "search.movieOnly.button", bundle: .module)
+        case .movieAndCollection: return String(localized: "search.movieAndCollection.button", bundle: .module)
+        case .none: return String(localized: "search.none.button", bundle: .module)
         }
     }
 }
@@ -119,15 +123,16 @@ public enum SonarrMonitorMode: String, CaseIterable, Identifiable {
         default: return rawValue
         }
     }
+    /// See `RadarrMonitorMode.displayName` — localized, not raw.
     var displayName: String {
         switch self {
-        case .all: return "All"
-        case .future: return "Future"
-        case .missing: return "Missing"
-        case .existing: return "Existing"
-        case .first: return "First Season"
-        case .latest: return "Latest Season"
-        case .none: return "None"
+        case .all: return String(localized: "search.all.button", bundle: .module)
+        case .future: return String(localized: "search.future.button", bundle: .module)
+        case .missing: return String(localized: "search.missing.button", bundle: .module)
+        case .existing: return String(localized: "search.existing.button", bundle: .module)
+        case .first: return String(localized: "search.firstSeason.button", bundle: .module)
+        case .latest: return String(localized: "search.latestSeason.button", bundle: .module)
+        case .none: return String(localized: "search.none.button", bundle: .module)
         }
     }
 }
@@ -135,5 +140,14 @@ public enum SonarrMonitorMode: String, CaseIterable, Identifiable {
 public enum SonarrSeriesType: String, CaseIterable, Identifiable {
     case standard, daily, anime
     public var id: String { rawValue }
-    var displayName: String { rawValue.capitalized }
+    /// Was `rawValue.capitalized` — cheap, and English-only forever: a
+    /// capitalized raw value can't be translated because it never existed as a
+    /// catalog key. See `RadarrMonitorMode.displayName`.
+    var displayName: String {
+        switch self {
+        case .standard: return String(localized: "search.standard.button", bundle: .module)
+        case .daily: return String(localized: "search.daily.button", bundle: .module)
+        case .anime: return String(localized: "search.anime.button", bundle: .module)
+        }
+    }
 }

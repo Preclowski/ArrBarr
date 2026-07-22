@@ -34,7 +34,8 @@ final class DiscoverViewModelTests: XCTestCase {
                        ["tmdb:1", "tmdb:2", "tmdb:3"])
     }
 
-    func test_swipe_advancesToNextCard() async {
+    func test_skip_advancesToNextCard_andRecordsSkipped() async {
+        // Skip (>>) is the only action that advances the deck.
         let vm = freshVM()
         vm.configure(
             tmdb: { _, _ in [self.makeItem(1, .tmdb), self.makeItem(2, .tmdb), self.makeItem(3, .tmdb)] },
@@ -42,80 +43,28 @@ final class DiscoverViewModelTests: XCTestCase {
         )
         await vm.start()
         XCTAssertEqual(vm.current?.dedupKey, "tmdb:1")
-        await vm.swipe(right: true)
+        vm.skip()
         XCTAssertEqual(vm.current?.dedupKey, "tmdb:2")
-        await vm.swipe(right: false)
+        vm.skip()
         XCTAssertEqual(vm.current?.dedupKey, "tmdb:3")
+        XCTAssertEqual(vm.sessionSkipped.map(\.dedupKey), ["tmdb:1", "tmdb:2"])
     }
 
-    func test_swipeRight_appendsToMatched_andAdvances() async {
+    func test_markPicked_recordsWithoutAdvancing_andDedupes() async {
+        // + = add: records a pick (drives QuizResumeCard's count) but does NOT
+        // advance — a cancelled add returns to the same card. Deduped.
         let vm = freshVM()
         vm.configure(
-            tmdb: { _, _ in [self.makeItem(1, .tmdb), self.makeItem(2, .tmdb), self.makeItem(3, .tmdb)] },
+            tmdb: { _, _ in [self.makeItem(1, .tmdb), self.makeItem(2, .tmdb)] },
             library: { _ in [] }, llm: nil
         )
         await vm.start()
         XCTAssertEqual(vm.current?.dedupKey, "tmdb:1")
-        XCTAssertTrue(vm.matched.isEmpty)
-        await vm.swipe(right: true)
-        XCTAssertEqual(vm.matched.map(\.dedupKey), ["tmdb:1"])
-        XCTAssertEqual(vm.current?.dedupKey, "tmdb:2")
-        await vm.swipe(right: true)
-        // Newest first: item 2 lands at index 0.
-        XCTAssertEqual(vm.matched.map(\.dedupKey), ["tmdb:2", "tmdb:1"], "newest pick must be at index 0")
-        await vm.swipe(right: false)
-        XCTAssertEqual(vm.matched.map(\.dedupKey), ["tmdb:2", "tmdb:1"], "left swipe must not append")
-    }
-
-    func test_removeMatch_dropsByDedupKey() async {
-        let vm = freshVM()
-        vm.configure(
-            tmdb: { _, _ in [self.makeItem(1, .tmdb), self.makeItem(2, .tmdb)] },
-            library: { _ in [] }, llm: nil
-        )
-        await vm.start()
-        await vm.swipe(right: true)
-        await vm.swipe(right: true)
-        XCTAssertEqual(vm.matched.count, 2)
-        // Newest-first: matched = ["tmdb:2", "tmdb:1"]. Remove item 1.
-        vm.removeMatch(id: "tmdb:1")
-        XCTAssertEqual(vm.matched.map(\.dedupKey), ["tmdb:2"])
-    }
-
-    func test_reshuffle_preservesMatched_andDedupesAgainstThem() async {
-        // Matched is sticky across mood changes — reshuffle must NOT
-        // clear it. seenKeys gets re-seeded with picked items so the
-        // next fetch doesn't surface the same titles.
-        let vm = freshVM()
-        var call = 0
-        vm.configure(
-            tmdb: { _, _ in
-                call += 1
-                return [self.makeItem(1, .tmdb)]
-            },
-            library: { _ in [] }, llm: nil
-        )
-        await vm.start()
-        await vm.swipe(right: true)
-        XCTAssertEqual(vm.matched.count, 1)
-        await vm.reshuffle()
-        XCTAssertEqual(vm.matched.count, 1, "picks survive reshuffle")
-        // Same item from the next fetch is filtered out as already picked.
-        XCTAssertNil(vm.current, "picked item shouldn't resurface")
-    }
-
-    func test_clearMatched_emptiesPicks() async {
-        let vm = freshVM()
-        vm.configure(
-            tmdb: { _, _ in [self.makeItem(1, .tmdb), self.makeItem(2, .tmdb)] },
-            library: { _ in [] }, llm: nil
-        )
-        await vm.start()
-        await vm.swipe(right: true)
-        await vm.swipe(right: true)
-        XCTAssertEqual(vm.matched.count, 2)
-        vm.clearMatched()
-        XCTAssertTrue(vm.matched.isEmpty)
+        vm.markPicked()
+        XCTAssertEqual(vm.sessionMatched.map(\.dedupKey), ["tmdb:1"])
+        XCTAssertEqual(vm.current?.dedupKey, "tmdb:1", "markPicked must not advance the deck")
+        vm.markPicked()   // pressing + twice on the same card counts once
+        XCTAssertEqual(vm.sessionMatched.map(\.dedupKey), ["tmdb:1"])
     }
 
     func test_perSourceFailure_dropsOnlyThatSource() async {
@@ -176,42 +125,6 @@ final class DiscoverViewModelTests: XCTestCase {
         // Round 0 visits source[0]=tmdb, source[1]=library; round 1 same; round 2 same.
         // Expected: [tmdb:100, tmdb:200, tmdb:101, tmdb:201, tmdb:102, tmdb:202]
         XCTAssertEqual(order, ["tmdb:100", "tmdb:200", "tmdb:101", "tmdb:201", "tmdb:102", "tmdb:202"])
-    }
-
-    func test_swipeRight_setsHasUnseenPicks() async {
-        let vm = freshVM()
-        vm.configure(
-            tmdb: { _, _ in (1...5).map { self.makeItem($0, .tmdb) } },
-            library: { _ in [] }, llm: nil
-        )
-        await vm.start()
-        XCTAssertFalse(vm.hasUnseenPicks, "no unseen picks before any swipe")
-        await vm.swipe(right: true)
-        XCTAssertTrue(vm.hasUnseenPicks, "right-swipe should set hasUnseenPicks")
-    }
-
-    func test_swipeLeft_doesNotSetHasUnseenPicks() async {
-        let vm = freshVM()
-        vm.configure(
-            tmdb: { _, _ in (1...5).map { self.makeItem($0, .tmdb) } },
-            library: { _ in [] }, llm: nil
-        )
-        await vm.start()
-        await vm.swipe(right: false)
-        XCTAssertFalse(vm.hasUnseenPicks, "left-swipe should not set hasUnseenPicks")
-    }
-
-    func test_acknowledgeUnseenPicks_clearsFlag() async {
-        let vm = freshVM()
-        vm.configure(
-            tmdb: { _, _ in (1...5).map { self.makeItem($0, .tmdb) } },
-            library: { _ in [] }, llm: nil
-        )
-        await vm.start()
-        await vm.swipe(right: true)
-        XCTAssertTrue(vm.hasUnseenPicks)
-        vm.acknowledgeUnseenPicks()
-        XCTAssertFalse(vm.hasUnseenPicks, "acknowledgeUnseenPicks should clear the flag")
     }
 
     func test_sourceError_capturesMessageAndZeroCount() async {

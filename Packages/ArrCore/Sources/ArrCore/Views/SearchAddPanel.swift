@@ -51,11 +51,17 @@ public struct SearchAddPanel: View {
     public var body: some View {
         ZStack {
             mainContent
-                // Hide the form + scroll while the lightbox is up so
-                // the frosted scrim doesn't blur a visible layout
-                // underneath. Same pattern DetailView uses.
+                // Parked while the lightbox is up, so the frosted scrim doesn't
+                // blur a visible layout underneath. All four mechanisms, same
+                // as PopoverContentView: hiding and un-clicking a layer still
+                // leaves it holding pointer regions and sitting in the
+                // accessibility tree. Full-bleed artwork makes that worse — the
+                // poster now covers the window edge to edge, so anything
+                // leaking from below leaks everywhere rather than in a margin.
                 .opacity(enlargedPoster != nil ? 0 : 1)
                 .allowsHitTesting(enlargedPoster == nil)
+                .disabled(enlargedPoster != nil)
+                .accessibilityHidden(enlargedPoster != nil)
 
             if let url = enlargedPoster {
                 PosterLightbox(
@@ -124,7 +130,7 @@ public struct SearchAddPanel: View {
                         .foregroundStyle(.red)
                         .padding(.horizontal, 14)
                 }
-                addButton
+                addButtons
                     .padding(.bottom, 10)
             }
             .padding(.top, 8)
@@ -259,7 +265,7 @@ public struct SearchAddPanel: View {
 
     private var lidarrForm: some View {
         VStack(spacing: 4) {
-            formPicker("Quality profile",
+            formPicker("search.qualityProfile.button",
                        selection: Binding(
                            get: { selectedProfileId ?? viewModel.qualityProfiles.first?.id ?? 0 },
                            set: { selectedProfileId = $0 }
@@ -267,7 +273,7 @@ public struct SearchAddPanel: View {
                        options: viewModel.qualityProfiles.map { ($0.id, $0.name) })
 
             if viewModel.metadataProfiles.count > 1 {
-                formPicker("Metadata Profile",
+                formPicker("search.metadataProfile.button",
                            selection: Binding(
                                get: { selectedMetadataProfileId ?? viewModel.metadataProfiles.first?.id ?? 0 },
                                set: { selectedMetadataProfileId = $0 }
@@ -275,7 +281,7 @@ public struct SearchAddPanel: View {
                            options: viewModel.metadataProfiles.map { ($0.id, $0.name) })
             }
 
-            formPicker("Root folder",
+            formPicker("search.rootFolder.button",
                        selection: Binding(
                            get: { selectedRootFolder ?? viewModel.rootFolders.first?.path ?? "" },
                            set: { selectedRootFolder = $0 }
@@ -299,21 +305,21 @@ public struct SearchAddPanel: View {
 
     private var whisparrForm: some View {
         VStack(spacing: 4) {
-            formPicker("Quality profile",
+            formPicker("search.qualityProfile.button",
                        selection: Binding(
                            get: { selectedProfileId ?? viewModel.qualityProfiles.first?.id ?? 0 },
                            set: { selectedProfileId = $0 }
                        ),
                        options: viewModel.qualityProfiles.map { ($0.id, $0.name) })
 
-            formPicker("Root folder",
+            formPicker("search.rootFolder.button",
                        selection: Binding(
                            get: { selectedRootFolder ?? viewModel.rootFolders.first?.path ?? "" },
                            set: { selectedRootFolder = $0 }
                        ),
                        options: viewModel.rootFolders.map { ($0.path, $0.path) })
 
-            formPicker("Monitor",
+            formPicker("search.monitor.button",
                        selection: $whisparrMonitor,
                        options: RadarrMonitorMode.allCases.map { ($0, $0.displayName) })
         }
@@ -325,21 +331,21 @@ public struct SearchAddPanel: View {
 
     private var radarrForm: some View {
         VStack(spacing: 4) {
-            formPicker("Quality profile",
+            formPicker("search.qualityProfile.button",
                        selection: Binding(
                            get: { selectedProfileId ?? viewModel.qualityProfiles.first?.id ?? 0 },
                            set: { selectedProfileId = $0 }
                        ),
                        options: viewModel.qualityProfiles.map { ($0.id, $0.name) })
 
-            formPicker("Root folder",
+            formPicker("search.rootFolder.button",
                        selection: Binding(
                            get: { selectedRootFolder ?? viewModel.rootFolders.first?.path ?? "" },
                            set: { selectedRootFolder = $0 }
                        ),
                        options: viewModel.rootFolders.map { ($0.path, $0.path) })
 
-            formPicker("Monitor",
+            formPicker("search.monitor.button",
                        selection: $radarrMonitor,
                        options: RadarrMonitorMode.allCases.map { ($0, $0.displayName) })
         }
@@ -357,21 +363,21 @@ public struct SearchAddPanel: View {
             // picker capsules touch the popover edge while the section
             // labels and chips around them are inset — reads as wonky.
             VStack(spacing: 4) {
-                formPicker("Quality profile",
+                formPicker("search.qualityProfile.button",
                            selection: Binding(
                                get: { selectedProfileId ?? viewModel.qualityProfiles.first?.id ?? 0 },
                                set: { selectedProfileId = $0 }
                            ),
                            options: viewModel.qualityProfiles.map { ($0.id, $0.name) })
 
-                formPicker("Root folder",
+                formPicker("search.rootFolder.button",
                            selection: Binding(
                                get: { selectedRootFolder ?? viewModel.rootFolders.first?.path ?? "" },
                                set: { selectedRootFolder = $0 }
                            ),
                            options: viewModel.rootFolders.map { ($0.path, $0.path) })
 
-                formPicker("Series Type",
+                formPicker("search.seriesType.button",
                            selection: $seriesType,
                            options: SonarrSeriesType.allCases.map { ($0, $0.displayName) })
             }
@@ -413,7 +419,24 @@ public struct SearchAddPanel: View {
 
     // MARK: - Add button
 
-    private var addButton: some View {
+    /// Two CTAs instead of one, because "Add" used to *also* kick off an
+    /// indexer search without saying so — the arr started downloading and the
+    /// only hint was a queue row appearing later. Splitting it puts the choice
+    /// in the user's hands and names it.
+    ///
+    /// "Add and search" is the prominent one: it's what the old single button
+    /// did, and it stays the common intent (you searched for a title because
+    /// you want it).
+    private var addButtons: some View {
+        HStack(spacing: 8) {
+            addButton(searchOnAdd: false)
+            addButton(searchOnAdd: true)
+        }
+        .padding(.horizontal, 14)
+        .padding(.top, 4)
+    }
+
+    private func addButton(searchOnAdd: Bool) -> some View {
         Button {
             Task {
                 guard let pid = selectedProfileId ?? viewModel.qualityProfiles.first?.id,
@@ -429,18 +452,22 @@ public struct SearchAddPanel: View {
                 switch result.mediaRef {
                 case .tmdb where result.source == .whisparr:
                     await viewModel.addScene(result, qualityProfileId: pid,
-                                            rootFolderPath: folder, monitor: whisparrMonitor)
+                                            rootFolderPath: folder, monitor: whisparrMonitor,
+                                            searchOnAdd: searchOnAdd)
                 case .tmdb:
                     await viewModel.addMovie(result, qualityProfileId: pid,
-                                            rootFolderPath: folder, monitor: radarrMonitor)
+                                            rootFolderPath: folder, monitor: radarrMonitor,
+                                            searchOnAdd: searchOnAdd)
                 case .tvdb:
                     await viewModel.addSeries(result, qualityProfileId: pid,
                                              rootFolderPath: folder, monitor: sonarrMonitor,
-                                             seriesType: seriesType, seasonFolder: seasonFolder)
+                                             seriesType: seriesType, seasonFolder: seasonFolder,
+                                             searchOnAdd: searchOnAdd)
                 case .musicBrainz:
                     let metaPid = selectedMetadataProfileId ?? viewModel.metadataProfiles.first?.id ?? 1
                     await viewModel.addArtist(result, qualityProfileId: pid,
-                                             metadataProfileId: metaPid, rootFolderPath: folder)
+                                             metadataProfileId: metaPid, rootFolderPath: folder,
+                                             searchOnAdd: searchOnAdd)
                 case .imdb:
                     // IMDB-only refs aren't directly addable — the search
                     // pipeline should have resolved them to tmdb/tvdb
@@ -454,25 +481,41 @@ public struct SearchAddPanel: View {
                 if viewModel.isAdding {
                     ProgressView().controlSize(.small)
                 } else {
-                    let addLabel: String = {
+                    // Catalog keys, not the English labels themselves: these
+                    // used to be plain `String`s handed to `Text(_:)`, which
+                    // resolves to the *non-localizing* StringProtocol overload,
+                    // so the button read "Add to Radarr" in every language even
+                    // though the translations were already sitting in the
+                    // catalog under these very keys.
+                    let addLabel: LocalizedStringKey = {
                         switch result.source {
-                        case .radarr: return "Add to Radarr"
-                        case .sonarr: return "Add to Sonarr"
-                        case .lidarr: return "Add to Lidarr"
-                        case .whisparr: return "Add to Whisparr"
+                        case .radarr: return "search.addToRadarr.button"
+                        case .sonarr: return "search.addToSonarr.button"
+                        case .lidarr: return "search.addToLidarr.button"
+                        case .whisparr: return "search.addToWhisparr.button"
                         }
                     }()
                     // Source glyph (film / tv / music.note / flame) leads
                     // the label — same visual that titles section headers
                     // and queue rows for this arr. Makes the CTA read at
-                    // a glance which service it'll hit.
+                    // a glance which service it'll hit. The search variant
+                    // trades it for a magnifier: the pair sits side by side
+                    // under one hero, so which arr is already unambiguous and
+                    // the glyph's job becomes telling the two buttons apart.
                     HStack(spacing: 6) {
                         if !storeManager.isPro {
                             Image(systemName: "lock.fill")
                         }
-                        ServiceIcon(source: result.source, size: 11)
-                        Text(addLabel)
-                            .scaledFont(size: 12, weight: .semibold)
+                        if searchOnAdd {
+                            Image(systemName: "magnifyingglass")
+                                .scaledFont(size: 11, weight: .semibold)
+                            Text("search.addAndSearch.button", bundle: .module)
+                                .scaledFont(size: 12, weight: .semibold)
+                        } else {
+                            ServiceIcon(source: result.source, size: 11)
+                            Text(addLabel, bundle: .module)
+                                .scaledFont(size: 12, weight: .semibold)
+                        }
                     }
                     .frame(maxWidth: .infinity)
                 }
@@ -480,13 +523,27 @@ public struct SearchAddPanel: View {
             .frame(maxWidth: .infinity)
             .padding(.vertical, 7)
         }
-        .modifier(GlassProminentButtonStyle())
+        // Only the search variant is prominent — two filled buttons of equal
+        // weight would make the user stop and read instead of reaching for the
+        // one they almost always want.
+        .modifier(AddCTAStyle(prominent: searchOnAdd))
         .disabled(viewModel.isAdding || viewModel.isLoadingOptions)
-        .padding(.horizontal, 14)
-        .padding(.top, 4)
     }
 
     // MARK: - Helpers
+
+    /// Prominent for the primary CTA, plain glass for the secondary — reuses
+    /// the two shared button styles rather than inventing a third.
+    private struct AddCTAStyle: ViewModifier {
+        let prominent: Bool
+        func body(content: Content) -> some View {
+            if prominent {
+                content.modifier(GlassProminentButtonStyle())
+            } else {
+                content.modifier(GlassButtonStyle())
+            }
+        }
+    }
 
     private func sectionLabel(_ text: LocalizedStringKey) -> some View {
         Text(text, bundle: .module)

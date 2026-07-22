@@ -6,6 +6,10 @@ public actor LidarrClient: ArrAPIClient {
     public let serviceName = "Lidarr"
     public let http = HTTPClient()
 
+    private struct CachedTrackFiles { let files: [LidarrTrackFile]; let expiry: Date }
+    private var trackFileCache: [Int: CachedTrackFiles] = [:]
+    private let trackFileCacheTTL: TimeInterval = 60
+
     init(config: ServiceConfig) {
         self.config = config
     }
@@ -30,7 +34,41 @@ public actor LidarrClient: ArrAPIClient {
         do { page = try JSONDecoder().decode(ArrQueuePage<LidarrQueueRecord>.self, from: data) }
         catch { throw HTTPError.decoding(error) }
         let baseURL = config.baseURL
-        return page.records.map { Self.unify($0, baseURL: baseURL) }
+
+        // Lidarr's /queue doesn't embed the on-disk files, so side-load the
+        // album's track files (one call per album, cached) and hand them to
+        // `unify` — the album equivalent of Sonarr's per-series episode-file
+        // map. An album with files on disk is an upgrade; its tracks aggregate
+        // into the existing-file diff.
+        let albumIds = Set(page.records.compactMap { $0.album?.id ?? $0.albumId }.filter { $0 > 0 })
+        var fileMap: [Int: [LidarrTrackFile]] = [:]
+        await withTaskGroup(of: (Int, [LidarrTrackFile]).self) { group in
+            for aid in albumIds {
+                group.addTask { (aid, (try? await self.fetchTrackFiles(albumId: aid)) ?? []) }
+            }
+            for await (aid, files) in group {
+                fileMap[aid] = files
+            }
+        }
+        return page.records.map { Self.unify($0, baseURL: baseURL, fileMap: fileMap) }
+    }
+
+    private func fetchTrackFiles(albumId: Int) async throws -> [LidarrTrackFile] {
+        if let cached = trackFileCache[albumId], cached.expiry > Date() {
+            return cached.files
+        }
+        let url = try http.url(
+            base: config.baseURL,
+            path: "/api/v1/trackfile",
+            query: [URLQueryItem(name: "albumId", value: String(albumId))]
+        )
+        let data = try await http.get(url, headers: apiHeaders)
+        let files = (try? JSONDecoder().decode([LidarrTrackFile].self, from: data)) ?? []
+        trackFileCache[albumId] = CachedTrackFiles(
+            files: files,
+            expiry: Date().addingTimeInterval(trackFileCacheTTL)
+        )
+        return files
     }
 
     func fetchCalendar() async throws -> [UpcomingItem] {
@@ -218,7 +256,7 @@ public actor LidarrClient: ArrAPIClient {
         )
     }
 
-    private static func unify(_ r: LidarrQueueRecord, baseURL: String) -> QueueItem {
+    private static func unify(_ r: LidarrQueueRecord, baseURL: String, fileMap: [Int: [LidarrTrackFile]]) -> QueueItem {
         let total = Int64(r.size ?? 0)
         let left = Int64(r.sizeleft ?? 0)
         let progress = total > 0 ? max(0, min(1, 1.0 - Double(left) / Double(total))) : 0.0
@@ -230,6 +268,16 @@ public actor LidarrClient: ArrAPIClient {
         if poster == nil {
             (poster, posterAuth) = (r.artist?.images?.posterURL(baseURL: baseURL, coverTypes: ["poster", "cover"]) ?? (nil, false))
         }
+
+        // An album on disk is N track files, so there's no single "existing
+        // file" the way a movie/episode has one — aggregate the album's tracks
+        // into album-level diff fields (total size, representative quality /
+        // score / formats). Having any files means this grab is an upgrade.
+        // `existingFileName` stays nil: an album has no one old name (same as
+        // a season pack, whose summary card also can't name a single file).
+        let existing = (r.album?.id ?? r.albumId).flatMap { fileMap[$0] } ?? []
+        let existingRep = existing.max(by: { ($0.size ?? 0) < ($1.size ?? 0) })
+        let existingTotalSize = existing.reduce(Int64(0)) { $0 + ($1.size ?? 0) }
 
         return QueueItem(
             id: "lidarr-\(r.id)",
@@ -250,7 +298,12 @@ public actor LidarrClient: ArrAPIClient {
             customFormats: (r.customFormats ?? []).map(\.name),
             customFormatScore: r.customFormatScore ?? 0,
             quality: r.quality?.name,
-            isUpgrade: false,
+            isUpgrade: !existing.isEmpty,
+            existingCustomFormats: (existingRep?.customFormats ?? []).map(\.name),
+            existingCustomFormatScore: existingRep?.customFormatScore,
+            existingQuality: existingRep?.quality?.name,
+            existingSize: existingTotalSize > 0 ? existingTotalSize : nil,
+            existingFileName: nil,
             contentSlug: r.album?.foreignAlbumId,
             entityId: r.album?.id ?? r.albumId,
             posterURL: poster,

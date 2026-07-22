@@ -380,6 +380,7 @@ private struct CalendarRowView: View {
                 RemotePoster(
                     url: item.posterURL,
                     apiKey: item.posterRequiresAuth ? apiKey : nil,
+                    tier: .icon,
                     size: CGSize(width: 40, height: 60),
                     cornerRadius: Tokens.Radius.chip
                 )

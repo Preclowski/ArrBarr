@@ -573,7 +573,10 @@ public struct EpisodeDetailOverlay: View {
                     size: existing.size,
                     score: existing.customFormatScore,
                     formats: existingTags,
-                    filename: existing.relativePath
+                    // Last path component only — matches the queue path's
+                    // `existingFileName` and the episode tooltip so the old
+                    // name reads the same across detail / overview surfaces.
+                    filename: existing.relativePath.map { URL(fileURLWithPath: $0).lastPathComponent }
                 )
             )
             if !q.statusMessages.isEmpty {

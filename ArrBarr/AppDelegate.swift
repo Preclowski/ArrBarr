@@ -17,6 +17,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private lazy var mcpController = MCPServerController()
     private var cancellables = Set<AnyCancellable>()
 
+    /// Held for the whole process lifetime to keep macOS App Nap from throttling
+    /// our polling timers and the notification-flush timer. A menu-bar accessory
+    /// (`LSUIElement`) with no visible window is App Nap's prime target — left
+    /// unchecked it stretches the 30 s background poll to minutes when idle and
+    /// makes grab notifications land long after the download actually started.
+    /// `.userInitiatedAllowingIdleSystemSleep` suppresses App Nap for *our*
+    /// process while still letting the Mac sleep normally (we never keep the
+    /// machine awake — just ourselves un-napped while it's running).
+    private var antiAppNap: (any NSObjectProtocol)?
+
     /// Route swift-log (MCP server, NIO) into os.Logger. Runs exactly once;
     /// must happen before the first `Logger` is created (hence `mcpController`
     /// is lazy and first touched in `wireMCPServer`).
@@ -27,6 +37,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         registerNotificationCategories()
         UNUserNotificationCenter.current().delegate = self
+
+        // Opt out of App Nap for our lifetime so the queue-poll and
+        // notification timers actually keep their cadence in the menu bar.
+        antiAppNap = ProcessInfo.processInfo.beginActivity(
+            options: .userInitiatedAllowingIdleSystemSleep,
+            reason: "Keep arr queue polling and download notifications timely"
+        )
 
         DemoMode.seedConfigsIfNeeded(configStore)
 
@@ -66,7 +83,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
 
-        Task.detached { await ImageCache.shared.purgeOlderThan(30) }
+        Task.detached { await PosterStore.shared.purge() }
 
         // Index the library into Spotlight (search "american pie" → result).
         // `--clear-intents` instead wipes ArrBarr's own Spotlight entries and
@@ -219,8 +236,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         SpotlightIndexer.reindex(configStore: configStore)
     }
 
-    /// A Spotlight result was clicked. The menu-bar app has no window to host
-    /// a detail view, so open the item in the arr's web UI instead.
+    /// A Spotlight result was clicked. By default it opens the title's detail
+    /// inside ArrBarr; `spotlightOpensInApp = false` restores the old behaviour
+    /// (the item's page in the arr's web UI).
     func application(_ application: NSApplication,
                      continue userActivity: NSUserActivity,
                      restorationHandler: @escaping ([any NSUserActivityRestoring]) -> Void) -> Bool {
@@ -228,12 +246,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
               let id = userActivity.userInfo?[CSSearchableItemActivityIdentifier] as? String else {
             return false
         }
-        Task { @MainActor in
-            if let url = await SpotlightIndexer.browserURL(forIdentifier: id, configStore: configStore) {
-                NSWorkspace.shared.open(url)
+        // Falls through to the browser when the preference is off, and also
+        // when the identifier is unparseable (nothing to navigate to in-app).
+        guard configStore.spotlightOpensInApp, let ref = SpotlightIndexer.parse(id) else {
+            Task { @MainActor in
+                if let url = await SpotlightIndexer.browserURL(forIdentifier: id, configStore: configStore) {
+                    NSWorkspace.shared.open(url)
+                }
             }
+            return true
         }
+        openSpotlightDetail(source: ref.source, entityId: ref.id)
         return true
+    }
+
+    /// Host the hit in the same window detached mode uses — the MenuBarExtra
+    /// panel can't be opened programmatically, so menu-bar mode gets a real
+    /// window too (self-closing × in the tab bar; activation policy untouched).
+    /// `DetailRequest` is a NotificationCenter post, so a *freshly built*
+    /// window needs a beat for `PopoverContentView`'s listener to mount before
+    /// the post lands — same cold-start race iOS works around. An already-open
+    /// window takes it immediately.
+    private func openSpotlightDetail(source: QueueItem.Source, entityId: Int) {
+        let wasOpen = mainWindow != nil
+        openMainWindow()
+        Task { @MainActor in
+            if !wasOpen { try? await Task.sleep(nanoseconds: 450_000_000) }
+            DetailRequest.post(DetailRequest.syntheticItem(source: source, entityId: entityId, title: ""))
+        }
     }
 
     // MARK: - Paywall

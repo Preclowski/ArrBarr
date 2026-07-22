@@ -33,6 +33,20 @@ public final class SearchViewModel {
     /// blink between states" pattern.
     private var searchGeneration: Int = 0
 
+    /// Trimmed form of the query the previous `onQueryChange` saw. Lets us
+    /// tell a refinement (`matr` → `matri`, plain typing/backspacing) from a
+    /// brand-new term (`matrix` → `inception` — select-all-and-retype, or a
+    /// paste). See `onQueryChange` for why that distinction matters.
+    private var previousQuery = ""
+
+    /// True while any arr lookup rows are on screen. Callers use it to place
+    /// the loader: with rows up, a bottom-of-list spinner sits below the fold
+    /// and is worthless — the loading state has to ride on the rows instead.
+    var hasResults: Bool {
+        !radarrResults.isEmpty || !sonarrResults.isEmpty
+            || !lidarrResults.isEmpty || !whisparrResults.isEmpty
+    }
+
     // Add panel state
     var qualityProfiles: [QualityProfile] = []
     var metadataProfiles: [MetadataProfile] = []
@@ -78,15 +92,14 @@ public final class SearchViewModel {
         parsedInput = QueryParser.parse(query)
 
         let trimmed = query.trimmingCharacters(in: .whitespaces)
+        let previous = previousQuery
+        previousQuery = trimmed
         guard !trimmed.isEmpty else {
             // Empty query: kill the loader, clear results. Anything
             // mid-flight that hasn't returned will be ignored when it
             // does (its generation no longer matches).
             isSearching = false
-            radarrResults = []
-            sonarrResults = []
-            lidarrResults = []
-            whisparrResults = []
+            clearResults()
             return
         }
 
@@ -95,6 +108,15 @@ public final class SearchViewModel {
         // don't touch this flag. Only the matching-generation
         // fetch will clear it (in `search`).
         isSearching = true
+
+        // A brand-new term invalidates whatever is on screen: those rows
+        // answer a question the user has stopped asking, and leaving them
+        // up means the second search looks *identical* to the settled
+        // first one — no visible loading state at all. Drop them so the
+        // loader owns the surface. Refinements keep their rows (one is a
+        // prefix of the other), which is what the sticky-loader design
+        // above is protecting: typing must never flicker list ↔ spinner.
+        if !Self.isRefinement(previous, trimmed) { clearResults() }
 
         searchTask = Task {
             try? await Task.sleep(for: .milliseconds(300))
@@ -106,12 +128,27 @@ public final class SearchViewModel {
     public func reset() {
         searchTask?.cancel()
         query = ""
+        previousQuery = ""
+        clearResults()
+        isSearching = false
+        errorMessage = nil
+    }
+
+    private func clearResults() {
         radarrResults = []
         sonarrResults = []
         lidarrResults = []
         whisparrResults = []
-        isSearching = false
-        errorMessage = nil
+    }
+
+    /// True when `new` merely narrows or widens `old` — one is a prefix of
+    /// the other, which is all that plain typing or backspacing can produce.
+    /// Anything else (select-all-and-retype, paste, a second word swapped in
+    /// front) is treated as a fresh search.
+    private static func isRefinement(_ old: String, _ new: String) -> Bool {
+        guard !old.isEmpty, !new.isEmpty else { return true }
+        let a = old.lowercased(), b = new.lowercased()
+        return a.hasPrefix(b) || b.hasPrefix(a)
     }
 
     private func search(generation: Int) async {
@@ -231,14 +268,15 @@ public final class SearchViewModel {
     }
 
     func addScene(_ result: SearchResult, qualityProfileId: Int, rootFolderPath: String,
-                  monitor: RadarrMonitorMode = .movieOnly) async {
+                  monitor: RadarrMonitorMode = .movieOnly, searchOnAdd: Bool) async {
         guard StoreManager.shared.requirePro(.addTitle) else { return }
         guard let client = whisparrClient else { return }
         isAdding = true; addError = nil
         defer { isAdding = false }
         do {
             let arrId = try await client.addScene(result, qualityProfileId: qualityProfileId,
-                                                  rootFolderPath: rootFolderPath, monitor: monitor)
+                                                  rootFolderPath: rootFolderPath, monitor: monitor,
+                                                  searchOnAdd: searchOnAdd)
             whisparrResults.removeAll { $0.id == result.id }
             navigateToAdded(result, source: .whisparr, arrId: arrId)
         } catch {
@@ -247,14 +285,15 @@ public final class SearchViewModel {
     }
 
     func addMovie(_ result: SearchResult, qualityProfileId: Int, rootFolderPath: String,
-                  monitor: RadarrMonitorMode) async {
+                  monitor: RadarrMonitorMode, searchOnAdd: Bool) async {
         guard StoreManager.shared.requirePro(.addTitle) else { return }
         guard let client = radarrClient else { return }
         isAdding = true; addError = nil
         defer { isAdding = false }
         do {
             let arrId = try await client.addMovie(result, qualityProfileId: qualityProfileId,
-                                                 rootFolderPath: rootFolderPath, monitor: monitor)
+                                                 rootFolderPath: rootFolderPath, monitor: monitor,
+                                                 searchOnAdd: searchOnAdd)
             radarrResults.removeAll { $0.id == result.id }
             navigateToAdded(result, source: .radarr, arrId: arrId)
         } catch {
@@ -264,7 +303,7 @@ public final class SearchViewModel {
 
     func addSeries(_ result: SearchResult, qualityProfileId: Int, rootFolderPath: String,
                    monitor: SonarrMonitorMode, seriesType: SonarrSeriesType,
-                   seasonFolder: Bool) async {
+                   seasonFolder: Bool, searchOnAdd: Bool) async {
         guard StoreManager.shared.requirePro(.addTitle) else { return }
         guard let client = sonarrClient else { return }
         isAdding = true; addError = nil
@@ -272,7 +311,8 @@ public final class SearchViewModel {
         do {
             let arrId = try await client.addSeries(result, qualityProfileId: qualityProfileId,
                                                   rootFolderPath: rootFolderPath, monitor: monitor,
-                                                  seriesType: seriesType, seasonFolder: seasonFolder)
+                                                  seriesType: seriesType, seasonFolder: seasonFolder,
+                                                  searchOnAdd: searchOnAdd)
             sonarrResults.removeAll { $0.id == result.id }
             navigateToAdded(result, source: .sonarr, arrId: arrId)
         } catch {
@@ -281,7 +321,7 @@ public final class SearchViewModel {
     }
 
     func addArtist(_ result: SearchResult, qualityProfileId: Int, metadataProfileId: Int,
-                   rootFolderPath: String) async {
+                   rootFolderPath: String, searchOnAdd: Bool) async {
         guard StoreManager.shared.requirePro(.addTitle) else { return }
         guard let client = lidarrClient else { return }
         isAdding = true; addError = nil
@@ -289,7 +329,8 @@ public final class SearchViewModel {
         do {
             let arrId = try await client.addArtist(result, qualityProfileId: qualityProfileId,
                                                   metadataProfileId: metadataProfileId,
-                                                  rootFolderPath: rootFolderPath)
+                                                  rootFolderPath: rootFolderPath,
+                                                  searchOnAdd: searchOnAdd)
             lidarrResults.removeAll { $0.id == result.id }
             navigateToAdded(result, source: .lidarr, arrId: arrId)
         } catch {
