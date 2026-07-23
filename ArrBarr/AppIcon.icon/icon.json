@@ -1,24 +1,23 @@
 {
-  "fill" : {
-    "solid" : "display-p3:0.96841,0.93803,0.90635,1.00000"
-  },
+  "fill" : "automatic",
   "groups" : [
     {
       "layers" : [
         {
           "glass" : false,
-          "image-name" : "popcorn.png",
-          "name" : "Popcorn",
+          "hidden" : false,
+          "image-name" : "arrbarr-icon.png",
+          "name" : "arrbarr-icon",
+          "opacity" : 1,
           "position" : {
-            "scale" : 1,
+            "scale" : 0.89,
             "translation-in-points" : [
-              0.5,
-              0.5
+              -23.5,
+              33.1171875
             ]
           }
         }
       ],
-      "name" : "IconLayers",
       "shadow" : {
         "kind" : "neutral",
         "opacity" : 0.5
@@ -30,8 +29,9 @@
     }
   ],
   "supported-platforms" : {
-    "squares" : [
-      "macOS"
-    ]
+    "circles" : [
+      "watchOS"
+    ],
+    "squares" : "shared"
   }
 }
