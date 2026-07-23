@@ -299,6 +299,90 @@ struct QueueViewModelOptimisticTests {
     }
 }
 
+// MARK: - Action failure → client health
+
+/// A queue action failing must only pin the *whole* download client `.down`
+/// (which hides pause/resume on every row via `canControl`) when the failure
+/// actually proves the client is unreachable — not when a reachable client
+/// rejected this one request. Serialized: these mutate the shared
+/// `ConnectionHealth.shared` singleton keyed by the same `.arr(.qbittorrent)`.
+@Suite("QueueViewModel action-failure health", .serialized)
+@MainActor
+struct QueueViewModelActionHealthTests {
+    /// A torrent item routed to the (configured) qBittorrent client.
+    private func torrentItem(_ id: String, status: QueueItem.Status = .paused) -> QueueItem {
+        QueueItem(
+            id: id, source: .radarr, arrQueueId: 1,
+            downloadId: "hash-\(id)", downloadProtocol: .torrent,
+            downloadClient: "qBittorrent", indexer: nil,
+            title: id, subtitle: nil,
+            status: status, progress: 0.4, sizeTotal: 100,
+            sizeLeft: 60, timeLeft: nil,
+            customFormats: [], customFormatScore: 0,
+            quality: nil, isUpgrade: false,
+            contentSlug: nil
+        )
+    }
+
+    @MainActor
+    private func makeReadySUT() async -> (QueueViewModel, FakeAggregator) {
+        ConnectionHealth.shared.markUnknown(.arr(.qbittorrent))
+        let (sut, fake, _) = makeSUT { $0.qbittorrent = configuredArr }
+        let item = torrentItem("a")
+        fake.fetchResult = AggregateResult(radarr: [item], sonarr: [], lidarr: [], whisparr: [])
+        await sut.refresh()
+        return (sut, fake)
+    }
+
+    @Test("A reachable client rejecting the request does NOT pin the client down")
+    func perRequestRejectionKeepsClientUp() async {
+        let (sut, fake) = await makeReadySUT()
+        // The download already finished and left the client: it answers, but
+        // with a 404 for this hash. Historically this flipped the whole client
+        // red and blanked hover pause/resume on every row.
+        fake.actionError = HTTPError.status(404, body: "not found")
+
+        await sut.resume(torrentItem("a"))
+
+        #expect(sut.lastError != nil)
+        #expect(!ConnectionHealth.shared.state(for: .arr(.qbittorrent)).isDown)
+    }
+
+    @Test("SAB/NZBGet-style {status:false} rejection does NOT pin the client down")
+    func actionFailedRejectionKeepsClientUp() async {
+        let (sut, fake) = await makeReadySUT()
+        // Usenet clients answer HTTP 200 then report the failure in the body,
+        // surfaced as their own error type (not an HTTPError) — still reachable.
+        fake.actionError = TestError()
+
+        await sut.resume(torrentItem("a"))
+
+        #expect(!ConnectionHealth.shared.state(for: .arr(.qbittorrent)).isDown)
+    }
+
+    @Test("A transport failure DOES pin the client down")
+    func transportFailureMarksClientDown() async {
+        let (sut, fake) = await makeReadySUT()
+        fake.actionError = HTTPError.transport(URLError(.cannotConnectToHost))
+
+        await sut.resume(torrentItem("a"))
+
+        #expect(ConnectionHealth.shared.state(for: .arr(.qbittorrent)).isDown)
+        ConnectionHealth.shared.markUnknown(.arr(.qbittorrent))     // don't leak red
+    }
+
+    @Test("An auth failure DOES pin the client down")
+    func authFailureMarksClientDown() async {
+        let (sut, fake) = await makeReadySUT()
+        fake.actionError = HTTPError.status(403, body: nil)
+
+        await sut.resume(torrentItem("a"))
+
+        #expect(ConnectionHealth.shared.state(for: .arr(.qbittorrent)).isDown)
+        ConnectionHealth.shared.markUnknown(.arr(.qbittorrent))     // don't leak red
+    }
+}
+
 // MARK: - Unreachable tracking
 
 @Suite("QueueViewModel unreachable tracking")

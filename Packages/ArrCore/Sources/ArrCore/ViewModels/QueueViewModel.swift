@@ -653,6 +653,34 @@ public final class QueueViewModel {
         configStore.selectedDownloadClient(for: item.downloadProtocol)
     }
 
+    /// Whether a failed queue action proves the download *client itself* is
+    /// unreachable / misconfigured — and so may be pinned `.down` for the whole
+    /// queue — versus a reachable client that simply rejected this one request.
+    ///
+    /// Only genuine client-level failures qualify:
+    ///   - `.transport` — the request never reached the client (connection
+    ///     refused, timed out, no route): truly unreachable.
+    ///   - `.status(401/403)` — the client answered but rejected our
+    ///     credentials: a persistent misconfiguration every action will hit.
+    ///
+    /// Everything else means the client answered and rejected *this* item — a
+    /// 404/409 for a download it already completed and removed, SAB/NZBGet's
+    /// `{status:false}` (their own `…Error.actionFailed`, not an `HTTPError`),
+    /// an undecodable body — or the failure is item-local (no download id,
+    /// unknown protocol). None of those say the client went away, so they must
+    /// NOT strip the pause/resume affordance from every other row.
+    private func actionFailureProvesClientDown(_ error: Error) -> Bool {
+        guard let http = error as? HTTPError else { return false }
+        switch http {
+        case .transport:
+            return true
+        case .status(let code, _):
+            return code == 401 || code == 403
+        default:
+            return false
+        }
+    }
+
     // MARK: - Derived state
 
     static func tonightSlice(from upcoming: [UpcomingItem], hours: Int) -> [UpcomingItem] {
@@ -897,10 +925,15 @@ public final class QueueViewModel {
         } catch {
             let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
             lastError = message
-            // A failed action is concrete proof the backing download client is
-            // unreachable / misconfigured — pin it red now (the next probe
-            // corrects it if it was transient).
-            if let kind = failedDownloadClientKind(for: item) {
+            // Pin the client red ONLY when the failure proves the client itself
+            // is unreachable / misconfigured — NOT when a reachable client
+            // merely rejected THIS request (e.g. resuming a download it has
+            // already completed and removed). `canControl` reads a client-wide
+            // health state, so a spurious `.down` strips the hover pause/resume
+            // control from *every* queue row at once — the exact symptom of
+            // clicking resume on a churning queue until one stale item's
+            // rejection blanked the affordance everywhere.
+            if actionFailureProvesClientDown(error), let kind = failedDownloadClientKind(for: item) {
                 ConnectionHealth.shared.forceDown(.arr(kind), message: message)
             }
         }
