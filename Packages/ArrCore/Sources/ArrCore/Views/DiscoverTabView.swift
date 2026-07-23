@@ -9,6 +9,10 @@ public struct DiscoverTabView: View {
 
     @State private var dragOffset: CGSize = .zero
     @State private var isDragging: Bool = false
+    /// In-flight state for the empty-state "More picks like these" button — the
+    /// appended round comes back via a chat round-trip, so the button shows a
+    /// spinner until fresh cards land (or a timeout re-enables it for a retry).
+    @State private var requestingMore: Bool = false
 
     public init(viewModel: DiscoverViewModel,
                 llmAvailable: Bool,
@@ -34,12 +38,33 @@ public struct DiscoverTabView: View {
     private var swipeSurface: some View {
         swipeBackground
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .overlay(alignment: .top) {
+                // The deck is a full-bleed poster with no top gradient of its
+                // own (only a bottom scrim, in DiscoverCardView), so the bare
+                // back chevron + mood chip need a subtle top darken to stay
+                // legible over bright artwork. Only while a card is showing.
+                if viewModel.current != nil { topLegibilityScrim }
+            }
             .overlay(alignment: .top) { floatingTopChrome }
             .overlay(alignment: .bottom) {
                 if viewModel.current != nil {
                     actionButtons
                 }
             }
+    }
+
+    /// Gradient darken behind the top chrome — transparent by ~90pt down so it
+    /// never touches the card's own bottom metadata. Kept light (≈0.3) so it
+    /// reads as "just enough contrast for the chevron", not a heavy banner.
+    private var topLegibilityScrim: some View {
+        LinearGradient(
+            colors: [.black.opacity(0.3), .clear],
+            startPoint: .top,
+            endPoint: .bottom
+        )
+        .frame(height: 90)
+        .frame(maxWidth: .infinity)
+        .allowsHitTesting(false)
     }
 
     @ViewBuilder
@@ -69,13 +94,11 @@ public struct DiscoverTabView: View {
                     .frame(maxWidth: 220)
             }
             HStack {
-                GlassCircleButton(
-                    systemName: "chevron.left",
-                    tint: .primary,
-                    diameter: 34,
-                    accessibilityKey: "settings.back.button",
-                    action: onClose
-                )
+                // The same bare-chevron control every other surface uses
+                // (DetailView / Search / Season / Episode) — not a one-off glass
+                // circle — so the back affordance is consistent app-wide. The
+                // top scrim above keeps it readable over the poster.
+                FloatingBackButton(action: onClose)
                 Spacer()
             }
         }
@@ -262,15 +285,34 @@ public struct DiscoverTabView: View {
                     .foregroundStyle(.secondary)
             }
             .buttonStyle(.plain)
-            if viewModel.hasSessionEngagement {
+            // Needs the agent to fetch a fresh appended round (see
+            // PopoverContentView.requestMoreQuizPicks), so only offer it when an
+            // LLM is actually available — otherwise the tap goes nowhere.
+            if llmAvailable && viewModel.hasSessionEngagement {
                 Button {
+                    requestingMore = true
                     onRequestMore(viewModel.moodText,
                                   viewModel.sessionMatched,
                                   viewModel.sessionSkipped)
+                    // The appended round arrives via a chat round-trip, so give
+                    // in-flight feedback. On success `extend` sets `current` and
+                    // this whole empty state is replaced before the timeout; the
+                    // timeout only fires if the agent never called the tool, so
+                    // the button re-enables for a retry instead of spinning
+                    // forever.
+                    Task { @MainActor in
+                        try? await Task.sleep(nanoseconds: 12_000_000_000)
+                        requestingMore = false
+                    }
                 } label: {
                     HStack(spacing: 6) {
-                        Image(systemName: "sparkles")
-                            .scaledFont(size: 12, weight: .semibold)
+                        if requestingMore {
+                            ProgressView()
+                                .controlSize(.small)
+                        } else {
+                            Image(systemName: "sparkles")
+                                .scaledFont(size: 12, weight: .semibold)
+                        }
                         Text("discover.morePicksLikeThese.button", bundle: .module)
                             .scaledFont(size: 13, weight: .semibold)
                     }
@@ -278,6 +320,7 @@ public struct DiscoverTabView: View {
                     .padding(.vertical, 8)
                 }
                 .buttonStyle(.borderedProminent)
+                .disabled(requestingMore)
                 .padding(.top, 6)
             }
             if viewModel.llmPoolExhausted && llmAvailable

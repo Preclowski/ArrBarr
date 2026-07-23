@@ -74,23 +74,29 @@ struct QueueTabContent: View {
             .scrollBounceBehavior(.basedOnSize)
             .frame(maxHeight: .infinity)
         } else if isFiltering {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    searchModeHeader
-                    searchResults
-                    // Only while nothing is rendered yet. With rows up this
-                    // spinner sits below the fold and the user sees no
-                    // loading state at all on a re-search — that case is
-                    // covered inside QueueSearchResultsView instead.
-                    if searchAvailable, searchViewModel.isSearching, !searchViewModel.hasResults {
-                        loadingIndicator
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 24)
+            // Chevron + "Searching" header is pinned ABOVE the ScrollView so it
+            // stays stuck to the top of the popover (in search mode it stands in
+            // for the hidden tab bar as the top strip) instead of scrolling away
+            // with the results beneath it.
+            VStack(alignment: .leading, spacing: 0) {
+                searchModeHeader
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 0) {
+                        searchResults
+                        // Only while nothing is rendered yet. With rows up this
+                        // spinner sits below the fold and the user sees no
+                        // loading state at all on a re-search — that case is
+                        // covered inside QueueSearchResultsView instead.
+                        if searchAvailable, searchViewModel.isSearching, !searchViewModel.hasResults {
+                            loadingIndicator
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 24)
+                        }
                     }
+                    .padding(.bottom, 58)
                 }
-                .padding(.bottom, 58)
+                .scrollBounceBehavior(.basedOnSize)
             }
-            .scrollBounceBehavior(.basedOnSize)
             .frame(maxHeight: .infinity)
         } else {
             QueueListView(
