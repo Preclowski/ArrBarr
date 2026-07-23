@@ -13929,6 +13929,48 @@
       },
       "comment": "Button in discover"
     },
+    "discover.moreLikeThese.chatPrompt": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "More picks like these — add another round to the current Quiz session."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Więcej takich propozycji — dodaj kolejną rundę do bieżącej sesji Quizu."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mehr solche Vorschläge – füge der aktuellen Quiz-Sitzung eine weitere Runde hinzu."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Más selecciones como estas: añade otra ronda a la sesión de Quiz actual."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plus de suggestions comme celles-ci — ajoute un autre tour à la session Quiz en cours."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Meer vergelijkbare keuzes — voeg nog een ronde toe aan de huidige Quiz-sessie."
+          }
+        }
+      },
+      "comment": "Auto-sent chat message when the user taps 'More picks like these' in the Quiz empty state; drives the agent to fetch another appended round."
+    },
     "common.mostVotes.button": {
       "extractionState": "manual",
       "localizations": {

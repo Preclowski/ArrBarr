@@ -46,17 +46,19 @@ public struct UpcomingItem: Identifiable, Equatable, Sendable, Codable {
         self.entityId = entityId
     }
 
-    /// `locale` controls date formatting only; the "Today"/"Tomorrow" labels
-    /// resolve through the app's active localization (driven by
-    /// `AppleLanguages`, which the language picker sets and the user applies
-    /// by restarting).
+    /// `locale` drives BOTH the numeric date *and* the "Today"/"Tomorrow" words,
+    /// so the whole label follows the in-app language picker live. The words go
+    /// through `AppLocalized` (per-language bundle) rather than
+    /// `String(localized:)`, which reads the process `AppleLanguages` and would
+    /// stay in the pre-switch language until relaunch — leaving the word and the
+    /// date in different languages. Callers pass `configStore.currentLocale`.
     public func airDateFormatted(locale: Locale = .current) -> String {
         let cal = Calendar.current
         if cal.isDateInToday(airDate) {
-            return String(localized: "upcoming.today.button", bundle: Bundle.module)
+            return AppLocalized.string("upcoming.today.button", locale: locale)
         }
         if cal.isDateInTomorrow(airDate) {
-            return String(localized: "upcoming.tomorrow.button", bundle: Bundle.module)
+            return AppLocalized.string("upcoming.tomorrow.button", locale: locale)
         }
         return airDate.formatted(
             .dateTime

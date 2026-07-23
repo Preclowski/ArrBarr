@@ -16,6 +16,11 @@ public struct ChatEmptyStateView: View {
     /// Poster URLs for the Quiz card deck — sampled from the user's library
     /// by the parent (see `LibraryPosterSampler`). Empty renders placeholders.
     public let quizPosterURLs: [URL]
+    /// In-app language, so the prompt SENT for a tapped suggestion matches its
+    /// visible chip after a live language switch. The chip label follows
+    /// `environment(\.locale)`; the sent string must be resolved explicitly
+    /// (see `AppLocalized`) or it lags in the process language until relaunch.
+    public var locale: Locale = .current
 
     /// A chat suggestion is one catalog key: it's localized both for the chip
     /// label AND for the prompt actually sent to the LLM — so tapping an English
@@ -29,10 +34,12 @@ public struct ChatEmptyStateView: View {
 
     public init(
         quizPosterURLs: [URL] = [],
+        locale: Locale = .current,
         onQuizStart: @escaping (QuizFeatureCard.Kind) -> Void,
         onSuggestionTap: @escaping (String) -> Void
     ) {
         self.quizPosterURLs = quizPosterURLs
+        self.locale = locale
         self.onQuizStart = onQuizStart
         self.onSuggestionTap = onSuggestionTap
     }
@@ -68,7 +75,10 @@ public struct ChatEmptyStateView: View {
                 VStack(spacing: 10) {
                     ForEach(suggestionKeys, id: \.self) { key in
                         SuggestionPromptRow(LocalizedStringKey(key)) {
-                            onSuggestionTap(String(localized: String.LocalizationValue(key), bundle: .module))
+                            // Send the prompt in the in-app language so it
+                            // matches the chip's (env-locale) label — not the
+                            // process language, which lags until relaunch.
+                            onSuggestionTap(AppLocalized.string(key, locale: locale))
                         }
                     }
                 }

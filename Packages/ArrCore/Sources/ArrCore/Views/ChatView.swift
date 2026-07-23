@@ -52,6 +52,7 @@ public struct ChatView: View {
                 if viewModel.messages.isEmpty && !viewModel.isThinking {
                     ChatEmptyStateView(
                         quizPosterURLs: quizPosterURLs,
+                        locale: configStore.currentLocale,
                         onQuizStart: { kind in
                             // Synthesised chat message that the LLM routes
                             // through `discover_in_quiz`. We name a SINGLE
@@ -62,7 +63,11 @@ public struct ChatView: View {
                             let promptKey = kind == .movies
                                 ? "chat.quizPrompt.movies"
                                 : "chat.quizPrompt.series"
-                            let prompt = String(localized: String.LocalizationValue(promptKey), bundle: .module)
+                            // Resolve in the *in-app* language, not the process
+                            // language — otherwise the sent message stays in the
+                            // pre-switch language and the model answers the whole
+                            // turn in it (see AppLocalized).
+                            let prompt = AppLocalized.string(promptKey, locale: configStore.currentLocale)
                             Task { await viewModel.send(prompt) }
                         },
                         onSuggestionTap: { prompt in
@@ -151,6 +156,19 @@ public struct ChatView: View {
                 .textFieldStyle(.plain)
                 .focused($inputFocused)
                 .onSubmit(send)
+                #if os(macOS)
+                // Return sends (via `.onSubmit`); Shift+Return inserts a newline.
+                // `.onSubmit` fires for BOTH and can't tell them apart, so
+                // intercept only Shift+Return: append a newline and mark the
+                // event handled so the submit doesn't also run. Plain Return
+                // falls through (`.ignored`) to `.onSubmit` — keeping the proven
+                // send path intact even if `onKeyPress` ever misses.
+                .onKeyPress(.return, phases: .down) { press in
+                    guard press.modifiers.contains(.shift) else { return .ignored }
+                    draft.append("\n")
+                    return .handled
+                }
+                #endif
                 .lineLimit(1...4)
             Button(action: send) {
                 Image(systemName: "arrow.up.circle.fill")

@@ -374,6 +374,9 @@ public struct PopoverContentView: View {
                     radarrAvailable: radarrConfigured,
                     onClose: {
                         withAnimation(.smooth(duration: 0.22)) { showDiscoverOverlay = false }
+                    },
+                    onRequestMore: { mood, kept, skipped in
+                        requestMoreQuizPicks(mood: mood, kept: kept, skipped: skipped)
                     }
                 )
                 // Parked (but kept mounted) when SearchAddPanel or DetailView
@@ -467,6 +470,26 @@ public struct PopoverContentView: View {
             default:    return true
             }
         }
+    }
+
+    /// Services the Quiz's "More picks like these" button. A chat-seeded deck
+    /// IS the session (see `DiscoverViewModel.seed`) — fresh picks can only come
+    /// from the agent, so "more" round-trips through the chat: this prompt makes
+    /// the model call `discover_in_quiz` again with `append: true`, which extends
+    /// the live deck via the `.arrBarrOpenDiscoverQuiz` handler. `mood` + the
+    /// already-shown picks live in the chat history, so the model has the "like
+    /// these" context without us stuffing every title into the visible message.
+    /// Without this wiring the button fell back to `onRequestMore`'s no-op
+    /// default and did nothing.
+    private func requestMoreQuizPicks(mood: String, kept: [DiscoverItem], skipped: [DiscoverItem]) {
+        // No LLM, or a turn already running → the round-trip can't land; skip
+        // rather than queue a message that silently never resolves.
+        guard chatAvailable, !chatHolder.vm.isThinking else { return }
+        // In-app language, not the process language — see AppLocalized. Otherwise
+        // the sent message (and the model's whole reply) lags a live language
+        // switch until relaunch.
+        let prompt = AppLocalized.string("discover.moreLikeThese.chatPrompt", locale: configStore.currentLocale)
+        Task { await chatHolder.vm.send(prompt) }
     }
 
     private var tabBar: some View {
