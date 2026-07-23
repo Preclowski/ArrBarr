@@ -100,8 +100,8 @@ fastest via SwiftPM:
   AppDelegate and the SwiftUI scenes observe the *same* instances.
 - **Demo mode**: isolated `UserDefaults` suite `pl.incred.ArrBarr.demo` —
   toggling re-points `ConfigStore` live and wipes only the demo suite; the real
-  profile is never touched. Launch with `--args --demo` (macOS) or
-  `ARRBARR_DEMO_SUITE=1` (iOS).
+  profile is never touched. Launch with `--args -ArrBarrDemo YES` (macOS; bare
+  `--demo` only unlocks Developer options) or `ARRBARR_DEMO_SUITE=1` (iOS).
 - **MCP server**: `MCPServerController` (actor, NIO HTTP host, bearer auth, tool
   whitelist) is started/stopped from `AppDelegate.wireMCPServer` based on
   `ConfigStore`. swift-log (server + NIO) is bridged into `os.Logger` via
