@@ -7,6 +7,33 @@ All notable changes to ArrBarr are documented here. The format follows
 Releases before 0.10.0 are described on the
 [Releases page](https://github.com/Preclowski/ArrBarr/releases).
 
+## [1.0.1] — 2026-07-24
+
+### Added
+
+- Chat input: **Shift+Return** inserts a newline; Return still sends.
+
+### Changed
+
+- New Liquid Glass app icon, across macOS and iOS.
+- The search header (back chevron + "Searching") stays pinned to the top of the
+  popover instead of scrolling away with the results.
+- The Quiz back chevron now matches the plain back chevron used everywhere else.
+
+### Fixed
+
+- Pausing/resuming from a queue poster no longer risks blanking the hover
+  controls on *every* row: a single per-item failure — e.g. resuming a download
+  the client has already finished and dropped — no longer pins the whole
+  download client as unreachable.
+- The Quiz "More picks like these" button now asks for another round instead of
+  doing nothing.
+- Switching the in-app language now takes effect immediately for text sent to
+  the chat (the Quiz movie/series buttons and the empty-state suggestion chips)
+  and for the "Today"/"Tomorrow" labels in Up Next, instead of lagging in the
+  previous language — which also made the assistant keep replying in it — until
+  the next relaunch.
+
 ## [1.0.0] — 2026-07-22
 
 The 1.0 release is a large one: 370-odd commits since 0.10.0 turned a macOS
