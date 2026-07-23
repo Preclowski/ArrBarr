@@ -59,13 +59,11 @@ and open source**, with every feature unlocked.
 
 ## Works with your stack
 
-| | |
-| --- | --- |
-| **Media managers** | Radarr · Sonarr · Lidarr · Whisparr |
-| **Usenet** | SABnzbd · NZBGet |
-| **Torrent** | qBittorrent · Transmission · rTorrent · Deluge |
-| **AI chat** | Apple Intelligence · any OpenAI-compatible API (OpenRouter, Ollama, local models) |
-| **MCP clients** | ChatGPT · Claude · any MCP-capable app — via ArrBarr's built-in [MCP](https://modelcontextprotocol.io) server |
+- **Media managers** — Radarr · Sonarr · Lidarr · Whisparr
+- **Usenet** — SABnzbd · NZBGet
+- **Torrent** — qBittorrent · Transmission · rTorrent · Deluge
+- **AI chat** — Apple Intelligence · any OpenAI-compatible API (OpenRouter, Ollama, local models)
+- **MCP clients** — ChatGPT · Claude · any MCP-capable app, via ArrBarr's built-in [MCP](https://modelcontextprotocol.io) server
 
 > Whisparr is adult content, so it stays hidden until you confirm your age in
 > Settings — and its posters can be blurred.
