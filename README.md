@@ -165,7 +165,7 @@ Want to explore the UI without wiring up real servers? Launch demo mode — it
 uses an isolated preferences suite and never touches your real config:
 
 ```bash
-open /Applications/ArrBarr.app --args --demo
+open /Applications/ArrBarr.app --args -ArrBarrDemo YES
 ```
 
 ## Also on iOS
