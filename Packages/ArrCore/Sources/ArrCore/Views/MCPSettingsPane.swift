@@ -159,7 +159,8 @@ struct MCPSettingsPane: View {
             }
         } footer: {
             VStack(alignment: .leading, spacing: 4) {
-                Text(String(format: String(localized: "settings.toolsExposedCount.label", bundle: .module),
+                Text(String(format: AppLocalized.string("settings.toolsExposedCount.label",
+                                                         locale: configStore.currentLocale),
                             enabledToolCount, ChatToolCatalog.allToolNames.count))
                 Text("settings.toolsAreOnlyRegistered.tooltip", bundle: .module)
             }
