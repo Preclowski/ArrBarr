@@ -7,6 +7,58 @@ All notable changes to ArrBarr are documented here. The format follows
 Releases before 0.10.0 are described on the
 [Releases page](https://github.com/Preclowski/ArrBarr/releases).
 
+## [1.1.0] — 2026-08-03
+
+A release about how much ArrBarr talks to your servers. Measured against a live
+setup with a 77-item Lidarr queue, sustained LAN traffic went from **5.6 GB/day
+to under 0.3 GB/day** with no change to what the app shows you.
+
+### Fixed
+
+- **ArrBarr no longer disappears after a few minutes.** It was never crashing —
+  macOS was terminating it. The app was writing 2.1 GB/day into the HTTP cache
+  (CFNetwork stores every polled response), which put it over the system's
+  disk-writes limit and made `cache_delete` kill it to reclaim the space. The
+  cache served nothing — queue data is live by definition — and is now off.
+- Poster artwork for Spotlight results survived those terminations, then didn't:
+  it lived in `~/Library/Caches`, which is exactly what `cache_delete` empties,
+  so every kill was followed by re-downloading the whole library's artwork. It
+  now lives where the OS won't reclaim it, and existing artwork is moved rather
+  than re-fetched.
+- macOS kept no offline "Upcoming" snapshot. The check for whether the App Group
+  container was usable passed even when writing to it was denied, so the
+  fallback path was unreachable and every refresh logged a permission error.
+
+### Changed
+
+- Queue polling no longer asks the arrs to embed the full series/movie/artist/
+  album record in every row of every poll. Titles, years, artwork and deep-link
+  slugs are resolved once and kept; the poll now carries only what actually
+  changes. On a season pack, where Sonarr repeats the entire series object once
+  per episode, this was the single largest thing on the wire.
+- Realtime (SignalR) updates now refresh only the arr that sent them, instead of
+  all four, and can no longer drive refreshes faster than the polling interval
+  would have.
+- With a healthy realtime connection, polling is suppressed entirely — Servarr
+  broadcasts on a fixed schedule even when idle, so silence is evidence the
+  connection has failed rather than that nothing happened. A new **Realtime
+  health check** setting (1 / 5 / 15 minutes) controls how long a quiet
+  connection is trusted before polling takes over.
+- The calendar and the arr health records have their own refresh schedules
+  instead of being re-fetched at the queue's cadence, and the connection-status
+  probes stop while the panel is closed.
+- Spotlight re-indexing is throttled to once every six hours and remembers that
+  across launches, instead of re-reading the whole library every couple of
+  minutes.
+
+### Added
+
+- Optional notifications when an arr reports a health **error** (Settings →
+  General). Off by default; warnings and notices continue to appear only in
+  "Needs you".
+- Opening the panel puts the cursor straight in the search or chat field, so you
+  can start typing immediately.
+
 ## [1.0.1] — 2026-07-24
 
 ### Added

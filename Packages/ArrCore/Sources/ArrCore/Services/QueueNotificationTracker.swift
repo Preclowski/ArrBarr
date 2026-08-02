@@ -56,26 +56,37 @@ struct QueueNotificationTracker: Codable, Equatable {
         errored: Set<QueueItem.Source>
     ) -> [QueueItem] {
         var result: [QueueItem] = []
-        for source in QueueItem.Source.allCases {
-            if errored.contains(source) { continue }
-            let raw = source.rawValue
-            let items = perSource[source] ?? []
-            let currentKeys = items.map(Self.key(for:))
-
-            guard let history = seen[raw] else {
-                // First successful fetch for this arr: remember what's already
-                // queued without announcing it — those items predate the cache.
-                seen[raw] = Self.merged(current: currentKeys, history: [])
-                continue
-            }
-
-            let known = Set(history)
-            for item in items where !known.contains(Self.key(for: item)) {
-                result.append(item)
-            }
-            seen[raw] = Self.merged(current: currentKeys, history: history)
+        for source in QueueItem.Source.allCases where !errored.contains(source) {
+            result += newItems(for: source, items: perSource[source] ?? [])
         }
         return result
+    }
+
+    /// Fold one source's fetched rows into the cache and return the ones worth
+    /// announcing.
+    ///
+    /// Per-source because that is the unit a fetch now covers. Folding a source
+    /// the caller has *not* just fetched is not merely wasteful — it is wrong:
+    /// the silent first-fetch seed below would record that source's placeholder
+    /// (usually empty) as its history, and its real rows would then all look new
+    /// the moment they did arrive. Committing four sources one at a time through
+    /// the all-sources shape used to do exactly that on a fresh cache, turning a
+    /// first launch with a busy queue into one banner per queued item.
+    mutating func newItems(for source: QueueItem.Source, items: [QueueItem]) -> [QueueItem] {
+        let raw = source.rawValue
+        let currentKeys = items.map(Self.key(for:))
+
+        guard let history = seen[raw] else {
+            // First successful fetch for this arr: remember what's already
+            // queued without announcing it — those items predate the cache.
+            seen[raw] = Self.merged(current: currentKeys, history: [])
+            return []
+        }
+
+        let known = Set(history)
+        let fresh = items.filter { !known.contains(Self.key(for: $0)) }
+        seen[raw] = Self.merged(current: currentKeys, history: history)
+        return fresh
     }
 
     /// Builds the next remembered list: every currently-queued key is retained

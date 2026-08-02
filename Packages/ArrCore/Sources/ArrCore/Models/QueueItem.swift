@@ -21,8 +21,8 @@ public struct QueueItem: Identifiable, Equatable, Hashable, Sendable {
             }
         }
     }
-    public enum DownloadProtocol: String, Sendable { case usenet, torrent, unknown }
-    public enum Status: String, Sendable {
+    public enum DownloadProtocol: String, Sendable, Codable { case usenet, torrent, unknown }
+    public enum Status: String, Sendable, Codable {
         case downloading, paused, queued, importing, completed, warning, failed, unknown
 
         public var displayName: String {

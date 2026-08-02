@@ -60,6 +60,24 @@ public final class ConfigStore: ObservableObject {
     @Published public var deluge: ServiceConfig = .empty
     @Published public var foregroundInterval: TimeInterval = 5
     @Published public var backgroundInterval: TimeInterval = 30
+    /// How long a realtime connection may stay silent before ArrBarr stops
+    /// trusting it and polls instead.
+    ///
+    /// Silence is meaningful because Servarr's `RefreshMonitoredDownloads` task
+    /// runs on a fixed schedule (1 minute by default) and ends in an
+    /// unconditional queue broadcast — so a healthy hub pushes even when the
+    /// queue is idle, and a hub that has said nothing for minutes is a hub that
+    /// has stopped working. Below that server-side cycle the setting only
+    /// creates false alarms, which is why the shortest option is 1 minute and
+    /// the default is 5.
+    @Published public var realtimeSilenceTimeout: TimeInterval = 300
+    /// Banner when an arr reports a new *error*-level health problem.
+    ///
+    /// Off by default. Every other notification in this app follows something
+    /// the user asked for — they added the download that just finished. A health
+    /// error is the app volunteering, and a stream nobody opted into is the
+    /// stream people mute wholesale, taking the useful ones with it.
+    @Published public var notifyHealth: Bool = false
     @Published public var notifyRadarr: Bool = true
     @Published public var notifySonarr: Bool = true
     @Published public var notifyLidarr: Bool = true
@@ -137,6 +155,19 @@ public final class ConfigStore: ObservableObject {
     /// Tool names the user has switched OFF. Empty = every catalog tool is
     /// exposed (the sensible default), so we only have to store the opt-outs.
     @Published public var mcpDisabledTools: Set<String> = []
+
+    // MARK: - Start page (experimental, developer-mode only)
+    //
+    // A read-only local HTML status page ("start page") served on loopback so it
+    // can be set as a browser home page. Deliberately undocumented and reachable
+    // only through the Developer-mode toggle; on macOS the AppDelegate's
+    // StartPageController (re)binds the host whenever these change. macOS-only in
+    // practice (ArrMCPServer isn't linked on iOS), but the keys live here so the
+    // shared Settings view compiles on both.
+    @Published public var startPageEnabled: Bool = false
+    /// Loopback port for the start page. Bind host is always 127.0.0.1 — the page
+    /// is never exposed off the machine.
+    @Published public var startPagePort: Int = 8787
 
     public static let needsYouOrderKey = "needsyou"
     public static let tonightOrderKey = "tonight"
@@ -217,6 +248,10 @@ public final class ConfigStore: ObservableObject {
 
     public static let foregroundIntervalOptions: [TimeInterval] = [0, 2, 5, 10, 15, 30]
     public static let backgroundIntervalOptions: [TimeInterval] = [0, 10, 30, 60, 120, 300]
+    /// See `realtimeSilenceTimeout`. Deliberately coarse — this is a tolerance,
+    /// not a tuning knob, and every option sits at or above Servarr's own
+    /// 1-minute refresh cycle.
+    public static let realtimeSilenceTimeoutOptions: [TimeInterval] = [60, 300, 900]
 
     private var defaults: UserDefaults
     private let secrets: SecretStore
@@ -261,6 +296,8 @@ public final class ConfigStore: ObservableObject {
 
     private static let foregroundIntervalKey = "ArrBarr.foregroundInterval"
     private static let backgroundIntervalKey = "ArrBarr.backgroundInterval"
+    private static let realtimeSilenceTimeoutKey = "ArrBarr.realtimeSilenceTimeout"
+    private static let notifyHealthKey = "ArrBarr.notifyHealth"
     private static let notifyRadarrKey = "ArrBarr.notifyRadarr"
     private static let notifySonarrKey = "ArrBarr.notifySonarr"
     private static let notifyLidarrKey = "ArrBarr.notifyLidarr"
@@ -292,6 +329,8 @@ public final class ConfigStore: ObservableObject {
     private static let mcpHostPortKey = "ArrBarr.mcpHostPort"
     private static let mcpRequireAuthKey = "ArrBarr.mcpRequireAuth"
     private static let mcpDisabledToolsKey = "ArrBarr.mcpDisabledTools"
+    private static let startPageEnabledKey = "ArrBarr.startPageEnabled"
+    private static let startPagePortKey = "ArrBarr.startPagePort"
     // nonisolated: read from the nonisolated migration helpers below (and the
     // widget extension under Swift 6 strict concurrency), so it must not inherit
     // the class's @MainActor isolation.
@@ -394,6 +433,9 @@ public final class ConfigStore: ObservableObject {
         self.foregroundInterval = defaults.object(forKey: fgKey) != nil ? defaults.double(forKey: fgKey) : 5
         let bgKey = Self.backgroundIntervalKey
         self.backgroundInterval = defaults.object(forKey: bgKey) != nil ? defaults.double(forKey: bgKey) : 30
+        let rtKey = Self.realtimeSilenceTimeoutKey
+        self.realtimeSilenceTimeout = defaults.object(forKey: rtKey) != nil ? defaults.double(forKey: rtKey) : 300
+        self.notifyHealth = defaults.bool(forKey: Self.notifyHealthKey)
         self.notifyRadarr = defaults.object(forKey: Self.notifyRadarrKey) != nil ? defaults.bool(forKey: Self.notifyRadarrKey) : true
         self.notifySonarr = defaults.object(forKey: Self.notifySonarrKey) != nil ? defaults.bool(forKey: Self.notifySonarrKey) : true
         self.notifyLidarr = defaults.object(forKey: Self.notifyLidarrKey) != nil ? defaults.bool(forKey: Self.notifyLidarrKey) : true
@@ -467,6 +509,10 @@ public final class ConfigStore: ObservableObject {
         self.mcpRequireAuth = (defaults.object(forKey: Self.mcpRequireAuthKey) as? Bool) ?? true
         self.mcpAuthToken = MCPTokenStore.read() ?? ""
         self.mcpDisabledTools = Set(defaults.stringArray(forKey: Self.mcpDisabledToolsKey) ?? [])
+        self.startPageEnabled = defaults.bool(forKey: Self.startPageEnabledKey)
+        // An absent key means "never set" — fall back to the default port rather
+        // than the `Int(forKey:)` zero (which would try to bind port 0).
+        self.startPagePort = (defaults.object(forKey: Self.startPagePortKey) as? Int) ?? 8787
         // Drop legacy username/password keys (replaced by the Keychain token).
         defaults.removeObject(forKey: "ArrBarr.mcpAuthUsername")
         defaults.removeObject(forKey: "ArrBarr.mcpAuthPassword")
@@ -484,6 +530,12 @@ public final class ConfigStore: ObservableObject {
         }.store(in: &cancellables)
         $backgroundInterval.dropFirst().sink { [weak self] val in
             self?.defaults.set(val, forKey: Self.backgroundIntervalKey)
+        }.store(in: &cancellables)
+        $realtimeSilenceTimeout.dropFirst().sink { [weak self] val in
+            self?.defaults.set(val, forKey: Self.realtimeSilenceTimeoutKey)
+        }.store(in: &cancellables)
+        $notifyHealth.dropFirst().sink { [weak self] val in
+            self?.defaults.set(val, forKey: Self.notifyHealthKey)
         }.store(in: &cancellables)
         $notifyRadarr.dropFirst().sink { [weak self] val in
             self?.defaults.set(val, forKey: Self.notifyRadarrKey)
@@ -592,6 +644,12 @@ public final class ConfigStore: ObservableObject {
         }.store(in: &cancellables)
         $mcpEnabled.dropFirst().sink { [weak self] val in
             self?.defaults.set(val, forKey: Self.mcpEnabledKey)
+        }.store(in: &cancellables)
+        $startPageEnabled.dropFirst().sink { [weak self] val in
+            self?.defaults.set(val, forKey: Self.startPageEnabledKey)
+        }.store(in: &cancellables)
+        $startPagePort.dropFirst().sink { [weak self] val in
+            self?.defaults.set(val, forKey: Self.startPagePortKey)
         }.store(in: &cancellables)
         $mcpHostPort.dropFirst().sink { [weak self] val in
             self?.defaults.set(val, forKey: Self.mcpHostPortKey)

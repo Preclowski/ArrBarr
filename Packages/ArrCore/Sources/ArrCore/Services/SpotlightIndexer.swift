@@ -51,8 +51,44 @@ public enum SpotlightIndexer {
         return (src, id)
     }
 
-    @MainActor private static var lastReindex: Date?
-    /// A pass that spends its poster budget outlives the 2-minute throttle, so
+    /// How long a pass suppresses the next one.
+    ///
+    /// This gates a *library refetch*, not just the indexing work: a pass has to
+    /// pull all of `/movie` and `/series` before the fingerprint can tell it
+    /// nothing changed, and on a real library that is megabytes (5.5 MB here).
+    /// `applicationDidBecomeActive` fires every time the menu-bar popover opens,
+    /// so the old 2-minute throttle meant a browsing session re-downloaded the
+    /// whole library every couple of minutes to almost always conclude "no
+    /// change" — the single largest thing on this app's wire.
+    ///
+    /// Six hours instead. Artwork does not depend on the interval (the fill loop
+    /// inside a pass keeps converging on its own 30 s cycle without refetching
+    /// the library), so the only cost is that a title added in Radarr can take
+    /// up to this long to become Spotlight-searchable. `clearIndex()` still
+    /// resets it for an on-demand rebuild.
+    private static let reindexThrottle: TimeInterval = 6 * 3600
+
+    /// Persisted, not just in-memory: `lastReindex` alone resets on every
+    /// launch, so a menu-bar app that gets relaunched — by the user, or by the
+    /// OS after a termination — refetched the library each time regardless of
+    /// how recently the last pass ran.
+    private static let lastReindexKey = "ArrBarr.spotlightLastReindex"
+
+    @MainActor private static var lastReindex: Date? {
+        get {
+            let t = UserDefaults.standard.double(forKey: lastReindexKey)
+            return t > 0 ? Date(timeIntervalSince1970: t) : nil
+        }
+        set {
+            guard let newValue else {
+                UserDefaults.standard.removeObject(forKey: lastReindexKey)
+                return
+            }
+            UserDefaults.standard.set(newValue.timeIntervalSince1970, forKey: lastReindexKey)
+        }
+    }
+
+    /// A pass that spends its poster budget can outlive even a long throttle, so
     /// the throttle alone can't stop two passes overlapping — which would fetch
     /// the same posters twice (neither has written its files yet).
     @MainActor private static var isReindexing = false
@@ -63,14 +99,14 @@ public enum SpotlightIndexer {
     @MainActor private static var indexingTask: Task<Void, Never>?
 
     /// Re-index the configured libraries. Fire-and-forget; runs detached so it
-    /// never blocks launch. Throttled to once / 2 min so launch + foreground
-    /// triggers don't double-fetch the whole library. Each run also fetches a
-    /// slice of the still-missing posters (see `prefetchBudget`), so artwork
-    /// converges across launches.
+    /// never blocks launch. Throttled by `reindexThrottle` — which is what
+    /// keeps launch and every popover activation from re-downloading the whole
+    /// library. Each run also fetches a slice of the still-missing posters (see
+    /// `prefetchBudget`), so artwork converges across launches.
     @MainActor
     public static func reindex(configStore: ConfigStore = .shared) {
         if isReindexing { return }
-        if let last = lastReindex, Date().timeIntervalSince(last) < 120 { return }
+        if let last = lastReindex, Date().timeIntervalSince(last) < reindexThrottle { return }
         lastReindex = Date()
         isReindexing = true
         let radarr = configStore.radarr
@@ -174,9 +210,34 @@ public enum SpotlightIndexer {
         return URL(string: cfg.baseURL)?.appendingPathComponent(path)
     }
 
+    /// Hand the library this pass already downloaded to `TitleMetadataStore`.
+    ///
+    /// Free in bytes: the pass fetches all of `/movie` and `/series` anyway, and
+    /// every field the store wants is already in that payload. Doing it here is
+    /// what keeps the queue's cold layer warm — without it, a fresh install pays
+    /// one `/movie/{id}` per queued title, because neither Radarr's nor Sonarr's
+    /// list endpoint takes an id filter (only `tmdbId` / `tvdbId`).
+    private static func seedMetadata(
+        _ values: [TitleMetadataStore.Key: TitleMetadataStore.Metadata]
+    ) async {
+        guard !values.isEmpty else { return }
+        await TitleMetadataStore.shared.store(values)
+    }
+
     private static func reindexRadarr(_ config: ServiceConfig, fallbackIcon: Data?) async -> [IndexedRecord] {
         guard config.isConfigured else { return [] }
         guard let movies = try? await RadarrClient(config: config).fetchAllMovies() else { return [] }
+        var seed: [TitleMetadataStore.Key: TitleMetadataStore.Metadata] = [:]
+        for rec in movies {
+            guard let id = rec.id, let title = rec.title else { continue }
+            let (poster, needsAuth) = (rec.images ?? []).posterURL(baseURL: config.baseURL)
+            seed[TitleMetadataStore.Key(source: .radarr, baseURL: config.baseURL, kind: .movie, id: id)] =
+                TitleMetadataStore.Metadata(
+                    title: title, year: rec.year, slug: rec.titleSlug,
+                    posterURL: poster, posterRequiresAuth: needsAuth
+                )
+        }
+        await seedMetadata(seed)
         return await syncIndex(movies, domain: domainRadarr, fallbackIcon: fallbackIcon) { rec -> IndexedRecord? in
             guard let id = rec.id, let title = rec.title else { return nil }
             let attr = CSSearchableItemAttributeSet(contentType: .movie)
@@ -199,6 +260,17 @@ public enum SpotlightIndexer {
     private static func reindexSonarr(_ config: ServiceConfig, fallbackIcon: Data?) async -> [IndexedRecord] {
         guard config.isConfigured else { return [] }
         guard let series = try? await SonarrClient(config: config).fetchAllSeries() else { return [] }
+        var seed: [TitleMetadataStore.Key: TitleMetadataStore.Metadata] = [:]
+        for rec in series {
+            guard let id = rec.id, let title = rec.title else { continue }
+            let (poster, needsAuth) = (rec.images ?? []).posterURL(baseURL: config.baseURL)
+            seed[TitleMetadataStore.Key(source: .sonarr, baseURL: config.baseURL, kind: .series, id: id)] =
+                TitleMetadataStore.Metadata(
+                    title: title, year: rec.year, slug: rec.titleSlug,
+                    posterURL: poster, posterRequiresAuth: needsAuth
+                )
+        }
+        await seedMetadata(seed)
         return await syncIndex(series, domain: domainSonarr, fallbackIcon: fallbackIcon) { rec -> IndexedRecord? in
             guard let id = rec.id, let title = rec.title else { return nil }
             let attr = CSSearchableItemAttributeSet(contentType: .audiovisualContent)
@@ -419,15 +491,6 @@ enum SourceThumbnail {
         case .sonarr:   return .blue
         case .lidarr:   return .green
         case .whisparr: return .pink
-        }
-    }
-}
-
-private extension Array {
-    func chunked(into size: Int) -> [[Element]] {
-        guard size > 0 else { return [self] }
-        return stride(from: 0, to: count, by: size).map {
-            Array(self[$0 ..< Swift.min($0 + size, count)])
         }
     }
 }

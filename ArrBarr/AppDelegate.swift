@@ -7,6 +7,13 @@ import ArrCore
 import ArrMCPServer
 import Logging
 
+/// Result of matching a start-page poster request against what's on the page:
+/// `.notFound` → 404 (SSRF guard), `.found` → fetch with this optional arr key.
+private enum StartPagePosterLookup: Sendable {
+    case notFound
+    case found(apiKey: String?)
+}
+
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var settingsWindow: NSWindow?
@@ -15,6 +22,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let configStore = ConfigStore.shared
     private let queueVM = QueueViewModel.shared
     private lazy var mcpController = MCPServerController()
+    private lazy var startPageController = StartPageController()
     private var cancellables = Set<AnyCancellable>()
 
     /// Held for the whole process lifetime to keep macOS App Nap from throttling
@@ -78,12 +86,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         _ = Self.bootstrapLogging
         wireMCPServer()
+        wireStartPage()
 
         showWelcomeIfNeeded()
 
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
 
         Task.detached { await PosterStore.shared.purge() }
+        Task.detached { await TitleMetadataStore.shared.purge() }
 
         // Index the library into Spotlight (search "american pie" → result).
         // `--clear-intents` instead wipes ArrBarr's own Spotlight entries and
@@ -218,6 +228,113 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             hostPort: cs.mcpHostPort, requireAuth: cs.mcpRequireAuth, token: cs.mcpAuthToken,
             disabledTools: cs.mcpDisabledTools, backendInputs: inputs)
         Task { await mcpController.restart(with: config) }
+    }
+
+    // MARK: - Start page (experimental, developer-mode only)
+
+    /// (Re)start / stop the read-only local status page whenever its config
+    /// changes. Same debounced-sink shape as `wireMCPServer`, but there's no
+    /// Settings status surface to feed — the toggle shows a fixed loopback URL —
+    /// so the status handler only logs (a bind can still fail on a taken port).
+    private func wireStartPage() {
+        let logger = Logger(label: "arrbarr.startpage.app")
+        Task {
+            await startPageController.setStatusHandler { status in
+                switch status {
+                case .running(let url): logger.notice("start page running at \(url)")
+                case .failed(let message): logger.error("start page failed: \(message)")
+                case .stopped: logger.info("start page stopped")
+                }
+            }
+        }
+        let cs = configStore
+        let triggers: [AnyPublisher<Void, Never>] = [
+            cs.$startPageEnabled.map { _ in () }.eraseToAnyPublisher(),
+            cs.$startPagePort.map { _ in () }.eraseToAnyPublisher(),
+        ]
+        Publishers.MergeMany(triggers)
+            .debounce(for: .milliseconds(400), scheduler: RunLoop.main)
+            .sink { [weak self] in self?.applyStartPageConfig() }
+            .store(in: &cancellables)
+        applyStartPageConfig()
+    }
+
+    private func applyStartPageConfig() {
+        let cs = configStore
+        guard cs.startPageEnabled else { Task { await startPageController.stop() }; return }
+        // Both providers are called off the main actor by the NIO host; each hops
+        // back to the main actor to read the live queue. No extra arr API calls —
+        // QueueViewModel is already kept fresh by the app's own polling; posters
+        // ride PosterStore's cache after the first fetch.
+        StartPageAssets.prewarm()  // rasterize brand icons on the main thread once
+        let config = StartPageController.Config(
+            port: cs.startPagePort,
+            snapshotProvider: {
+                await MainActor.run { StartPageSnapshot.current(queue: .shared, appIcon: Self.appIconDataURI()) }
+            },
+            posterProvider: { url in await Self.resolvePoster(url) })
+        Task { await startPageController.restart(with: config) }
+    }
+
+    /// The running app's icon as a `data:` URI for the start-page header, rendered
+    /// once and cached. The Liquid Glass app icon, straight from the live app.
+    @MainActor private static var cachedAppIcon: String?? = nil
+    @MainActor private static func appIconDataURI() -> String? {
+        if let cached = cachedAppIcon { return cached }
+        let uri: String?
+        let image = NSApp.applicationIconImage
+        if let image, let png = pngData(image, size: 64) {
+            uri = "data:image/png;base64," + png.base64EncodedString()
+        } else {
+            uri = nil
+        }
+        cachedAppIcon = uri
+        return uri
+    }
+
+    @MainActor private static func pngData(_ image: NSImage, size: CGFloat) -> Data? {
+        let px = Int(size)
+        guard let rep = NSBitmapImageRep(
+            bitmapDataPlanes: nil, pixelsWide: px, pixelsHigh: px, bitsPerSample: 8,
+            samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+            colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0) else { return nil }
+        rep.size = NSSize(width: size, height: size)
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
+        image.draw(in: NSRect(x: 0, y: 0, width: size, height: size),
+                   from: .zero, operation: .sourceOver, fraction: 1)
+        NSGraphicsContext.restoreGraphicsState()
+        return rep.representation(using: .png, properties: [:])
+    }
+
+    /// Resolve a poster URL requested by the start page to image bytes. The URL
+    /// is only fetched when it matches a poster currently ON the page (queue or
+    /// upcoming) — that membership check is the SSRF guard, since this path can
+    /// otherwise reach the arrs. The matching item also tells us which arr's API
+    /// key (if any) the fetch needs.
+    private static func resolvePoster(_ url: URL) async -> Data? {
+        let lookup: StartPagePosterLookup = await MainActor.run {
+            let q = QueueViewModel.shared
+            for (source, items) in q.queues {
+                if let item = items.first(where: { $0.posterURL == url }) {
+                    return .found(apiKey: posterKey(item.posterRequiresAuth, source))
+                }
+            }
+            if let item = q.upcoming.first(where: { $0.posterURL == url }) {
+                return .found(apiKey: posterKey(item.posterRequiresAuth, item.source))
+            }
+            return .notFound
+        }
+        guard case .found(let apiKey) = lookup else { return nil }
+        return await PosterStore.shared.fetchStoring(url, tier: .card, apiKey: apiKey)?.data
+    }
+
+    /// The arr API key to fetch an authed poster, or nil for a public/no-auth one.
+    @MainActor
+    private static func posterKey(_ requiresAuth: Bool, _ source: QueueItem.Source) -> String? {
+        guard requiresAuth else { return nil }
+        let key = ConfigStore.shared.config(for: source.serviceKind).apiKey
+        return key.isEmpty ? nil : key
     }
 
     private func applyAppearance(_ pref: String) {

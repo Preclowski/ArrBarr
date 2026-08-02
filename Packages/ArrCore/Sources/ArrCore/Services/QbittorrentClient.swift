@@ -44,7 +44,7 @@ public actor QbittorrentClient: DownloadProgressSource {
             // /api/v2/auth/login and tracks the session with a SID cookie, so
             // the session needs cookie storage. (API-key mode skips login and
             // doesn't need the cookie, but sharing one session is harmless.)
-            let configuration = URLSessionConfiguration.default
+            let configuration = HTTPClient.uncachedConfiguration()
             configuration.httpCookieStorage = HTTPCookieStorage()
             configuration.httpCookieAcceptPolicy = .always
             configuration.httpShouldSetCookies = true

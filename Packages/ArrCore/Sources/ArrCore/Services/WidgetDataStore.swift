@@ -16,51 +16,89 @@ public enum WidgetDataStore {
 
     // MARK: - Upcoming snapshot
 
-    /// Last-known "Upcoming" calendar, cached in the App Group so it survives a
-    /// relaunch and shows immediately on cold start — even when the arrs are
-    /// unreachable (away from the home LAN). Calendar entries are stable
-    /// (air dates for the week ahead), so a stale snapshot is genuinely useful
-    /// offline; the live fetch replaces it the moment a refresh succeeds.
-    /// On-disk JSON file rather than UserDefaults: `UserDefaults` buffers writes
-    /// and may not flush before a hard kill / crash, so the snapshot could be
-    /// lost across a restart. An atomic file write lands on disk immediately and
-    /// survives any termination. Prefers the shared App Group container (so the
-    /// widget can read it too); falls back to the app's own Application Support
-    /// — both persist across restarts.
-    private static func upcomingSnapshotURL() -> URL? {
+    private static let snapshotFile = "upcoming-snapshot.json"
+
+    /// Every place the snapshot may live, most-preferred first: the shared App
+    /// Group container (so the widget can read it too), then the app's own
+    /// Application Support. Both survive a restart.
+    ///
+    /// The App Group cannot be *probed*, only tried. macOS ships without the
+    /// entitlement — there is no macOS widget to share with — and yet
+    /// `containerURL` still returns a path there, and creating that directory
+    /// SUCCEEDS while the write into it is denied by the sandbox. An earlier
+    /// version treated `createDirectory` as the capability check, so it committed
+    /// to the group and every refresh logged a permission failure — the fallback
+    /// was unreachable and macOS kept no offline snapshot at all.
+    private static func snapshotCandidates() -> [URL] {
         let fm = FileManager.default
-        // App Group container (shared with the widget) ONLY when its directory
-        // actually exists or can be created. On macOS the group isn't
-        // provisioned yet (no entitlement), yet `containerURL` still hands back a
-        // path whose directory is MISSING — an atomic write there silently fails.
-        // So verify we can ensure the directory; otherwise fall back to the app's
-        // own Application Support (always writable, survives restarts).
-        if let group = fm.containerURL(forSecurityApplicationGroupIdentifier: appGroupSuiteName),
-           (try? fm.createDirectory(at: group, withIntermediateDirectories: true)) != nil {
-            return group.appendingPathComponent("upcoming-snapshot.json")
+        var urls: [URL] = []
+        if let group = fm.containerURL(forSecurityApplicationGroupIdentifier: appGroupSuiteName) {
+            urls.append(group.appendingPathComponent(snapshotFile))
         }
-        guard let dir = try? fm.url(for: .applicationSupportDirectory, in: .userDomainMask,
-                                    appropriateFor: nil, create: true) else { return nil }
-        return dir.appendingPathComponent("upcoming-snapshot.json")
+        if let dir = try? fm.url(for: .applicationSupportDirectory, in: .userDomainMask,
+                                 appropriateFor: nil, create: true) {
+            urls.append(dir.appendingPathComponent(snapshotFile))
+        }
+        return urls
+    }
+
+    /// The candidate that last accepted a write, tried first from then on, so an
+    /// unreachable App Group costs one failed write per process instead of one
+    /// on every refresh. Still only a preference — if the remembered location
+    /// starts failing, the others are tried again.
+    private nonisolated(unsafe) static var writableSnapshotURL: URL?
+    private static let snapshotLock = NSLock()
+
+    private static func orderedSnapshotCandidates() -> [URL] {
+        snapshotLock.lock()
+        let preferred = writableSnapshotURL
+        snapshotLock.unlock()
+        let candidates = snapshotCandidates()
+        guard let preferred else { return candidates }
+        return [preferred] + candidates.filter { $0 != preferred }
     }
 
     private static let snapshotLog = Logger(subsystem: AppLog.subsystem, category: "Snapshot")
 
+    /// Persist the last-known "Upcoming" calendar so it shows immediately on
+    /// cold start — even when the arrs are unreachable (away from the home LAN).
+    /// Air dates for the week ahead are stable, so a stale snapshot is genuinely
+    /// useful offline; the live fetch replaces it the moment a refresh succeeds.
+    ///
+    /// An atomic file rather than `UserDefaults`, which buffers writes and may
+    /// not flush before a hard kill — and this app does get hard-killed.
     public static func saveUpcoming(_ items: [UpcomingItem]) {
-        guard let url = upcomingSnapshotURL(), let data = try? JSONEncoder().encode(items) else { return }
-        do {
-            try data.write(to: url, options: .atomic)
-        } catch {
-            snapshotLog.error("upcoming snapshot write failed: \(error.localizedDescription, privacy: .public)")
+        guard let data = try? JSONEncoder().encode(items) else { return }
+        var lastError: Error?
+        for url in orderedSnapshotCandidates() {
+            do {
+                try FileManager.default.createDirectory(
+                    at: url.deletingLastPathComponent(), withIntermediateDirectories: true
+                )
+                try data.write(to: url, options: .atomic)
+                snapshotLock.lock()
+                writableSnapshotURL = url
+                snapshotLock.unlock()
+                return
+            } catch {
+                lastError = error
+            }
+        }
+        if let lastError {
+            snapshotLog.error(
+                "upcoming snapshot write failed: \(lastError.localizedDescription, privacy: .public)"
+            )
         }
     }
 
     public static func loadUpcoming() -> [UpcomingItem] {
-        guard let url = upcomingSnapshotURL(),
-              let data = try? Data(contentsOf: url),
-              let items = try? JSONDecoder().decode([UpcomingItem].self, from: data)
-        else { return [] }
-        return items
+        for url in orderedSnapshotCandidates() {
+            guard let data = try? Data(contentsOf: url),
+                  let items = try? JSONDecoder().decode([UpcomingItem].self, from: data)
+            else { continue }
+            return items
+        }
+        return []
     }
 
     /// Reads a service config from the group suite and merges the secrets back

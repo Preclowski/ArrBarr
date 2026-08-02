@@ -6,6 +6,13 @@ public actor WhisparrClient: ArrAPIClient {
     public let serviceName = "Whisparr"
     public let http = HTTPClient()
 
+    /// Whisparr is a Radarr fork, so `/moviefile` answers the same shape and
+    /// `RadarrMovieFile` decodes it. See `SonarrClient.episodeFileCacheTTL` for
+    /// why the TTL is what it is.
+    private struct CachedMovieFile { let file: RadarrMovieFile; let expiry: Date }
+    private var movieFileCache: [Int: CachedMovieFile] = [:]
+    private let movieFileCacheTTL: TimeInterval = 15 * 60
+
     init(config: ServiceConfig) {
         self.config = config
     }
@@ -19,7 +26,11 @@ public actor WhisparrClient: ArrAPIClient {
             path: "\(apiBase)/queue",
             query: [
                 URLQueryItem(name: "pageSize", value: String(Self.queuePageSize)),
-                URLQueryItem(name: "includeMovie", value: "true"),
+                // See LidarrClient.fetchQueue. Dropping `includeMovie` here cost
+                // more than in Radarr: this client had no `/moviefile` side-load
+                // at all and read the whole existing-file diff off the embedded
+                // `movie.movieFile`. That side-load is now ported below, so the
+                // upgrade card survives the leaner queue.
                 URLQueryItem(name: "includeUnknownMovieItems", value: "true"),
             ]
         )
@@ -30,7 +41,59 @@ public actor WhisparrClient: ArrAPIClient {
         catch { throw HTTPError.decoding(error) }
         warnIfQueueTruncated(returned: page.records.count, totalRecords: page.totalRecords)
         let baseURL = config.baseURL
-        return page.records.map { Self.unify($0, baseURL: baseURL) }
+
+        let movieIds = Set(page.records.compactMap { $0.movieId ?? $0.movie?.id }.filter { $0 > 0 })
+        async let metaMap = resolveMovieMetadata(ids: Array(movieIds), baseURL: baseURL)
+        let fileMap = (try? await fetchMovieFiles(movieIds: movieIds)) ?? [:]
+        let meta = await metaMap
+        return page.records.map { Self.unify($0, baseURL: baseURL, fileMap: fileMap, meta: meta) }
+    }
+
+    /// Ported from `RadarrClient` — Whisparr's queue used to carry the on-disk
+    /// file inline and no longer does.
+    private func fetchMovieFiles(movieIds: Set<Int>) async throws -> [Int: RadarrMovieFile] {
+        guard !movieIds.isEmpty else { return [:] }
+        let now = Date()
+        var result: [Int: RadarrMovieFile] = [:]
+        var misses: Set<Int> = []
+        for id in movieIds {
+            if let cached = movieFileCache[id], cached.expiry > now {
+                result[id] = cached.file
+            } else {
+                misses.insert(id)
+            }
+        }
+        guard !misses.isEmpty else { return result }
+
+        let items = misses.map { URLQueryItem(name: "movieId", value: String($0)) }
+        let url = try http.url(base: config.baseURL, path: "\(apiBase)/moviefile", query: items)
+        let data = try await http.get(url, headers: apiHeaders)
+        let files = (try? JSONDecoder().decode([RadarrMovieFile].self, from: data)) ?? []
+
+        let expiry = now.addingTimeInterval(movieFileCacheTTL)
+        let returnedIds = Set(files.compactMap { $0.movieId })
+        for f in files {
+            if let mid = f.movieId {
+                result[mid] = f
+                movieFileCache[mid] = CachedMovieFile(file: f, expiry: expiry)
+            }
+        }
+        // A movie with no file returns nothing — clear any stale entry for it.
+        for id in misses where !returnedIds.contains(id) {
+            movieFileCache.removeValue(forKey: id)
+        }
+        return result
+    }
+
+    private func resolveMovieMetadata(ids: [Int], baseURL: String) async -> [Int: TitleMetadataStore.Metadata] {
+        await resolveMetadata(ids: ids, source: .whisparr, kind: .movie) { id in
+            guard let detail = try? await self.fetchMovieDetails(id: id) else { return nil }
+            let (poster, auth) = (detail.images ?? []).posterURL(baseURL: baseURL)
+            return TitleMetadataStore.Metadata(
+                title: detail.title, year: detail.year, slug: detail.titleSlug,
+                posterURL: poster, posterRequiresAuth: auth
+            )
+        }
     }
 
     func fetchCalendar() async throws -> [UpcomingItem] {
@@ -146,18 +209,35 @@ public actor WhisparrClient: ArrAPIClient {
         )
     }
 
-    private static func unify(_ r: WhisparrQueueRecord, baseURL: String) -> QueueItem {
+    /// Wire record -> `QueueItem`. Internal rather than private so
+    /// `QueueUnificationTests` can pin it: this is where every displayed field
+    /// on a queue row is decided, and nothing else in the suite reaches it.
+    static func unify(
+        _ r: WhisparrQueueRecord,
+        baseURL: String,
+        fileMap: [Int: RadarrMovieFile] = [:],
+        meta: [Int: TitleMetadataStore.Metadata] = [:]
+    ) -> QueueItem {
         let total = clampedBytes(r.size)
         let left = clampedBytes(r.sizeleft)
         let progress = total > 0 ? max(0, min(1, 1.0 - Double(left) / Double(total))) : 0.0
 
+        let movieId = r.movieId ?? r.movie?.id
+        let cached = movieId.flatMap { meta[$0] }
+        let existingFile = movieId.flatMap { fileMap[$0] }
         let movieTitle: String
-        if let m = r.movie {
+        if let c = cached {
+            movieTitle = c.year.map { "\(c.title) (\($0))" } ?? c.title
+        } else if let m = r.movie {
             movieTitle = m.year.map { "\(m.title) (\($0))" } ?? m.title
         } else {
             movieTitle = r.title ?? "Unknown"
         }
-        let (poster, posterAuth) = (r.movie?.images ?? []).posterURL(baseURL: baseURL)
+        var poster = cached?.posterURL
+        var posterAuth = cached?.posterRequiresAuth ?? false
+        if poster == nil {
+            (poster, posterAuth) = (r.movie?.images ?? []).posterURL(baseURL: baseURL)
+        }
 
         return QueueItem(
             id: "whisparr-\(r.id)",
@@ -178,17 +258,17 @@ public actor WhisparrClient: ArrAPIClient {
             customFormats: (r.customFormats ?? []).map(\.name),
             customFormatScore: r.customFormatScore ?? 0,
             quality: r.quality?.name,
-            isUpgrade: r.movie?.movieFile != nil || (r.movie?.hasFile ?? false),
-            // Whisparr is a Radarr fork: `includeMovie=true` embeds the
-            // on-disk `movieFile`, so populate the existing-file diff
-            // fields straight from it (mirrors RadarrClient's embedded
-            // `movie.movieFile` fallback). No side-load needed.
-            existingCustomFormats: (r.movie?.movieFile?.customFormats ?? []).map(\.name),
-            existingCustomFormatScore: r.movie?.movieFile?.customFormatScore,
-            existingQuality: r.movie?.movieFile?.quality?.name,
-            existingSize: r.movie?.movieFile?.size,
-            existingFileName: r.movie?.movieFile?.relativePath.map { URL(fileURLWithPath: $0).lastPathComponent },
-            contentSlug: r.movie?.titleSlug,
+            isUpgrade: existingFile != nil || r.movie?.movieFile != nil || (r.movie?.hasFile ?? false),
+            // Side-loaded `/moviefile` first, embedded `movie.movieFile` second
+            // — same precedence as Radarr. The embedded arm is dead while the
+            // queue stays lean but is kept: it is exactly one `?? ` per field,
+            // and it is what makes a failed side-load degrade instead of blank.
+            existingCustomFormats: (existingFile?.customFormats ?? r.movie?.movieFile?.customFormats ?? []).map(\.name),
+            existingCustomFormatScore: existingFile?.customFormatScore ?? r.movie?.movieFile?.customFormatScore,
+            existingQuality: existingFile?.quality?.name ?? r.movie?.movieFile?.quality?.name,
+            existingSize: existingFile?.size ?? r.movie?.movieFile?.size,
+            existingFileName: (existingFile?.relativePath ?? r.movie?.movieFile?.relativePath).map { URL(fileURLWithPath: $0).lastPathComponent },
+            contentSlug: cached?.slug ?? r.movie?.titleSlug,
             entityId: r.movieId ?? r.movie?.id,
             posterURL: poster,
             posterRequiresAuth: posterAuth,

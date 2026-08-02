@@ -8,7 +8,13 @@ public actor SonarrClient: ArrAPIClient {
 
     private struct CachedEpisodeFiles { let files: [SonarrEpisodeFile]; let expiry: Date }
     private var episodeFileCache: [Int: CachedEpisodeFiles] = [:]
-    private let episodeFileCacheTTL: TimeInterval = 60
+    /// The side-load exists to show what a download is upgrading *from*, and an
+    /// existing episode file only changes when an import completes — at which
+    /// point the row leaves the queue anyway. At 60s and a 30s poll, every other
+    /// refresh re-fetched `/episodefile` once per series in the queue, which on
+    /// a busy queue was the second-largest thing on the wire after `/queue`
+    /// itself. Fifteen minutes costs a stale "upgrade from" label at worst.
+    private let episodeFileCacheTTL: TimeInterval = 15 * 60
 
     init(config: ServiceConfig) {
         self.config = config
@@ -23,7 +29,19 @@ public actor SonarrClient: ArrAPIClient {
             path: "\(apiBase)/queue",
             query: [
                 URLQueryItem(name: "pageSize", value: String(Self.queuePageSize)),
-                URLQueryItem(name: "includeSeries", value: "true"),
+                // `includeSeries` is gone — see LidarrClient.fetchQueue. It was
+                // the worst offender of the four: Sonarr emits one queue row per
+                // expected episode in a season pack, so a 22-episode pack
+                // repeated the entire series object (seasons[] with per-season
+                // statistics, alternateTitles[], genres, path) 22 times. The
+                // payload was quadratic in pack size.
+                //
+                // `includeEpisode` deliberately STAYS. It is ~400 bytes and does
+                // not repeat, and what it carries is not stable-metadata: the
+                // drill-down gate reads `episodeNumber`, and `episodeFileId`
+                // joins the row to its on-disk file and flips the moment an
+                // import lands. Moving it into the metadata store would trade a
+                // large regression surface for a rounding error.
                 URLQueryItem(name: "includeEpisode", value: "true"),
                 URLQueryItem(name: "includeUnknownSeriesItems", value: "true"),
             ]
@@ -43,6 +61,9 @@ public actor SonarrClient: ArrAPIClient {
         // to `maxConcurrentSideLoads` — see that constant for why an uncapped
         // group makes the tail of a big queue time out instead of going faster.
         let seriesIds = Array(Set(page.records.compactMap { $0.series?.id ?? $0.seriesId }))
+        async let metaMap = resolveSeriesMetadata(
+            ids: seriesIds.filter { $0 > 0 }, baseURL: baseURL
+        )
         var fileMap: [Int: SonarrEpisodeFile] = [:]
         await withTaskGroup(of: [SonarrEpisodeFile].self) { group in
             var next = 0
@@ -62,7 +83,8 @@ public actor SonarrClient: ArrAPIClient {
                 }
             }
         }
-        return page.records.map { Self.unify($0, baseURL: baseURL, fileMap: fileMap) }
+        let meta = await metaMap
+        return page.records.map { Self.unify($0, baseURL: baseURL, fileMap: fileMap, meta: meta) }
     }
 
     /// Public wrapper for the cached `fetchEpisodeFiles` — returns the
@@ -77,6 +99,17 @@ public actor SonarrClient: ArrAPIClient {
         var map: [Int: SonarrEpisodeFile] = [:]
         for f in files { map[f.id] = f }
         return map
+    }
+
+    private func resolveSeriesMetadata(ids: [Int], baseURL: String) async -> [Int: TitleMetadataStore.Metadata] {
+        await resolveMetadata(ids: ids, source: .sonarr, kind: .series) { id in
+            guard let detail = try? await self.fetchSeriesDetails(id: id) else { return nil }
+            let (poster, auth) = (detail.images ?? []).posterURL(baseURL: baseURL)
+            return TitleMetadataStore.Metadata(
+                title: detail.title, year: detail.year, slug: detail.titleSlug,
+                posterURL: poster, posterRequiresAuth: auth
+            )
+        }
     }
 
     private func fetchEpisodeFiles(seriesId: Int) async throws -> [SonarrEpisodeFile] {
@@ -453,7 +486,15 @@ public actor SonarrClient: ArrAPIClient {
         return String(token)
     }
 
-    private static func unify(_ r: SonarrQueueRecord, baseURL: String, fileMap: [Int: SonarrEpisodeFile]) -> QueueItem {
+    /// Wire record -> `QueueItem`. Internal rather than private so
+    /// `QueueUnificationTests` can pin it: this is where every displayed field
+    /// on a queue row is decided, and nothing else in the suite reaches it.
+    static func unify(
+        _ r: SonarrQueueRecord,
+        baseURL: String,
+        fileMap: [Int: SonarrEpisodeFile],
+        meta: [Int: TitleMetadataStore.Metadata] = [:]
+    ) -> QueueItem {
         let total = clampedBytes(r.size)
         let left = clampedBytes(r.sizeleft)
         let progress: Double
@@ -463,12 +504,16 @@ public actor SonarrClient: ArrAPIClient {
             progress = 0
         }
 
+        // Store first, embedded series second — see `LidarrClient.unify`.
+        let cached = (r.seriesId ?? r.series?.id).flatMap { meta[$0] }
         let title: String
         let subtitle: String?
         let seasonNumber: Int?
         let episodeNumber: Int?
         let episodeTitle: String?
-        if let s = r.series {
+        if let s = cached ?? r.series.map({
+            TitleMetadataStore.Metadata(title: $0.title, year: $0.year, slug: $0.titleSlug)
+        }) {
             // Bake the year into the series title so queue rows read the
             // same "Series (2019)" shape as movies / the upcoming list.
             title = s.year.map { "\(s.title) (\($0))" } ?? s.title
@@ -495,7 +540,11 @@ public actor SonarrClient: ArrAPIClient {
             episodeTitle = nil
             subtitle = nil
         }
-        let (poster, posterAuth) = (r.series?.images ?? []).posterURL(baseURL: baseURL)
+        var poster = cached?.posterURL
+        var posterAuth = cached?.posterRequiresAuth ?? false
+        if poster == nil {
+            (poster, posterAuth) = (r.series?.images ?? []).posterURL(baseURL: baseURL)
+        }
 
         let existingFile = (r.episode?.episodeFileId).flatMap { id in id > 0 ? fileMap[id] : nil }
         let isUpgrade = existingFile != nil || (r.episode?.hasFile ?? false)
@@ -529,7 +578,7 @@ public actor SonarrClient: ArrAPIClient {
             existingQuality: existingFile?.quality?.name,
             existingSize: existingFile?.size,
             existingFileName: existingFile?.relativePath.map { URL(fileURLWithPath: $0).lastPathComponent },
-            contentSlug: r.series?.titleSlug,
+            contentSlug: cached?.slug ?? r.series?.titleSlug,
             entityId: r.series?.id ?? r.seriesId,
             posterURL: poster,
             posterRequiresAuth: posterAuth,

@@ -8,7 +8,8 @@ public actor LidarrClient: ArrAPIClient {
 
     private struct CachedTrackFiles { let files: [LidarrTrackFile]; let expiry: Date }
     private var trackFileCache: [Int: CachedTrackFiles] = [:]
-    private let trackFileCacheTTL: TimeInterval = 60
+    /// See `SonarrClient.episodeFileCacheTTL` — same reasoning, same trade.
+    private let trackFileCacheTTL: TimeInterval = 15 * 60
 
     init(config: ServiceConfig) {
         self.config = config
@@ -23,8 +24,17 @@ public actor LidarrClient: ArrAPIClient {
             path: "/api/v1/queue",
             query: [
                 URLQueryItem(name: "pageSize", value: String(Self.queuePageSize)),
-                URLQueryItem(name: "includeArtist", value: "true"),
-                URLQueryItem(name: "includeAlbum", value: "true"),
+                // No `includeArtist` / `includeAlbum`: Servarr embeds the whole
+                // artist and album in every row, on every poll, and `unify`
+                // keeps four fields out of them. Measured on a 77-row queue,
+                // that was ~1 MB per poll to learn names that change about
+                // never. `TitleMetadataStore` holds them instead; the ids the
+                // join needs (`albumId`, `artistId`) are top-level on the queue
+                // resource and arrive without any include.
+                //
+                // `includeUnknownArtistItems` is a different thing and stays:
+                // without it, downloads Lidarr can't map to a library artist
+                // vanish from the queue entirely.
                 URLQueryItem(name: "includeUnknownArtistItems", value: "true"),
             ]
         )
@@ -43,6 +53,9 @@ public actor LidarrClient: ArrAPIClient {
         // with files on disk is an upgrade; its tracks aggregate into the
         // existing-file diff.
         let albumIds = Array(Set(page.records.compactMap { $0.album?.id ?? $0.albumId }.filter { $0 > 0 }))
+        // Resolved alongside the track files rather than before them: neither
+        // depends on the other, and both are usually pure cache hits.
+        async let metaMap = resolveAlbumMetadata(ids: albumIds, baseURL: baseURL)
         var fileMap: [Int: [LidarrTrackFile]] = [:]
         await withTaskGroup(of: (Int, [LidarrTrackFile]).self) { group in
             var next = 0
@@ -62,7 +75,71 @@ public actor LidarrClient: ArrAPIClient {
                 }
             }
         }
-        return page.records.map { Self.unify($0, baseURL: baseURL, fileMap: fileMap) }
+        let meta = await metaMap
+        return page.records.map { Self.unify($0, baseURL: baseURL, fileMap: fileMap, meta: meta) }
+    }
+
+    /// Album display metadata for these ids: cache first, one bulk call for the
+    /// misses. Returns whatever it could resolve — a miss is not an error, it
+    /// degrades the row to its release name rather than failing the refresh.
+    private func resolveAlbumMetadata(
+        ids: [Int], baseURL: String
+    ) async -> [Int: TitleMetadataStore.Metadata] {
+        guard !ids.isEmpty else { return [:] }
+        func key(_ id: Int) -> TitleMetadataStore.Key {
+            TitleMetadataStore.Key(source: .lidarr, baseURL: baseURL, kind: .album, id: id)
+        }
+        var byId: [Int: TitleMetadataStore.Metadata] = [:]
+        for (k, v) in await TitleMetadataStore.shared.metadata(for: ids.map(key)) {
+            byId[k.id] = v
+        }
+        let missing = ids.filter { byId[$0] == nil }
+        guard !missing.isEmpty else { return byId }
+
+        var fresh: [TitleMetadataStore.Key: TitleMetadataStore.Metadata] = [:]
+        // Chunked because the ids go in the query string: a pathological queue
+        // would otherwise build a URL long enough for the arr's reverse proxy
+        // to reject it.
+        for chunk in missing.chunked(into: 50) {
+            guard let albums = try? await fetchAlbums(ids: chunk) else { continue }
+            for album in albums {
+                let metadata = Self.metadata(from: album, baseURL: baseURL)
+                byId[album.id] = metadata
+                fresh[key(album.id)] = metadata
+            }
+        }
+        if !fresh.isEmpty { await TitleMetadataStore.shared.store(fresh) }
+        return byId
+    }
+
+    private func fetchAlbums(ids: [Int]) async throws -> [LidarrAlbum] {
+        let url = try http.url(
+            base: config.baseURL,
+            path: "\(apiBase)/album",
+            query: ids.map { URLQueryItem(name: "albumIds", value: String($0)) }
+        )
+        let data = try await http.get(url, headers: apiHeaders)
+        return (try? JSONDecoder().decode([LidarrAlbum].self, from: data)) ?? []
+    }
+
+    /// The album cover is the row's artwork; the artist image stands in when the
+    /// album has none. Resolved here, on write, so `unify` never re-derives it.
+    private static func metadata(
+        from album: LidarrAlbum, baseURL: String
+    ) -> TitleMetadataStore.Metadata {
+        var (poster, auth) = album.images?
+            .posterURL(baseURL: baseURL, coverTypes: ["cover", "poster"]) ?? (nil, false)
+        if poster == nil {
+            (poster, auth) = album.artist?.images?
+                .posterURL(baseURL: baseURL, coverTypes: ["poster", "cover"]) ?? (nil, false)
+        }
+        return TitleMetadataStore.Metadata(
+            title: album.title,
+            secondary: album.artist?.artistName,
+            slug: album.foreignAlbumId,
+            posterURL: poster,
+            posterRequiresAuth: auth
+        )
     }
 
     private func fetchTrackFiles(albumId: Int) async throws -> [LidarrTrackFile] {
@@ -268,15 +345,33 @@ public actor LidarrClient: ArrAPIClient {
         )
     }
 
-    private static func unify(_ r: LidarrQueueRecord, baseURL: String, fileMap: [Int: [LidarrTrackFile]]) -> QueueItem {
+    /// Wire record -> `QueueItem`. Internal rather than private so
+    /// `QueueUnificationTests` can pin it: this is where every displayed field
+    /// on a queue row is decided, and nothing else in the suite reaches it.
+    static func unify(
+        _ r: LidarrQueueRecord,
+        baseURL: String,
+        fileMap: [Int: [LidarrTrackFile]],
+        meta: [Int: TitleMetadataStore.Metadata] = [:]
+    ) -> QueueItem {
         let total = clampedBytes(r.size)
         let left = clampedBytes(r.sizeleft)
         let progress = total > 0 ? max(0, min(1, 1.0 - Double(left) / Double(total))) : 0.0
 
-        let artistName = r.artist?.artistName ?? r.album?.artist?.artistName
-        let albumTitle = r.album?.title ?? r.title ?? "Unknown"
+        // Store first, embedded objects second. The embedded path is dead in the
+        // queue (the request no longer asks for it) but is kept rather than
+        // deleted: it is still how history rows arrive, and it makes a metadata
+        // miss degrade to "slightly worse" instead of "wrong".
+        let albumId = r.album?.id ?? r.albumId
+        let cached = albumId.flatMap { meta[$0] }
+        let artistName = cached?.secondary ?? r.artist?.artistName ?? r.album?.artist?.artistName
+        let albumTitle = cached?.title ?? r.album?.title ?? r.title ?? "Unknown"
         let displayTitle = artistName.map { "\($0) — \(albumTitle)" } ?? albumTitle
-        var (poster, posterAuth) = (r.album?.images?.posterURL(baseURL: baseURL, coverTypes: ["cover", "poster"]) ?? (nil, false))
+        var poster = cached?.posterURL
+        var posterAuth = cached?.posterRequiresAuth ?? false
+        if poster == nil {
+            (poster, posterAuth) = (r.album?.images?.posterURL(baseURL: baseURL, coverTypes: ["cover", "poster"]) ?? (nil, false))
+        }
         if poster == nil {
             (poster, posterAuth) = (r.artist?.images?.posterURL(baseURL: baseURL, coverTypes: ["poster", "cover"]) ?? (nil, false))
         }
@@ -316,7 +411,7 @@ public actor LidarrClient: ArrAPIClient {
             existingQuality: existingRep?.quality?.name,
             existingSize: existingTotalSize > 0 ? existingTotalSize : nil,
             existingFileName: nil,
-            contentSlug: r.album?.foreignAlbumId,
+            contentSlug: cached?.slug ?? r.album?.foreignAlbumId,
             entityId: r.album?.id ?? r.albumId,
             posterURL: poster,
             posterRequiresAuth: posterAuth,

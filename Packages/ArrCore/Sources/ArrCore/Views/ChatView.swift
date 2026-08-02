@@ -150,6 +150,7 @@ public struct ChatView: View {
 
     private var inputBar: some View {
         HStack(spacing: 8) {
+
             TextField(text: $draft, prompt: Text("chat.askAnything.button", bundle: .module), axis: .vertical) {
                 Text("chat.askAnything.button", bundle: .module)
             }
@@ -181,6 +182,11 @@ public struct ChatView: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
         .glassyFloatingBar(focused: inputFocused)
+        // Typeable the moment Chat is on screen, whether the panel just opened
+        // on this tab or the user switched to it. Hopped to the next main-actor
+        // turn because the field is not in the responder chain during
+        // `onAppear`, and an assignment made before it is there is dropped.
+        .onAppear { Task { @MainActor in inputFocused = true } }
     }
 
     private func send() {

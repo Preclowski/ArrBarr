@@ -27,13 +27,32 @@ private final class FakeAggregator: QueueDataProviding {
     /// test can suspend the first fetch and exercise the queue-not-drop path.
     var onFetch: (() async -> Void)?
 
+    private(set) var perSourceFetches: [QueueItem.Source] = []
+
     func fetch() async -> AggregateResult {
         fetchCallCount += 1
         await onFetch?()
         return fetchResult
     }
-    func fetchUpcoming() async -> (items: [UpcomingItem], failed: Set<QueueItem.Source>) { (upcomingResult, upcomingFailed) }
-    func fetchHealth() async -> HealthResult { healthResult }
+
+    /// Serves the same canned `fetchResult`, sliced — so a test that drives the
+    /// per-source path sees the same data the all-sources path would give it.
+    func fetch(source: QueueItem.Source) async -> SourceQueueResult {
+        perSourceFetches.append(source)
+        await onFetch?()
+        return fetchResult.slice(for: source)
+    }
+    private(set) var upcomingCallCount = 0
+    private(set) var healthCallCount = 0
+
+    func fetchUpcoming() async -> (items: [UpcomingItem], failed: Set<QueueItem.Source>) {
+        upcomingCallCount += 1
+        return (upcomingResult, upcomingFailed)
+    }
+    func fetchHealth() async -> HealthResult {
+        healthCallCount += 1
+        return healthResult
+    }
     func fetchHistory(for source: QueueItem.Source) async -> HistoryResult { historyResult }
     func perform(_ action: QueueAggregator.Action, on item: QueueItem) async throws {
         performedActions.append((action, item.id))
@@ -75,6 +94,15 @@ private func makeSUT(
     let defaults = UserDefaults(suiteName: suiteName)!
     defaults.removePersistentDomain(forName: suiteName)
     let config = ConfigStore(defaults: defaults)
+    // Every arr configured by default. `refresh()` only commits sources the user
+    // has actually set up — committing an unconfigured one would stamp
+    // "last refreshed just now" and record connection health for a service that
+    // was never contacted — so a fixture with nothing configured exercises
+    // nothing. Tests that care about the unconfigured case clear it explicitly.
+    config.radarr = configuredArr
+    config.sonarr = configuredArr
+    config.lidarr = configuredArr
+    config.whisparr = configuredArr
     configure(config)
     let fake = FakeAggregator()
     let sut = QueueViewModel(
@@ -183,6 +211,84 @@ struct QueueViewModelRefreshTests {
 }
 
 // MARK: - Optimistic updates
+
+/// A realtime push names the arr it came from, so refreshing that arr must not
+/// disturb the other three. These pin the split: before it, one Lidarr event
+/// refetched every configured arr's queue, calendar and health.
+@Suite("QueueViewModel per-source refresh")
+@MainActor
+struct QueueViewModelPerSourceTests {
+    /// The on-screen tick pulls queues and nothing else — the calendar and the
+    /// health records keep their own clocks. Before the split, a 5-second
+    /// foreground cadence re-pulled both calendars and every arr's health twenty
+    /// times a minute for data that changes daily.
+    @Test("A queues-only refresh leaves the calendar and health alone")
+    func queuesOnlyRefreshSkipsAuxiliaryFetches() async {
+        let (sut, fake, _) = makeSUT()
+        await sut.refresh()
+        let upcomingAfterFull = fake.upcomingCallCount
+        let healthAfterFull = fake.healthCallCount
+
+        await sut.refreshQueues()
+
+        #expect(fake.upcomingCallCount == upcomingAfterFull)
+        #expect(fake.healthCallCount == healthAfterFull)
+        // …and it did fetch the queues.
+        #expect(fake.fetchCallCount == 2)
+    }
+
+    @Test("Refreshing one source fetches only that source")
+    func fetchesOnlyTheNamedSource() async {
+        // Notifications off: these tests are about which arr gets fetched, and a
+        // configured-and-notifying source drives the coalescer into
+        // `UNUserNotificationCenter`, which has no bundle to talk to in a
+        // SwiftPM test binary.
+        let (sut, fake, _) = makeSUT {
+            $0.lidarr = configuredArr
+            $0.notifyLidarr = false
+        }
+        fake.fetchResult = AggregateResult(
+            radarr: [makeItem("r", source: .radarr, status: .downloading)],
+            sonarr: [], lidarr: [makeItem("l", source: .lidarr, status: .downloading)], whisparr: []
+        )
+        await sut.refreshQueue(source: .lidarr)
+
+        #expect(fake.perSourceFetches == [.lidarr])
+        // The all-sources fetch must not have run at all.
+        #expect(fake.fetchCallCount == 0)
+        #expect(sut.items(for: .lidarr).map(\.id) == ["l"])
+    }
+
+    @Test("Refreshing one source leaves the other sources' rows untouched")
+    func leavesSiblingsAlone() async {
+        // Notifications off: these tests are about which arr gets fetched, and a
+        // configured-and-notifying source drives the coalescer into
+        // `UNUserNotificationCenter`, which has no bundle to talk to in a
+        // SwiftPM test binary.
+        let (sut, fake, _) = makeSUT {
+            $0.lidarr = configuredArr
+            $0.notifyLidarr = false
+        }
+        fake.fetchResult = AggregateResult(
+            radarr: [makeItem("r", source: .radarr, status: .downloading)],
+            sonarr: [], lidarr: [], whisparr: []
+        )
+        await sut.refresh()
+        #expect(sut.items(for: .radarr).map(\.id) == ["r"])
+
+        // Lidarr now reports a row; Radarr's slice in the canned result is
+        // unchanged, but the point is that refreshing Lidarr doesn't re-commit
+        // — or blank — anything belonging to Radarr.
+        fake.fetchResult = AggregateResult(
+            radarr: [], sonarr: [],
+            lidarr: [makeItem("l", source: .lidarr, status: .downloading)], whisparr: []
+        )
+        await sut.refreshQueue(source: .lidarr)
+
+        #expect(sut.items(for: .lidarr).map(\.id) == ["l"])
+        #expect(sut.items(for: .radarr).map(\.id) == ["r"])
+    }
+}
 
 @Suite("QueueViewModel optimistic updates")
 @MainActor
@@ -444,7 +550,7 @@ struct QueueViewModelUnreachableTests {
 
     @Test("An unconfigured arr never becomes unreachable even when it errors")
     func unconfiguredNeverUnreachable() async {
-        let (sut, fake, _) = makeSUT()       // sonarr left unconfigured
+        let (sut, fake, _) = makeSUT { $0.sonarr = .empty }   // explicitly unconfigured
         fake.fetchResult = AggregateResult(
             radarr: [], sonarr: [], lidarr: [], whisparr: [],
             sonarrError: "boom", unreachableSources: [.sonarr]

@@ -4,9 +4,26 @@ import os
 /// The slice of `QueueAggregator` that `QueueViewModel` depends on. Extracted
 /// as a protocol purely so the view-model can be driven by a fake in tests —
 /// production always wires the concrete `QueueAggregator`.
+/// One arr's queue slice. The unit a realtime push actually describes.
+public struct SourceQueueResult: Equatable {
+    let source: QueueItem.Source
+    let items: [QueueItem]
+    var error: String?
+    /// Transport-level failure (host unreachable), as opposed to the arr
+    /// answering with an HTTP/decode error. Drives the offline indicator.
+    var unreachable: Bool
+}
+
 @MainActor
 protocol QueueDataProviding {
     func fetch() async -> AggregateResult
+    /// Fetch a single arr's queue.
+    ///
+    /// Servarr's realtime push names the arr it came from, so a Lidarr event
+    /// should cost a Lidarr fetch — not a fetch of all four. The all-four
+    /// `fetch()` remains for launch, wake and manual refresh, where "everything
+    /// at once" is genuinely what is wanted.
+    func fetch(source: QueueItem.Source) async -> SourceQueueResult
     func fetchUpcoming() async -> (items: [UpcomingItem], failed: Set<QueueItem.Source>)
     func fetchHealth() async -> HealthResult
     func fetchHistory(for source: QueueItem.Source) async -> HistoryResult
@@ -76,7 +93,16 @@ public final class QueueAggregator: QueueDataProviding {
         // Overlay live progress from the download clients on top of the arr's
         // polled `/queue` value — the arr stays the fallback (no client / no
         // match / client unreachable). Cached + batched in DownloadProgressService.
-        let clientProgress = await DownloadProgressService.shared.snapshot(configs: downloadClientConfigs())
+        // Only ask the download clients for progress when an arr says there is
+        // something to overlay it onto. `overlay` matches on `downloadId`, so a
+        // row without one can't be improved by the client either — an empty (or
+        // id-less) queue used to poll every configured client forever to enrich
+        // nothing, which on an idle stack was the app's whole remaining traffic.
+        let hasTrackableRows = [r.items, s.items, l.items, w.items]
+            .contains { rows in rows.contains { $0.downloadId?.isEmpty == false } }
+        let clientProgress = hasTrackableRows
+            ? await DownloadProgressService.shared.snapshot(configs: downloadClientConfigs())
+            : [:]
         return AggregateResult(
             radarr: Self.overlay(r.items, with: clientProgress),
             sonarr: Self.overlay(s.items, with: clientProgress),
@@ -84,6 +110,28 @@ public final class QueueAggregator: QueueDataProviding {
             whisparr: Self.overlay(w.items, with: clientProgress),
             radarrError: r.error, sonarrError: s.error, lidarrError: l.error, whisparrError: w.error,
             unreachableSources: unreachable
+        )
+    }
+
+    func fetch(source: QueueItem.Source) async -> SourceQueueResult {
+        let outcome: (items: [QueueItem], error: String?, unreachable: Bool)
+        switch source {
+        case .radarr:   outcome = await Self.safeFetch { try await self.radarrClient(for: self.configStore.radarr).fetchQueue() }
+        case .sonarr:   outcome = await Self.safeFetch { try await self.sonarrClient(for: self.configStore.sonarr).fetchQueue() }
+        case .lidarr:   outcome = await Self.safeFetch { try await self.lidarrClient(for: self.configStore.lidarr).fetchQueue() }
+        case .whisparr: outcome = await Self.safeFetch { try await self.whisparrClient(for: self.configStore.whisparr).fetchQueue() }
+        }
+        // The client snapshot is TTL-cached and shared, so asking for it here
+        // costs nothing extra when a sibling source just refreshed. Same gate as
+        // `fetch()`: no trackable row means nothing to overlay onto.
+        let progress = outcome.items.contains { $0.downloadId?.isEmpty == false }
+            ? await DownloadProgressService.shared.snapshot(configs: downloadClientConfigs())
+            : [:]
+        return SourceQueueResult(
+            source: source,
+            items: Self.overlay(outcome.items, with: progress),
+            error: outcome.error,
+            unreachable: outcome.unreachable
         )
     }
 
@@ -582,6 +630,22 @@ public struct AggregateResult: Equatable {
     /// as opposed to those that answered with an HTTP/decode error. Drives the
     /// offline indicator; empty for a healthy or merely outaged stack.
     var unreachableSources: Set<QueueItem.Source>
+
+    /// One source's view of this result, in the same shape the per-source fetch
+    /// returns — so the all-sources path can commit through exactly the same
+    /// code as a realtime-driven single-source refresh.
+    func slice(for source: QueueItem.Source) -> SourceQueueResult {
+        let (items, error): ([QueueItem], String?) = switch source {
+        case .radarr:   (radarr, radarrError)
+        case .sonarr:   (sonarr, sonarrError)
+        case .lidarr:   (lidarr, lidarrError)
+        case .whisparr: (whisparr, whisparrError)
+        }
+        return SourceQueueResult(
+            source: source, items: items, error: error,
+            unreachable: unreachableSources.contains(source)
+        )
+    }
 
     init(radarr: [QueueItem], sonarr: [QueueItem], lidarr: [QueueItem], whisparr: [QueueItem] = [],
          radarrError: String? = nil, sonarrError: String? = nil, lidarrError: String? = nil,

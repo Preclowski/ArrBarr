@@ -127,6 +127,20 @@ public struct SettingsView: View {
         } label: { Text("settings.theme.button", bundle: .module) }
     }
 
+    /// Provider picker binding that refuses Apple Intelligence on devices that
+    /// can't run it. The row is also `.disabled`, but some picker styles ignore
+    /// per-row disabling, so the setter is the real guarantee it stays
+    /// non-selectable.
+    private var chatProviderSelection: Binding<ChatProvider> {
+        Binding(
+            get: { configStore.chatProvider },
+            set: { newValue in
+                if newValue == .foundationModels && !FoundationModelsAvailability.isSupported { return }
+                configStore.chatProvider = newValue
+            }
+        )
+    }
+
     /// Shared "AI" section. One master toggle at the top kills the whole
     /// feature; provider controls only appear when AI is on.
     @ViewBuilder
@@ -136,12 +150,22 @@ public struct SettingsView: View {
         } header: { Text("settings.assistant.button", bundle: .module) }
         if configStore.aiEnabled {
             Section {
-                Picker(selection: $configStore.chatProvider) {
-                    // Hide Apple Intelligence on devices that don't support it.
-                    ForEach(ChatProvider.allCases.filter {
-                        $0 != .foundationModels || FoundationModelsAvailability.isSupported
-                    }) { p in
-                        Text(p.displayName).tag(p)
+                Picker(selection: chatProviderSelection) {
+                    // Keep every provider visible in the pop-up. Apple
+                    // Intelligence stays listed but labelled "(unavailable)" and
+                    // is non-selectable on devices that can't run it — rather
+                    // than filtered out, which collapses the picker to a single
+                    // unlabeled option that reads like a bug. The pop-up menu
+                    // won't grey a disabled row, so `chatProviderSelection`
+                    // enforces non-selectability instead.
+                    ForEach(ChatProvider.allCases) { p in
+                        if p == .foundationModels && !FoundationModelsAvailability.isSupported {
+                            Text("settings.appleIntelligenceUnavailable.button", bundle: .module)
+                                .tag(p)
+                                .disabled(true)
+                        } else {
+                            Text(p.displayName).tag(p)
+                        }
                     }
                 } label: { Text("settings.aiProvider.button", bundle: .module) }
                 if configStore.chatProvider == .openai {
@@ -627,6 +651,7 @@ public struct SettingsView: View {
         Form {
             if DeveloperMode.isActive {
                 demoModeSection
+                startPageDevSection
             }
             Section {
                 LabeledContent {
@@ -884,6 +909,33 @@ public struct SettingsView: View {
         } header: { Text("settings.developerOptions.button", bundle: .module) }
     }
 
+    #if os(macOS)
+    /// Experimental, developer-mode-only: a read-only local status page served on
+    /// loopback so it can be set as a browser home page. Deliberately un-localized
+    /// (English-only, verbatim strings) and undocumented — it exists only behind
+    /// Developer mode and is intentionally kept out of the string catalog so it
+    /// stays off the beaten path. macOS-only: the host lives in ArrMCPServer,
+    /// which isn't linked on iOS.
+    @ViewBuilder
+    private var startPageDevSection: some View {
+        Section {
+            Toggle(isOn: $configStore.startPageEnabled) {
+                Text(verbatim: "Start page (experimental)")
+            }
+            if configStore.startPageEnabled {
+                let url = "http://127.0.0.1:\(configStore.startPagePort)/"
+                Link(destination: URL(string: url)!) {
+                    Label { Text(verbatim: url) } icon: { Image(systemName: "globe") }
+                }
+            }
+        } header: {
+            Text(verbatim: "Start page")
+        } footer: {
+            Text(verbatim: "A read-only status page served on this Mac only (loopback). English-only, experimental.")
+        }
+    }
+    #endif
+
     // MARK: - Service roster (shared data)
 
     /// One configurable service row. Both the macOS panes and the iOS forms
@@ -962,6 +1014,12 @@ public struct SettingsView: View {
                 themePicker
                 textSizePicker
                 notificationSoundPicker
+                Toggle(isOn: $configStore.notifyHealth) {
+                    Text("settings.notifyHealth.button", bundle: .module)
+                }
+                Text("settings.notifyHealth.footnote", bundle: .module)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
             } header: {
                 Text("settings.application.button", bundle: .module)
             } footer: {
@@ -1001,6 +1059,14 @@ public struct SettingsView: View {
                         Text(Self.formatInterval(interval)).tag(interval)
                     }
                 } label: { Text("settings.background.button", bundle: .module) }
+                Picker(selection: $configStore.realtimeSilenceTimeout) {
+                    ForEach(ConfigStore.realtimeSilenceTimeoutOptions, id: \.self) { interval in
+                        Text(Self.formatInterval(interval)).tag(interval)
+                    }
+                } label: { Text("settings.realtimeHealthCheck.button", bundle: .module) }
+                Text("settings.realtimeHealthCheck.footnote", bundle: .module)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
             } header: { Text("settings.refreshInterval.button", bundle: .module) }
             // Developer/Demo controls moved to the About pane; Siri & Shortcuts
             // is now its own sidebar row (see siriPane).

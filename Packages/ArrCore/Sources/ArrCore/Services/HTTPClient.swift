@@ -108,6 +108,41 @@ public struct HTTPClient {
     /// aggregator awaits all four arrs together) for a minute-plus.
     public static let requestTimeout: TimeInterval = 15
 
+    /// Switches off the process-wide on-disk HTTP cache. Runs once, the first
+    /// time anything builds an `HTTPClient` — i.e. before this app's first
+    /// request, in every target, with nothing to remember to wire up.
+    ///
+    /// `URLSession.shared` carries an on-disk `URLCache`, and CFNetwork writes
+    /// every cacheable response into it. Polling four arrs on a timer turned
+    /// that into 2.1 GB of dirty file-backed writes a day — enough for macOS to
+    /// flag the app under its disk-writes limit and then for `cache_delete` to
+    /// start *terminating* it (`CacheDeleteAppContainerCaches`) so it could
+    /// reclaim the container. The app read as "randomly quits after a few
+    /// minutes", with no crash report anywhere, because it never crashed.
+    ///
+    /// The cache bought nothing in return: queue rows and download progress are
+    /// live by definition and were never re-served from it.
+    ///
+    /// Replacing `URLCache.shared` rather than giving the arr clients a private
+    /// session is deliberate. It covers *every* consumer of the shared session
+    /// in one place, and it leaves `URLSession.shared` in use — a custom session
+    /// ignores `URLProtocol.registerClass`, which is how the tool-backend tests
+    /// stub their HTTP.
+    private static let diskCacheDisabled: Void = {
+        URLCache.shared = URLCache(memoryCapacity: 4 * 1024 * 1024, diskCapacity: 0, diskPath: nil)
+    }()
+
+    /// A `.default` configuration that keeps out of the URL cache. The clients
+    /// needing their own cookie jar (qBittorrent's SID, Deluge's session cookie)
+    /// build on this rather than `URLSessionConfiguration.default`, whose
+    /// `urlCache` would otherwise be whatever `URLCache.shared` happens to be.
+    static func uncachedConfiguration() -> URLSessionConfiguration {
+        let cfg = URLSessionConfiguration.default
+        cfg.urlCache = nil
+        cfg.requestCachePolicy = .reloadIgnoringLocalCacheData
+        return cfg
+    }
+
     let session: URLSession
     /// Per-request timeout for this client. Defaults to the short
     /// refresh-safe `requestTimeout`; the chat-tool / search clients raise it
@@ -115,6 +150,7 @@ public struct HTTPClient {
     let timeout: TimeInterval
 
     init(session: URLSession = .shared, timeout: TimeInterval = HTTPClient.requestTimeout) {
+        _ = Self.diskCacheDisabled
         self.session = session
         self.timeout = timeout
     }
@@ -189,6 +225,12 @@ public struct HTTPClient {
         // Bound every request so a hung/restarting arr can't stall a refresh
         // for URLSession's 60s default. See `timeout` / `requestTimeout`.
         req.timeoutInterval = timeout
+        // Never store, never re-serve. Everything this client fetches is live
+        // state (queue rows, progress, health), so a cache entry is at best
+        // dead weight and at worst a stale row. Pairs with `diskCacheDisabled`:
+        // that stops the writes process-wide, this states the intent per
+        // request and holds even if a caller hands us its own session.
+        req.cachePolicy = .reloadIgnoringLocalCacheData
         let (data, response): (Data, URLResponse)
         do {
             (data, response) = try await session.data(for: req)

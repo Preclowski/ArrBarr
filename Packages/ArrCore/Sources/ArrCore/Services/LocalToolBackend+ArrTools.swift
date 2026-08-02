@@ -264,7 +264,7 @@ extension LocalToolBackend {
     private static func cookieSession(for kind: DownloadClientKind) -> URLSession? {
         switch kind {
         case .qbittorrent, .deluge:
-            let cfg = URLSessionConfiguration.default
+            let cfg = HTTPClient.uncachedConfiguration()
             cfg.httpCookieStorage = HTTPCookieStorage()
             cfg.httpCookieAcceptPolicy = .always
             cfg.httpShouldSetCookies = true
