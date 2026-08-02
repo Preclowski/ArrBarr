@@ -362,6 +362,29 @@ public final class NotificationCoalescer {
         emit(source: source, items: items)
     }
 
+    /// Announce one arr health problem.
+    ///
+    /// Posted straight through rather than queued: the coalescer's windows exist
+    /// because grabs arrive in bursts (a season pack is 24 of them), and health
+    /// errors do not — they are rare, individually meaningful, and each names a
+    /// different thing to go and fix. Grouping them would only hide detail.
+    ///
+    /// The identifier is derived from the message so the system replaces rather
+    /// than stacks if the same problem is somehow announced twice.
+    func postHealthIssue(source: QueueItem.Source, message: String) {
+        let content = UNMutableNotificationContent()
+        content.title = source.displayName
+        content.body = message
+        content.sound = configuredSound
+        let digest = String(message.hashValue, radix: 16)
+        let req = UNNotificationRequest(
+            identifier: "arrbarr.health.\(source.rawValue).\(digest)",
+            content: content,
+            trigger: nil
+        )
+        UNUserNotificationCenter.current().add(req)
+    }
+
     private func post(source: QueueItem.Source, items: [QueueItem]) {
         let cfg = configStore.config(for: source.serviceKind)
         let baseURL = cfg.baseURL

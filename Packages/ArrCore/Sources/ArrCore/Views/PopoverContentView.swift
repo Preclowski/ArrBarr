@@ -101,6 +101,22 @@ public struct PopoverContentView: View {
         !queueFilter.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
+    /// Put the caret in the tab's text field so the panel is typeable the
+    /// instant it opens.
+    ///
+    /// Queue only — its floating bar is the global search. Upcoming has no
+    /// field to focus, and Chat focuses its own on appear (the field lives
+    /// inside `ChatView`, and it appears both on open and on tab switch, so
+    /// driving it from here would just be a second owner of the same state).
+    ///
+    /// Hopped to the next main-actor turn rather than set inline: on the
+    /// `onAppear` pass the field isn't in the responder chain yet, and an
+    /// assignment made before it is there is silently dropped.
+    private func focusInputForCurrentTab() {
+        guard selectedTab == .queue else { return }
+        Task { @MainActor in queueFilterFocused = true }
+    }
+
     /// Queue rows that are for a specific Sonarr episode (season pack
     /// items have `episodeNumber == nil`). These bypass DetailView's
     /// series chrome and push the episode directly via
@@ -158,6 +174,7 @@ public struct PopoverContentView: View {
                 // cadence and refresh right now. macOS had no foreground tier
                 // before: it sat on the 30 s background timer even while open.
                 viewModel.startForegroundPolling()
+                focusInputForCurrentTab()
             }
             .onDisappear {
                 // Panel closed — drop back to the background cadence so we're
@@ -180,6 +197,7 @@ public struct PopoverContentView: View {
                 detailItem = nil
                 searchResult = nil
                 historySource = nil
+                focusInputForCurrentTab()
             }
             .background {
                 // Hidden keyboard shortcut for cmd+, (Settings). cmd+N

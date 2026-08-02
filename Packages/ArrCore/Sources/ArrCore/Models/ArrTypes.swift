@@ -548,6 +548,10 @@ public struct RadarrLibraryRecord: Decodable, Sendable, Equatable {
     let title: String?
     let year: Int?
     let hasFile: Bool?
+    /// Deep-link slug for the arr web UI. Always been on the wire; decoding it
+    /// costs nothing and lets the Spotlight pass seed `TitleMetadataStore`
+    /// completely, so the queue never has to fetch a movie just for its slug.
+    let titleSlug: String?
     let monitored: Bool?
     let images: [ArrImage]?
     let genres: [String]?
@@ -573,6 +577,8 @@ public struct SonarrLibraryRecord: Decodable, Sendable, Equatable {
     /// second round-trip to the series detail endpoint.
     let seasons: [SonarrLibrarySeason]?
     let overview: String?
+    /// See `RadarrLibraryRecord.titleSlug` — same field, same reason.
+    let titleSlug: String?
 }
 public struct SonarrLibraryStatistics: Decodable, Sendable, Equatable {
     let episodeCount: Int?

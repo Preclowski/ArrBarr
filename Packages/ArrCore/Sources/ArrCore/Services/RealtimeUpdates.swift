@@ -33,7 +33,45 @@ private let realtimeLog = Logger(category: "Realtime")
 /// Body parsing is deliberately not exposed; the polling pipeline already
 /// owns the canonical data fetch and the SignalR side is just a faster
 /// trigger.
+/// Servarr's own summary of a queue: how many rows, and whether any of them are
+/// in trouble. Pushed inline on every queue change, so comparing two of them
+/// answers "did anything material change" for the price of a socket frame.
+///
+/// Deliberately not a mirror of our own row set — `totalCount` includes pending
+/// releases we never display. It is only ever compared against another instance
+/// of itself, never against `queues[source].count`, so what it counts matters
+/// less than that it counts the same things each time.
+public struct QueueStatus: Sendable, Equatable {
+    let totalCount: Int
+    let count: Int
+    let unknownCount: Int
+    let errors: Bool
+    let warnings: Bool
+
+    init?(_ json: [String: Any]) {
+        guard let totalCount = json["totalCount"] as? Int else { return nil }
+        self.totalCount = totalCount
+        self.count = json["count"] as? Int ?? 0
+        self.unknownCount = json["unknownCount"] as? Int ?? 0
+        self.errors = json["errors"] as? Bool ?? false
+        self.warnings = json["warnings"] as? Bool ?? false
+    }
+}
+
 public enum RealtimeEvent: Sendable, Equatable {
+    /// Which arr this came from. Every case carries it; this just saves the
+    /// callers a `switch` when all they want is the origin.
+    public var source: QueueItem.Source {
+        switch self {
+        case .queueChanged(let s), .fileImported(let s), .other(let s, _, _),
+             .queueStatus(let s, _):
+            return s
+        }
+    }
+
+    /// The arr's queue summary changed (or was re-announced unchanged).
+    case queueStatus(source: QueueItem.Source, status: QueueStatus)
+
     /// Queue item added/updated/removed/etc. — caller should refresh
     /// the queue snapshot for the named source.
     case queueChanged(source: QueueItem.Source)
@@ -70,6 +108,8 @@ public actor RealtimeManager {
     /// connected but hub gone silent" and tune polling accordingly.
     private var lastPushedAt: Date?
     public func lastEventAt() -> Date? { lastPushedAt }
+    /// Same signal, split per arr — see `lastEventAt(_:)`.
+    private var lastPushedBySource: [QueueItem.Source: Date] = [:]
 
     /// Transport for every connection's negotiate + WebSocket. Injectable so
     /// tests can drive negotiate against a `URLProtocol` stub instead of the
@@ -173,8 +213,26 @@ public actor RealtimeManager {
     /// that connected but went silent.
     fileprivate func dispatch(_ event: RealtimeEvent) async {
         lastPushedAt = Date()
+        lastPushedBySource[event.source] = lastPushedAt
         await onEvent(event)
     }
+
+    /// Per-source liveness, which is what makes suppressing the poll safe.
+    ///
+    /// A global timestamp can't answer "is *this* arr's hub alive" — one busy
+    /// Lidarr would vouch for three silent Sonarrs. And the reason a per-source
+    /// timestamp is decisive at all is Servarr's own scheduler: the
+    /// `RefreshMonitoredDownloads` task runs on a fixed interval (1 minute by
+    /// default), `DownloadMonitoringService.Refresh()` publishes
+    /// `TrackedDownloadRefreshedEvent` unconditionally at the end of it, and
+    /// `QueueService` republishes that as `QueueUpdatedEvent` with no diff
+    /// check. So a healthy hub emits a `queue` push on a timer **even when
+    /// nothing is happening** — which is exactly what separates "quiet because
+    /// idle" from "quiet because dead".
+    public func lastEventAt(_ source: QueueItem.Source) -> Date? {
+        lastPushedBySource[source]
+    }
+
 
     public func shutdown() async {
         generation &+= 1
@@ -372,6 +430,14 @@ actor SignalRConnection {
         lastReachedListen = true
         listenStartedAt = .now
         realtimeLog.debug("[\(self.source.rawValue, privacy: .public)] handshake ok — listening (pending=\(pending.count, privacy: .public))")
+        // Announce the (re)connection as a queue change.
+        //
+        // Two jobs. It closes the reconnect window: anything that happened
+        // while the socket was down produced a push we were not there to hear,
+        // and nothing else would ever tell us. And it marks the source live, so
+        // a freshly connected hub isn't treated as stale by the health gate
+        // until its first real push arrives.
+        await onEvent(.queueChanged(source: source))
         startPingPump(ws: ws)
         try await listen(ws: ws, pending: pending)
     }
@@ -635,8 +701,9 @@ actor SignalRConnection {
                 }
                 return .ignored
             }
-            let action = (payload["body"] as? [String: Any])?["action"] as? String ?? ""
-            return .events(events(forName: name, action: action, source: source))
+            let body = payload["body"] as? [String: Any]
+            let action = body?["action"] as? String ?? ""
+            return .events(events(forName: name, action: action, source: source, body: body))
         case 7:  // Close
             return .close
         default:  // 6 = ping (our pump keeps the socket alive); rest irrelevant
@@ -647,12 +714,25 @@ actor SignalRConnection {
     /// Map a Servarr resource name to our event surface. Queue + file-import
     /// changes drive refresh/notifications; everything else surfaces as
     /// `.other` for any future listener.
-    static func events(forName name: String, action: String, source: QueueItem.Source) -> [RealtimeEvent] {
+    static func events(
+        forName name: String, action: String, source: QueueItem.Source,
+        body: [String: Any]? = nil
+    ) -> [RealtimeEvent] {
         switch name {
         case "queue":
             return [.queueChanged(source: source)]
         case "episodeFile", "movieFile", "trackFile":
             return [.fileImported(source: source), .queueChanged(source: source)]
+        case "queue/status":
+            // The one Servarr broadcast that ships its resource inline
+            // (`QueueStatusController` sends `ModelAction.Updated` *with* the
+            // body, unlike the queue's payload-free `Sync`). Free evidence of
+            // whether anything actually changed — see `QueueStatus`.
+            guard let resource = body?["resource"] as? [String: Any],
+                  let status = QueueStatus(resource) else {
+                return [.other(source: source, name: name, action: action)]
+            }
+            return [.queueStatus(source: source, status: status)]
         default:
             return [.other(source: source, name: name, action: action)]
         }

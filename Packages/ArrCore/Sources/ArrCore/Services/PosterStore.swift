@@ -71,6 +71,29 @@ public enum PosterTier: String, Sendable, CaseIterable {
         }
     }
 
+    /// Whether this tier may live in `~/Library/Caches`.
+    ///
+    /// `.icon` may not. Everything under an app's Caches directory is
+    /// reclaimable by macOS `cache_delete` — and reclaiming it is not passive:
+    /// the daemon takes a termination assertion and *kills the app* to do it
+    /// (`CacheDeleteAppContainerCaches`), which is what made ArrBarr look like
+    /// it was quitting on its own every few minutes with no crash report. Each
+    /// sweep also deleted the whole icon store, so the next launch re-downloaded
+    /// every poster in the library — 54 MB here — feeding the disk pressure that
+    /// triggered the next sweep.
+    ///
+    /// That directly contradicts the invariant `retention` is written around: a
+    /// re-index must never need the network. So the tier that backs the
+    /// Spotlight index lives in Application Support, which the OS does not
+    /// reclaim. `.card` and `.full` are genuinely disposable — a cleared card is
+    /// one poster re-fetched when a detail view opens — and stay in Caches.
+    var isDisposable: Bool {
+        switch self {
+        case .icon: return false
+        case .card, .full: return true
+        }
+    }
+
     /// The CDN's own size variant for this tier, if the host has one.
     fileprivate var tmdbSize: String? {
         switch self {
@@ -131,8 +154,15 @@ public actor PosterStore {
         }
         memory.totalCostLimit = Self.memoryCostCap
         for tier in PosterTier.allCases {
-            guard let dir = Self.directory(tier) else { continue }
+            guard var dir = Self.directory(tier) else { continue }
             try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+            // Out of Caches so the OS can't reclaim it (see `isDisposable`) —
+            // but it is still re-downloadable artwork, so keep it out of backups
+            // and iCloud rather than shipping ~50 MB of posters to both.
+            guard !tier.isDisposable else { continue }
+            var values = URLResourceValues()
+            values.isExcludedFromBackup = true
+            try? dir.setResourceValues(values)
         }
     }
 
@@ -418,15 +448,28 @@ public actor PosterStore {
 
     // MARK: - Paths
 
+    /// Where the disposable tiers live — the OS may reclaim any of it.
     nonisolated static var root: URL {
         let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first
             ?? URL(fileURLWithPath: NSTemporaryDirectory())
-        let bundleId = Bundle.main.bundleIdentifier ?? "pl.incred.ArrBarr"
         return caches.appendingPathComponent(bundleId, isDirectory: true)
     }
 
+    /// Where tiers the OS must not reclaim live. See `PosterTier.isDisposable`.
+    nonisolated static var durableRoot: URL {
+        let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+            ?? root
+        return support.appendingPathComponent(bundleId, isDirectory: true)
+    }
+
+    private nonisolated static var bundleId: String {
+        Bundle.main.bundleIdentifier ?? "pl.incred.ArrBarr"
+    }
+
     nonisolated static func directory(_ tier: PosterTier) -> URL? {
-        tier.directoryName.map { root.appendingPathComponent($0, isDirectory: true) }
+        guard let name = tier.directoryName else { return nil }
+        let base = tier.isDisposable ? root : durableRoot
+        return base.appendingPathComponent(name, isDirectory: true)
     }
 
     private nonisolated static func file(_ url: URL, _ tier: PosterTier) -> URL? {
@@ -485,24 +528,47 @@ public actor PosterStore {
         guard !didMigrate else { return }
         didMigrate = true
         let fm = FileManager.default
-        if let iconDir = Self.directory(.icon) {
-            let legacyThumbs = Self.root.appendingPathComponent("spotlight-thumbs", isDirectory: true)
-            if fm.fileExists(atPath: legacyThumbs.path) {
-                if (try? fm.contentsOfDirectory(atPath: iconDir.path))?.isEmpty ?? true {
-                    try? fm.removeItem(at: iconDir)
-                    try? fm.moveItem(at: legacyThumbs, to: iconDir)
-                    logger.notice("migrated Spotlight thumbnails into the icon tier")
-                } else {
-                    try? fm.removeItem(at: legacyThumbs)
-                }
-            }
+        // Two former homes for the same artwork, newest first. The icon tier
+        // most recently lived in Caches, where the OS could delete it out from
+        // under us (see `PosterTier.isDisposable`); before that it was the flat
+        // `spotlight-thumbs` directory. Whichever is found is carried over.
+        if let name = PosterTier.icon.directoryName {
+            adoptAsIconTier(Self.root.appendingPathComponent(name, isDirectory: true), from: "Caches")
         }
+        adoptAsIconTier(
+            Self.root.appendingPathComponent("spotlight-thumbs", isDirectory: true),
+            from: "spotlight-thumbs"
+        )
         let legacyOriginals = Self.root.appendingPathComponent("posters", isDirectory: true)
         if fm.fileExists(atPath: legacyOriginals.path) {
             let freed = (try? fm.contentsOfDirectory(atPath: legacyOriginals.path))?.count ?? 0
             try? fm.removeItem(at: legacyOriginals)
             logger.notice("dropped \(freed, privacy: .public) full-size posters (superseded by the card tier)")
         }
+    }
+
+    /// Take over `legacy` as the icon tier, or drop it if the tier already holds
+    /// artwork. A directory rename either way — the icon store is tens of MB of
+    /// downloads, and the whole point of moving it is not to fetch it again.
+    /// Adopting only into an *empty* tier keeps the newest home winning when
+    /// more than one legacy directory is still lying around.
+    private func adoptAsIconTier(_ legacy: URL, from source: String) {
+        let fm = FileManager.default
+        guard let iconDir = Self.directory(.icon),
+              legacy != iconDir,
+              fm.fileExists(atPath: legacy.path) else { return }
+        guard (try? fm.contentsOfDirectory(atPath: iconDir.path))?.isEmpty ?? true else {
+            try? fm.removeItem(at: legacy)
+            return
+        }
+        let carried = (try? fm.contentsOfDirectory(atPath: legacy.path))?.count ?? 0
+        try? fm.removeItem(at: iconDir)
+        try? fm.createDirectory(at: iconDir.deletingLastPathComponent(),
+                                withIntermediateDirectories: true)
+        try? fm.moveItem(at: legacy, to: iconDir)
+        logger.notice(
+            "carried \(carried, privacy: .public) icon posters over from \(source, privacy: .public)"
+        )
     }
 
     /// Wipe one tier. Internal on purpose — user-facing clearing goes through

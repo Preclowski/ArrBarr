@@ -26,6 +26,35 @@ struct RealtimeFrameParsingTests {
                 == .events([.fileImported(source: .sonarr), .queueChanged(source: .sonarr)]))
     }
 
+    /// `QueueStatusController` is the one Servarr broadcast that sends its
+    /// resource inline (`ModelAction.Updated` *with* the body) rather than a
+    /// payload-free `Sync`. That body is what lets a `queue` push be answered
+    /// with nothing when the summary hasn't moved.
+    @Test("A queue/status invocation carries the counters inline")
+    func queueStatusCarriesResource() {
+        let frame = #"{"type":1,"target":"receiveMessage","arguments":[{"body":{"action":"updated","resource":{"totalCount":7,"count":5,"unknownCount":2,"errors":true,"warnings":false}},"name":"queue/status"}]}"#
+        guard case .events(let events) = SignalRConnection.parse(frame: frame, source: .lidarr),
+              case .queueStatus(let source, let status) = events.first
+        else { return #expect(Bool(false), "expected a queueStatus event") }
+
+        #expect(source == .lidarr)
+        #expect(status.totalCount == 7)
+        #expect(status.count == 5)
+        #expect(status.unknownCount == 2)
+        #expect(status.errors == true)
+        #expect(status.warnings == false)
+    }
+
+    /// A malformed or resource-less status frame must not be mistaken for a
+    /// *zeroed* status — that would read as "the queue emptied" and could
+    /// suppress a refresh that was genuinely needed.
+    @Test("A queue/status frame without a resource degrades to .other")
+    func queueStatusWithoutResource() {
+        let frame = #"{"type":1,"target":"receiveMessage","arguments":[{"body":{"action":"updated"},"name":"queue/status"}]}"#
+        #expect(SignalRConnection.parse(frame: frame, source: .lidarr)
+                == .events([.other(source: .lidarr, name: "queue/status", action: "updated")]))
+    }
+
     @Test("An unrecognised resource surfaces as .other, not dropped")
     func otherResource() {
         let frame = #"{"type":1,"target":"receiveMessage","arguments":[{"body":{"version":"4.0.17.2952"},"name":"version"}]}"#

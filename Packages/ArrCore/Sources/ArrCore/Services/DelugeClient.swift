@@ -37,7 +37,7 @@ public actor DelugeClient: DownloadProgressSource {
             self.session = session
             self.http = HTTPClient(session: session)
         } else {
-            let cfg = URLSessionConfiguration.default
+            let cfg = HTTPClient.uncachedConfiguration()
             cfg.httpCookieStorage = HTTPCookieStorage()
             cfg.httpCookieAcceptPolicy = .always
             cfg.httpShouldSetCookies = true

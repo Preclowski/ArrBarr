@@ -60,6 +60,24 @@ public final class ConfigStore: ObservableObject {
     @Published public var deluge: ServiceConfig = .empty
     @Published public var foregroundInterval: TimeInterval = 5
     @Published public var backgroundInterval: TimeInterval = 30
+    /// How long a realtime connection may stay silent before ArrBarr stops
+    /// trusting it and polls instead.
+    ///
+    /// Silence is meaningful because Servarr's `RefreshMonitoredDownloads` task
+    /// runs on a fixed schedule (1 minute by default) and ends in an
+    /// unconditional queue broadcast — so a healthy hub pushes even when the
+    /// queue is idle, and a hub that has said nothing for minutes is a hub that
+    /// has stopped working. Below that server-side cycle the setting only
+    /// creates false alarms, which is why the shortest option is 1 minute and
+    /// the default is 5.
+    @Published public var realtimeSilenceTimeout: TimeInterval = 300
+    /// Banner when an arr reports a new *error*-level health problem.
+    ///
+    /// Off by default. Every other notification in this app follows something
+    /// the user asked for — they added the download that just finished. A health
+    /// error is the app volunteering, and a stream nobody opted into is the
+    /// stream people mute wholesale, taking the useful ones with it.
+    @Published public var notifyHealth: Bool = false
     @Published public var notifyRadarr: Bool = true
     @Published public var notifySonarr: Bool = true
     @Published public var notifyLidarr: Bool = true
@@ -217,6 +235,10 @@ public final class ConfigStore: ObservableObject {
 
     public static let foregroundIntervalOptions: [TimeInterval] = [0, 2, 5, 10, 15, 30]
     public static let backgroundIntervalOptions: [TimeInterval] = [0, 10, 30, 60, 120, 300]
+    /// See `realtimeSilenceTimeout`. Deliberately coarse — this is a tolerance,
+    /// not a tuning knob, and every option sits at or above Servarr's own
+    /// 1-minute refresh cycle.
+    public static let realtimeSilenceTimeoutOptions: [TimeInterval] = [60, 300, 900]
 
     private var defaults: UserDefaults
     private let secrets: SecretStore
@@ -261,6 +283,8 @@ public final class ConfigStore: ObservableObject {
 
     private static let foregroundIntervalKey = "ArrBarr.foregroundInterval"
     private static let backgroundIntervalKey = "ArrBarr.backgroundInterval"
+    private static let realtimeSilenceTimeoutKey = "ArrBarr.realtimeSilenceTimeout"
+    private static let notifyHealthKey = "ArrBarr.notifyHealth"
     private static let notifyRadarrKey = "ArrBarr.notifyRadarr"
     private static let notifySonarrKey = "ArrBarr.notifySonarr"
     private static let notifyLidarrKey = "ArrBarr.notifyLidarr"
@@ -394,6 +418,9 @@ public final class ConfigStore: ObservableObject {
         self.foregroundInterval = defaults.object(forKey: fgKey) != nil ? defaults.double(forKey: fgKey) : 5
         let bgKey = Self.backgroundIntervalKey
         self.backgroundInterval = defaults.object(forKey: bgKey) != nil ? defaults.double(forKey: bgKey) : 30
+        let rtKey = Self.realtimeSilenceTimeoutKey
+        self.realtimeSilenceTimeout = defaults.object(forKey: rtKey) != nil ? defaults.double(forKey: rtKey) : 300
+        self.notifyHealth = defaults.bool(forKey: Self.notifyHealthKey)
         self.notifyRadarr = defaults.object(forKey: Self.notifyRadarrKey) != nil ? defaults.bool(forKey: Self.notifyRadarrKey) : true
         self.notifySonarr = defaults.object(forKey: Self.notifySonarrKey) != nil ? defaults.bool(forKey: Self.notifySonarrKey) : true
         self.notifyLidarr = defaults.object(forKey: Self.notifyLidarrKey) != nil ? defaults.bool(forKey: Self.notifyLidarrKey) : true
@@ -484,6 +511,12 @@ public final class ConfigStore: ObservableObject {
         }.store(in: &cancellables)
         $backgroundInterval.dropFirst().sink { [weak self] val in
             self?.defaults.set(val, forKey: Self.backgroundIntervalKey)
+        }.store(in: &cancellables)
+        $realtimeSilenceTimeout.dropFirst().sink { [weak self] val in
+            self?.defaults.set(val, forKey: Self.realtimeSilenceTimeoutKey)
+        }.store(in: &cancellables)
+        $notifyHealth.dropFirst().sink { [weak self] val in
+            self?.defaults.set(val, forKey: Self.notifyHealthKey)
         }.store(in: &cancellables)
         $notifyRadarr.dropFirst().sink { [weak self] val in
             self?.defaults.set(val, forKey: Self.notifyRadarrKey)

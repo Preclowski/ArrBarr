@@ -8,7 +8,8 @@ public actor RadarrClient: ArrAPIClient {
 
     private struct CachedMovieFile { let file: RadarrMovieFile; let expiry: Date }
     private var movieFileCache: [Int: CachedMovieFile] = [:]
-    private let movieFileCacheTTL: TimeInterval = 60
+    /// See `SonarrClient.episodeFileCacheTTL` — same reasoning, same trade.
+    private let movieFileCacheTTL: TimeInterval = 15 * 60
 
     init(config: ServiceConfig) {
         self.config = config
@@ -23,7 +24,11 @@ public actor RadarrClient: ArrAPIClient {
             path: "\(apiBase)/queue",
             query: [
                 URLQueryItem(name: "pageSize", value: String(Self.queuePageSize)),
-                URLQueryItem(name: "includeMovie", value: "true"),
+                // See LidarrClient.fetchQueue — the embedded entity is a
+                // per-poll cost for fields that never change; the store holds
+                // them and `movieId` is top-level. `includeUnknownMovieItems`
+                // is a different flag and stays: without it, downloads Radarr
+                // can't map to a library movie drop out of the queue.
                 URLQueryItem(name: "includeUnknownMovieItems", value: "true"),
             ]
         )
@@ -37,8 +42,21 @@ public actor RadarrClient: ArrAPIClient {
 
         let movieIds = Set(page.records.compactMap { $0.movieId ?? $0.movie?.id }
             .filter { $0 > 0 })
+        async let metaMap = resolveMovieMetadata(ids: Array(movieIds), baseURL: baseURL)
         let fileMap = (try? await fetchMovieFiles(movieIds: movieIds)) ?? [:]
-        return page.records.map { Self.unify($0, baseURL: baseURL, fileMap: fileMap) }
+        let meta = await metaMap
+        return page.records.map { Self.unify($0, baseURL: baseURL, fileMap: fileMap, meta: meta) }
+    }
+
+    private func resolveMovieMetadata(ids: [Int], baseURL: String) async -> [Int: TitleMetadataStore.Metadata] {
+        await resolveMetadata(ids: ids, source: .radarr, kind: .movie) { id in
+            guard let detail = try? await self.fetchMovieDetails(id: id) else { return nil }
+            let (poster, auth) = (detail.images ?? []).posterURL(baseURL: baseURL)
+            return TitleMetadataStore.Metadata(
+                title: detail.title, year: detail.year, slug: detail.titleSlug,
+                posterURL: poster, posterRequiresAuth: auth
+            )
+        }
     }
 
     private func fetchMovieFiles(movieIds: Set<Int>) async throws -> [Int: RadarrMovieFile] {
@@ -253,18 +271,36 @@ public actor RadarrClient: ArrAPIClient {
         )
     }
 
-    private static func unify(_ r: RadarrQueueRecord, baseURL: String, fileMap: [Int: RadarrMovieFile]) -> QueueItem {
+    /// Wire record -> `QueueItem`. Internal rather than private so
+    /// `QueueUnificationTests` can pin it: this is where every displayed field
+    /// on a queue row is decided, and nothing else in the suite reaches it.
+    static func unify(
+        _ r: RadarrQueueRecord,
+        baseURL: String,
+        fileMap: [Int: RadarrMovieFile],
+        meta: [Int: TitleMetadataStore.Metadata] = [:]
+    ) -> QueueItem {
         let total = clampedBytes(r.size)
         let left = clampedBytes(r.sizeleft)
         let progress = total > 0 ? max(0, min(1, 1.0 - Double(left) / Double(total))) : 0.0
 
+        // Store first, embedded movie second, release name last. See
+        // `LidarrClient.unify` for why the embedded path is kept rather than
+        // deleted.
+        let cached = (r.movieId ?? r.movie?.id).flatMap { meta[$0] }
         let movieTitle: String
-        if let m = r.movie {
+        if let c = cached {
+            movieTitle = c.year.map { "\(c.title) (\($0))" } ?? c.title
+        } else if let m = r.movie {
             movieTitle = m.year.map { "\(m.title) (\($0))" } ?? m.title
         } else {
             movieTitle = r.title ?? "Unknown"
         }
-        let (poster, posterAuth) = (r.movie?.images ?? []).posterURL(baseURL: baseURL)
+        var poster = cached?.posterURL
+        var posterAuth = cached?.posterRequiresAuth ?? false
+        if poster == nil {
+            (poster, posterAuth) = (r.movie?.images ?? []).posterURL(baseURL: baseURL)
+        }
 
         let existingFile = (r.movieId ?? r.movie?.id).flatMap { fileMap[$0] }
 
@@ -293,7 +329,7 @@ public actor RadarrClient: ArrAPIClient {
             existingQuality: existingFile?.quality?.name ?? r.movie?.movieFile?.quality?.name,
             existingSize: existingFile?.size ?? r.movie?.movieFile?.size,
             existingFileName: (existingFile?.relativePath ?? r.movie?.movieFile?.relativePath).map { URL(fileURLWithPath: $0).lastPathComponent },
-            contentSlug: r.movie?.titleSlug,
+            contentSlug: cached?.slug ?? r.movie?.titleSlug,
             entityId: r.movieId ?? r.movie?.id,
             posterURL: poster,
             posterRequiresAuth: posterAuth,

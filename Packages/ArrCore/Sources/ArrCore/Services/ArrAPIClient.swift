@@ -45,6 +45,59 @@ extension ArrAPIClient {
     /// the rows. Four saturates the pool while leaving lanes for posters.
     static var maxConcurrentSideLoads: Int { 4 }
 
+    /// Resolve display metadata for a set of entity ids: cache first, then one
+    /// bounded fan-out for the misses, then write the results back.
+    ///
+    /// Three clients had a line-for-line copy of this, differing only in their
+    /// source, entity kind and per-id fetch. The shape is the interesting part
+    /// and it is identical everywhere — miss-only fetching, a bounded group so a
+    /// first-run queue can't saturate the six-connections-per-host pool (see
+    /// `maxConcurrentSideLoads`), and a single batched store write.
+    ///
+    /// `fetch` returns nil for an id it couldn't resolve; that id is simply
+    /// absent from the result and the row falls back to its release name rather
+    /// than the whole refresh failing.
+    func resolveMetadata(
+        ids: [Int],
+        source: QueueItem.Source,
+        kind: TitleMetadataStore.Kind,
+        fetch: @Sendable @escaping (Int) async -> TitleMetadataStore.Metadata?
+    ) async -> [Int: TitleMetadataStore.Metadata] {
+        guard !ids.isEmpty else { return [:] }
+        let baseURL = config.baseURL
+        func key(_ id: Int) -> TitleMetadataStore.Key {
+            TitleMetadataStore.Key(source: source, baseURL: baseURL, kind: kind, id: id)
+        }
+
+        var byId: [Int: TitleMetadataStore.Metadata] = [:]
+        for (cached, value) in await TitleMetadataStore.shared.metadata(for: ids.map(key)) {
+            byId[cached.id] = value
+        }
+        let missing = ids.filter { byId[$0] == nil }
+        guard !missing.isEmpty else { return byId }
+
+        var fresh: [TitleMetadataStore.Key: TitleMetadataStore.Metadata] = [:]
+        await withTaskGroup(of: (Int, TitleMetadataStore.Metadata)?.self) { group in
+            var next = 0
+            func schedule() {
+                guard next < missing.count else { return }
+                let id = missing[next]
+                next += 1
+                group.addTask { await fetch(id).map { (id, $0) } }
+            }
+            for _ in 0 ..< min(Self.maxConcurrentSideLoads, missing.count) { schedule() }
+            while let done = await group.next() {
+                if let (id, metadata) = done {
+                    byId[id] = metadata
+                    fresh[key(id)] = metadata
+                }
+                schedule()
+            }
+        }
+        if !fresh.isEmpty { await TitleMetadataStore.shared.store(fresh) }
+        return byId
+    }
+
     /// Shout when the arr says its queue holds more rows than the single page
     /// we asked for returned. We deliberately don't page — a >1000-item queue
     /// is pathological — but the rows past the cut are invisible in the UI,

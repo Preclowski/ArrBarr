@@ -33593,6 +33593,174 @@
           }
         }
       }
+    },
+    "settings.realtimeHealthCheck.button": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Realtime health check"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kontrola stanu na żywo"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Echtzeit-Statusprüfung"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comprobación de estado en tiempo real"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Contrôle d'état en temps réel"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Realtime statuscontrole"
+          }
+        }
+      },
+      "comment": "Picker in settings: how long a silent realtime connection is trusted"
+    },
+    "settings.realtimeHealthCheck.footnote": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "How long a silent realtime connection is trusted before ArrBarr falls back to polling."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jak długo ArrBarr ufa milczącemu połączeniu na żywo, zanim wróci do odpytywania."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wie lange einer stillen Echtzeitverbindung vertraut wird, bevor ArrBarr wieder abfragt."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cuánto tiempo se confía en una conexión en tiempo real silenciosa antes de volver al sondeo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Durée pendant laquelle une connexion temps réel silencieuse reste fiable avant le retour à l'interrogation."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hoelang een stille realtime-verbinding wordt vertrouwd voordat ArrBarr weer gaat pollen."
+          }
+        }
+      },
+      "comment": "Footnote under the realtime health check picker"
+    },
+    "settings.notifyHealth.button": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notify on health errors"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Powiadamiaj o błędach stanu"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bei Zustandsfehlern benachrichtigen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notificar errores de estado"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notifier les erreurs d'état"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Melden bij statusfouten"
+          }
+        }
+      },
+      "comment": "Toggle in settings: banner when an arr reports a health error"
+    },
+    "settings.notifyHealth.footnote": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Only errors — warnings and notices still appear in Needs you."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tylko błędy — ostrzeżenia i uwagi nadal pojawiają się w „Wymaga uwagi”."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nur Fehler — Warnungen und Hinweise erscheinen weiterhin unter „Erfordert Aufmerksamkeit“."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Solo errores: los avisos y las advertencias siguen apareciendo en «Requiere tu atención»."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erreurs uniquement — avertissements et remarques restent dans « À vérifier »."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alleen fouten — waarschuwingen en meldingen blijven in ‘Vraagt om aandacht’."
+          }
+        }
+      },
+      "comment": "Footnote under the health notification toggle"
     }
   }
 }

@@ -962,6 +962,12 @@ public struct SettingsView: View {
                 themePicker
                 textSizePicker
                 notificationSoundPicker
+                Toggle(isOn: $configStore.notifyHealth) {
+                    Text("settings.notifyHealth.button", bundle: .module)
+                }
+                Text("settings.notifyHealth.footnote", bundle: .module)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
             } header: {
                 Text("settings.application.button", bundle: .module)
             } footer: {
@@ -1001,6 +1007,14 @@ public struct SettingsView: View {
                         Text(Self.formatInterval(interval)).tag(interval)
                     }
                 } label: { Text("settings.background.button", bundle: .module) }
+                Picker(selection: $configStore.realtimeSilenceTimeout) {
+                    ForEach(ConfigStore.realtimeSilenceTimeoutOptions, id: \.self) { interval in
+                        Text(Self.formatInterval(interval)).tag(interval)
+                    }
+                } label: { Text("settings.realtimeHealthCheck.button", bundle: .module) }
+                Text("settings.realtimeHealthCheck.footnote", bundle: .module)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
             } header: { Text("settings.refreshInterval.button", bundle: .module) }
             // Developer/Demo controls moved to the About pane; Siri & Shortcuts
             // is now its own sidebar row (see siriPane).
