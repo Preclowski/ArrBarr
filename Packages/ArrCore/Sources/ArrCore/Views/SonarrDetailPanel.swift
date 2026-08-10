@@ -73,19 +73,20 @@ struct SonarrDetailPanel<Header: View>: View {
         }
     }
 
-    /// Map episode-id → active queue item, built from `siblings`
+    /// Map episode-id → ALL active queue items, built from `siblings`
     /// (queue items for this series) joined to the loaded
     /// `sonarrEpisodes`. Powers the per-episode in-progress
     /// indicator + hover action icons that replaced the standalone
-    /// "in queue" list.
-    private var queueByEpisodeId: [Int: QueueItem] {
-        var map: [Int: QueueItem] = [:]
+    /// "in queue" list. A list so duplicate grabs of the same episode
+    /// all stay visible (the old single-value map dropped one).
+    private var queueByEpisodeId: [Int: [QueueItem]] {
+        var map: [Int: [QueueItem]] = [:]
         for q in siblings where q.arrQueueId != 0 {
             guard let sn = q.seasonNumber, let en = q.episodeNumber else { continue }
             if let ep = sonarrEpisodes.first(where: {
                 $0.seasonNumber == sn && $0.episodeNumber == en
             }) {
-                map[ep.id] = q
+                map[ep.id, default: []].append(q)
             }
         }
         return map

@@ -31,6 +31,15 @@ public struct SearchResult: Identifiable, Equatable, Sendable {
     let imdb: Double?            // Radarr only
     let rottenTomatoes: Double?  // Radarr only
     let metacritic: Double?      // Radarr only
+    /// `"ttNNNNNNN"` when the source reports one (Radarr / Sonarr). The
+    /// unified identity is TMDB/TVDB-keyed, so this is the ONLY thing an
+    /// `imdb:ttN` query can match on.
+    let imdbId: String?
+    /// Zero-based position in the arr's own `/lookup` response. That order
+    /// encodes upstream popularity (TMDB / TVDB rank it for us), which the
+    /// ranker used to discard wholesale by re-sorting on a continuous
+    /// score that essentially never ties. Kept as a mild ranking signal.
+    let sourceRank: Int
     let overview: String?
     let runtime: Int?            // minutes
     let genres: [String]
@@ -50,7 +59,8 @@ public struct SearchResult: Identifiable, Equatable, Sendable {
          metacritic: Double?, overview: String?, runtime: Int?,
          genres: [String], network: String?, certification: String?,
          posterURL: URL?, source: QueueItem.Source,
-         inLibraryArrId: Int? = nil) {
+         inLibraryArrId: Int? = nil,
+         imdbId: String? = nil, sourceRank: Int = 0) {
         self.id = id
         self.foreignId = foreignId
         self.title = title
@@ -69,6 +79,8 @@ public struct SearchResult: Identifiable, Equatable, Sendable {
         self.posterURL = posterURL
         self.source = source
         self.inLibraryArrId = inLibraryArrId
+        self.imdbId = imdbId
+        self.sourceRank = sourceRank
     }
 
     /// Re-stamp `inLibraryArrId` without retyping every other field.
@@ -85,7 +97,8 @@ public struct SearchResult: Identifiable, Equatable, Sendable {
             genres: self.genres, network: self.network,
             certification: self.certification,
             posterURL: self.posterURL, source: self.source,
-            inLibraryArrId: id
+            inLibraryArrId: id,
+            imdbId: self.imdbId, sourceRank: self.sourceRank
         )
     }
 }

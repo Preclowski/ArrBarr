@@ -2,10 +2,13 @@ import SwiftUI
 
 struct EpisodeRow: View {
     let episode: SonarrEpisodeDetail
-    /// Active queue item matched to this episode. Drives the
+    /// ALL active queue items matched to this episode (usually 0 or 1;
+    /// 2+ when the same episode was grabbed twice). Drives the
     /// "downloading" indicator + swaps hover-overlay icons from
-    /// magnifyingglass (search) to pause/resume/trash.
-    var queueItem: QueueItem? = nil
+    /// magnifyingglass (search) to pause/resume/trash. The row renders
+    /// off the first item and flags extras with a count badge — the
+    /// episode detail lists and controls each download separately.
+    var queueItems: [QueueItem] = []
     /// Episode-file payload when this episode is on disk. Used to render
     /// the file's custom-format score in the right gutter — same
     /// `ScoreLabel` treatment as an in-progress download — so the
@@ -28,6 +31,11 @@ struct EpisodeRow: View {
     var seriesPosterURL: URL? = nil
     var seriesPosterRequiresAuth: Bool = false
     var seriesPosterAPIKey: String? = nil
+
+    /// The row's representative download — first of `queueItems`. All the
+    /// single-item visuals (tint, progress fill, hover actions, tooltip)
+    /// render off this one; the count badge signals when there are more.
+    private var queueItem: QueueItem? { queueItems.first }
 
     @State private var isHovering = false
     @State private var showDeleteConfirm = false
@@ -62,6 +70,9 @@ struct EpisodeRow: View {
         guard let air = episode.airDateUtc.flatMap(parseArrDate) else { return true }
         return air <= Date()
     }
+    /// `nil` reads as monitored — an older Sonarr that doesn't report the
+    /// flag shouldn't make every episode look switched off.
+    private var isMonitored: Bool { episode.monitored ?? true }
 
     /// Title colour. Inverted from the previous "missing pops"
     /// scheme — on-disk episodes (the user's library, ready to
@@ -83,6 +94,13 @@ struct EpisodeRow: View {
             onTap?(episode)
         } label: {
             HStack(spacing: 6) {
+                // Everything except the state glyph dims together when the
+                // episode is unmonitored — same wash the season row uses.
+                // Dimming only the title left the `S02E04` code reading
+                // BRIGHTER than the name it prefixes, which inverted the
+                // row's hierarchy. The bookmark stays outside the group so
+                // the one thing explaining the wash isn't washed out too.
+                HStack(spacing: 6) {
                 // `S02E04` identifier leads the title (Music/TV idiom:
                 // the episode number prefixes the name). Monospaced +
                 // fixed 6-char width so titles align down the column;
@@ -111,6 +129,18 @@ struct EpisodeRow: View {
                     // second filled chip on top read as noisy.
                     MediaBadgeCluster(isUpgrade: q.isUpgrade, size: .subtle)
                 }
+                // Duplicate-grab flag: the same episode has 2+ active
+                // downloads. The row shows the first one's progress; the
+                // badge says there's more — the episode detail lists each.
+                if queueItems.count > 1 {
+                    OutlineLabel(
+                        text: String.localizedStringWithFormat(
+                            NSLocalizedString("unit.downloads", bundle: .module, comment: ""),
+                            queueItems.count
+                        ),
+                        tint: .secondary
+                    )
+                }
                 Spacer()
                 // Right-hand stat: airdate is the default, but for any
                 // non-downloaded state where we actually have an
@@ -121,11 +151,12 @@ struct EpisodeRow: View {
                 // not-aired rows keep the date since there's no diff
                 // to compute.
                 if let q = queueItem {
-                    // Diff against the existing file when this download
-                    // is an upgrade — "are we gaining or losing points?"
-                    // is the actionable bit. Plain raw score for fresh
-                    // downloads with no replacement target.
-                    ScoreLabel(delta: q.customFormatScore, from: q.existingCustomFormatScore, size: 10)
+                    // The incoming file's own score. It used to be a delta
+                    // against the file on disk, which made this gutter mean
+                    // something different from the identical-looking gutter
+                    // two screens away. The comparison lives in the tooltip.
+                    ScoreLabel(score: q.customFormatScore,
+                               baseline: q.existingCustomFormatScore, size: 10)
                 } else if let file = episodeFile, let score = file.customFormatScore {
                     // On-disk episode — show its custom-format score
                     // (more useful than the air date the user already
@@ -137,6 +168,11 @@ struct EpisodeRow: View {
                         .scaledFont(size: 10)
                         .foregroundStyle(.tertiary)
                 }
+                }
+                // Applied ON TOP of the existing style resolution rather than
+                // as another branch inside `episodeTitleStyle` — a monitored
+                // episode renders byte-for-byte as before.
+                .opacity(isMonitored ? 1 : 0.55)
                 stateIndicator
                     .frame(width: 14, height: 14, alignment: .center)
             }
@@ -145,6 +181,12 @@ struct EpisodeRow: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        // The dim + glyph are visual-only; VoiceOver gets the state as the
+        // row's value so it reads "S02E04, Title, Not monitored, button".
+        .accessibilityValue(
+            isMonitored ? Text(verbatim: "")
+                        : Text("common.notMonitored.label", bundle: .module)
+        )
         // Row background doubles as a progress visualiser for
         // active downloads: a status-tinted bar that fills `progress`
         // % of the row's width, clipped to the same 4pt corner as
@@ -237,7 +279,6 @@ struct EpisodeRow: View {
             HStack(spacing: 2) {
                 queueActionIcons(for: q)
             }
-            .rowActionBackdrop()
             .padding(.trailing, 6)
         }
     }
@@ -272,15 +313,29 @@ struct EpisodeRow: View {
 
     @ViewBuilder
     private var stateIndicator: some View {
-        // Only the not-aired (scheduled) glyph remains. "Missing" no longer gets a
-        // bare circle — the dimmed title already says "not in your library", and
-        // the season row carries the per-season "X/Y · missing" count.
-        if !hasAired {
+        // One 14pt slot, and unmonitored WINS it over not-aired: "hasn't
+        // aired" is already said twice on the row (tertiary title + the
+        // future date in the trailing gutter), while "unmonitored" is said
+        // nowhere else. The tooltip carries both states when they coincide.
+        //
+        // A monitored, aired episode still renders nothing — the default
+        // state costs no pixels, which is the whole point of showing only
+        // the exception. ("Missing" gets no bare circle either: the dimmed
+        // title already says "not in your library", and the season row
+        // carries the per-season "X/Y" count.)
+        if !isMonitored {
+            MonitorBookmark(isMonitored: false, size: 10)
+                .help(Text(LocalizedStringKey(unmonitoredHelpKey), bundle: .module))
+        } else if !hasAired {
             Image(systemName: "calendar")
                 .scaledFont(size: 10)
                 .foregroundStyle(.tertiary)
                 .help(Text("detail.notAiredYet.button", bundle: .module))
         }
+    }
+
+    private var unmonitoredHelpKey: String {
+        hasAired ? "common.notMonitored.label" : "detail.notMonitoredNotAired.label"
     }
 
     private static let formatter: DateFormatter = {

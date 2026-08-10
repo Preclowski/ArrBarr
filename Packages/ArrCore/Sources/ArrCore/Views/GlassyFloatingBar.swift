@@ -10,9 +10,11 @@ import SwiftUI
 /// the same general look without the dynamic refraction.
 public extension View {
     /// - Parameter focused: when true (an active/focused input), the *glass
-    ///   itself* lights up — white mixed into the material, edge catching more
-    ///   light, pill lifting off the list — instead of the field wearing a
-    ///   focus ring. Stays fully translucent throughout.
+    ///   itself* lights up — a little white mixed into the material, edge
+    ///   catching more light, pill lifting off the list — instead of the field
+    ///   wearing a focus ring. Stays fully translucent throughout, and the lift
+    ///   is deliberately gentle: enough to say "this one is live", not enough to
+    ///   turn the field into the brightest thing in the popover.
     ///   Defaults false, so non-input callers (toolbar islands) are unchanged.
     func glassyFloatingBar(focused: Bool = false) -> some View {
         modifier(GlassyFloatingBarModifier(lift: focused ? GlassyFloatingBarModifier.litTint : 0))
@@ -108,10 +110,10 @@ private struct GlassPillModifier: ViewModifier {
 /// means SwiftUI interpolates *that*, re-running `body` per frame with an
 /// in-between value, and the glass, rim and shadows all ease together for free.
 private struct GlassyFloatingBarModifier: ViewModifier, Animatable {
-    /// How much white goes *into* the glass on focus, 0 at rest. Tuned to be the
-    /// brightest the pill can get while white label text still reads on it —
-    /// push past ~0.35 and the content has to invert to dark too, which the
-    /// placeholder can't follow (see `base`).
+    /// How much white goes *into* the glass on focus, 0 at rest. A gentle
+    /// brightening, not a spotlight: the pill sits over a dark, low-contrast
+    /// list, so it takes very little white to read as "active" — the earlier
+    /// 0.26 lit up hard enough to pull the eye off the content it belongs to.
     var lift: Double
 
     var animatableData: Double {
@@ -123,7 +125,7 @@ private struct GlassyFloatingBarModifier: ViewModifier, Animatable {
     /// pill gets a half-lit rim rather than a rim that pops in at the start.
     private var t: Double { min(1, max(0, lift / GlassyFloatingBarModifier.litTint)) }
 
-    static let litTint: Double = 0.26
+    static let litTint: Double = 0.12
 
     func body(content: Content) -> some View {
         decorated(base(content))
@@ -139,11 +141,10 @@ private struct GlassyFloatingBarModifier: ViewModifier, Animatable {
     /// mixes the white into the material itself, so what's underneath keeps
     /// showing through.
     ///
-    /// The content is deliberately left alone. Flipping it dark for a true
-    /// inversion needs an explicit `.foregroundStyle` — forcing
-    /// `\.colorScheme` to `.light` does *not* recolor it — and even then the
-    /// TextField's `prompt` is AppKit-drawn and stays light grey, i.e. invisible
-    /// on a bright pill. So the glass lifts only as far as white text survives.
+    /// The content is deliberately left alone, which is the other reason to keep
+    /// the tint low: the TextField's `prompt` is AppKit-drawn and stays light
+    /// grey, so the brighter the pill, the closer the placeholder gets to
+    /// invisible.
     @ViewBuilder
     private func base(_ content: Content) -> some View {
         #if os(macOS)
@@ -175,11 +176,12 @@ private struct GlassyFloatingBarModifier: ViewModifier, Animatable {
             // No focus *ring* — the lit glass is the cue. What focus adds here
             // is only the edge catching a bit more light, plus lift: a deeper
             // drop shadow and a whisper of white halo, so the active field
-            // floats above the list instead of sitting in it. Every focused
-            // layer is 0-opacity at rest → non-input callers (toolbar islands,
-            // "New chat") are unchanged.
-            .overlay(Capsule().strokeBorder(Color.white.opacity(0.20 * t), lineWidth: 0.75))
-            .shadow(color: .black.opacity(0.10 + 0.16 * t), radius: 8 + 4 * t, y: 2 + t)
-            .shadow(color: .white.opacity(0.14 * t), radius: 7)
+            // floats above the list instead of sitting in it. All three scale
+            // with the (now gentler) tint, so the whole focus state stays a hint
+            // rather than a highlight. Every focused layer is 0-opacity at rest
+            // → non-input callers (toolbar islands, "New chat") are unchanged.
+            .overlay(Capsule().strokeBorder(Color.white.opacity(0.12 * t), lineWidth: 0.75))
+            .shadow(color: .black.opacity(0.10 + 0.12 * t), radius: 8 + 3 * t, y: 2 + t)
+            .shadow(color: .white.opacity(0.07 * t), radius: 7)
     }
 }

@@ -104,78 +104,99 @@ public struct OutlineLabel: View {
 
 // MARK: -
 
-/// Inline `+XXXX` / `-XXXX` score in green / red. Renders nothing
-/// when `score == 0`. The status-line / details-line right gutter
-/// across every surface pipes the item's `customFormatScore` (or the
-/// existing file's) through this view.
+/// The one place a custom-format score is turned into pixels.
+///
+/// ## The rule
+///
+/// **A bare number is always absolute — "this file scores N" — on every
+/// surface.** Relative numbers ("N better than what you have") never
+/// appear inline; they live only where a comparison is actually drawn,
+/// with room to label both sides: the upgrade diff and the tooltips.
+///
+/// That is a deliberate narrowing. The same signed green number used to
+/// mean the file's own score in the release list and the *change against
+/// the file on disk* in a queue group row — identical pixels, opposite
+/// meaning, and nothing on screen to tell them apart. Rendering both
+/// ("+465 (+125)") would disambiguate but does not fit a 400 pt popover's
+/// right gutter, so the ambiguous case is removed instead of marked.
+///
+/// ## Colour
+///
+/// One rule: **colour answers the most useful question the surface can
+/// answer.**
+///
+/// - Where a `baseline` is known — the file this one would replace, or
+///   the on-disk file pinned above a manual-search list — colour is the
+///   **comparison**: green means "better than what you have", red means
+///   worse, neutral means level. A release scoring +120 next to a +465
+///   file on disk is a downgrade and must not read as a win just because
+///   its own number is positive.
+/// - Where there is no baseline, colour falls back to the **sign of the
+///   value**, which is the only thing left to say.
+///
+/// The number itself never changes: absolute either way.
 public struct ScoreLabel: View {
     let score: Int
-    /// When non-nil, the view renders `score − existing` as a signed
-    /// delta (green for gains, red for losses, neutral `±0` for a wash).
-    /// `nil` keeps the legacy raw-score rendering used by surfaces that
-    /// just want to show the file's own score with no upgrade context.
-    let existing: Int?
+    /// Score of the file this one is measured against, when there is one.
+    /// `nil` = nothing to compare with, so colour goes by sign.
+    let baseline: Int?
     var size: CGFloat
     var weight: Font.Weight
 
-    public init(score: Int, size: CGFloat = 10, weight: Font.Weight = .semibold) {
+    public init(score: Int, baseline: Int? = nil, size: CGFloat = 10, weight: Font.Weight = .medium) {
         self.score = score
-        self.existing = nil
+        self.baseline = baseline
         self.size = size
         self.weight = weight
     }
 
-    /// Diff-mode initializer — `new` is the incoming file's score,
-    /// `from` the existing file's score it's replacing. Used for queue /
-    /// upgrade rows where the actionable info is "are we gaining or
-    /// losing points?" rather than the absolute number. Falls back to a
-    /// raw `new` render when `from == nil` (fresh download — no
-    /// replacement target to diff against).
-    public init(delta new: Int, from existing: Int?, size: CGFloat = 10, weight: Font.Weight = .semibold) {
-        self.score = new
-        self.existing = existing
-        self.size = size
-        self.weight = weight
+    /// Green / red / neutral for this label, per the rule above.
+    private var tint: Color {
+        guard let baseline else { return Self.color(score) }
+        return Self.deltaColor(score - baseline)
     }
 
     public var body: some View {
-        if let existing {
-            // Diff mode renders absolute + delta — "+465 (+125)" reads as
-            // "score is 465, up by 125" in one glance. The delta is
-            // what's tinted (green / red / neutral) since gain-or-loss
-            // is the actionable signal; the absolute score sits in
-            // primary so it's still legible at a distance.
-            // Absolute score takes the gain/loss tint (it's the headline
-            // number — green for "this download has positive score",
-            // red for negative). The delta sits in a desaturated mint
-            // alongside — present but secondary, since the absolute
-            // already encodes the direction via the sign on the number
-            // itself.
-            let delta = score - existing
-            let scoreSign = score > 0 ? "+" : ""
-            let deltaSign = delta > 0 ? "+" : (delta == 0 ? "±" : "")
-            let scoreColor: Color = score > 0 ? .green : (score < 0 ? .red : .secondary)
-            HStack(spacing: 3) {
-                Text(verbatim: "\(scoreSign)\(score)")
-                    .foregroundStyle(scoreColor)
-                Text(verbatim: "(\(deltaSign)\(delta))")
-                    .foregroundStyle(Color.green.opacity(0.55))
-            }
-            .scaledFont(size: size, weight: weight, monospacedDigit: true)
-            // Sighted users read the green/red tint as "score"; VoiceOver
-            // would just hear two bare numbers. Name the thing, hand the
-            // digits over as its value.
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel(Text("common.customFormatScore.button", bundle: .module))
-            .accessibilityValue(Text(verbatim: "\(scoreSign)\(score) (\(deltaSign)\(delta))"))
-        } else if score != 0 {
-            let sign = score > 0 ? "+" : ""
-            Text(verbatim: "\(sign)\(score)")
-                .scaledFont(size: size, weight: weight)
-                .foregroundStyle(score > 0 ? Color.green : Color.red)
+        if score != 0 {
+            Text(verbatim: Self.text(score))
+                .scaledFont(size: size, weight: weight, monospacedDigit: true)
+                .foregroundStyle(tint)
                 .accessibilityLabel(Text("common.customFormatScore.button", bundle: .module))
-                .accessibilityValue(Text(verbatim: "\(sign)\(score)"))
+                .accessibilityValue(Text(verbatim: Self.text(score)))
         }
+    }
+
+    // MARK: - Shared formatting
+    //
+    // Table and grid cells lay their own text out (aligned columns, fixed
+    // label widths) but must not invent their own signs or colours. They
+    // call these instead, so "what does green mean here" has exactly one
+    // answer per context.
+
+    /// Signed absolute score. Rendered verbatim so a locale's grouping
+    /// separator can't sneak into a four-digit score.
+    public static func text(_ score: Int) -> String {
+        "\(score > 0 ? "+" : "")\(score)"
+    }
+
+    /// Colour for an absolute score — the sign of the value.
+    public static func color(_ score: Int) -> Color {
+        score > 0 ? .green : (score < 0 ? .red : .secondary)
+    }
+
+    /// Signed change. `±0` rather than `0` so a wash reads as "compared,
+    /// no movement" instead of "score is zero".
+    public static func deltaText(_ delta: Int) -> String {
+        delta == 0 ? "±0" : "\(delta > 0 ? "+" : "")\(delta)"
+    }
+
+    /// Colour for a change — the DIRECTION, not the sign of either side.
+    /// A file scoring −200 that replaces one scoring −500 is a gain and
+    /// reads green, even though both numbers are negative. The old code
+    /// painted every delta green unconditionally, so a losing upgrade
+    /// announced itself as a win.
+    public static func deltaColor(_ delta: Int) -> Color {
+        delta > 0 ? .green : (delta < 0 ? .red : .secondary)
     }
 }
 
@@ -419,14 +440,15 @@ public struct ExistingFileDiffRow: View {
                 if showScore {
                     if showQuality || showSize { SeparatorDot() }
                     if let s = existingScore, s != 0 {
-                        ScoreLabel(score: s, size: 11, weight: .regular)
+                        ScoreLabel(score: s, size: 11)
                     }
                     if let existing = existingScore, existing != newScore {
+                        // A comparison surface, so the delta is allowed here —
+                        // and it is coloured by DIRECTION, not by its own sign.
                         let delta = newScore - existing
-                        let sign = delta > 0 ? "+" : ""
-                        Text(verbatim: "(\(sign)\(delta))")
-                            .scaledFont(size: 10, weight: .semibold)
-                            .foregroundStyle(delta > 0 ? Color.green : Color.red)
+                        Text(verbatim: "(\(ScoreLabel.deltaText(delta)))")
+                            .scaledFont(size: 10, weight: .semibold, monospacedDigit: true)
+                            .foregroundStyle(ScoreLabel.deltaColor(delta))
                     }
                 }
             }

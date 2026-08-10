@@ -22,6 +22,12 @@ public struct RadarrMovieDetail: Decodable {
     let movieFile: ArrFile?
     let inCinemas: String?
     let status: String?
+    /// Radarr's monitored flag. `var … = nil` for the same reason as
+    /// `tmdbId` above (decodes from JSON, stays optional in the
+    /// memberwise init) — and `nil` is load-bearing here: "the field
+    /// didn't decode" hides the monitor toggle instead of rendering a
+    /// bookmark that lies about state.
+    var monitored: Bool? = nil
 }
 
 public struct RadarrDetailRatings: Decodable {
@@ -54,8 +60,12 @@ public struct SonarrSeriesDetail: Decodable {
     let status: String?
     let images: [ArrImage]?
     let titleSlug: String?
-    let seasons: [SonarrSeasonInfo]?
+    /// `var` so a monitor toggle can write the flipped season flag back
+    /// in place (optimistic update) without refetching the series.
+    var seasons: [SonarrSeasonInfo]?
     let firstAired: String?
+    /// See `RadarrMovieDetail.monitored`.
+    var monitored: Bool? = nil
 }
 
 public struct SonarrDetailRatings: Decodable {
@@ -65,7 +75,8 @@ public struct SonarrDetailRatings: Decodable {
 
 public struct SonarrSeasonInfo: Decodable {
     let seasonNumber: Int
-    let monitored: Bool?
+    /// `var` for the optimistic in-place write from the monitor toggle.
+    var monitored: Bool?
     let statistics: SonarrSeasonStats?
 }
 
@@ -85,7 +96,8 @@ public struct SonarrEpisodeDetail: Decodable, Identifiable, Hashable {
     let overview: String?
     let airDateUtc: String?
     let hasFile: Bool?
-    let monitored: Bool?
+    /// `var` for the optimistic in-place write from the monitor toggle.
+    var monitored: Bool?
     let runtime: Int?
     /// Sonarr's link to the episode-file record; non-nil exactly when
     /// `hasFile == true`. Lets the detail view fetch the full file
@@ -108,6 +120,8 @@ public struct LidarrAlbumDetail: Decodable {
     let albumType: String?
     let duration: Int?
     let statistics: LidarrAlbumStats?
+    /// See `RadarrMovieDetail.monitored`.
+    var monitored: Bool? = nil
 }
 
 public struct LidarrDetailRatings: Decodable {

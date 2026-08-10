@@ -43,25 +43,29 @@ struct RowTapToOpen: ViewModifier {
     }
 }
 
-/// Whether (and how) a queue row shows its multi-select circle in the poster
-/// slot. `.hidden` keeps the poster (normal mode); the others swap it for a
-/// hollow / filled selection ring.
+/// Whether (and how) a queue row shows its multi-select circle over the
+/// poster. `.hidden` = normal mode (no overlay); the others draw a hollow /
+/// filled selection ring on a dark scrim on top of the artwork.
 enum RowSelectionState { case hidden, unselected, selected }
 
-/// The selection ring that takes the poster's place (same footprint) in
-/// multi-select mode — accent + filled when selected, hollow tertiary otherwise.
+/// The selection ring overlaid ON the poster in multi-select mode — the
+/// artwork stays visible under a dark scrim so the row keeps its identity;
+/// accent + filled when selected, hollow white otherwise.
 struct SelectionCircle: View {
     let selected: Bool
     var body: some View {
-        Image(systemName: selected ? "checkmark.circle.fill" : "circle")
-            .font(.system(size: 20))
-            .foregroundStyle(selected ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.tertiary))
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .contentShape(Rectangle())
-            // The ring mirrors the row's selection state, which the row
-            // itself publishes via the `.isSelected` trait — announcing
-            // "checkmark circle fill" on top of that is just noise.
-            .accessibilityHidden(true)
+        ZStack {
+            RoundedRectangle(cornerRadius: Tokens.Radius.chip)
+                .fill(.black.opacity(selected ? 0.45 : 0.30))
+            Image(systemName: selected ? "checkmark.circle.fill" : "circle")
+                .font(.system(size: 20))
+                .foregroundStyle(selected ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.white.opacity(0.9)))
+        }
+        .contentShape(Rectangle())
+        // The ring mirrors the row's selection state, which the row
+        // itself publishes via the `.isSelected` trait — announcing
+        // "checkmark circle fill" on top of that is just noise.
+        .accessibilityHidden(true)
     }
 }
 
@@ -87,8 +91,8 @@ public struct QueueRowView: View {
     let onResume: () -> Void
     let onDelete: () -> Void
     var onShowDetail: (() -> Void)? = nil
-    /// Multi-select state — `.hidden` (default) shows the poster; otherwise the
-    /// poster slot becomes the selection circle.
+    /// Multi-select state — `.hidden` (default) = no overlay; otherwise the
+    /// selection circle is drawn over the poster.
     var selectionState: RowSelectionState = .hidden
     @EnvironmentObject var configStore: ConfigStore
     /// Surfaces that have a permanent detail pane (the desktop window) set
@@ -124,6 +128,10 @@ public struct QueueRowView: View {
     /// must hide pause/resume because they'd just fail. `.unknown` (not yet
     /// probed) stays allowed; only a confirmed `.down` gates.
     private var canControl: Bool {
+        // Demo has no download client to configure, and hiding pause/resume
+        // there would hide one of the things the demo exists to show. The
+        // action is served by the fixture state — see DemoQueueState.
+        if DemoMode.isActive { return true }
         guard let kind = configStore.selectedDownloadClient(for: item.downloadProtocol) else { return false }
         if case .down = ConnectionHealth.shared.state(for: .arr(kind)) { return false }
         return true
@@ -141,32 +149,34 @@ public struct QueueRowView: View {
 
     public var body: some View {
         HStack(alignment: .top, spacing: 10) {
-            // Multi-select mode replaces the poster with a selection ring (same
-            // footprint, so the row never shifts).
-            if selectionState != .hidden {
-                SelectionCircle(selected: selectionState == .selected)
-                    .frame(width: posterSize.width, height: posterSize.height)
-            } else {
-                PosterBlurContainer(blurred: configStore.shouldBlurPoster(for: item.source), cornerRadius: Tokens.Radius.chip) {
-                    RemotePoster(
-                        url: item.posterURL,
-                        apiKey: item.posterRequiresAuth ? apiKeyForSource : nil,
-                        tier: .icon,
-                        size: posterSize,
-                        cornerRadius: Tokens.Radius.chip,
-                        fallbackSymbol: item.source.symbol
-                    )
+            // Multi-select mode overlays the selection ring ON the poster
+            // (dark scrim + circle) — the artwork stays visible underneath.
+            PosterBlurContainer(blurred: configStore.shouldBlurPoster(for: item.source), cornerRadius: Tokens.Radius.chip) {
+                RemotePoster(
+                    url: item.posterURL,
+                    apiKey: item.posterRequiresAuth ? apiKeyForSource : nil,
+                    tier: .icon,
+                    size: posterSize,
+                    cornerRadius: Tokens.Radius.chip,
+                    fallbackSymbol: item.source.symbol
+                )
+            }
+            // macOS: pause/resume lives ON the poster (hover-revealed). The row
+            // has no delete button — cancelling a download is intentionally out
+            // of the glanceable queue list. Suppressed while selecting — the
+            // poster is the checkbox then.
+            #if os(macOS)
+            .overlay {
+                if selectionState == .hidden && isHovering && canControl && canPauseResume && !isOffline {
+                    posterControl.transition(.opacity)
                 }
-                // macOS: pause/resume lives ON the poster (hover-revealed). The row
-                // has no delete button — cancelling a download is intentionally out
-                // of the glanceable queue list.
-                #if os(macOS)
-                .overlay {
-                    if isHovering && canControl && canPauseResume && !isOffline {
-                        posterControl.transition(.opacity)
-                    }
+            }
+            #endif
+            .overlay {
+                if selectionState != .hidden {
+                    SelectionCircle(selected: selectionState == .selected)
+                        .transition(.opacity)
                 }
-                #endif
             }
 
             VStack(alignment: .leading, spacing: 4) {
@@ -192,59 +202,32 @@ public struct QueueRowView: View {
 
                         Spacer(minLength: 4)
 
-                        // Upgrade/New badge lives here on the title row's
-                        // trailing edge (moved out of the progress card's
-                        // header below).
+                        // Upgrade/New badge on the title line's trailing edge —
+                        // the card's status row below has no room for it next
+                        // to the client label + quality · size spec.
                         MediaBadgeCluster(isUpgrade: item.isUpgrade)
                     }
 
-                    // Status + meta + score row dropped — same info
-                    // now lives inside `DownloadProgressCard`'s
-                    // header below. Quality / size / client all live
-                    // in the long-hover tooltip so the row stays
-                    // glanceable: title + status card, period.
+                    // Status / badge / client / quality / size live in
+                    // `DownloadProgressCard`'s header below; the score
+                    // trails the custom-format strip under it.
                 }
 
                 DownloadProgressCard(
                     item: item,
-                    fadeTrailing: !(isHovering && canControl),
                     showUpgradeDiff: false,
                     showHeader: true,
-                    showBadge: false,
                     compactSpec: true
                 )
 
                 // Custom-format strip replaces the old release-name line:
-                // the incoming file's custom formats as muted chips (TagChip,
-                // like the diff view). Kept to a SINGLE line — overflow fades
-                // out under a trailing transparency gradient instead of
-                // wrapping or hard-clipping.
-                if !item.customFormats.isEmpty {
-                    // A horizontal ScrollView takes the PROPOSED width and
-                    // clips overflow, so it never widens the row (the prior
-                    // `.fixedSize()` propagated the chips' full intrinsic
-                    // width up, making each row as wide as its tag count).
-                    // Scrolling is disabled — the trailing gradient just
-                    // fades the overflow into transparency.
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 3) {
-                            ForEach(item.customFormats, id: \.self) { tag in
-                                TagChip(text: tag, color: .secondary)
-                            }
-                        }
-                    }
-                    .scrollDisabled(true)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .mask(
-                        LinearGradient(
-                            gradient: Gradient(stops: [
-                                .init(color: .black, location: 0),
-                                .init(color: .black, location: 0.85),
-                                .init(color: .clear, location: 1.0),
-                            ]),
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
+                // the incoming file's custom formats as muted chips, with the
+                // custom-format score pinned on the row's trailing edge.
+                if !item.customFormats.isEmpty || item.customFormatScore != 0 {
+                    QueueRowFormatStrip(
+                        formats: item.customFormats,
+                        score: item.customFormatScore,
+                        baseline: item.existingCustomFormatScore
                     )
                 }
             }
@@ -387,6 +370,53 @@ public struct QueueRowView: View {
     #endif
 }
 
+
+// MARK: - Custom-format strip (queue rows)
+
+/// One-line custom-format chip strip with the custom-format score pinned on
+/// the trailing edge. Shared by `QueueRowView` and `QueueGroupRowView` so the
+/// score sits in the same spot on single and season-pack rows. Chips keep to
+/// a SINGLE line — overflow fades out under a trailing transparency gradient
+/// instead of wrapping or hard-clipping.
+struct QueueRowFormatStrip: View {
+    let formats: [String]
+    let score: Int
+    let baseline: Int?
+
+    var body: some View {
+        HStack(spacing: 6) {
+            // A horizontal ScrollView takes the PROPOSED width and clips
+            // overflow, so it never widens the row (a `.fixedSize()` here
+            // would propagate the chips' full intrinsic width up, making
+            // each row as wide as its tag count). Scrolling is disabled —
+            // the trailing gradient just fades the overflow into
+            // transparency.
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 3) {
+                    ForEach(formats, id: \.self) { tag in
+                        TagChip(text: tag, color: .secondary)
+                    }
+                }
+            }
+            .scrollDisabled(true)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .mask(
+                LinearGradient(
+                    gradient: Gradient(stops: [
+                        .init(color: .black, location: 0),
+                        .init(color: .black, location: 0.85),
+                        .init(color: .clear, location: 1.0),
+                    ]),
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
+            if score != 0 {
+                ScoreLabel(score: score, baseline: baseline, size: 10)
+            }
+        }
+    }
+}
 
 // MARK: - Rich tooltip
 

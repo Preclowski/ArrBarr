@@ -360,6 +360,15 @@ public final class QueueAggregator: QueueDataProviding {
     }
 
     func perform(_ action: Action, on item: QueueItem) async throws {
+        // Demo has neither an arr to delete through nor a client to pause — the
+        // in-memory fixture state is the whole backend. Held here rather than in
+        // each client so every route below (arr delete, client pause, force-grab)
+        // is covered by one branch.
+        if DemoMode.isActive {
+            try? await Task.sleep(nanoseconds: 400_000_000)
+            DemoQueueState.perform(action, on: item)
+            return
+        }
         // Delete is routed through the arr API — works for any download client.
         if action == .delete {
             try await deleteViaArr(item)
@@ -423,6 +432,11 @@ public final class QueueAggregator: QueueDataProviding {
     /// The two cases are distinguished by whether all members share the
     /// same non-empty downloadId.
     func deleteAll(_ items: [QueueItem]) async throws {
+        if DemoMode.isActive {
+            try? await Task.sleep(nanoseconds: 400_000_000)
+            for item in items { DemoQueueState.perform(.delete, on: item) }
+            return
+        }
         let downloadIds = Set(items.compactMap { $0.downloadId?.isEmpty == false ? $0.downloadId : nil })
         let sharedDownload = downloadIds.count <= 1
         var first = true

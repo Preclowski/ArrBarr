@@ -531,8 +531,8 @@ public struct SettingsView: View {
         switch section {
         case .general: generalPane
         case .status: ServerStatusView()
-        case .mediaManagers: serviceHubPane(mediaManagerSpecs, locked: false)
-        case .downloadClients: serviceHubPane(downloadClientSpecs, locked: true)
+        case .mediaManagers: serviceHubPane(mediaManagerSpecs, locked: false, reorderable: true)
+        case .downloadClients: serviceHubPane(downloadClientSpecs, locked: true, showsMagnetHandler: true)
         case .service(let kind): singleServicePane(for: kind)
         case .assistant: aiPane
         case .mcp: MCPSettingsPane()
@@ -545,17 +545,34 @@ public struct SettingsView: View {
     /// Hub page: a card list of services (iOS-style). Tapping a card drills
     /// into that service's single-config page via `macSelection` (so the
     /// back/forward arrows return here). Download clients stay Pro-gated.
-    private func serviceHubPane(_ specs: [ServiceSpec], locked: Bool) -> some View {
+    ///
+    /// `reorderable` makes this list double as the queue's section order: the
+    /// cards are already one per arr, so dragging them here beats keeping a
+    /// second copy of the same roster over in General.
+    private func serviceHubPane(
+        _ specs: [ServiceSpec],
+        locked: Bool,
+        reorderable: Bool = false,
+        showsMagnetHandler: Bool = false
+    ) -> some View {
         Form {
             Section {
-                ForEach(specs) { spec in
+                ForEach(reorderable ? orderedByQueueSections(specs) : specs) { spec in
                     Button {
                         macSelection = .service(spec.kind)
                     } label: {
                         HStack(spacing: 10) {
-                            // Brand mark and drill-in chevron are decoration
-                            // around the service name — announcing the asset
-                            // name / "chevron right" adds nothing.
+                            // Grip glyph, brand mark and drill-in chevron are
+                            // decoration around the service name — announcing
+                            // the asset name / "chevron right" adds nothing.
+                            // Reordering itself is `.onMove`, which ships its
+                            // own VoiceOver affordance.
+                            if reorderable {
+                                Image(systemName: "line.3.horizontal")
+                                    .foregroundStyle(.tertiary)
+                                    .scaledFont(size: 11)
+                                    .accessibilityHidden(true)
+                            }
                             ServiceIcon(kind: spec.kind, size: 18)
                                 .accessibilityHidden(true)
                             Text(verbatim: spec.title)
@@ -575,7 +592,18 @@ public struct SettingsView: View {
                     }
                     .buttonStyle(.plain)
                 }
+                .onMove(perform: reorderable ? moveMediaManagers : nil)
+            } footer: {
+                if reorderable {
+                    Text("settings.dragToReorderQueue.footer", bundle: .module)
+                }
             }
+
+            #if os(macOS)
+            if showsMagnetHandler {
+                MagnetHandlerSection()
+            }
+            #endif
         }
         .formStyle(.grouped)
         .disabled(locked && !storeManager.isPro)
@@ -741,7 +769,7 @@ public struct SettingsView: View {
     }
 
     private var iosMediaManagersForm: some View {
-        iosServiceList(mediaManagerSpecs, title: "Media managers")
+        iosServiceList(mediaManagerSpecs, title: "Media managers", reorderable: true)
     }
 
     private var iosDownloadClientsForm: some View {
@@ -755,18 +783,33 @@ public struct SettingsView: View {
     }
 
     /// iOS chrome: each service is a `NavigationLink` row drilling into its
-    /// own screen — same roster as macOS, different presentation.
-    private func iosServiceList(_ specs: [ServiceSpec], title: LocalizedStringKey) -> some View {
+    /// own screen — same roster as macOS, different presentation. Media
+    /// managers are `reorderable`: the list doubles as the queue's section
+    /// order (`.onMove` needs edit mode on iOS, hence the toolbar EditButton).
+    private func iosServiceList(_ specs: [ServiceSpec], title: LocalizedStringKey,
+                                reorderable: Bool = false) -> some View {
         List {
-            ForEach(specs) { spec in
-                iosServiceLink(kind: spec.kind, title: spec.title,
-                               configured: spec.config.wrappedValue.isConfigured) {
-                    serviceFields(spec)
+            Section {
+                ForEach(reorderable ? orderedByQueueSections(specs) : specs) { spec in
+                    iosServiceLink(kind: spec.kind, title: spec.title,
+                                   configured: spec.config.wrappedValue.isConfigured) {
+                        serviceFields(spec)
+                    }
+                }
+                .onMove(perform: reorderable ? moveMediaManagers : nil)
+            } footer: {
+                if reorderable {
+                    Text("settings.dragToReorderQueue.footer", bundle: .module)
                 }
             }
         }
         .navigationTitle(Text(title, bundle: .module))
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if reorderable {
+                ToolbarItem(placement: .topBarTrailing) { EditButton() }
+            }
+        }
     }
 
     private var iosAIForm: some View {
@@ -780,25 +823,16 @@ public struct SettingsView: View {
             // No language picker on iOS — it always follows the system
             // language (see ConfigStore: appLanguage is forced to "system"
             // on iOS).
-            Section {
-                ForEach(configStore.arrOrder, id: \.self) { key in
-                    arrOrderRow(key: key)
-                }
-                .onMove(perform: moveArrOrder)
-            } header: {
-                HStack {
-                    Text("settings.sectionOrder.button", bundle: .module)
-                    Spacer()
-                    EditButton()
-                        .textCase(nil)
-                        .font(.caption)
-                }
-            }
+            // Section *order* lives on the Media-managers screen (the same
+            // roster, drag-sorted there); this screen keeps what each queue
+            // section shows.
+            upcomingSection
+            needsYouSection
             // No theme picker on iOS — it always follows the system
             // appearance (forced in ConfigStore).
-            // iOS has no "Show indexer issues" toggle and no refresh-interval
-            // picker: indexer warnings are off, and foreground polling is a
-            // fixed 5s while the app is open (iOS suspends apps in the
+            // iOS has no "Show warnings" toggle and no refresh-interval
+            // picker: warnings are off (errors only), and foreground polling is
+            // a fixed 5s while the app is open (iOS suspends apps in the
             // background, so there's no configurable background interval).
             // Both are forced in ConfigStore for iOS.
         }
@@ -949,10 +983,14 @@ public struct SettingsView: View {
             Section {
                 Toggle(isOn: $configStore.launchAtLogin) { Text("settings.launchAtLogin.button", bundle: .module) }
                 #if os(macOS)
-                Toggle(isOn: $configStore.detachedWindow) {
-                    Text("settings.showInDockAs.button", bundle: .module)
-                    Text("settings.detachFromTheMenu.tooltip", bundle: .module)
-                }
+                // Menu bar ⇄ standalone window with a Dock icon. A picker, not
+                // a switch: "detached" isn't an option *on* something, it's one
+                // of two places the app lives, and naming both says more than a
+                // paragraph of tooltip under a toggle did.
+                Picker(selection: $configStore.detachedWindow) {
+                    Text("settings.interfaceMode.menuBar", bundle: .module).tag(false)
+                    Text("settings.interfaceMode.window", bundle: .module).tag(true)
+                } label: { Text("settings.interfaceMode.label", bundle: .module) }
                 #endif
                 Picker(selection: $configStore.appLanguage) {
                     ForEach(ConfigStore.appLanguageOptions, id: \.code) { opt in
@@ -962,12 +1000,6 @@ public struct SettingsView: View {
                 themePicker
                 textSizePicker
                 notificationSoundPicker
-                Toggle(isOn: $configStore.notifyHealth) {
-                    Text("settings.notifyHealth.button", bundle: .module)
-                }
-                Text("settings.notifyHealth.footnote", bundle: .module)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
             } header: {
                 Text("settings.application.button", bundle: .module)
             } footer: {
@@ -983,19 +1015,10 @@ public struct SettingsView: View {
                     #endif
                 }
             }
-            Section {
-                Toggle(isOn: $configStore.showWarnings) { Text("settings.showWarnings.label", bundle: .module) }
-            } header: {
-                Text("settings.warnings.header", bundle: .module)
-            } footer: {
-                Text("settings.showWarnings.footer", bundle: .module)
-            }
-            Section {
-                ForEach(configStore.arrOrder, id: \.self) { key in
-                    arrOrderRow(key: key)
-                }
-                .onMove(perform: moveArrOrder)
-            } header: { Text("settings.sectionOrder.button", bundle: .module) }
+            // What each queue section shows. Their *order* is dragged on the
+            // Media-managers page, which lists the same arrs.
+            upcomingSection
+            needsYouSection
             Section {
                 Picker(selection: $configStore.foregroundInterval) {
                     ForEach(ConfigStore.foregroundIntervalOptions, id: \.self) { interval in
@@ -1007,14 +1030,9 @@ public struct SettingsView: View {
                         Text(Self.formatInterval(interval)).tag(interval)
                     }
                 } label: { Text("settings.background.button", bundle: .module) }
-                Picker(selection: $configStore.realtimeSilenceTimeout) {
-                    ForEach(ConfigStore.realtimeSilenceTimeoutOptions, id: \.self) { interval in
-                        Text(Self.formatInterval(interval)).tag(interval)
-                    }
-                } label: { Text("settings.realtimeHealthCheck.button", bundle: .module) }
-                Text("settings.realtimeHealthCheck.footnote", bundle: .module)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+                // No picker for `realtimeSilenceTimeout`: it's the tolerance for
+                // a silent realtime connection, which nobody can reason about
+                // without knowing Servarr's push cycle. Hard-locked to 5m.
             } header: { Text("settings.refreshInterval.button", bundle: .module) }
             // Developer/Demo controls moved to the About pane; Siri & Shortcuts
             // is now its own sidebar row (see siriPane).
@@ -1076,86 +1094,66 @@ public struct SettingsView: View {
     }
     #endif
 
-    private static let arrRowHeight: CGFloat = 24
+    // MARK: - Queue sections
 
-    @ViewBuilder
-    private func arrOrderRow(key: String) -> some View {
-        if let spec = orderRowSpec(for: key) {
-            // Reordering is native (`.onMove`). Keep a grip glyph as the
-            // "you can drag this" affordance (the iOS native grip only shows
-            // in edit mode; macOS has none), but the actual drag is `.onMove`.
-            HStack(spacing: 8) {
-                // Grip glyph + service mark are decoration around the row
-                // title; reordering is `.onMove`, which ships its own
-                // VoiceOver affordance.
-                Image(systemName: "line.3.horizontal")
-                    .foregroundStyle(.tertiary)
-                    .scaledFont(size: 11)
-                    .accessibilityHidden(true)
-                Group {
-                    if let source = QueueItem.Source(rawValue: key) {
-                        ServiceIcon(source: source, size: 13)
-                    } else {
-                        Image(systemName: spec.symbol)
-                    }
-                }
-                .foregroundStyle(.secondary)
-                .frame(width: 16)
-                .accessibilityHidden(true)
-                Text(spec.title)
-                Spacer()
-                if let toggle = visibilityToggle(for: key) {
-                    // `.labelsHidden()` hides the label from the accessibility
-                    // tree too — the switch would announce as a bare "off".
-                    Toggle("", isOn: toggle)
-                        .labelsHidden()
-                        .controlSize(.small)
-                        .toggleStyle(.switch)
-                        .accessibilityLabel(Text(visibilityToggleLabel(for: key) ?? spec.title, bundle: .module))
-                }
+    /// The Upcoming banner: one switch, since its window is hard-locked to
+    /// 7 days (see `ConfigStore.tonightHoursOptions`).
+    private var upcomingSection: some View {
+        Section {
+            Toggle(isOn: $configStore.showTonight) {
+                Text("settings.showUpcoming.label", bundle: .module)
             }
-            .frame(height: Self.arrRowHeight)
-            .contentShape(Rectangle())
-        }
+        } header: { Text("Upcoming", bundle: .module) }
     }
 
-    /// Native reorder applied to the "Section order" ForEach.
-    private func moveArrOrder(from: IndexSet, to: Int) {
-        configStore.arrOrder.move(fromOffsets: from, toOffset: to)
+    /// Everything "Needs you" in one place. The three controls read as one
+    /// setting from a distance but aren't: the first decides whether the
+    /// section renders at all, the second what severity lands in it, the third
+    /// whether *errors* also leave the app as a system notification. Only the
+    /// middle one depends on the section being visible, so only it is disabled
+    /// with it. Severity is a picker rather than a "Show warnings" switch —
+    /// naming both ends ("Errors only" / "Errors and warnings") says what a
+    /// footnote under a toggle had to spell out.
+    @ViewBuilder
+    private var needsYouSection: some View {
+        Section {
+            Toggle(isOn: $configStore.showNeedsYou) {
+                Text("settings.showSection.label", bundle: .module)
+            }
+            // iOS is errors-only by design — ConfigStore forces showWarnings
+            // off there on every load, so a control would spring back.
+            #if os(macOS)
+            Picker(selection: $configStore.showWarnings) {
+                Text("settings.errorsOnly.option", bundle: .module).tag(false)
+                Text("settings.errorsAndWarnings.option", bundle: .module).tag(true)
+            } label: { Text("settings.needsYouSeverity.label", bundle: .module) }
+                .disabled(!configStore.showNeedsYou)
+            #endif
+            Toggle(isOn: $configStore.notifyHealth) {
+                Text("settings.notifyHealth.label", bundle: .module)
+            }
+        } header: { Text("Needs you", bundle: .module) }
     }
 
-    private struct OrderRowSpec {
-        let title: LocalizedStringKey
-        let symbol: String
+    /// Media-manager cards in the order their sections appear in the queue.
+    /// `arrOrder` also carries the two pseudo-sections (Upcoming / Needs you);
+    /// those have switches in General instead, so they're filtered out here.
+    private func orderedByQueueSections(_ specs: [ServiceSpec]) -> [ServiceSpec] {
+        let ranked = configStore.arrOrder.compactMap { key in specs.first { $0.kind.rawValue == key } }
+        let rankedKinds = Set(ranked.map(\.kind))
+        return ranked + specs.filter { !rankedKinds.contains($0.kind) }
     }
 
-    private func visibilityToggle(for key: String) -> Binding<Bool>? {
-        if key == ConfigStore.tonightOrderKey { return $configStore.showTonight }
-        if key == ConfigStore.needsYouOrderKey { return $configStore.showNeedsYou }
-        return nil
-    }
-
-    /// VoiceOver label for the row's visibility switch. The switch is
-    /// `.labelsHidden()`, so it has no name of its own — these say what the
-    /// toggle actually does ("Show Tonight banner") rather than repeating the
-    /// row title, which reads as a duplicate of the element right before it.
-    private func visibilityToggleLabel(for key: String) -> LocalizedStringKey? {
-        if key == ConfigStore.tonightOrderKey { return "common.showTonightBanner.button" }
-        if key == ConfigStore.needsYouOrderKey { return "common.showNeedsYou.button" }
-        return nil
-    }
-
-    private func orderRowSpec(for key: String) -> OrderRowSpec? {
-        if key == ConfigStore.tonightOrderKey {
-            return .init(title: "Upcoming", symbol: "moon.stars.fill")
-        }
-        if key == ConfigStore.needsYouOrderKey {
-            return .init(title: "Needs you", symbol: "exclamationmark.bubble.fill")
-        }
-        if let source = QueueItem.Source(rawValue: key) {
-            return .init(title: LocalizedStringKey(source.displayName), symbol: source.symbol)
-        }
-        return nil
+    /// Apply a card drag back to `arrOrder`. The arrs are permuted among the
+    /// slots arr keys already held, so Upcoming and Needs you keep the position
+    /// they have in the queue — this list has no row for them to move.
+    private func moveMediaManagers(from source: IndexSet, to destination: Int) {
+        var order = configStore.arrOrder
+        let slots = order.indices.filter { QueueItem.Source(rawValue: order[$0]) != nil }
+        var keys = slots.map { order[$0] }
+        keys.move(fromOffsets: source, toOffset: destination)
+        for (slot, key) in zip(slots, keys) { order[slot] = key }
+        configStore.arrOrder = order
     }
 
     private static var versionString: String {

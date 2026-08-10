@@ -4,6 +4,11 @@ public struct DiscoverTabView: View {
     var viewModel: DiscoverViewModel
     let llmAvailable: Bool
     let radarrAvailable: Bool
+    /// True while the agent is working on a turn. The top-up round IS a chat
+    /// turn, so this is the honest answer to "are we still looking?" — far
+    /// better than a fixed timer, which either cuts the wait short or leaves a
+    /// spinner up long after the agent gave up.
+    var moreInFlight: Bool = false
     let onClose: () -> Void
     let onRequestMore: (_ mood: String, _ kept: [DiscoverItem], _ skipped: [DiscoverItem]) -> Void
 
@@ -13,15 +18,25 @@ public struct DiscoverTabView: View {
     /// appended round comes back via a chat round-trip, so the button shows a
     /// spinner until fresh cards land (or a timeout re-enables it for a retry).
     @State private var requestingMore: Bool = false
+    /// `sessionTotal` at the moment we last kicked off a background top-up.
+    /// The round-trip only bumps `sessionTotal` when items actually land, so
+    /// comparing against it both throttles the trigger (one request per
+    /// deck-tail) and re-arms it as soon as the deck genuinely grew.
+    @State private var prefetchedAtTotal: Int?
+    /// Escape hatch for a round that never resolves. Held so a new request
+    /// can cancel the previous one's timer instead of racing it.
+    @State private var moreTimeout: Task<Void, Never>?
 
     public init(viewModel: DiscoverViewModel,
                 llmAvailable: Bool,
                 radarrAvailable: Bool,
+                moreInFlight: Bool = false,
                 onClose: @escaping () -> Void,
                 onRequestMore: @escaping (_ mood: String, _ kept: [DiscoverItem], _ skipped: [DiscoverItem]) -> Void = { _, _, _ in }) {
         self.viewModel = viewModel
         self.llmAvailable = llmAvailable
         self.radarrAvailable = radarrAvailable
+        self.moreInFlight = moreInFlight
         self.onClose = onClose
         self.onRequestMore = onRequestMore
     }
@@ -51,6 +66,89 @@ public struct DiscoverTabView: View {
                     actionButtons
                 }
             }
+            // Top up the deck while the user is still swiping rather than
+            // after they've hit the wall. The refill is a chat round-trip
+            // (see `requestMore`), so waiting for the empty state meant
+            // staring at a button and a spinner for several seconds; starting
+            // it on the second-to-last card usually means the cards are just
+            // there. The empty state keeps its button as the fallback for when
+            // the round-trip is slow or never lands.
+            .onChange(of: viewModel.queue.count) { _, remaining in
+                guard remaining <= 1 else { return }
+                prefetchMoreIfNeeded()
+            }
+            // Items landed — the round is over, whatever the timer thinks.
+            .onChange(of: viewModel.sessionTotal) { _, _ in
+                finishRequestingMore()
+            }
+            // The agent stopped working. Either it produced picks (handled
+            // above) or it answered without calling the tool — either way
+            // there is nothing left to wait for, so stop claiming there is.
+            .onChange(of: moreInFlight) { wasInFlight, nowInFlight in
+                guard wasInFlight, !nowInFlight else { return }
+                finishRequestingMore()
+                // If we skipped a top-up because the agent was mid-turn, this
+                // is the moment to take it. Can't loop: `prefetchedAtTotal`
+                // only re-arms once items actually land.
+                if viewModel.queue.count <= 1 { prefetchMoreIfNeeded() }
+            }
+            .onDisappear { moreTimeout?.cancel() }
+    }
+
+    /// Fires one background top-up per deck-tail. Deliberately reuses
+    /// `requestingMore`: if the deck does run dry before the round-trip
+    /// lands, the empty-state button is already showing its spinner and
+    /// disabled, so the user can't fire a second identical request.
+    private func prefetchMoreIfNeeded() {
+        // Same preconditions as the empty-state button — without an LLM the
+        // request goes nowhere, and without engagement it has no signal to
+        // feed back ("more like WHAT?").
+        guard llmAvailable,
+              viewModel.current != nil,
+              viewModel.hasSessionEngagement,
+              !isLookingForMore,
+              prefetchedAtTotal != viewModel.sessionTotal else { return }
+        // The host drops the request when the agent is mid-turn, so firing
+        // now would leave a "looking for more" state with nothing behind it.
+        // `onChange(of: moreInFlight)` retries the moment the agent frees up.
+        guard !moreInFlight else { return }
+        prefetchedAtTotal = viewModel.sessionTotal
+        requestMore()
+    }
+
+    /// True whenever a top-up is genuinely outstanding — either we just asked,
+    /// or the agent is still working on the turn.
+    private var isLookingForMore: Bool { requestingMore || moreInFlight }
+
+    /// Shared by the background top-up and the empty-state button so both
+    /// paths get the same in-flight feedback.
+    ///
+    /// The in-flight state ends when the WORK ends — `moreInFlight` going
+    /// quiet, or items actually landing — not on a stopwatch. It used to be a
+    /// flat 12 s timer, which was survivable while the timer started on a
+    /// button tap, and broke the moment the background top-up started it one
+    /// or two cards earlier: by the time the deck ran dry most of the budget
+    /// was already spent, so the "looking for more" state expired mid-flight
+    /// and dumped the user back on the end-of-deck screen while the round was
+    /// still running. The remaining timeout is only a stuck-state escape.
+    private func requestMore() {
+        moreTimeout?.cancel()
+        requestingMore = true
+        onRequestMore(viewModel.moodText,
+                      viewModel.sessionMatched,
+                      viewModel.sessionSkipped)
+        moreTimeout = Task { @MainActor in
+            try? await Task.sleep(for: .seconds(90))
+            guard !Task.isCancelled else { return }
+            requestingMore = false
+        }
+    }
+
+    /// Ends the in-flight state and cancels its escape timer.
+    private func finishRequestingMore() {
+        moreTimeout?.cancel()
+        moreTimeout = nil
+        requestingMore = false
     }
 
     /// Gradient darken behind the top chrome — transparent by ~90pt down so it
@@ -89,10 +187,6 @@ public struct DiscoverTabView: View {
 
     private var floatingTopChrome: some View {
         ZStack {
-            if !activeFilterSummary.isEmpty {
-                filterSummaryChip
-                    .frame(maxWidth: 220)
-            }
             HStack {
                 // The same bare-chevron control every other surface uses
                 // (DetailView / Search / Season / Episode) — not a one-off glass
@@ -241,132 +335,124 @@ public struct DiscoverTabView: View {
         }
     }
 
-    // MARK: - Top-chrome pieces
-
-    private var activeFilterSummary: String {
-        let mood = viewModel.moodText.trimmingCharacters(in: .whitespaces)
-        guard !mood.isEmpty else { return "" }
-        return mood.count > 40 ? String(mood.prefix(40)) + "\u{2026}" : mood
-    }
-
-    private var filterSummaryChip: some View {
-        HStack(spacing: 6) {
-            Image(systemName: "line.3.horizontal.decrease")
-                .scaledFont(size: 10, weight: .semibold)
-                .foregroundStyle(.secondary)
-            Text(activeFilterSummary)
-                .scaledFont(size: 11, weight: .medium)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-                .truncationMode(.middle)
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 5)
-        .glassPill()
-    }
-
     // MARK: - Empty stack
 
+    /// Two states, never mixed. While a round is in flight the surface says
+    /// exactly one thing — that we're looking — because a spinner buried
+    /// inside a button, under a heading, next to two other actions reads as
+    /// "something is happening somewhere" rather than as an answer. Once
+    /// there's nothing in flight it becomes a plain end-of-deck message with a
+    /// single primary action.
+    ///
+    /// The previous layout had four competing weights stacked in a row (icon,
+    /// heading, a semibold link that outweighed the heading, then the CTA) and
+    /// no sentence telling the user what had actually happened.
     @ViewBuilder
     private var emptyStackState: some View {
         VStack(spacing: 10) {
             Spacer()
-            Image(systemName: "rectangle.stack.fill")
-                .scaledFont(size: 22, weight: .light)
-                .foregroundStyle(.tertiary)
-            Text("discover.noMoreCards.button", bundle: .module)
-                .scaledFont(size: 12)
-                .foregroundStyle(.secondary)
+            if isLookingForMore {
+                ProgressView()
+                    .controlSize(.small)
+                Text("discover.lookingForMore.label", bundle: .module)
+                    .scaledFont(size: 13, weight: .medium)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 24)
+            } else {
+                Image(systemName: "rectangle.stack.fill")
+                    .scaledFont(size: 26, weight: .light)
+                    .foregroundStyle(.tertiary)
+                // Headline outranks everything below it now — it used to be
+                // the smallest, faintest text on screen.
+                Text("discover.noMoreCards.button", bundle: .module)
+                    .scaledFont(size: 15, weight: .semibold)
+                    .foregroundStyle(.primary)
+                Text("discover.thatsEverything.label", bundle: .module)
+                    .scaledFont(size: 11)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 24)
+                // Needs the agent to fetch a fresh appended round (see
+                // PopoverContentView.requestMoreQuizPicks), so only offer it when an
+                // LLM is actually available — otherwise the tap goes nowhere.
+                if llmAvailable && viewModel.hasSessionEngagement {
+                    Button {
+                        requestMore()
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "sparkles")
+                                .scaledFont(size: 12, weight: .semibold)
+                            Text("discover.morePicksLikeThese.button", bundle: .module)
+                                .scaledFont(size: 13, weight: .semibold)
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .padding(.top, 4)
+                }
+                if viewModel.llmPoolExhausted && llmAvailable
+                   && !viewModel.moodText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    Button {
+                        Task { await viewModel.requestMoreLLM() }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "sparkles")
+                            Text("discover.moreAiSuggestions.button", bundle: .module)
+                        }
+                        .scaledFont(size: 11, weight: .semibold)
+                        .padding(.horizontal, 10).padding(.vertical, 5)
+                        .background(Capsule().fill(Color.purple.opacity(0.12)))
+                        .foregroundStyle(.purple)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            // Always last and always quiet — it's the way out, not an action
+            // competing with the one the user probably wants.
             Button {
                 onClose()
             } label: {
                 Text("discover.backToMood.button", bundle: .module)
-                    .scaledFont(size: 11, weight: .semibold)
+                    .scaledFont(size: 11)
                     .foregroundStyle(.secondary)
             }
             .buttonStyle(.plain)
-            // Needs the agent to fetch a fresh appended round (see
-            // PopoverContentView.requestMoreQuizPicks), so only offer it when an
-            // LLM is actually available — otherwise the tap goes nowhere.
-            if llmAvailable && viewModel.hasSessionEngagement {
-                Button {
-                    requestingMore = true
-                    onRequestMore(viewModel.moodText,
-                                  viewModel.sessionMatched,
-                                  viewModel.sessionSkipped)
-                    // The appended round arrives via a chat round-trip, so give
-                    // in-flight feedback. On success `extend` sets `current` and
-                    // this whole empty state is replaced before the timeout; the
-                    // timeout only fires if the agent never called the tool, so
-                    // the button re-enables for a retry instead of spinning
-                    // forever.
-                    Task { @MainActor in
-                        try? await Task.sleep(nanoseconds: 12_000_000_000)
-                        requestingMore = false
-                    }
-                } label: {
-                    HStack(spacing: 6) {
-                        if requestingMore {
-                            ProgressView()
-                                .controlSize(.small)
-                        } else {
-                            Image(systemName: "sparkles")
-                                .scaledFont(size: 12, weight: .semibold)
-                        }
-                        Text("discover.morePicksLikeThese.button", bundle: .module)
-                            .scaledFont(size: 13, weight: .semibold)
-                    }
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 8)
+            .padding(.top, 2)
+            // Setup hints and per-source diagnostics explain an EMPTY deck.
+            // While a round is in flight they'd contradict the one thing the
+            // surface is saying, so they wait until it settles.
+            if !isLookingForMore {
+                if !radarrAvailable {
+                    Text("discover.configureRadarrInSettings.tooltip",
+                         bundle: .module)
+                        .scaledFont(size: 10)
+                        .foregroundStyle(.tertiary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 24)
+                        .padding(.top, 4)
                 }
-                .buttonStyle(.borderedProminent)
-                .disabled(requestingMore)
-                .padding(.top, 6)
-            }
-            if viewModel.llmPoolExhausted && llmAvailable
-               && !viewModel.moodText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                Button {
-                    Task { await viewModel.requestMoreLLM() }
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "sparkles")
-                        Text("discover.moreAiSuggestions.button", bundle: .module)
-                    }
-                    .scaledFont(size: 11, weight: .semibold)
-                    .padding(.horizontal, 10).padding(.vertical, 5)
-                    .background(Capsule().fill(Color.purple.opacity(0.12)))
-                    .foregroundStyle(.purple)
+                if !llmAvailable {
+                    Text("discover.configureAnLlmProvider.tooltip",
+                         bundle: .module)
+                        .scaledFont(size: 12)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 24)
                 }
-                .buttonStyle(.plain)
-            }
-            if !radarrAvailable {
-                Text("discover.configureRadarrInSettings.tooltip",
-                     bundle: .module)
-                    .scaledFont(size: 10)
-                    .foregroundStyle(.tertiary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 24)
-                    .padding(.top, 4)
-            }
-            if !llmAvailable {
-                Text("discover.configureAnLlmProvider.tooltip",
-                     bundle: .module)
-                    .scaledFont(size: 12)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 24)
-            }
-            if !viewModel.failedSources.isEmpty {
-                Text(failureBadgeText)
-                    .scaledFont(size: 10)
-                    .foregroundStyle(.tertiary)
-            }
-            let counts = viewModel.lastFetchedCounts
-            if !counts.isEmpty {
-                Text(verbatim: countsLabel(counts))
-                    .scaledFont(size: 10)
-                    .foregroundStyle(.tertiary)
-                    .padding(.top, 4)
+                if !viewModel.failedSources.isEmpty {
+                    Text(failureBadgeText)
+                        .scaledFont(size: 10)
+                        .foregroundStyle(.tertiary)
+                }
+                let counts = viewModel.lastFetchedCounts
+                if !counts.isEmpty {
+                    Text(verbatim: countsLabel(counts))
+                        .scaledFont(size: 10)
+                        .foregroundStyle(.tertiary)
+                        .padding(.top, 4)
+                }
             }
             Spacer()
         }

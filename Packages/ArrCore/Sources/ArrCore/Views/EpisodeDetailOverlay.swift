@@ -24,10 +24,15 @@ public struct EpisodeDetailOverlay: View {
     /// of the per-episode async `/episodefile/{id}` fetch we used to
     /// fire, which returned nil in demo and broke the diff view.
     let episodeFile: SonarrEpisodeFile?
-    /// Active queue item for this episode (when one's downloading).
-    /// Powers the "new file" section that sits alongside the existing
-    /// file — both can be present (upgrade in progress).
-    let queueItem: QueueItem?
+    /// ALL active queue items for this episode (usually 0 or 1; 2+ when the
+    /// same episode was grabbed twice). Powers the "new file" section that
+    /// sits alongside the existing file — both can be present (upgrade in
+    /// progress). With duplicates, every download renders its own block with
+    /// its own pause/cancel controls.
+    let queueItems: [QueueItem]
+    /// Representative download — first of `queueItems`. Single-download
+    /// paths (CTA strip, toolbar trash, diff section) act on this.
+    private var queueItem: QueueItem? { queueItems.first }
     let onClose: () -> Void
     let onSearch: ((Int) async -> Void)?
     /// Pause/Resume/Cancel closures for the active queueItem — wired
@@ -62,9 +67,27 @@ public struct EpisodeDetailOverlay: View {
     /// than gating behind a spinner. Defaults off for the from-series flow,
     /// which always passes a fully-loaded episode.
     var isLoadingDetails: Bool = false
+    /// Monitored flag, passed in EXPLICITLY rather than read off `episode`.
+    /// This view is pushed via `.navigationDestination(item:)`, so `episode`
+    /// is the snapshot captured when the row was tapped — reading the flag
+    /// from it would give a bookmark that never changes after it's flipped.
+    /// The parent recomputes this from its live episode array on every body
+    /// pass. `nil` renders no bookmark.
+    var monitored: Bool? = nil
+
+    @ViewBuilder
+    private var monitorToggle: some View {
+        if let monitored {
+            MonitorToggleButton(isMonitored: monitored, entity: .episode)
+        }
+    }
 
     @State private var isSearching = false
     @State private var ctaPendingDelete = false
+    /// Which of the duplicate downloads a per-block trash tap wants to
+    /// cancel (duplicate-grab path only; the single-download path keeps
+    /// using `ctaPendingDelete` + `queueItem`).
+    @State private var pendingDeleteItem: QueueItem?
     @State private var didSearch = false
     @State private var showSearchConfirm = false
     /// Own poster lightbox — set when the user taps the hero poster.
@@ -116,7 +139,7 @@ public struct EpisodeDetailOverlay: View {
         posterRequiresAuth: Bool,
         apiKey: String?,
         episodeFile: SonarrEpisodeFile? = nil,
-        queueItem: QueueItem? = nil,
+        queueItems: [QueueItem] = [],
         onClose: @escaping () -> Void,
         onSearch: ((Int) async -> Void)?,
         warningActionURL: URL? = nil,
@@ -126,7 +149,8 @@ public struct EpisodeDetailOverlay: View {
         onTapSeries: (() -> Void)? = nil,
         onTapSeason: (() -> Void)? = nil,
         seriesYear: Int? = nil,
-        isLoadingDetails: Bool = false
+        isLoadingDetails: Bool = false,
+        monitored: Bool? = nil
     ) {
         self.episode = episode
         self.seriesTitle = seriesTitle
@@ -135,7 +159,7 @@ public struct EpisodeDetailOverlay: View {
         self.posterRequiresAuth = posterRequiresAuth
         self.apiKey = apiKey
         self.episodeFile = episodeFile
-        self.queueItem = queueItem
+        self.queueItems = queueItems
         self.onClose = onClose
         self.onSearch = onSearch
         self.warningActionURL = warningActionURL
@@ -146,6 +170,7 @@ public struct EpisodeDetailOverlay: View {
         self.onTapSeason = onTapSeason
         self.seriesYear = seriesYear
         self.isLoadingDetails = isLoadingDetails
+        self.monitored = monitored
     }
 
     public var body: some View {
@@ -170,6 +195,7 @@ public struct EpisodeDetailOverlay: View {
                     .foregroundStyle(.primary)
                     .lineLimit(1)
                 Spacer(minLength: 0)
+                monitorToggle
                 if let url = warningActionURL {
                     Button { PlatformURLOpener.open(url) } label: {
                         Image(systemName: "safari")
@@ -216,9 +242,12 @@ public struct EpisodeDetailOverlay: View {
             apiKey: posterRequiresAuth ? apiKey : nil,
             aspectRatio: 2.0 / 3.0
         )
-        // Manual-search ("Download") drill-down — releases for this episode.
+        // Manual-search ("Download") drill-down — releases for this episode,
+        // diffed against the episode file on disk when there is one.
         .navigationDestination(item: $manualSearchTarget) { wrapper in
-            ReleaseListView(target: wrapper.target, onBack: { manualSearchTarget = nil })
+            ReleaseListView(target: wrapper.target,
+                            existing: episodeFile.map(UpgradeDiffView.side(episodeFile:)),
+                            onBack: { manualSearchTarget = nil })
         }
         #if os(iOS)
         .navigationTitle(navTitleString)
@@ -236,6 +265,11 @@ public struct EpisodeDetailOverlay: View {
         // bug. Single placement, cluster ordered left-to-right.
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
+                // iOS-only: macOS already carries the bookmark in the self-drawn
+                // header above, and adding it here too would double it up.
+                #if os(iOS)
+                monitorToggle
+                #endif
                 // Detached window surfaces Safari in the self-drawn header above
                 // (the toolbar bar doesn't render in the hand-built NSWindow).
                 if !isDetachedWindow, let url = warningActionURL {
@@ -248,7 +282,9 @@ public struct EpisodeDetailOverlay: View {
                 // iOS: delete in the toolbar, to the RIGHT of Safari.
                 // macOS surfaces it next to the Resume CTA instead.
                 #if os(iOS)
-                if queueItem != nil, onDeleteEpisode != nil {
+                // Single download only — with duplicates each block carries
+                // its own trash, so a toolbar-level one would be ambiguous.
+                if queueItems.count == 1, onDeleteEpisode != nil {
                     Button { PanelActivation.bringForward(); ctaPendingDelete = true } label: {
                         Image(systemName: "trash")
                     }
@@ -282,23 +318,46 @@ public struct EpisodeDetailOverlay: View {
                 if let q = queueItem { onDeleteEpisode?(q); onClose() }
             }
         )
+        // Per-download cancel for the duplicate-grab path. Deliberately does
+        // NOT close the overlay — the other download is still live and the
+        // list re-derives to show what's left.
+        .inlineConfirm(
+            isPresented: Binding(
+                get: { pendingDeleteItem != nil },
+                set: { if !$0 { pendingDeleteItem = nil } }
+            ),
+            title: "Cancel this download?",
+            message: LocalizedStringKey("This will remove the download from the client."),
+            confirmLabel: "Cancel download",
+            cancelLabel: "Keep download",
+            isDestructive: true,
+            onConfirm: {
+                if let q = pendingDeleteItem { onDeleteEpisode?(q) }
+                pendingDeleteItem = nil
+            }
+        )
     }
 
     private var shouldShowCTAStrip: Bool {
-        let canPauseResume = (queueItem?.status == .downloading || queueItem?.status == .paused)
+        // Duplicate grabs: the bottom strip's single pause/cancel would be
+        // ambiguous — each download block carries its own controls instead.
+        let canPauseResume = queueItems.count == 1
+            && (queueItem?.status == .downloading || queueItem?.status == .paused)
             && ((queueItem?.isPaused == true && onResumeEpisode != nil)
                 || (queueItem?.isPaused == false && onPauseEpisode != nil))
         // Library episode that isn't downloading → offer manual search
         // ("Download"). Aired-only so we don't query indexers for future eps.
         let canManualSearch = hasAired && queueItem == nil
         // Trash + Safari moved to the toolbar; bottom strip only renders if a
-        // primary verb (pause/resume, download, search) needs a place.
-        return canPauseResume || canManualSearch
+        // primary verb (pause/resume, download, search) needs a place. With
+        // duplicate grabs the strip carries manual search alone.
+        return canPauseResume || canManualSearch || queueItems.count > 1
     }
 
     @ViewBuilder
     private var episodeCTAStrip: some View {
-        let canPauseResume = (queueItem?.status == .downloading || queueItem?.status == .paused)
+        let canPauseResume = queueItems.count == 1
+            && (queueItem?.status == .downloading || queueItem?.status == .paused)
             && ((queueItem?.isPaused == true && onResumeEpisode != nil)
                 || (queueItem?.isPaused == false && onPauseEpisode != nil))
         // Auto-search (queues an EpisodeSearch command); manual "Download" opens
@@ -310,7 +369,11 @@ public struct EpisodeDetailOverlay: View {
         let canSearch = onSearch != nil && hasAired && queueItem == nil
         let canManualSearch = hasAired && queueItem == nil
         HStack(spacing: 8) {
-            if canPauseResume, let q = queueItem {
+            if queueItems.count > 1 {
+                // Duplicate grabs: per-block controls own pause/cancel; the
+                // strip only offers jumping into the release list.
+                ctaDownloadButton(compact: true)
+            } else if canPauseResume, let q = queueItem {
                 ctaPauseResume(q: q)
                 #if os(macOS)
                 // macOS: delete next to Resume — same prominent capsule shape as
@@ -319,6 +382,9 @@ public struct EpisodeDetailOverlay: View {
                     ctaCancelProminent
                 }
                 #endif
+                // Third action while a single download runs — grab a different
+                // release without cancelling first.
+                ctaDownloadButton(compact: true)
             } else if canManualSearch {
                 ctaDownload
                 if canSearch { ctaSearch }
@@ -327,7 +393,14 @@ public struct EpisodeDetailOverlay: View {
     }
 
     @ViewBuilder
-    private var ctaDownload: some View {
+    private var ctaDownload: some View { ctaDownloadButton(compact: false) }
+
+    /// `compact` shows the bare "Search" verb — used when the button shares
+    /// the strip with pause + cancel (or stands in for them on duplicate
+    /// grabs); the idle pair keeps "Manual search" to stay distinguishable
+    /// from "Automatic search".
+    @ViewBuilder
+    private func ctaDownloadButton(compact: Bool) -> some View {
         Button {
             manualSearchTarget = EpisodeReleaseSearch(target: .episode(episodeId: episode.id, title: navTitleString))
         } label: {
@@ -335,13 +408,14 @@ public struct EpisodeDetailOverlay: View {
                 Image(systemName: "magnifyingglass")
                     .scaledFont(size: 11, weight: .semibold)
                     .accessibilityHidden(true)
-                Text("Manual search", bundle: .module)
+                Text(compact ? "Search" : "Manual search", bundle: .module)
                     .scaledFont(size: 12, weight: .semibold)
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 7)
         }
         .modifier(GlassProminentButtonStyle())
+        .accessibilityLabel(Text("Manual search", bundle: .module))
     }
 
     @ViewBuilder
@@ -364,7 +438,9 @@ public struct EpisodeDetailOverlay: View {
                 Image(systemName: "trash")
                     .scaledFont(size: 11, weight: .semibold)
                     .accessibilityHidden(true)
-                Text("queue.cancelDownload.button", bundle: .module)
+                // Short verb — the strip fits three capsules; accessibility
+                // below keeps the full "Cancel download".
+                Text("common.cancel.button", bundle: .module)
                     .scaledFont(size: 12, weight: .semibold)
             }
             .frame(maxWidth: .infinity)
@@ -372,6 +448,7 @@ public struct EpisodeDetailOverlay: View {
         }
         .modifier(GlassProminentButtonStyle())
         .tint(.red)
+        .accessibilityLabel(Text("queue.cancelDownload.button", bundle: .module))
         // Destructive: spell out the consequence, since "Cancel download"
         // alone doesn't say the client loses the transfer.
         .accessibilityHint(Text("This will remove the download from the client.", bundle: .module))
@@ -565,7 +642,9 @@ public struct EpisodeDetailOverlay: View {
     ///   - Existing only: ExistingFileBanner.
     @ViewBuilder
     private var fileSection: some View {
-        if let q = queueItem, let existing = episodeFile, episode.hasFile == true {
+        if queueItems.count > 1 {
+            duplicateDownloadsSection
+        } else if let q = queueItem, let existing = episodeFile, episode.hasFile == true {
             queueFileWithDiff(new: q, existing: existing)
         } else if let q = queueItem {
             queueFileSection(q)
@@ -575,6 +654,105 @@ public struct EpisodeDetailOverlay: View {
             VStack(alignment: .leading, spacing: 6) {
                 InLibraryBadge()
                 ExistingFileBanner(episodeFile: existing)
+            }
+        }
+    }
+
+    /// Duplicate-grab path: 2+ active downloads for this one episode. Every
+    /// download renders its own progress card with its OWN pause/cancel row
+    /// (the bottom CTA strip is suppressed — a single pause there would be
+    /// ambiguous). The on-disk file (upgrade target), when present, renders
+    /// once below — it's shared by both downloads, so per-block diffs would
+    /// just repeat it.
+    @ViewBuilder
+    private var duplicateDownloadsSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 6) {
+                Text("queue.inQueue.button", bundle: .module)
+                    .scaledFont(size: 11, weight: .semibold)
+                    .foregroundStyle(.secondary)
+                SeparatorDot()
+                Text(String.localizedStringWithFormat(
+                    NSLocalizedString("unit.downloads", bundle: .module, comment: ""),
+                    queueItems.count
+                ))
+                .scaledFont(size: 11)
+                .foregroundStyle(.secondary)
+            }
+            ForEach(queueItems) { q in
+                duplicateDownloadBlock(q)
+            }
+            if let existing = episodeFile, episode.hasFile == true {
+                ExistingFileBanner(episodeFile: existing)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func duplicateDownloadBlock(_ q: QueueItem) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .center, spacing: 10) {
+                // Pause/resume in the poster-control chrome (progress ring,
+                // adaptive tint) — same treatment as the movie multi-list.
+                // Cancel lives in the block's context menu, like queue rows.
+                if q.status == .downloading || q.status == .paused {
+                    Button {
+                        Task {
+                            if q.isPaused { await onResumeEpisode?(q) }
+                            else { await onPauseEpisode?(q) }
+                        }
+                    } label: {
+                        DownloadProgressRing(
+                            systemName: q.isPaused ? "play.fill" : "pause.fill",
+                            progress: q.progress,
+                            diameter: 24,
+                            lineWidth: 2,
+                            tint: .primary
+                        )
+                        .frame(width: 30, height: 30)
+                        .contentShape(Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .help(q.isPaused
+                          ? Text("queue.resume.button", bundle: .module)
+                          : Text("queue.pause.button", bundle: .module))
+                    .accessibilityLabel(q.isPaused
+                                        ? Text("queue.resume.button", bundle: .module)
+                                        : Text("queue.pause.button", bundle: .module))
+                }
+                DownloadProgressCard(item: q, showUpgradeDiff: false, showHeader: true)
+            }
+            if !q.statusMessages.isEmpty {
+                QueueStatusMessagesBanner(
+                    messages: q.statusMessages,
+                    tint: q.status.tint,
+                    actionURL: warningActionURL
+                )
+            }
+            ReleaseNameBlock(release: q.releaseName)
+        }
+        .contentShape(Rectangle())
+        .contextMenu {
+            if q.status == .downloading || q.status == .paused {
+                Button {
+                    Task {
+                        if q.isPaused { await onResumeEpisode?(q) }
+                        else { await onPauseEpisode?(q) }
+                    }
+                } label: {
+                    if q.isPaused {
+                        Label { Text("queue.resume.button", bundle: .module) } icon: { Image(systemName: "play.fill") }
+                    } else {
+                        Label { Text("queue.pause.button", bundle: .module) } icon: { Image(systemName: "pause.fill") }
+                    }
+                }
+            }
+            if onDeleteEpisode != nil {
+                Button(role: .destructive) {
+                    pendingDeleteItem = q
+                } label: {
+                    Label { Text("queue.removeFromQueue.button", bundle: .module) } icon: { Image(systemName: "trash") }
+                }
             }
         }
     }
@@ -596,7 +774,6 @@ public struct EpisodeDetailOverlay: View {
             DownloadProgressCard(
                 item: q,
                 showHeader: true,
-                showProgressFill: false,
                 existingOverride: DownloadProgressCard.ExistingFileSnapshot(
                     quality: existing.quality?.name,
                     size: existing.size,
@@ -630,7 +807,7 @@ public struct EpisodeDetailOverlay: View {
     @ViewBuilder
     private func queueFileSection(_ q: QueueItem) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            DownloadProgressCard(item: q, showUpgradeDiff: false, showHeader: true, showProgressFill: false)
+            DownloadProgressCard(item: q, showUpgradeDiff: false, showHeader: true)
             if !q.statusMessages.isEmpty {
                 QueueStatusMessagesBanner(
                     messages: q.statusMessages,

@@ -32,19 +32,30 @@ extension DemoMocks {
     /// stable across reloads and varies row-to-row — same hash trick
     /// the queue-row mocks already use.
     public static func sonarrEpisodeFileMap(seriesId: Int) -> [Int: SonarrEpisodeFile] {
+        // Qualities/formats are older than anything the manual-search fixtures
+        // offer, so every candidate release reads as a genuine upgrade in the
+        // diff rather than a lateral move.
+        let tiers: [(quality: String, formats: [String])] = [
+            ("HDTV-720p", ["x264", "AAC 2.0"]),
+            ("WEBRip-480p", ["x264"]),
+            ("WEBDL-1080p", ["x264", "AAC 2.0", "Repack"]),
+        ]
         var map: [Int: SonarrEpisodeFile] = [:]
         for ep in sonarrEpisodes(seriesId: seriesId) where ep.hasFile == true {
             guard let fid = ep.episodeFileId else { continue }
             let score = 200 + (fid * 37) % 400      // deterministic spread 200…600
             let size = Int64(1_500_000_000 + (fid * 53) % 1_500_000_000)
+            let tier = tiers[fid % tiers.count]
+            let season = String(format: "%02d", ep.seasonNumber ?? 0)
+            let number = String(format: "%02d", ep.episodeNumber ?? 0)
             map[fid] = SonarrEpisodeFile(
                 id: fid,
                 seriesId: seriesId,
-                customFormats: nil,
+                customFormats: tier.formats.enumerated().map { ArrCustomFormat(id: $0.offset + 1, name: $0.element) },
                 customFormatScore: score,
-                quality: nil,
+                quality: ArrQuality(quality: ArrQuality.ArrQualityName(name: tier.quality)),
                 size: size,
-                relativePath: "S\(String(format: "%02d", ep.seasonNumber ?? 0))/episode.\(fid).mkv"
+                relativePath: "Season \(season)/S\(season)E\(number).\(tier.quality).x264-OLD.mkv"
             )
         }
         return map
@@ -84,7 +95,8 @@ extension DemoMocks {
                 titleSlug: "bigbuckbunny",
                 movieFile: nil,
                 inCinemas: nil,
-                status: "released"
+                status: "released",
+                monitored: true
             ),
             202: RadarrMovieDetail(
                 id: 202,
@@ -105,7 +117,8 @@ extension DemoMocks {
                 titleSlug: "sintel",
                 movieFile: nil,
                 inCinemas: nil,
-                status: "released"
+                status: "released",
+                monitored: true
             ),
             203: RadarrMovieDetail(
                 id: 203,
@@ -126,7 +139,86 @@ extension DemoMocks {
                 titleSlug: "tearsofsteel",
                 movieFile: nil,
                 inCinemas: nil,
-                status: "released"
+                status: "released",
+                monitored: false
+            ),
+            // Library-only title: owned, nothing in flight. The other three all
+            // have a queue row, which hides the detail view's search CTA — so
+            // without this one the whole manual-search + upgrade-diff flow is
+            // unreachable for movies in demo.
+            204: RadarrMovieDetail(
+                id: 204,
+                title: "Elephants Dream",
+                year: 2006,
+                overview: "Two men argue about the nature of the strange machine world they inhabit. The first Blender open movie — every asset, scene and tool shipped alongside the film, which is why it still turns up in graphics coursework twenty years later.",
+                runtime: 11,
+                genres: ["Animation", "Short", "Sci-Fi"],
+                ratings: RadarrDetailRatings(
+                    imdb: RadarrRatingValue(value: 6.8, votes: 5_600),
+                    tmdb: RadarrRatingValue(value: 7.0, votes: 410),
+                    metacritic: nil,
+                    rottenTomatoes: RadarrRatingValue(value: 79, votes: nil)
+                ),
+                images: [image(seed: "elephantsdream")],
+                studio: "Blender Foundation",
+                certification: "PG",
+                titleSlug: "elephantsdream",
+                movieFile: nil,
+                inCinemas: nil,
+                status: "released",
+                monitored: true
+            ),
+        ]
+    }
+
+    /// Whisparr shares Radarr's detail shape. Two entries matching the demo
+    /// queue's cat "nature films" — without them, tapping a Whisparr row in
+    /// demo tried to reach a real server and surfaced a connection error.
+    static var whisparrDetails: [Int: RadarrMovieDetail] {
+        [
+            401: RadarrMovieDetail(
+                id: 401,
+                title: "Kitten Cam: Backyard Drama",
+                year: 2024,
+                overview: "A long-running observational documentary about feline politics in a suburban garden. Episode count varies depending on which neighbour cats show up.",
+                runtime: 24,
+                genres: ["Documentary", "Comedy"],
+                ratings: RadarrDetailRatings(
+                    imdb: RadarrRatingValue(value: 8.4, votes: 220),
+                    tmdb: RadarrRatingValue(value: 8.1, votes: 90),
+                    metacritic: nil,
+                    rottenTomatoes: nil
+                ),
+                images: [image(seed: "kitten:neo")],
+                studio: "Whisparr Studio",
+                certification: nil,
+                titleSlug: "kitten-cam-backyard-drama",
+                movieFile: nil,
+                inCinemas: nil,
+                status: "released",
+                monitored: true
+            ),
+            402: RadarrMovieDetail(
+                id: 402,
+                title: "The Black Cat Chronicles",
+                year: 2023,
+                overview: "Award-winning short film series following the social lives of three sibling cats sharing a Brooklyn apartment.",
+                runtime: 18,
+                genres: ["Short", "Drama"],
+                ratings: RadarrDetailRatings(
+                    imdb: RadarrRatingValue(value: 7.8, votes: 310),
+                    tmdb: RadarrRatingValue(value: 7.6, votes: 140),
+                    metacritic: nil,
+                    rottenTomatoes: nil
+                ),
+                images: [image(seed: "kitten:millie")],
+                studio: "Whisparr Studio",
+                certification: nil,
+                titleSlug: "the-black-cat-chronicles",
+                movieFile: nil,
+                inCinemas: nil,
+                status: "released",
+                monitored: true
             ),
         ]
     }
@@ -150,12 +242,13 @@ extension DemoMocks {
                         episodeFileCount: 3, episodeCount: 6, totalEpisodeCount: 6,
                         sizeOnDisk: 1_800_000_000, percentOfEpisodes: 50
                     )),
-                    SonarrSeasonInfo(seasonNumber: 2, monitored: true, statistics: SonarrSeasonStats(
+                    SonarrSeasonInfo(seasonNumber: 2, monitored: false, statistics: SonarrSeasonStats(
                         episodeFileCount: 0, episodeCount: 4, totalEpisodeCount: 4,
                         sizeOnDisk: 0, percentOfEpisodes: 0
                     )),
                 ],
-                firstAired: "2010-06-16"
+                firstAired: "2010-06-16",
+                monitored: true
             ),
             102: SonarrSeriesDetail(
                 id: 102,
@@ -175,7 +268,8 @@ extension DemoMocks {
                         sizeOnDisk: 450_000_000, percentOfEpisodes: 25
                     )),
                 ],
-                firstAired: "2013-04-13"
+                firstAired: "2013-04-13",
+                monitored: true
             ),
         ]
     }
@@ -189,10 +283,13 @@ extension DemoMocks {
                 episode(104, 1, 4, "Brave New Earth", "The signal travels.", daysAgo: 670, hasFile: false),
                 episode(105, 1, 5, "Foothold", "An offer no one can refuse.", daysAgo: 660, hasFile: false),
                 episode(106, 1, 6, "What Remains", "Things break, others mend.", daysAgo: 650, hasFile: true),
-                episode(201, 2, 1, "Reentry", "Aftermath.", daysAhead: 1, hasFile: false),
-                episode(202, 2, 2, "Witness", "An unexpected ally.", daysAhead: 8, hasFile: false),
-                episode(203, 2, 3, "Cold War Echo", "An old enemy.", daysAhead: 15, hasFile: false),
-                episode(204, 2, 4, "Diaspora", "The cosmonaut speaks.", daysAhead: 22, hasFile: false),
+                // Season 2 is unmonitored (see `sonarrDetails`), and Sonarr
+                // cascades that to its episodes — so the demo shows the
+                // combined "unmonitored + not aired" row state too.
+                episode(201, 2, 1, "Reentry", "Aftermath.", daysAhead: 1, hasFile: false, monitored: false),
+                episode(202, 2, 2, "Witness", "An unexpected ally.", daysAhead: 8, hasFile: false, monitored: false),
+                episode(203, 2, 3, "Cold War Echo", "An old enemy.", daysAhead: 15, hasFile: false, monitored: false),
+                episode(204, 2, 4, "Diaspora", "The cosmonaut speaks.", daysAhead: 22, hasFile: false, monitored: false),
             ],
             102: [ // Caminandes
                 episode(301, 1, 1, "Llama Drama", "Koro meets a fence.", daysAgo: 1100, hasFile: true),
@@ -207,7 +304,8 @@ extension DemoMocks {
         _ id: Int, _ season: Int, _ number: Int,
         _ title: String, _ overview: String,
         daysAgo: Int = -1, daysAhead: Int = -1,
-        hasFile: Bool
+        hasFile: Bool,
+        monitored: Bool = true
     ) -> SonarrEpisodeDetail {
         let date: Date
         if daysAgo >= 0 {
@@ -222,7 +320,7 @@ extension DemoMocks {
             id: id, seasonNumber: season, episodeNumber: number,
             title: title, overview: overview,
             airDateUtc: fmt.string(from: date),
-            hasFile: hasFile, monitored: true, runtime: 45,
+            hasFile: hasFile, monitored: monitored, runtime: 45,
             episodeFileId: hasFile ? id : nil
         )
     }
@@ -248,7 +346,8 @@ extension DemoMocks {
                 statistics: LidarrAlbumStats(
                     trackCount: 36, trackFileCount: 12, totalTrackCount: 36,
                     sizeOnDisk: 280_000_000
-                )
+                ),
+                monitored: true
             ),
             302: LidarrAlbumDetail(
                 id: 302,
@@ -269,7 +368,8 @@ extension DemoMocks {
                 statistics: LidarrAlbumStats(
                     trackCount: 11, trackFileCount: 11, totalTrackCount: 11,
                     sizeOnDisk: 95_000_000
-                )
+                ),
+                monitored: true
             ),
             303: LidarrAlbumDetail(
                 id: 303,
@@ -290,7 +390,8 @@ extension DemoMocks {
                 statistics: LidarrAlbumStats(
                     trackCount: 12, trackFileCount: 12, totalTrackCount: 12,
                     sizeOnDisk: 110_000_000
-                )
+                ),
+                monitored: false
             ),
         ]
     }

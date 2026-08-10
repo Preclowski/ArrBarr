@@ -33,7 +33,7 @@ struct SeasonDetailView: View {
     /// season screen reuses the same `MediaHeaderCard` as the series view.
     let sonarrDetail: SonarrSeriesDetail?
     let episodes: [SonarrEpisodeDetail]
-    let queueByEpisodeId: [Int: QueueItem]
+    let queueByEpisodeId: [Int: [QueueItem]]
     let fileByEpisodeFileId: [Int: SonarrEpisodeFile]
     let seriesPosterURL: URL?
     let seriesPosterRequiresAuth: Bool
@@ -54,6 +54,20 @@ struct SeasonDetailView: View {
         String(format: String(localized: "detail.seasonLld.label", bundle: .module), drill.seasonNumber)
     }
 
+    /// This season's own monitored flag, read live off the series detail the
+    /// parent hands down on every body pass — no local copy to go stale when
+    /// the flag is flipped upstream. `nil` (unreported) renders no bookmark.
+    private var seasonMonitored: Bool? {
+        sonarrDetail?.seasons?.first { $0.seasonNumber == drill.seasonNumber }?.monitored
+    }
+
+    @ViewBuilder
+    private var monitorToggle: some View {
+        if let seasonMonitored {
+            MonitorToggleButton(isMonitored: seasonMonitored, entity: .season)
+        }
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             #if os(macOS)
@@ -69,6 +83,7 @@ struct SeasonDetailView: View {
                     .lineLimit(1)
                     .truncationMode(.middle)
                 Spacer(minLength: 0)
+                monitorToggle
             }
             .padding(.horizontal, 12)
             .padding(.top, 10)
@@ -82,7 +97,7 @@ struct SeasonDetailView: View {
                         ForEach(episodes.sorted(by: { ($0.episodeNumber ?? 0) < ($1.episodeNumber ?? 0) })) { ep in
                             EpisodeRow(
                                 episode: ep,
-                                queueItem: queueByEpisodeId[ep.id],
+                                queueItems: queueByEpisodeId[ep.id] ?? [],
                                 episodeFile: ep.episodeFileId.flatMap { fileByEpisodeFileId[$0] },
                                 onTap: { episode in
                                     withAnimation(.smooth(duration: 0.22)) { selectedEpisode = episode }
@@ -124,7 +139,7 @@ struct SeasonDetailView: View {
                 posterRequiresAuth: seriesPosterRequiresAuth,
                 apiKey: seriesPosterAPIKey,
                 episodeFile: ep.episodeFileId.flatMap { fileByEpisodeFileId[$0] },
-                queueItem: queueByEpisodeId[ep.id],
+                queueItems: queueByEpisodeId[ep.id] ?? [],
                 onClose: { selectedEpisode = nil },
                 onSearch: { episodeId in
                     try? await SonarrClient(config: configStore.sonarr).searchEpisodes(episodeIds: [episodeId])
@@ -134,7 +149,10 @@ struct SeasonDetailView: View {
                 onDeleteEpisode: { q in Task { await viewModel.delete(q) } },
                 // Tapping the hero's season link pops back to this season view.
                 onTapSeason: { selectedEpisode = nil },
-                seriesYear: drill.seriesYear
+                seriesYear: drill.seriesYear,
+                // Re-read from the live array rather than the pushed `ep`
+                // snapshot, which is frozen at tap time.
+                monitored: episodes.first { $0.id == ep.id }?.monitored
             )
         }
         .navigationDestination(item: $manualSearchTarget) { wrapper in
@@ -142,6 +160,14 @@ struct SeasonDetailView: View {
         }
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
+        // This screen had no toolbar at all — the season monitor toggle is its
+        // first trailing action. `.primaryAction` matches the placement the
+        // sibling detail screens already use.
+        .toolbar {
+            ToolbarItemGroup(placement: .primaryAction) {
+                monitorToggle
+            }
+        }
         #else
         .toolbar(.hidden, for: .windowToolbar)
         #endif

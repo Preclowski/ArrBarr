@@ -56,9 +56,11 @@ struct PauseResumeButton: View {
                         diameter: Self.labelSize + 2
                     )
                 }
+                // Short verbs ("Resume"/"Pause", not "Resume download") — the
+                // CTA strip fits three capsules, long labels truncated.
                 Text(isPaused
-                        ? String(localized: "queue.resumeDownload.button", bundle: .module)
-                        : String(localized: "detail.pauseDownload.button", bundle: .module))
+                        ? String(localized: "queue.resume.button", bundle: .module)
+                        : String(localized: "queue.pause.button", bundle: .module))
                     .scaledFont(size: Self.labelSize, weight: .semibold)
             }
             .frame(maxWidth: .infinity)

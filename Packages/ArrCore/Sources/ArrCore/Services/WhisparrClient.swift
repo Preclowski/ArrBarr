@@ -149,7 +149,7 @@ public actor WhisparrClient: ArrAPIClient {
     }
 
     func fetchAllMovies() async throws -> [WhisparrLibraryRecord] {
-        if DemoMode.isActive { return [] }
+        if DemoMode.isActive { return DemoMocks.whisparrLibrary() }
         guard config.isConfigured else { throw HTTPError.notConfigured }
         let url = try http.url(base: config.baseURL, path: "\(apiBase)/movie")
         let data = try await http.get(url, headers: apiHeaders)
@@ -157,6 +157,10 @@ public actor WhisparrClient: ArrAPIClient {
     }
 
     func fetchMovieDetails(id: Int) async throws -> RadarrMovieDetail {
+        if DemoMode.isActive {
+            try? await Task.sleep(nanoseconds: 350_000_000)
+            if let demo = DemoMocks.whisparrDetails[id] { return demo }
+        }
         guard config.isConfigured else { throw HTTPError.notConfigured }
         guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
         let url = try http.url(base: config.baseURL, path: "\(apiBase)/movie/\(id)")

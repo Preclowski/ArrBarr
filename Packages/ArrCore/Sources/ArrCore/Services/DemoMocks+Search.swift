@@ -14,6 +14,17 @@ extension DemoMocks {
         case .whisparr: pool = whisparrSearchPool
         }
         guard !query.isEmpty else { return Array(pool.prefix(6)) }
+        // An id lookup has to resolve by id in demo too, otherwise
+        // `imdb:ttN` / `tmdb:N` silently return nothing here and demo
+        // contradicts the real behaviour.
+        if case .ref(let ref) = QueryParser.parse(query) {
+            return pool.filter { result in
+                if case .imdb(let wanted) = ref {
+                    return result.imdbId?.caseInsensitiveCompare(wanted) == .orderedSame
+                }
+                return result.mediaRef == ref
+            }
+        }
         let q = query.lowercased()
         return pool.filter { result in
             result.title.lowercased().contains(q)
@@ -36,7 +47,8 @@ extension DemoMocks {
                 network: "Blender Foundation",
                 certification: "PG",
                 posterURL: poster(label: "Elephants Dream", seed: "elephantsdream", w: 200, h: 300),
-                source: .radarr
+                source: .radarr,
+                imdbId: "tt0010003"
             ),
             SearchResult(
                 id: 10004, foreignId: "10004",
@@ -50,7 +62,8 @@ extension DemoMocks {
                 network: "Blender Foundation",
                 certification: "G",
                 posterURL: poster(label: "Spring", seed: "spring", w: 200, h: 300),
-                source: .radarr
+                source: .radarr,
+                imdbId: "tt0010004"
             ),
             SearchResult(
                 id: 10005, foreignId: "10005",
@@ -64,7 +77,8 @@ extension DemoMocks {
                 network: nil,
                 certification: "PG",
                 posterURL: poster(label: "Charge", seed: "charge", w: 200, h: 300),
-                source: .radarr
+                source: .radarr,
+                imdbId: "tt0010005"
             ),
             SearchResult(
                 id: 10006, foreignId: "10006",
@@ -78,7 +92,8 @@ extension DemoMocks {
                 network: "Blender Animation Studio",
                 certification: "PG",
                 posterURL: poster(label: "Agent 327", seed: "agent327", w: 200, h: 300),
-                source: .radarr
+                source: .radarr,
+                imdbId: "tt0010006"
             ),
             SearchResult(
                 id: 10007, foreignId: "10007",
@@ -92,7 +107,8 @@ extension DemoMocks {
                 network: "Blender Animation Studio",
                 certification: "G",
                 posterURL: poster(label: "Hero", seed: "hero2018", w: 200, h: 300),
-                source: .radarr
+                source: .radarr,
+                imdbId: "tt0010007"
             ),
             SearchResult(
                 id: 10008, foreignId: "10008",
@@ -106,7 +122,8 @@ extension DemoMocks {
                 network: "Blender Animation Studio",
                 certification: "G",
                 posterURL: poster(label: "Coffee Run", seed: "coffeerun", w: 200, h: 300),
-                source: .radarr
+                source: .radarr,
+                imdbId: "tt0010008"
             ),
             SearchResult(
                 id: 10009, foreignId: "10009",
@@ -120,7 +137,8 @@ extension DemoMocks {
                 network: "Blender Foundation",
                 certification: "PG",
                 posterURL: poster(label: "Cosmos Laundromat", seed: "cosmoslaundromat", w: 200, h: 300),
-                source: .radarr
+                source: .radarr,
+                imdbId: "tt0010009"
             ),
         ]
     }
@@ -140,7 +158,8 @@ extension DemoMocks {
                 network: nil,
                 certification: nil,
                 posterURL: poster(label: "NIN", seed: "ninghosts", w: 200, h: 200),
-                source: .lidarr
+                source: .lidarr,
+                imdbId: "tt0030001"
             ),
             SearchResult(
                 id: 30002, foreignId: "1ce18a52-ca5f-4f34-9bc6-5f2af0d33f5e",
@@ -155,7 +174,8 @@ extension DemoMocks {
                 network: nil,
                 certification: nil,
                 posterURL: poster(label: "Brad Sucks", seed: "bradsucks", w: 200, h: 200),
-                source: .lidarr
+                source: .lidarr,
+                imdbId: "tt0030002"
             ),
             SearchResult(
                 id: 30003, foreignId: "30c4c46c-2c4e-44a3-b9f2-c0ultonforeignid",
@@ -170,7 +190,8 @@ extension DemoMocks {
                 network: nil,
                 certification: nil,
                 posterURL: poster(label: "Coulton", seed: "coultonsomeguys", w: 200, h: 200),
-                source: .lidarr
+                source: .lidarr,
+                imdbId: "tt0030003"
             ),
             SearchResult(
                 id: 30004, foreignId: "kevinmacleod-incompetech",
@@ -185,7 +206,8 @@ extension DemoMocks {
                 network: nil,
                 certification: nil,
                 posterURL: poster(label: "Kevin MacLeod", seed: "kevinmacleod", w: 200, h: 200),
-                source: .lidarr
+                source: .lidarr,
+                imdbId: "tt0030004"
             ),
             SearchResult(
                 id: 30005, foreignId: "tobu-musicbrainz",
@@ -200,7 +222,8 @@ extension DemoMocks {
                 network: nil,
                 certification: nil,
                 posterURL: poster(label: "Tobu", seed: "tobu", w: 200, h: 200),
-                source: .lidarr
+                source: .lidarr,
+                imdbId: "tt0030005"
             ),
             SearchResult(
                 id: 30006, foreignId: "komiku-fma",
@@ -215,7 +238,8 @@ extension DemoMocks {
                 network: nil,
                 certification: nil,
                 posterURL: poster(label: "Komiku", seed: "komiku", w: 200, h: 200),
-                source: .lidarr
+                source: .lidarr,
+                imdbId: "tt0030006"
             ),
         ]
     }
@@ -234,7 +258,8 @@ extension DemoMocks {
                 network: "Whisparr Studio",
                 certification: nil,
                 posterURL: poster(label: "Kitten Cam", seed: "kitten:neo", w: 200, h: 300),
-                source: .whisparr
+                source: .whisparr,
+                imdbId: "tt0040001"
             ),
             SearchResult(
                 id: 40002, foreignId: "40002",
@@ -248,7 +273,8 @@ extension DemoMocks {
                 network: "Whisparr Studio",
                 certification: nil,
                 posterURL: poster(label: "Black Cat", seed: "kitten:millie", w: 200, h: 300),
-                source: .whisparr
+                source: .whisparr,
+                imdbId: "tt0040002"
             ),
             SearchResult(
                 id: 40003, foreignId: "40003",
@@ -262,7 +288,8 @@ extension DemoMocks {
                 network: "Whisparr Studio",
                 certification: nil,
                 posterURL: poster(label: "Mittens", seed: "kitten:poppy", w: 200, h: 300),
-                source: .whisparr
+                source: .whisparr,
+                imdbId: "tt0040003"
             ),
             SearchResult(
                 id: 40004, foreignId: "40004",
@@ -276,7 +303,8 @@ extension DemoMocks {
                 network: nil,
                 certification: nil,
                 posterURL: poster(label: "Whiskers", seed: "kitten:bella", w: 200, h: 300),
-                source: .whisparr
+                source: .whisparr,
+                imdbId: "tt0040004"
             ),
             SearchResult(
                 id: 40005, foreignId: "40005",
@@ -290,7 +318,8 @@ extension DemoMocks {
                 network: "Whisparr Studio",
                 certification: nil,
                 posterURL: poster(label: "Cat Burglar", seed: "kitten:g", w: 200, h: 300),
-                source: .whisparr
+                source: .whisparr,
+                imdbId: "tt0040005"
             ),
             SearchResult(
                 id: 40006, foreignId: "40006",
@@ -304,7 +333,8 @@ extension DemoMocks {
                 network: nil,
                 certification: nil,
                 posterURL: poster(label: "Garage Cat", seed: "kitten:mu", w: 200, h: 300),
-                source: .whisparr
+                source: .whisparr,
+                imdbId: "tt0040006"
             ),
         ]
     }
@@ -323,7 +353,8 @@ extension DemoMocks {
                 network: "VODO",
                 certification: nil,
                 posterURL: poster(label: "Pioneer One", seed: "pioneerone", w: 200, h: 300),
-                source: .sonarr
+                source: .sonarr,
+                imdbId: "tt0020001"
             ),
             SearchResult(
                 id: 20002, foreignId: "20002",
@@ -337,7 +368,8 @@ extension DemoMocks {
                 network: "Blender Foundation",
                 certification: nil,
                 posterURL: poster(label: "Caminandes", seed: "caminandes", w: 200, h: 300),
-                source: .sonarr
+                source: .sonarr,
+                imdbId: "tt0020002"
             ),
         ]
     }

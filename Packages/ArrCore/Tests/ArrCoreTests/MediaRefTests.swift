@@ -86,7 +86,11 @@ struct MediaRefTests {
         #expect(MediaRef.tmdb(1).compatibleSources == [.radarr, .whisparr])
         #expect(MediaRef.tvdb(1).compatibleSources == [.sonarr])
         #expect(MediaRef.musicBrainz("x").compatibleSources == [.lidarr])
-        #expect(MediaRef.imdb("tt1").compatibleSources == [.radarr])
+        // IMDB reaches Sonarr as well as Radarr: an IMDB id names a series
+        // just as often as a film, and the ranker matches on the record's
+        // own `imdbId`, so a server that can't resolve the prefix returns
+        // nothing that could survive the filter.
+        #expect(MediaRef.imdb("tt1").compatibleSources == [.radarr, .sonarr])
     }
 
     // MARK: - lookupTerm vs urlString distinction

@@ -98,7 +98,7 @@ public struct UpgradeDiffTable: View {
                     arrowCell(showArrow: os > 0 && delta != 0)
                     newCell(formatBytes(ns))
                     deltaCell(text: os > 0 && delta != 0 ? formatBytesDelta(delta) : nil,
-                              isPositive: delta > 0)
+                              sign: delta > 0 ? 1 : (delta < 0 ? -1 : 0))
                 }
             }
             if newScore != 0 || oldScore != nil {
@@ -110,11 +110,11 @@ public struct UpgradeDiffTable: View {
                     // Dedicated score cells: a negative score reads red on
                     // either side (matching the tooltip diff + queue list),
                     // not the neutral grey/primary every other value uses.
-                    oldScoreCell(oldScore != nil ? oScore : nil)
+                    oldCell(oldScore != nil ? ScoreLabel.text(oScore) : nil)
                     arrowCell(showArrow: oldScore != nil && delta != 0)
-                    newScoreCell(nScore)
-                    deltaCell(text: oldScore != nil && delta != 0 ? "\(delta > 0 ? "+" : "")\(delta)" : nil,
-                              isPositive: delta > 0)
+                    newCell(ScoreLabel.text(nScore))
+                    deltaCell(text: oldScore != nil && delta != 0 ? ScoreLabel.deltaText(delta) : nil,
+                              sign: delta)
                 }
             }
             // Formaty — single chip strip showing the union of old +
@@ -162,7 +162,7 @@ public struct UpgradeDiffTable: View {
             if newScore != 0 {
                 GridRow {
                     label("queue.score.button")
-                    newScoreCell(newScore)
+                    newCell(ScoreLabel.text(newScore))
                 }
             }
             if !newFormats.isEmpty {
@@ -285,38 +285,19 @@ public struct UpgradeDiffTable: View {
             .gridColumnAlignment(.leading)
     }
 
-    /// Old/original-file score — like `oldCell` but a negative score reads red
-    /// (positive / zero stay secondary like every other old value).
+    /// The change between the two cells on its row. The ONLY coloured value
+    /// in the table: the old and new scores go through the plain `oldCell` /
+    /// `newCell` like every other dimension, because tinting a side by its
+    /// own sign competes with the delta for the same meaning.
+    ///
+    /// `sign` is any value whose signum matches the change — the raw delta
+    /// works, and the byte row passes its own comparison through.
     @ViewBuilder
-    private func oldScoreCell(_ score: Int?) -> some View {
-        if let score {
-            Text(formatScore(score))
-                .scaledFont(size: 11)
-                .foregroundStyle(score < 0 ? Color.red : Color.secondary)
-                .lineLimit(1)
-                .gridColumnAlignment(.leading)
-        } else {
-            Color.clear.gridCellUnsizedAxes([.horizontal, .vertical])
-        }
-    }
-
-    /// Incoming-file score — like `newCell` but a negative score reads red
-    /// (positive / zero keep the semibold primary treatment).
-    @ViewBuilder
-    private func newScoreCell(_ score: Int) -> some View {
-        Text(formatScore(score))
-            .scaledFont(size: 11, weight: .semibold)
-            .foregroundStyle(score < 0 ? Color.red : Color.primary)
-            .lineLimit(1)
-            .gridColumnAlignment(.leading)
-    }
-
-    @ViewBuilder
-    private func deltaCell(text: String?, isPositive: Bool) -> some View {
+    private func deltaCell(text: String?, sign: Int) -> some View {
         if let text {
             Text(verbatim: "(\(text))")
-                .scaledFont(size: 10, weight: .semibold)
-                .foregroundStyle(isPositive ? .green : .red)
+                .scaledFont(size: 10, weight: .semibold, monospacedDigit: true)
+                .foregroundStyle(ScoreLabel.deltaColor(sign))
                 .lineLimit(1)
                 .gridColumnAlignment(.leading)
         } else {
@@ -346,7 +327,4 @@ public struct UpgradeDiffTable: View {
 
     /// "+4656" / "-120" — signed integer, matches ScoreLabel format
     /// without needing the chip chrome.
-    private func formatScore(_ score: Int) -> String {
-        score >= 0 ? "+\(score)" : "\(score)"
-    }
 }

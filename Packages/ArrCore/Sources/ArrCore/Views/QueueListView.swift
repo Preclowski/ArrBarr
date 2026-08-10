@@ -47,11 +47,18 @@ struct QueueListView: View {
     ///     don't fight — which is what keeps this solid rather than a hack.
     @Binding var selecting: Bool
     @State private var selected = Set<String>()
+    /// Last individually-toggled row — the anchor a ⇧-click extends from
+    /// (Finder semantics). Cleared when selecting mode ends.
+    @State private var lastAnchorID: String?
 
     #if os(macOS)
-    /// Live frame of every selectable row in `Self.listSpace`, harvested via a
-    /// `PreferenceKey`. Drives which row the drag is currently over. Only
-    /// populated while `selecting` (the reporter is gated), empty otherwise.
+    /// Live frame of every selectable row in GLOBAL coordinates, harvested via
+    /// `onGeometryChange` on each row. Global (not a named space, not a
+    /// PreferenceKey): macOS `List` hosts every row in its own AppKit cell, so
+    /// a `.coordinateSpace(name:)` declared on the List never resolves inside
+    /// the rows and preferences don't reliably climb out of them — both came
+    /// back garbage, which is what made drag-painting select the wrong rows.
+    /// Only populated while `selecting` (the reporter is gated), cleared on exit.
     @State private var rowFrames: [String: CGRect] = [:]
     /// Drag-to-select scratch state. `dragBaseline` is the selection snapshot at
     /// the drag's start — every change re-derives from it, so dragging back up
@@ -62,10 +69,6 @@ struct QueueListView: View {
     /// start: begin on an unselected row → painting *adds*; on a selected row →
     /// painting *removes* (drag-to-deselect).
     @State private var dragPaintAdding = true
-
-    /// Named coordinate space shared by the row-frame reporter and the drag
-    /// gesture so `value.location` and the harvested frames are in one system.
-    private static let listSpace = "queueList"
     #endif
 
     /// The ONE listRowInsets every section header uses. Explicit + non-all-zero
@@ -167,17 +170,18 @@ struct QueueListView: View {
         }
         // Drop the selection set whenever selecting mode ends (menu toggle,
         // Cancel, or the queue emptying out from under us).
-        .onChange(of: selecting) { _, on in if !on { selected.removeAll() } }
+        .onChange(of: selecting) { _, on in
+            if !on {
+                selected.removeAll()
+                lastAnchorID = nil
+                #if os(macOS)
+                rowFrames.removeAll()
+                #endif
+            }
+        }
         .onChange(of: viewModel.activeCount) { _, count in
             if count == 0, selecting { selecting = false }
         }
-        #if os(macOS)
-        // Establish the space the drag gesture + row-frame reporter both use,
-        // then keep `rowFrames` in sync as rows lay out / scroll. Same
-        // `.coordinateSpace(name:)` + preference recipe as the tab-pill bar.
-        .coordinateSpace(name: Self.listSpace)
-        .onPreferenceChange(RowFramePreferenceKey.self) { rowFrames = $0 }
-        #endif
     }
 
     // MARK: - Multi-select
@@ -249,7 +253,7 @@ struct QueueListView: View {
         )
     }
 
-    /// Per-row selection state driving the circle that replaces the poster.
+    /// Per-row selection state driving the circle overlaid on the poster.
     private func selectionState(for entry: QueueRowEntry) -> RowSelectionState {
         guard selecting else { return .hidden }
         return selected.contains(entry.id) ? .selected : .unselected
@@ -264,23 +268,55 @@ struct QueueListView: View {
         else { selected.insert(entry.id) }
     }
 
-    /// Central row-tap router. In selecting mode any tap toggles. Outside it, a
-    /// ⌘-click (macOS) *enters* selecting with this row already picked — the
-    /// standard Finder/Mail affordance — while a plain click opens the detail.
+    /// Central row-tap router. In selecting mode any tap toggles — except a
+    /// ⇧-click (macOS), which extends the selection from the last-toggled row
+    /// to this one (Finder range semantics). Outside it, a ⌘-click (macOS)
+    /// *enters* selecting with this row already picked — the standard
+    /// Finder/Mail affordance — while a plain click opens the detail.
     private func rowTapped(_ entry: QueueRowEntry, defaultTarget: QueueItem) {
         if selecting {
+            #if os(macOS)
+            if NSEvent.modifierFlags.contains(.shift), let anchor = lastAnchorID {
+                selectRange(from: anchor, to: entry.id)
+                return
+            }
+            #endif
             toggleSelection(entry)
+            lastAnchorID = entry.id
             return
         }
         #if os(macOS)
         if NSEvent.modifierFlags.contains(.command) {
             selected = [entry.id]
+            lastAnchorID = entry.id
             withAnimation(.snappy(duration: 0.18)) { selecting = true }
             return
         }
         #endif
         onShowDetail(defaultTarget)
     }
+
+    #if os(macOS)
+    /// ⇧-click: select every row between the anchor and the clicked row
+    /// (inclusive, additive — it never deselects, like Finder). The anchor
+    /// stays put so successive ⇧-clicks re-extend from the same start.
+    private func selectRange(from anchor: String, to target: String) {
+        let ids = orderedSelectableEntries.map(\.id)
+        guard let ai = ids.firstIndex(of: anchor), let ti = ids.firstIndex(of: target) else {
+            toggleSelection(target: target)
+            return
+        }
+        selected.formUnion(ids[min(ai, ti)...max(ai, ti)])
+    }
+
+    /// Fallback toggle by id (anchor vanished from the list, e.g. the row
+    /// finished and left the queue mid-selection).
+    private func toggleSelection(target: String) {
+        if selected.contains(target) { selected.remove(target) }
+        else { selected.insert(target) }
+        lastAnchorID = target
+    }
+    #endif
 
     private func exitSelection() {
         // Setting the mode false clears `selected` via `onChange(of: selecting)`.
@@ -323,6 +359,8 @@ struct QueueListView: View {
     /// Paint a contiguous range of rows as the pointer drags down (or up) a run
     /// of them. Attached per-row so the anchor is known without hit-testing the
     /// start point; the *current* row is resolved from the harvested frame map.
+    /// Everything runs in GLOBAL coordinates — the one space that means the
+    /// same thing inside and outside the List's per-row AppKit hosting cells.
     ///
     /// Robustness comes from re-deriving the whole selection from `dragBaseline`
     /// on every change (drag reversal un-paints) and from macOS click-drag not
@@ -330,7 +368,7 @@ struct QueueListView: View {
     /// the drag stream. `minimumDistance: 6` keeps a plain click a tap (toggle),
     /// not a zero-length paint.
     private func dragSelectGesture(anchor: String) -> some Gesture {
-        DragGesture(minimumDistance: 6, coordinateSpace: .named(Self.listSpace))
+        DragGesture(minimumDistance: 6, coordinateSpace: .global)
             .onChanged { value in
                 if dragAnchorID == nil {
                     dragBaseline = selected
@@ -340,6 +378,9 @@ struct QueueListView: View {
                 applyDragSelection(to: value.location.y)
             }
             .onEnded { _ in
+                // The drag's start row becomes the ⇧-click anchor, so a
+                // follow-up shift-click extends from where the paint began.
+                lastAnchorID = dragAnchorID
                 dragAnchorID = nil
                 dragBaseline = nil
             }
@@ -350,7 +391,7 @@ struct QueueListView: View {
         guard let anchor = dragAnchorID, let baseline = dragBaseline else { return }
         let ids = orderedSelectableEntries.map(\.id)
         guard let ai = ids.firstIndex(of: anchor),
-              let current = rowID(near: y),
+              let current = rowID(near: y, among: Set(ids)),
               let ci = ids.firstIndex(of: current) else { return }
         var next = baseline
         for id in ids[min(ai, ci)...max(ai, ci)] {
@@ -361,10 +402,12 @@ struct QueueListView: View {
 
     /// Row whose vertical band contains `y`; if `y` sits in a gap (a section
     /// header between two arr groups), the nearest row by edge distance — so the
-    /// range never collapses just because the pointer crossed a header.
-    private func rowID(near y: CGFloat) -> String? {
+    /// range never collapses just because the pointer crossed a header. Only
+    /// rows in `valid` count — `rowFrames` can hold a stale entry for a row
+    /// that left the queue mid-drag (its reporter unmounts without removing it).
+    private func rowID(near y: CGFloat, among valid: Set<String>) -> String? {
         var nearest: (id: String, dist: CGFloat)?
-        for (id, rect) in rowFrames {
+        for (id, rect) in rowFrames where valid.contains(id) {
             if y >= rect.minY, y <= rect.maxY { return id }
             let d = min(abs(y - rect.minY), abs(y - rect.maxY))
             if nearest == nil || d < nearest!.dist { nearest = (id, d) }
@@ -372,15 +415,6 @@ struct QueueListView: View {
         return nearest?.id
     }
 
-    /// Transparent backing that reports a row's frame into `rowFrames`.
-    private func rowFrameReporter(_ id: String) -> some View {
-        GeometryReader { proxy in
-            Color.clear.preference(
-                key: RowFramePreferenceKey.self,
-                value: [id: proxy.frame(in: .named(Self.listSpace))]
-            )
-        }
-    }
     #endif
 
     // MARK: - Sections
@@ -486,7 +520,15 @@ struct QueueListView: View {
         // they can't interfere with the detail-tap / hover affordances.
         if selecting {
             content
-                .background { rowFrameReporter(entry.id) }
+                // Direct state write instead of a PreferenceKey — preferences
+                // don't reliably climb out of the List's per-row hosting cells
+                // on macOS, and `onGeometryChange` re-fires as the row scrolls
+                // (its global frame changes), keeping the map live.
+                .onGeometryChange(for: CGRect.self) { proxy in
+                    proxy.frame(in: .global)
+                } action: { frame in
+                    rowFrames[entry.id] = frame
+                }
                 .plainQueueRow()
                 .simultaneousGesture(dragSelectGesture(anchor: entry.id))
         } else {
@@ -757,6 +799,8 @@ struct QueueListView: View {
     /// that's configured AND reachable (the action bypasses the arr and goes
     /// straight to the client), so a `.down` client hides the swipe.
     private func canControl(_ item: QueueItem) -> Bool {
+        // See QueueRowView.canControl — demo serves the action from fixtures.
+        if DemoMode.isActive { return true }
         guard let kind = configStore.selectedDownloadClient(for: item.downloadProtocol) else { return false }
         if case .down = ConnectionHealth.shared.state(for: .arr(kind)) { return false }
         return true
@@ -799,21 +843,6 @@ struct QueueListView: View {
     }
 
 }
-
-// MARK: - Drag-select frame harvesting
-
-#if os(macOS)
-/// Collects each selectable row's frame (in the list's named coordinate space)
-/// so the drag-to-select gesture can tell which row the pointer is currently
-/// over. Last writer wins per id — a row that re-lays-out overwrites its own
-/// entry.
-private struct RowFramePreferenceKey: PreferenceKey {
-    static let defaultValue: [String: CGRect] = [:]
-    static func reduce(value: inout [String: CGRect], nextValue: () -> [String: CGRect]) {
-        value.merge(nextValue(), uniquingKeysWith: { _, new in new })
-    }
-}
-#endif
 
 // MARK: - Row chrome helper
 

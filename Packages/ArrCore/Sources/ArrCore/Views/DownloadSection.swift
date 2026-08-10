@@ -11,10 +11,8 @@ import SwiftUI
 struct DownloadSection: View {
     let items: [QueueItem]
     let focused: QueueItem
-    var showInlineUpgrade: Bool = true
     var showCustomFormats: Bool = false
     var showListingBadges: Bool = false
-    var rowHoverDetail: Bool = false
     var listCollapsible: Bool = false
     var listExpandedDefault: Bool = true
     /// Per-item drill-down for the multi-row variant — fires when the
@@ -37,10 +35,8 @@ struct DownloadSection: View {
     init(
         items: [QueueItem],
         focused: QueueItem,
-        showInlineUpgrade: Bool = true,
         showCustomFormats: Bool = false,
         showListingBadges: Bool = false,
-        rowHoverDetail: Bool = false,
         listCollapsible: Bool = false,
         listExpandedDefault: Bool = true,
         onTapItem: ((QueueItem) -> Void)? = nil,
@@ -51,10 +47,8 @@ struct DownloadSection: View {
     ) {
         self.items = items
         self.focused = focused
-        self.showInlineUpgrade = showInlineUpgrade
         self.showCustomFormats = showCustomFormats
         self.showListingBadges = showListingBadges
-        self.rowHoverDetail = rowHoverDetail
         self.listCollapsible = listCollapsible
         self.listExpandedDefault = listExpandedDefault
         self.onTapItem = onTapItem
@@ -107,7 +101,7 @@ struct DownloadSection: View {
             // that sat outside the card — the `└─` pattern matches
             // every other surface (queue tooltip, episode tooltip)
             // and the user only needs to read one diff format.
-            DownloadProgressCard(item: item, showUpgradeDiff: true, showHeader: true, showProgressFill: false)
+            DownloadProgressCard(item: item, showUpgradeDiff: true, showHeader: true)
             // No quality · time · size · client meta line under the
             // card — the card carries quality / size / score and the
             // client in its own header. Repeating those tokens below
@@ -165,7 +159,8 @@ struct DownloadSection: View {
                     quality: item.quality,
                     size: item.sizeTotal,
                     score: item.customFormatScore,
-                    tags: item.customFormats
+                    tags: item.customFormats,
+                    baseline: item.existingCustomFormatScore
                 )
             }
             HStack(alignment: .firstTextBaseline, spacing: 8) {
@@ -181,7 +176,8 @@ struct DownloadSection: View {
     }
 
     @ViewBuilder
-    private func qualityCells(quality: String?, size: Int64, score: Int, tags: [String]) -> some View {
+    private func qualityCells(quality: String?, size: Int64, score: Int, tags: [String],
+                              baseline: Int? = nil) -> some View {
         // Tag chips dropped from the per-row inline — they wrap
         // unpredictably and at >4 tags overflow the diff row.
         // CustomFormatChips + CustomFormatDiff strip rendered below
@@ -199,10 +195,7 @@ struct DownloadSection: View {
             }
             if score != 0 {
                 SeparatorDot()
-                let sign = score > 0 ? "+" : ""
-                Text(verbatim: "\(sign)\(score)")
-                    .foregroundStyle(score > 0 ? Color.green : Color.red)
-                    .scaledFont(size: 11, weight: .semibold)
+                ScoreLabel(score: score, baseline: baseline, size: 11)
             }
         }
         .scaledFont(size: 11)
@@ -232,10 +225,9 @@ struct DownloadSection: View {
                     Text(String.localizedStringWithFormat(NSLocalizedString("unit.downloads", bundle: .module, comment: ""), items.count))
                         .scaledFont(size: 11)
                         .foregroundStyle(.secondary)
+                    // No aggregate size — each row carries its own
+                    // quality · size spec, exactly like the queue list.
                     Spacer()
-                    Text(verbatim: aggregateSizeText)
-                        .scaledFont(size: 11, monospacedDigit: true)
-                        .foregroundStyle(.secondary)
                 }
                 .contentShape(Rectangle())
             }
@@ -247,10 +239,6 @@ struct DownloadSection: View {
                     ForEach(sortedItems) { it in
                         MultiRow(
                             item: it,
-                            isFocused: it.id == focused.id,
-                            showInlineUpgrade: showInlineUpgrade,
-                            showCustomFormats: showCustomFormats,
-                            hoverDetail: rowHoverDetail,
                             onTap: onTapItem.map { fn in { fn(it) } },
                             onPause: onPauseItem.map { fn in { fn(it) } },
                             onResume: onResumeItem.map { fn in { fn(it) } },
@@ -262,12 +250,4 @@ struct DownloadSection: View {
         }
     }
 
-    private var aggregateSizeText: String {
-        let total = items.reduce(Int64(0)) { $0 + $1.sizeTotal }
-        let left = items.reduce(Int64(0)) { $0 + $1.sizeLeft }
-        let done = max(0, total - left)
-        let totalStr = ByteCountFormatter.string(fromByteCount: total, countStyle: .file)
-        let doneStr = ByteCountFormatter.string(fromByteCount: done, countStyle: .file)
-        return "\(doneStr) / \(totalStr)"
-    }
 }

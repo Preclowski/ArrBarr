@@ -11,7 +11,7 @@ public enum DelugeError: LocalizedError {
     }
 }
 
-public actor DelugeClient: DownloadProgressSource {
+public actor DelugeClient: DownloadProgressSource, DownloadAddSource {
     enum Action { case pause, resume, delete }
 
     private let config: ServiceConfig
@@ -68,6 +68,52 @@ public actor DelugeClient: DownloadProgressSource {
            let message = error["message"] as? String {
             throw DelugeError.actionFailed(message)
         }
+    }
+
+    /// Add a torrent by base64 dump or magnet link, then label it.
+    ///
+    /// Deluge's category *is* the Label plugin's label, which is a second call —
+    /// `core.add_torrent_*` has no label parameter. If the plugin isn't enabled
+    /// the label call fails; that's deliberately non-fatal (the torrent is
+    /// already downloading, and failing the whole add would be a lie), but it
+    /// does mean the arr won't auto-import — which the caller surfaces.
+    public func add(_ drop: DownloadDrop, category: String?, paused: Bool) async throws {
+        let options: [String: Any] = ["add_paused": paused]
+        let method: String
+        let params: [Any]
+        switch drop.content {
+        case .magnet(let link):
+            method = "core.add_torrent_magnet"
+            params = [link, options]
+        case .file(let data, let filename):
+            method = "core.add_torrent_file"
+            params = [filename, data.base64EncodedString(), options]
+        }
+
+        let resp = try await authenticated { try await rpc(method: method, params: params) }
+        if let error = resp["error"] as? [String: Any],
+           let message = error["message"] as? String {
+            throw DelugeError.actionFailed(message)
+        }
+        // Deluge answers with the new torrent's hash; without one we have
+        // nothing to label and no evidence the add took.
+        guard let hash = resp["result"] as? String, !hash.isEmpty else {
+            throw DelugeError.actionFailed(
+                String(localized: "Deluge did not accept the torrent.", bundle: .module)
+            )
+        }
+        guard let category, !category.isEmpty else { return }
+        _ = try? await authenticated {
+            try await rpc(method: "label.set_torrent", params: [hash, category])
+        }
+    }
+
+    /// Deluge's own `add_paused` config value.
+    public func defaultAddPaused() async -> Bool? {
+        let resp = try? await authenticated {
+            try await rpc(method: "core.get_config_value", params: ["add_paused"])
+        }
+        return resp?["result"] as? Bool
     }
 
     func testConnection() async throws -> String {

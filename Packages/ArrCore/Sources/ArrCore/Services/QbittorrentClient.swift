@@ -1,6 +1,15 @@
 import Foundation
 
-public actor QbittorrentClient: DownloadProgressSource {
+public enum QbittorrentError: LocalizedError {
+    case actionFailed(String)
+    public var errorDescription: String? {
+        switch self {
+        case .actionFailed(let msg): return "qBittorrent: \(msg)"
+        }
+    }
+}
+
+public actor QbittorrentClient: DownloadProgressSource, DownloadAddSource {
     enum Action {
         case pause, resume, delete, forceStart
 
@@ -81,6 +90,58 @@ public actor QbittorrentClient: DownloadProgressSource {
         }
         let version = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         return version.isEmpty ? "OK" : "qBittorrent \(version)"
+    }
+
+    /// Hand qBittorrent a new torrent — file bytes or a magnet link — under the
+    /// arr's category, which is what lets that arr import it later.
+    ///
+    /// `/torrents/add` is multipart-only (it rejects a urlencoded body), and it
+    /// answers 200 with the literal body "Fails." when it refuses the payload —
+    /// a malformed .torrent, or a magnet it can't parse — so the body has to be
+    /// checked, not just the status.
+    ///
+    /// `paused` is sent under both spellings on purpose: qBittorrent 5.x renamed
+    /// the parameter to `stopped` and ignores unknown fields, so sending both
+    /// covers 4.x and 5.x without version-sniffing first.
+    public func add(_ drop: DownloadDrop, category: String?, paused: Bool) async throws {
+        var fields: [String: String] = [
+            "paused": paused ? "true" : "false",
+            "stopped": paused ? "true" : "false",
+        ]
+        if let category, !category.isEmpty { fields["category"] = category }
+
+        var file: (name: String, filename: String, data: Data, contentType: String)?
+        switch drop.content {
+        case .magnet(let link):
+            fields["urls"] = link
+        case .file(let data, let filename):
+            file = (name: "torrents", filename: filename, data: data, contentType: "application/x-bittorrent")
+        }
+
+        let sent = file
+        let data = try await authenticated {
+            let url = try http.url(base: config.baseURL, path: "/api/v2/torrents/add")
+            return try await http.postMultipart(url, headers: authHeaders(), fields: fields, file: sent)
+        }
+        let body = (String(data: data, encoding: .utf8) ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        if body.localizedCaseInsensitiveContains("fail") {
+            throw QbittorrentError.actionFailed(
+                String(localized: "qBittorrent rejected the file.", bundle: .module)
+            )
+        }
+    }
+
+    /// qBittorrent's own "do not start automatically" preference, so the add
+    /// sheet's checkbox starts where the client already stands. 4.x calls it
+    /// `start_paused_enabled`, 5.x `add_stopped_enabled` — read both.
+    public func defaultAddPaused() async -> Bool? {
+        let data = try? await authenticated {
+            let url = try http.url(base: config.baseURL, path: "/api/v2/app/preferences")
+            return try await http.get(url, headers: authHeaders())
+        }
+        guard let data,
+              let prefs = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return nil }
+        return (prefs["add_stopped_enabled"] ?? prefs["start_paused_enabled"]) as? Bool
     }
 
     func contains(hash: String) async throws -> Bool {

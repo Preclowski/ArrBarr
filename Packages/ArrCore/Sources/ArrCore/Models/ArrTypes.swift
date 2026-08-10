@@ -454,6 +454,10 @@ public struct RadarrLookupRecord: Decodable {
     /// "in library" state on search cards.
     let id: Int?
     let tmdbId: Int?
+    /// `"ttNNNNNNN"`. Needed to resolve an `imdb:ttN` search — the unified
+    /// `SearchResult` identity is TMDB-keyed, so without this an IMDB ref
+    /// has nothing to match against and every row gets filtered out.
+    var imdbId: String? = nil
     let title: String
     let year: Int?
     let overview: String?
@@ -486,6 +490,9 @@ public struct SonarrLookupRecord: Decodable {
     /// — drives the "in library" state on search cards.
     let id: Int?
     let tvdbId: Int?
+    /// See `RadarrLookupRecord.imdbId` — Sonarr's lookup carries it too, so
+    /// an `imdb:ttN` query can resolve a series as well as a movie.
+    var imdbId: String? = nil
     let title: String
     let year: Int?
     let overview: String?
@@ -500,6 +507,10 @@ public struct SonarrLookupRecord: Decodable {
 
 public struct SonarrLookupRatings: Decodable {
     let value: Double?
+    /// TVDB vote count. Sonarr has always returned it; we used to drop it,
+    /// which meant `bayesianQuality` never shrank a series rating and a
+    /// 10.0-with-three-votes obscurity outranked a famous 8.6.
+    var votes: Int? = nil
 }
 
 public struct SonarrLookupStats: Decodable {
@@ -534,6 +545,8 @@ public struct LidarrLookupRecord: Decodable {
 }
 public struct LidarrLookupRatings: Decodable {
     public let value: Double?
+    /// See `SonarrLookupRatings.votes` — same dropped-signal fix.
+    public var votes: Int? = nil
 }
 
 public struct MetadataProfile: Decodable, Sendable, Equatable, Identifiable {

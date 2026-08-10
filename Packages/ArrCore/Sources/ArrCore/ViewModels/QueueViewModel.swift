@@ -607,9 +607,9 @@ public final class QueueViewModel {
     /// `QueueService` turns into an unconditional `QueueUpdatedEvent`, which
     /// `QueueController` broadcasts with no diff check. A healthy hub therefore
     /// pushes on a timer even when the queue is idle. How much slack to allow is
-    /// `ConfigStore.realtimeSilenceTimeout` — user-configurable because the
-    /// cycle it is measured against is itself a server-side setting that can run
-    /// late under load.
+    /// `ConfigStore.realtimeSilenceTimeout`, hard-locked to 5 minutes: enough
+    /// slack for a server-side cycle running late under load, short enough that
+    /// a dead hub is noticed within one background tick or two.
     ///
     /// Per-source on purpose: one busy Lidarr must not vouch for
     /// three silent Sonarrs, and a reverse proxy that strips the WebSocket
@@ -689,11 +689,14 @@ public final class QueueViewModel {
             // Simulate a real network round-trip so the spinner is visible and
             // popover-blink regressions are easier to spot in demo mode.
             try? await Task.sleep(nanoseconds: 1_000_000_000)
+            // Through DemoQueueState so a pause / cancel the user just performed
+            // survives this refresh — the fixtures themselves are immutable and
+            // would otherwise undo the action on the next poll.
             self.queues = [
-                .radarr:   DemoMocks.radarrQueue,
-                .sonarr:   DemoMocks.sonarrQueue,
-                .lidarr:   DemoMocks.lidarrQueue,
-                .whisparr: DemoMocks.whisparrQueue,
+                .radarr:   DemoQueueState.apply(DemoMocks.radarrQueue),
+                .sonarr:   DemoQueueState.apply(DemoMocks.sonarrQueue),
+                .lidarr:   DemoQueueState.apply(DemoMocks.lidarrQueue),
+                .whisparr: DemoQueueState.apply(DemoMocks.whisparrQueue),
             ]
             self.upcoming = DemoMocks.upcoming
             self.tonight = Self.tonightSlice(from: DemoMocks.upcoming, hours: configStore.tonightHours)

@@ -22,8 +22,7 @@ struct CustomFormatChips: View {
                 TagChip(text: f, color: isAdded ? .green : .primary)
             }
             if score != 0 {
-                let sign = score > 0 ? "+" : ""
-                TagChip(text: "\(sign)\(score)", color: score > 0 ? .green : .red)
+                TagChip(text: ScoreLabel.text(score), color: ScoreLabel.color(score))
             }
         }
     }

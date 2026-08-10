@@ -258,7 +258,7 @@ public actor LidarrClient: ArrAPIClient {
     }
 
     func fetchAllArtists() async throws -> [LidarrLibraryRecord] {
-        if DemoMode.isActive { return [] }
+        if DemoMode.isActive { return DemoMocks.lidarrLibrary() }
         guard config.isConfigured else { return [] }
         guard !config.apiKey.isEmpty else { return [] }
         let url = try http.url(base: config.baseURL, path: "/api/v1/artist")

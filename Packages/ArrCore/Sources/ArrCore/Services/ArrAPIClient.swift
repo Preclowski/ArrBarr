@@ -150,27 +150,43 @@ extension ArrAPIClient {
     /// Sonarr + Radarr (both v3); powers the chat `list_custom_formats` /
     /// `describe_format` tools.
     func fetchCustomFormats() async throws -> [ArrCustomFormatDetail] {
-        try await get("/customformat")
+        if DemoMode.isActive { return DemoMocks.customFormats() }
+        return try await get("/customformat")
     }
 
     /// All quality profiles (`/qualityprofile`). Decoded down to the
     /// per-format score table so `describe_format` can report where a
     /// custom format earns or loses points.
     func fetchQualityProfiles() async throws -> [ArrQualityProfile] {
-        try await get("/qualityprofile")
+        if DemoMode.isActive { return DemoMocks.qualityProfiles() }
+        return try await get("/qualityprofile")
     }
 
     /// Interactive / manual search: candidate releases on the indexers for a
     /// movie / episode / album. `query` carries the keying param (movieId /
     /// episodeId / albumId). Shared by every arr (Sonarr/Radarr/Lidarr/Whisparr).
     func fetchReleases(query: [URLQueryItem]) async throws -> [Release] {
-        try await get("/release", query: query)
+        if DemoMode.isActive {
+            // Indexer searches are slow in production and the list's loading
+            // state is part of what's being demoed, so don't return instantly.
+            try? await Task.sleep(nanoseconds: 900_000_000)
+            return DemoMocks.releases(query: query, source: demoSource)
+        }
+        return try await get("/release", query: query)
     }
 
     /// Grab a release returned by `fetchReleases` — hands it to the arr's
     /// download client. arr identifies the release by guid + indexerId.
     func grabRelease(guid: String, indexerId: Int) async throws {
+        if DemoMode.isActive { try? await Task.sleep(nanoseconds: 500_000_000); return }
         _ = try await post("/release", body: ["guid": guid, "indexerId": indexerId])
+    }
+
+    /// Which arr this client is, for fixture lookup. `serviceName` is the only
+    /// identity the protocol carries and it matches `Source`'s raw values
+    /// one-for-one once lowercased.
+    private var demoSource: QueueItem.Source {
+        QueueItem.Source(rawValue: serviceName.lowercased()) ?? .radarr
     }
 
     /// DELETE <apiBase><path>?key=val&...
@@ -186,6 +202,10 @@ extension ArrAPIClient {
     /// GET /system/status and report "<serviceName> <version>". Auth-gated,
     /// so a wrong API key fails here. Powers the Settings "Test" button.
     func testConnection() async throws -> String {
+        if DemoMode.isActive {
+            try? await Task.sleep(nanoseconds: 600_000_000)
+            return DemoMocks.systemStatus(serviceName: serviceName)
+        }
         guard config.isConfigured else { throw HTTPError.notConfigured }
         guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
         let url = try http.url(base: config.baseURL, path: "\(apiBase)/system/status")

@@ -9,7 +9,7 @@ public enum RtorrentError: LocalizedError {
     }
 }
 
-public actor RtorrentClient: DownloadProgressSource {
+public actor RtorrentClient: DownloadProgressSource, DownloadAddSource {
     enum Action { case pause, resume, delete }
 
     private let config: ServiceConfig
@@ -164,6 +164,76 @@ public actor RtorrentClient: DownloadProgressSource {
         let ns = xml as NSString
         return re.matches(in: xml, range: NSRange(location: 0, length: ns.length))
             .map { ns.substring(with: $0.range(at: 2)) }
+    }
+
+    /// Add a torrent by raw bytes or magnet link.
+    ///
+    /// rTorrent's category is `d.custom1` — the field every arr reads back as
+    /// the label — and it can only be set *at load time*, as a trailing command
+    /// argument to the load call. Setting it afterwards would need the info-hash,
+    /// which `load.*` doesn't return.
+    ///
+    /// Paused vs started is the method itself: `load.raw` parks the torrent,
+    /// `load.raw_start` begins it. Same split for magnets via `load.normal` /
+    /// `load.start`.
+    public func add(_ drop: DownloadDrop, category: String?, paused: Bool) async throws {
+        let method: String
+        let payload: Param
+        switch drop.content {
+        case .magnet(let link):
+            method = paused ? "load.normal" : "load.start"
+            payload = .string(link)
+        case .file(let data, _):
+            method = paused ? "load.raw" : "load.raw_start"
+            payload = .base64(data)
+        }
+
+        // The leading empty string is XML-RPC's "target" argument, mandatory on
+        // rTorrent 0.9.7+ (`load.*` gained it when commands became scoped).
+        var params: [Param] = [.string(""), payload]
+        if let category, !category.isEmpty {
+            params.append(.string("d.custom1.set=\(category)"))
+        }
+
+        let xml = xmlrpcCall(method: method, params: params)
+        let url = try http.url(base: config.baseURL, path: "")
+        let data = try await http.post(url, headers: authHeaders(), body: Data(xml.utf8))
+        let body = String(data: data, encoding: .utf8) ?? ""
+        if body.contains("<fault>") {
+            throw RtorrentError.actionFailed(Self.faultMessage(body, method: method))
+        }
+    }
+
+    /// One XML-RPC argument: rTorrent's load calls mix plain strings (target,
+    /// commands, magnet URI) with the torrent's raw bytes, which XML-RPC only
+    /// carries as `<base64>`.
+    enum Param {
+        case string(String)
+        case base64(Data)
+    }
+
+    private func xmlrpcCall(method: String, params: [Param]) -> String {
+        let encoded = params.map { param -> String in
+            switch param {
+            case .string(let value):
+                return "<param><value><string>\(Self.escapeXML(value))</string></value></param>"
+            case .base64(let data):
+                return "<param><value><base64>\(data.base64EncodedString())</base64></value></param>"
+            }
+        }.joined()
+        return """
+        <?xml version="1.0" encoding="UTF-8"?>\
+        <methodCall>\
+        <methodName>\(method)</methodName>\
+        <params>\(encoded)</params>\
+        </methodCall>
+        """
+    }
+
+    private static func escapeXML(_ value: String) -> String {
+        value
+            .replacingOccurrences(of: "&", with: "&amp;")
+            .replacingOccurrences(of: "<", with: "&lt;")
     }
 
     private func xmlrpcCall(method: String, stringParam: String) -> String {

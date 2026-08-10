@@ -11,7 +11,7 @@ public enum TransmissionError: LocalizedError {
     }
 }
 
-public actor TransmissionClient: DownloadProgressSource {
+public actor TransmissionClient: DownloadProgressSource, DownloadAddSource {
     enum Action { case pause, resume, delete }
 
     private let config: ServiceConfig
@@ -43,6 +43,77 @@ public actor TransmissionClient: DownloadProgressSource {
             )
         }
         guard result == "success" else { throw TransmissionError.actionFailed(result) }
+    }
+
+    /// Add a torrent by base64 metainfo or magnet link.
+    ///
+    /// Transmission has no categories or labels the arrs read — Sonarr/Radarr
+    /// map their "category" onto a *subdirectory* of the client's download dir
+    /// and match imports by path. So the category becomes `download-dir` =
+    /// `<session download-dir>/<category>`, which is exactly what the arr
+    /// itself does when it sends a grab to Transmission. Without that the file
+    /// lands in the root download dir and the arr never claims it.
+    ///
+    /// A duplicate torrent comes back as `torrent-duplicate` rather than an
+    /// error; that's a success for our purposes — the thing the user wanted
+    /// downloading is in the client.
+    public func add(_ drop: DownloadDrop, category: String?, paused: Bool) async throws {
+        guard config.isConfigured else { throw HTTPError.notConfigured }
+
+        var arguments: [String: Any] = ["paused": paused]
+        switch drop.content {
+        case .magnet(let link):
+            arguments["filename"] = link
+        case .file(let data, _):
+            arguments["metainfo"] = data.base64EncodedString()
+        }
+        if let category, !category.isEmpty, let root = await sessionDownloadDir() {
+            arguments["download-dir"] = root.hasSuffix("/") ? root + category : root + "/" + category
+        }
+
+        let url = try http.url(base: config.baseURL, path: "/transmission/rpc")
+        let body = try JSONSerialization.data(withJSONObject: ["method": "torrent-add", "arguments": arguments])
+        let data = try await rpcRequest(url: url, body: body)
+        guard let resp = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let result = resp["result"] as? String else {
+            throw TransmissionError.actionFailed(
+                String(localized: "The server sent an unreadable response.", bundle: .module)
+            )
+        }
+        guard result == "success" else { throw TransmissionError.actionFailed(result) }
+    }
+
+    /// Transmission's `start-added-torrents` inverted: it says whether new
+    /// torrents *start*, we ask whether they're added paused.
+    public func defaultAddPaused() async -> Bool? {
+        guard let args = await sessionGet(fields: ["start-added-torrents"]),
+              let starts = (args["start-added-torrents"] ?? args["start_added_torrents"]) as? Bool else { return nil }
+        return !starts
+    }
+
+    /// The client's configured download root — the base the per-arr category
+    /// subdirectory hangs off. nil when the session can't be read, in which
+    /// case `add` sends no `download-dir` and Transmission uses its own.
+    private func sessionDownloadDir() async -> String? {
+        guard let args = await sessionGet(fields: ["download-dir"]) else { return nil }
+        let dir = ((args["download-dir"] ?? args["download_dir"]) as? String)?
+            .trimmingCharacters(in: .whitespaces)
+        return (dir?.isEmpty == false) ? dir : nil
+    }
+
+    /// One `session-get`, tolerant of failure: every caller has a usable
+    /// fallback, so a dead session degrades the sheet's defaults rather than
+    /// blocking the add.
+    private func sessionGet(fields: [String]) async -> [String: Any]? {
+        guard config.isConfigured,
+              let url = try? http.url(base: config.baseURL, path: "/transmission/rpc"),
+              let body = try? JSONSerialization.data(
+                  withJSONObject: ["method": "session-get", "arguments": ["fields": fields]]
+              ),
+              let data = try? await rpcRequest(url: url, body: body),
+              let resp = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        else { return nil }
+        return resp["arguments"] as? [String: Any]
     }
 
     func testConnection() async throws -> String {

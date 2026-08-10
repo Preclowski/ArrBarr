@@ -189,7 +189,7 @@ public actor RadarrClient: ArrAPIClient {
     /// surface symptom was "no CF chips in movie detail" (the
     /// architect catch).
     func fetchMovieFile(movieId: Int) async throws -> ArrFile? {
-        if DemoMode.isActive { return nil }
+        if DemoMode.isActive { return DemoMocks.movieFile(movieId: movieId) }
         guard config.isConfigured else { throw HTTPError.notConfigured }
         guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
         let url = try http.url(
@@ -223,7 +223,7 @@ public actor RadarrClient: ArrAPIClient {
     /// LLM-suggested titles surface as cards. Mirrors Radarr's
     /// `/api/v3/movie/lookup?term=…`.
     func lookupMovies(term: String) async throws -> [RadarrLookupRecord] {
-        if DemoMode.isActive { return [] }
+        if DemoMode.isActive { return DemoMocks.radarrLookup(term: term) }
         guard config.isConfigured else { throw HTTPError.notConfigured }
         guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
         let url = try http.url(
@@ -236,7 +236,7 @@ public actor RadarrClient: ArrAPIClient {
     }
 
     func fetchAllMovies() async throws -> [RadarrLibraryRecord] {
-        if DemoMode.isActive { return [] }
+        if DemoMode.isActive { return DemoMocks.radarrLibrary() }
         guard config.isConfigured else { throw HTTPError.notConfigured }
         let url = try http.url(base: config.baseURL, path: "\(apiBase)/movie")
         let data = try await http.get(url, headers: apiHeaders)

@@ -46,14 +46,17 @@ public struct DetailView: View {
         return item.arrQueueId != 0 ? [] : [item]
     }
 
-    /// episode-id → active queue item for this series, for SeasonDetailView's
-    /// per-episode download indicators (mirrors SonarrDetailPanel's map).
-    private var sonarrQueueByEpisodeId: [Int: QueueItem] {
-        var map: [Int: QueueItem] = [:]
+    /// episode-id → ALL active queue items for this series, for
+    /// SeasonDetailView's per-episode download indicators (mirrors
+    /// SonarrDetailPanel's map). A list, not a single item — two grabs of the
+    /// same episode (auto + manual) both stay visible; the old last-writer-wins
+    /// dictionary silently hid one of them.
+    private var sonarrQueueByEpisodeId: [Int: [QueueItem]] {
+        var map: [Int: [QueueItem]] = [:]
         for q in siblings where q.arrQueueId != 0 {
             guard let sn = q.seasonNumber, let en = q.episodeNumber else { continue }
             if let ep = sonarrEpisodes.first(where: { $0.seasonNumber == sn && $0.episodeNumber == en }) {
-                map[ep.id] = q
+                map[ep.id, default: []].append(q)
             }
         }
         return map
@@ -110,6 +113,13 @@ public struct DetailView: View {
     /// rendering a 0%/Unknown progress bar would be misleading.
     private var hasActiveDownloads: Bool {
         siblings.contains { $0.arrQueueId != 0 }
+    }
+
+    /// How many live queue rows this title has. >1 (a duplicate grab) drops
+    /// the bottom pause/cancel — those act on `focused` only, which is
+    /// ambiguous with two downloads on screen; the list rows control each.
+    private var activeDownloadCount: Int {
+        siblings.count { $0.arrQueueId != 0 }
     }
 
     @State private var radarrDetail: RadarrMovieDetail?
@@ -175,6 +185,9 @@ public struct DetailView: View {
         // configured AND reachable. And don't offer them when the item's arr is
         // unavailable — the data is stale, the action can't land. Both cases
         // hide the CTA (and the episode-row pause/resume/delete callbacks below).
+        // Demo is exempt: no client is configured there and the actions are
+        // served by the fixture state (DemoQueueState).
+        if DemoMode.isActive { return true }
         guard let kind = configStore.selectedDownloadClient(for: item.downloadProtocol) else { return false }
         if case .down = ConnectionHealth.shared.state(for: .arr(kind)) { return false }
         if viewModel.lastUnreachable.contains(item.source) { return false }
@@ -184,6 +197,38 @@ public struct DetailView: View {
     private var canPauseResume: Bool {
         let s = focused.status
         return s == .downloading || s == .paused
+    }
+
+    // MARK: - Monitored state
+
+    /// What this detail's top-level entity is, and whether the arr says
+    /// it's monitored. `nil` when the flag didn't decode — an arr (or fork,
+    /// e.g. Whisparr V3) that doesn't report it gets NO bookmark rather
+    /// than one asserting a state we never learned. Also `nil` while the
+    /// detail fetch is still in flight, so the glyph appears with the data
+    /// instead of flickering from a guessed value.
+    private var monitorState: (entity: MonitorEntity, isMonitored: Bool)? {
+        switch item.source {
+        case .radarr, .whisparr:
+            guard let m = radarrDetail?.monitored else { return nil }
+            return (.movie, m)
+        case .sonarr:
+            guard let m = sonarrDetail?.monitored else { return nil }
+            return (.series, m)
+        case .lidarr:
+            guard let m = lidarrAlbum?.monitored else { return nil }
+            return (.album, m)
+        }
+    }
+
+    /// Leads the header action cluster on both platforms: `[bookmark]
+    /// [safari] [trash]` — state toggle first, then the leave-the-app link,
+    /// then the destructive one where users already found it.
+    @ViewBuilder
+    private var monitorToggle: some View {
+        if let state = monitorState {
+            MonitorToggleButton(isMonitored: state.isMonitored, entity: state.entity)
+        }
     }
 
     public var body: some View {
@@ -210,7 +255,18 @@ public struct DetailView: View {
                     // Floating CTA — no material backdrop / divider so the glass
                     // pill reads as an island on top of the content.
                     if hasActiveDownloads {
-                        if canControl && canPauseResume {
+                        if activeDownloadCount > 1 {
+                            // Multiple downloads of this title — a single
+                            // bottom pause/cancel would be ambiguous, so each
+                            // list row carries its own controls and the strip
+                            // offers only manual search.
+                            if let target = manualTarget {
+                                manualSearchButton(target, compact: true)
+                                    .padding(.horizontal, 14)
+                                    .padding(.vertical, 10)
+                                    .frame(maxWidth: .infinity)
+                            }
+                        } else if canControl && canPauseResume {
                             downloadCTAStrip
                                 .padding(.horizontal, 14)
                                 .padding(.vertical, 10)
@@ -284,6 +340,7 @@ public struct DetailView: View {
         #if os(iOS)
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
+                monitorToggle
                 if let url = arrWebURL(for: item, in: configStore) {
                     Button { PlatformURLOpener.open(url) } label: {
                         Image(systemName: "safari")
@@ -337,7 +394,9 @@ public struct DetailView: View {
         }
         // Manual-search ("Download") drill-down — releases for this movie/album.
         .navigationDestination(item: $manualSearchTarget) { target in
-            ReleaseListView(target: target, onBack: { manualSearchTarget = nil })
+            ReleaseListView(target: target,
+                            existing: manualSearchExistingFile,
+                            onBack: { manualSearchTarget = nil })
         }
         // Inline confirmation — replaces `.confirmationDialog` because
         // the system dialog steals focus from MenuBarExtra(.window),
@@ -400,6 +459,7 @@ public struct DetailView: View {
                 .foregroundStyle(.primary)
                 .lineLimit(1)
             Spacer(minLength: 0)
+            monitorToggle
             if let url = arrWebURL(for: item, in: configStore) {
                 Button { PlatformURLOpener.open(url) } label: {
                     Image(systemName: "safari")
@@ -448,6 +508,23 @@ public struct DetailView: View {
 
     private var hasBottomSearchCTA: Bool { manualTarget != nil }
 
+    /// The on-disk file a manual search from here would be replacing — the
+    /// baseline `ReleaseListView` diffs its candidates against. Movies only: a
+    /// Lidarr album is many track files with no single "current" one, and a
+    /// Sonarr series doesn't open manual search from this level at all.
+    private var manualSearchExistingFile: UpgradeDiffView.Side? {
+        switch item.source {
+        case .radarr, .whisparr:
+            // Same fallback as RadarrDetailPanel's banner: prefer the separately
+            // fetched file (it carries customFormats), fall back to the stripped
+            // inline one from /movie/{id}.
+            guard let file = radarrMovieFile ?? radarrDetail?.movieFile else { return nil }
+            return UpgradeDiffView.side(file: file)
+        case .sonarr, .lidarr:
+            return nil
+        }
+    }
+
     /// Bottom search CTA when the item isn't downloading — Manual + Automatic
     /// search for every library kind (movie / album / season).
     @ViewBuilder
@@ -471,14 +548,19 @@ public struct DetailView: View {
         }
     }
 
-    private func manualSearchButton(_ target: ManualSearchTarget) -> some View {
+    /// `compact` shows the bare "Search" verb — used on the downloading CTA
+    /// strip, where three capsules share the width and "Manual search"
+    /// truncated. The idle-state pair below keeps the full label to stay
+    /// distinguishable from "Automatic search" beside it.
+    private func manualSearchButton(_ target: ManualSearchTarget, compact: Bool = false) -> some View {
         Button { manualSearchTarget = target } label: {
-            searchCTALabel(icon: "magnifyingglass", text: "Manual search")
+            searchCTALabel(icon: "magnifyingglass", text: compact ? "Search" : "Manual search")
         }
         .modifier(GlassProminentButtonStyle())
         // Locked while the server is already sweeping indexers: an interactive
         // search hits the same trackers and would race the automatic one.
         .disabled(searchRunning)
+        .accessibilityLabel(Text("Manual search", bundle: .module))
     }
 
     @ViewBuilder
@@ -594,6 +676,11 @@ public struct DetailView: View {
                 // capsule. iOS keeps delete in the nav toolbar instead.
                 cancelGlassCompact
                 #endif
+                // Third action: jump into the release list — e.g. to grab a
+                // better release while this one is still downloading.
+                if let target = manualTarget {
+                    manualSearchButton(target, compact: true)
+                }
             }
             // Inline-confirm attached to body instead of here so the
             // overlay fires regardless of whether the bottom CTA strip
@@ -644,7 +731,9 @@ public struct DetailView: View {
             HStack(spacing: 6) {
                 Image(systemName: "trash")
                     .scaledFont(size: 11, weight: .semibold)
-                Text("queue.cancelDownload.button", bundle: .module)
+                // Visible label is the short verb; help/accessibility keep the
+                // full "Cancel download" so the meaning stays unambiguous.
+                Text("common.cancel.button", bundle: .module)
                     .scaledFont(size: 12, weight: .semibold)
             }
             .frame(maxWidth: .infinity)
@@ -697,7 +786,10 @@ public struct DetailView: View {
                     isLoading: loading,
                     header: movieHeader,
                     cast: cast,
-                    arrWebURLForItem: { q in arrWebURL(for: q, in: configStore) }
+                    arrWebURLForItem: { q in arrWebURL(for: q, in: configStore) },
+                    onPauseItem: { q in Task { await viewModel.pause(q); await viewModel.refresh() } },
+                    onResumeItem: { q in Task { await viewModel.resume(q); await viewModel.refresh() } },
+                    onDeleteItem: { q in Task { await viewModel.delete(q) } }
                 )
             case .sonarr:
                 let titleFallback = splitTitleAndYear(item.title)
@@ -745,7 +837,10 @@ public struct DetailView: View {
                     isLoading: loading,
                     enlargedPoster: $enlargedPoster,
                     selectedDiscNumber: $selectedDiscNumber,
-                    arrWebURLForItem: { q in arrWebURL(for: q, in: configStore) }
+                    arrWebURLForItem: { q in arrWebURL(for: q, in: configStore) },
+                    onPauseItem: { q in Task { await viewModel.pause(q); await viewModel.refresh() } },
+                    onResumeItem: { q in Task { await viewModel.resume(q); await viewModel.refresh() } },
+                    onDeleteItem: { q in Task { await viewModel.delete(q) } }
                 )
             }
     }

@@ -15,8 +15,8 @@ public struct QueueGroupRowView: View {
     let onResume: () -> Void
     let onDelete: () -> Void
     var onShowDetail: (() -> Void)? = nil
-    /// Multi-select state — `.hidden` shows the poster; otherwise the poster
-    /// slot becomes the selection circle (a pack row selects the whole pack).
+    /// Multi-select state — `.hidden` = no overlay; otherwise the selection
+    /// circle is drawn over the poster (a pack row selects the whole pack).
     var selectionState: RowSelectionState = .hidden
 
     @EnvironmentObject var configStore: ConfigStore
@@ -47,6 +47,8 @@ public struct QueueGroupRowView: View {
     /// reachable download client (they bypass the arr); a `.down` client hides
     /// them so the user isn't offered an action that can't reach home.
     private var canControl: Bool {
+        // See QueueRowView.canControl — demo serves the action from fixtures.
+        if DemoMode.isActive { return true }
         guard let kind = configStore.selectedDownloadClient(for: rep.downloadProtocol) else { return false }
         if case .down = ConnectionHealth.shared.state(for: .arr(kind)) { return false }
         return true
@@ -62,29 +64,31 @@ public struct QueueGroupRowView: View {
 
     public var body: some View {
         HStack(alignment: .top, spacing: 10) {
-            if selectionState != .hidden {
-                SelectionCircle(selected: selectionState == .selected)
-                    .frame(width: 40, height: 60)
-            } else {
-                PosterBlurContainer(blurred: configStore.shouldBlurPoster(for: rep.source), cornerRadius: Tokens.Radius.chip) {
-                    RemotePoster(
-                        url: rep.posterURL,
-                        apiKey: rep.posterRequiresAuth ? configStore.sonarr.apiKey : nil,
-                        tier: .icon,
-                        size: CGSize(width: 40, height: 60),
-                        cornerRadius: Tokens.Radius.chip,
-                        fallbackSymbol: "tv"
-                    )
+            PosterBlurContainer(blurred: configStore.shouldBlurPoster(for: rep.source), cornerRadius: Tokens.Radius.chip) {
+                RemotePoster(
+                    url: rep.posterURL,
+                    apiKey: rep.posterRequiresAuth ? configStore.sonarr.apiKey : nil,
+                    tier: .icon,
+                    size: CGSize(width: 40, height: 60),
+                    cornerRadius: Tokens.Radius.chip,
+                    fallbackSymbol: "tv"
+                )
+            }
+            // macOS: pause/resume on the poster (hover-revealed); no delete in
+            // the list — same treatment as QueueRowView. Suppressed while
+            // selecting — the poster is the checkbox then.
+            #if os(macOS)
+            .overlay {
+                if selectionState == .hidden && isHovering && canControl && canPauseResume && !isOffline {
+                    posterControl.transition(.opacity)
                 }
-                // macOS: pause/resume on the poster (hover-revealed); no delete in
-                // the list — same treatment as QueueRowView.
-                #if os(macOS)
-                .overlay {
-                    if isHovering && canControl && canPauseResume && !isOffline {
-                        posterControl.transition(.opacity)
-                    }
+            }
+            #endif
+            .overlay {
+                if selectionState != .hidden {
+                    SelectionCircle(selected: selectionState == .selected)
+                        .transition(.opacity)
                 }
-                #endif
             }
 
             VStack(alignment: .leading, spacing: 4) {
@@ -103,9 +107,8 @@ public struct QueueGroupRowView: View {
 
                         Spacer(minLength: 4)
 
-                        // Upgrade/New badge on the title row's trailing
-                        // edge — matches QueueRowView (moved out of the
-                        // progress card header below).
+                        // Upgrade/New badge on the title line's trailing edge —
+                        // matches QueueRowView (no room in the card's status row).
                         MediaBadgeCluster(isUpgrade: rep.isUpgrade)
                     }
 
@@ -123,12 +126,22 @@ public struct QueueGroupRowView: View {
                 DownloadProgressCard(
                     item: rep,
                     progressOverride: aggregateProgress,
-                    fadeTrailing: !(isHovering && canControl),
                     showUpgradeDiff: false,
                     showHeader: true,
-                    showBadge: false,
                     compactSpec: true
                 )
+
+                // Same custom-format strip + trailing score as QueueRowView —
+                // a pack is one physical release, so the rep's formats/score
+                // describe the whole row. Keeps the score in the same spot
+                // across single and pack rows.
+                if !rep.customFormats.isEmpty || rep.customFormatScore != 0 {
+                    QueueRowFormatStrip(
+                        formats: rep.customFormats,
+                        score: rep.customFormatScore,
+                        baseline: rep.existingCustomFormatScore
+                    )
+                }
             }
         }
         .padding(.horizontal, Tokens.Spacing.queueRowH)
@@ -613,7 +626,7 @@ public struct TooltipQueueRow: View {
                 // active pack download, "+50 vs your existing" is
                 // more interesting than a number the progress bar
                 // already shows visually.
-                scoreDeltaView
+                scoreView
             }
             .padding(.horizontal, 6)
             .padding(.vertical, 4)
@@ -652,24 +665,14 @@ public struct TooltipQueueRow: View {
         }
     }
 
-    /// Score delta = new file score − existing file score. Green when
-    /// the upgrade gains points, red when it loses, neutral when
-    /// equal. Falls back to the raw score when no existing score is
-    /// known (fresh download with no replacement target).
+    /// The incoming file's own score, like every other inline gutter.
+    /// This row used to show the DELTA alone — a bare "+125" that looked
+    /// exactly like the release list's absolute "+125" and meant something
+    /// else entirely.
     @ViewBuilder
-    private var scoreDeltaView: some View {
-        if let existing = item.existingCustomFormatScore {
-            let delta = item.customFormatScore - existing
-            let sign = delta > 0 ? "+" : (delta == 0 ? "±" : "")
-            Text(verbatim: "\(sign)\(delta)")
-                .scaledFont(size: 10, weight: .semibold, monospacedDigit: true)
-                .foregroundStyle(delta > 0 ? Color.green : (delta < 0 ? Color.red : .secondary))
-        } else if item.customFormatScore != 0 {
-            let sign = item.customFormatScore > 0 ? "+" : ""
-            Text(verbatim: "\(sign)\(item.customFormatScore)")
-                .scaledFont(size: 10, weight: .semibold, monospacedDigit: true)
-                .foregroundStyle(item.customFormatScore > 0 ? Color.green : Color.red)
-        }
+    private var scoreView: some View {
+        ScoreLabel(score: item.customFormatScore,
+                   baseline: item.existingCustomFormatScore, size: 10)
     }
 
     private var episodeCode: String? {

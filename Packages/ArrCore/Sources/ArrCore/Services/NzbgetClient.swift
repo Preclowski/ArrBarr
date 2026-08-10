@@ -9,7 +9,7 @@ public enum NzbgetError: LocalizedError {
     }
 }
 
-public actor NzbgetClient: DownloadProgressSource {
+public actor NzbgetClient: DownloadProgressSource, DownloadAddSource {
     enum Action { case pause, resume, delete }
 
     private let config: ServiceConfig
@@ -67,6 +67,62 @@ public actor NzbgetClient: DownloadProgressSource {
         // no message anywhere — say what that usually means instead.
         if let result = resp["result"] as? Bool, !result {
             throw NzbgetError.actionFailed(Self.rejectionMessage(command))
+        }
+    }
+
+    /// Upload an .nzb via `append`, which takes the file base64-encoded inside
+    /// the JSON-RPC body — no multipart involved.
+    ///
+    /// The positional parameter list is NZBGet's v13+ signature and every slot
+    /// has to be present in order: filename, content, category, priority,
+    /// addToTop, addPaused, dupeKey, dupeScore, dupeMode, postParameters.
+    /// `append` answers with the new NZBID, or `0` when it refused the file.
+    public func add(_ drop: DownloadDrop, category: String?, paused: Bool) async throws {
+        guard config.isConfigured else { throw HTTPError.notConfigured }
+        guard case .file(let data, let filename) = drop.content else {
+            // Unreachable in practice (a magnet never resolves to usenet), but
+            // an explicit failure beats silently doing nothing.
+            throw NzbgetError.actionFailed(
+                String(localized: "NZBGet can only take .nzb files.", bundle: .module)
+            )
+        }
+
+        let body: [String: Any] = [
+            "method": "append",
+            "params": [
+                filename,
+                data.base64EncodedString(),
+                category ?? "",
+                0,                  // priority — normal
+                false,              // addToTop
+                paused,
+                "",                 // dupeKey
+                0,                  // dupeScore
+                "SCORE",            // dupeMode
+                [[String: Any]](),  // postParameters
+            ],
+        ]
+        let jsonData = try JSONSerialization.data(withJSONObject: body)
+        let url = try http.url(base: config.baseURL, path: "/jsonrpc")
+        let data2 = try await http.post(url, headers: authHeaders(contentType: "application/json"), body: jsonData)
+
+        guard let resp = try? JSONSerialization.jsonObject(with: data2) as? [String: Any] else {
+            throw NzbgetError.actionFailed(
+                String(localized: "The server sent an unreadable response.", bundle: .module)
+            )
+        }
+        if let error = resp["error"] as? [String: Any] {
+            let detail = (error["message"] as? String) ?? (error["name"] as? String)
+            throw NzbgetError.actionFailed(detail ?? Self.rejectionMessage("append"))
+        }
+        if let error = resp["error"] as? String, !error.isEmpty {
+            throw NzbgetError.actionFailed(error)
+        }
+        // A refused append is a zero id, not an error member.
+        guard let id = resp["result"] as? Int, id > 0 else {
+            throw NzbgetError.actionFailed(
+                String(localized: "NZBGet rejected the file.", bundle: .module)
+            )
         }
     }
 

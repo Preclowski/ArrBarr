@@ -18,10 +18,6 @@ public struct DownloadProgressCard: View {
     /// where the rendered % is an *aggregate* over member items, not
     /// the representative's own progress. nil = use `item.progress`.
     let progressOverride: Double?
-    /// `true` mutes the trailing edge fade on the status row when
-    /// the row's hover overlay is going to paint its own gradient
-    /// on top — avoids double-fade artefacts.
-    let fadeTrailing: Bool
     /// Show the inline upgrade diff sub-line (`└─ OLD: quality · size (±delta)`).
     /// Defaults to true; surfaces that already render an explicit
     /// existing-file section can pass false.
@@ -30,14 +26,6 @@ public struct DownloadProgressCard: View {
     /// the bar. Queue-row variants set `false` because the row
     /// already shows status info inline above the card.
     let showHeader: Bool
-    /// Show the Upgrade/New badge in the header. Queue rows pass `false`
-    /// because they render the badge up in the title row instead.
-    var showBadge: Bool = true
-    /// Legacy flag — kept for source-compat with existing call sites
-    /// but no longer affects rendering. The progress bar now always
-    /// sits at the top of the card (with the percent rendered on
-    /// top of it) per user direction.
-    let showProgressFill: Bool
     /// Queue-row variant: inline `quality · size · score` next to
     /// the status pill instead of on its own row. Keeps the compact
     /// list dense. Detail surfaces stay false (spec gets its own
@@ -68,21 +56,15 @@ public struct DownloadProgressCard: View {
     public init(
         item: QueueItem,
         progressOverride: Double? = nil,
-        fadeTrailing: Bool = false,
         showUpgradeDiff: Bool = true,
         showHeader: Bool = false,
-        showBadge: Bool = true,
-        showProgressFill: Bool = true,
         compactSpec: Bool = false,
         existingOverride: ExistingFileSnapshot? = nil
     ) {
         self.item = item
         self.progressOverride = progressOverride
-        self.fadeTrailing = fadeTrailing
         self.showUpgradeDiff = showUpgradeDiff
         self.showHeader = showHeader
-        self.showBadge = showBadge
-        self.showProgressFill = showProgressFill
         self.compactSpec = compactSpec
         self.existingOverride = existingOverride
     }
@@ -124,10 +106,13 @@ public struct DownloadProgressCard: View {
                     // icon + coloured word are enough; the border read as a
                     // redundant label there.
                     StatusIconLabel(status: item.status, bordered: !compactSpec)
-                    if showBadge {
+                    // Compact queue rows carry the badge on their title line
+                    // (no room here next to status + client + spec); detail
+                    // surfaces show it in this header.
+                    if !compactSpec {
                         MediaBadgeCluster(isUpgrade: item.isUpgrade)
                     }
-                    if let client = item.downloadClient, !compactSpec {
+                    if let client = item.downloadClient {
                         DownloadClientLabel(name: client)
                     }
                     Spacer(minLength: 6)
@@ -193,6 +178,20 @@ public struct DownloadProgressCard: View {
                     // Nudge the facts grid down off the progress-bar
                     // block so it doesn't read as glued to the bar.
                     .padding(.top, 5)
+
+                    // Where the grab came from — previously tooltip-only,
+                    // which left both the movie and series details without
+                    // the indexer.
+                    if let indexer = item.indexer, !indexer.isEmpty {
+                        HStack(alignment: .firstTextBaseline, spacing: 8) {
+                            Text("Indexer", bundle: .module)
+                                .scaledFont(size: 11, weight: .semibold)
+                                .foregroundStyle(.secondary)
+                            Text(indexer)
+                                .scaledFont(size: 11)
+                        }
+                        .padding(.top, 2)
+                    }
                 }
             }
             // Progress bar BELOW the status/spec row (compact / queue
@@ -212,8 +211,9 @@ public struct DownloadProgressCard: View {
     }
 
     /// Trailing-edge spec for the compact queue-row variant —
-    /// `quality · size · score` condensed to fit next to the status
-    /// pill / client label on a single row.
+    /// `quality · size` condensed to fit next to the status pill /
+    /// client label on a single row. The score moved up to the row's
+    /// title line (rendered by the queue rows themselves).
     @ViewBuilder
     private var inlineSpec: some View {
         HStack(spacing: 3) {
@@ -229,10 +229,6 @@ public struct DownloadProgressCard: View {
                 Text(ByteCountFormatter.string(fromByteCount: item.sizeTotal, countStyle: .file))
                     .scaledFont(size: 10)
                     .foregroundStyle(.secondary)
-            }
-            if item.customFormatScore != 0 {
-                SeparatorDot()
-                ScoreLabel(score: item.customFormatScore, size: 10)
             }
         }
         .lineLimit(1)

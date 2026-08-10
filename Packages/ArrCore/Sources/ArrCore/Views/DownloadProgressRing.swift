@@ -1,14 +1,17 @@
 import SwiftUI
 
 /// An SF Symbol glyph (play/pause) wrapped in a circular progress ring that
-/// fills with download progress. White strokes + glyph — designed to sit on a
-/// tinted-glass CTA or a dark poster scrim. Shared by the detail download
-/// control (`PauseResumeButton`) and the queue rows' on-poster hover control.
+/// fills with download progress. Default white strokes + glyph — designed to
+/// sit on a tinted-glass CTA or a dark poster scrim; pass `tint` for surfaces
+/// with no dark backdrop. Shared by the detail download control
+/// (`PauseResumeButton`), the queue rows' on-poster hover control and the
+/// multi-download list's inline controls.
 struct DownloadProgressRing: View {
     let systemName: String
     let progress: Double
     let diameter: CGFloat
     var lineWidth: CGFloat = 1.5
+    var tint: Color = .white
 
     var body: some View {
         let clamped = max(0, min(1, progress))
@@ -19,14 +22,14 @@ struct DownloadProgressRing: View {
         let playNudge: CGFloat = systemName == "play.fill" ? diameter * 0.03 : 0
         return ZStack {
             Circle()
-                .stroke(Color.white.opacity(0.30), lineWidth: lineWidth)
+                .stroke(tint.opacity(0.30), lineWidth: lineWidth)
             Circle()
                 .trim(from: 0, to: clamped)
-                .stroke(Color.white, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
+                .stroke(tint, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
                 .rotationEffect(.degrees(-90))
             Image(systemName: systemName)
                 .font(.system(size: diameter * 0.5, weight: .semibold))
-                .foregroundStyle(.white)
+                .foregroundStyle(tint)
                 .offset(x: playNudge)
         }
         .frame(width: diameter, height: diameter)

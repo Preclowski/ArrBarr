@@ -32,6 +32,10 @@ public struct PopoverContentView: View {
     }
 
     @State private var selectedTab: Tab = .queue
+    #if os(macOS)
+    /// Drives the ⌘-number hints on the tab pills — see `commandHint(for:)`.
+    @State private var commandKey = CommandKeyMonitor()
+    #endif
     /// Queue multi-select mode, entered from the "⋯" menu and threaded into
     /// QueueTabContent → QueueListView (the native-`List` selection).
     @State private var queueSelecting = false
@@ -155,6 +159,27 @@ public struct PopoverContentView: View {
     public var body: some View {
         mainContent
             .environment(\.locale, configStore.currentLocale)
+            #if os(macOS)
+            // Dropping onto the open panel is the most discoverable route, but
+            // it deliberately does NOT get its own inline UI: the URLs are
+            // handed to AppDelegate, which opens the same add window that Dock
+            // drops, "Open With" and magnet clicks use. One add surface, four
+            // ways in. (A drop the app can't download is filtered out there,
+            // not here — this side has no business knowing what a client takes.)
+            .dropDestination(for: URL.self) { urls, _ in
+                // Deferred for the same reason the menu-bar drop defers: this
+                // runs inside the drag handling, and opening a window from
+                // there can leave the drag session's tracking loop wedged.
+                DispatchQueue.main.async {
+                    NotificationCenter.default.post(
+                        name: .arrBarrDropDownloads,
+                        object: nil,
+                        userInfo: ["urls": urls]
+                    )
+                }
+                return true
+            }
+            #endif
             // The menu-bar popover is its own scene root — without this every
             // `.scaledFont` in the popover falls back to 1.0 and the Text-size
             // preset has no effect here (it only worked in Settings, which
@@ -175,11 +200,17 @@ public struct PopoverContentView: View {
                 // before: it sat on the 30 s background timer even while open.
                 viewModel.startForegroundPolling()
                 focusInputForCurrentTab()
+                #if os(macOS)
+                commandKey.start()
+                #endif
             }
             .onDisappear {
                 // Panel closed — drop back to the background cadence so we're
                 // not hammering the arrs every few seconds while hidden.
                 viewModel.stopForegroundPolling()
+                #if os(macOS)
+                commandKey.stop()
+                #endif
             }
             .onChange(of: ChatViewModelHolder.signature(store: configStore)) { _, _ in
                 chatHolder.reconfigure(store: configStore)
@@ -224,6 +255,19 @@ public struct PopoverContentView: View {
                     .keyboardShortcut("r", modifiers: .command)
                     .opacity(0)
                     .frame(width: 0, height: 0)
+                // ⌘1 / ⌘2 / ⌘3 — jump straight to a tab, the same numbering
+                // Safari / Finder / Mail use. Keyed off `visibleTabs`, NOT
+                // `Tab.allCases`, so the numbers always match the pills the
+                // user is looking at: with chat unavailable there is no third
+                // pill, and ⌘3 correctly does nothing rather than landing on a
+                // tab that isn't on screen. Capped at 9 — ⌘0 means something
+                // else everywhere.
+                ForEach(Array(visibleTabs.prefix(9).enumerated()), id: \.element) { index, tab in
+                    Button("") { selectTab(tab) }
+                        .keyboardShortcut(KeyEquivalent(Character("\(index + 1)")), modifiers: .command)
+                        .opacity(0)
+                        .frame(width: 0, height: 0)
+                }
             }
             .onReceive(NotificationCenter.default.publisher(for: .arrBarrTriggerAdd)) { _ in
                 withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
@@ -390,6 +434,9 @@ public struct PopoverContentView: View {
                     viewModel: discoverViewModel,
                     llmAvailable: chatAvailable,
                     radarrAvailable: radarrConfigured,
+                    // The top-up round IS a chat turn, so the agent's own
+                    // thinking flag is what the deck should wait on.
+                    moreInFlight: chatHolder.vm.isThinking,
                     onClose: {
                         withAnimation(.smooth(duration: 0.22)) { showDiscoverOverlay = false }
                     },
@@ -480,6 +527,17 @@ public struct PopoverContentView: View {
 
 
     // MARK: - Tab bar
+
+    /// Switch tabs the way the tab pill does — same Pro gate, same spring —
+    /// so ⌘1/2/3 and a click are genuinely the same action. Kept next to
+    /// `visibleTabs` because the two have to agree on what's reachable.
+    private func selectTab(_ tab: Tab) {
+        if tab == .chat && !storeManager.isPro {
+            storeManager.gate(.chat)
+            return
+        }
+        withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) { selectedTab = tab }
+    }
 
     private var visibleTabs: [Tab] {
         Tab.allCases.filter { tab in
@@ -596,6 +654,19 @@ public struct PopoverContentView: View {
 
     @State private var tabFrames: [Tab: CGRect] = [:]
 
+    /// While ⌘ is held the tab labels crossfade to their ⌘-number, so the
+    /// shortcut is discoverable without a menu (the numbering is the same one
+    /// the hidden ⌘1…⌘9 buttons register — both read `visibleTabs`).
+    /// `nil` on iOS / when the tab is past the ninth (no shortcut to show).
+    private func commandHint(for tab: Tab) -> String? {
+        #if os(macOS)
+        guard commandKey.isHeld, let index = visibleTabs.firstIndex(of: tab), index < 9 else { return nil }
+        return "⌘\(index + 1)"
+        #else
+        return nil
+        #endif
+    }
+
     private var tabPills: some View {
         HStack(spacing: 0) {
             // Edge Spacer at start + between every tab gives n+1 evenly
@@ -665,6 +736,21 @@ public struct PopoverContentView: View {
                     // via `pillHeight` (they don't shrink the tabs).
                     .padding(.horizontal, 18)
                     .padding(.vertical, 9)
+                    // ⌘-number sits *beside* the label, parked in the pill's own
+                    // 18pt trailing padding — an overlay, so it never enters the
+                    // layout and can't resize a tab (which would jolt the
+                    // selection indicator mid-spring, see the stabiliser above).
+                    .overlay(alignment: .trailing) {
+                        if let hint = commandHint(for: tab) {
+                            Text(hint)
+                                .scaledFont(size: 9, weight: .semibold)
+                                .monospacedDigit()
+                                .foregroundStyle(.secondary)
+                                .padding(.trailing, 3)
+                                .transition(.opacity)
+                                .accessibilityHidden(true)
+                        }
+                    }
                     .contentShape(Rectangle())
                     .background(
                         GeometryReader { proxy in
@@ -680,6 +766,9 @@ public struct PopoverContentView: View {
             }
         }
         .coordinateSpace(name: "tabPills")
+        #if os(macOS)
+        .animation(.easeOut(duration: 0.12), value: commandKey.isHeld)
+        #endif
         .onPreferenceChange(TabFrames.self) { tabFrames = $0 }
         .background(
             // Indicator reads from `tabFrames` so it lines up exactly
@@ -759,12 +848,9 @@ public struct PopoverContentView: View {
                 }
                 Divider()
             }
-            // Manual refresh — mirrors the hidden ⌘R button above so the
-            // shortcut is also discoverable in the menu (same dual-
-            // registration pattern as Settings' ⌘,).
-            Button { Task { await viewModel.refresh() } } label: { Text("common.refresh.button", bundle: .module) }
-                .keyboardShortcut("r", modifiers: .command)
-            Divider()
+            // No "Refresh" item — the queue refreshes itself and ⌘R (the
+            // hidden button above) stays for power users; a manual refresh
+            // verb in the menu just suggested the app needs babysitting.
             Button { onOpenSettings() } label: { Text("common.settings2.button", bundle: .module) }
                 .keyboardShortcut(",", modifiers: .command)
             #if os(macOS)

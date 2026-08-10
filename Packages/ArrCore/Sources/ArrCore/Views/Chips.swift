@@ -15,8 +15,7 @@ public func customFormatChipStrip(tags: [String], score: Int?) -> some View {
         TooltipFlowLayout(spacing: 3) {
             ForEach(tags, id: \.self) { TagChip(text: $0) }
             if let score, score != 0 {
-                let sign = score > 0 ? "+" : ""
-                TagChip(text: "\(sign)\(score)", color: score > 0 ? .green : .red)
+                TagChip(text: ScoreLabel.text(score), color: ScoreLabel.color(score))
             }
         }
         .padding(.top, 2)
@@ -207,9 +206,8 @@ public struct CustomFormatStrip: View {
                             .overlay(RoundedRectangle(cornerRadius: Tokens.Radius.chip).stroke(Color.primary.opacity(0.22), lineWidth: 0.75))
                     }
                     if score != 0 {
-                        let sign = score > 0 ? "+" : ""
-                        let scoreColor: Color = score > 0 ? .green : .red
-                        Text(verbatim: "\(sign)\(score)")
+                        let scoreColor = ScoreLabel.color(score)
+                        Text(verbatim: ScoreLabel.text(score))
                             .scaledFont(size: 9, weight: .semibold)
                             .foregroundStyle(scoreColor)
                             .padding(.horizontal, 5)

@@ -33,7 +33,11 @@ public enum MediaRef: Hashable, Sendable {
         case .tmdb:        return [.radarr, .whisparr]
         case .tvdb:        return [.sonarr]
         case .musicBrainz: return [.lidarr]
-        case .imdb:        return [.radarr]  // Radarr's /lookup accepts imdb:ttN
+        // Both Radarr and Sonarr accept `imdb:ttN` on /lookup. Asking a
+        // server that doesn't is harmless now that the ranker matches on the
+        // record's own `imdbId`: a title search for the literal "imdb:ttN"
+        // returns nothing that can pass that check.
+        case .imdb:        return [.radarr, .sonarr]
         }
     }
 

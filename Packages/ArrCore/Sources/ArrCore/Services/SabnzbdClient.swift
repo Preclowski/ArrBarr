@@ -14,7 +14,7 @@ private struct SabActionResponse: Decodable {
     let error: String?
 }
 
-public actor SabnzbdClient: DownloadProgressSource {
+public actor SabnzbdClient: DownloadProgressSource, DownloadAddSource {
     enum Action: String { case pause, resume, delete }
 
     private let config: ServiceConfig
@@ -47,6 +47,55 @@ public actor SabnzbdClient: DownloadProgressSource {
         let resp: SabActionResponse
         do {
             resp = try JSONDecoder().decode(SabActionResponse.self, from: data)
+        } catch {
+            throw HTTPError.decoding(error)
+        }
+        if resp.status == false {
+            throw SabnzbdError.actionFailed(resp.error ?? "Unknown SABnzbd error")
+        }
+    }
+
+    /// Upload an .nzb via `mode=addfile`, which is multipart-only.
+    ///
+    /// SAB has no per-job "add paused" flag; pausing is a *priority* — `-2` is
+    /// its Paused priority, and it's the same mechanism the web UI uses. The
+    /// category is the arr's, exactly as with the torrent clients.
+    ///
+    /// The API key travels in the query string here rather than the body: SAB
+    /// accepts either, and keeping it out of the multipart body means the file
+    /// part stays the only thing we have to get byte-exact.
+    public func add(_ drop: DownloadDrop, category: String?, paused: Bool) async throws {
+        guard config.isConfigured, !config.apiKey.isEmpty else { throw HTTPError.notConfigured }
+        guard case .file(let data, let filename) = drop.content else {
+            // Structurally unreachable — magnets never resolve to a usenet
+            // destination — but a thrown error beats a silent no-op if the
+            // destination resolver ever regresses.
+            throw SabnzbdError.actionFailed(
+                String(localized: "SABnzbd can only take .nzb files.", bundle: .module)
+            )
+        }
+
+        var fields: [String: String] = [:]
+        if let category, !category.isEmpty { fields["cat"] = category }
+        if paused { fields["priority"] = "-2" }
+
+        let url = try http.url(
+            base: config.baseURL,
+            path: "/api",
+            query: [
+                URLQueryItem(name: "mode", value: "addfile"),
+                URLQueryItem(name: "output", value: "json"),
+                URLQueryItem(name: "apikey", value: config.apiKey),
+            ]
+        )
+        let response = try await http.postMultipart(
+            url,
+            fields: fields,
+            file: (name: "nzbfile", filename: filename, data: data, contentType: "application/x-nzb")
+        )
+        let resp: SabActionResponse
+        do {
+            resp = try JSONDecoder().decode(SabActionResponse.self, from: response)
         } catch {
             throw HTTPError.decoding(error)
         }

@@ -31,7 +31,8 @@ struct ProgressLine: View {
                             labelSize: 11,
                             labelWeight: .semibold)
             Spacer(minLength: 6)
-            ScoreLabel(score: item.customFormatScore, size: 11)
+            ScoreLabel(score: item.customFormatScore,
+                       baseline: item.existingCustomFormatScore, size: 11)
         }
     }
 

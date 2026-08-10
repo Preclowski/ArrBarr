@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		1F0B1A9D78DA2F2F554BA54D /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64DC7B599FC995056A674DBF /* AppDelegate.swift */; };
+		A1B2C3D40002STATUSDROP02 /* StatusItemDropTarget.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40001STATUSDROP01 /* StatusItemDropTarget.swift */; };
 		7A1D7C162F00000100000005 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 7A1D7C152F00000100000005 /* AppIcon.icon */; };
 		953E24EE53AE7971D31F0FA0 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C345657BD587401B20496BE6 /* Assets.xcassets */; };
 		D2FECFB6447CD596A4FC0207 /* ArrBarrApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33A8662C0F95882A1E6A959B /* ArrBarrApp.swift */; };
@@ -56,6 +57,7 @@
 		310F6F8DD8AF0FDCD7BA6CBB /* ArrBarr.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ArrBarr.entitlements; sourceTree = "<group>"; };
 		33A8662C0F95882A1E6A959B /* ArrBarrApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArrBarrApp.swift; sourceTree = "<group>"; };
 		64DC7B599FC995056A674DBF /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		A1B2C3D40001STATUSDROP01 /* StatusItemDropTarget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusItemDropTarget.swift; sourceTree = "<group>"; };
 		7A1D7C152F00000100000005 /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = AppIcon.icon; sourceTree = "<group>"; };
 		C345657BD587401B20496BE6 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		E476A3C86CE13DD5526DF9D8 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -117,6 +119,7 @@
 			isa = PBXGroup;
 			children = (
 				64DC7B599FC995056A674DBF /* AppDelegate.swift */,
+				A1B2C3D40001STATUSDROP01 /* StatusItemDropTarget.swift */,
 				7A1D7C152F00000100000005 /* AppIcon.icon */,
 				310F6F8DD8AF0FDCD7BA6CBB /* ArrBarr.entitlements */,
 				33A8662C0F95882A1E6A959B /* ArrBarrApp.swift */,
@@ -321,6 +324,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				1F0B1A9D78DA2F2F554BA54D /* AppDelegate.swift in Sources */,
+				A1B2C3D40002STATUSDROP02 /* StatusItemDropTarget.swift in Sources */,
 				D2FECFB6447CD596A4FC0207 /* ArrBarrApp.swift in Sources */,
 				SKB00020SKB00020SKB0020A /* StoreKitBackend.swift in Sources */,
 			);

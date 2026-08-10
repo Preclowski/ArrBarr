@@ -161,30 +161,6 @@ public extension View {
     }
 }
 
-// MARK: - Cluster backdrop
-
-/// Subtle backdrop chip behind a row action cluster. Apple uses the
-/// same idiom in Photos hover-cornerach, Quick Look thumbnails: a
-/// material-tinted rounded rectangle that hugs the icons and gives
-/// them stable contrast no matter what the row underneath is tinted
-/// (status fill, hover wash, alternating bg). Replaces the previous
-/// full-width gradient — same job, far smaller footprint.
-public extension View {
-    func rowActionBackdrop() -> some View {
-        self
-            .padding(.horizontal, 6)
-            .padding(.vertical, 3)
-            .background(
-                RoundedRectangle(cornerRadius: 7, style: .continuous)
-                    .fill(.regularMaterial)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 7, style: .continuous)
-                    .stroke(Color.primary.opacity(0.08), lineWidth: 0.5)
-            )
-    }
-}
-
 // MARK: - Action overflow menu
 
 /// Apple `ellipsis.circle` overflow — quiet glyph that opens a menu

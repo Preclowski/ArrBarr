@@ -23,6 +23,13 @@ public extension Notification.Name {
     /// the next scheduled poll.
     static let arrBarrConfigValidated = Notification.Name("ArrBarr.ConfigValidated")
 
+    /// Posted when torrent/nzb files (or a magnet link) are dropped onto the
+    /// panel or the detached window. `userInfo["urls"]` is `[URL]`; AppDelegate
+    /// listens and opens the add-download window — the same one Dock drops,
+    /// "Open With" and magnet clicks land in, so there is exactly one add UI
+    /// regardless of how the payload arrived.
+    static let arrBarrDropDownloads = Notification.Name("ArrBarr.DropDownloads")
+
     /// Posted by the `SearchToAddIntent` App Intent. `userInfo["query"]` is the
     /// search string; the queue/search surface picks it up and runs the search.
     static let arrBarrSearchQuery = Notification.Name("ArrBarr.SearchQuery")

@@ -17,6 +17,12 @@ struct RadarrDetailPanel<Header: View>: View {
     /// Cast (from Radarr `/credit`) — horizontal headshot strip under header.
     var cast: [CastMember] = []
     let arrWebURLForItem: (QueueItem) -> URL?
+    /// Per-item queue actions for the multi-download list (two grabs of the
+    /// same movie) — the header CTA only controls the focused row, so each
+    /// list row needs its own pause/resume/cancel.
+    var onPauseItem: ((QueueItem) -> Void)? = nil
+    var onResumeItem: ((QueueItem) -> Void)? = nil
+    var onDeleteItem: ((QueueItem) -> Void)? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -38,14 +44,17 @@ struct RadarrDetailPanel<Header: View>: View {
                 DownloadSection(
                     items: siblings,
                     focused: item,
-                    showInlineUpgrade: true,
                     showCustomFormats: true,
                     // Badges moved to the header card above.
                     showListingBadges: false,
-                    // Per-item closures (used by MultiRow when this
-                    // section renders a list) are only needed for the
-                    // multi-item case; for single-item, sticky header
-                    // controls (`headerActions`) own the actions.
+                    // Per-item closures power MultiRow's hover cluster +
+                    // context menu when this section renders a list (two
+                    // active grabs of the same movie). Single-item keeps
+                    // using the sticky header controls, which act on the
+                    // focused row.
+                    onPauseItem: onPauseItem,
+                    onResumeItem: onResumeItem,
+                    onDeleteItem: onDeleteItem,
                     arrWebURLForItem: arrWebURLForItem
                 )
             }

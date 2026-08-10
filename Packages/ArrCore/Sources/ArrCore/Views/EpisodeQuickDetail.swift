@@ -88,7 +88,7 @@ public struct EpisodeQuickDetail: View {
             posterRequiresAuth: item.posterRequiresAuth,
             apiKey: configStore.sonarr.apiKey,
             episodeFile: displayEpisode.episodeFileId.flatMap { episodeFileMap[$0] },
-            queueItem: liveQueueItem,
+            queueItems: liveQueueItems,
             onClose: { dismiss() },
             onSearch: { episodeId in
                 let client = SonarrClient(config: configStore.sonarr)
@@ -108,7 +108,11 @@ public struct EpisodeQuickDetail: View {
                 )
             },
             seriesYear: sonarrDetail?.year ?? splitTitleAndYear(item.title).year,
-            isLoadingDetails: fullEpisode == nil && loadError == nil
+            isLoadingDetails: fullEpisode == nil && loadError == nil,
+            // Live off `displayEpisode` (which tracks the `fullEpisode` state),
+            // not a captured value — the stub carries `monitored: nil` so no
+            // bookmark shows until the real record lands.
+            monitored: displayEpisode.monitored
         )
         .conditionalNavTitle(sonarrDetail?.title ?? splitTitleAndYear(item.title).title, apply: !isDetachedWindow)
         // Series push nests under THIS view (see `seriesPush`), so back
@@ -147,19 +151,32 @@ public struct EpisodeQuickDetail: View {
         }
     }
 
-    /// Live queue row pulled from the view model, mirroring `DetailView`. The
+    /// Live queue rows pulled from the view model, mirroring `DetailView`. The
     /// `item` handed in via `navigationDestination` is a static open-time
     /// snapshot (the binding never re-reads the queue), so reading the pool
     /// here lets every background refresh advance the progress bar.
     ///
-    /// Returns nil once the row leaves the queue (import finished / removed) —
-    /// we deliberately DON'T fall back to the captured snapshot, which is
-    /// frozen at e.g. "importing" and would otherwise keep the overlay stuck on
-    /// a dead download forever. nil lets `EpisodeDetailOverlay` fall through to
-    /// the on-disk file section (which the `onChange` refetch below populates).
-    private var liveQueueItem: QueueItem? {
-        viewModel.items(for: item.source)
-            .first { $0.id == item.id || $0.arrQueueId == item.arrQueueId }
+    /// ALL active downloads for this episode (same series + season/episode),
+    /// not just the row the view was opened on — a duplicate grab stays
+    /// visible in the overlay. The opened row is moved to the front so the
+    /// hero keeps tracking it. Empty once every row leaves the queue (import
+    /// finished / removed) — we deliberately DON'T fall back to the captured
+    /// snapshot, which is frozen at e.g. "importing"; empty lets
+    /// `EpisodeDetailOverlay` fall through to the on-disk file section
+    /// (which the `onChange` refetch below populates).
+    private var liveQueueItems: [QueueItem] {
+        var matches = viewModel.items(for: item.source).filter {
+            $0.arrQueueId != 0
+                && $0.entityId == item.entityId
+                && $0.seasonNumber == item.seasonNumber
+                && $0.episodeNumber == item.episodeNumber
+        }
+        if let idx = matches.firstIndex(where: {
+            $0.id == item.id || ($0.arrQueueId != 0 && $0.arrQueueId == item.arrQueueId)
+        }), idx != 0 {
+            matches.swapAt(0, idx)
+        }
+        return matches
     }
 
     /// Whether the opened row is still a live queue row — flips false the moment
@@ -187,15 +204,16 @@ public struct EpisodeQuickDetail: View {
         )
     }
 
-    /// episode-id → active queue item for this series — feeds SeasonDetailView's
-    /// per-episode download indicators when pushed from the hero's season link.
-    private var seasonQueueByEpisodeId: [Int: QueueItem] {
+    /// episode-id → all active queue items for this series — feeds
+    /// SeasonDetailView's per-episode download indicators when pushed from
+    /// the hero's season link. List-valued so duplicate grabs stay visible.
+    private var seasonQueueByEpisodeId: [Int: [QueueItem]] {
         guard let id = item.entityId else { return [:] }
-        var map: [Int: QueueItem] = [:]
+        var map: [Int: [QueueItem]] = [:]
         for q in viewModel.items(for: .sonarr) where q.entityId == id && q.arrQueueId != 0 {
             guard let sn = q.seasonNumber, let en = q.episodeNumber else { continue }
             if let ep = allEpisodes.first(where: { $0.seasonNumber == sn && $0.episodeNumber == en }) {
-                map[ep.id] = q
+                map[ep.id, default: []].append(q)
             }
         }
         return map

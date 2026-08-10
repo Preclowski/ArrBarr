@@ -33,6 +33,11 @@ public struct DiscoverCardView: View {
     /// Opens the full movie/series detail card.
     var onMore: () -> Void
 
+    /// Dominant colour of the poster's lower edge — see `bottomGlassPanel`.
+    /// Resolved per poster URL, so the peek card has it in hand well before
+    /// it reaches the top of the deck.
+    @State private var posterTint: Color?
+
     public init(item: DiscoverItem,
                 dragOffset: CGSize = .zero,
                 bottomInset: CGFloat = 0,
@@ -61,11 +66,6 @@ public struct DiscoverCardView: View {
                 .frame(width: w, height: h)
                 .clipped()
 
-                // Origin chip pinned top-right on the poster.
-                originChip
-                    .padding(12)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
-
                 // Bottom scrim — transparent at the top, opaque glass at the
                 // bottom — so text + buttons read over any artwork.
                 bottomGlassPanel(h: h * 0.55)
@@ -86,6 +86,11 @@ public struct DiscoverCardView: View {
             .overlay(swipeTint.allowsHitTesting(false))
             .overlay(alignment: dragOffset.width > 0 ? .topLeading : .topTrailing) {
                 swipeStamp
+            }
+            // Runs for the peek card too — it's rendered (behind the top card),
+            // so its tint is resolved before the user ever sees it.
+            .task(id: item.result.posterURL) {
+                posterTint = await PosterTint.color(for: item.result.posterURL)
             }
         }
     }
@@ -164,64 +169,40 @@ public struct DiscoverCardView: View {
         ].compactMap { $0 }
     }
 
-    /// Glass material masked by a vertical gradient — transparent at top,
-    /// fully opaque (= visible glass blur) at bottom.
+    /// The scrim under the metadata: a dark base for legibility, washed with
+    /// this card's OWN poster colour.
+    ///
+    /// There is deliberately no `.regularMaterial` here any more. A material
+    /// takes its colour from whatever it samples behind itself — which, in the
+    /// deck's ZStack, is the *sibling card*, not this one. So every card's
+    /// panel was partly painted by its neighbour, and the sample settled a
+    /// beat after the swap: the card changed, then its colour caught up. No
+    /// amount of tint layered on top fixes that, because the lagging colour is
+    /// still underneath.
+    ///
+    /// Now both layers are values this card owns. `posterTint` is resolved
+    /// from its own pixels while it is still the hidden peek card, so it is
+    /// already correct the moment it reaches the top of the deck, and it
+    /// cross-fades rather than snapping when it does arrive.
     @ViewBuilder
     private func bottomGlassPanel(h: CGFloat) -> some View {
-        Rectangle()
-            .fill(.regularMaterial)
-            .mask(
-                LinearGradient(
-                    colors: [.clear, .black.opacity(0.8), .black],
-                    startPoint: .top, endPoint: .bottom
-                )
+        ZStack {
+            // Legibility floor — independent of the artwork, so text contrast
+            // never depends on how bright a given poster happens to be.
+            LinearGradient(
+                colors: [.clear, .black.opacity(0.55), .black.opacity(0.88)],
+                startPoint: .top, endPoint: .bottom
             )
-            .frame(height: h)
+            // The card's own colour, over the top of that floor.
+            LinearGradient(
+                colors: [.clear, (posterTint ?? .clear).opacity(0.4), (posterTint ?? .clear).opacity(0.62)],
+                startPoint: .top, endPoint: .bottom
+            )
+            .animation(.easeInOut(duration: 0.3), value: posterTint)
+        }
+        .frame(height: h)
     }
 
-    @ViewBuilder
-    private var originChip: some View {
-        switch item.originLabel {
-        case .library:
-            HStack(spacing: 3) {
-                Image(systemName: "checkmark.circle.fill")
-                    .scaledFont(size: 8, weight: .semibold)
-                    .foregroundStyle(Color.accentColor)
-                Text("search.inLibrary.button", bundle: .module)
-                    .scaledFont(size: 9, weight: .semibold)
-                    .foregroundStyle(Color.accentColor)
-            }
-            .padding(.horizontal, 5)
-            .padding(.vertical, 1)
-            .overlay(
-                Capsule().stroke(Color.accentColor.opacity(0.6), lineWidth: 0.75)
-            )
-        case .tmdb:
-            HStack(spacing: 3) {
-                Image(systemName: "globe")
-                    .scaledFont(size: 8, weight: .semibold)
-                    .foregroundStyle(Color.blue)
-                Text("discover.discover.button", bundle: .module)
-                    .scaledFont(size: 9, weight: .medium)
-                    .foregroundStyle(Color.blue)
-            }
-            .padding(.horizontal, 5)
-            .padding(.vertical, 1)
-            .background(Color.primary.opacity(0.08), in: Capsule())
-        case .llm:
-            HStack(spacing: 3) {
-                Image(systemName: "sparkles")
-                    .scaledFont(size: 8, weight: .semibold)
-                    .foregroundStyle(Color.purple)
-                Text("settings.ai.label", bundle: .module)
-                    .scaledFont(size: 9, weight: .medium)
-                    .foregroundStyle(Color.purple)
-            }
-            .padding(.horizontal, 5)
-            .padding(.vertical, 1)
-            .background(Color.primary.opacity(0.08), in: Capsule())
-        }
-    }
 
     // MARK: - Swipe tint / stamp
 

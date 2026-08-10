@@ -265,6 +265,56 @@ public struct HTTPClient {
     private static let formFieldAllowed: CharacterSet =
         CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "-._~"))
 
+    /// POST a `multipart/form-data` body: `fields` as plain text parts, `file`
+    /// as a binary part. qBittorrent's `/torrents/add` and SABnzbd's
+    /// `mode=addfile` accept the payload no other way — both reject a
+    /// urlencoded body, and neither has a JSON equivalent.
+    func postMultipart(
+        _ url: URL,
+        headers: [String: String] = [:],
+        fields: [String: String] = [:],
+        file: (name: String, filename: String, data: Data, contentType: String)? = nil
+    ) async throws -> Data {
+        // Fixed, unguessable-enough boundary built from a UUID: it only has to
+        // not occur inside the payload, and a torrent/nzb can't contain one.
+        let boundary = "ArrBarr-\(UUID().uuidString)"
+        var body = Data()
+        func append(_ string: String) { body.append(Data(string.utf8)) }
+
+        // Sorted for the same reason `encodeForm` sorts — deterministic, testable.
+        for (key, value) in fields.sorted(by: { $0.key < $1.key }) {
+            append("--\(boundary)\r\n")
+            append("Content-Disposition: form-data; name=\"\(key)\"\r\n\r\n")
+            append("\(value)\r\n")
+        }
+        if let file {
+            append("--\(boundary)\r\n")
+            append("Content-Disposition: form-data; name=\"\(file.name)\"; filename=\"\(Self.escapeQuoted(file.filename))\"\r\n")
+            append("Content-Type: \(file.contentType)\r\n\r\n")
+            body.append(file.data)
+            append("\r\n")
+        }
+        append("--\(boundary)--\r\n")
+
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        for (k, v) in headers { req.setValue(v, forHTTPHeaderField: k) }
+        req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        req.httpBody = body
+        return try await perform(req)
+    }
+
+    /// A quote or backslash in a filename would close the `filename="…"`
+    /// parameter early and split the part header. Torrent names routinely carry
+    /// quotes, so this isn't hypothetical.
+    private static func escapeQuoted(_ value: String) -> String {
+        value
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "\"", with: "\\\"")
+            .replacingOccurrences(of: "\r", with: "")
+            .replacingOccurrences(of: "\n", with: "")
+    }
+
     static func encodeForm(_ dict: [String: String]) -> String {
         // Sorted by key so the body is deterministic: field order means
         // nothing to a form parser, but it makes this testable.

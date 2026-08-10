@@ -187,7 +187,8 @@ struct EpisodeRowTooltip: View {
                     qualitySizeScore(
                         quality: q.quality,
                         size: q.sizeTotal,
-                        score: q.customFormatScore
+                        score: q.customFormatScore,
+                        baseline: episodeFile?.customFormatScore
                     )
                 }
                 if let file = episodeFile, q.isUpgrade {
@@ -235,7 +236,8 @@ struct EpisodeRowTooltip: View {
     }
 
     @ViewBuilder
-    private func qualitySizeScore(quality: String?, size: Int64, score: Int) -> some View {
+    private func qualitySizeScore(quality: String?, size: Int64, score: Int,
+                                  baseline: Int? = nil) -> some View {
         HStack(spacing: 4) {
             if let q = quality, !q.isEmpty {
                 Text(q)
@@ -252,7 +254,7 @@ struct EpisodeRowTooltip: View {
             }
             if score != 0 {
                 SeparatorDot()
-                ScoreLabel(score: score, size: 11)
+                ScoreLabel(score: score, baseline: baseline, size: 11)
             }
         }
     }

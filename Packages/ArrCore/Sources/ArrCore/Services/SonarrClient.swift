@@ -244,7 +244,7 @@ public actor SonarrClient: ArrAPIClient {
     /// Used by `EpisodeDetailOverlay` to surface CF chips for on-disk
     /// episodes.
     func fetchEpisodeFile(id: Int) async throws -> ArrFile? {
-        if DemoMode.isActive { return nil }
+        if DemoMode.isActive { return DemoMocks.episodeFile(id: id) }
         guard config.isConfigured else { throw HTTPError.notConfigured }
         guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
         let url = try http.url(base: config.baseURL, path: "\(apiBase)/episodefile/\(id)")
@@ -402,7 +402,7 @@ public actor SonarrClient: ArrAPIClient {
     /// LLM-suggested titles surface as cards. Mirrors Sonarr's
     /// `/api/v3/series/lookup?term=…`.
     func lookupSeries(term: String) async throws -> [SonarrLookupRecord] {
-        if DemoMode.isActive { return [] }
+        if DemoMode.isActive { return DemoMocks.sonarrLookup(term: term) }
         guard config.isConfigured else { throw HTTPError.notConfigured }
         guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
         let url = try http.url(
@@ -415,7 +415,7 @@ public actor SonarrClient: ArrAPIClient {
     }
 
     func fetchAllSeries() async throws -> [SonarrLibraryRecord] {
-        if DemoMode.isActive { return [] }
+        if DemoMode.isActive { return DemoMocks.sonarrLibrary() }
         guard config.isConfigured else { throw HTTPError.notConfigured }
         let url = try http.url(base: config.baseURL, path: "\(apiBase)/series")
         let data = try await http.get(url, headers: apiHeaders)

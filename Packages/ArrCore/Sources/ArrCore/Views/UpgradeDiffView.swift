@@ -47,9 +47,45 @@ struct UpgradeDiffView: View {
         self.showFilenames = showFilenames
     }
 
+    /// Ways to build a side out of the *library* payloads (as opposed to the
+    /// queue's `existing*` fields above) — what manual search compares its
+    /// candidates against. Mirrors `ExistingFileBanner`'s two file inits so the
+    /// banner and the diff can't disagree about what's on disk.
+    static func side(file: ArrFile) -> Side {
+        Side(quality: file.quality?.name,
+             score: file.customFormatScore,
+             size: file.size,
+             formats: (file.customFormats ?? []).map(\.name),
+             filename: file.relativePath)
+    }
+
+    /// Sonarr's `episodefile` payload — same fields as `ArrFile` plus an id.
+    static func side(episodeFile: SonarrEpisodeFile) -> Side {
+        Side(quality: episodeFile.quality?.name,
+             score: episodeFile.customFormatScore,
+             size: episodeFile.size,
+             formats: (episodeFile.customFormats ?? []).map(\.name),
+             filename: episodeFile.relativePath)
+    }
+
+    /// A manual-search candidate as the *incoming* side.
+    static func side(release: Release) -> Side {
+        Side(quality: release.qualityName,
+             score: release.customFormatScore,
+             size: release.sizeBytes > 0 ? release.sizeBytes : nil,
+             formats: (release.customFormats ?? []).compactMap(\.name),
+             filename: release.title)
+    }
+
     private var gained: [String] { Set(incoming.formats).subtracting(current.formats).sorted() }
     private var lost: [String] { Set(current.formats).subtracting(incoming.formats).sorted() }
-    private var scoreImproved: Bool { (current.score ?? Int.min) < (incoming.score ?? Int.min) }
+    /// Formats both files carry. Shown plain (no sign, `.primary`) so the
+    /// strip describes the whole incoming file rather than only its edits —
+    /// "what am I getting" is as much a part of the comparison as "what
+    /// changed", and a chip list that silently omitted the unchanged ones
+    /// read as a much thinner file than it is.
+    private var unchanged: [String] { Set(incoming.formats).intersection(current.formats).sorted() }
+
 
     var body: some View {
         #if os(iOS)
@@ -63,20 +99,22 @@ struct UpgradeDiffView: View {
     private var sideBySideBody: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .top, spacing: 8) {
-                column(side: current, scoreHighlighted: false)
+                column(side: current)
                 Image(systemName: "arrow.right")
                     .scaledFont(size: 11)
                     .foregroundStyle(.secondary)
                     .padding(.top, 1)
-                column(side: incoming, scoreHighlighted: scoreImproved)
+                column(side: incoming)
             }
-            if !gained.isEmpty || !lost.isEmpty {
+            if !gained.isEmpty || !lost.isEmpty || !unchanged.isEmpty {
                 // Wrap inline with the shared flow layout + diff-coloured
-                // TagChips (green = gained, red = lost) — the same colour
-                // language used for custom-format diffs elsewhere.
+                // TagChips: green = gained, red = lost, plain = carried over
+                // by both files. Same colour language as every other
+                // custom-format diff in the app.
                 TooltipFlowLayout(spacing: 3) {
                     ForEach(gained, id: \.self) { TagChip(text: "+\($0)", color: .green) }
                     ForEach(lost, id: \.self) { TagChip(text: "−\($0)", color: .red) }
+                    ForEach(unchanged, id: \.self) { TagChip(text: $0, color: .primary) }
                 }
             }
             if showFilenames {
@@ -110,7 +148,7 @@ struct UpgradeDiffView: View {
                     .foregroundStyle(comparing ? AnyShapeStyle(.secondary) : AnyShapeStyle(Color.green))
                 Spacer(minLength: 0)
             }
-            column(side: side, scoreHighlighted: !comparing && scoreImproved)
+            column(side: side)
             // Formats for the shown side only — NEW lists the incoming file's
             // formats (gains, absent from the old file, in green +); CURRENT
             // (while held) lists the old file's (losses, absent from the new
@@ -183,17 +221,18 @@ struct UpgradeDiffView: View {
         }
     }
 
-    private func column(side: Side, scoreHighlighted: Bool) -> some View {
+    private func column(side: Side) -> some View {
         VStack(alignment: .leading, spacing: 3) {
             Text(side.quality ?? "—")
                 .scaledFont(size: 12, weight: .semibold)
             if let score = side.score {
-                // Bare signed score (no "Score" label) — render the integer
-                // verbatim so the locale's grouping separator doesn't sneak in.
-                // Negative scores read red; the highlighted (gained) side green.
-                Text(verbatim: "\(score > 0 ? "+" : "")\(score)")
-                    .scaledFont(size: 10)
-                    .foregroundStyle(score < 0 ? .red : (scoreHighlighted ? .green : .secondary))
+                // Deliberately uncoloured. Tinting a side by its own sign, or
+                // by which side "won", put a third meaning on green inside a
+                // view whose whole job is to show a change — the delta by the
+                // arrow is the one number allowed to be coloured here.
+                Text(verbatim: ScoreLabel.text(score))
+                    .scaledFont(size: 10, monospacedDigit: true)
+                    .foregroundStyle(.secondary)
             }
             if let size = side.size, size > 0 {
                 Text(ByteCountFormatter.string(fromByteCount: size, countStyle: .file))

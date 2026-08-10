@@ -50,6 +50,15 @@ extension DemoMocks {
                 posterSeed: "bigbuckbunny", aspect: .portrait,
                 entityId: 201
             ),
+            // This week: the library-only movie (no queue row), which is how a
+            // demo user reaches a movie detail that still offers Manual search.
+            upcomingItem(
+                source: .radarr, id: "demo-cal-6",
+                title: "Elephants Dream (2006)",
+                daysAhead: 6, releaseType: "Physical", hasFile: true,
+                posterSeed: "elephantsdream", aspect: .portrait,
+                entityId: 204
+            ),
             // Next week: Pioneer One S02E02.
             upcomingItem(
                 source: .sonarr, id: "demo-cal-5",

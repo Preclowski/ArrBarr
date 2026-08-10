@@ -12,6 +12,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var settingsWindow: NSWindow?
     private var welcomeWindow: NSWindow?
     private var paywallWindow: NSWindow?
+    /// The add-download window, and the batches still waiting for it. See
+    /// `enqueueDrops` for why a mixed drop becomes more than one batch.
+    private var addDownloadWindow: NSWindow?
+    private var pendingDropBatches: [[DownloadDrop]] = []
+    private let statusItemDropTarget = StatusItemDropTarget()
+    /// Local rightMouseDown monitor backing the status-item context menu —
+    /// kept so it could be removed, though it lives for the app's lifetime.
+    private var statusItemRightClickMonitor: Any?
     private let configStore = ConfigStore.shared
     private let queueVM = QueueViewModel.shared
     private lazy var mcpController = MCPServerController()
@@ -75,6 +83,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 if feature != nil { self?.showPaywall() } else { self?.closePaywall() }
             }
             .store(in: &cancellables)
+
+        // Drops onto the panel / detached window arrive as a notification (the
+        // SwiftUI side can't reach the window plumbing) and land in the same
+        // add window as every other entry point.
+        NotificationCenter.default.publisher(for: .arrBarrDropDownloads)
+            .sink { [weak self] note in
+                guard let urls = note.userInfo?["urls"] as? [URL] else { return }
+                self?.enqueueDrops(urls.compactMap(DownloadDrop.init(url:)))
+            }
+            .store(in: &cancellables)
+
+        // An arr's download client (or its category) can change under us, and
+        // the resolved destinations are memoised — so any config edit drops
+        // that cache rather than serving a stale client on the next drop.
+        configStore.objectWillChange
+            .sink { _ in Task { await DownloadDropService.shared.invalidate() } }
+            .store(in: &cancellables)
+
+        // The menu-bar icon accepts drops too — installed on a delay because
+        // SwiftUI creates the status item after this callback returns.
+        statusItemDropTarget.install()
+        installStatusItemRightClickMenu()
 
         _ = Self.bootstrapLogging
         wireMCPServer()
@@ -321,6 +351,139 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         win.close()
     }
 
+    // MARK: - Dropped / opened downloads
+
+    /// Every way a torrent, nzb or magnet can reach us: dropped on the Dock
+    /// icon, opened from Finder ("Open With"), or clicked as a `magnet:` link
+    /// in a browser. LaunchServices funnels all three through here.
+    ///
+    /// Anything we can't download is ignored rather than refused — the same
+    /// drag may carry a stray file alongside the torrents, and failing the
+    /// whole batch for it would be hostile.
+    func application(_ application: NSApplication, open urls: [URL]) {
+        enqueueDrops(urls.compactMap(DownloadDrop.init(url:)))
+    }
+
+    /// Show the add window for these payloads.
+    ///
+    /// Torrent and usenet payloads are handled as separate batches: one window
+    /// asks one question ("which arr?"), and that answer can't be shared across
+    /// protocols — a `.nzb` and a `.torrent` reach different clients even
+    /// within the same arr. Mixed drops therefore queue, and the second batch's
+    /// window opens when the first one closes.
+    func enqueueDrops(_ drops: [DownloadDrop]) {
+        guard !drops.isEmpty else { return }
+        for kind in DownloadKind.allCases {
+            let batch = drops.filter { $0.kind == kind }
+            if !batch.isEmpty { pendingDropBatches.append(batch) }
+        }
+        showNextDropBatch()
+    }
+
+    private func showNextDropBatch() {
+        guard !pendingDropBatches.isEmpty else { return }
+        // One window at a time — the queued batches drain as it closes. If one
+        // is already up, surface it: dropping a second file and seeing nothing
+        // happen reads as "the drop was lost", when it's really waiting behind
+        // the question already on screen.
+        if let existing = addDownloadWindow {
+            existing.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
+        let batch = pendingDropBatches.removeFirst()
+
+        let view = AddDownloadView(drops: batch) { [weak self] in
+            self?.addDownloadWindow?.close()
+        }
+        .environmentObject(configStore)
+
+        let hosting = NSHostingController(rootView: view)
+        let win = NSWindow(contentViewController: hosting)
+        win.title = String(localized: "Add download", bundle: .arrCore)
+        win.styleMask = [.titled, .closable]
+        win.isReleasedWhenClosed = false
+        // Size the content before centring: an `NSHostingController` reports a
+        // zero-sized view until SwiftUI lays out, and centring a zero frame can
+        // park the window off the visible area — where it's key, invisible, and
+        // looks exactly like a hang.
+        win.setContentSize(hosting.view.fittingSize == .zero ? NSSize(width: 420, height: 260) : hosting.view.fittingSize)
+        win.center()
+        if let screen = NSScreen.main, !screen.visibleFrame.intersects(win.frame) {
+            win.setFrameOrigin(NSPoint(
+                x: screen.visibleFrame.midX - win.frame.width / 2,
+                y: screen.visibleFrame.midY - win.frame.height / 2
+            ))
+        }
+        // A `.regular` app already activates on Dock drop; an accessory one
+        // (menu-bar mode) does not, and its window would open behind whatever
+        // the user was in. `.floating` keeps it reachable in both modes.
+        win.level = .floating
+        NotificationCenter.default.addObserver(
+            forName: NSWindow.willCloseNotification,
+            object: win,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.addDownloadWindow = nil
+                self?.showNextDropBatch()
+            }
+        }
+        addDownloadWindow = win
+        win.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    // MARK: - Status-item right-click menu
+
+    /// Right-click on the menu-bar icon opens a small context menu (Settings /
+    /// About / Quit) instead of the panel. `MenuBarExtra(.window)` has no
+    /// native affordance for this, so a local monitor watches for right-clicks
+    /// landing in the status item's window. The class-name match is the same
+    /// unavoidable non-public-API sniffing `StatusItemDropTarget` does;
+    /// failure degrades to "right-click opens the panel", never a crash.
+    private func installStatusItemRightClickMenu() {
+        statusItemRightClickMonitor = NSEvent.addLocalMonitorForEvents(matching: [.rightMouseDown]) { [weak self] event in
+            guard let self,
+                  let window = event.window,
+                  String(describing: type(of: window)).contains("StatusBar"),
+                  let contentView = window.contentView
+            else { return event }
+            NSMenu.popUpContextMenu(self.statusItemContextMenu(), with: event, for: contentView)
+            // Swallow the event so the panel doesn't also toggle underneath.
+            return nil
+        }
+    }
+
+    private func statusItemContextMenu() -> NSMenu {
+        let bundle = Bundle.arrCore
+        let menu = NSMenu()
+        let settings = NSMenuItem(
+            title: String(localized: "common.settings2.button", bundle: bundle),
+            action: #selector(statusMenuOpenSettings), keyEquivalent: ""
+        )
+        settings.target = self
+        menu.addItem(settings)
+        let about = NSMenuItem(
+            title: String(localized: "settings.aboutArrbarr.button", bundle: bundle),
+            action: #selector(statusMenuShowAbout), keyEquivalent: ""
+        )
+        about.target = self
+        menu.addItem(about)
+        menu.addItem(.separator())
+        let quit = NSMenuItem(
+            title: String(localized: "common.quitArrbarr.button", bundle: bundle),
+            action: #selector(statusMenuQuit), keyEquivalent: ""
+        )
+        quit.target = self
+        menu.addItem(quit)
+        return menu
+    }
+
+    @objc private func statusMenuOpenSettings() { openSettings() }
+    @objc private func statusMenuShowAbout() { showAbout() }
+    @objc private func statusMenuQuit() { NSApp.terminate(nil) }
+
     // MARK: - About
 
     /// Native macOS About window. The standard panel renders the app icon,
@@ -361,7 +524,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             ]))
         }
 
-        appendPlain("Made by 🥨\n\n", size: 12, color: .labelColor)
+        appendPlain(String(localized: "Made by 🥨", bundle: bundle) + "\n\n", size: 12, color: .labelColor)
         // Order: app first, then privacy, then source.
         appendLine(String(localized: "Website", bundle: bundle), "https://arrbarr.app")
         appendLine(String(localized: "Privacy Policy", bundle: bundle), "https://arrbarr.app/privacy")

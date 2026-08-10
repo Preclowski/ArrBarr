@@ -105,9 +105,7 @@ struct ExistingFileBanner: View {
                             .foregroundStyle(.secondary)
                     }
                     if let score = customFormatScore, score != 0 {
-                        Text(verbatim: score > 0 ? "+\(score)" : "\(score)")
-                            .scaledFont(size: 11, weight: .medium)
-                            .foregroundStyle(score > 0 ? .green : .red)
+                        ScoreLabel(score: score, size: 11)
                             .help(Text("common.customFormatScore.button", bundle: .module))
                     }
                 }

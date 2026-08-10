@@ -14,6 +14,12 @@ struct LidarrDetailPanel: View {
     @Binding var enlargedPoster: URL?
     @Binding var selectedDiscNumber: Int?
     let arrWebURLForItem: (QueueItem) -> URL?
+    /// Per-item queue actions for the multi-download list — see
+    /// RadarrDetailPanel; two active grabs of the same album need per-row
+    /// controls because the header CTA only drives the focused one.
+    var onPauseItem: ((QueueItem) -> Void)? = nil
+    var onResumeItem: ((QueueItem) -> Void)? = nil
+    var onDeleteItem: ((QueueItem) -> Void)? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -28,6 +34,9 @@ struct LidarrDetailPanel: View {
                 DownloadSection(
                     items: siblings,
                     focused: item,
+                    onPauseItem: onPauseItem,
+                    onResumeItem: onResumeItem,
+                    onDeleteItem: onDeleteItem,
                     arrWebURLForItem: arrWebURLForItem
                 )
             }

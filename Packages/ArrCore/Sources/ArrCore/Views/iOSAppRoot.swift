@@ -368,6 +368,10 @@ private struct SettingsTab: View {
                     DemoMode.seedConfigsIfNeeded(configStore)
                 } else {
                     DemoMode.resetDemoStore()
+                    // iOS toggles demo in place (macOS relaunches, which drops
+                    // this by itself), so the in-memory queue edits have to be
+                    // wiped alongside the demo profile.
+                    DemoQueueState.reset()
                 }
                 Task { await viewModel.refresh() }
                 return true

@@ -53,25 +53,25 @@ public actor SearchClient {
                                    query: [URLQueryItem(name: "term", value: query)])
             let data = try await http.get(url, headers: headers)
             let records = try JSONDecoder().decode([RadarrLookupRecord].self, from: data)
-            return records.compactMap { Self.unifyRadarr($0, baseURL: config.baseURL) }
+            return records.enumerated().compactMap { Self.unifyRadarr($0.element, baseURL: config.baseURL, sourceRank: $0.offset) }
         case .sonarr:
             let url = try http.url(base: config.baseURL, path: "\(apiBase)/series/lookup",
                                    query: [URLQueryItem(name: "term", value: query)])
             let data = try await http.get(url, headers: headers)
             let records = try JSONDecoder().decode([SonarrLookupRecord].self, from: data)
-            return records.compactMap { Self.unifySonarr($0, baseURL: config.baseURL) }
+            return records.enumerated().compactMap { Self.unifySonarr($0.element, baseURL: config.baseURL, sourceRank: $0.offset) }
         case .lidarr:
             let url = try http.url(base: config.baseURL, path: "\(apiBase)/artist/lookup",
                                    query: [URLQueryItem(name: "term", value: query)])
             let data = try await http.get(url, headers: headers)
             let records = try JSONDecoder().decode([LidarrLookupRecord].self, from: data)
-            return records.compactMap { Self.unifyLidarr($0, baseURL: config.baseURL) }
+            return records.enumerated().compactMap { Self.unifyLidarr($0.element, baseURL: config.baseURL, sourceRank: $0.offset) }
         case .whisparr:
             let url = try http.url(base: config.baseURL, path: "\(apiBase)/movie/lookup",
                                    query: [URLQueryItem(name: "term", value: query)])
             let data = try await http.get(url, headers: headers)
             let records = try JSONDecoder().decode([WhisparrLookupRecord].self, from: data)
-            return records.compactMap { Self.unifyWhisparr($0, baseURL: config.baseURL) }
+            return records.enumerated().compactMap { Self.unifyWhisparr($0.element, baseURL: config.baseURL, sourceRank: $0.offset) }
         }
     }
 
@@ -358,7 +358,7 @@ public actor SearchClient {
 
     // MARK: - Unify
 
-    private static func unifyRadarr(_ r: RadarrLookupRecord, baseURL: String) -> SearchResult? {
+    private static func unifyRadarr(_ r: RadarrLookupRecord, baseURL: String, sourceRank: Int = 0) -> SearchResult? {
         guard let tmdbId = r.tmdbId else { return nil }
         let (poster, _) = (r.images?.posterURL(baseURL: baseURL) ?? (nil, false))
         return SearchResult(
@@ -378,11 +378,12 @@ public actor SearchClient {
             network: r.studio,
             certification: r.certification,
             posterURL: poster, source: .radarr,
-            inLibraryArrId: (r.id ?? 0) != 0 ? r.id : nil
+            inLibraryArrId: (r.id ?? 0) != 0 ? r.id : nil,
+            imdbId: r.imdbId, sourceRank: sourceRank
         )
     }
 
-    private static func unifySonarr(_ r: SonarrLookupRecord, baseURL: String) -> SearchResult? {
+    private static func unifySonarr(_ r: SonarrLookupRecord, baseURL: String, sourceRank: Int = 0) -> SearchResult? {
         guard let tvdbId = r.tvdbId else { return nil }
         let (poster, _) = (r.images?.posterURL(baseURL: baseURL) ?? (nil, false))
         let seasons = r.statistics?.seasonCount
@@ -391,17 +392,21 @@ public actor SearchClient {
             id: tvdbId, foreignId: String(tvdbId),
             title: r.title, subtitle: subtitle,
             year: r.year, rating: r.ratings?.value,
+            // TVDB vote count — was never passed, so the Bayesian shrinkage
+            // silently never applied to series.
+            votes: r.ratings?.votes,
             imdb: nil, rottenTomatoes: nil, metacritic: nil,
             overview: r.overview, runtime: r.runtime,
             genres: r.genres ?? [],
             network: r.network,
             certification: nil,
             posterURL: poster, source: .sonarr,
-            inLibraryArrId: (r.id ?? 0) != 0 ? r.id : nil
+            inLibraryArrId: (r.id ?? 0) != 0 ? r.id : nil,
+            imdbId: r.imdbId, sourceRank: sourceRank
         )
     }
 
-    internal static func unifyWhisparr(_ r: WhisparrLookupRecord, baseURL: String) -> SearchResult? {
+    internal static func unifyWhisparr(_ r: WhisparrLookupRecord, baseURL: String, sourceRank: Int = 0) -> SearchResult? {
         let stableId: Int
         let foreign: String
         if let tmdb = r.tmdbId, tmdb != 0 {
@@ -421,6 +426,7 @@ public actor SearchClient {
             subtitle: nil,
             year: r.year,
             rating: r.ratings?.tmdb?.value,
+            votes: r.ratings?.tmdb?.votes ?? r.ratings?.imdb?.votes,
             imdb: nil,
             rottenTomatoes: nil,
             metacritic: nil,
@@ -430,11 +436,12 @@ public actor SearchClient {
             network: r.studio,
             certification: nil,
             posterURL: poster.0,
-            source: .whisparr
+            source: .whisparr,
+            sourceRank: sourceRank
         )
     }
 
-    internal static func unifyLidarr(_ r: LidarrLookupRecord, baseURL: String) -> SearchResult? {
+    internal static func unifyLidarr(_ r: LidarrLookupRecord, baseURL: String, sourceRank: Int = 0) -> SearchResult? {
         guard let foreign = r.foreignArtistId, !foreign.isEmpty else { return nil }
         let (poster, _) = r.images?.posterURL(baseURL: baseURL, coverTypes: ["poster", "cover"]) ?? (nil, false)
         let stableId = abs(foreign.hashValue) & 0x7fffffff
@@ -445,6 +452,7 @@ public actor SearchClient {
             subtitle: r.disambiguation,
             year: nil,
             rating: r.ratings?.value,
+            votes: r.ratings?.votes,
             imdb: nil,
             rottenTomatoes: nil,
             metacritic: nil,
@@ -454,7 +462,8 @@ public actor SearchClient {
             network: nil,
             certification: nil,
             posterURL: poster,
-            source: .lidarr
+            source: .lidarr,
+            sourceRank: sourceRank
         )
     }
 }
