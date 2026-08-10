@@ -9,86 +9,51 @@ Releases before 0.10.0 are described on the
 
 ## [1.2.0] — 2026-08-10
 
-A release about doing more from inside ArrBarr: drop torrents and NZBs straight
-into your arrs, control every duplicate download individually, and have search
-find what you actually meant.
-
 ### Added
 
-- **Add downloads by drag & drop.** Drop a `.torrent` / `.nzb` file or a magnet
-  link onto the menu-bar icon or the open panel — or hand it over from Finder
-  ("Open With") and the browser (ArrBarr registers as a `magnet:` handler,
-  opt-in via Settings → Download clients). The download is routed *through the
-  arr*: the arr picks its own download client and category, so the file doesn't
-  just land somewhere — it gets imported. Mixed drops split per protocol, only
-  arrs that can actually take the payload are offered, and partial failures
-  keep the window open with "N of M could not be added" plus the client's own
-  reason. "Add paused" pre-fills from the client's preference where it exposes
-  one.
-- **Queue multi-select.** "Select multiple" in the queue's ⋯ menu — or just
-  ⌘-click a row: tap to toggle, ⇧-click to extend a range, or paint a run of
-  rows by dragging across them, then pause / resume / delete everything at
-  once. Selection circles draw over the posters, so the queue keeps its
-  identity while you pick.
-- **Monitored bookmarks.** Movie, series, season, episode, artist and album
-  surfaces now show the arr's monitored flag with the same bookmark glyph the
-  web UIs use; unmonitored episodes dim as a whole.
-- **Search from the download strip.** While something is downloading, a third
-  "Search" capsule opens the release list — grab a better release without
-  cancelling the current one first.
-- **⌘1 / ⌘2 / ⌘3 switch tabs.** Holding ⌘ crossfades the tab pills to their
-  numbers, Safari-style.
-- Right-click on the menu-bar icon opens a context menu (Settings / About /
-  Quit).
-- The indexer a grab came from now shows in the download details — it was
-  tooltip-only before.
+- Drag & drop `.torrent` / `.nzb` files or magnet links onto the menu-bar icon
+  or the panel; Finder "Open With" and an opt-in `magnet:` handler included.
+  Downloads are routed through the arr's own client and category so they get
+  imported.
+- Queue multi-select: ⌘-click or "Select multiple" in the ⋯ menu, ⇧-click for
+  ranges, drag to paint rows; bulk pause / resume / delete.
+- Monitored bookmarks on movie / series / season / episode / artist / album
+  surfaces; unmonitored episodes dim.
+- "Search" button on the download CTA strip — open the release list while a
+  download is running.
+- ⌘1 / ⌘2 / ⌘3 switch tabs; holding ⌘ shows the numbers on the tab pills.
+- Right-click menu on the menu-bar icon (Settings / About / Quit).
+- Indexer shown in download details.
 
 ### Changed
 
-- **Duplicate downloads are first-class.** When the same movie or episode has
-  two active grabs (auto + manual, say), the detail view now lists both — each
-  with its own pause/resume ring and a cancel in the context menu. The bottom
-  pause/cancel strip steps aside when there's more than one download (it could
-  only ever act on one of them), and Sonarr episode rows flag "2 downloads"
-  instead of silently showing one.
-- **Search ranks like you'd expect.** Word order no longer matters ("bunny
-  big" finds Big Buck Bunny), punctuation folds ("spiderman" reaches
-  Spider-Man), a trailing year filters ("dune 2024" beats the 2021 Dune),
-  titles already in your library get a nudge, the arr's own popularity signal
-  finally counts, and Sonarr/Lidarr vote counts now shrink obscure
-  10.0-with-three-votes entries the way movies always did. `imdb:` lookups
-  work for series too.
-- **Manual search shows the upgrade context.** Your current file is pinned
-  above the candidates, each row carries the release's age, and the hover card
-  leads with the current → incoming diff instead of a bare spec table.
-- Queue rows regrouped: New/Upgrade badge on the title line, download client
-  and quality · size next to the status word above the progress bar, and the
-  custom-format chips with their score on the line below. The multi-download
-  list in details wears the exact same layout.
-- Discover cards tint from the poster's own colours instead of catching up a
-  beat later, the deck tops itself up in the background, and the end-of-deck
-  screen was rebuilt around one clear action.
-- Settings: queue section order is dragged directly on the Media managers
-  list, "Show in Dock" became a Menu bar / Window picker, and the "Needs you"
-  options live in one section with an Errors-only / Errors-and-warnings
-  picker.
-- Demo mode now has real data behind every surface — library, on-disk files,
-  release lists, custom formats — and pause/cancel visibly stick instead of
-  being wiped by the next poll.
-- The ⋯ menu dropped its "Refresh" item; ⌘R still refreshes.
+- Duplicate downloads of the same movie/episode are all listed in details,
+  each with its own pause/resume and cancel; Sonarr episode rows show a
+  download count.
+- Search ranking: order-free word matching, punctuation folding, trailing-year
+  filter ("dune 2024"), library boost, arr popularity signal, vote-count
+  shrinkage for series/albums, `imdb:` lookups for series.
+- Manual search: current file pinned above the candidates, release age on each
+  row, diff-first hover cards.
+- Queue rows regrouped: badge on the title line, client + quality · size next
+  to the status word, format chips + score under the bar; the details download
+  list uses the same layout.
+- Discover: cards tint from the poster itself, the deck refills in the
+  background, rebuilt end-of-deck screen.
+- Settings: queue order dragged directly on the Media managers list, Menu bar /
+  Window picker, consolidated "Needs you" section with a severity picker.
+- Demo mode covers library, files and release lists; pause/cancel stick.
+- Removed "Refresh" from the ⋯ menu (⌘R still works).
 
 ### Fixed
 
-- Cancelling one of two duplicate downloads no longer makes the other pop back
-  like a zombie — detail views tracked one download per episode and hid the
-  rest.
-- Lidarr never showed up as a drop destination (it spells its torrent protocol
-  differently than the other arrs).
-- Torrent names with quotes no longer break the upload to the download client.
-- The About window is fully localized (Website / Privacy Policy / the pretzel
-  credit).
-- The download CTA labels are short verbs (Resume / Cancel / Search) in every
-  language, so they no longer truncate mid-word.
+- Cancelling one of two duplicate downloads no longer resurrects the other in
+  detail views.
+- Lidarr was missing as a drop destination (protocol string mismatch).
+- Torrent names containing quotes broke the upload to the download client.
+- About window is fully localized.
+- Download CTA labels no longer truncate (short verbs: Resume / Cancel /
+  Search).
 
 ## [1.1.0] — 2026-08-03
 
