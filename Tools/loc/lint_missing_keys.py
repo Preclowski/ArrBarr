@@ -21,10 +21,18 @@ def missing_keys(sources=SOURCES):
     # any string literal shaped like a dotted key whose first segment is a
     # known catalog area
     lit = re.compile(r'"([a-z][a-zA-Z0-9]*(?:\.[a-zA-Z0-9]+){1,6})"')
+    # SF Symbol literals share the dotted shape ("person.fill") and, since
+    # person.* became a catalog area, can collide with area prefixes. They
+    # only ever appear as symbol arguments, so skip literals whose call-site
+    # context names a symbol parameter.
+    symbol_ctx = re.compile(r'(systemName|[sS]ymbol)\s*:\s*$')
     bad = {}
     for p in sources.rglob("*.swift"):
-        for m in lit.finditer(p.read_text()):
+        text = p.read_text()
+        for m in lit.finditer(text):
             k = m.group(1)
+            if symbol_ctx.search(text[max(0, m.start() - 40):m.start()]):
+                continue
             if k.split(".", 1)[0] in areas and k not in keys:
                 bad.setdefault(k, p.name)
     return bad
