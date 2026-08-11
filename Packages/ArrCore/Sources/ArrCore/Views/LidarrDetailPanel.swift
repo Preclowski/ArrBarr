@@ -20,6 +20,9 @@ struct LidarrDetailPanel: View {
     var onPauseItem: ((QueueItem) -> Void)? = nil
     var onResumeItem: ((QueueItem) -> Void)? = nil
     var onDeleteItem: ((QueueItem) -> Void)? = nil
+    /// Tap on the artist line under the album title — pushes the artist
+    /// view (album list). nil leaves the line as plain text.
+    var onOpenArtist: ((LidarrArtist) -> Void)? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -42,11 +45,19 @@ struct LidarrDetailPanel: View {
             }
 
             if !lidarrTracks.isEmpty {
-                Text("detail.tracks.button", bundle: .module)
-                    .scaledFont(size: 11, weight: .semibold)
-                    .foregroundStyle(.secondary)
-                    .textCase(.uppercase)
-                    .tracking(0.5)
+                // Section header in the same voice as the artist view's
+                // Album / EP / Single headers (Upcoming-style: sentence
+                // case, 11pt semibold .secondary, tertiary count) — the
+                // two surfaces sit one push apart, so a different header
+                // treatment read as a glitch.
+                HStack(spacing: 6) {
+                    Text("detail.tracks.button", bundle: .module)
+                        .scaledFont(size: 11, weight: .semibold)
+                        .foregroundStyle(.secondary)
+                    Text(verbatim: "\(lidarrTracks.count)")
+                        .scaledFont(size: 11)
+                        .foregroundStyle(.tertiary)
+                }
                 let mediums = Dictionary(grouping: lidarrTracks, by: { $0.mediumNumber ?? 1 })
                     .sorted { $0.key < $1.key }
                 // Track list owns its own tight spacing (4pt) — the
@@ -79,8 +90,6 @@ struct LidarrDetailPanel: View {
                 Text("detail.tracks.button", bundle: .module)
                     .scaledFont(size: 11, weight: .semibold)
                     .foregroundStyle(.secondary)
-                    .textCase(.uppercase)
-                    .tracking(0.5)
                 SkeletonRows(count: 8)
                     .padding(.top, 6)
             }
@@ -118,17 +127,35 @@ struct LidarrDetailPanel: View {
                 Text(album?.title ?? item.title)
                     .scaledFont(size: 15, weight: .semibold)
                     .lineLimit(2)
-                if let artist = album?.artist?.artistName {
+                if let artist = album?.artist {
                     // Artist as subtitle — 12pt medium .secondary.
                     // Subordinate to the 15pt album title above but
                     // bumped from regular weight so it stays
                     // legible. Matches `EpisodeDetailOverlay`'s
                     // series-title treatment so the two detail
                     // surfaces share the same hierarchy language.
-                    Text(artist)
-                        .scaledFont(size: 12, weight: .medium)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
+                    // Tappable (chevron) when the host wires
+                    // `onOpenArtist` — pushes the artist's album list,
+                    // mirroring the episode hero's "series name >" tap.
+                    if let onOpenArtist {
+                        Button { onOpenArtist(artist) } label: {
+                            HStack(spacing: 3) {
+                                Text(artist.artistName)
+                                    .scaledFont(size: 12, weight: .medium)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(2)
+                                LinkChevron()
+                            }
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .help(Text("detail.showArtist.button", bundle: .module))
+                    } else {
+                        Text(artist.artistName)
+                            .scaledFont(size: 12, weight: .medium)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(2)
+                    }
                 }
                 HStack(spacing: 6) {
                     if let year = lidarrYear {

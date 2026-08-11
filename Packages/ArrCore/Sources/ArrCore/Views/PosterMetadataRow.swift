@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Shared row chrome for poster + title + dot-joined metadata + trailing
-/// accessory. Powers both the search "+" result rows (`SearchResultRow`)
+/// accessory. Powers both the search result rows (`SearchResultRow`)
 /// and the Upcoming tab rows (`UpcomingRowView`) so they stay
 /// pixel-identical structurally — the only differences should be what
 /// goes into `metadataSegments` and what trails on the right.
@@ -126,9 +126,8 @@ public struct PosterMetadataRow<TrailingAccessory: View>: View {
         }
         .buttonStyle(.plain)
         .disabled(disabled)
-        // Publish the row's hover state to the drill-in LinkChevron(s)
-        // inside (the title chevron + any trailing accessory chevron)
-        // so they light up on row hover, not on glyph hover.
+        // Publish the row's hover state to the drill-in title chevron
+        // so it lights up on row hover, not on glyph hover.
         .linkRowHover()
         // Hover-tint dropped — chevron after the title now signals
         // "tap to drill in" without depending on cursor state. Works

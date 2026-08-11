@@ -161,9 +161,8 @@ struct QueueTabContent: View {
     /// progress + action chrome — they don't flatten well into a
     /// search row), then a single merged + cross-source-sorted block
     /// of library + new hits. The library/new distinction is read
-    /// per-row from the trailing affordance: chevron + InLibraryBadge
-    /// for already-owned, `+` for addable. No section divider; this
-    /// IS the search result list.
+    /// per-row from the trailing InLibraryBadge on already-owned
+    /// rows. No section divider; this IS the search result list.
     @ViewBuilder
     private var searchResults: some View {
         // Delegates to the shared surface so macOS and iOS render search

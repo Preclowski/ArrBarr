@@ -18,9 +18,8 @@ public struct SearchResultRow: View {
 
     /// True when this result is already in the user's arr library.
     /// Set by `SearchViewModel.fetchOne` from the library-id map.
-    /// Drives the row's trailing affordance: a chevron + "In library"
-    /// pill (tap drills into DetailView) instead of the addable `+`
-    /// (tap opens SearchAddPanel).
+    /// Drives the row's trailing "In library" pill (tap drills into
+    /// DetailView; without it, tap opens SearchAddPanel).
     private var isInLibrary: Bool { result.inLibraryArrId != nil }
 
     public var body: some View {
@@ -39,17 +38,12 @@ public struct SearchResultRow: View {
             titleBadge: AnyView(SourceGlyphChip(source: result.source)),
             onTap: onTap
         ) {
+            // Trailing edge carries only the ownership badge. The drill-in
+            // affordance is the title chevron PosterMetadataRow already
+            // draws — a second trailing chevron (or a `+`) made search rows
+            // read differently from every other row surface.
             if isInLibrary {
-                HStack(spacing: 6) {
-                    InLibraryBadge()
-                    // Apple-standard "drill in" affordance — same chevron
-                    // the system uses in Settings, Music, App Store.
-                    LinkChevron(size: 10)
-                }
-            } else {
-                Image(systemName: "plus")
-                    .scaledFont(size: 11, weight: .medium)
-                    .foregroundStyle(.secondary)
+                InLibraryBadge()
             }
         }
         #if os(macOS)
@@ -132,14 +126,9 @@ public struct SearchResultTooltip: View {
                         ForEach(result.genres, id: \.self) { TagChip(text: $0) }
                     }
                 }
-                if hasRatingsRow {
+                if !ratingChips.isEmpty {
                     HStack(spacing: 6) {
-                        if let v = result.imdb { ratingChip(label: "IMDb", value: String(format: "%.1f", v), color: .yellow) }
-                        if let v = result.rottenTomatoes { ratingChip(label: "RT", value: "\(Int(v))%", color: .red) }
-                        if let v = result.metacritic { ratingChip(label: "MC", value: "\(Int(v))", color: .green) }
-                        if result.imdb == nil, let v = result.rating {
-                            ratingChip(label: "★", value: String(format: "%.1f", v), color: .yellow)
-                        }
+                        ForEach(ratingChips, id: \.label) { RatingPill(chip: $0) }
                     }
                 }
                 if let n = result.network, !n.isEmpty {
@@ -158,23 +147,29 @@ public struct SearchResultTooltip: View {
         }
     }
 
-    private var hasRatingsRow: Bool {
-        result.imdb != nil || result.rottenTomatoes != nil
-            || result.metacritic != nil || result.rating != nil
-    }
-
-    @ViewBuilder
-    private func ratingChip(label: String, value: String, color: Color) -> some View {
-        HStack(spacing: 3) {
-            Text(label)
-                .scaledFont(size: 10, weight: .medium)
-                .foregroundStyle(color)
-            Text(value)
-                .scaledFont(size: 10, weight: .semibold)
-                .foregroundStyle(.primary)
+    /// Same brand-icon pills as the detail headers (`RatingPill`), minus the
+    /// links — a tooltip is hover chrome, not a click target. The bare-rating
+    /// fallback is TVDB-sourced for Sonarr results and TMDB otherwise.
+    private var ratingChips: [RatingChip] {
+        var chips: [RatingChip] = []
+        if let v = result.imdb {
+            chips.append(RatingChip(label: "IMDb", value: String(format: "%.1f", v),
+                                    color: .yellow, iconName: "rating-imdb"))
         }
-        .padding(.horizontal, 6)
-        .padding(.vertical, 2)
-        .overlay(RoundedRectangle(cornerRadius: Tokens.Radius.chip).stroke(color.opacity(0.30), lineWidth: 0.75))
+        if let v = result.rottenTomatoes {
+            chips.append(RatingChip(label: "RT", value: "\(Int(v))%",
+                                    color: .red, iconName: "rating-rt"))
+        }
+        if let v = result.metacritic {
+            chips.append(RatingChip(label: "MC", value: "\(Int(v))", color: .green))
+        }
+        if result.imdb == nil, let v = result.rating {
+            chips.append(result.source == .sonarr
+                ? RatingChip(label: "TVDB", value: String(format: "%.1f", v),
+                             color: .blue, iconName: "rating-tvdb")
+                : RatingChip(label: "TMDB", value: String(format: "%.1f", v),
+                             color: .teal, iconName: "rating-tmdb"))
+        }
+        return chips
     }
 }

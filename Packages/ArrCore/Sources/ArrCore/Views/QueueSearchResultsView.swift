@@ -86,7 +86,51 @@ struct QueueSearchResultsView: View {
                 }
             }
             .animation(.easeInOut(duration: 0.15), value: reloading)
+
+            // Settled empty search: every bucket came back empty and the
+            // lookups are done. Without this the surface is just blank rows
+            // of nothing, which reads as "still loading" or "broken".
+            // An error state is NOT an empty state — when a lookup failed
+            // the message says so instead of pretending there are no hits.
+            if showsEmptyState {
+                VStack(spacing: 8) {
+                    Image(systemName: searchViewModel.errorMessage == nil
+                          ? "magnifyingglass" : "exclamationmark.triangle")
+                        .scaledFont(size: 22)
+                        .foregroundStyle(.tertiary)
+                    if let error = searchViewModel.errorMessage {
+                        Text("search.error.title", bundle: .module)
+                            .scaledFont(size: 13, weight: .semibold)
+                        Text(error)
+                            .scaledFont(size: 11)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                    } else {
+                        Text("search.noResults.title", bundle: .module)
+                            .scaledFont(size: 13, weight: .semibold)
+                        Text("search.noResults.message", bundle: .module)
+                            .scaledFont(size: 11)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 24)
+                .padding(.vertical, 28)
+            }
         }
+    }
+
+    /// True when the query has settled with nothing to show in ANY bucket —
+    /// no queue matches, no lookup hits, no people. Requires a non-empty
+    /// query (an empty field legitimately shows nothing) and no in-flight
+    /// search (that case is the host's loading indicator).
+    private var showsEmptyState: Bool {
+        let query = searchViewModel.query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty, !searchViewModel.isSearching else { return false }
+        guard !searchViewModel.hasResults, searchViewModel.starring == nil else { return false }
+        // Local queue matches still count as results.
+        return scopedSources.allSatisfy { entries(for: $0).isEmpty }
     }
 
     // MARK: - People

@@ -551,6 +551,45 @@ public struct LidarrLookupRatings: Decodable {
     public var votes: Int? = nil
 }
 
+/// One entry of `/api/v1/search` — Lidarr's mixed text search (what its own
+/// UI queries). Each entry wraps EITHER an artist OR an album resource;
+/// `/artist/lookup` and `/album/lookup` only do text search for prefixed /
+/// foreign-id terms, which is why the app searches through this endpoint.
+public struct LidarrSearchRecord: Decodable {
+    public let foreignId: String?
+    public let artist: LidarrLookupRecord?
+    public let album: LidarrAlbumLookupRecord?
+}
+
+/// Album resource as returned inside `/search` entries (and by
+/// `/album/lookup` for foreign-id terms). `id` is non-zero when the album
+/// is already in the library (same convention as the other arr lookups);
+/// the embedded `artist` carries what the add flow needs to create the
+/// artist alongside the album.
+public struct LidarrAlbumLookupRecord: Decodable {
+    public let id: Int?
+    public let foreignAlbumId: String?
+    public let title: String
+    public let disambiguation: String?
+    public let overview: String?
+    public let albumType: String?
+    public let releaseDate: String?
+    public let genres: [String]?
+    public let images: [ArrImage]?
+    public let ratings: LidarrLookupRatings?
+    public let artist: LidarrAlbumLookupArtist?
+}
+
+/// Artist as embedded in `/search` album entries. NOT `LidarrArtist` — that
+/// type requires `id`, and the search payload omits it for artists that
+/// aren't in the library (which is most of them), so reusing it made the
+/// whole `/search` array fail to decode and music search came back empty.
+public struct LidarrAlbumLookupArtist: Decodable {
+    public let id: Int?
+    public let artistName: String?
+    public let foreignArtistId: String?
+}
+
 public struct MetadataProfile: Decodable, Sendable, Equatable, Identifiable {
     public let id: Int
     public let name: String
@@ -718,7 +757,14 @@ public extension Array where Element == ArrImage {
         }
         guard let match else { return (nil, false) }
 
-        if let remote = match.remoteUrl, let url = URL(string: remote) {
+        // Only trust remoteUrl when it's a real absolute web URL. Lidarr
+        // artist records ship relative junk here ("/config/MediaCover/…" —
+        // the server's own container path), which URL(string:) happily
+        // accepts as a scheme-less URL that can never load. Anything
+        // relative falls through to the `url` leg below, which resolves
+        // against the arr's base URL.
+        if let remote = match.remoteUrl, let url = URL(string: remote),
+           url.scheme == "http" || url.scheme == "https" {
             return (url, false)
         }
         if let path = match.url, let base = URL(string: baseURL) {

@@ -128,10 +128,11 @@ public enum DetailRequest {
     /// the user gets the same hero card + form as the `+` flow.
     public static func tap(_ result: SearchResult) {
         if let arrId = result.inLibraryArrId {
-            // Lidarr search results are ARTISTS (artist/lookup), so the
-            // arr-internal id is an artist id — route to the artist view,
-            // not the album-shaped DetailView.
-            if result.source == .lidarr {
+            // Lidarr ARTIST results (artist/lookup) carry an artist id —
+            // route to the artist view, not the album-shaped DetailView.
+            // Album rows (`isLidarrAlbum`) carry an album id and fall
+            // through to the generic path, which IS the album detail.
+            if result.source == .lidarr, !result.isLidarrAlbum {
                 post(syntheticArtistItem(
                     artistId: arrId,
                     name: result.title,

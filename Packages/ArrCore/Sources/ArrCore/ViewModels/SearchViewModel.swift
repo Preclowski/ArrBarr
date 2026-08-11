@@ -218,7 +218,11 @@ public final class SearchViewModel {
         guard searchGeneration == generation else { return }
         radarrResults = rRes
         sonarrResults = sRes
-        lidarrResults = lRes
+        // Albums join the list only in the dedicated Music scope. In `all`,
+        // soundtracks and self-titled albums exact-match movie/series
+        // queries (same 10k tier) and shove the actual titles down — the
+        // broad scope keeps its historical artists-only behaviour.
+        lidarrResults = effective == .album ? lRes : lRes.filter { !$0.isLidarrAlbum }
         whisparrResults = wRes
         peopleResults = pRes.rows
         starring = pRes.starring
@@ -264,7 +268,7 @@ public final class SearchViewModel {
             // `inLibraryArrId` on the ones we own. The row + selection
             // routing diverge based on that field: in-library rows show
             // an "In library" pill + drill into DetailView; addable
-            // rows keep the existing + flow into SearchAddPanel.
+            // rows flow into SearchAddPanel.
             return raw.map { result in
                 if let arrId = map[result.id] {
                     return result.withInLibraryArrId(arrId)
@@ -411,7 +415,8 @@ public final class SearchViewModel {
     }
 
     func addArtist(_ result: SearchResult, qualityProfileId: Int, metadataProfileId: Int,
-                   rootFolderPath: String, searchOnAdd: Bool) async {
+                   rootFolderPath: String, monitor: LidarrMonitorMode = .all,
+                   searchOnAdd: Bool) async {
         guard StoreManager.shared.requirePro(.addTitle) else { return }
         guard let client = lidarrClient else { return }
         isAdding = true; addError = nil
@@ -420,9 +425,39 @@ public final class SearchViewModel {
             let arrId = try await client.addArtist(result, qualityProfileId: qualityProfileId,
                                                   metadataProfileId: metadataProfileId,
                                                   rootFolderPath: rootFolderPath,
+                                                  monitor: monitor.rawValue,
                                                   searchOnAdd: searchOnAdd)
             lidarrResults.removeAll { $0.id == result.id }
             navigateToAdded(result, source: .lidarr, arrId: arrId)
+        } catch {
+            addError = error.localizedDescription
+        }
+    }
+
+    /// Add a single album (Lidarr) — creates the artist alongside it with
+    /// only this album monitored. See `SearchClient.addAlbum`.
+    func addAlbum(_ result: SearchResult, qualityProfileId: Int, metadataProfileId: Int,
+                  rootFolderPath: String, searchOnAdd: Bool) async {
+        guard StoreManager.shared.requirePro(.addTitle) else { return }
+        guard let client = lidarrClient else { return }
+        isAdding = true; addError = nil
+        defer { isAdding = false }
+        do {
+            let arrId = try await client.addAlbum(result, qualityProfileId: qualityProfileId,
+                                                  metadataProfileId: metadataProfileId,
+                                                  rootFolderPath: rootFolderPath,
+                                                  searchOnAdd: searchOnAdd)
+            lidarrResults.removeAll { $0.id == result.id }
+            // The POST returns the ALBUM record — deep-link straight into the
+            // album detail (unlike the artist add, which lands on the artist).
+            guard let arrId else { return }
+            DetailRequest.post(DetailRequest.syntheticItem(
+                source: .lidarr,
+                entityId: arrId,
+                title: result.title,
+                posterURL: result.posterURL,
+                posterRequiresAuth: false
+            ))
         } catch {
             addError = error.localizedDescription
         }

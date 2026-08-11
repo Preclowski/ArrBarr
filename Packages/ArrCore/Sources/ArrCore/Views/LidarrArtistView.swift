@@ -23,8 +23,43 @@ struct LidarrArtistView: View {
     /// Album drill-down, owned locally (like PersonView's `titleDetail`) so
     /// back from the album returns HERE, not to the queue.
     @State private var albumDetail: QueueItem?
+    /// Release-type sections the user folded shut (queue-view style). Keyed
+    /// by the server's type string; empty = everything expanded.
+    @State private var collapsedTypes: Set<String> = []
+    /// Header pencil → edit panel push (profiles / root folder).
+    @State private var editRequest: MediaEditRequest?
+
+    /// What the header pencil edits — the artist record (Lidarr's profile-
+    /// carrying entity).
+    private var editTarget: MediaEditRequest? {
+        guard let artistId = item.entityId else { return nil }
+        return MediaEditRequest(source: .lidarr, entityId: artistId)
+    }
 
     var body: some View {
+        ZStack {
+            mainContent
+
+            // Edit modal — scrim + bottom form card OVER the still-visible
+            // artist surface (matches DetailView). iOS presents it as a
+            // sheet instead.
+            #if os(macOS)
+            if let req = editRequest {
+                MediaEditModalOverlay(request: req, onDismiss: { editRequest = nil })
+                    .zIndex(6)
+            }
+            #endif
+        }
+        #if os(iOS)
+        .sheet(item: $editRequest) { req in
+            MediaEditPanel(request: req, onBack: { editRequest = nil })
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
+        }
+        #endif
+    }
+
+    private var mainContent: some View {
         VStack(spacing: 0) {
             #if os(macOS)
             // Popover hides the native chevron and the detached window never
@@ -36,6 +71,15 @@ struct LidarrArtistView: View {
                     .scaledFont(size: 15, weight: .semibold)
                     .lineLimit(1)
                 Spacer(minLength: 0)
+                if let target = editTarget {
+                    Button { editRequest = target } label: {
+                        Image(systemName: "pencil")
+                            .scaledFont(size: 14, weight: .medium)
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .help(Text("detail.edit.button", bundle: .module))
+                }
                 if let url = artistWebURL {
                     Button { PlatformURLOpener.open(url) } label: {
                         Image(systemName: "safari")
@@ -52,19 +96,25 @@ struct LidarrArtistView: View {
             #endif
 
             ScrollView {
+                // PersonView's inset scheme: header/overview padded to 14,
+                // the album list full-bleed (its rows are PosterMetadataRow,
+                // which self-insets 12) so rows don't sit doubly indented.
                 VStack(alignment: .leading, spacing: 12) {
-                    headerCard
-                    if let overview = artist?.overview, !overview.isEmpty {
-                        ExpandableOverview(text: overview)
-                    } else if loading {
-                        SkeletonLines(count: 3)
+                    VStack(alignment: .leading, spacing: 12) {
+                        headerCard
+                        if let overview = artist?.overview, !overview.isEmpty {
+                            ExpandableOverview(text: overview)
+                        } else if loading {
+                            SkeletonLines(count: 3)
+                        }
                     }
+                    .padding(.horizontal, 14)
                     albumSection
                     if let err = loadError {
                         LoadErrorLine(message: err)
+                            .padding(.horizontal, 14)
                     }
                 }
-                .padding(.horizontal, 14)
                 .padding(.vertical, 12)
             }
             .scrollBounceBehavior(.basedOnSize)
@@ -81,8 +131,14 @@ struct LidarrArtistView: View {
         .navigationTitle(artist?.artistName ?? item.title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            if let url = artistWebURL {
-                ToolbarItem(placement: .primaryAction) {
+            ToolbarItemGroup(placement: .primaryAction) {
+                if let target = editTarget {
+                    Button { editRequest = target } label: {
+                        Image(systemName: "pencil")
+                    }
+                    .help(Text("detail.edit.button", bundle: .module))
+                }
+                if let url = artistWebURL {
                     Button { PlatformURLOpener.open(url) } label: {
                         Image(systemName: "safari")
                     }
@@ -160,17 +216,33 @@ struct LidarrArtistView: View {
 
     // MARK: - Album list
 
+    /// Lidarr's release taxonomy, in its own display order — albums first,
+    /// then EPs / singles, everything else (Broadcast, Other, …) after.
+    /// Types are server-side enum values ("Album", "EP", "Single"), shown
+    /// verbatim as section headers.
+    private var albumTypeGroups: [(type: String, albums: [LidarrAlbumListRecord])] {
+        let grouped = Dictionary(grouping: albums) { $0.albumType ?? "Other" }
+        let preferred = ["Album", "EP", "Single"]
+        let rest = grouped.keys
+            .filter { !preferred.contains($0) }
+            .sorted()
+        return (preferred + rest).compactMap { type in
+            guard let list = grouped[type] else { return nil }
+            return (type, list)
+        }
+    }
+
     @ViewBuilder
     private var albumSection: some View {
-        Text("Albums", bundle: .module)
-            .scaledFont(size: 11, weight: .semibold)
-            .foregroundStyle(.secondary)
-            .textCase(.uppercase)
-            .tracking(0.5)
         if albums.isEmpty {
+            Text("Albums", bundle: .module)
+                .scaledFont(size: 11, weight: .semibold)
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 14)
             if loading {
                 SkeletonRows(count: 6)
                     .padding(.top, 6)
+                    .padding(.horizontal, 14)
             } else if loadError == nil {
                 Text("person.noTitles.label", bundle: .module)
                     .scaledFont(size: 12)
@@ -179,78 +251,126 @@ struct LidarrArtistView: View {
                     .padding(.vertical, 12)
             }
         } else {
-            VStack(alignment: .leading, spacing: 4) {
-                ForEach(albums) { album in
-                    albumRow(album)
+            // One spacing-0 stack so the Upcoming-style header paddings
+            // (14 above, 4 below) own ALL the vertical rhythm — nested in
+            // the outer `VStack(spacing: 12)` directly, every header/rows
+            // pair would pick up extra 12pt gaps.
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(Array(albumTypeGroups.enumerated()), id: \.element.type) { index, group in
+                    sectionHeader(for: group, isFirst: index == 0)
+                    if !collapsedTypes.contains(group.type) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            ForEach(group.albums) { album in
+                                albumRow(album)
+                            }
+                        }
+                    }
                 }
             }
-            .padding(.top, 6)
-            .padding(.bottom, 4)
         }
     }
 
+    /// Section header for one release type — the Upcoming tab's Today /
+    /// Tomorrow treatment (11pt semibold .secondary, 14pt above / 4pt
+    /// below) plus the queue view's collapse affordance (rotating chevron,
+    /// whole row tappable, count in the tertiary gutter).
+    private func sectionHeader(
+        for group: (type: String, albums: [LidarrAlbumListRecord]), isFirst: Bool
+    ) -> some View {
+        let collapsed = collapsedTypes.contains(group.type)
+        return HStack(spacing: 6) {
+            Image(systemName: "chevron.right")
+                .scaledFont(size: 9, weight: .semibold)
+                .foregroundStyle(.tertiary)
+                .rotationEffect(.degrees(collapsed ? 0 : 90))
+                .frame(width: 10)
+                .accessibilityHidden(true)
+            // "Album" (the type) gets the plural header key; the other types
+            // show the server's own name — they're Lidarr enum values, not
+            // free text, and pluralising them per-language buys nothing
+            // ("EP", "Single" read fine as-is).
+            Group {
+                if group.type == "Album" {
+                    Text("Albums", bundle: .module)
+                } else {
+                    Text(verbatim: group.type)
+                }
+            }
+            .scaledFont(size: 11, weight: .semibold)
+            .foregroundStyle(.secondary)
+            Text(verbatim: "\(group.albums.count)")
+                .scaledFont(size: 11)
+                .foregroundStyle(.tertiary)
+            Spacer(minLength: 0)
+        }
+        // 12pt inset mirrors the queue-view section header, so the chevron
+        // column lines up with the rows' PosterMetadataRow inset below.
+        .padding(.horizontal, 12)
+        .padding(.top, isFirst ? 0 : 14)
+        .padding(.bottom, 4)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            withAnimation(.smooth(duration: 0.2)) {
+                if collapsed { collapsedTypes.remove(group.type) }
+                else { collapsedTypes.insert(group.type) }
+            }
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityHint(
+            Text(collapsed ? "Expand section" : "Collapse section", bundle: .module)
+        )
+    }
+
+    /// One album row — the shared `PosterMetadataRow` chrome (same component
+    /// as search results and Upcoming rows), so spacing, hover and the
+    /// drill-in chevron can't drift from the rest of the app.
     private func albumRow(_ album: LidarrAlbumListRecord) -> some View {
         let (cover, coverAuth) = album.images?.posterURL(
             baseURL: configStore.lidarr.baseURL, coverTypes: ["cover", "poster"]) ?? (nil, false)
         let trackCount = album.statistics?.totalTrackCount ?? album.statistics?.trackCount ?? 0
         let fileCount = album.statistics?.trackFileCount ?? 0
         let complete = trackCount > 0 && fileCount >= trackCount
-        return Button {
-            albumDetail = DetailRequest.syntheticItem(
-                source: .lidarr,
-                entityId: album.id,
-                title: album.title,
-                posterURL: cover,
-                posterRequiresAuth: coverAuth
-            )
-        } label: {
-            HStack(spacing: 10) {
-                RemotePoster(
-                    url: cover,
-                    apiKey: coverAuth ? configStore.lidarr.apiKey : nil,
-                    size: CGSize(width: 44, height: 44),
-                    cornerRadius: Tokens.Radius.chip,
-                    fallbackSymbol: "music.note"
-                )
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(album.title)
-                        .scaledFont(size: 12, weight: .medium)
-                        .foregroundStyle(.primary)
-                        .lineLimit(1)
-                    HStack(spacing: 6) {
-                        if let year = albumYear(album) {
-                            Text(year)
-                        }
-                        if let type = album.albumType, !type.isEmpty {
-                            SeparatorDot()
-                            Text(type)
-                        }
-                        if trackCount > 0 {
-                            SeparatorDot()
-                            // "8/12" file coverage; complete albums show a
-                            // green dot after it instead of restating N/N.
-                            Text(verbatim: complete ? "\(trackCount)" : "\(fileCount)/\(trackCount)")
-                            if complete {
-                                Circle().fill(Color.green).frame(width: 4, height: 4)
-                            }
-                        }
-                    }
-                    .scaledFont(size: 10.5)
-                    .foregroundStyle(.secondary)
-                }
-                Spacer(minLength: 0)
-                if album.monitored == false {
-                    Image(systemName: "bookmark.slash")
-                        .scaledFont(size: 10)
-                        .foregroundStyle(.tertiary)
-                        .help(Text("Unmonitored", bundle: .module))
-                }
-                LinkChevron()
-            }
-            .padding(.vertical, 4)
-            .contentShape(Rectangle())
+        // "12 utworów" / "8/12 utworów" — same plural the album detail uses;
+        // incomplete albums prefix the on-disk count. (Type is NOT a segment —
+        // the section header already says Album / EP / Single.)
+        var segments: [String] = []
+        if let year = albumYear(album) { segments.append(year) }
+        if trackCount > 0 {
+            let word = String.localizedStringWithFormat(
+                String(localized: "%lld tracks", bundle: .module), trackCount)
+            segments.append(complete ? word : "\(fileCount)/" + word)
         }
-        .buttonStyle(.plain)
+        return PosterMetadataRow(
+            posterURL: cover,
+            posterAPIKey: coverAuth ? configStore.lidarr.apiKey : nil,
+            posterSize: CGSize(width: 44, height: 44),
+            posterCornerRadius: Tokens.Radius.chip,
+            posterBlurred: false,
+            posterFallbackSymbol: "music.note",
+            title: album.title,
+            metadataSegments: segments,
+            onTap: {
+                albumDetail = DetailRequest.syntheticItem(
+                    source: .lidarr,
+                    entityId: album.id,
+                    title: album.title,
+                    posterURL: cover,
+                    posterRequiresAuth: coverAuth
+                )
+            }
+        ) {
+            if complete {
+                Circle().fill(Color.green).frame(width: 4, height: 4)
+                    .accessibilityLabel(Text("queue.completed.button", bundle: .module))
+            }
+            if album.monitored == false {
+                Image(systemName: "bookmark.slash")
+                    .scaledFont(size: 10)
+                    .foregroundStyle(.tertiary)
+                    .help(Text("Unmonitored", bundle: .module))
+            }
+        }
     }
 
     private func albumYear(_ album: LidarrAlbumListRecord) -> String? {

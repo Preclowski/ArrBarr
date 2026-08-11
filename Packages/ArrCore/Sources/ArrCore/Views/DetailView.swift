@@ -146,6 +146,9 @@ public struct DetailView: View {
     @State private var loadError: String?
     /// Cast-head → person view push, owned locally so back returns here.
     @State private var personRef: PersonRef?
+    /// Album header's "artist name >" tap — pushes `LidarrArtistView`,
+    /// owned locally (like `personRef`) so back returns to this album.
+    @State private var artistDrill: QueueItem?
 
     /// Poster lightbox — set to a URL when the user taps the header
     /// card's poster, cleared by the xmark button. Renders as an
@@ -157,6 +160,8 @@ public struct DetailView: View {
     @State private var seasonDrill: SeasonDrill?
     /// Manual-search push target (movie / album) when not downloading.
     @State private var manualSearchTarget: ManualSearchTarget?
+    /// Header pencil → edit panel push (profile / availability / root folder).
+    @State private var editRequest: MediaEditRequest?
     /// Automatic-search in flight / just-queued feedback for the bottom CTA.
     @State private var autoSearching = false
     @State private var autoDidSearch = false
@@ -333,6 +338,17 @@ public struct DetailView: View {
             .disabled(enlargedPoster != nil)
             .accessibilityHidden(enlargedPoster != nil)
 
+            // Edit modal — scrim + bottom form card OVER the still-visible
+            // detail (ModalConfirmOverlay pattern; `.sheet` doesn't render in
+            // a MenuBarExtra popover). Deliberately not a NavigationStack
+            // push: that nudged the whole popover down by the collapsed nav
+            // bar's height, which read as the window jumping.
+            #if os(macOS)
+            if let req = editRequest {
+                MediaEditModalOverlay(request: req, onDismiss: { editRequest = nil })
+                    .zIndex(6)
+            }
+            #endif
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         // Full-screen poster: iOS covers all chrome (no header/back, tap to
@@ -377,6 +393,13 @@ public struct DetailView: View {
         #if os(iOS)
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
+                // Cluster order: edit, search, monitor, safari, trash.
+                if let target = editTarget {
+                    Button { editRequest = target } label: {
+                        Image(systemName: "pencil")
+                    }
+                    .help(Text("detail.edit.button", bundle: .module))
+                }
                 headerSearchMenu
                 monitorToggle
                 if let url = arrWebURL(for: item, in: configStore) {
@@ -415,6 +438,15 @@ public struct DetailView: View {
         #endif
         // Cast-head → person view, owned here so back returns to this detail.
         .personDestination($personRef)
+        // Album header's artist tap — push the artist's album list.
+        .navigationDestination(item: $artistDrill) { artistItem in
+            LidarrArtistView(
+                item: artistItem,
+                onBack: { artistDrill = nil },
+                originLabel: originLabel,
+                viewModel: viewModel
+            )
+        }
         // Season drill-down — push SeasonDetailView (its episodes + that season's
         // search buttons). The bottom search CTA there is unambiguous because the
         // user is *inside* the season.
@@ -458,6 +490,15 @@ public struct DetailView: View {
                 }
             )
         }
+        // iOS gets the edit panel as a native sheet — the modal treatment the
+        // overlay approximates on macOS.
+        #if os(iOS)
+        .sheet(item: $editRequest) { req in
+            MediaEditPanel(request: req, onBack: { editRequest = nil })
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
+        }
+        #endif
         // Manual-search ("Download") drill-down — releases for this movie/album.
         .navigationDestination(item: $manualSearchTarget) { target in
             ReleaseListView(target: target,
@@ -525,6 +566,16 @@ public struct DetailView: View {
                 .foregroundStyle(.primary)
                 .lineLimit(1)
             Spacer(minLength: 0)
+            // Cluster order: edit, search, monitor, safari, (trash on iOS).
+            if let target = editTarget {
+                Button { editRequest = target } label: {
+                    Image(systemName: "pencil")
+                        .scaledFont(size: 14, weight: .medium)
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .help(Text("detail.edit.button", bundle: .module))
+            }
             headerSearchMenu
             monitorToggle
             if let url = arrWebURL(for: item, in: configStore) {
@@ -543,6 +594,14 @@ public struct DetailView: View {
         #else
         EmptyView()
         #endif
+    }
+
+    /// What the header pencil edits. Nil for Lidarr ALBUM details — the
+    /// editable Lidarr entity is the artist (profiles / root folder live on
+    /// it), so the pencil lives in `LidarrArtistView` instead.
+    private var editTarget: MediaEditRequest? {
+        guard item.source != .lidarr, let entityId = item.entityId else { return nil }
+        return MediaEditRequest(source: item.source, entityId: entityId)
     }
 
     /// The Search choice, relocated from the bottom CTA strip into the header
@@ -854,7 +913,15 @@ public struct DetailView: View {
                     arrWebURLForItem: { q in arrWebURL(for: q, in: configStore) },
                     onPauseItem: { q in Task { await viewModel.pause(q); await viewModel.refresh() } },
                     onResumeItem: { q in Task { await viewModel.resume(q); await viewModel.refresh() } },
-                    onDeleteItem: { q in Task { await viewModel.delete(q) } }
+                    onDeleteItem: { q in Task { await viewModel.delete(q) } },
+                    onOpenArtist: { artist in
+                        artistDrill = DetailRequest.syntheticArtistItem(
+                            artistId: artist.id,
+                            name: artist.artistName,
+                            posterURL: arrPosterURL(images: artist.images, for: item, in: configStore),
+                            posterRequiresAuth: item.posterRequiresAuth
+                        )
+                    }
                 )
             }
     }

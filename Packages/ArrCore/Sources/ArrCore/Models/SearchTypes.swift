@@ -52,6 +52,12 @@ public struct SearchResult: Identifiable, Equatable, Hashable, Sendable {
     /// chat UI can route a tap to DetailView instead of the add flow.
     /// `nil` for non-cross-referenced results (e.g. regular `*_search` calls).
     let inLibraryArrId: Int?
+    /// Lidarr only: true when this row is an ALBUM (`/album/lookup`), false
+    /// for artists (`/artist/lookup`). The two route differently on tap —
+    /// albums open/add the album, artists open the artist view — and the two
+    /// lookups return records with disjoint shapes, so the flag is stamped at
+    /// unify time rather than re-derived downstream.
+    let isLidarrAlbum: Bool
 
     init(id: Int, foreignId: String, title: String, subtitle: String?,
          year: Int?, rating: Double?, votes: Int? = nil,
@@ -60,7 +66,8 @@ public struct SearchResult: Identifiable, Equatable, Hashable, Sendable {
          genres: [String], network: String?, certification: String?,
          posterURL: URL?, source: QueueItem.Source,
          inLibraryArrId: Int? = nil,
-         imdbId: String? = nil, sourceRank: Int = 0) {
+         imdbId: String? = nil, sourceRank: Int = 0,
+         isLidarrAlbum: Bool = false) {
         self.id = id
         self.foreignId = foreignId
         self.title = title
@@ -81,6 +88,7 @@ public struct SearchResult: Identifiable, Equatable, Hashable, Sendable {
         self.inLibraryArrId = inLibraryArrId
         self.imdbId = imdbId
         self.sourceRank = sourceRank
+        self.isLidarrAlbum = isLidarrAlbum
     }
 
     /// Re-stamp `inLibraryArrId` without retyping every other field.
@@ -98,7 +106,8 @@ public struct SearchResult: Identifiable, Equatable, Hashable, Sendable {
             certification: self.certification,
             posterURL: self.posterURL, source: self.source,
             inLibraryArrId: id,
-            imdbId: self.imdbId, sourceRank: self.sourceRank
+            imdbId: self.imdbId, sourceRank: self.sourceRank,
+            isLidarrAlbum: self.isLidarrAlbum
         )
     }
 }
@@ -146,6 +155,41 @@ public enum SonarrMonitorMode: String, CaseIterable, Identifiable {
         case .first: return String(localized: "search.firstSeason.button", bundle: .module)
         case .latest: return String(localized: "search.latestSeason.button", bundle: .module)
         case .none: return String(localized: "search.none.button", bundle: .module)
+        }
+    }
+}
+
+/// Lidarr `addOptions.monitor` for a new artist. Mirrors Lidarr's
+/// `MonitorTypes` (serialised lowercase/camelCase 1:1 — unlike Sonarr,
+/// `first`/`latest` need no remapping).
+public enum LidarrMonitorMode: String, CaseIterable, Identifiable {
+    case all, future, missing, existing, first, latest, none
+    public var id: String { rawValue }
+    /// See `RadarrMonitorMode.displayName` — localized, not raw.
+    var displayName: String {
+        switch self {
+        case .all: return String(localized: "search.all.button", bundle: .module)
+        case .future: return String(localized: "search.future.button", bundle: .module)
+        case .missing: return String(localized: "search.missing.button", bundle: .module)
+        case .existing: return String(localized: "search.existing.button", bundle: .module)
+        case .first: return String(localized: "search.firstAlbum.button", bundle: .module)
+        case .latest: return String(localized: "search.latestAlbum.button", bundle: .module)
+        case .none: return String(localized: "search.none.button", bundle: .module)
+        }
+    }
+}
+
+/// Radarr's `minimumAvailability` — when a monitored movie becomes eligible
+/// for searching/downloading. Serialises 1:1 to Radarr v3's enum values.
+public enum RadarrMinimumAvailability: String, CaseIterable, Identifiable {
+    case announced, inCinemas, released
+    public var id: String { rawValue }
+    /// See `RadarrMonitorMode.displayName` — localized, not raw.
+    var displayName: String {
+        switch self {
+        case .announced: return String(localized: "edit.availability.announced.button", bundle: .module)
+        case .inCinemas: return String(localized: "edit.availability.inCinemas.button", bundle: .module)
+        case .released: return String(localized: "edit.availability.released.button", bundle: .module)
         }
     }
 }

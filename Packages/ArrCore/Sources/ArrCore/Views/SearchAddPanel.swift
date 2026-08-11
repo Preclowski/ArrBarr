@@ -36,6 +36,7 @@ public struct SearchAddPanel: View {
 
     // Whisparr state
     @State private var whisparrMonitor: RadarrMonitorMode = .movieOnly
+    @State private var lidarrMonitor: LidarrMonitorMode = .all
     /// Poster lightbox — set to a URL when the user taps the hero
     /// poster, cleared by the xmark / scrim tap. Renders the shared
     /// `PosterLightbox` as a ZStack overlay so the focused view
@@ -298,6 +299,15 @@ public struct SearchAddPanel: View {
                            set: { selectedRootFolder = $0 }
                        ),
                        options: viewModel.rootFolders.map { ($0.path, $0.path) })
+
+            // Monitor choice applies to a fresh ARTIST add. An album row
+            // always monitors exactly that album (the artist is created
+            // with `monitor: none`), so the picker would be a lie there.
+            if !result.isLidarrAlbum {
+                formPicker("search.monitor.button",
+                           selection: $lidarrMonitor,
+                           options: LidarrMonitorMode.allCases.map { ($0, $0.displayName) })
+            }
         }
         .padding(.horizontal, 14)
         .padding(.bottom, 4)
@@ -386,65 +396,35 @@ public struct SearchAddPanel: View {
     // MARK: - Sonarr form
 
     private var sonarrForm: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            sectionLabel("search.library.button")
-            // Match the 14pt horizontal inset every other form here uses
-            // (radarrForm / whisparrForm / lidarrForm). Without it the
-            // picker capsules touch the popover edge while the section
-            // labels and chips around them are inset — reads as wonky.
-            VStack(spacing: 4) {
-                formPicker("search.qualityProfile.button",
-                           selection: Binding(
-                               get: { selectedProfileId ?? viewModel.qualityProfiles.first?.id ?? 0 },
-                               set: { selectedProfileId = $0 }
-                           ),
-                           options: viewModel.qualityProfiles.map { ($0.id, $0.name) })
+        // Same picker-row stack as every other arr's form (radarr / whisparr
+        // / lidarr) — monitor mode used to be a horizontal chip strip here,
+        // the lone control of its kind across the four forms, so it's a
+        // `formPicker` now too.
+        VStack(spacing: 4) {
+            formPicker("search.qualityProfile.button",
+                       selection: Binding(
+                           get: { selectedProfileId ?? viewModel.qualityProfiles.first?.id ?? 0 },
+                           set: { selectedProfileId = $0 }
+                       ),
+                       options: viewModel.qualityProfiles.map { ($0.id, $0.name) })
 
-                formPicker("search.rootFolder.button",
-                           selection: Binding(
-                               get: { selectedRootFolder ?? viewModel.rootFolders.first?.path ?? "" },
-                               set: { selectedRootFolder = $0 }
-                           ),
-                           options: viewModel.rootFolders.map { ($0.path, $0.path) })
+            formPicker("search.rootFolder.button",
+                       selection: Binding(
+                           get: { selectedRootFolder ?? viewModel.rootFolders.first?.path ?? "" },
+                           set: { selectedRootFolder = $0 }
+                       ),
+                       options: viewModel.rootFolders.map { ($0.path, $0.path) })
 
-                formPicker("search.seriesType.button",
-                           selection: $seriesType,
-                           options: SonarrSeriesType.allCases.map { ($0, $0.displayName) })
-            }
-            .padding(.horizontal, 14)
+            formPicker("search.seriesType.button",
+                       selection: $seriesType,
+                       options: SonarrSeriesType.allCases.map { ($0, $0.displayName) })
 
-            sectionLabel("search.monitor.button")
-            monitorChips
+            formPicker("search.monitor.button",
+                       selection: $sonarrMonitor,
+                       options: SonarrMonitorMode.allCases.map { ($0, $0.displayName) })
         }
+        .padding(.horizontal, 14)
         .padding(.bottom, 4)
-    }
-
-    private var monitorChips: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 4) {
-                ForEach(SonarrMonitorMode.allCases) { mode in
-                    Button {
-                        sonarrMonitor = mode
-                    } label: {
-                        Text(mode.displayName)
-                            .scaledFont(size: 10, weight: .medium)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 3)
-                            .background(sonarrMonitor == mode
-                                ? Color.accentColor.opacity(0.2)
-                                : Color.primary.opacity(0.07),
-                                in: RoundedRectangle(cornerRadius: Tokens.Radius.chip))
-                            .foregroundStyle(sonarrMonitor == mode ? Color.accentColor : .secondary)
-                            .overlay(RoundedRectangle(cornerRadius: Tokens.Radius.chip)
-                                .stroke(sonarrMonitor == mode ? Color.accentColor.opacity(0.4) : Color.clear,
-                                        lineWidth: 1))
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 6)
-        }
     }
 
     // MARK: - Add button
@@ -495,9 +475,18 @@ public struct SearchAddPanel: View {
                                              searchOnAdd: searchOnAdd)
                 case .musicBrainz:
                     let metaPid = selectedMetadataProfileId ?? viewModel.metadataProfiles.first?.id ?? 1
-                    await viewModel.addArtist(result, qualityProfileId: pid,
-                                             metadataProfileId: metaPid, rootFolderPath: folder,
-                                             searchOnAdd: searchOnAdd)
+                    if result.isLidarrAlbum {
+                        // Album row: add just this album (artist gets created
+                        // unmonitored-for-new so only this album is tracked).
+                        await viewModel.addAlbum(result, qualityProfileId: pid,
+                                                 metadataProfileId: metaPid, rootFolderPath: folder,
+                                                 searchOnAdd: searchOnAdd)
+                    } else {
+                        await viewModel.addArtist(result, qualityProfileId: pid,
+                                                 metadataProfileId: metaPid, rootFolderPath: folder,
+                                                 monitor: lidarrMonitor,
+                                                 searchOnAdd: searchOnAdd)
+                    }
                 case .imdb:
                     // IMDB-only refs aren't directly addable — the search
                     // pipeline should have resolved them to tmdb/tvdb
@@ -573,17 +562,6 @@ public struct SearchAddPanel: View {
                 content.modifier(GlassButtonStyle())
             }
         }
-    }
-
-    private func sectionLabel(_ text: LocalizedStringKey) -> some View {
-        Text(text, bundle: .module)
-            .scaledFont(size: 10, weight: .semibold)
-            .foregroundStyle(.tertiary)
-            .textCase(.uppercase)
-            .tracking(0.5)
-            .padding(.horizontal, 14)
-            .padding(.top, 8)
-            .padding(.bottom, 2)
     }
 
     private func formPicker<T: Hashable>(_ label: LocalizedStringKey, selection: Binding<T>,

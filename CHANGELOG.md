@@ -17,6 +17,9 @@ Releases before 0.10.0 are described on the
 - People search: scope filter on the search field plus a `person:` prefix;
   matching a well-known name shows a "Starring" section with their films.
 - Demo mode ships people fixtures, so cast taps and People search work there.
+- Edit button in movie / series / artist detail headers: change quality
+  profile, root folder and the arr-specific bits (minimum availability,
+  series type, metadata profile). Changing the folder moves the files.
 
 ### Fixed
 

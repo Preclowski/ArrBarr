@@ -61,11 +61,64 @@ public actor SearchClient {
             let records = try JSONDecoder().decode([SonarrLookupRecord].self, from: data)
             return records.enumerated().compactMap { Self.unifySonarr($0.element, baseURL: config.baseURL, sourceRank: $0.offset) }
         case .lidarr:
-            let url = try http.url(base: config.baseURL, path: "\(apiBase)/artist/lookup",
-                                   query: [URLQueryItem(name: "term", value: query)])
-            let data = try await http.get(url, headers: headers)
-            let records = try JSONDecoder().decode([LidarrLookupRecord].self, from: data)
-            return records.enumerated().compactMap { Self.unifyLidarr($0.element, baseURL: config.baseURL, sourceRank: $0.offset) }
+            // Music search covers BOTH entities — artists and albums. Text
+            // terms go through `/search` (the mixed endpoint Lidarr's own UI
+            // uses; `/artist/lookup` and `/album/lookup` only resolve
+            // foreign-id / prefixed terms, so a title query returns artists
+            // at best). Album rows are stamped `isLidarrAlbum` for the
+            // divergent tap routing. An MBID ref query keeps the dedicated
+            // artist endpoint — it resolves a bare GUID directly.
+            if input.isRef {
+                let url = try http.url(base: config.baseURL, path: "\(apiBase)/artist/lookup",
+                                       query: [URLQueryItem(name: "term", value: query)])
+                let data = try await http.get(url, headers: headers)
+                let records = try JSONDecoder().decode([LidarrLookupRecord].self, from: data)
+                return records.enumerated().compactMap {
+                    Self.unifyLidarr($0.element, baseURL: config.baseURL, sourceRank: $0.offset)
+                }
+            }
+            // Hybrid fetch: `/search` is the only endpoint that returns
+            // albums for a text term, but its artist entries come back with
+            // EMPTY `images` (Lidarr quirk — `/artist/lookup` for the same
+            // term has them). So albums come from `/search` and artists from
+            // `/artist/lookup`, concurrently; `SearchRelevance` re-ranks the
+            // merged list anyway, so the split costs no ordering.
+            let searchUrl = try http.url(base: config.baseURL, path: "\(apiBase)/search",
+                                         query: [URLQueryItem(name: "term", value: query)])
+            async let searchData = http.get(searchUrl, headers: headers)
+            let lookupUrl = try http.url(base: config.baseURL, path: "\(apiBase)/artist/lookup",
+                                         query: [URLQueryItem(name: "term", value: query)])
+            // Artist leg is best-effort — the mixed endpoint alone still
+            // yields a usable (if imageless-artist) list.
+            async let lookupData: Data? = try? http.get(lookupUrl, headers: headers)
+            let searchRecords = try JSONDecoder().decode([LidarrSearchRecord].self, from: await searchData)
+            let artistRecords: [LidarrLookupRecord] = await lookupData.flatMap {
+                try? JSONDecoder().decode([LidarrLookupRecord].self, from: $0)
+            } ?? []
+            let albums = searchRecords.enumerated().compactMap { offset, rec in
+                rec.album.flatMap {
+                    Self.unifyLidarrAlbum($0, baseURL: config.baseURL, sourceRank: offset)
+                }
+            }
+            let artists: [SearchResult]
+            if artistRecords.isEmpty {
+                // Fallback: imageless artists straight from `/search`.
+                artists = searchRecords.enumerated().compactMap { offset, rec in
+                    rec.artist.flatMap {
+                        Self.unifyLidarr($0, baseURL: config.baseURL, sourceRank: offset)
+                    }
+                }
+            } else {
+                // Each endpoint keeps its own natural 0-based order — they
+                // rank different entity kinds, and offsetting artists by the
+                // /search length handed every artist a flat upstream-rank
+                // penalty (~2 pt/position) against same-band titles from
+                // OTHER arrs for no reason.
+                artists = artistRecords.enumerated().compactMap {
+                    Self.unifyLidarr($0.element, baseURL: config.baseURL, sourceRank: $0.offset)
+                }
+            }
+            return albums + artists
         case .whisparr:
             let url = try http.url(base: config.baseURL, path: "\(apiBase)/movie/lookup",
                                    query: [URLQueryItem(name: "term", value: query)])
@@ -356,6 +409,53 @@ public actor SearchClient {
         return Self.newRecordId(from: response)
     }
 
+    /// Add a single ALBUM (Lidarr) — what its own UI's "Add new album" does:
+    /// re-fetch the album from `/album/lookup` by MBID (POST `/album` wants
+    /// the full lookup resource, and round-tripping it as raw JSON keeps
+    /// every field Lidarr expects), graft the artist's add parameters onto
+    /// the embedded artist, and POST. The artist is created monitored with
+    /// `monitor: "none"` so ONLY this album ends up monitored.
+    /// Returns the new album's arr id (the album-detail deep link).
+    @discardableResult
+    func addAlbum(_ result: SearchResult, qualityProfileId: Int, metadataProfileId: Int,
+                  rootFolderPath: String, searchOnAdd: Bool) async throws -> Int? {
+        try ensureRefCompatible(result)
+        if DemoMode.isActive {
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            return nil
+        }
+        guard config.isConfigured else { throw HTTPError.notConfigured }
+        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
+        // Re-search by the TITLE the user just searched (guaranteed to
+        // return this album again) and pick the record by MBID. Same
+        // `/search` endpoint the row came from — the dedicated lookup
+        // endpoints don't do text search.
+        let lookupUrl = try http.url(
+            base: config.baseURL, path: "\(apiBase)/search",
+            query: [URLQueryItem(name: "term", value: result.title)])
+        let lookupData = try await http.get(lookupUrl, headers: headers)
+        let records = (try? JSONSerialization.jsonObject(with: lookupData)) as? [[String: Any]] ?? []
+        guard var album = records
+                .compactMap({ $0["album"] as? [String: Any] })
+                .first(where: { ($0["foreignAlbumId"] as? String) == result.foreignId }) else {
+            throw HTTPError.decoding(NSError(domain: "lidarr", code: 404, userInfo: [
+                NSLocalizedDescriptionKey: "Album not found in Lidarr lookup"]))
+        }
+        album["monitored"] = true
+        var artist = album["artist"] as? [String: Any] ?? [:]
+        artist["qualityProfileId"] = qualityProfileId
+        artist["metadataProfileId"] = metadataProfileId
+        artist["rootFolderPath"] = rootFolderPath
+        artist["monitored"] = true
+        artist["addOptions"] = ["monitor": "none", "searchForMissingAlbums": false]
+        album["artist"] = artist
+        album["addOptions"] = ["searchForNewAlbum": searchOnAdd]
+        let url = try http.url(base: config.baseURL, path: "\(apiBase)/album")
+        let body = try JSONSerialization.data(withJSONObject: album)
+        let response = try await http.post(url, headers: headers.merging(["Content-Type": "application/json"]) { $1 }, body: body)
+        return Self.newRecordId(from: response)
+    }
+
     // MARK: - Unify
 
     private static func unifyRadarr(_ r: RadarrLookupRecord, baseURL: String, sourceRank: Int = 0) -> SearchResult? {
@@ -438,6 +538,45 @@ public actor SearchClient {
             posterURL: poster.0,
             source: .whisparr,
             sourceRank: sourceRank
+        )
+    }
+
+    internal static func unifyLidarrAlbum(_ r: LidarrAlbumLookupRecord, baseURL: String, sourceRank: Int = 0) -> SearchResult? {
+        guard let foreign = r.foreignAlbumId, !foreign.isEmpty else { return nil }
+        let (poster, _) = r.images?.posterURL(baseURL: baseURL, coverTypes: ["cover", "poster"]) ?? (nil, false)
+        let stableId = abs(foreign.hashValue) & 0x7fffffff
+        let year = r.releaseDate.flatMap { parseArrDate($0) }.map {
+            Calendar.current.component(.year, from: $0)
+        }
+        // Subtitle: the artist — the row's disambiguator, same slot the
+        // artist rows use for MusicBrainz's own disambiguation string.
+        let subtitle = [r.artist?.artistName, r.albumType]
+            .compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · ")
+        return SearchResult(
+            id: stableId,
+            foreignId: foreign,
+            title: r.title,
+            subtitle: subtitle.isEmpty ? r.disambiguation : subtitle,
+            year: year,
+            rating: r.ratings?.value,
+            votes: r.ratings?.votes,
+            imdb: nil,
+            rottenTomatoes: nil,
+            metacritic: nil,
+            overview: r.overview,
+            runtime: nil,
+            genres: r.genres ?? [],
+            network: nil,
+            certification: nil,
+            posterURL: poster,
+            source: .lidarr,
+            // Lookup stamps the arr record id on in-library albums — that's
+            // the deep-link into the album DetailView. The artist-keyed
+            // library map in `fetchOne` can't match these rows (disjoint
+            // hash spaces), so this is the only in-library signal they get.
+            inLibraryArrId: (r.id ?? 0) != 0 ? r.id : nil,
+            sourceRank: sourceRank,
+            isLidarrAlbum: true
         )
     }
 

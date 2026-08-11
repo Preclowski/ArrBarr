@@ -438,12 +438,15 @@ struct LocalToolBackendTests {
             LocalStubProtocol.reset()
         }
 
+        // Text terms go through Lidarr's mixed `/search` endpoint (entries
+        // wrapping either an artist or an album) — see SearchClient.lookup.
         let json = """
-        [{"foreignArtistId":"a74b1b7f-71a5-4011-9441-d0b5e4122711","artistName":"Radiohead",
+        [{"foreignId":"a74b1b7f-71a5-4011-9441-d0b5e4122711",
+          "artist":{"foreignArtistId":"a74b1b7f-71a5-4011-9441-d0b5e4122711","artistName":"Radiohead",
           "disambiguation":"","overview":"Alternative rock band","genres":["Alternative"],
-          "images":[],"ratings":{"value":8.9}}]
+          "images":[],"ratings":{"value":8.9}}}]
         """.data(using: .utf8)!
-        LocalStubProtocol.handlers["/api/v1/artist/lookup"] = (200, json)
+        LocalStubProtocol.handlers["/api/v1/search"] = (200, json)
         // library fetch returns empty
         LocalStubProtocol.handlers["/api/v1/artist"] = (200, Data("[]".utf8))
 

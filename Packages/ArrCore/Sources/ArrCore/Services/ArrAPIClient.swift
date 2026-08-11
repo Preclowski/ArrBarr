@@ -148,10 +148,10 @@ extension ArrAPIClient {
 
     /// PUT a JSON body to <apiBase><path>. Returns the raw response data.
     @discardableResult
-    func put(_ path: String, body: [String: Any]) async throws -> Data {
+    func put(_ path: String, query: [URLQueryItem] = [], body: [String: Any]) async throws -> Data {
         guard config.isConfigured else { throw HTTPError.notConfigured }
         guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
-        let url = try http.url(base: config.baseURL, path: "\(apiBase)\(path)")
+        let url = try http.url(base: config.baseURL, path: "\(apiBase)\(path)", query: query)
         let data = try JSONSerialization.data(withJSONObject: body)
         return try await http.put(
             url,
@@ -189,6 +189,36 @@ extension ArrAPIClient {
         var movie = try await getRawObject("/movie/\(movieId)")
         movie["monitored"] = monitored
         try await put("/movie/\(movieId)", body: movie)
+    }
+
+    /// Edit a library record (`/movie/{id}`, `/series/{id}`, `/artist/{id}`).
+    /// Full-record round-trip like `setMovieMonitored`: the arrs' PUT wants the
+    /// whole object back, so fetch raw JSON, overlay `fields`, PUT it back.
+    ///
+    /// A `rootFolderPath` change also rewrites `path` (new root + the record's
+    /// existing folder name) and is sent with `moveFiles=true` so the arr
+    /// relocates the files on disk — mirrors what the arrs' own edit UI does.
+    func updateLibraryRecord(path recordPath: String, fields: [String: Any]) async throws {
+        if DemoMode.isActive {
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            return
+        }
+        var record = try await getRawObject(recordPath)
+        var moveFiles = false
+        if let newRoot = (fields["rootFolderPath"] as? String),
+           let oldRoot = record["rootFolderPath"] as? String,
+           newRoot.trimmingCharacters(in: CharacterSet(charactersIn: "/")) !=
+               oldRoot.trimmingCharacters(in: CharacterSet(charactersIn: "/")),
+           let oldPath = record["path"] as? String,
+           let folderName = oldPath.split(separator: "/").last.map(String.init) {
+            let base = newRoot.hasSuffix("/") ? String(newRoot.dropLast()) : newRoot
+            record["path"] = "\(base)/\(folderName)"
+            moveFiles = true
+        }
+        for (key, value) in fields { record[key] = value }
+        try await put(recordPath,
+                      query: [URLQueryItem(name: "moveFiles", value: moveFiles ? "true" : "false")],
+                      body: record)
     }
 
     /// All custom formats defined on this arr (`/customformat`). Shared by
