@@ -7,6 +7,40 @@ All notable changes to ArrBarr are documented here. The format follows
 Releases before 0.10.0 are described on the
 [Releases page](https://github.com/Preclowski/ArrBarr/releases).
 
+## [1.2.1] — 2026-08-11
+
+### Added
+
+- Monitor bookmarks in detail headers now actually toggle monitoring (movie /
+  series / season / episode / album).
+- One "Search" button per detail surface, in the header next to the bookmark —
+  tapping opens the automatic / manual choice.
+- Rating pills link to IMDb / TMDB / TVDB / RT / Metacritic; cast photos link
+  to TMDB profiles.
+- Cast strip in the add-to-library panel, with a loading skeleton.
+- Quiz: "library" badge on owned cards; the AI defaults to suggesting titles
+  you don't own yet.
+- Demo mode: duplicate-download fixtures; monitor toggles stick.
+
+### Changed
+
+- Detail buttons are capsules with short labels; Pause orange, Resume blue,
+  Cancel a compact red ✕.
+- The multi-download list uses the queue-row layout with a pause ring in the
+  poster slot; per-file sizes instead of an aggregate.
+- Quiz skip icon is ✕ (the old ⏩ pointed against the animation).
+- The add panel shows the overview beside the poster, like the detail view.
+- "Show more" appears only when it hides more than its own height.
+
+### Fixed
+
+- Cancelling from a context menu in the detail download list did nothing on
+  iOS.
+- The wrong search button showed the spinner after starting an automatic
+  search.
+- Missing translations: quiz "looking for more", bookmark tooltips, About
+  window links.
+
 ## [1.2.0] — 2026-08-10
 
 ### Added
