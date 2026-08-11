@@ -35,11 +35,7 @@ struct CastRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("detail.cast.button", bundle: .module)
-                .scaledFont(size: 11, weight: .semibold)
-                .foregroundStyle(.secondary)
-                .textCase(.uppercase)
-                .tracking(0.5)
+            DetailSectionHeader("detail.cast.button", count: cast.count)
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(alignment: .top, spacing: 12) {
                     ForEach(cast.prefix(limit)) { person in

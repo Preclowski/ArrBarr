@@ -45,51 +45,35 @@ struct LidarrDetailPanel: View {
             }
 
             if !lidarrTracks.isEmpty {
-                // Section header in the same voice as the artist view's
-                // Album / EP / Single headers (Upcoming-style: sentence
-                // case, 11pt semibold .secondary, tertiary count) — the
-                // two surfaces sit one push apart, so a different header
-                // treatment read as a glitch.
-                HStack(spacing: 6) {
-                    Text("detail.tracks.button", bundle: .module)
-                        .scaledFont(size: 11, weight: .semibold)
-                        .foregroundStyle(.secondary)
-                    Text(verbatim: "\(lidarrTracks.count)")
-                        .scaledFont(size: 11)
-                        .foregroundStyle(.tertiary)
-                }
+                DetailSectionHeader("detail.tracks.button", count: lidarrTracks.count)
                 let mediums = Dictionary(grouping: lidarrTracks, by: { $0.mediumNumber ?? 1 })
                     .sorted { $0.key < $1.key }
-                // Track list owns its own tight spacing (4pt) — the
-                // outer `VStack(spacing: 12)` was making every track
-                // sit 12pt from the next, which read as "list of
-                // sections" not "list of tracks". Mirrors the
-                // episode-list spacing inside `SeasonRow`.
+                // Rows already pad 4pt each, so a 0-spacing stack yields 8pt
+                // between track lines — a dense tracklist. Any stack spacing
+                // on top of that read as unnatural daylight between rows of
+                // bare single-line text (episode rows carry the same metrics
+                // but their card-like fill visually absorbs it).
                 if mediums.count > 1 {
                     discPillBar(mediums.map { $0.key })
                     let active = effectiveDiscNumber(in: mediums.map { $0.key }) ?? mediums.first!.key
                     let tracks = mediums.first(where: { $0.key == active })?.value ?? []
-                    VStack(alignment: .leading, spacing: 4) {
+                    VStack(alignment: .leading, spacing: 0) {
                         ForEach(tracks.sorted(by: { ($0.absoluteTrackNumber ?? 0) < ($1.absoluteTrackNumber ?? 0) })) { track in
                             TrackRow(track: track)
                         }
                     }
-                    .padding(.top, 6)
-                    .padding(.bottom, 4)
+                    .padding(.top, 2)
                 } else {
                     let tracks = mediums.first?.value ?? []
-                    VStack(alignment: .leading, spacing: 4) {
+                    VStack(alignment: .leading, spacing: 0) {
                         ForEach(tracks.sorted(by: { ($0.absoluteTrackNumber ?? 0) < ($1.absoluteTrackNumber ?? 0) })) { track in
                             TrackRow(track: track)
                         }
                     }
-                    .padding(.top, 6)
-                    .padding(.bottom, 4)
+                    .padding(.top, 2)
                 }
             } else if isLoading {
-                Text("detail.tracks.button", bundle: .module)
-                    .scaledFont(size: 11, weight: .semibold)
-                    .foregroundStyle(.secondary)
+                DetailSectionHeader("detail.tracks.button")
                 SkeletonRows(count: 8)
                     .padding(.top, 6)
             }

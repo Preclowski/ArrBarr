@@ -235,9 +235,7 @@ struct LidarrArtistView: View {
     @ViewBuilder
     private var albumSection: some View {
         if albums.isEmpty {
-            Text("Albums", bundle: .module)
-                .scaledFont(size: 11, weight: .semibold)
-                .foregroundStyle(.secondary)
+            DetailSectionHeader("Albums")
                 .padding(.horizontal, 14)
             if loading {
                 SkeletonRows(count: 6)
@@ -289,18 +287,11 @@ struct LidarrArtistView: View {
             // show the server's own name — they're Lidarr enum values, not
             // free text, and pluralising them per-language buys nothing
             // ("EP", "Single" read fine as-is).
-            Group {
-                if group.type == "Album" {
-                    Text("Albums", bundle: .module)
-                } else {
-                    Text(verbatim: group.type)
-                }
+            if group.type == "Album" {
+                DetailSectionHeader("Albums", count: group.albums.count)
+            } else {
+                DetailSectionHeader(verbatim: group.type, count: group.albums.count)
             }
-            .scaledFont(size: 11, weight: .semibold)
-            .foregroundStyle(.secondary)
-            Text(verbatim: "\(group.albums.count)")
-                .scaledFont(size: 11)
-                .foregroundStyle(.tertiary)
             Spacer(minLength: 0)
         }
         // 12pt inset mirrors the queue-view section header, so the chevron

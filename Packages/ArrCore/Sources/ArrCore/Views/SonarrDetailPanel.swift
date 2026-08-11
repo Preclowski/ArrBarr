@@ -39,7 +39,7 @@ struct SonarrDetailPanel<Header: View>: View {
             if let seasons = sonarrDetail?.seasons {
                 let visibleSeasons = seasons.filter { $0.seasonNumber > 0 }
                 if !visibleSeasons.isEmpty {
-                    seasonsHeader
+                    DetailSectionHeader("detail.seasons.button", count: visibleSeasons.count)
                     // Each season is a progress-bar summary row; tapping it pushes
                     // SeasonDetailView (its episodes + that season's search buttons).
                     VStack(spacing: 3) {
@@ -56,7 +56,7 @@ struct SonarrDetailPanel<Header: View>: View {
             } else if isLoading {
                 // Series detail still loading — skeleton the seasons list (its
                 // main content) so the surface isn't an empty column.
-                seasonsHeader
+                DetailSectionHeader("detail.seasons.button")
                 SkeletonRows(count: 6)
             }
             // DownloadSection used to live here for series — the
@@ -92,20 +92,6 @@ struct SonarrDetailPanel<Header: View>: View {
             }
         }
         return map
-    }
-
-    /// Section header for the seasons list. Series-wide "search whole series"
-    /// affordance lived here briefly; pulled per UX feedback — per-season search
-    /// (now the bottom CTA, targeting the open accordion row) is more precise.
-    private var seasonsHeader: some View {
-        HStack(spacing: 8) {
-            Text("detail.seasons.button", bundle: .module)
-                .scaledFont(size: 11, weight: .semibold)
-                .foregroundStyle(.secondary)
-                .textCase(.uppercase)
-                .tracking(0.5)
-            Spacer()
-        }
     }
 
 }

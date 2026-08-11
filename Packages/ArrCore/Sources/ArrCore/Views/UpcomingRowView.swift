@@ -149,20 +149,9 @@ public struct UpcomingItemTooltip: View {
                     row("Runtime", value: "\(r) min")
                 }
                 if let v = item.imdb {
-                    // Brand mark in the label column — same icon-for-text swap
-                    // as the rating pills everywhere else.
-                    GridRow(alignment: .firstTextBaseline) {
-                        Image("rating-imdb", bundle: .module)
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(height: 11)
-                            .gridColumnAlignment(.leading)
-                            .accessibilityLabel(Text(verbatim: "IMDb"))
-                        Text(String(format: "%.1f", v))
-                            .scaledFont(size: 11)
-                            .foregroundStyle(.primary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
+                    // Info-grid rows keep TEXT labels — brand icons live only
+                    // in chip chrome (RatingPill).
+                    row("IMDb", value: String(format: "%.1f", v))
                 }
             }
         }
