@@ -170,16 +170,34 @@ public struct PersonView: View {
 
     // MARK: - Filmography
 
+    /// Movies / Series toggle in the app's own pill idiom (matching the
+    /// season / disc pill bars) rather than the system segmented control,
+    /// which reads as foreign glass next to the rest of the detail chrome.
     private var filmographyPicker: some View {
-        Picker("", selection: $kind) {
-            Text("person.movies.button", bundle: .module).tag(Kind.movie)
-            Text("person.series.button", bundle: .module).tag(Kind.series)
+        HStack(spacing: 6) {
+            kindPill("person.movies.button", .movie)
+            kindPill("person.series.button", .series)
+            Spacer(minLength: 0)
         }
-        .pickerStyle(.segmented)
-        .labelsHidden()
-        .onChange(of: kind) { _, k in
-            if k == .series, !seriesLoaded { Task { await loadSeries() } }
+    }
+
+    private func kindPill(_ key: LocalizedStringKey, _ value: Kind) -> some View {
+        let isActive = kind == value
+        return Button {
+            guard kind != value else { return }
+            withAnimation(.smooth(duration: 0.2)) { kind = value }
+            if value == .series, !seriesLoaded { Task { await loadSeries() } }
+        } label: {
+            Text(key, bundle: .module)
+                .scaledFont(size: 11, weight: isActive ? .semibold : .medium)
+                .foregroundStyle(isActive ? .primary : .secondary)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 5)
+                .background(Capsule().fill(isActive ? Color.primary.opacity(0.12) : Color.clear))
+                .overlay(Capsule().strokeBorder(Color.primary.opacity(isActive ? 0 : 0.18), lineWidth: 0.6))
+                .contentShape(Capsule())
         }
+        .buttonStyle(.plain)
     }
 
     @ViewBuilder
@@ -197,10 +215,47 @@ public struct PersonView: View {
         } else {
             VStack(spacing: 2) {
                 ForEach(rows) { result in
-                    SearchResultRow(result: result) { DetailRequest.tap(result) }
+                    filmographyRow(result)
                 }
             }
         }
+    }
+
+    /// A filmography row. Reuses the shared `PosterMetadataRow` primitive
+    /// directly rather than `SearchResultRow`: the person tab already says
+    /// movie-vs-series, so the source badge would be redundant, and one
+    /// affordance (chevron for owned / plus for new) reads cleaner than the
+    /// search row's title-chevron + trailing pair. The second line carries
+    /// rating and genres — the year lives in the title.
+    private func filmographyRow(_ result: SearchResult) -> some View {
+        let owned = result.inLibraryArrId != nil
+        return PosterMetadataRow(
+            posterURL: result.posterURL,
+            posterAPIKey: nil,
+            posterSize: CGSize(width: 30, height: 44),
+            posterBlurred: configStore.shouldBlurPoster(for: result.source),
+            posterFallbackSymbol: result.source.symbol,
+            title: result.year.map { "\(result.title) (\($0))" } ?? result.title,
+            metadataSegments: filmographyMetadata(result),
+            titleBadge: owned ? AnyView(InLibraryBadge()) : nil,
+            showTitleChevron: false,
+            onTap: { DetailRequest.tap(result) }
+        ) {
+            if owned {
+                LinkChevron(size: 10)
+            } else {
+                Image(systemName: "plus")
+                    .scaledFont(size: 11, weight: .medium)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private func filmographyMetadata(_ result: SearchResult) -> [String] {
+        var out: [String] = []
+        if let r = result.rating { out.append(String(format: "★%.1f", r)) }
+        out.append(contentsOf: result.genres.prefix(2))
+        return out
     }
 
     // MARK: - Footer
@@ -231,8 +286,10 @@ public struct PersonView: View {
     // MARK: - Loading
 
     private func loadInitial() async {
-        async let d = PersonStore.shared.details(personId: ref.tmdbId, configStore: configStore)
-        async let m = PersonStore.shared.movieFilmography(personId: ref.tmdbId, configStore: configStore)
+        let key = configStore.tmdbApiKey
+        async let d = PersonStore.shared.details(personId: ref.tmdbId, tmdbKey: key)
+        async let m = PersonStore.shared.movieFilmography(
+            personId: ref.tmdbId, tmdbKey: key, radarrConfig: configStore.radarr)
         details = await d
         detailsLoading = false
         movieRows = await m
@@ -241,7 +298,8 @@ public struct PersonView: View {
 
     private func loadSeries() async {
         seriesLoading = true
-        seriesRows = await PersonStore.shared.seriesFilmography(personId: ref.tmdbId, configStore: configStore)
+        seriesRows = await PersonStore.shared.seriesFilmography(
+            personId: ref.tmdbId, tmdbKey: configStore.tmdbApiKey)
         seriesLoading = false
         seriesLoaded = true
     }

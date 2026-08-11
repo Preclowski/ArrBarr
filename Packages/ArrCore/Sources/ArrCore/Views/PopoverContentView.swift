@@ -191,7 +191,8 @@ public struct PopoverContentView: View {
                     radarrConfig: configStore.radarr,
                     sonarrConfig: configStore.sonarr,
                     lidarrConfig: configStore.lidarr,
-                    whisparrConfig: configStore.whisparr
+                    whisparrConfig: configStore.whisparr,
+                    tmdbApiKey: configStore.tmdbApiKey
                 )
                 chatHolder.reconfigure(store: configStore)
                 // The panel is on screen (menu-bar popover opened, or the

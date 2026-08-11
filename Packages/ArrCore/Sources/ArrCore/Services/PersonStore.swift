@@ -31,10 +31,9 @@ public final class PersonStore {
 
     /// Biography / age / birthplace / external ids. nil without a TMDB key or
     /// on a failed lookup.
-    public func details(personId: Int, configStore: ConfigStore) async -> TMDBPersonDetails? {
+    public func details(personId: Int, tmdbKey key: String) async -> TMDBPersonDetails? {
         if let hit = cache.details[personId] { touch(personId); return hit }
         if let running = detailTasks[personId] { return await running.value }
-        let key = configStore.tmdbApiKey
         let task = Task<TMDBPersonDetails?, Never> {
             guard !key.isEmpty else { return nil }
             return try? await TMDBClient(apiKey: key).personDetails(personId: personId)
@@ -49,11 +48,9 @@ public final class PersonStore {
     /// Movie filmography as ready-to-render `SearchResult` rows, owned movies
     /// tagged from the Radarr library. Popularity-desc, year-desc — the same
     /// ordering the chat credits tools use (PersonRelevance refines this later).
-    public func movieFilmography(personId: Int, configStore: ConfigStore) async -> [SearchResult] {
+    public func movieFilmography(personId: Int, tmdbKey key: String, radarrConfig: ServiceConfig) async -> [SearchResult] {
         if let hit = cache.movies[personId] { touch(personId); return hit }
         if let running = movieTasks[personId] { return await running.value }
-        let key = configStore.tmdbApiKey
-        let radarrConfig = configStore.radarr
         let task = Task<[SearchResult], Never> {
             guard !key.isEmpty else { return [] }
             guard let credits = try? await TMDBClient(apiKey: key).personMovieCredits(personId: personId) else { return [] }
@@ -70,10 +67,9 @@ public final class PersonStore {
     /// TV filmography. Series can't be library-tagged from TMDB tv ids (they're
     /// not tvdb ids), so rows stay add-flow; the row resolves its tvdbId lazily
     /// on tap.
-    public func seriesFilmography(personId: Int, configStore: ConfigStore) async -> [SearchResult] {
+    public func seriesFilmography(personId: Int, tmdbKey key: String) async -> [SearchResult] {
         if let hit = cache.series[personId] { touch(personId); return hit }
         if let running = seriesTasks[personId] { return await running.value }
-        let key = configStore.tmdbApiKey
         let task = Task<[SearchResult], Never> {
             guard !key.isEmpty else { return [] }
             guard let credits = try? await TMDBClient(apiKey: key).personTVCredits(personId: personId) else { return [] }

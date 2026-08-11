@@ -14,6 +14,8 @@ struct QueueTabContent: View {
     /// Queue multi-select mode — owned by PopoverContentView (toggled from its
     /// "⋯" menu), threaded down to the native-`List` queue.
     @Binding var selecting: Bool
+    /// Person-view push from a search person row / "Starring X" section.
+    @State private var personRef: PersonRef?
 
     private var sonarrConfigured: Bool { configStore.sonarr.isVisible }
     private var radarrConfigured: Bool { configStore.radarr.isVisible }
@@ -46,6 +48,11 @@ struct QueueTabContent: View {
             // so library / add-new hits update in lockstep with the
             // queue filter.
             searchViewModel.query = new
+            // Emptying the field ends the search — drop any narrow scope so the
+            // next search starts from All (a sticky scope reads as a bug).
+            if new.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                searchViewModel.scope = .all
+            }
             searchViewModel.onQueryChange()
         }
         .onChange(of: queueScope) { _, _ in
@@ -166,8 +173,10 @@ struct QueueTabContent: View {
             searchViewModel: searchViewModel,
             scope: queueScope,
             onSelectQueueItem: { detailItem = $0 },
-            onSelectAddResult: { searchResult = $0 }
+            onSelectAddResult: { searchResult = $0 },
+            onSelectPerson: { personRef = $0 }
         )
+        .personDestination($personRef)
     }
 
     private var queueFilterBar: some View {
@@ -206,6 +215,9 @@ struct QueueTabContent: View {
             .scaledFont(size: 14)
             .textFieldStyle(.plain)
             .focused(queueFilterFocused)
+            if isFiltering && searchAvailable {
+                scopeMenu
+            }
             if !queueFilter.isEmpty {
                 Button { queueFilter = "" } label: {
                     Image(systemName: "xmark.circle.fill")
@@ -222,6 +234,47 @@ struct QueueTabContent: View {
         .contentShape(Capsule())
         .onTapGesture { queueFilterFocused.wrappedValue = true }
         .glassyFloatingBar(focused: queueFilterFocused.wrappedValue)
+    }
+
+    /// Scopes offered: `all` always, each arr scope only when that arr is
+    /// configured, `people` only with a TMDB key.
+    private var availableScopes: [SearchScope] {
+        var out: [SearchScope] = [.all]
+        if radarrConfigured { out.append(.movie) }
+        if sonarrConfigured { out.append(.series) }
+        if lidarrConfigured { out.append(.album) }
+        if !configStore.tmdbApiKey.isEmpty { out.append(.people) }
+        if whisparrConfigured { out.append(.whisparr) }
+        return out
+    }
+
+    /// Compact menu chip on the search field's trailing edge — narrows which
+    /// backends the query hits. Tinted accent while a non-`all` scope is
+    /// active, so a stuck narrow scope is visible at a glance.
+    private var scopeMenu: some View {
+        let scope = searchViewModel.scope
+        return Menu {
+            ForEach(availableScopes) { s in
+                Button { searchViewModel.scope = s } label: {
+                    Label {
+                        Text(LocalizedStringKey(s.labelKey), bundle: .module)
+                    } icon: {
+                        Image(systemName: s == scope ? "checkmark" : s.symbol)
+                    }
+                }
+            }
+        } label: {
+            Image(systemName: scope.symbol)
+                .scaledFont(size: 13, weight: .medium)
+                .foregroundStyle(scope == .all ? AnyShapeStyle(.tertiary) : AnyShapeStyle(Color.accentColor))
+                .frame(width: 20, height: 20)
+                .contentShape(Rectangle())
+        }
+        .menuStyle(.button)
+        .buttonStyle(.plain)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .help(Text("search.scope.help", bundle: .module))
     }
 
 }

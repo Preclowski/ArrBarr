@@ -24,6 +24,7 @@ public struct QueueSearchRow: View {
             posterAPIKey: nil,
             posterSize: CGSize(width: 26, height: 38),
             posterBlurred: configStore.shouldBlurPoster(for: item.source),
+            posterFallbackSymbol: item.source.symbol,
             title: item.title,
             metadataSegments: metadataSegments,
             // Arr identity + "In queue" status badge — section

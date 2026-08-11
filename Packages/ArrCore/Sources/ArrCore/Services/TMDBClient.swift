@@ -6,7 +6,7 @@ import Foundation
 // is much richer (production_companies, runtime, original_language, …) but
 // pulling everything makes the codable surface fragile when TMDB tweaks schema.
 
-public struct TMDBPerson: Decodable, Sendable, Equatable {
+public struct TMDBPerson: Decodable, Sendable, Equatable, Identifiable {
     public let id: Int
     public let name: String
     public let knownForDepartment: String?

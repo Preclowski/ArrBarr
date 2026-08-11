@@ -18,6 +18,8 @@ struct QueueSearchResultsView: View {
     let onSelectQueueItem: (QueueItem) -> Void
     /// Tap on an add-new (not-in-library) result.
     let onSelectAddResult: (SearchResult) -> Void
+    /// Tap on a person row / "Full filmography" — host pushes the person view.
+    var onSelectPerson: (PersonRef) -> Void = { _ in }
 
     var body: some View {
         let queueRows = scopedSources.flatMap { entries(for: $0) }
@@ -49,6 +51,16 @@ struct QueueSearchResultsView: View {
                     }
                 }
             }
+            // People rows (people scope / `person:` prefix) sit above the
+            // titles — in that mode the arr clients are gated off, so `combined`
+            // is empty and these are the whole result.
+            if !searchViewModel.peopleResults.isEmpty {
+                VStack(spacing: 2) {
+                    ForEach(searchViewModel.peopleResults) { person in
+                        personRow(person)
+                    }
+                }
+            }
             VStack(alignment: .leading, spacing: 0) {
                 ForEach(combined) { r in
                     SearchResultRow(result: r) {
@@ -58,6 +70,11 @@ struct QueueSearchResultsView: View {
                             onSelectAddResult(r)
                         }
                     }
+                }
+                // "Starring X" — an all-scope confident person match and their
+                // top titles, under the plain title results.
+                if let starring = searchViewModel.starring {
+                    starringSection(starring)
                 }
             }
             .opacity(reloading ? 0.3 : 1)
@@ -69,6 +86,57 @@ struct QueueSearchResultsView: View {
                 }
             }
             .animation(.easeInOut(duration: 0.15), value: reloading)
+        }
+    }
+
+    // MARK: - People
+
+    private func personRef(_ p: TMDBPerson) -> PersonRef {
+        PersonRef(tmdbId: p.id, name: p.name, profilePath: p.profilePath)
+    }
+
+    private func personRow(_ p: TMDBPerson) -> some View {
+        PosterMetadataRow(
+            posterURL: p.profileURL,
+            posterAPIKey: nil,
+            posterSize: CGSize(width: 30, height: 30),
+            posterCornerRadius: 15,
+            posterBlurred: false,
+            posterFallbackSymbol: "person.fill",
+            title: p.name,
+            metadataSegments: p.knownForDepartment.map { [$0] } ?? [],
+            onTap: { onSelectPerson(personRef(p)) }
+        ) { EmptyView() }
+    }
+
+    @ViewBuilder
+    private func starringSection(_ section: SearchViewModel.StarringSection) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Button { onSelectPerson(personRef(section.person)) } label: {
+                HStack(spacing: 8) {
+                    RemotePoster(
+                        url: section.person.profileURL, apiKey: nil, tier: .icon,
+                        size: CGSize(width: 22, height: 22), cornerRadius: 11,
+                        fallbackSymbol: "person.fill"
+                    )
+                    Text(String.localizedStringWithFormat(
+                        NSLocalizedString("search.starring", bundle: .module, comment: ""), section.person.name))
+                        .scaledFont(size: 11, weight: .semibold)
+                        .foregroundStyle(.secondary)
+                    LinkChevron(size: 9)
+                    Spacer(minLength: 0)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, 12)
+            .padding(.top, 8)
+
+            ForEach(section.titles) { r in
+                SearchResultRow(result: r) {
+                    if r.inLibraryArrId != nil { DetailRequest.tap(r) } else { onSelectAddResult(r) }
+                }
+            }
         }
     }
 

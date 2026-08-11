@@ -29,6 +29,7 @@ public struct SearchResultRow: View {
             posterAPIKey: nil,
             posterSize: CGSize(width: 26, height: 38),
             posterBlurred: configStore.shouldBlurPoster(for: result.source),
+            posterFallbackSymbol: result.source.symbol,
             title: titleWithYear,
             metadataSegments: metadataSegments,
             // Title slot: arr identity ("Sonarr"/"Radarr") and, if

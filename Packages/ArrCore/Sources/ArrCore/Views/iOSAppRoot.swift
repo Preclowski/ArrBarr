@@ -132,11 +132,24 @@ private struct QueueTab: View {
     @State private var detailItem: QueueItem?
     @State private var searchVM = SearchViewModel()
     @State private var searchResult: SearchResult?
+    @State private var personRef: PersonRef?
     /// Queue multi-select mode (iOS owns it locally — no "⋯" menu here yet, so
     /// it can't be entered on iOS for now; macOS drives it from PopoverContentView).
     @State private var selecting = false
 
     private var isSearching: Bool { !searchVM.query.trimmingCharacters(in: .whitespaces).isEmpty }
+
+    /// Scope-bar options: `all` always, each arr when configured, `people`
+    /// with a TMDB key. Whisparr folded into the arr set when present.
+    private var iosSearchScopes: [SearchScope] {
+        var out: [SearchScope] = [.all]
+        if configStore.radarr.isVisible { out.append(.movie) }
+        if configStore.sonarr.isVisible { out.append(.series) }
+        if configStore.lidarr.isVisible { out.append(.album) }
+        if !configStore.tmdbApiKey.isEmpty { out.append(.people) }
+        if configStore.whisparr.isVisible { out.append(.whisparr) }
+        return out
+    }
 
     var body: some View {
         Group {
@@ -159,7 +172,8 @@ private struct QueueTab: View {
                                 searchViewModel: searchVM,
                                 scope: nil,
                                 onSelectQueueItem: { detailItem = $0 },
-                                onSelectAddResult: { searchResult = $0 }
+                                onSelectAddResult: { searchResult = $0 },
+                                onSelectPerson: { personRef = $0 }
                             )
                             .padding(.vertical, 8)
                             // Only until the first rows land — once they do,
@@ -198,9 +212,22 @@ private struct QueueTab: View {
             prompt: Text("search.searchMoviesAndTv.label", bundle: .module)
         )
         .autocorrectionDisabled(true)
+        // Native scope bar under the search field — the iOS idiom for the
+        // macOS scope chip. Options gate which backends fire.
+        .searchScopes($searchVM.scope) {
+            ForEach(iosSearchScopes) { s in
+                Text(LocalizedStringKey(s.labelKey), bundle: .module).tag(s)
+            }
+        }
         // Fire the arr lookups when the query changes — same trigger macOS
         // wires from its filter bar.
-        .onChange(of: searchVM.query) { _, _ in searchVM.onQueryChange() }
+        .onChange(of: searchVM.query) { _, new in
+            if new.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                searchVM.scope = .all
+            }
+            searchVM.onQueryChange()
+        }
+        .personDestination($personRef)
         .navigationDestination(item: $detailItem) { item in
             DetailView(item: item, onBack: { detailItem = nil }, viewModel: viewModel)
         }
@@ -222,7 +249,8 @@ private struct QueueTab: View {
                 radarrConfig: configStore.radarr,
                 sonarrConfig: configStore.sonarr,
                 lidarrConfig: configStore.lidarr,
-                whisparrConfig: configStore.whisparr
+                whisparrConfig: configStore.whisparr,
+                tmdbApiKey: configStore.tmdbApiKey
             )
         }
     }

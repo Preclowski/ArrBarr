@@ -9,6 +9,20 @@ public final class SearchViewModel {
     var sonarrResults: [SearchResult] = []
     var lidarrResults: [SearchResult] = []
     var whisparrResults: [SearchResult] = []
+    /// People-scope (or `person:` prefix) results — ranked person rows that
+    /// open the person view. Empty in every other mode.
+    var peopleResults: [TMDBPerson] = []
+    /// All-scope "Starring X" section: a confident person match plus their top
+    /// filmography, rendered under the title results. nil when no strong match.
+    var starring: StarringSection?
+
+    /// A confident person match and their top titles for the all-scope
+    /// "Starring X" section.
+    public struct StarringSection: Identifiable, Equatable {
+        public let person: TMDBPerson
+        public let titles: [SearchResult]
+        public var id: Int { person.id }
+    }
     /// Single sticky flag — true from the first keystroke until the
     /// final fetch (the one matching the latest query) returns. While
     /// the user keeps typing, in-flight fetches get superseded and
@@ -45,6 +59,7 @@ public final class SearchViewModel {
     var hasResults: Bool {
         !radarrResults.isEmpty || !sonarrResults.isEmpty
             || !lidarrResults.isEmpty || !whisparrResults.isEmpty
+            || !peopleResults.isEmpty || starring != nil
     }
 
     // Add panel state
@@ -55,6 +70,14 @@ public final class SearchViewModel {
     var addError: String?
     var isAdding = false
 
+    /// Which backends a search hits. `all` fires every configured arr (plus
+    /// TMDB people); the others narrow to one so an album search never pings
+    /// Radarr and a people search only hits TMDB. Set from the search field's
+    /// scope chip; reset to `all` when the search surface closes.
+    var scope: SearchScope = .all {
+        didSet { if scope != oldValue { onQueryChange() } }
+    }
+
     private var searchTask: Task<Void, Never>?
     private var radarrClient: SearchClient?
     private var sonarrClient: SearchClient?
@@ -63,9 +86,14 @@ public final class SearchViewModel {
     /// Per-source `ServiceConfig` kept so `loadOptions` can key the
     /// `SearchOptionsCache` without round-tripping through the client.
     private var configs: [QueueItem.Source: ServiceConfig] = [:]
+    /// TMDB key for the person lookup (people scope / `person:` prefix / the
+    /// all-scope "Starring X" section). Empty ⇒ people search is skipped.
+    private var tmdbApiKey = ""
 
     func setup(radarrConfig: ServiceConfig, sonarrConfig: ServiceConfig,
-               lidarrConfig: ServiceConfig = .empty, whisparrConfig: ServiceConfig = .empty) {
+               lidarrConfig: ServiceConfig = .empty, whisparrConfig: ServiceConfig = .empty,
+               tmdbApiKey: String = "") {
+        self.tmdbApiKey = tmdbApiKey
         if radarrConfig.isConfigured {
             radarrClient = SearchClient(config: radarrConfig, source: .radarr)
             configs[.radarr] = radarrConfig
@@ -139,6 +167,25 @@ public final class SearchViewModel {
         sonarrResults = []
         lidarrResults = []
         whisparrResults = []
+        peopleResults = []
+        starring = nil
+    }
+
+    /// `person:`/`actor:` (and PL `osoba:`/`aktor:`) prefix → the bare name to
+    /// search, or nil when there's no prefix. A prefix forces people-only mode
+    /// regardless of the scope chip.
+    private var peoplePrefixTerm: String? {
+        let t = query.trimmingCharacters(in: .whitespaces)
+        let lower = t.lowercased()
+        for p in ["person:", "actor:", "osoba:", "aktor:"] where lower.hasPrefix(p) {
+            return String(t.dropFirst(p.count)).trimmingCharacters(in: .whitespaces)
+        }
+        return nil
+    }
+
+    /// The scope actually applied — a `person:` prefix overrides the chip.
+    private var effectiveScope: SearchScope {
+        peoplePrefixTerm != nil ? .people : scope
     }
 
     /// True when `new` merely narrows or widens `old` — one is a prefix of
@@ -152,11 +199,15 @@ public final class SearchViewModel {
     }
 
     private func search(generation: Int) async {
-        async let r = fetchOne(client: radarrClient, generation: generation)
-        async let s = fetchOne(client: sonarrClient, generation: generation)
-        async let l = fetchOne(client: lidarrClient, generation: generation)
-        async let w = fetchOne(client: whisparrClient, generation: generation)
-        let (rRes, sRes, lRes, wRes) = await (r, s, l, w)
+        let effective = effectiveScope
+        // Scope gates which arr clients fire — a nil client short-circuits to
+        // [] in `fetchOne`, so an out-of-scope source simply doesn't run.
+        async let r = fetchOne(client: effective.allows(.radarr) ? radarrClient : nil, generation: generation)
+        async let s = fetchOne(client: effective.allows(.sonarr) ? sonarrClient : nil, generation: generation)
+        async let l = fetchOne(client: effective.allows(.lidarr) ? lidarrClient : nil, generation: generation)
+        async let w = fetchOne(client: effective.allows(.whisparr) ? whisparrClient : nil, generation: generation)
+        async let p = fetchPeople(scope: effective)
+        let (rRes, sRes, lRes, wRes, pRes) = await (r, s, l, w, p)
 
         // Generation gate. If the user kept typing while we were
         // fetching, `onQueryChange` bumped `searchGeneration` past
@@ -169,7 +220,31 @@ public final class SearchViewModel {
         sonarrResults = sRes
         lidarrResults = lRes
         whisparrResults = wRes
+        peopleResults = pRes.rows
+        starring = pRes.starring
         isSearching = false
+    }
+
+    /// Run the TMDB person lookup for the current mode. People scope → ranked
+    /// person rows. All scope → a single confident headliner + their top
+    /// filmography (the "Starring X" section), or nothing.
+    private func fetchPeople(scope: SearchScope) async -> (rows: [TMDBPerson], starring: StarringSection?) {
+        guard scope.searchesPeople, !tmdbApiKey.isEmpty else { return ([], nil) }
+        let term = peoplePrefixTerm ?? query.trimmingCharacters(in: .whitespaces)
+        guard term.count >= 2 else { return ([], nil) }
+        let raw = (try? await TMDBClient(apiKey: tmdbApiKey).searchPerson(query: term)) ?? []
+        let ranked = PersonRelevance.rank(raw, query: term)
+        if scope == .people {
+            return (ranked, nil)
+        }
+        // All scope: only a confident, well-known match earns a section.
+        guard let top = ranked.first, PersonRelevance.isConfidentHeadliner(top, query: term) else {
+            return ([], nil)
+        }
+        let titles = await PersonStore.shared.movieFilmography(
+            personId: top.id, tmdbKey: tmdbApiKey, radarrConfig: configs[.radarr] ?? .empty)
+        guard !titles.isEmpty else { return ([], nil) }
+        return ([], StarringSection(person: top, titles: Array(titles.prefix(8))))
     }
 
     /// One source's lookup. `generation` is the same gate `search` applies to

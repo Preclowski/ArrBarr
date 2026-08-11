@@ -63,13 +63,25 @@ public struct RemotePoster: View {
                     .scaledToFill()
             } else {
                 ZStack {
+                    // A styled "blank poster" instead of a flat grey box: a
+                    // soft top-down sheen over the fill plus the arr's own
+                    // glyph, so a posterless title still reads as a
+                    // poster-shaped placeholder at any size — list thumbnail
+                    // through detail hero. Callers pass their source symbol
+                    // (`tv`/`film`/`music.note`/`flame`); an empty symbol just
+                    // yields the sheen with no glyph.
                     Rectangle().fill(.quaternary)
+                    LinearGradient(
+                        colors: [Color.primary.opacity(0.06), .clear],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
                     if showsLoadingIndicator && isLoading {
                         ProgressView()
                             .controlSize(.small)
-                    } else if let fallbackSymbol {
+                    } else if let fallbackSymbol, !fallbackSymbol.isEmpty {
                         Image(systemName: fallbackSymbol)
-                            .font(.system(size: min(size.width, size.height) * 0.4, weight: .light))
+                            .font(.system(size: min(size.width, size.height) * 0.38, weight: .light))
                             .foregroundStyle(.tertiary)
                     }
                 }
