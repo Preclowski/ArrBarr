@@ -540,7 +540,7 @@ public enum ChatToolCatalog {
 
             Pass `append: true` when the user asks for MORE picks continuing the current vibe — that extends the active deck instead of starting over.
 
-            Use `library_mode: "none"` when the user explicitly asks for new/unseen content. Use `"many"` when they want to dig through what they already own. Default `"few"` for general taste-based quizzes.
+            Set `library_mode` from the user's intent: "new" (default) excludes titles already in their library; "library" fills the deck from titles they own — use it when they want to rediscover their collection.
 
             When the user asks for MORE picks following an active session, pass `anchor_tmdb_ids` containing the TMDB IDs of titles they kept — the backend will fetch TMDB's similar-to graph for those anchors and merge it with your curated picks for stronger relevance.
 
@@ -583,7 +583,7 @@ public enum ChatToolCatalog {
                     ]),
                     "library_mode": .object([
                         "type": .string("string"),
-                        "description": .string("How to treat the user's existing library. 'none' = strictly exclude owned items (use when the user wants something NEW or HAVEN'T SEEN). 'few' (default) = include owned items if your picks happen to be in library, route to Open detail. 'many' = lean toward library items (use when the user wants to rediscover what they own). Defaults to 'few' if omitted."),
+                        "description": .string("'new' (default) = only titles NOT in the user's library — something to discover. 'library' = titles they already own — rediscovering their collection. Decide from the user's intent."),
                     ]),
                     "anchor_tmdb_ids": .object([
                         "type": .string("array"),

@@ -30,10 +30,13 @@ extension LocalToolBackend {
         let libraryMode: String = {
             if case .object(let dict) = arguments,
                case .string(let v) = dict["library_mode"] {
-                let lowered = v.lowercased()
-                if ["none", "few", "many"].contains(lowered) { return lowered }
+                switch v.lowercased() {
+                case "library", "many": return "library"   // "many" = legacy alias
+                case "new", "none", "few": return "new"    // legacy aliases
+                default: break
+                }
             }
-            return "few"
+            return "new"
         }()
 
         let anchorIds: [Int] = {
@@ -131,18 +134,17 @@ extension LocalToolBackend {
 
         let filtered: [DiscoverItem]
         switch libraryMode {
-        case "none":
-            // Strict: drop everything the user already owns.
-            filtered = resolved.filter { $0.result.inLibraryArrId == nil }
-        default:
-            // "few" and "many" both pass everything through for now.
-            // "many" is reserved for future library injection.
+        case "library":
+            // Rediscovery mode — owned picks are the point; pass everything.
             filtered = resolved
+        default:
+            // "new" (the default): strictly drop what the user already owns.
+            filtered = resolved.filter { $0.result.inLibraryArrId == nil }
         }
 
         if filtered.isEmpty {
-            if !resolved.isEmpty && libraryMode == "none" {
-                return ToolCallOutput(text: "All resolved picks were already in your library. Try different titles or pass library_mode: 'few' to include owned items.")
+            if !resolved.isEmpty && libraryMode == "new" {
+                return ToolCallOutput(text: "All resolved picks were already in the user's library. Suggest different titles, or pass library_mode: 'library' if they want to rediscover what they own.")
             }
             return ToolCallOutput(text: "Couldn't resolve any of those picks through \(kind == "movie" ? "Radarr" : "Sonarr") lookup. Try other titles or check the service config.")
         }
@@ -287,7 +289,7 @@ extension LocalToolBackend {
                 guard seen.insert(item.dedupKey).inserted else { continue }
                 let metadataId = item.result.id
                 if let arrId = libraryMap[metadataId] {
-                    if libraryMode == "none" { continue }
+                    if libraryMode == "new" { continue }
                     let owned = item.result.withInLibraryArrId(arrId)
                     let detailAction: DiscoverAction = (kind == "movie")
                         ? .openDetail(source: .radarr, arrId: arrId)

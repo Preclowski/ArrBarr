@@ -40,6 +40,11 @@ struct SeasonDetailView: View {
     let seriesPosterAPIKey: String?
     let onBack: () -> Void
     var viewModel: QueueViewModel
+    /// Monitor-toggle callbacks up to the state owner (DetailView /
+    /// EpisodeQuickDetail own `sonarrDetail` + the episode array; this view
+    /// only receives copies). nil renders the bookmarks as inert state.
+    var onSetSeasonMonitored: ((Bool) async -> Void)? = nil
+    var onSetEpisodeMonitored: ((Int, Bool) async -> Void)? = nil
 
     @EnvironmentObject private var configStore: ConfigStore
     @Environment(\.isDetachedWindow) private var isDetachedWindow
@@ -64,7 +69,11 @@ struct SeasonDetailView: View {
     @ViewBuilder
     private var monitorToggle: some View {
         if let seasonMonitored {
-            MonitorToggleButton(isMonitored: seasonMonitored, entity: .season)
+            MonitorToggleButton(
+                isMonitored: seasonMonitored,
+                entity: .season,
+                onToggle: onSetSeasonMonitored.map { toggle in { m in await toggle(m) } }
+            )
         }
     }
 
@@ -119,13 +128,10 @@ struct SeasonDetailView: View {
             .scrollBounceBehavior(.basedOnSize)
             .frame(maxHeight: .infinity)
             .safeAreaInset(edge: .bottom, spacing: 0) {
-                HStack(spacing: 8) {
-                    manualSearchButton
-                    automaticSearchButton
-                }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
-                .frame(maxWidth: .infinity)
+                searchMenuButton
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .frame(maxWidth: .infinity)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -152,7 +158,8 @@ struct SeasonDetailView: View {
                 seriesYear: drill.seriesYear,
                 // Re-read from the live array rather than the pushed `ep`
                 // snapshot, which is frozen at tap time.
-                monitored: episodes.first { $0.id == ep.id }?.monitored
+                monitored: episodes.first { $0.id == ep.id }?.monitored,
+                onToggleMonitored: onSetEpisodeMonitored.map { toggle in { m in await toggle(ep.id, m) } }
             )
         }
         .navigationDestination(item: $manualSearchTarget) { wrapper in
@@ -173,42 +180,51 @@ struct SeasonDetailView: View {
         #endif
     }
 
-    private var manualSearchButton: some View {
-        Button {
-            manualSearchTarget = SeasonReleaseSearch(target: .season(
-                seriesId: drill.seriesId, seasonNumber: drill.seasonNumber,
-                title: "\(drill.seriesTitle) · \(navTitle)"))
+    /// ONE "Search" CTA opening a native automatic/manual menu — same
+    /// pattern as DetailView / EpisodeDetailOverlay. The button carries the
+    /// in-flight spinner and the queued checkmark.
+    private var searchMenuButton: some View {
+        Menu {
+            Button { startAutomaticSearch() } label: {
+                Label { Text("Automatic search", bundle: .module) } icon: { Image(systemName: "bolt.fill") }
+            }
+            Button {
+                manualSearchTarget = SeasonReleaseSearch(target: .season(
+                    seriesId: drill.seriesId, seasonNumber: drill.seasonNumber,
+                    title: "\(drill.seriesTitle) · \(navTitle)"))
+            } label: {
+                Label { Text("Manual search", bundle: .module) } icon: { Image(systemName: "list.bullet") }
+            }
         } label: {
-            searchLabel(icon: "magnifyingglass", text: "Manual search")
+            GlassProminentMenuLabel {
+                if autoSearching {
+                    HStack { ProgressView().controlSize(.small).tint(.white) }
+                        .frame(maxWidth: .infinity).padding(.vertical, 7)
+                } else if autoDidSearch {
+                    searchLabel(icon: "checkmark", text: "detail.searchQueued.button")
+                } else {
+                    searchLabel(icon: "magnifyingglass", text: "Search")
+                }
+            }
         }
-        .modifier(GlassProminentButtonStyle())
+        .modifier(GlassProminentMenuStyle())
+        .disabled(autoSearching)
+        .accessibilityLabel(autoSearching
+                            ? Text("detail.searchingForRelease.label", bundle: .module)
+                            : Text("Search", bundle: .module))
     }
 
-    @ViewBuilder
-    private var automaticSearchButton: some View {
-        Button {
-            guard !autoSearching else { return }
-            Task {
-                autoSearching = true
-                try? await SonarrClient(config: configStore.sonarr)
-                    .searchSeason(seriesId: drill.seriesId, seasonNumber: drill.seasonNumber)
-                autoSearching = false
-                autoDidSearch = true
-                try? await Task.sleep(nanoseconds: 1_600_000_000)
-                autoDidSearch = false
-            }
-        } label: {
-            if autoSearching {
-                HStack { ProgressView().controlSize(.small) }
-                    .frame(maxWidth: .infinity).padding(.vertical, 7)
-            } else if autoDidSearch {
-                searchLabel(icon: "checkmark", text: "detail.searchQueued.button")
-            } else {
-                searchLabel(icon: "magnifyingglass", text: "Automatic search")
-            }
+    private func startAutomaticSearch() {
+        guard !autoSearching else { return }
+        Task {
+            autoSearching = true
+            try? await SonarrClient(config: configStore.sonarr)
+                .searchSeason(seriesId: drill.seriesId, seasonNumber: drill.seasonNumber)
+            autoSearching = false
+            autoDidSearch = true
+            try? await Task.sleep(nanoseconds: 1_600_000_000)
+            autoDidSearch = false
         }
-        .modifier(GlassProminentButtonStyle())
-        .disabled(autoSearching)
     }
 
     private var ratings: [RatingChip] {

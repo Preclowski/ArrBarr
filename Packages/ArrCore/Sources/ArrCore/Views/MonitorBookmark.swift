@@ -84,7 +84,6 @@ public struct MonitorToggleButton: View {
     /// update upstream), so a spinner here would contradict what the user
     /// is looking at. Dim + disable instead.
     @State private var inFlight = false
-    @State private var isHovering = false
 
     public init(isMonitored: Bool, entity: MonitorEntity, onToggle: ((Bool) async -> Void)? = nil) {
         self.isMonitored = isMonitored
@@ -106,20 +105,11 @@ public struct MonitorToggleButton: View {
             } label: {
                 glyph
                     .frame(width: 22, height: 22)
-                    .background(
-                        RoundedRectangle(cornerRadius: 6)
-                            .fill(Color.primary.opacity(isHovering ? 0.14 : 0))
-                    )
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .disabled(inFlight)
             .opacity(inFlight ? 0.5 : 1)
-            #if os(macOS)
-            .onHover { hovering in
-                withAnimation(.easeInOut(duration: 0.12)) { isHovering = hovering }
-            }
-            #endif
             .help(Text(LocalizedStringKey(helpKey), bundle: .module))
             .accessibilityLabel(Text(LocalizedStringKey(helpKey), bundle: .module))
             // State *and* verb: VoiceOver reads "Monitored, Stop monitoring
@@ -146,9 +136,6 @@ public struct MonitorToggleButton: View {
     private var glyph: some View {
         Image(systemName: isMonitored ? "bookmark.fill" : "bookmark")
             .scaledFont(size: 13, weight: .medium)
-            .foregroundStyle(
-                isHovering ? AnyShapeStyle(Color.primary)
-                           : AnyShapeStyle(Color.primary.opacity(isMonitored ? 0.72 : 0.45))
-            )
+            .foregroundStyle(Color.primary.opacity(isMonitored ? 0.72 : 0.45))
     }
 }

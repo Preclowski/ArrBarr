@@ -11,11 +11,46 @@ public struct RatingChip {
     let label: String
     let value: String
     let color: Color
+    /// When set, the pill becomes a link to the rating's home page
+    /// (IMDb title, TMDB record, RT/Metacritic search, …).
+    let url: URL?
 
-    public init(label: String, value: String, color: Color) {
+    public init(label: String, value: String, color: Color, url: URL? = nil) {
         self.label = label
         self.value = value
         self.color = color
+        self.url = url
+    }
+}
+
+/// Builders for the pages a rating chip can deep-link to. Direct record
+/// links when an id is known; the site's search otherwise — RT and
+/// Metacritic ids never reach the arr payloads at all.
+public enum RatingSiteLink {
+    private static func q(_ s: String) -> String {
+        s.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? s
+    }
+    public static func imdb(id: String?, title: String) -> URL? {
+        if let id, !id.isEmpty { return URL(string: "https://www.imdb.com/title/\(id)/") }
+        return URL(string: "https://www.imdb.com/find/?q=\(q(title))")
+    }
+    public static func tmdbMovie(id: Int?, title: String) -> URL? {
+        if let id, id > 0 { return URL(string: "https://www.themoviedb.org/movie/\(id)") }
+        return URL(string: "https://www.themoviedb.org/search?query=\(q(title))")
+    }
+    public static func tmdbTV(id: Int?, title: String) -> URL? {
+        if let id, id > 0 { return URL(string: "https://www.themoviedb.org/tv/\(id)") }
+        return URL(string: "https://www.themoviedb.org/search/tv?query=\(q(title))")
+    }
+    public static func tvdbSeries(id: Int?, title: String) -> URL? {
+        if let id, id > 0 { return URL(string: "https://thetvdb.com/dereferrer/series/\(id)") }
+        return URL(string: "https://thetvdb.com/search?query=\(q(title))")
+    }
+    public static func rottenTomatoes(title: String) -> URL? {
+        URL(string: "https://www.rottentomatoes.com/search?search=\(q(title))")
+    }
+    public static func metacritic(title: String) -> URL? {
+        URL(string: "https://www.metacritic.com/search/\(q(title))/")
     }
 }
 
@@ -387,6 +422,23 @@ public struct PosterLightbox: View {
 struct RatingPill: View {
     let chip: RatingChip
     public var body: some View {
+        if let url = chip.url {
+            Button { PlatformURLOpener.open(url) } label: {
+                pill.contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .help(Text(verbatim: url.host() ?? url.absoluteString))
+            #if os(macOS)
+            .onHover { hovering in
+                if hovering { NSCursor.pointingHand.push() } else { NSCursor.pop() }
+            }
+            #endif
+        } else {
+            pill
+        }
+    }
+
+    private var pill: some View {
         HStack(spacing: 3) {
             Text(chip.label)
                 .scaledFont(size: 9, weight: .semibold)

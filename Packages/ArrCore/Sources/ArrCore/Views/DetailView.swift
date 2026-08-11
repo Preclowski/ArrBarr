@@ -227,7 +227,36 @@ public struct DetailView: View {
     @ViewBuilder
     private var monitorToggle: some View {
         if let state = monitorState {
-            MonitorToggleButton(isMonitored: state.isMonitored, entity: state.entity)
+            MonitorToggleButton(isMonitored: state.isMonitored, entity: state.entity) { monitored in
+                await setTopLevelMonitored(monitored)
+            }
+        }
+    }
+
+    /// Flip the detail's top-level monitored flag: optimistic local write so
+    /// the bookmark moves under the finger, then the arr call; a failure
+    /// silently refetches so the UI snaps back to the server's truth.
+    private func setTopLevelMonitored(_ monitored: Bool) async {
+        guard let entityId = item.entityId else { return }
+        do {
+            switch item.source {
+            case .radarr, .whisparr:
+                radarrDetail?.monitored = monitored
+                let client: any ArrAPIClient = item.source == .radarr
+                    ? RadarrClient(config: configStore.radarr)
+                    : WhisparrClient(config: configStore.whisparr)
+                try await client.setMovieMonitored(movieId: entityId, monitored: monitored)
+            case .sonarr:
+                sonarrDetail?.monitored = monitored
+                try await SonarrClient(config: configStore.sonarr)
+                    .setSeriesMonitored(seriesId: entityId, monitored: monitored)
+            case .lidarr:
+                lidarrAlbum?.monitored = monitored
+                try await LidarrClient(config: configStore.lidarr)
+                    .setAlbumMonitored(albumId: entityId, monitored: monitored)
+            }
+        } catch {
+            await load(showSpinner: false)
         }
     }
 
@@ -261,7 +290,7 @@ public struct DetailView: View {
                             // list row carries its own controls and the strip
                             // offers only manual search.
                             if let target = manualTarget {
-                                manualSearchButton(target, compact: true)
+                                searchMenuButton(target)
                                     .padding(.horizontal, 14)
                                     .padding(.vertical, 10)
                                     .frame(maxWidth: .infinity)
@@ -389,7 +418,33 @@ public struct DetailView: View {
                 seriesPosterRequiresAuth: item.posterRequiresAuth,
                 seriesPosterAPIKey: configStore.sonarr.apiKey,
                 onBack: { seasonDrill = nil },
-                viewModel: viewModel
+                viewModel: viewModel,
+                onSetSeasonMonitored: { monitored in
+                    // Optimistic flip in the season array this view hands down.
+                    if var seasons = sonarrDetail?.seasons,
+                       let idx = seasons.firstIndex(where: { $0.seasonNumber == drill.seasonNumber }) {
+                        seasons[idx].monitored = monitored
+                        sonarrDetail?.seasons = seasons
+                    }
+                    do {
+                        try await SonarrClient(config: configStore.sonarr).setSeasonMonitored(
+                            seriesId: drill.seriesId, seasonNumber: drill.seasonNumber, monitored: monitored)
+                    } catch {}
+                    // Refetch either way: success cascades every episode's flag
+                    // server-side; failure snaps the optimistic flip back.
+                    await load(showSpinner: false)
+                },
+                onSetEpisodeMonitored: { episodeId, monitored in
+                    if let idx = sonarrEpisodes.firstIndex(where: { $0.id == episodeId }) {
+                        sonarrEpisodes[idx].monitored = monitored
+                    }
+                    do {
+                        try await SonarrClient(config: configStore.sonarr)
+                            .setEpisodesMonitored(episodeIds: [episodeId], monitored: monitored)
+                    } catch {
+                        await load(showSpinner: false)
+                    }
+                }
             )
         }
         // Manual-search ("Download") drill-down — releases for this movie/album.
@@ -525,74 +580,64 @@ public struct DetailView: View {
         }
     }
 
-    /// Bottom search CTA when the item isn't downloading — Manual + Automatic
-    /// search for every library kind (movie / album / season).
+    /// Bottom search CTA when the item isn't downloading — ONE "Search"
+    /// button whose tap opens a native menu with the two flavours
+    /// (Automatic / Manual), replacing the old side-by-side pair. The single
+    /// button also carries every progress state (spinner while a sweep runs,
+    /// checkmark right after queueing one), which kills the two-button
+    /// weirdness where the spinner lit the *manual* button first.
     @ViewBuilder
     private var bottomSearchCTA: some View {
         if let target = manualTarget {
-            VStack(spacing: 6) {
-                if searchRunning {
-                    HStack(spacing: 6) {
-                        ProgressView().controlSize(.small)
-                        Text("detail.searchingForRelease.label", bundle: .module)
-                            .scaledFont(size: 11)
-                            .foregroundStyle(.secondary)
-                    }
-                    .transition(.opacity.combined(with: .move(edge: .bottom)))
-                }
-                HStack(spacing: 8) {
-                    manualSearchButton(target)
-                    automaticSearchButton
-                }
+            searchMenuButton(target)
+        }
+    }
+
+    private func searchMenuButton(_ target: ManualSearchTarget) -> some View {
+        Menu {
+            Button { startAutomaticSearch() } label: {
+                Label { Text("Automatic search", bundle: .module) } icon: { Image(systemName: "bolt.fill") }
             }
-        }
-    }
-
-    /// `compact` shows the bare "Search" verb — used on the downloading CTA
-    /// strip, where three capsules share the width and "Manual search"
-    /// truncated. The idle-state pair below keeps the full label to stay
-    /// distinguishable from "Automatic search" beside it.
-    private func manualSearchButton(_ target: ManualSearchTarget, compact: Bool = false) -> some View {
-        Button { manualSearchTarget = target } label: {
-            searchCTALabel(icon: "magnifyingglass", text: compact ? "Search" : "Manual search")
-        }
-        .modifier(GlassProminentButtonStyle())
-        // Locked while the server is already sweeping indexers: an interactive
-        // search hits the same trackers and would race the automatic one.
-        .disabled(searchRunning)
-        .accessibilityLabel(Text("Manual search", bundle: .module))
-    }
-
-    @ViewBuilder
-    private var automaticSearchButton: some View {
-        Button {
-            guard !autoSearching, !searchRunning else { return }
-            Task {
-                autoSearching = true
-                await runAutomaticSearch()
-                autoSearching = false
-                autoDidSearch = true
-                // Assume it's running rather than waiting for the next poll to
-                // notice — the command was just accepted, and a CTA that goes
-                // idle for three seconds before the indicator appears reads as
-                // "nothing happened" and invites a second tap.
-                searchRunning = true
-                searchWatchToken += 1
-                try? await Task.sleep(nanoseconds: 1_600_000_000)
-                autoDidSearch = false
+            Button { manualSearchTarget = target } label: {
+                Label { Text("Manual search", bundle: .module) } icon: { Image(systemName: "list.bullet") }
             }
         } label: {
-            if autoSearching {
-                HStack { ProgressView().controlSize(.small) }
-                    .frame(maxWidth: .infinity).padding(.vertical, 7)
-            } else if autoDidSearch {
-                searchCTALabel(icon: "checkmark", text: "detail.searchQueued.button")
-            } else {
-                searchCTALabel(icon: "magnifyingglass", text: "Automatic search")
+            GlassProminentMenuLabel {
+                if autoSearching || searchRunning {
+                    HStack { ProgressView().controlSize(.small).tint(.white) }
+                        .frame(maxWidth: .infinity).padding(.vertical, 7)
+                } else if autoDidSearch {
+                    searchCTALabel(icon: "checkmark", text: "detail.searchQueued.button")
+                } else {
+                    searchCTALabel(icon: "magnifyingglass", text: "Search")
+                }
             }
         }
-        .modifier(GlassProminentButtonStyle())
+        .modifier(GlassProminentMenuStyle())
         .disabled(autoSearching || searchRunning)
+        .accessibilityLabel(autoSearching || searchRunning
+                            ? Text("detail.searchingForRelease.label", bundle: .module)
+                            : Text("Search", bundle: .module))
+    }
+
+    /// Fire the server-side sweep and drive the CTA's state machine:
+    /// spinner (in flight) → checkmark (queued) → spinner (sweep running).
+    private func startAutomaticSearch() {
+        guard !autoSearching, !searchRunning else { return }
+        Task {
+            autoSearching = true
+            await runAutomaticSearch()
+            autoSearching = false
+            autoDidSearch = true
+            // Assume it's running rather than waiting for the next poll to
+            // notice — the command was just accepted, and a CTA that goes
+            // idle for three seconds before the indicator appears reads as
+            // "nothing happened" and invites a second tap.
+            searchRunning = true
+            searchWatchToken += 1
+            try? await Task.sleep(nanoseconds: 1_600_000_000)
+            autoDidSearch = false
+        }
     }
 
     /// Poll the arr for "is a search for this record still running".
@@ -671,16 +716,16 @@ public struct DetailView: View {
         if hasDownloadControls, canPauseResume {
             HStack(spacing: 8) {
                 pauseResumeProminent
+                // Middle slot: the same Search menu (automatic / manual) —
+                // e.g. to grab a better release while this one downloads.
+                if let target = manualTarget {
+                    searchMenuButton(target)
+                }
                 #if os(macOS)
-                // macOS: delete sits next to Resume as a matching glass
-                // capsule. iOS keeps delete in the nav toolbar instead.
+                // macOS: destructive Cancel anchors the trailing edge, away
+                // from the primary verb. iOS keeps delete in the nav toolbar.
                 cancelGlassCompact
                 #endif
-                // Third action: jump into the release list — e.g. to grab a
-                // better release while this one is still downloading.
-                if let target = manualTarget {
-                    manualSearchButton(target, compact: true)
-                }
             }
             // Inline-confirm attached to body instead of here so the
             // overlay fires regardless of whether the bottom CTA strip
@@ -704,7 +749,10 @@ public struct DetailView: View {
         PauseResumeButton(
             isPaused: f.isPaused,
             progress: f.source == .sonarr ? 1 : f.progress,
-            tint: f.status.tint
+            // Tint by the ACTION, not the status: Pause is neutral gray (the
+            // red trash beside it carries the "careful" signal), Resume green
+            // (universal play colour). Blue stays reserved for Search.
+            tint: f.isPaused ? .green : .gray
         ) {
             if f.isPaused {
                 await viewModel.resume(f)
@@ -720,24 +768,18 @@ public struct DetailView: View {
     }
 
     #if os(macOS)
-    /// Compact glass-capsule trash that matches the Resume/Pause CTA shape
-    /// (same height + capsule + glass), so the two read as a pair instead of
-    /// a round button next to a square one.
+    /// Compact icon-only trash: red glyph on a neutral gray glass square, the
+    /// same height as the prominent CTAs beside it but no wider than it needs
+    /// to be — cancelling is the rare action, so it doesn't get a text slot.
     @ViewBuilder
     private var cancelGlassCompact: some View {
         Button {
             PanelActivation.bringForward(); ctaPendingDelete = true
         } label: {
-            HStack(spacing: 6) {
-                Image(systemName: "trash")
-                    .scaledFont(size: 11, weight: .semibold)
-                // Visible label is the short verb; help/accessibility keep the
-                // full "Cancel download" so the meaning stays unambiguous.
-                Text("common.cancel.button", bundle: .module)
-                    .scaledFont(size: 12, weight: .semibold)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 7)
+            Image(systemName: "trash")
+                .scaledFont(size: 13, weight: .bold)
+                .frame(width: 26)
+                .padding(.vertical, 7)
         }
         .modifier(GlassProminentButtonStyle())
         .tint(.red)
@@ -847,17 +889,36 @@ public struct DetailView: View {
 
     private func movieRatingChipsFor(_ detail: RadarrMovieDetail?) -> [RatingChip] {
         guard let r = detail?.ratings else { return [] }
+        // Radarr's detail payload carries no imdbId, so the IMDb pill links
+        // to the site's search; TMDB gets a direct record link via tmdbId.
+        let title = detail?.title ?? splitTitleAndYear(item.title).title
         var chips: [RatingChip] = []
-        if let v = r.imdb?.value { chips.append(RatingChip(label: "IMDb", value: String(format: "%.1f", v), color: .yellow)) }
-        if let v = r.tmdb?.value { chips.append(RatingChip(label: "TMDB", value: String(format: "%.1f", v), color: .teal)) }
-        if let v = r.rottenTomatoes?.value { chips.append(RatingChip(label: "RT", value: "\(Int(v))%", color: .red)) }
-        if let v = r.metacritic?.value { chips.append(RatingChip(label: "MC", value: "\(Int(v))", color: .green)) }
+        if let v = r.imdb?.value {
+            chips.append(RatingChip(label: "IMDb", value: String(format: "%.1f", v), color: .yellow,
+                                    url: RatingSiteLink.imdb(id: nil, title: title)))
+        }
+        if let v = r.tmdb?.value {
+            chips.append(RatingChip(label: "TMDB", value: String(format: "%.1f", v), color: .teal,
+                                    url: RatingSiteLink.tmdbMovie(id: detail?.tmdbId, title: title)))
+        }
+        if let v = r.rottenTomatoes?.value {
+            chips.append(RatingChip(label: "RT", value: "\(Int(v))%", color: .red,
+                                    url: RatingSiteLink.rottenTomatoes(title: title)))
+        }
+        if let v = r.metacritic?.value {
+            chips.append(RatingChip(label: "MC", value: "\(Int(v))", color: .green,
+                                    url: RatingSiteLink.metacritic(title: title)))
+        }
         return chips
     }
 
     private func sonarrRatingChipsFor(_ detail: SonarrSeriesDetail?) -> [RatingChip] {
         guard let r = detail?.ratings, let v = r.value else { return [] }
-        return [RatingChip(label: "Rating", value: String(format: "%.1f", v), color: .yellow)]
+        // Sonarr's rating is TVDB-sourced — link to the TVDB series page
+        // (the detail payload has no tvdbId here, so it goes via search).
+        let title = detail?.title ?? splitTitleAndYear(item.title).title
+        return [RatingChip(label: "Rating", value: String(format: "%.1f", v), color: .yellow,
+                           url: RatingSiteLink.tvdbSeries(id: nil, title: title))]
     }
 
     // MARK: - Shared header card

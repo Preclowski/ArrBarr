@@ -200,13 +200,14 @@ public struct DiscoverTabView: View {
         .padding(.top, 12)
     }
 
-    /// The two round, icon-only verdict buttons. ⏩ = skip to the next card
-    /// (neutral), + = add to collection (accent). Each lifts as the drag heads
-    /// its way; colours mirror the swipe tint (right = accent, left = neutral).
+    /// The two round, icon-only verdict buttons. ✕ = skip to the next card
+    /// (neutral — direction-free, unlike the old ⏩ whose right-arrows fought
+    /// the card flying LEFT), + = add to collection (accent). Each lifts as
+    /// the drag heads its way; colours mirror the swipe tint.
     private var actionButtons: some View {
         HStack(spacing: 30) {
             GlassCircleButton(
-                systemName: "forward.fill",
+                systemName: "xmark",
                 tint: .secondary,
                 extraScale: 0.16 * leftDragProgress,
                 accessibilityKey: "Skip",
@@ -390,6 +391,7 @@ public struct DiscoverTabView: View {
                         .padding(.vertical, 8)
                     }
                     .buttonStyle(.borderedProminent)
+                    .buttonBorderShape(.capsule)
                     .padding(.top, 4)
                 }
                 if viewModel.llmPoolExhausted && llmAvailable

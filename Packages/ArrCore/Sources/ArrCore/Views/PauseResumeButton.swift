@@ -63,6 +63,10 @@ struct PauseResumeButton: View {
                         : String(localized: "queue.pause.button", bundle: .module))
                     .scaledFont(size: Self.labelSize, weight: .semibold)
             }
+            // Force white — `.glassProminent` flips to black text on light
+            // tints (green/orange), which clashed with the white-labelled
+            // Search/Cancel capsules beside it.
+            .foregroundStyle(.white)
             .frame(maxWidth: .infinity)
             .padding(.vertical, Self.vPadding)
         }

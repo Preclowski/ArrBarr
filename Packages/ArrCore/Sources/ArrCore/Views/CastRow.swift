@@ -7,12 +7,23 @@ public struct CastMember: Identifiable, Equatable, Sendable {
     public let name: String
     public let role: String?
     public let imageURL: URL?
+    /// TMDB person id — both providers already carry it (Radarr credits ship
+    /// `personTmdbId`, TMDB credits their own id), so the tile can deep-link
+    /// to the person's TMDB page with no extra API calls. nil = plain tile.
+    public let tmdbPersonId: Int?
 
-    public init(id: String, name: String, role: String?, imageURL: URL?) {
+    public init(id: String, name: String, role: String?, imageURL: URL?, tmdbPersonId: Int? = nil) {
         self.id = id
         self.name = name
         self.role = role
         self.imageURL = imageURL
+        self.tmdbPersonId = tmdbPersonId
+    }
+
+    /// The person's TMDB page, when the id is known.
+    public var profileURL: URL? {
+        guard let tmdbPersonId, tmdbPersonId > 0 else { return nil }
+        return URL(string: "https://www.themoviedb.org/person/\(tmdbPersonId)")
     }
 }
 
@@ -34,25 +45,46 @@ struct CastRow: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(alignment: .top, spacing: 12) {
                     ForEach(cast.prefix(limit)) { person in
-                        VStack(spacing: 4) {
-                            avatar(person)
-                            Text(person.name)
-                                .scaledFont(size: 10, weight: .semibold)
-                                .lineLimit(2)
-                                .multilineTextAlignment(.center)
-                            if let role = person.role, !role.isEmpty {
-                                Text(role)
-                                    .scaledFont(size: 9)
-                                    .foregroundStyle(.secondary)
-                                    .lineLimit(1)
-                                    .truncationMode(.tail)
-                            }
-                        }
-                        .frame(width: 64)
+                        personTile(person)
                     }
                 }
                 .padding(.vertical, 2)
             }
+        }
+    }
+
+    /// One head+name+role tile. Becomes a link to the person's TMDB page
+    /// when the id is known (it always is, from both providers).
+    @ViewBuilder
+    private func personTile(_ person: CastMember) -> some View {
+        let tile = VStack(spacing: 4) {
+            avatar(person)
+            Text(person.name)
+                .scaledFont(size: 10, weight: .semibold)
+                .lineLimit(2)
+                .multilineTextAlignment(.center)
+            if let role = person.role, !role.isEmpty {
+                Text(role)
+                    .scaledFont(size: 9)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
+        }
+        .frame(width: 64)
+        if let url = person.profileURL {
+            Button { PlatformURLOpener.open(url) } label: {
+                tile.contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .help(Text(verbatim: person.name))
+            #if os(macOS)
+            .onHover { hovering in
+                if hovering { NSCursor.pointingHand.push() } else { NSCursor.pop() }
+            }
+            #endif
+        } else {
+            tile
         }
     }
 
@@ -87,7 +119,8 @@ extension CastMember {
                     id: "\(c.personTmdbId ?? 0)-\(name)-\(c.order ?? 0)",
                     name: name,
                     role: c.character,
-                    imageURL: c.headshotURL
+                    imageURL: c.headshotURL,
+                    tmdbPersonId: c.personTmdbId
                 )
             }
     }
@@ -96,7 +129,8 @@ extension CastMember {
     /// `/credit` endpoint).
     static func from(tmdbCast cast: [TMDBCreditPerson]) -> [CastMember] {
         cast.map { p in
-            CastMember(id: "tmdb-\(p.id)", name: p.name, role: p.character, imageURL: p.posterURL)
+            CastMember(id: "tmdb-\(p.id)", name: p.name, role: p.character,
+                       imageURL: p.posterURL, tmdbPersonId: p.id)
         }
     }
 }

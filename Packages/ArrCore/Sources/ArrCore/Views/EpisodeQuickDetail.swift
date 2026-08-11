@@ -112,7 +112,21 @@ public struct EpisodeQuickDetail: View {
             // Live off `displayEpisode` (which tracks the `fullEpisode` state),
             // not a captured value — the stub carries `monitored: nil` so no
             // bookmark shows until the real record lands.
-            monitored: displayEpisode.monitored
+            monitored: displayEpisode.monitored,
+            onToggleMonitored: { monitored in
+                // Guard against the pre-fetch stub (id 0 isn't a real episode).
+                guard let epId = fullEpisode?.id, epId != 0 else { return }
+                fullEpisode?.monitored = monitored
+                if let idx = allEpisodes.firstIndex(where: { $0.id == epId }) {
+                    allEpisodes[idx].monitored = monitored
+                }
+                do {
+                    try await SonarrClient(config: configStore.sonarr)
+                        .setEpisodesMonitored(episodeIds: [epId], monitored: monitored)
+                } catch {
+                    await load()
+                }
+            }
         )
         .conditionalNavTitle(sonarrDetail?.title ?? splitTitleAndYear(item.title).title, apply: !isDetachedWindow)
         // Series push nests under THIS view (see `seriesPush`), so back
@@ -137,7 +151,31 @@ public struct EpisodeQuickDetail: View {
                 seriesPosterRequiresAuth: item.posterRequiresAuth,
                 seriesPosterAPIKey: configStore.sonarr.apiKey,
                 onBack: { seasonPush = nil },
-                viewModel: viewModel
+                viewModel: viewModel,
+                onSetSeasonMonitored: { monitored in
+                    if var seasons = sonarrDetail?.seasons,
+                       let idx = seasons.firstIndex(where: { $0.seasonNumber == drill.seasonNumber }) {
+                        seasons[idx].monitored = monitored
+                        sonarrDetail?.seasons = seasons
+                    }
+                    do {
+                        try await SonarrClient(config: configStore.sonarr).setSeasonMonitored(
+                            seriesId: drill.seriesId, seasonNumber: drill.seasonNumber, monitored: monitored)
+                    } catch {}
+                    // Refetch either way — the flip cascades every episode flag.
+                    await load()
+                },
+                onSetEpisodeMonitored: { episodeId, monitored in
+                    if let idx = allEpisodes.firstIndex(where: { $0.id == episodeId }) {
+                        allEpisodes[idx].monitored = monitored
+                    }
+                    do {
+                        try await SonarrClient(config: configStore.sonarr)
+                            .setEpisodesMonitored(episodeIds: [episodeId], monitored: monitored)
+                    } catch {
+                        await load()
+                    }
+                }
             )
         }
         .task(id: item.id) { await load() }

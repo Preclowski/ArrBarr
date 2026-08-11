@@ -300,6 +300,32 @@ public actor SonarrClient: ArrAPIClient {
         ])
     }
 
+    /// Flip the series-level monitored flag. Full-record round-trip —
+    /// Sonarr v3's PUT `/series/{id}` wants the whole object back, and
+    /// strip-decoding into our lean structs would drop fields it needs.
+    func setSeriesMonitored(seriesId: Int, monitored: Bool) async throws {
+        if DemoMode.isActive {
+            try? await Task.sleep(nanoseconds: 400_000_000)
+            return
+        }
+        var series = try await getRawObject("/series/\(seriesId)")
+        series["monitored"] = monitored
+        try await put("/series/\(seriesId)", body: series)
+    }
+
+    /// Flip individual episodes' monitored flags — the dedicated bulk
+    /// endpoint, no record round-trip needed.
+    func setEpisodesMonitored(episodeIds: [Int], monitored: Bool) async throws {
+        if DemoMode.isActive {
+            try? await Task.sleep(nanoseconds: 400_000_000)
+            return
+        }
+        try await put("/episode/monitor", body: [
+            "episodeIds": episodeIds,
+            "monitored": monitored,
+        ])
+    }
+
     /// Toggle season monitoring. Tries the canonical V5 endpoint first
     /// (`PUT /api/v5/series/{id}/season`) — single atomic operation
     /// that Sonarr's own modern frontend uses, with the server doing

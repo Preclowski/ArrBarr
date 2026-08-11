@@ -104,6 +104,12 @@ public struct DiscoverCardView: View {
                 .scaledFont(size: 19, weight: .semibold)
                 .foregroundStyle(.primary)
                 .lineLimit(2)
+            // Owned titles say so up front — without the badge a deliberate
+            // library pick reads as the quiz suggesting things you already
+            // have. Same chip the search results / detail views use.
+            if item.result.inLibraryArrId != nil {
+                InLibraryBadge()
+            }
             if !runtimeCertSegments.isEmpty {
                 Text(runtimeCertSegments.joined(separator: " · "))
                     .scaledFont(size: 11)

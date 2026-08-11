@@ -146,6 +146,50 @@ extension ArrAPIClient {
         )
     }
 
+    /// PUT a JSON body to <apiBase><path>. Returns the raw response data.
+    @discardableResult
+    func put(_ path: String, body: [String: Any]) async throws -> Data {
+        guard config.isConfigured else { throw HTTPError.notConfigured }
+        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
+        let url = try http.url(base: config.baseURL, path: "\(apiBase)\(path)")
+        let data = try JSONSerialization.data(withJSONObject: body)
+        return try await http.put(
+            url,
+            headers: apiHeaders.merging(["Content-Type": "application/json"]) { $1 },
+            body: data
+        )
+    }
+
+    /// GET <apiBase><path> as an untyped JSON object — for read-modify-write
+    /// round-trips (e.g. flipping one season flag inside `/series/{id}`)
+    /// where decoding into our lean structs would drop fields the PUT must
+    /// carry back.
+    func getRawObject(_ path: String) async throws -> [String: Any] {
+        guard config.isConfigured else { throw HTTPError.notConfigured }
+        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
+        let url = try http.url(base: config.baseURL, path: "\(apiBase)\(path)")
+        let data = try await http.get(url, headers: apiHeaders)
+        guard let obj = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw HTTPError.decoding(NSError(domain: "ArrAPIClient", code: 1, userInfo: [
+                NSLocalizedDescriptionKey: "Expected a JSON object at \(path)"
+            ]))
+        }
+        return obj
+    }
+
+    /// Flip a movie's monitored flag (Radarr and its Whisparr fork share the
+    /// `/movie/{id}` shape). Full-record round-trip: PUT wants the whole
+    /// object back, so mutate the raw JSON rather than a strip-decoded struct.
+    func setMovieMonitored(movieId: Int, monitored: Bool) async throws {
+        if DemoMode.isActive {
+            try? await Task.sleep(nanoseconds: 400_000_000)
+            return
+        }
+        var movie = try await getRawObject("/movie/\(movieId)")
+        movie["monitored"] = monitored
+        try await put("/movie/\(movieId)", body: movie)
+    }
+
     /// All custom formats defined on this arr (`/customformat`). Shared by
     /// Sonarr + Radarr (both v3); powers the chat `list_custom_formats` /
     /// `describe_format` tools.

@@ -47,6 +47,9 @@ public struct SearchAddPanel: View {
     /// add panel matches the in-library DetailView (which also shows a CastRow).
     /// Movies/series only; empty until loaded (and stays empty without a TMDB key).
     @State private var cast: [CastMember] = []
+    /// True while the TMDB credits fetch is in flight — drives the cast
+    /// skeleton so the hero doesn't jump when the strip pops in.
+    @State private var castLoading = false
 
     public var body: some View {
         ZStack {
@@ -215,6 +218,10 @@ public struct SearchAddPanel: View {
                 certification: result.certification,
                 genres: result.genres,
                 ratings: ratingChips,
+                // Overview beside the poster — same right-column layout the
+                // detail view gets from this shared card (it used to render
+                // below the poster here, as a separate block).
+                overview: result.overview,
                 posterURL: result.posterURL,
                 fallbackSymbol: result.source == .sonarr ? "tv" : (result.source == .lidarr ? "music.note" : (result.source == .whisparr ? "flame" : "film")),
                 posterAspect: 2.0/3.0,
@@ -228,11 +235,13 @@ public struct SearchAddPanel: View {
                 // matches DetailView's pattern.
                 showTitle: false
             )
-            if let ov = result.overview, !ov.isEmpty {
-                ExpandableOverview(text: ov)
-            }
+            // Overview lives inside the header card's right column now.
+            // Cast strip with a skeleton while the TMDB fetch is in flight —
+            // same fill-in-as-it-lands pattern as DetailView.
             if !cast.isEmpty {
                 CastRow(cast: cast)
+            } else if castLoading {
+                SkeletonCastRow()
             }
         }
     }
@@ -242,6 +251,9 @@ public struct SearchAddPanel: View {
     private func loadCast() async {
         let key = configStore.tmdbApiKey
         guard !key.isEmpty else { return }
+        guard result.source == .radarr || result.source == .sonarr else { return }
+        castLoading = true
+        defer { castLoading = false }
         let client = TMDBClient(apiKey: key)
         do {
             let credits: TMDBCredits
@@ -294,10 +306,27 @@ public struct SearchAddPanel: View {
 
     private var ratingChips: [RatingChip] {
         var chips: [RatingChip] = []
-        if let v = result.imdb { chips.append(RatingChip(label: "IMDb", value: String(format: "%.1f", v), color: .yellow)) }
-        if let v = result.rating { chips.append(RatingChip(label: "TMDB", value: String(format: "%.1f", v), color: .teal)) }
-        if let v = result.rottenTomatoes { chips.append(RatingChip(label: "RT", value: "\(Int(v))%", color: .red)) }
-        if let v = result.metacritic { chips.append(RatingChip(label: "MC", value: "\(Int(v))", color: .green)) }
+        // Direct links where an id exists (imdbId; movie result.id IS the
+        // TMDB id, series result.id the TVDB id) — site search otherwise.
+        if let v = result.imdb {
+            chips.append(RatingChip(label: "IMDb", value: String(format: "%.1f", v), color: .yellow,
+                                    url: RatingSiteLink.imdb(id: result.imdbId, title: result.title)))
+        }
+        if let v = result.rating {
+            let url = result.source == .sonarr
+                ? RatingSiteLink.tvdbSeries(id: result.id, title: result.title)
+                : RatingSiteLink.tmdbMovie(id: result.id, title: result.title)
+            chips.append(RatingChip(label: result.source == .sonarr ? "TVDB" : "TMDB",
+                                    value: String(format: "%.1f", v), color: .teal, url: url))
+        }
+        if let v = result.rottenTomatoes {
+            chips.append(RatingChip(label: "RT", value: "\(Int(v))%", color: .red,
+                                    url: RatingSiteLink.rottenTomatoes(title: result.title)))
+        }
+        if let v = result.metacritic {
+            chips.append(RatingChip(label: "MC", value: "\(Int(v))", color: .green,
+                                    url: RatingSiteLink.metacritic(title: result.title)))
+        }
         return chips
     }
 

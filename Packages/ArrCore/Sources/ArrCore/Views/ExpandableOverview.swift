@@ -27,21 +27,48 @@ public struct ExpandableOverview: View {
     /// from SwiftUI's text layout.
     private var isTruncated: Bool { fullHeight > clampedHeight + 0.5 }
 
+    /// The disclosure only pays for itself when it hides MORE than its own
+    /// footprint (~one 11pt button row ≈ 18pt). Clipping a single line just
+    /// to render a button of the same height is a net loss — in that case
+    /// the text renders unclamped and no button shows.
+    private var hiddenOverflowIsWorthAButton: Bool {
+        fullHeight - clampedHeight > 18
+    }
+
+    /// Show everything: user expanded, or the overflow is too small to be
+    /// worth a disclosure row.
+    private var showsFullText: Bool {
+        expanded || (isTruncated && !hiddenOverflowIsWorthAButton)
+    }
+
     public var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(text)
                 .scaledFont(size: 12)
                 .foregroundStyle(.secondary)
-                .lineLimit(expanded ? nil : 4)
+                .lineLimit(showsFullText ? nil : 4)
                 .fixedSize(horizontal: false, vertical: true)
-                .background(
-                    GeometryReader { g in
-                        Color.clear.preference(
-                            key: ClampedHeightKey.self,
-                            value: g.size.height
+                // The 4-line height is measured on a HIDDEN probe (below),
+                // not on the visible text — the visible line limit depends on
+                // the measurement result, so measuring it directly feeds the
+                // decision back into itself and oscillates.
+                .background(alignment: .topLeading) {
+                    Text(text)
+                        .scaledFont(size: 12)
+                        .lineLimit(4)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .opacity(0)
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)
+                        .background(
+                            GeometryReader { g in
+                                Color.clear.preference(
+                                    key: ClampedHeightKey.self,
+                                    value: g.size.height
+                                )
+                            }
                         )
-                    }
-                )
+                }
                 .background(alignment: .topLeading) {
                     // Hidden, unlimited copy used as a measuring
                     // stick. Same font, same width (the background
@@ -68,7 +95,7 @@ public struct ExpandableOverview: View {
                 }
                 .onPreferenceChange(ClampedHeightKey.self) { clampedHeight = $0 }
                 .onPreferenceChange(FullHeightKey.self) { fullHeight = $0 }
-            if !expanded && isTruncated {
+            if !expanded && isTruncated && hiddenOverflowIsWorthAButton {
                 Button {
                     withAnimation(.smooth(duration: 0.18)) { expanded = true }
                 } label: {

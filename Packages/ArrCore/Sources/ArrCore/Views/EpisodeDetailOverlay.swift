@@ -74,11 +74,14 @@ public struct EpisodeDetailOverlay: View {
     /// The parent recomputes this from its live episode array on every body
     /// pass. `nil` renders no bookmark.
     var monitored: Bool? = nil
+    /// Flips the episode's monitored flag — wired by the parent, which owns
+    /// the live episode array. nil renders the bookmark as inert state.
+    var onToggleMonitored: ((Bool) async -> Void)? = nil
 
     @ViewBuilder
     private var monitorToggle: some View {
         if let monitored {
-            MonitorToggleButton(isMonitored: monitored, entity: .episode)
+            MonitorToggleButton(isMonitored: monitored, entity: .episode, onToggle: onToggleMonitored)
         }
     }
 
@@ -89,7 +92,6 @@ public struct EpisodeDetailOverlay: View {
     /// using `ctaPendingDelete` + `queueItem`).
     @State private var pendingDeleteItem: QueueItem?
     @State private var didSearch = false
-    @State private var showSearchConfirm = false
     /// Own poster lightbox — set when the user taps the hero poster.
     @State private var enlargedPoster: URL?
     /// Manual-search ("Download") push target for this episode. Wrapped in a
@@ -150,7 +152,8 @@ public struct EpisodeDetailOverlay: View {
         onTapSeason: (() -> Void)? = nil,
         seriesYear: Int? = nil,
         isLoadingDetails: Bool = false,
-        monitored: Bool? = nil
+        monitored: Bool? = nil,
+        onToggleMonitored: ((Bool) async -> Void)? = nil
     ) {
         self.episode = episode
         self.seriesTitle = seriesTitle
@@ -171,6 +174,7 @@ public struct EpisodeDetailOverlay: View {
         self.seriesYear = seriesYear
         self.isLoadingDetails = isLoadingDetails
         self.monitored = monitored
+        self.onToggleMonitored = onToggleMonitored
     }
 
     public var body: some View {
@@ -300,13 +304,8 @@ public struct EpisodeDetailOverlay: View {
         }
         // Inline confirmations — see InlineConfirm.swift for why we
         // can't use `.confirmationDialog` inside MenuBarExtra panels.
-        .inlineConfirm(
-            isPresented: $showSearchConfirm,
-            title: "Search this episode?",
-            message: LocalizedStringKey("Will query your indexers and start a download if a release matches."),
-            confirmLabel: "Search",
-            onConfirm: { performSearch() }
-        )
+        // (Automatic search lost its confirm: picking it from the Search
+        // menu is already a deliberate two-step choice.)
         .inlineConfirm(
             isPresented: $ctaPendingDelete,
             title: "Cancel this download?",
@@ -371,48 +370,84 @@ public struct EpisodeDetailOverlay: View {
         HStack(spacing: 8) {
             if queueItems.count > 1 {
                 // Duplicate grabs: per-block controls own pause/cancel; the
-                // strip only offers jumping into the release list.
-                ctaDownloadButton(compact: true)
+                // strip only offers the Search menu.
+                searchMenuButton
             } else if canPauseResume, let q = queueItem {
                 ctaPauseResume(q: q)
+                // Middle slot while a single download runs — the same Search
+                // menu, e.g. to grab a different release without cancelling.
+                searchMenuButton
                 #if os(macOS)
-                // macOS: delete next to Resume — same prominent capsule shape as
-                // the Download CTA, tinted red. iOS keeps it in the nav toolbar.
+                // macOS: destructive Cancel anchors the trailing edge, away
+                // from the primary verb. iOS keeps it in the nav toolbar.
                 if onDeleteEpisode != nil {
                     ctaCancelProminent
                 }
                 #endif
-                // Third action while a single download runs — grab a different
-                // release without cancelling first.
-                ctaDownloadButton(compact: true)
             } else if canManualSearch {
-                ctaDownload
-                if canSearch { ctaSearch }
+                if canSearch {
+                    searchMenuButton
+                } else {
+                    // No auto-search closure wired — manual is the only
+                    // flavour, so skip the menu and go straight to it.
+                    ctaDownload
+                }
             }
         }
     }
 
-    @ViewBuilder
-    private var ctaDownload: some View { ctaDownloadButton(compact: false) }
+    /// ONE "Search" CTA opening a native automatic/manual menu — same
+    /// pattern as DetailView.searchMenuButton. The button carries the
+    /// in-flight spinner and the queued checkmark.
+    private var searchMenuButton: some View {
+        Menu {
+            Button { performSearch() } label: {
+                Label { Text("Automatic search", bundle: .module) } icon: { Image(systemName: "bolt.fill") }
+            }
+            Button {
+                manualSearchTarget = EpisodeReleaseSearch(target: .episode(episodeId: episode.id, title: navTitleString))
+            } label: {
+                Label { Text("Manual search", bundle: .module) } icon: { Image(systemName: "list.bullet") }
+            }
+        } label: {
+            GlassProminentMenuLabel {
+                if isSearching {
+                    HStack { ProgressView().controlSize(.small).tint(.white) }
+                        .frame(maxWidth: .infinity).padding(.vertical, 7)
+                } else if didSearch {
+                    ctaLabel(icon: "checkmark", text: "detail.searchQueued.button")
+                } else {
+                    ctaLabel(icon: "magnifyingglass", text: "Search")
+                }
+            }
+        }
+        .modifier(GlassProminentMenuStyle())
+        .disabled(isSearching)
+        .accessibilityLabel(isSearching
+                            ? Text("detail.searchingForRelease.label", bundle: .module)
+                            : Text("Search", bundle: .module))
+    }
 
-    /// `compact` shows the bare "Search" verb — used when the button shares
-    /// the strip with pause + cancel (or stands in for them on duplicate
-    /// grabs); the idle pair keeps "Manual search" to stay distinguishable
-    /// from "Automatic search".
+    private func ctaLabel(icon: String, text: LocalizedStringKey) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .scaledFont(size: 11, weight: .semibold)
+                .accessibilityHidden(true)
+            Text(text, bundle: .module)
+                .scaledFont(size: 12, weight: .semibold)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 7)
+    }
+
+    /// Direct manual-search CTA — only used when no auto-search closure is
+    /// wired (a one-item menu would be pointless).
     @ViewBuilder
-    private func ctaDownloadButton(compact: Bool) -> some View {
+    private var ctaDownload: some View {
         Button {
             manualSearchTarget = EpisodeReleaseSearch(target: .episode(episodeId: episode.id, title: navTitleString))
         } label: {
-            HStack(spacing: 6) {
-                Image(systemName: "magnifyingglass")
-                    .scaledFont(size: 11, weight: .semibold)
-                    .accessibilityHidden(true)
-                Text(compact ? "Search" : "Manual search", bundle: .module)
-                    .scaledFont(size: 12, weight: .semibold)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 7)
+            ctaLabel(icon: "magnifyingglass", text: "Manual search")
         }
         .modifier(GlassProminentButtonStyle())
         .accessibilityLabel(Text("Manual search", bundle: .module))
@@ -422,7 +457,8 @@ public struct EpisodeDetailOverlay: View {
     private func ctaPauseResume(q: QueueItem) -> some View {
         // Shared button: prominent glass capsule (Manual-search shape) with a
         // progress ring glyph + in-flight spinner; tint follows status.
-        PauseResumeButton(isPaused: q.isPaused, progress: q.progress, tint: q.status.tint) {
+        // Action tint, not status tint — see DetailView.pauseResumeProminent.
+        PauseResumeButton(isPaused: q.isPaused, progress: q.progress, tint: q.isPaused ? .green : .gray) {
             if q.isPaused { await onResumeEpisode?(q) } else { await onPauseEpisode?(q) }
         }
         // The button's progress ring is the only place this episode's
@@ -431,60 +467,23 @@ public struct EpisodeDetailOverlay: View {
         .accessibilityValue(Text(max(0.0, min(1.0, q.progress)), format: .percent.precision(.fractionLength(0))))
     }
 
+    /// Compact icon-only trash — red glyph on neutral gray glass, matching
+    /// DetailView.cancelGlassCompact.
     @ViewBuilder
     private var ctaCancelProminent: some View {
         Button { PanelActivation.bringForward(); ctaPendingDelete = true } label: {
-            HStack(spacing: 6) {
-                Image(systemName: "trash")
-                    .scaledFont(size: 11, weight: .semibold)
-                    .accessibilityHidden(true)
-                // Short verb — the strip fits three capsules; accessibility
-                // below keeps the full "Cancel download".
-                Text("common.cancel.button", bundle: .module)
-                    .scaledFont(size: 12, weight: .semibold)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 7)
+            Image(systemName: "trash")
+                .scaledFont(size: 13, weight: .bold)
+                .frame(width: 26)
+                .padding(.vertical, 7)
         }
         .modifier(GlassProminentButtonStyle())
         .tint(.red)
+        .help(Text("queue.cancelDownload.button", bundle: .module))
         .accessibilityLabel(Text("queue.cancelDownload.button", bundle: .module))
         // Destructive: spell out the consequence, since "Cancel download"
         // alone doesn't say the client loses the transfer.
         .accessibilityHint(Text("This will remove the download from the client.", bundle: .module))
-    }
-
-    @ViewBuilder
-    private var ctaSearch: some View {
-        Button { showSearchConfirm = true } label: {
-            HStack(spacing: 6) {
-                if isSearching {
-                    ProgressView().controlSize(.small)
-                } else if didSearch {
-                    Image(systemName: "checkmark")
-                        .scaledFont(size: 11, weight: .semibold)
-                        .accessibilityHidden(true)
-                    Text("detail.searchQueued.button", bundle: .module)
-                        .scaledFont(size: 12, weight: .semibold)
-                } else {
-                    Image(systemName: "magnifyingglass")
-                        .scaledFont(size: 11, weight: .semibold)
-                        .accessibilityHidden(true)
-                    Text("Automatic search", bundle: .module)
-                        .scaledFont(size: 12, weight: .semibold)
-                }
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 7)
-        }
-        .modifier(GlassProminentButtonStyle())
-        .disabled(isSearching)
-        // While the search is in flight the label is a bare spinner.
-        .accessibilityLabel(isSearching
-                            ? Text("detail.searchingForRelease.label", bundle: .module)
-                            : (didSearch ? Text("detail.searchQueued.button", bundle: .module)
-                                         : Text("Automatic search", bundle: .module)))
-        .accessibilityHint(Text("Will query your indexers and start a download if a release matches.", bundle: .module))
     }
 
     @ViewBuilder
