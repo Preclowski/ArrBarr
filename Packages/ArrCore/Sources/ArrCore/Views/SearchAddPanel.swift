@@ -303,22 +303,24 @@ public struct SearchAddPanel: View {
         // TMDB id, series result.id the TVDB id) — site search otherwise.
         if let v = result.imdb {
             chips.append(RatingChip(label: "IMDb", value: String(format: "%.1f", v), color: .yellow,
-                                    url: RatingSiteLink.imdb(id: result.imdbId, title: result.title)))
+                                    url: RatingSiteLink.imdb(id: result.imdbId, title: result.title), iconName: "rating-imdb"))
         }
         if let v = result.rating {
-            let url = result.source == .sonarr
+            let isSeries = result.source == .sonarr
+            let url = isSeries
                 ? RatingSiteLink.tvdbSeries(id: result.id, title: result.title)
                 : RatingSiteLink.tmdbMovie(id: result.id, title: result.title)
-            chips.append(RatingChip(label: result.source == .sonarr ? "TVDB" : "TMDB",
-                                    value: String(format: "%.1f", v), color: .teal, url: url))
+            chips.append(RatingChip(label: isSeries ? "TVDB" : "TMDB",
+                                    value: String(format: "%.1f", v), color: isSeries ? .blue : .teal,
+                                    url: url, iconName: isSeries ? "rating-tvdb" : "rating-tmdb"))
         }
         if let v = result.rottenTomatoes {
             chips.append(RatingChip(label: "RT", value: "\(Int(v))%", color: .red,
-                                    url: RatingSiteLink.rottenTomatoes(title: result.title)))
+                                    url: RatingSiteLink.rottenTomatoes(title: result.title), iconName: "rating-rt"))
         }
         if let v = result.metacritic {
             chips.append(RatingChip(label: "MC", value: "\(Int(v))", color: .green,
-                                    url: RatingSiteLink.metacritic(title: result.title)))
+                                    url: RatingSiteLink.metacritic(title: result.title), iconName: "rating-metacritic"))
         }
         return chips
     }

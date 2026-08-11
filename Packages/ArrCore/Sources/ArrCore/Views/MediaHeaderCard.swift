@@ -14,12 +14,16 @@ public struct RatingChip {
     /// When set, the pill becomes a link to the rating's home page
     /// (IMDb title, TMDB record, RT/Metacritic search, …).
     let url: URL?
+    /// Asset name of the service's brand icon (in `ServiceIcons.xcassets`) —
+    /// shown in place of the text `label` when present.
+    let iconName: String?
 
-    public init(label: String, value: String, color: Color, url: URL? = nil) {
+    public init(label: String, value: String, color: Color, url: URL? = nil, iconName: String? = nil) {
         self.label = label
         self.value = value
         self.color = color
         self.url = url
+        self.iconName = iconName
     }
 }
 
@@ -436,9 +440,18 @@ struct RatingPill: View {
 
     private var pill: some View {
         HStack(spacing: 3) {
-            Text(chip.label)
-                .scaledFont(size: 9, weight: .semibold)
-                .foregroundStyle(chip.color)
+            if let iconName = chip.iconName {
+                // Brand mark (full colour, appearance-adaptive) in place of the
+                // text label. Non-template so IMDb yellow / RT red etc. show.
+                Image(iconName, bundle: .module)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(height: 11)
+            } else {
+                Text(chip.label)
+                    .scaledFont(size: 9, weight: .semibold)
+                    .foregroundStyle(chip.color)
+            }
             Text(chip.value)
                 .scaledFont(size: 10, weight: .semibold, monospacedDigit: true)
         }

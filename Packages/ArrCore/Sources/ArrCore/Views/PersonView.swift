@@ -46,9 +46,9 @@ public struct PersonView: View {
     @State private var detailsLoading = true
     @State private var movieRows: [SearchResult] = []
     @State private var seriesRows: [SearchResult] = []
-    @State private var moviesLoading = true
-    @State private var seriesLoading = false
-    @State private var seriesLoaded = false
+    /// Both filmographies load up front (two parallel calls) so switching tabs
+    /// is instant — no per-switch fetch — and the tab counts are known.
+    @State private var filmographyLoading = true
     @State private var kind: Kind = .movie
     @State private var enlargedPoster: URL?
     /// Local title pushes so back returns HERE (owned → detail, new → add).
@@ -196,38 +196,45 @@ public struct PersonView: View {
     // MARK: - Filmography
 
     /// ONE segmented Movies/Series switch — a single capsule track with the
-    /// active half filled that slides between the two, rather than two
-    /// independent pills (which read as separate buttons, not a toggle).
+    /// active half filled that slides between the two. Both filmographies are
+    /// already loaded, so switching is a pure local state flip (no fetch, no
+    /// list-swap animation — that was the jank) with just the indicator sliding.
     private var filmographyToggle: some View {
         HStack(spacing: 0) {
-            segment("person.movies.button", .movie)
-            segment("person.series.button", .series)
+            segment("person.movies.button", count: movieRows.count, .movie)
+            segment("person.series.button", count: seriesRows.count, .series)
         }
         .padding(2)
         .background(Capsule().fill(Color.primary.opacity(0.06)))
         .overlay(Capsule().strokeBorder(Color.primary.opacity(0.10), lineWidth: 0.5))
         .fixedSize()
+        .animation(.smooth(duration: 0.18), value: kind)
     }
 
-    private func segment(_ key: LocalizedStringKey, _ value: Kind) -> some View {
+    private func segment(_ key: LocalizedStringKey, count: Int, _ value: Kind) -> some View {
         let isActive = kind == value
         return Button {
-            guard kind != value else { return }
-            withAnimation(.smooth(duration: 0.2)) { kind = value }
-            if value == .series, !seriesLoaded { Task { await loadSeries() } }
+            kind = value
         } label: {
-            Text(key, bundle: .module)
-                .scaledFont(size: 11, weight: .semibold)
-                .foregroundStyle(isActive ? AnyShapeStyle(.primary) : AnyShapeStyle(.secondary))
-                .padding(.horizontal, 16)
-                .padding(.vertical, 5)
-                .background {
-                    if isActive {
-                        Capsule().fill(Color.primary.opacity(0.14))
-                            .matchedGeometryEffect(id: "personKindSel", in: kindNS)
-                    }
+            HStack(spacing: 4) {
+                Text(key, bundle: .module)
+                // Count appears once the filmography has loaded — "Movies (16)".
+                if !filmographyLoading {
+                    Text(verbatim: "(\(count))")
+                        .foregroundStyle(.tertiary)
                 }
-                .contentShape(Capsule())
+            }
+            .scaledFont(size: 11, weight: .semibold)
+            .foregroundStyle(isActive ? AnyShapeStyle(.primary) : AnyShapeStyle(.secondary))
+            .padding(.horizontal, 14)
+            .padding(.vertical, 5)
+            .background {
+                if isActive {
+                    Capsule().fill(Color.primary.opacity(0.14))
+                        .matchedGeometryEffect(id: "personKindSel", in: kindNS)
+                }
+            }
+            .contentShape(Capsule())
         }
         .buttonStyle(.plain)
     }
@@ -237,9 +244,9 @@ public struct PersonView: View {
     @ViewBuilder
     private var filmography: some View {
         let rows = kind == .movie ? movieRows : seriesRows
-        let loading = kind == .movie ? moviesLoading : seriesLoading
-        if loading && rows.isEmpty {
+        if filmographyLoading && rows.isEmpty {
             SkeletonRows(count: 6)
+                .padding(.horizontal, 12)
         } else if rows.isEmpty {
             Text("person.noTitles.label", bundle: .module)
                 .scaledFont(size: 12)
@@ -323,17 +330,11 @@ public struct PersonView: View {
         async let d = PersonStore.shared.details(personId: ref.tmdbId, tmdbKey: key)
         async let m = PersonStore.shared.movieFilmography(
             personId: ref.tmdbId, tmdbKey: key, radarrConfig: configStore.radarr)
+        async let s = PersonStore.shared.seriesFilmography(personId: ref.tmdbId, tmdbKey: key)
         details = await d
         detailsLoading = false
         movieRows = await m
-        moviesLoading = false
-    }
-
-    private func loadSeries() async {
-        seriesLoading = true
-        seriesRows = await PersonStore.shared.seriesFilmography(
-            personId: ref.tmdbId, tmdbKey: configStore.tmdbApiKey)
-        seriesLoading = false
-        seriesLoaded = true
+        seriesRows = await s
+        filmographyLoading = false
     }
 }

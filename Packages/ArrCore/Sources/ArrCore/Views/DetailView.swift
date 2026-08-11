@@ -850,19 +850,19 @@ public struct DetailView: View {
         var chips: [RatingChip] = []
         if let v = r.imdb?.value {
             chips.append(RatingChip(label: "IMDb", value: String(format: "%.1f", v), color: .yellow,
-                                    url: RatingSiteLink.imdb(id: nil, title: title)))
+                                    url: RatingSiteLink.imdb(id: nil, title: title), iconName: "rating-imdb"))
         }
         if let v = r.tmdb?.value {
             chips.append(RatingChip(label: "TMDB", value: String(format: "%.1f", v), color: .teal,
-                                    url: RatingSiteLink.tmdbMovie(id: detail?.tmdbId, title: title)))
+                                    url: RatingSiteLink.tmdbMovie(id: detail?.tmdbId, title: title), iconName: "rating-tmdb"))
         }
         if let v = r.rottenTomatoes?.value {
             chips.append(RatingChip(label: "RT", value: "\(Int(v))%", color: .red,
-                                    url: RatingSiteLink.rottenTomatoes(title: title)))
+                                    url: RatingSiteLink.rottenTomatoes(title: title), iconName: "rating-rt"))
         }
         if let v = r.metacritic?.value {
             chips.append(RatingChip(label: "MC", value: "\(Int(v))", color: .green,
-                                    url: RatingSiteLink.metacritic(title: title)))
+                                    url: RatingSiteLink.metacritic(title: title), iconName: "rating-metacritic"))
         }
         return chips
     }
@@ -872,8 +872,8 @@ public struct DetailView: View {
         // Sonarr's rating is TVDB-sourced — link to the TVDB series page
         // (the detail payload has no tvdbId here, so it goes via search).
         let title = detail?.title ?? splitTitleAndYear(item.title).title
-        return [RatingChip(label: "Rating", value: String(format: "%.1f", v), color: .yellow,
-                           url: RatingSiteLink.tvdbSeries(id: nil, title: title))]
+        return [RatingChip(label: "TVDB", value: String(format: "%.1f", v), color: .blue,
+                           url: RatingSiteLink.tvdbSeries(id: nil, title: title), iconName: "rating-tvdb")]
     }
 
     // MARK: - Shared header card
