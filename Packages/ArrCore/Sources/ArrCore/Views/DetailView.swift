@@ -363,7 +363,7 @@ public struct DetailView: View {
                 // Delete to the RIGHT of Safari; macOS surfaces it by the CTA.
                 if hasActiveDownloads && canControl {
                     Button { PanelActivation.bringForward(); ctaPendingDelete = true } label: {
-                        Image(systemName: "trash")
+                        Image(systemName: "xmark")
                     }
                     .tint(.red)
                     .help(Text("queue.cancelDownload.button", bundle: .module))
@@ -692,10 +692,10 @@ public struct DetailView: View {
         PauseResumeButton(
             isPaused: f.isPaused,
             progress: f.source == .sonarr ? 1 : f.progress,
-            // Tint by the ACTION, not the status: Pause is neutral gray (the
-            // red trash beside it carries the "careful" signal), Resume green
-            // (universal play colour). Blue stays reserved for Search.
-            tint: f.isPaused ? .green : .gray
+            // Tint by the ACTION, not the status: Pause orange, Resume blue
+            // (Search moved to the header, so blue is free again). Red stays
+            // Cancel's.
+            tint: f.isPaused ? .blue : .orange
         ) {
             if f.isPaused {
                 await viewModel.resume(f)
@@ -719,7 +719,7 @@ public struct DetailView: View {
         Button {
             PanelActivation.bringForward(); ctaPendingDelete = true
         } label: {
-            Image(systemName: "trash")
+            Image(systemName: "xmark")
                 .scaledFont(size: 13, weight: .bold)
                 .frame(width: 26)
                 .padding(.vertical, 7)

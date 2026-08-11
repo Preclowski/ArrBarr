@@ -230,7 +230,7 @@ public actor LidarrClient: ArrAPIClient {
     func fetchAlbumDetails(id: Int) async throws -> LidarrAlbumDetail {
         if DemoMode.isActive {
             try? await Task.sleep(nanoseconds: 250_000_000)
-            if let demo = DemoMocks.lidarrAlbumDetail(id: id) { return demo }
+            if let demo = await DemoMonitorState.apply(album: DemoMocks.lidarrAlbumDetail(id: id)) { return demo }
             throw HTTPError.decoding(NSError(domain: "demo", code: 404))
         }
         guard config.isConfigured else { throw HTTPError.notConfigured }
@@ -292,6 +292,7 @@ public actor LidarrClient: ArrAPIClient {
     func setAlbumMonitored(albumId: Int, monitored: Bool) async throws {
         if DemoMode.isActive {
             try? await Task.sleep(nanoseconds: 400_000_000)
+            await DemoMonitorState.setAlbum(albumId, monitored: monitored)
             return
         }
         guard config.isConfigured else { throw HTTPError.notConfigured }

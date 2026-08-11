@@ -1,11 +1,13 @@
 import Foundation
 
-// Queue fixtures: curated open-source universe (3 movies, 5 episodes / 2 series,
-// 2 albums, 2 cat "nature films"). States are tuned to show off quality upgrades
-// and custom-format scores. No failures/warnings — health stays green.
+// Queue fixtures: curated open-source universe (3 movies — one grabbed twice,
+// 6 episode rows / 2 series — one episode grabbed twice, 2 albums, 2 cat
+// "nature films"). States are tuned to show off quality upgrades,
+// custom-format scores and the duplicate-download handling. No failures /
+// warnings — health stays green.
 
 extension DemoMocks {
-    // MARK: - Radarr (3 movies)
+    // MARK: - Radarr (3 movies, 4 queue rows)
 
     static var radarrQueue: [QueueItem] {
         [
@@ -19,6 +21,21 @@ extension DemoMocks {
                 quality: "Bluray-2160p",
                 formats: ["HDR10+", "DV", "Atmos", "TrueHD", "Remux Tier 01", "HQ Source Group"], score: 1850,
                 client: "SABnzbd", indexer: "DemoUsenet",
+                upgrade: false, posterSeed: "bigbuckbunny", aspect: .portrait,
+                entityId: 201
+            ),
+            // Duplicate grab of Big Buck Bunny — a second, lesser release of
+            // the SAME movie (entityId 201). Shows off the duplicate-download
+            // handling: the detail lists both with per-row controls and the
+            // bottom pause/cancel strip steps aside.
+            queueItem(
+                source: .radarr, id: "demo-radarr-1b",
+                title: "Big Buck Bunny (2008)",
+                releaseName: "Big.Buck.Bunny.2008.1080p.WEB-DL.x264-DEMO",
+                status: .downloading, progress: 0.18,
+                quality: "WEBDL-1080p",
+                formats: ["x264", "DDP 5.1"], score: 240,
+                client: "qBittorrent", indexer: "DemoTracker",
                 upgrade: false, posterSeed: "bigbuckbunny", aspect: .portrait,
                 entityId: 201
             ),
@@ -61,15 +78,33 @@ extension DemoMocks {
         ]
     }
 
-    // MARK: - Sonarr (5 episodes / 2 series)
+    // MARK: - Sonarr (6 queue rows / 2 series)
 
     static var sonarrQueue: [QueueItem] {
         // The Caminandes 2-ep season pack (groups into one row) followed by the
         // three independent Pioneer One S01 rows (distinct downloadIds => do NOT
-        // group). 5 episodes total.
+        // group), plus a duplicate grab of E03.
         var items: [QueueItem] = []
         items.append(contentsOf: caminandesSeasonPack)
         items.append(contentsOf: pioneerOneIndependentEpisodes)
+        // Duplicate grab of Pioneer One S01E03 — a second release of the SAME
+        // episode (own downloadId, so it does NOT group with the row above).
+        // Shows the "2 downloads" badge on the episode row and the per-download
+        // list in the episode detail.
+        items.append(queueItem(
+            source: .sonarr,
+            id: "demo-sonarr-pone-3b",
+            title: "Pioneer One (2010)",
+            subtitle: "S01E03 · Endurance",
+            seasonNumber: 1, episodeNumber: 3, episodeTitle: "Endurance",
+            releaseName: "Pioneer.One.S01E03.1080p.WEB-DL.AV1-DEMO",
+            status: .downloading, progress: 0.09,
+            quality: "WEBDL-1080p", formats: ["AV1", "DDP 5.1"], score: 510,
+            client: "SABnzbd", indexer: "DemoUsenet",
+            upgrade: false,
+            posterSeed: "pioneerone", aspect: .portrait,
+            entityId: 101
+        ))
         return items
     }
 

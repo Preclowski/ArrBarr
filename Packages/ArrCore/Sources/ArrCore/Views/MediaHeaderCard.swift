@@ -38,10 +38,6 @@ public enum RatingSiteLink {
         if let id, id > 0 { return URL(string: "https://www.themoviedb.org/movie/\(id)") }
         return URL(string: "https://www.themoviedb.org/search?query=\(q(title))")
     }
-    public static func tmdbTV(id: Int?, title: String) -> URL? {
-        if let id, id > 0 { return URL(string: "https://www.themoviedb.org/tv/\(id)") }
-        return URL(string: "https://www.themoviedb.org/search/tv?query=\(q(title))")
-    }
     public static func tvdbSeries(id: Int?, title: String) -> URL? {
         if let id, id > 0 { return URL(string: "https://thetvdb.com/dereferrer/series/\(id)") }
         return URL(string: "https://thetvdb.com/search?query=\(q(title))")

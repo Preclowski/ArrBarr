@@ -6,7 +6,7 @@ import SwiftUI
 /// Upgrade/New badge, the compact `DownloadProgressCard` (status word + client
 /// + quality · size over the progress bar), and the custom-format strip with
 /// the score below — except the poster slot on the left holds the row's
-/// pause/resume + cancel controls instead of artwork.
+/// pause/resume ring instead of artwork (cancel lives in the context menu).
 struct MultiRow: View {
     let item: QueueItem
     /// Tap handler — drills the user into the episode detail
@@ -21,17 +21,30 @@ struct MultiRow: View {
     @State private var isHovering = false
     @State private var showHoverPopover = false
     @State private var hoverTask: Task<Void, Never>?
+    #if os(iOS)
+    @State private var showDeleteConfirm = false
+    #endif
 
     private func requestDeleteConfirm() {
-        guard let onDelete else { return }
+        guard onDelete != nil else { return }
+        #if os(macOS)
+        // Panel-wide inline overlay — `.confirmationDialog` steals key focus
+        // from the MenuBarExtra panel, which auto-dismisses it. The listener
+        // lives in PopoverContentView, which only exists on macOS…
         ConfirmCenter.request(PendingConfirm(
             title: "Cancel this download?",
             message: "This will remove the download from the client.",
             confirmLabel: "Cancel download",
             cancelLabel: "Keep download",
             isDestructive: true,
-            onConfirm: onDelete
+            onConfirm: onDelete ?? {}
         ))
+        #else
+        // …so iOS uses the platform-native sheet instead (same pattern as
+        // EpisodeRow) — a ConfirmCenter request there has no listener and
+        // the delete would silently never confirm.
+        showDeleteConfirm = true
+        #endif
     }
 
     private var canPauseResume: Bool {
@@ -96,6 +109,20 @@ struct MultiRow: View {
                 }
             }
         }
+        #if os(iOS)
+        .confirmationDialog(
+            Text("queue.cancelThisDownload.tooltip", bundle: .module),
+            isPresented: $showDeleteConfirm,
+            titleVisibility: .visible
+        ) {
+            Button(role: .destructive) { onDelete?() } label: {
+                Text("queue.cancelDownload.button", bundle: .module)
+            }
+            Button(role: .cancel) {} label: { Text("queue.keepDownload.button", bundle: .module) }
+        } message: {
+            Text("This will remove the download from the client.", bundle: .module)
+        }
+        #endif
         #if os(macOS)
         // Long-hover rich tooltip — same QueueItemTooltip the queue
         // list rows use, anchored to .leading so it floats out on

@@ -58,6 +58,7 @@ extension DemoMocks {
 
     /// Single `/episodefile/{id}` lookup — served from the same map the series
     /// detail already builds, so one episode can't report two different files.
+    /// (Covered by DemoFixtureTests — keep behaviourally identical to the map.)
     public static func episodeFile(id: Int) -> ArrFile? {
         for seriesId in sonarrEpisodeData.keys {
             if let match = sonarrEpisodeFileMap(seriesId: seriesId)[id] {

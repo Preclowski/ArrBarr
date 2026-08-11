@@ -211,7 +211,7 @@ public actor SonarrClient: ArrAPIClient {
     func fetchSeriesDetails(id: Int) async throws -> SonarrSeriesDetail {
         if DemoMode.isActive {
             try? await Task.sleep(nanoseconds: 250_000_000)
-            if let demo = DemoMocks.sonarrSeriesDetail(id: id) { return demo }
+            if let demo = await DemoMonitorState.apply(series: DemoMocks.sonarrSeriesDetail(id: id)) { return demo }
             throw HTTPError.decoding(NSError(domain: "demo", code: 404))
         }
         guard config.isConfigured else { throw HTTPError.notConfigured }
@@ -225,7 +225,7 @@ public actor SonarrClient: ArrAPIClient {
     func fetchEpisodes(seriesId: Int) async throws -> [SonarrEpisodeDetail] {
         if DemoMode.isActive {
             try? await Task.sleep(nanoseconds: 200_000_000)
-            return DemoMocks.sonarrEpisodes(seriesId: seriesId)
+            return await DemoMonitorState.apply(episodes: DemoMocks.sonarrEpisodes(seriesId: seriesId))
         }
         guard config.isConfigured else { throw HTTPError.notConfigured }
         guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
@@ -236,20 +236,6 @@ public actor SonarrClient: ArrAPIClient {
         )
         let data = try await http.get(url, headers: apiHeaders)
         return (try? JSONDecoder().decode([SonarrEpisodeDetail].self, from: data)) ?? []
-    }
-
-    /// Fetches an episode-file record. Sonarr's `/episode/{id}` returns
-    /// `episodeFileId` but not the file payload; the full record (with
-    /// quality / size / customFormats) lives at `/episodefile/{id}`.
-    /// Used by `EpisodeDetailOverlay` to surface CF chips for on-disk
-    /// episodes.
-    func fetchEpisodeFile(id: Int) async throws -> ArrFile? {
-        if DemoMode.isActive { return DemoMocks.episodeFile(id: id) }
-        guard config.isConfigured else { throw HTTPError.notConfigured }
-        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
-        let url = try http.url(base: config.baseURL, path: "\(apiBase)/episodefile/\(id)")
-        let data = try await http.get(url, headers: apiHeaders)
-        return (try? JSONDecoder().decode(ArrFile.self, from: data))
     }
 
     // MARK: - Search commands
@@ -306,6 +292,7 @@ public actor SonarrClient: ArrAPIClient {
     func setSeriesMonitored(seriesId: Int, monitored: Bool) async throws {
         if DemoMode.isActive {
             try? await Task.sleep(nanoseconds: 400_000_000)
+            await DemoMonitorState.setSeries(seriesId, monitored: monitored)
             return
         }
         var series = try await getRawObject("/series/\(seriesId)")
@@ -318,6 +305,7 @@ public actor SonarrClient: ArrAPIClient {
     func setEpisodesMonitored(episodeIds: [Int], monitored: Bool) async throws {
         if DemoMode.isActive {
             try? await Task.sleep(nanoseconds: 400_000_000)
+            await DemoMonitorState.setEpisodes(episodeIds, monitored: monitored)
             return
         }
         try await put("/episode/monitor", body: [
@@ -336,6 +324,7 @@ public actor SonarrClient: ArrAPIClient {
     func setSeasonMonitored(seriesId: Int, seasonNumber: Int, monitored: Bool) async throws {
         if DemoMode.isActive {
             try? await Task.sleep(nanoseconds: 400_000_000)
+            await DemoMonitorState.setSeason(seriesId: seriesId, seasonNumber: seasonNumber, monitored: monitored)
             return
         }
         guard config.isConfigured else { throw HTTPError.notConfigured }

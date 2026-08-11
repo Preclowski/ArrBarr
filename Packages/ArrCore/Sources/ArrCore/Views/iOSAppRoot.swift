@@ -372,6 +372,7 @@ private struct SettingsTab: View {
                     // this by itself), so the in-memory queue edits have to be
                     // wiped alongside the demo profile.
                     DemoQueueState.reset()
+                    DemoMonitorState.reset()
                 }
                 Task { await viewModel.refresh() }
                 return true

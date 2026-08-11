@@ -1,9 +1,10 @@
 import SwiftUI
 
 /// Compact full-popover episode detail. Pushed on top of `DetailView`
-/// when the user taps an `EpisodeRow`. Shows episode metadata + a
-/// destructive Search action when the episode is missing. Closes via
-/// the leading back chevron, the trailing xmark, or Esc.
+/// when the user taps an `EpisodeRow`. Shows episode metadata, the
+/// download/on-disk file section and the header action cluster
+/// (search / bookmark / safari). Closes via the leading back chevron
+/// or Esc.
 public struct EpisodeDetailOverlay: View {
     let episode: SonarrEpisodeDetail
     let seriesTitle: String
@@ -87,10 +88,6 @@ public struct EpisodeDetailOverlay: View {
 
     @State private var isSearching = false
     @State private var ctaPendingDelete = false
-    /// Which of the duplicate downloads a per-block trash tap wants to
-    /// cancel (duplicate-grab path only; the single-download path keeps
-    /// using `ctaPendingDelete` + `queueItem`).
-    @State private var pendingDeleteItem: QueueItem?
     @State private var didSearch = false
     /// Own poster lightbox — set when the user taps the hero poster.
     @State private var enlargedPoster: URL?
@@ -292,7 +289,7 @@ public struct EpisodeDetailOverlay: View {
                 // its own trash, so a toolbar-level one would be ambiguous.
                 if queueItems.count == 1, onDeleteEpisode != nil {
                     Button { PanelActivation.bringForward(); ctaPendingDelete = true } label: {
-                        Image(systemName: "trash")
+                        Image(systemName: "xmark")
                     }
                     .tint(.red)
                     .help(Text("queue.cancelDownload.button", bundle: .module))
@@ -319,24 +316,9 @@ public struct EpisodeDetailOverlay: View {
                 if let q = queueItem { onDeleteEpisode?(q); onClose() }
             }
         )
-        // Per-download cancel for the duplicate-grab path. Deliberately does
-        // NOT close the overlay — the other download is still live and the
-        // list re-derives to show what's left.
-        .inlineConfirm(
-            isPresented: Binding(
-                get: { pendingDeleteItem != nil },
-                set: { if !$0 { pendingDeleteItem = nil } }
-            ),
-            title: "Cancel this download?",
-            message: LocalizedStringKey("This will remove the download from the client."),
-            confirmLabel: "Cancel download",
-            cancelLabel: "Keep download",
-            isDestructive: true,
-            onConfirm: {
-                if let q = pendingDeleteItem { onDeleteEpisode?(q) }
-                pendingDeleteItem = nil
-            }
-        )
+        // (Per-download cancel on the duplicate path confirms inside MultiRow —
+        // ConfirmCenter on macOS, native dialog on iOS — and deliberately does
+        // NOT close the overlay: the other download is still live.)
     }
 
     private var shouldShowCTAStrip: Bool {
@@ -407,7 +389,7 @@ public struct EpisodeDetailOverlay: View {
         // Shared button: prominent glass capsule (Manual-search shape) with a
         // progress ring glyph + in-flight spinner; tint follows status.
         // Action tint, not status tint — see DetailView.pauseResumeProminent.
-        PauseResumeButton(isPaused: q.isPaused, progress: q.progress, tint: q.isPaused ? .green : .gray) {
+        PauseResumeButton(isPaused: q.isPaused, progress: q.progress, tint: q.isPaused ? .blue : .orange) {
             if q.isPaused { await onResumeEpisode?(q) } else { await onPauseEpisode?(q) }
         }
         // The button's progress ring is the only place this episode's
@@ -421,7 +403,7 @@ public struct EpisodeDetailOverlay: View {
     @ViewBuilder
     private var ctaCancelProminent: some View {
         Button { PanelActivation.bringForward(); ctaPendingDelete = true } label: {
-            Image(systemName: "trash")
+            Image(systemName: "xmark")
                 .scaledFont(size: 13, weight: .bold)
                 .frame(width: 26)
                 .padding(.vertical, 7)
@@ -636,40 +618,20 @@ public struct EpisodeDetailOverlay: View {
         }
     }
 
+    /// One duplicate download = one `MultiRow` (the same pause-ring + compact
+    /// card + context-menu row the movie multi-list uses — it was a hand-rolled
+    /// near-copy of it before), plus the episode-specific extras below: the
+    /// warning banner and the release name, which is what actually tells two
+    /// grabs of the same episode apart.
     @ViewBuilder
     private func duplicateDownloadBlock(_ q: QueueItem) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack(alignment: .center, spacing: 10) {
-                // Pause/resume in the poster-control chrome (progress ring,
-                // adaptive tint) — same treatment as the movie multi-list.
-                // Cancel lives in the block's context menu, like queue rows.
-                if q.status == .downloading || q.status == .paused {
-                    Button {
-                        Task {
-                            if q.isPaused { await onResumeEpisode?(q) }
-                            else { await onPauseEpisode?(q) }
-                        }
-                    } label: {
-                        DownloadProgressRing(
-                            systemName: q.isPaused ? "play.fill" : "pause.fill",
-                            progress: q.progress,
-                            diameter: 24,
-                            lineWidth: 2,
-                            tint: .primary
-                        )
-                        .frame(width: 30, height: 30)
-                        .contentShape(Circle())
-                    }
-                    .buttonStyle(.plain)
-                    .help(q.isPaused
-                          ? Text("queue.resume.button", bundle: .module)
-                          : Text("queue.pause.button", bundle: .module))
-                    .accessibilityLabel(q.isPaused
-                                        ? Text("queue.resume.button", bundle: .module)
-                                        : Text("queue.pause.button", bundle: .module))
-                }
-                DownloadProgressCard(item: q, showUpgradeDiff: false, showHeader: true)
-            }
+            MultiRow(
+                item: q,
+                onPause: { Task { await onPauseEpisode?(q) } },
+                onResume: { Task { await onResumeEpisode?(q) } },
+                onDelete: onDeleteEpisode.map { del in { del(q) } }
+            )
             if !q.statusMessages.isEmpty {
                 QueueStatusMessagesBanner(
                     messages: q.statusMessages,
@@ -678,30 +640,6 @@ public struct EpisodeDetailOverlay: View {
                 )
             }
             ReleaseNameBlock(release: q.releaseName)
-        }
-        .contentShape(Rectangle())
-        .contextMenu {
-            if q.status == .downloading || q.status == .paused {
-                Button {
-                    Task {
-                        if q.isPaused { await onResumeEpisode?(q) }
-                        else { await onPauseEpisode?(q) }
-                    }
-                } label: {
-                    if q.isPaused {
-                        Label { Text("queue.resume.button", bundle: .module) } icon: { Image(systemName: "play.fill") }
-                    } else {
-                        Label { Text("queue.pause.button", bundle: .module) } icon: { Image(systemName: "pause.fill") }
-                    }
-                }
-            }
-            if onDeleteEpisode != nil {
-                Button(role: .destructive) {
-                    pendingDeleteItem = q
-                } label: {
-                    Label { Text("queue.removeFromQueue.button", bundle: .module) } icon: { Image(systemName: "trash") }
-                }
-            }
         }
     }
 

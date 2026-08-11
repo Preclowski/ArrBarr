@@ -183,6 +183,7 @@ extension ArrAPIClient {
     func setMovieMonitored(movieId: Int, monitored: Bool) async throws {
         if DemoMode.isActive {
             try? await Task.sleep(nanoseconds: 400_000_000)
+            await DemoMonitorState.setMovie(movieId, monitored: monitored)
             return
         }
         var movie = try await getRawObject("/movie/\(movieId)")
