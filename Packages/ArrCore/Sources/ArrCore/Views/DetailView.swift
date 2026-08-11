@@ -144,6 +144,8 @@ public struct DetailView: View {
     @State private var cast: [CastMember] = []
     @State private var loading = true
     @State private var loadError: String?
+    /// Cast-head → person view push, owned locally so back returns here.
+    @State private var personRef: PersonRef?
 
     /// Poster lightbox — set to a URL when the user taps the header
     /// card's poster, cleared by the xmark button. Renders as an
@@ -231,6 +233,12 @@ public struct DetailView: View {
                 await setTopLevelMonitored(monitored)
             }
         }
+    }
+
+    /// Push the person view for a tapped cast head (both providers stamp the
+    /// TMDB id, so `PersonRef` init only fails for the rare id-less credit).
+    private func openPerson(_ member: CastMember) {
+        if let ref = PersonRef(castMember: member) { personRef = ref }
     }
 
     /// Flip the detail's top-level monitored flag: optimistic local write so
@@ -388,6 +396,8 @@ public struct DetailView: View {
         // there.
         .toolbar(.hidden, for: .windowToolbar)
         #endif
+        // Cast-head → person view, owned here so back returns to this detail.
+        .personDestination($personRef)
         // Season drill-down — push SeasonDetailView (its episodes + that season's
         // search buttons). The bottom search CTA there is unambiguous because the
         // user is *inside* the season.
@@ -771,6 +781,7 @@ public struct DetailView: View {
                     isLoading: loading,
                     header: movieHeader,
                     cast: cast,
+                    onTapPerson: openPerson,
                     arrWebURLForItem: { q in arrWebURL(for: q, in: configStore) },
                     onPauseItem: { q in Task { await viewModel.pause(q); await viewModel.refresh() } },
                     onResumeItem: { q in Task { await viewModel.resume(q); await viewModel.refresh() } },
@@ -799,6 +810,7 @@ public struct DetailView: View {
                     isLoading: loading,
                     header: seriesHeader,
                     cast: cast,
+                    onTapPerson: openPerson,
                     sonarrDetail: $sonarrDetail,
                     sonarrEpisodes: sonarrEpisodes,
                     sonarrEpisodeFiles: sonarrEpisodeFiles,

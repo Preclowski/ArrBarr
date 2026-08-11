@@ -19,12 +19,6 @@ public struct CastMember: Identifiable, Equatable, Sendable {
         self.imageURL = imageURL
         self.tmdbPersonId = tmdbPersonId
     }
-
-    /// The person's TMDB page, when the id is known.
-    public var profileURL: URL? {
-        guard let tmdbPersonId, tmdbPersonId > 0 else { return nil }
-        return URL(string: "https://www.themoviedb.org/person/\(tmdbPersonId)")
-    }
 }
 
 /// Horizontally-scrolling cast strip for detail surfaces — circular headshot
@@ -34,6 +28,10 @@ struct CastRow: View {
     let cast: [CastMember]
     /// Cap — providers return dozens; the first ~16 are the headline cast.
     var limit: Int = 16
+    /// Tapping a head opens the in-app person view. When nil (no host to push
+    /// into) heads are inert. Replaces the old open-TMDB-in-browser behaviour —
+    /// the external links live in the person view now.
+    var onTapPerson: ((CastMember) -> Void)? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -53,8 +51,8 @@ struct CastRow: View {
         }
     }
 
-    /// One head+name+role tile. Becomes a link to the person's TMDB page
-    /// when the id is known (it always is, from both providers).
+    /// One head+name+role tile. Opens the in-app person view when a tap
+    /// handler is wired and the person has a TMDB id; inert otherwise.
     @ViewBuilder
     private func personTile(_ person: CastMember) -> some View {
         let tile = VStack(spacing: 4) {
@@ -72,8 +70,8 @@ struct CastRow: View {
             }
         }
         .frame(width: 64)
-        if let url = person.profileURL {
-            Button { PlatformURLOpener.open(url) } label: {
+        if let onTapPerson, person.tmdbPersonId != nil {
+            Button { onTapPerson(person) } label: {
                 tile.contentShape(Rectangle())
             }
             .buttonStyle(.plain)

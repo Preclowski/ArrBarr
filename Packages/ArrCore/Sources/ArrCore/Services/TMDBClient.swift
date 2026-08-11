@@ -11,11 +11,59 @@ public struct TMDBPerson: Decodable, Sendable, Equatable {
     public let name: String
     public let knownForDepartment: String?
     public let profilePath: String?
+    /// Ranking signal for "which person did the user mean" — TMDB's own
+    /// relevance/fame score. nil on payloads that don't include it.
+    public let popularity: Double?
 
     enum CodingKeys: String, CodingKey {
-        case id, name
+        case id, name, popularity
         case knownForDepartment = "known_for_department"
         case profilePath = "profile_path"
+    }
+
+    public var profileURL: URL? { TMDBClient.imageURL(path: profilePath, size: "w185") }
+}
+
+/// `/person/{id}` — the biography-bearing detail record. Only the fields the
+/// person view / tooltip render are decoded.
+public struct TMDBPersonDetails: Decodable, Sendable, Equatable {
+    public let id: Int
+    public let name: String
+    public let biography: String?
+    public let birthday: String?
+    public let deathday: String?
+    public let placeOfBirth: String?
+    public let profilePath: String?
+    public let imdbId: String?
+    public let knownForDepartment: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, biography, birthday, deathday
+        case placeOfBirth = "place_of_birth"
+        case profilePath = "profile_path"
+        case imdbId = "imdb_id"
+        case knownForDepartment = "known_for_department"
+    }
+
+    public var profileURL: URL? { TMDBClient.imageURL(path: profilePath, size: "w185") }
+    public var imdbURL: URL? {
+        guard let imdbId, !imdbId.isEmpty else { return nil }
+        return URL(string: "https://www.imdb.com/name/\(imdbId)/")
+    }
+    public var tmdbURL: URL? { URL(string: "https://www.themoviedb.org/person/\(id)") }
+
+    /// Current age (or age at death), computed from `birthday`/`deathday`.
+    public var age: Int? {
+        guard let birthday, let born = Self.date(birthday) else { return nil }
+        let end = deathday.flatMap(Self.date) ?? Date()
+        return Calendar.current.dateComponents([.year], from: born, to: end).year
+    }
+
+    private static func date(_ s: String) -> Date? {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        f.timeZone = TimeZone(identifier: "UTC")
+        return f.date(from: s)
     }
 }
 
@@ -241,6 +289,22 @@ public struct TMDBClient: Sendable {
     private struct TMDBFindResponse: Decodable {
         struct TVResult: Decodable { let id: Int }
         let tv_results: [TVResult]
+    }
+
+    /// `/person/{id}`. Biography is localized by the account's TMDB language;
+    /// when the localized one comes back empty we retry in English so the
+    /// person view isn't blank for non-English locales.
+    public func personDetails(personId: Int) async throws -> TMDBPersonDetails {
+        let details: TMDBPersonDetails = try await get(path: "/person/\(personId)", query: [])
+        if details.biography?.isEmpty ?? true {
+            if let english: TMDBPersonDetails = try? await get(
+                path: "/person/\(personId)",
+                query: [URLQueryItem(name: "language", value: "en-US")]
+            ), !(english.biography?.isEmpty ?? true) {
+                return english
+            }
+        }
+        return details
     }
 
     public func personMovieCredits(personId: Int) async throws -> [TMDBMovieSummary] {

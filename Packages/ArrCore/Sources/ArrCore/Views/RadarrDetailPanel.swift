@@ -16,6 +16,9 @@ struct RadarrDetailPanel<Header: View>: View {
     let header: Header
     /// Cast (from Radarr `/credit`) — horizontal headshot strip under header.
     var cast: [CastMember] = []
+    /// Tapping a cast head opens the person view — the host (DetailView) owns
+    /// the push target.
+    var onTapPerson: ((CastMember) -> Void)? = nil
     let arrWebURLForItem: (QueueItem) -> URL?
     /// Per-item queue actions for the multi-download list (two grabs of the
     /// same movie) — the header CTA only controls the focused row, so each
@@ -31,7 +34,7 @@ struct RadarrDetailPanel<Header: View>: View {
             header
 
             if !cast.isEmpty {
-                CastRow(cast: cast)
+                CastRow(cast: cast, onTapPerson: onTapPerson)
             } else if isLoading {
                 SkeletonCastRow()
             }

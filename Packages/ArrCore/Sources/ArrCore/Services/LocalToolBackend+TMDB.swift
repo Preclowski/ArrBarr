@@ -146,41 +146,16 @@ extension LocalToolBackend {
     // `TMDBSearchMapping` (shared with the person view); these build the
     // library maps that mapping consumes to tag owned results.
 
-    /// Build a `tmdbId → movie.id` map of the Radarr library so TMDB-sourced
-    /// results can be tagged as "owned" without each result paying for its
-    /// own lookup. Returns an empty map if Radarr isn't configured or the
-    /// fetch fails — callers should still proceed (owned status just won't be
-    /// shown). Demo mode handled by RadarrClient.fetchAllMovies.
+    /// `tmdbId → movie.id` for the Radarr library — tags owned TMDB results.
+    /// Thin wrapper over the shared `ArrLibraryMaps` (also used by the person
+    /// view) so the two build the map identically.
     func radarrLibraryByTMDBId() async -> [Int: Int] {
-        guard radarr.isConfigured else { return [:] }
-        let client = RadarrClient(config: radarr)
-        guard let library = try? await client.fetchAllMovies() else { return [:] }
-        var map: [Int: Int] = [:]
-        for rec in library {
-            if let tmdb = rec.tmdbId, let arrId = rec.id {
-                map[tmdb] = arrId
-            }
-        }
-        return map
+        await ArrLibraryMaps.radarrByTMDBId(config: radarr)
     }
 
-    /// Sonarr equivalent: `tvdbId → series.id`. Used by `suggest_titles`
-    /// to tag series the user already has, so card taps route to
-    /// DetailView instead of trying to add a duplicate. TMDB-discover
-    /// series can't use this directly because TMDB-TV ids aren't TVDB
-    /// ids — only flows that resolved through Sonarr's own lookup (with
-    /// real tvdbIds) can cross-reference here.
+    /// `tvdbId → series.id` for the Sonarr library. See `ArrLibraryMaps`.
     func sonarrLibraryByTVDBId() async -> [Int: Int] {
-        guard sonarr.isConfigured else { return [:] }
-        let client = SonarrClient(config: sonarr)
-        guard let library = try? await client.fetchAllSeries() else { return [:] }
-        var map: [Int: Int] = [:]
-        for rec in library {
-            if let tvdb = rec.tvdbId, let arrId = rec.id {
-                map[tvdb] = arrId
-            }
-        }
-        return map
+        await ArrLibraryMaps.sonarrByTVDBId(config: sonarr)
     }
 
     static func formatTMDBSummary(_ results: [SearchResult], kind: String, origin: String) -> String {

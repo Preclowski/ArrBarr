@@ -13,6 +13,8 @@ struct SonarrDetailPanel<Header: View>: View {
     let header: Header
     /// Cast (TMDB — Sonarr has no cast endpoint) — horizontal headshot strip.
     var cast: [CastMember] = []
+    /// Tapping a cast head opens the person view (host owns the push target).
+    var onTapPerson: ((CastMember) -> Void)? = nil
     @Binding var sonarrDetail: SonarrSeriesDetail?
     let sonarrEpisodes: [SonarrEpisodeDetail]
     let sonarrEpisodeFiles: [Int: SonarrEpisodeFile]
@@ -26,7 +28,7 @@ struct SonarrDetailPanel<Header: View>: View {
             header
 
             if !cast.isEmpty {
-                CastRow(cast: cast)
+                CastRow(cast: cast, onTapPerson: onTapPerson)
             } else if isLoading, !configStore.tmdbApiKey.isEmpty {
                 // Series cast comes from TMDB and only with a key (Sonarr has no
                 // cast endpoint). No key → it will never load, so don't pulse a
