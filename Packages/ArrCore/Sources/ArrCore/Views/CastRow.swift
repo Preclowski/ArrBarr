@@ -166,11 +166,17 @@ private struct CastTooltip: View {
                 } else if !loaded {
                     SkeletonLines(count: 2).padding(.top, 1)
                 }
+                Spacer(minLength: 0)
             }
             Spacer(minLength: 0)
         }
         .padding(12)
-        .frame(width: 320)
+        // FIXED size — the async details (age · birthplace + bio) land after
+        // the popover is already up, and letting the card grow to fit them made
+        // NSPopover re-lay-out, which read as a flicker. A fixed box absorbs the
+        // fill-in with no resize; the header sits top-left and the detail lines
+        // populate the reserved space.
+        .frame(width: 320, height: 148, alignment: .topLeading)
         .task {
             guard !loaded, let id = person.tmdbPersonId else { return }
             details = await PersonStore.shared.details(personId: id, tmdbKey: tmdbKey)

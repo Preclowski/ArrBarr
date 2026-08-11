@@ -51,12 +51,18 @@ public struct PersonView: View {
     @State private var seriesLoaded = false
     @State private var kind: Kind = .movie
     @State private var enlargedPoster: URL?
+    /// Local title pushes so back returns HERE (owned → detail, new → add).
+    /// Routing titles through the root `DetailRequest` tore the nav stack down
+    /// to the root, which is what sent "back" to the wrong tab.
+    @State private var titleDetail: QueueItem?
+    @State private var titleAdd: SearchResult?
+    /// Own SearchViewModel for the pushed add panel (it loads quality/root
+    /// options from the configs `setup` supplies).
+    @State private var searchVM = SearchViewModel()
 
     enum Kind: Hashable { case movie, series }
 
     public init(ref: PersonRef) { self.ref = ref }
-
-    private var ownedCount: Int { movieRows.filter { $0.inLibraryArrId != nil }.count }
 
     public var body: some View {
         VStack(spacing: 0) {
@@ -78,12 +84,17 @@ public struct PersonView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
-                    header
-                    filmographyPicker
+                    // Header (photo, bio, external links) and the segmented
+                    // toggle are padded to 14; the filmography rows are
+                    // full-bleed (they self-inset 12) so they don't sit doubly
+                    // indented under the header.
+                    VStack(alignment: .leading, spacing: 14) {
+                        header
+                        filmographyToggle
+                    }
+                    .padding(.horizontal, 14)
                     filmography
-                    footerLinks
                 }
-                .padding(.horizontal, 14)
                 .padding(.vertical, 12)
             }
             .scrollBounceBehavior(.basedOnSize)
@@ -96,7 +107,21 @@ public struct PersonView: View {
         #else
         .toolbar(.hidden, for: .windowToolbar)
         #endif
+        // Local title pushes — owned drills into the detail, a new title opens
+        // the add panel, both popping back to this person view.
+        .navigationDestination(item: $titleDetail) { item in
+            DetailView(item: item, onBack: { titleDetail = nil }, viewModel: QueueViewModel.shared)
+        }
+        .navigationDestination(item: $titleAdd) { result in
+            SearchAddPanel(result: result, viewModel: searchVM) { titleAdd = nil }
+        }
         .task(id: ref.tmdbId) { await loadInitial() }
+        .task {
+            searchVM.setup(
+                radarrConfig: configStore.radarr, sonarrConfig: configStore.sonarr,
+                lidarrConfig: configStore.lidarr, whisparrConfig: configStore.whisparr,
+                tmdbApiKey: configStore.tmdbApiKey)
+        }
     }
 
     // MARK: - Header
@@ -131,14 +156,14 @@ public struct PersonView: View {
                     } else if detailsLoading {
                         SkeletonLines(count: 1)
                     }
-                    if ownedCount > 0 {
-                        Label {
-                            Text(String.localizedStringWithFormat(
-                                NSLocalizedString("person.inLibraryCount", bundle: .module, comment: ""), ownedCount))
-                        } icon: { Image(systemName: "checkmark.circle.fill") }
-                            .scaledFont(size: 11, weight: .medium)
-                            .foregroundStyle(Color.accentColor)
-                            .padding(.top, 1)
+                    // External links live at the top (next to the identity),
+                    // not buried under the filmography.
+                    if let details {
+                        HStack(spacing: 14) {
+                            if let url = details.tmdbURL { externalLink("TMDB", url) }
+                            if let url = details.imdbURL { externalLink("IMDb", url) }
+                        }
+                        .padding(.top, 2)
                     }
                 }
                 Spacer(minLength: 0)
@@ -170,18 +195,21 @@ public struct PersonView: View {
 
     // MARK: - Filmography
 
-    /// Movies / Series toggle in the app's own pill idiom (matching the
-    /// season / disc pill bars) rather than the system segmented control,
-    /// which reads as foreign glass next to the rest of the detail chrome.
-    private var filmographyPicker: some View {
-        HStack(spacing: 6) {
-            kindPill("person.movies.button", .movie)
-            kindPill("person.series.button", .series)
-            Spacer(minLength: 0)
+    /// ONE segmented Movies/Series switch — a single capsule track with the
+    /// active half filled that slides between the two, rather than two
+    /// independent pills (which read as separate buttons, not a toggle).
+    private var filmographyToggle: some View {
+        HStack(spacing: 0) {
+            segment("person.movies.button", .movie)
+            segment("person.series.button", .series)
         }
+        .padding(2)
+        .background(Capsule().fill(Color.primary.opacity(0.06)))
+        .overlay(Capsule().strokeBorder(Color.primary.opacity(0.10), lineWidth: 0.5))
+        .fixedSize()
     }
 
-    private func kindPill(_ key: LocalizedStringKey, _ value: Kind) -> some View {
+    private func segment(_ key: LocalizedStringKey, _ value: Kind) -> some View {
         let isActive = kind == value
         return Button {
             guard kind != value else { return }
@@ -189,16 +217,22 @@ public struct PersonView: View {
             if value == .series, !seriesLoaded { Task { await loadSeries() } }
         } label: {
             Text(key, bundle: .module)
-                .scaledFont(size: 11, weight: isActive ? .semibold : .medium)
-                .foregroundStyle(isActive ? .primary : .secondary)
-                .padding(.horizontal, 12)
+                .scaledFont(size: 11, weight: .semibold)
+                .foregroundStyle(isActive ? AnyShapeStyle(.primary) : AnyShapeStyle(.secondary))
+                .padding(.horizontal, 16)
                 .padding(.vertical, 5)
-                .background(Capsule().fill(isActive ? Color.primary.opacity(0.12) : Color.clear))
-                .overlay(Capsule().strokeBorder(Color.primary.opacity(isActive ? 0 : 0.18), lineWidth: 0.6))
+                .background {
+                    if isActive {
+                        Capsule().fill(Color.primary.opacity(0.14))
+                            .matchedGeometryEffect(id: "personKindSel", in: kindNS)
+                    }
+                }
                 .contentShape(Capsule())
         }
         .buttonStyle(.plain)
     }
+
+    @Namespace private var kindNS
 
     @ViewBuilder
     private var filmography: some View {
@@ -239,7 +273,7 @@ public struct PersonView: View {
             metadataSegments: filmographyMetadata(result),
             titleBadge: owned ? AnyView(InLibraryBadge()) : nil,
             showTitleChevron: false,
-            onTap: { DetailRequest.tap(result) }
+            onTap: { openTitle(result) }
         ) {
             if owned {
                 LinkChevron(size: 10)
@@ -258,19 +292,18 @@ public struct PersonView: View {
         return out
     }
 
-    // MARK: - Footer
-
-    @ViewBuilder
-    private var footerLinks: some View {
-        if let details {
-            HStack(spacing: 14) {
-                if let url = details.tmdbURL { externalLink("TMDB", url) }
-                if let url = details.imdbURL { externalLink("IMDb", url) }
-                Spacer(minLength: 0)
-            }
-            .padding(.top, 2)
+    /// Open a filmography title LOCALLY so back returns to this person view.
+    /// Owned → the detail (via the arr-internal id); new → the add panel.
+    private func openTitle(_ result: SearchResult) {
+        if let arrId = result.inLibraryArrId {
+            titleDetail = DetailRequest.syntheticItem(
+                source: result.source, entityId: arrId, title: result.title)
+        } else {
+            titleAdd = result
         }
     }
+
+    // MARK: - External links
 
     private func externalLink(_ label: String, _ url: URL) -> some View {
         Button { PlatformURLOpener.open(url) } label: {
