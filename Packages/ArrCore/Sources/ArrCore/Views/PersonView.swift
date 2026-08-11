@@ -28,7 +28,9 @@ public extension View {
     /// view. Owned by each surface (not a global) so back returns to the
     /// originating detail and nested pushes don't collide.
     func personDestination(_ ref: Binding<PersonRef?>) -> some View {
-        navigationDestination(item: ref) { PersonView(ref: $0) }
+        navigationDestination(item: ref) { r in
+            PersonView(ref: r, onBack: { ref.wrappedValue = nil })
+        }
     }
 }
 
@@ -40,7 +42,12 @@ public struct PersonView: View {
     let ref: PersonRef
     @EnvironmentObject private var configStore: ConfigStore
     @Environment(\.isDetachedWindow) private var isDetachedWindow
-    @Environment(\.dismiss) private var dismiss
+    /// Explicit pop callback instead of `@Environment(\.dismiss)`: reading
+    /// `dismiss` in a view that also declares `navigationDestination` trips a
+    /// SwiftUI invalidation loop — the DismissAction is re-created every update
+    /// cycle, each re-creation invalidates this view, and the whole nav stack
+    /// re-rendered at ~150 Hz (the person-view jank).
+    let onBack: () -> Void
 
     @State private var details: TMDBPersonDetails?
     @State private var detailsLoading = true
@@ -62,7 +69,10 @@ public struct PersonView: View {
 
     enum Kind: Hashable { case movie, series }
 
-    public init(ref: PersonRef) { self.ref = ref }
+    public init(ref: PersonRef, onBack: @escaping () -> Void = {}) {
+        self.ref = ref
+        self.onBack = onBack
+    }
 
     public var body: some View {
         VStack(spacing: 0) {
@@ -70,7 +80,7 @@ public struct PersonView: View {
             // Detached window / popover draw no NavigationStack chevron — mirror
             // the other detail surfaces and self-draw a back header.
             HStack(spacing: 6) {
-                FloatingBackButton(action: { dismiss() })
+                FloatingBackButton(action: onBack)
                     .keyboardShortcut(.cancelAction)
                 Text(ref.name)
                     .scaledFont(size: 15, weight: .semibold)
