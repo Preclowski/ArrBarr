@@ -66,7 +66,6 @@ private struct CastTile: View {
     @State private var isHovering = false
     @State private var showTooltip = false
     @State private var hoverTask: Task<Void, Never>?
-    @State private var details: TMDBPersonDetails?
     #endif
 
     private var tile: some View {
@@ -101,6 +100,10 @@ private struct CastTile: View {
             }
             .buttonStyle(.plain)
             #if os(macOS)
+            // The anchor owns ONLY `showTooltip`; the tooltip loads its own
+            // details. Keeping the async fetch out of the anchor is what stops
+            // the first-hover flicker — a `details` update here would re-render
+            // the anchor and blink the popover's `isPresented` binding.
             .onHover { hovering in
                 if hovering { NSCursor.pointingHand.push() } else { NSCursor.pop() }
                 isHovering = hovering
@@ -110,16 +113,13 @@ private struct CastTile: View {
                         try? await Task.sleep(nanoseconds: 600_000_000)
                         guard !Task.isCancelled, isHovering else { return }
                         showTooltip = true
-                        if details == nil, let id = person.tmdbPersonId {
-                            details = await PersonStore.shared.details(personId: id, tmdbKey: configStore.tmdbApiKey)
-                        }
                     }
                 } else {
                     showTooltip = false
                 }
             }
             .tooltipPopover(isPresented: $showTooltip, arrowEdge: .top) {
-                CastTooltip(person: person, details: details)
+                CastTooltip(person: person, tmdbKey: configStore.tmdbApiKey)
             }
             #else
             .help(Text(verbatim: person.name))
@@ -136,7 +136,12 @@ private struct CastTile: View {
 /// in `PersonStore`.
 private struct CastTooltip: View {
     let person: CastMember
-    let details: TMDBPersonDetails?
+    let tmdbKey: String
+    /// Loaded HERE, not by the anchor — see the anchor's onHover note. This
+    /// re-renders only the popover content when the fetch lands, so the
+    /// anchor's `isPresented` binding never blinks.
+    @State private var details: TMDBPersonDetails?
+    @State private var loaded = false
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -158,7 +163,7 @@ private struct CastTooltip: View {
                 if let bio = details?.biography, !bio.isEmpty {
                     Text(bio).scaledFont(size: 11).foregroundStyle(.primary.opacity(0.9))
                         .lineLimit(4).fixedSize(horizontal: false, vertical: true).padding(.top, 1)
-                } else if details == nil {
+                } else if !loaded {
                     SkeletonLines(count: 2).padding(.top, 1)
                 }
             }
@@ -166,6 +171,11 @@ private struct CastTooltip: View {
         }
         .padding(12)
         .frame(width: 320)
+        .task {
+            guard !loaded, let id = person.tmdbPersonId else { return }
+            details = await PersonStore.shared.details(personId: id, tmdbKey: tmdbKey)
+            loaded = true
+        }
     }
 
     private var ageBirthplace: String? {
