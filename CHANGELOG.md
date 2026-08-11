@@ -9,6 +9,8 @@ Releases before 0.10.0 are described on the
 
 ## [Unreleased]
 
+## [1.3.0] — 2026-08-12
+
 ### Added
 
 - Person view: tap a cast photo to open an in-app page with bio, photo,
@@ -16,14 +18,35 @@ Releases before 0.10.0 are described on the
   credit role per title).
 - People search: scope filter on the search field plus a `person:` prefix;
   matching a well-known name shows a "Starring" section with their films.
-- Demo mode ships people fixtures, so cast taps and People search work there.
+- Artist view for Lidarr: albums grouped by release type (albums / EPs /
+  singles) in collapsible sections, with per-album download coverage.
+  Tapping an artist anywhere now lands here instead of on a random album.
+- Music search finds albums, not just artists (Music scope). Adding an
+  album creates the artist with only that album monitored.
+- Monitor mode picker when adding an artist (all / future / missing /
+  existing / first / latest album / none).
+- Per-track view with file quality; album view links to the artist.
+- Episodes / Tracks section headers show downloaded-of-total counts.
+- "Existing file" caption over the on-disk file block; the library chip
+  moved up next to the title in every detail view.
 - Edit button in movie / series / artist detail headers: change quality
   profile, root folder and the arr-specific bits (minimum availability,
   series type, metadata profile). Changing the folder moves the files.
+- Empty search results show a message instead of a blank list.
+- Demo mode ships people + artist fixtures.
 
 ### Fixed
 
+- Lidarr queue rows and details regained pause/resume (protocol-name quirk).
+- Lidarr artist images load again (relative remoteUrl quirk).
+- Search scoring: albums no longer shove same-titled movies off the top.
 - Entering the person view no longer slows the whole app down.
+
+### Changed
+
+- Search scope chip "Albums" is now "Music".
+- Detail section headers (Cast / Seasons / Episodes / Tracks) share one
+  style, with item counts.
 
 ## [1.2.1] — 2026-08-11
 
