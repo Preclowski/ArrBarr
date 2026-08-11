@@ -105,14 +105,7 @@ struct TrackDetailOverlay: View {
         if let file {
             VStack(alignment: .leading, spacing: 6) {
                 InLibraryBadge()
-                ExistingFileBanner(
-                    quality: file.quality?.quality?.name,
-                    size: file.size,
-                    customFormatScore: file.customFormatScore,
-                    customFormats: (file.customFormats ?? []).map(\.name),
-                    fileName: nil,
-                    showMetadata: true
-                )
+                ExistingFileBanner(trackFile: file)
             }
         } else if track.hasFile != true {
             Text("search.missing.button", bundle: .module)

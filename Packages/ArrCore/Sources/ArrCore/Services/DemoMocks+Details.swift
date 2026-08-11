@@ -513,7 +513,8 @@ extension DemoMocks {
                     id: 8000 + t.id, albumId: albumId,
                     customFormats: [], customFormatScore: 0,
                     quality: ArrQuality(quality: ArrQuality.ArrQualityName(name: "FLAC")),
-                    size: Int64((t.duration ?? 200_000) * 130)
+                    size: Int64((t.duration ?? 200_000) * 130),
+                    path: "/music/\(t.title ?? "track").flac"
                 )
             }
     }

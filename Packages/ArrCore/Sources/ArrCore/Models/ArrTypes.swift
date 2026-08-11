@@ -308,6 +308,9 @@ public struct LidarrTrackFile: Decodable {
     let customFormatScore: Int?
     let quality: ArrQuality?
     let size: Int64?
+    /// Absolute on-disk path (Lidarr sends no relativePath here) — the
+    /// banner shows just the last component.
+    let path: String?
 }
 
 public struct LidarrCalendarRecord: Decodable {

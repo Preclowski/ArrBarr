@@ -82,6 +82,20 @@ struct ExistingFileBanner: View {
         )
     }
 
+    /// Lidarr `trackfile` variant — same chrome as movie / episode files.
+    /// Lidarr sends an absolute `path` (no relativePath), so trim to the
+    /// filename the same way the episode diff line does.
+    init(trackFile: LidarrTrackFile) {
+        self.init(
+            quality: trackFile.quality?.quality?.name,
+            size: trackFile.size,
+            customFormatScore: trackFile.customFormatScore,
+            customFormats: (trackFile.customFormats ?? []).map(\.name),
+            fileName: trackFile.path.map { URL(fileURLWithPath: $0).lastPathComponent },
+            showMetadata: true
+        )
+    }
+
     public var body: some View {
         // No header label, no inline metadata strip — same chrome as
         // the new-release block above (filename + chip strip). The
