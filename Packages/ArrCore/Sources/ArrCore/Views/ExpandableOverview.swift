@@ -27,12 +27,17 @@ public struct ExpandableOverview: View {
     /// from SwiftUI's text layout.
     private var isTruncated: Bool { fullHeight > clampedHeight + 0.5 }
 
-    /// The disclosure only pays for itself when it hides MORE than its own
-    /// footprint (~one 11pt button row ≈ 18pt). Clipping a single line just
-    /// to render a button of the same height is a net loss — in that case
-    /// the text renders unclamped and no button shows.
+    /// The disclosure only pays for itself when it hides MORE than roughly a
+    /// line and a half — clipping one short line just to render a button of
+    /// the same height is a net loss; the text renders unclamped instead.
+    /// The threshold is derived from the measured 4-line render (÷4 = one
+    /// line) rather than fixed points, so it tracks the user's text scaling —
+    /// a fixed 18pt cutoff mis-fired the button over a few clipped letters
+    /// at larger font sizes.
     private var hiddenOverflowIsWorthAButton: Bool {
-        fullHeight - clampedHeight > 18
+        guard clampedHeight > 0 else { return true }
+        let lineHeight = clampedHeight / 4
+        return fullHeight - clampedHeight > lineHeight * 1.5
     }
 
     /// Show everything: user expanded, or the overflow is too small to be

@@ -265,7 +265,8 @@ public enum DemoMocks {
         minutesAgo: Int, event: HistoryItem.EventType,
         title: String, subtitle: String? = nil,
         sourceTitle: String?,
-        quality: String?, formats: [String], score: Int
+        quality: String?, formats: [String], score: Int,
+        hint: HistoryItem.GroupHint? = nil
     ) -> HistoryItem {
         HistoryItem(
             id: "demo-\(id)",
@@ -277,7 +278,8 @@ public enum DemoMocks {
             sourceTitle: sourceTitle,
             quality: quality,
             customFormats: formats,
-            customFormatScore: score
+            customFormatScore: score,
+            groupHint: hint
         )
     }
 

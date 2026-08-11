@@ -352,19 +352,21 @@ struct LidarrHistoryDecodingTests {
     }
 
     /// Lidarr spells its import event `trackFileImported`, which is neither
-    /// of the names Radarr and Sonarr use. The raw value is asserted here
-    /// rather than the parsed one — `EventType.parse` maps only the
-    /// movie/episode spellings today.
+    /// of the names Radarr and Sonarr use — `EventType.parse` maps it to
+    /// `.imported` so per-track rows can fold into album batches.
     @Test("An import event decodes with Lidarr's own event name")
     func importEventName() throws {
         let json = """
         {"page":1,"pageSize":50,"totalRecords":1,"records":[
           {"id": 78, "sourceTitle": "Example Artist - Example Album [FLAC]",
-           "date": "2026-07-19T22:11:00Z", "eventType": "trackFileImported"}
+           "downloadId": "abc123", "date": "2026-07-19T22:11:00Z",
+           "eventType": "trackFileImported"}
         ]}
         """
         let page = try JSONDecoder().decode(ArrQueuePage<LidarrHistoryRecord>.self, from: Data(json.utf8))
         #expect(page.records.first?.eventType == "trackFileImported")
+        #expect(page.records.first?.downloadId == "abc123")
+        #expect(HistoryItem.EventType.parse(page.records.first?.eventType) == .imported)
     }
 
     @Test("A history record with nothing but an id decodes")

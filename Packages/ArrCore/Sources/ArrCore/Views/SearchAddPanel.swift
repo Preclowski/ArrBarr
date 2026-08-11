@@ -246,30 +246,23 @@ public struct SearchAddPanel: View {
         }
     }
 
-    /// Fetch the cast from TMDB (movie: id is the TMDB id; series: resolve the
-    /// tvdbId → TMDB id via `/find`). Supplementary — silent on failure / no key.
+    /// Fetch the cast via the shared `CastProvider`. Supplementary — silent on
+    /// failure / no key. The result's `id` carries the TMDB movie id for
+    /// movies and the TVDB series id for series (see `SearchResult`), which is
+    /// exactly what each cast path keys on.
     private func loadCast() async {
-        let key = configStore.tmdbApiKey
-        guard !key.isEmpty else { return }
-        guard result.source == .radarr || result.source == .sonarr else { return }
+        guard !configStore.tmdbApiKey.isEmpty else { return }
         castLoading = true
         defer { castLoading = false }
-        let client = TMDBClient(apiKey: key)
-        do {
-            let credits: TMDBCredits
-            switch result.source {
-            case .radarr:
-                credits = try await client.movieCredits(movieId: result.id)
-            case .sonarr:
-                guard let tmdbId = try await client.tvIdFromTVDB(result.id) else { return }
-                credits = try await client.tvCredits(tvId: tmdbId)
-            default:
-                return  // lidarr / whisparr: no TMDB cast
-            }
-            let members = CastMember.from(tmdbCast: credits.cast)
-            await MainActor.run { cast = members }
-        } catch {
-            // Cast is supplementary; ignore lookup failures.
+        switch result.source {
+        case .radarr, .whisparr:
+            cast = await CastProvider.movieCast(
+                radarrMovieId: nil, tmdbId: result.id, configStore: configStore)
+        case .sonarr:
+            cast = await CastProvider.seriesCast(
+                tmdbId: nil, tvdbId: result.id, demoSeriesId: nil, configStore: configStore)
+        case .lidarr:
+            break  // no TMDB cast for music
         }
     }
 

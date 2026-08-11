@@ -322,6 +322,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             StoreManager.shared.dismissPaywall()
         }
         .environmentObject(configStore)
+        // Standalone scene → self-inject the font-scale preset.
+        .appFontScale(configStore)
         let hosting = NSHostingController(rootView: view)
         let win = NSWindow(contentViewController: hosting)
         win.title = String(localized: "Control", bundle: .arrCore)
@@ -397,6 +399,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.addDownloadWindow?.close()
         }
         .environmentObject(configStore)
+        // Standalone scene → self-inject the font-scale preset (see
+        // `appFontScale`) or every scaledFont here silently renders at 1.0.
+        .appFontScale(configStore)
 
         let hosting = NSHostingController(rootView: view)
         let win = NSWindow(contentViewController: hosting)
@@ -651,6 +656,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 self?.welcomeWindow?.performClose(nil)
             }
         ).environmentObject(configStore)
+        // Standalone scene → self-inject the font-scale preset.
+        .appFontScale(configStore)
 
         let hosting = NSHostingController(rootView: view)
         let win = NSWindow(contentViewController: hosting)

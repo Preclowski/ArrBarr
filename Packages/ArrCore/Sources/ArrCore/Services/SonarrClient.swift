@@ -189,22 +189,35 @@ public actor SonarrClient: ArrAPIClient {
 
     private static func unifyHistory(_ r: SonarrHistoryRecord) -> HistoryItem? {
         guard let dateStr = r.date, let date = parseArrDate(dateStr) else { return nil }
+        let eventType = HistoryItem.EventType.parse(r.eventType)
         var subtitle: String?
+        var groupHint: HistoryItem.GroupHint?
         if let ep = r.episode, let s = ep.seasonNumber, let e = ep.episodeNumber {
             let code = String(format: "S%02dE%02d", s, e)
             subtitle = (ep.title?.isEmpty == false) ? "\(code) · \(ep.title!)" : code
+            // A season pack imports as one row per episode, all sharing a
+            // downloadId (one release → one group, one quality). Tie them
+            // together so history shows the season once; the folded row swaps
+            // the per-episode code for a season label.
+            if eventType == .imported, let batch = r.downloadId ?? r.sourceTitle {
+                groupHint = .init(
+                    key: "\(batch)|s\(s)",
+                    collapsedSubtitle: String(format: String(localized: "detail.seasonLld.label", bundle: .module), s)
+                )
+            }
         }
         return HistoryItem(
             id: "sonarr-h-\(r.id)",
             source: .sonarr,
             date: date,
-            eventType: HistoryItem.EventType.parse(r.eventType),
+            eventType: eventType,
             title: r.series?.title ?? r.sourceTitle ?? "Unknown",
             subtitle: subtitle,
             sourceTitle: r.sourceTitle,
             quality: r.quality?.name,
             customFormats: (r.customFormats ?? []).map(\.name),
-            customFormatScore: r.customFormatScore ?? 0
+            customFormatScore: r.customFormatScore ?? 0,
+            groupHint: groupHint
         )
     }
 

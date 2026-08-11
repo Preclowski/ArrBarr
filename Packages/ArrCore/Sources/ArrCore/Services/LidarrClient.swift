@@ -212,17 +212,27 @@ public actor LidarrClient: ArrAPIClient {
         catch { throw HTTPError.decoding(error) }
         return page.records.compactMap { r in
             guard let dateStr = r.date, let date = parseArrDate(dateStr) else { return nil }
+            let eventType = HistoryItem.EventType.parse(r.eventType)
+            // Lidarr logs one `trackFileImported` row per track; tie the rows
+            // of one download+album together so history can show the album
+            // once. The subtitle is already the album title, so no override.
+            var groupHint: HistoryItem.GroupHint?
+            if eventType == .imported, let albumId = r.albumId,
+               let batch = r.downloadId ?? r.sourceTitle {
+                groupHint = .init(key: "\(batch)|album-\(albumId)")
+            }
             return HistoryItem(
                 id: "lidarr-h-\(r.id)",
                 source: .lidarr,
                 date: date,
-                eventType: HistoryItem.EventType.parse(r.eventType),
+                eventType: eventType,
                 title: r.artist?.artistName ?? r.sourceTitle ?? "Unknown",
                 subtitle: r.album?.title,
                 sourceTitle: r.sourceTitle,
                 quality: r.quality?.name,
                 customFormats: (r.customFormats ?? []).map(\.name),
-                customFormatScore: r.customFormatScore ?? 0
+                customFormatScore: r.customFormatScore ?? 0,
+                groupHint: groupHint
             )
         }
     }

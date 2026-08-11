@@ -505,7 +505,7 @@ extension DemoMocks {
     }
 
     /// Series cast, keyed by demo series entityId. Backs the demo branch of
-    /// `DetailView.fetchSeriesCast` (Sonarr has no `/credit` endpoint, so this
+    /// `CastProvider.seriesCast` (Sonarr has no `/credit` endpoint, so this
     /// stands in for the TMDB lookup the live app would do).
     public static func sonarrSeriesCast(seriesId: Int) -> [CastMember] {
         sonarrCast[seriesId] ?? []

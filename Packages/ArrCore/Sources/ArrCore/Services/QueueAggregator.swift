@@ -190,7 +190,7 @@ public final class QueueAggregator: QueueDataProviding {
             case .lidarr: items = try await lidarrClient(for: configStore.lidarr).fetchHistory()
             case .whisparr: items = try await whisparrClient(for: configStore.whisparr).fetchHistory()
             }
-            return HistoryResult(items: items, error: nil)
+            return HistoryResult(items: HistoryItem.collapsingImportBatches(items), error: nil)
         } catch {
             let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
             return HistoryResult(items: [], error: message)

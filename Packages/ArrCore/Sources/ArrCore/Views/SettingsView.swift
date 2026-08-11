@@ -205,32 +205,37 @@ public struct SettingsView: View {
                     Toggle(isOn: $configStore.aiKnowsAboutWhisparr) { Text("settings.aiKnowsAboutWhisparr.button", bundle: .module) }
                 }
             }
-            Section {
-                SecureField(text: $configStore.tmdbApiKey,
-                            prompt: Text(verbatim: "v4 Read Access Token")) {
-                    Text("settings.tmdbReadAccessToken.button", bundle: .module)
-                }
-                .apiKeyField()
-                if !configStore.tmdbApiKey.isEmpty {
-                    ApiKeyTestButton(test: {
-                        try await TMDBClient(apiKey: configStore.tmdbApiKey).testConnection()
-                    }, service: .tmdb)
-                }
-                if let url = URL(string: "https://www.themoviedb.org/settings/api") {
-                    Link(destination: url) {
-                        Label { Text("settings.getAFreeTmdb.button", bundle: .module) } icon: { Image(systemName: "link") }
-                            .font(.caption)
-                    }
-                }
-            } header: {
-                Text("settings.discovery.button", bundle: .module)
-            } footer: {
-                Text(configStore.tmdbEnabled
-                     ? String(localized: "settings.chatCanSearchBy.tooltip", bundle: .module)
-                     : String(localized: "settings.addATmdbKey.tooltip", bundle: .module))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+        }
+    }
+
+    /// TMDB key — lives under General (not AI): the key powers cast strips,
+    /// discovery and the upcoming people features, not just the assistant.
+    private var tmdbSection: some View {
+        Section {
+            SecureField(text: $configStore.tmdbApiKey,
+                        prompt: Text(verbatim: "v4 Read Access Token")) {
+                Text("settings.tmdbReadAccessToken.button", bundle: .module)
             }
+            .apiKeyField()
+            if !configStore.tmdbApiKey.isEmpty {
+                ApiKeyTestButton(test: {
+                    try await TMDBClient(apiKey: configStore.tmdbApiKey).testConnection()
+                }, service: .tmdb)
+            }
+            if let url = URL(string: "https://www.themoviedb.org/settings/api") {
+                Link(destination: url) {
+                    Label { Text("settings.getAFreeTmdb.button", bundle: .module) } icon: { Image(systemName: "link") }
+                        .font(.caption)
+                }
+            }
+        } header: {
+            Text("settings.discovery.button", bundle: .module)
+        } footer: {
+            Text(configStore.tmdbEnabled
+                 ? String(localized: "settings.chatCanSearchBy.tooltip", bundle: .module)
+                 : String(localized: "settings.addATmdbKey.tooltip", bundle: .module))
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
     }
 
@@ -828,6 +833,7 @@ public struct SettingsView: View {
             // section shows.
             upcomingSection
             needsYouSection
+            tmdbSection
             // No theme picker on iOS — it always follows the system
             // appearance (forced in ConfigStore).
             // iOS has no "Show warnings" toggle and no refresh-interval
@@ -1019,6 +1025,7 @@ public struct SettingsView: View {
             // Media-managers page, which lists the same arrs.
             upcomingSection
             needsYouSection
+            tmdbSection
             Section {
                 Picker(selection: $configStore.foregroundInterval) {
                     ForEach(ConfigStore.foregroundIntervalOptions, id: \.self) { interval in

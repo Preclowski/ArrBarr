@@ -555,7 +555,7 @@ public final class QueueViewModel {
 
     func fetchHistory(for source: QueueItem.Source) async -> HistoryResult {
         if DemoMode.isActive {
-            return HistoryResult(items: DemoMocks.history(for: source), error: nil)
+            return HistoryResult(items: HistoryItem.collapsingImportBatches(DemoMocks.history(for: source)), error: nil)
         }
         return await aggregator.fetchHistory(for: source)
     }

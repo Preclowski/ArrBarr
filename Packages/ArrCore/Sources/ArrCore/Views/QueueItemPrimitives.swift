@@ -253,6 +253,19 @@ public struct QueueStatusMessagesBanner: View {
     /// doesn't vanish. +0.5 slop for sub-pixel text-layout rounding.
     private var isTruncated: Bool { fullHeight > clampedHeight + 0.5 }
 
+    /// Same rule as `ExpandableOverview`: the disclosure only pays for itself
+    /// when it hides more than ~1.5 lines. Line height is derived from the
+    /// measured collapsed render so the threshold tracks font scaling.
+    private var hiddenOverflowIsWorthAButton: Bool {
+        guard clampedHeight > 0 else { return true }
+        let lineHeight = clampedHeight / CGFloat(collapsedLineLimit)
+        return fullHeight - clampedHeight > lineHeight * 1.5
+    }
+
+    private var showsFullText: Bool {
+        expanded || (isTruncated && !hiddenOverflowIsWorthAButton)
+    }
+
     public var body: some View {
         // Warning icon dropped: the status pill rendered immediately
         // above already carries the triangle — repeating it here was
@@ -263,12 +276,12 @@ public struct QueueStatusMessagesBanner: View {
                 .scaledFont(size: 11)
                 .foregroundStyle(.primary)
                 .lineSpacing(2)
-                .lineLimit(expanded ? nil : collapsedLineLimit)
+                .lineLimit(showsFullText ? nil : collapsedLineLimit)
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(alignment: .topLeading) { heightProbes }
 
-            if isTruncated {
+            if isTruncated && hiddenOverflowIsWorthAButton {
                 Button {
                     withAnimation(.smooth(duration: 0.18)) { expanded.toggle() }
                 } label: {

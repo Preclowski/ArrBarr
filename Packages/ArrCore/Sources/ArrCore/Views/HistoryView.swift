@@ -184,6 +184,10 @@ public struct HistoryRowView: View {
                 HStack(spacing: 3) {
                     Text(LocalizedStringKey(item.eventType.displayName))
                         .foregroundStyle(eventTint)
+                    if let count = groupedCountText {
+                        SeparatorDot()
+                        Text(count).foregroundStyle(.secondary)
+                    }
                     if let q = item.quality, !q.isEmpty {
                         SeparatorDot()
                         Text(q).foregroundStyle(.tertiary)
@@ -208,6 +212,14 @@ public struct HistoryRowView: View {
         .help(tooltip)
     }
 
+    /// "12 tracks" / "8 episodes" on a folded import batch; nil on plain rows.
+    private var groupedCountText: String? {
+        guard item.groupedCount > 1 else { return nil }
+        let unitKey = item.source == .lidarr ? "unit.tracks" : "unit.episodes"
+        return String.localizedStringWithFormat(
+            NSLocalizedString(unitKey, bundle: .module, comment: ""), item.groupedCount)
+    }
+
     private var eventTint: Color {
         switch item.eventType {
         case .grabbed: return .blue
@@ -227,6 +239,7 @@ public struct HistoryRowView: View {
     private var tooltip: String {
         var lines = [item.title]
         if let sub = item.subtitle { lines.append(sub) }
+        if let count = groupedCountText { lines.append(count) }
         if let src = item.sourceTitle { lines.append(src) }
         lines.append("")
         lines.append(item.date.formatted(date: .abbreviated, time: .shortened))

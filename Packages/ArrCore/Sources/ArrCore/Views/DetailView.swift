@@ -940,7 +940,8 @@ public struct DetailView: View {
                 async let file = (try? client.fetchMovieFile(movieId: entityId)) ?? nil
                 radarrDetail = try await detail
                 radarrMovieFile = await file
-                await fetchMovieCast(movieId: entityId)
+                cast = await CastProvider.movieCast(
+                    radarrMovieId: entityId, tmdbId: radarrDetail?.tmdbId, configStore: configStore)
             case .sonarr:
                 let client = SonarrClient(config: configStore.sonarr)
                 async let d = client.fetchSeriesDetails(id: entityId)
@@ -949,7 +950,9 @@ public struct DetailView: View {
                 sonarrDetail = try await d
                 sonarrEpisodes = try await eps
                 sonarrEpisodeFiles = await files
-                await fetchSeriesCast(seriesId: entityId, tmdbId: sonarrDetail?.tmdbId)
+                cast = await CastProvider.seriesCast(
+                    tmdbId: sonarrDetail?.tmdbId, tvdbId: sonarrDetail?.tvdbId,
+                    demoSeriesId: entityId, configStore: configStore)
             case .lidarr:
                 let client = LidarrClient(config: configStore.lidarr)
                 async let a = client.fetchAlbumDetails(id: entityId)
@@ -965,41 +968,6 @@ public struct DetailView: View {
         }
     }
 
-    /// Movie cast straight from Radarr's `/credit` endpoint — Radarr stores
-    /// it, so NO TMDB key is required (resolves the "key is AI-only" mismatch
-    /// for movies).
-    private func fetchMovieCast(movieId: Int) async {
-        // Demo Radarr is enabled but has a blank baseURL (mocks, no real host),
-        // so isConfigured is false — gate on demo too or demo movies show no cast.
-        guard DemoMode.isActive || configStore.radarr.isConfigured else { return }
-        let credits = (try? await RadarrClient(config: configStore.radarr).fetchCredits(movieId: movieId)) ?? []
-        var members = CastMember.from(radarrCredits: credits)
-        // Radarr frequently has NO credits for unreleased / upcoming movies, so
-        // the upcoming detail showed an empty cast. Fall back to TMDB when a key
-        // and the movie's tmdbId are available.
-        if members.isEmpty, !DemoMode.isActive {
-            let key = configStore.tmdbApiKey
-            if !key.isEmpty, let tmdbId = radarrDetail?.tmdbId, tmdbId > 0,
-               let tmdb = try? await TMDBClient(apiKey: key).movieCredits(movieId: tmdbId) {
-                members = CastMember.from(tmdbCast: tmdb.cast)
-            }
-        }
-        cast = members
-    }
-
-    /// Series cast from TMDB — Sonarr has no `/credit` endpoint, so this is
-    /// the only source and it needs a configured TMDB key + the series'
-    /// tmdbId. No-op otherwise (row stays hidden).
-    private func fetchSeriesCast(seriesId: Int, tmdbId: Int?) async {
-        if DemoMode.isActive {
-            cast = DemoMocks.sonarrSeriesCast(seriesId: seriesId)
-            return
-        }
-        let key = configStore.tmdbApiKey
-        guard !key.isEmpty, let tmdbId, tmdbId > 0 else { return }
-        guard let credits = try? await TMDBClient(apiKey: key).tvCredits(tvId: tmdbId) else { return }
-        cast = CastMember.from(tmdbCast: credits.cast)
-    }
 }
 
 extension View {

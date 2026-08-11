@@ -339,6 +339,7 @@ public struct SonarrHistoryRecord: Decodable {
     let episodeId: Int?
     let seriesId: Int?
     let sourceTitle: String?
+    let downloadId: String?
     let date: String?
     let eventType: String?
     let quality: ArrQuality?
@@ -353,6 +354,7 @@ public struct LidarrHistoryRecord: Decodable {
     let albumId: Int?
     let artistId: Int?
     let sourceTitle: String?
+    let downloadId: String?
     let date: String?
     let eventType: String?
     let quality: ArrQuality?

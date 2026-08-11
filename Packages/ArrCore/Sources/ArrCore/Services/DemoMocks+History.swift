@@ -34,6 +34,24 @@ extension DemoMocks {
         ]
     }
 
+    /// Per-episode rows of one imported Caminandes season pack — the view
+    /// model folds them into a single "Season 1 · N episodes" history row.
+    private static var sonarrSeasonPackImports: [HistoryItem] {
+        let episodes = ["E01 · Llama Drama", "E02 · Gran Dillama", "E03 · Llamigos"]
+        let hint = HistoryItem.GroupHint(
+            key: "demo-caminandes-s01|s1",
+            collapsedSubtitle: String(format: String(localized: "detail.seasonLld.label", bundle: .module), 1)
+        )
+        return episodes.enumerated().map { idx, title in
+            historyItem(.sonarr, id: "sh-pack-\(idx)", minutesAgo: 180 + idx, event: .imported,
+                        title: "Caminandes (2013)",
+                        subtitle: "S01\(title)",
+                        sourceTitle: "Caminandes.S01.1080p.WEB-DL.x264-DEMO",
+                        quality: "WEB-DL 1080p", formats: ["AMZN", "x264"], score: 640,
+                        hint: hint)
+        }
+    }
+
     static var sonarrHistory: [HistoryItem] {
         [
             historyItem(.sonarr, id: "sh1", minutesAgo: 5, event: .grabbed,
@@ -46,6 +64,7 @@ extension DemoMocks {
                         subtitle: "S01E02 · Earthfall",
                         sourceTitle: "Pioneer.One.S01E02.720p.HDTV.x264-DEMO",
                         quality: "HDTV-720p", formats: ["x264"], score: 180),
+        ] + sonarrSeasonPackImports + [
             historyItem(.sonarr, id: "sh3", minutesAgo: 320, event: .imported,
                         title: "Caminandes (2013)",
                         subtitle: "S01E01 · Llama Drama",
@@ -61,12 +80,21 @@ extension DemoMocks {
                         subtitle: "Ghosts I-IV · Upgrade — FLAC",
                         sourceTitle: "Nine.Inch.Nails-Ghosts.I-IV-FLAC-2008-DEMO",
                         quality: "FLAC", formats: ["Lossless", "24bit"], score: 320),
-            historyItem(.lidarr, id: "lh2", minutesAgo: 600, event: .imported,
+        ] + bradSucksAlbumImports
+    }
+
+    /// Per-track rows of one imported album — folded into a single
+    /// "Out of It · N tracks" history row by the view model.
+    private static var bradSucksAlbumImports: [HistoryItem] {
+        let hint = HistoryItem.GroupHint(key: "demo-brad-sucks-out-of-it|album-1")
+        return (0..<11).map { idx in
+            historyItem(.lidarr, id: "lh-track-\(idx)", minutesAgo: 600 + idx, event: .imported,
                         title: "Brad Sucks",
                         subtitle: "Out of It",
                         sourceTitle: "Brad.Sucks-Out.of.It-MP3-DEMO",
-                        quality: "MP3-320", formats: [], score: 0),
-        ]
+                        quality: "MP3-320", formats: [], score: 0,
+                        hint: hint)
+        }
     }
 
     static var whisparrHistory: [HistoryItem] {

@@ -44,7 +44,7 @@ extension LocalToolBackend {
             return (lhs.year ?? 0) > (rhs.year ?? 0)
         }
         let libraryMap = await radarrLibraryByTMDBId()
-        let results = Self.tmdbMoviesToSearchResults(ranked.prefix(25), libraryMap: libraryMap)
+        let results = TMDBSearchMapping.movies(ranked.prefix(25), libraryMap: libraryMap)
         guard !results.isEmpty else {
             return ToolCallOutput(text: "TMDB returned no movie credits for personId \(personId).")
         }
@@ -67,7 +67,7 @@ extension LocalToolBackend {
             if lp != rp { return lp > rp }
             return (lhs.year ?? 0) > (rhs.year ?? 0)
         }
-        let results = Self.tmdbTVToSearchResults(ranked.prefix(25))
+        let results = TMDBSearchMapping.series(ranked.prefix(25))
         guard !results.isEmpty else {
             return ToolCallOutput(text: "TMDB returned no TV credits for personId \(personId).")
         }
@@ -94,7 +94,7 @@ extension LocalToolBackend {
             genreIds: genreIds, startYear: startYear, endYear: endYear, sortBy: resolvedSort
         )
         let libraryMap = await radarrLibraryByTMDBId()
-        let results = Self.tmdbMoviesToSearchResults(movies.prefix(25), libraryMap: libraryMap)
+        let results = TMDBSearchMapping.movies(movies.prefix(25), libraryMap: libraryMap)
         guard !results.isEmpty else {
             return ToolCallOutput(text: "TMDB returned no movies matching that filter.")
         }
@@ -126,7 +126,7 @@ extension LocalToolBackend {
         let shows = try await client.discoverTV(
             genreIds: genreIds, startYear: startYear, endYear: endYear, sortBy: resolvedSort
         )
-        let results = Self.tmdbTVToSearchResults(shows.prefix(25))
+        let results = TMDBSearchMapping.series(shows.prefix(25))
         guard !results.isEmpty else {
             return ToolCallOutput(text: "TMDB returned no series matching that filter.")
         }
@@ -140,38 +140,11 @@ extension LocalToolBackend {
         return ToolCallOutput(text: text, rich: .searchSeriesResults(results))
     }
 
-    // MARK: - TMDB → SearchResult adapters
-
-    /// Build `SearchResult`s the rest of the UI already knows how to render
-    /// (poster carousel, tap → SearchAddPanel for adds). Movie `id` carries
-    /// the tmdbId — Radarr's add path takes it as-is. `libraryMap` maps
-    /// tmdbId → Radarr movie id so already-owned results get tagged with
-    /// `inLibraryArrId` — the UI then routes the tap to DetailView instead
-    /// of the add flow.
-    static func tmdbMoviesToSearchResults(
-        _ movies: some Sequence<TMDBMovieSummary>,
-        libraryMap: [Int: Int] = [:]
-    ) -> [SearchResult] {
-        movies.map { m in
-            SearchResult(
-                id: m.id,
-                foreignId: String(m.id),
-                title: m.title,
-                subtitle: nil,
-                year: m.year,
-                rating: m.voteAverage,
-                imdb: nil, rottenTomatoes: nil, metacritic: nil,
-                overview: m.overview,
-                runtime: nil,
-                genres: TMDBGenres.movieNames(for: m.genreIds ?? []),
-                network: nil,
-                certification: nil,
-                posterURL: TMDBClient.imageURL(path: m.posterPath),
-                source: .radarr,
-                inLibraryArrId: libraryMap[m.id]
-            )
-        }
-    }
+    // MARK: - Library ownership maps
+    //
+    // The TMDB summary → SearchResult mapping itself lives in
+    // `TMDBSearchMapping` (shared with the person view); these build the
+    // library maps that mapping consumes to tag owned results.
 
     /// Build a `tmdbId → movie.id` map of the Radarr library so TMDB-sourced
     /// results can be tagged as "owned" without each result paying for its
@@ -208,31 +181,6 @@ extension LocalToolBackend {
             }
         }
         return map
-    }
-
-    /// TV path is fuzzier: Sonarr indexes by tvdbId, but TMDB exposes its own
-    /// tv id. We stash 0 in `id` so the add-tap path falls back to a title
-    /// lookup — Sonarr resolves the right tvdbId at add-time. Good enough for
-    /// popular titles; ambiguous ones surface in SearchAddPanel for review.
-    static func tmdbTVToSearchResults(_ shows: some Sequence<TMDBTVSummary>) -> [SearchResult] {
-        shows.map { s in
-            SearchResult(
-                id: 0,
-                foreignId: "",
-                title: s.name,
-                subtitle: nil,
-                year: s.year,
-                rating: s.voteAverage,
-                imdb: nil, rottenTomatoes: nil, metacritic: nil,
-                overview: s.overview,
-                runtime: nil,
-                genres: TMDBGenres.tvNames(for: s.genreIds ?? []),
-                network: nil,
-                certification: nil,
-                posterURL: TMDBClient.imageURL(path: s.posterPath),
-                source: .sonarr
-            )
-        }
     }
 
     static func formatTMDBSummary(_ results: [SearchResult], kind: String, origin: String) -> String {

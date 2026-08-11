@@ -50,6 +50,10 @@ public struct SonarrSeriesDetail: Decodable {
     /// `var` (not `let`) with a default so it still DECODES while the
     /// memberwise init stays optional for demo mocks.
     var tmdbId: Int? = nil
+    /// TVDB series id. Sonarr always ships this (it keys on TVDB); it's the
+    /// fallback for resolving TMDB cast when `tmdbId` is absent — TMDB's
+    /// `/find?external_source=tvdb_id` maps it to the tmdb tv id.
+    var tvdbId: Int? = nil
     let title: String
     let year: Int?
     let overview: String?
