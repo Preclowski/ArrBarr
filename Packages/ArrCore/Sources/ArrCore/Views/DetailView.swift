@@ -269,6 +269,23 @@ public struct DetailView: View {
     }
 
     public var body: some View {
+        // Lidarr ARTIST items (search tap on an in-library artist, post-add
+        // navigation, chat library card) get the artist surface — this view's
+        // own lidarr path treats `entityId` as an ALBUM id and would fetch
+        // `/album/{artistId}`, landing on an unrelated album.
+        if item.isLidarrArtistLookup {
+            LidarrArtistView(
+                item: item,
+                onBack: onBack,
+                originLabel: originLabel,
+                viewModel: viewModel
+            )
+        } else {
+            detailBody
+        }
+    }
+
+    private var detailBody: some View {
         ZStack {
             VStack(spacing: 0) {
                 header

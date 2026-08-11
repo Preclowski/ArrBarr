@@ -7,6 +7,21 @@ All notable changes to ArrBarr are documented here. The format follows
 Releases before 0.10.0 are described on the
 [Releases page](https://github.com/Preclowski/ArrBarr/releases).
 
+## [Unreleased]
+
+### Added
+
+- Person view: tap a cast photo to open an in-app page with bio, photo,
+  external links and the full filmography (movies / series, owned marked,
+  credit role per title).
+- People search: scope filter on the search field plus a `person:` prefix;
+  matching a well-known name shows a "Starring" section with their films.
+- Demo mode ships people fixtures, so cast taps and People search work there.
+
+### Fixed
+
+- Entering the person view no longer slows the whole app down.
+
 ## [1.2.1] — 2026-08-11
 
 ### Added

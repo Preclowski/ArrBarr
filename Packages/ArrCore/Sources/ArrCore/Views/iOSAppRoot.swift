@@ -146,7 +146,7 @@ private struct QueueTab: View {
         if configStore.radarr.isVisible { out.append(.movie) }
         if configStore.sonarr.isVisible { out.append(.series) }
         if configStore.lidarr.isVisible { out.append(.album) }
-        if !configStore.tmdbApiKey.isEmpty { out.append(.people) }
+        if !configStore.tmdbApiKey.isEmpty || DemoMode.isActive { out.append(.people) }
         if configStore.whisparr.isVisible { out.append(.whisparr) }
         return out
     }

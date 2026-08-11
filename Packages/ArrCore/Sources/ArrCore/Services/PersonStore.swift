@@ -32,6 +32,7 @@ public final class PersonStore {
     /// Biography / age / birthplace / external ids. nil without a TMDB key or
     /// on a failed lookup.
     public func details(personId: Int, tmdbKey key: String) async -> TMDBPersonDetails? {
+        if DemoMode.isActive { return DemoMocks.personDetails(personId: personId) }
         if let hit = cache.details[personId] { touch(personId); return hit }
         if let running = detailTasks[personId] { return await running.value }
         let task = Task<TMDBPersonDetails?, Never> {
@@ -49,6 +50,7 @@ public final class PersonStore {
     /// tagged from the Radarr library. Popularity-desc, year-desc — the same
     /// ordering the chat credits tools use (PersonRelevance refines this later).
     public func movieFilmography(personId: Int, tmdbKey key: String, radarrConfig: ServiceConfig) async -> [SearchResult] {
+        if DemoMode.isActive { return DemoMocks.personMovies(personId: personId) }
         if let hit = cache.movies[personId] { touch(personId); return hit }
         if let running = movieTasks[personId] { return await running.value }
         let task = Task<[SearchResult], Never> {
@@ -70,6 +72,7 @@ public final class PersonStore {
     /// not tvdb ids), so rows stay add-flow; the row resolves its tvdbId lazily
     /// on tap.
     public func seriesFilmography(personId: Int, tmdbKey key: String, sonarrConfig: ServiceConfig) async -> [SearchResult] {
+        if DemoMode.isActive { return DemoMocks.personSeries(personId: personId) }
         if let hit = cache.series[personId] { touch(personId); return hit }
         if let running = seriesTasks[personId] { return await running.value }
         let task = Task<[SearchResult], Never> {

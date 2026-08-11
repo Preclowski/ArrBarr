@@ -75,6 +75,44 @@ public enum DetailRequest {
         )
     }
 
+    /// Synthetic item that opens the Lidarr ARTIST surface instead of the
+    /// album detail. Lidarr's addable/search entity is the artist, so both
+    /// the in-library search tap and the post-add navigation carry an
+    /// artist id — handing that to the album-shaped `DetailView` fetched
+    /// `/album/{artistId}` and landed on an unrelated album. The marker
+    /// lives in the synthetic `id` prefix (see `isLidarrArtistLookup`);
+    /// real queue rows keep `lidarr-<queueId>` ids and are never artists.
+    public static func syntheticArtistItem(
+        artistId: Int,
+        name: String,
+        posterURL: URL? = nil,
+        posterRequiresAuth: Bool = true
+    ) -> QueueItem {
+        QueueItem(
+            id: "detail-lookup-lidarr-artist-\(artistId)",
+            source: .lidarr,
+            arrQueueId: 0,
+            downloadId: nil,
+            downloadProtocol: .unknown,
+            downloadClient: nil,
+            title: name,
+            subtitle: nil,
+            status: .unknown,
+            progress: 0,
+            sizeTotal: 0,
+            sizeLeft: 0,
+            timeLeft: nil,
+            customFormats: [],
+            customFormatScore: 0,
+            quality: nil,
+            isUpgrade: false,
+            contentSlug: nil,
+            entityId: artistId,
+            posterURL: posterURL,
+            posterRequiresAuth: posterRequiresAuth
+        )
+    }
+
     public static func post(_ item: QueueItem) {
         NotificationCenter.default.post(name: .arrBarrOpenDetail, object: nil, userInfo: ["item": item])
     }
@@ -90,6 +128,18 @@ public enum DetailRequest {
     /// the user gets the same hero card + form as the `+` flow.
     public static func tap(_ result: SearchResult) {
         if let arrId = result.inLibraryArrId {
+            // Lidarr search results are ARTISTS (artist/lookup), so the
+            // arr-internal id is an artist id — route to the artist view,
+            // not the album-shaped DetailView.
+            if result.source == .lidarr {
+                post(syntheticArtistItem(
+                    artistId: arrId,
+                    name: result.title,
+                    posterURL: result.posterURL,
+                    posterRequiresAuth: false
+                ))
+                return
+            }
             post(syntheticItem(
                 source: result.source,
                 entityId: arrId,
@@ -104,6 +154,17 @@ public enum DetailRequest {
         } else {
             SearchAddRequest.post(result)
         }
+    }
+}
+
+public extension QueueItem {
+    /// True for the synthetic "open Lidarr artist" items built by
+    /// `DetailRequest.syntheticArtistItem`. `DetailView` branches on this to
+    /// render the artist surface (album list) instead of treating `entityId`
+    /// as an album id. Real queue rows carry `lidarr-<queueId>` ids, so the
+    /// prefix can't collide.
+    var isLidarrArtistLookup: Bool {
+        source == .lidarr && id.hasPrefix("detail-lookup-lidarr-artist-")
     }
 }
 

@@ -243,7 +243,7 @@ struct QueueTabContent: View {
         if radarrConfigured { out.append(.movie) }
         if sonarrConfigured { out.append(.series) }
         if lidarrConfigured { out.append(.album) }
-        if !configStore.tmdbApiKey.isEmpty { out.append(.people) }
+        if !configStore.tmdbApiKey.isEmpty || DemoMode.isActive { out.append(.people) }
         if whisparrConfigured { out.append(.whisparr) }
         return out
     }

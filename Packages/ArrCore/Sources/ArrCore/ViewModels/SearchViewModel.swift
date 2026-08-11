@@ -229,10 +229,12 @@ public final class SearchViewModel {
     /// person rows. All scope → a single confident headliner + their top
     /// filmography (the "Starring X" section), or nothing.
     private func fetchPeople(scope: SearchScope) async -> (rows: [TMDBPerson], starring: StarringSection?) {
-        guard scope.searchesPeople, !tmdbApiKey.isEmpty else { return ([], nil) }
+        guard scope.searchesPeople, DemoMode.isActive || !tmdbApiKey.isEmpty else { return ([], nil) }
         let term = peoplePrefixTerm ?? query.trimmingCharacters(in: .whitespaces)
         guard term.count >= 2 else { return ([], nil) }
-        let raw = (try? await TMDBClient(apiKey: tmdbApiKey).searchPerson(query: term)) ?? []
+        let raw = DemoMode.isActive
+            ? DemoMocks.searchPeople(query: term)
+            : (try? await TMDBClient(apiKey: tmdbApiKey).searchPerson(query: term)) ?? []
         let ranked = PersonRelevance.rank(raw, query: term)
         if scope == .people {
             return (ranked, nil)
@@ -433,6 +435,18 @@ public final class SearchViewModel {
     /// add still succeeded, we just can't deep-link to it.
     private func navigateToAdded(_ result: SearchResult, source: QueueItem.Source, arrId: Int?) {
         guard let arrId else { return }
+        // Lidarr's POST /artist returns an ARTIST id — route to the artist
+        // view; the album-shaped DetailView would fetch /album/{artistId}
+        // and land on an unrelated album.
+        if source == .lidarr {
+            DetailRequest.post(DetailRequest.syntheticArtistItem(
+                artistId: arrId,
+                name: result.title,
+                posterURL: result.posterURL,
+                posterRequiresAuth: false
+            ))
+            return
+        }
         DetailRequest.post(DetailRequest.syntheticItem(
             source: source,
             entityId: arrId,

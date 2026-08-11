@@ -285,6 +285,18 @@ private struct LibraryRecordCard: View {
         Button {
             guard let entityId else { return }
             let url = images?.posterURL(baseURL: baseURL).0
+            // `.libraryArtists` cards carry an ARTIST id — open the artist
+            // surface, not the album-shaped DetailView.
+            if source == .lidarr {
+                DetailRequest.post(
+                    DetailRequest.syntheticArtistItem(
+                        artistId: entityId,
+                        name: title,
+                        posterURL: url
+                    )
+                )
+                return
+            }
             DetailRequest.post(
                 DetailRequest.syntheticItem(
                     source: source,

@@ -267,6 +267,23 @@ public actor LidarrClient: ArrAPIClient {
         return (try? JSONDecoder().decode([LidarrTrackDetail].self, from: data)) ?? []
     }
 
+    /// Artist-level record for `LidarrArtistView` — the surface search
+    /// results and the post-add navigation land on (Lidarr's addable
+    /// entity is the artist, not an album).
+    func fetchArtistDetails(id: Int) async throws -> LidarrArtistDetail {
+        if DemoMode.isActive {
+            try? await Task.sleep(nanoseconds: 250_000_000)
+            if let demo = DemoMocks.lidarrArtistDetail(id: id) { return demo }
+            throw HTTPError.decoding(NSError(domain: "demo", code: 404))
+        }
+        guard config.isConfigured else { throw HTTPError.notConfigured }
+        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
+        let url = try http.url(base: config.baseURL, path: "/api/v1/artist/\(id)")
+        let data = try await http.get(url, headers: apiHeaders)
+        do { return try JSONDecoder().decode(LidarrArtistDetail.self, from: data) }
+        catch { throw HTTPError.decoding(error) }
+    }
+
     func fetchAllArtists() async throws -> [LidarrLibraryRecord] {
         if DemoMode.isActive { return DemoMocks.lidarrLibrary() }
         guard config.isConfigured else { return [] }
@@ -282,7 +299,7 @@ public actor LidarrClient: ArrAPIClient {
     func fetchArtistAlbums(artistId: Int) async throws -> [LidarrAlbumListRecord] {
         if DemoMode.isActive {
             try? await Task.sleep(nanoseconds: 200_000_000)
-            return []
+            return DemoMocks.lidarrArtistAlbums(artistId: artistId)
         }
         guard config.isConfigured else { throw HTTPError.notConfigured }
         guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }

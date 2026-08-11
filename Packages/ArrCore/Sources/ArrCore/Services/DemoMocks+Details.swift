@@ -69,6 +69,50 @@ extension DemoMocks {
         lidarrTrackData[albumId] ?? []
     }
 
+    /// `/artist/{id}` — assembled from the album fixtures' embedded artists so
+    /// the artist view mirrors whatever the demo albums say.
+    public static func lidarrArtistDetail(id: Int) -> LidarrArtistDetail? {
+        let owned = lidarrDetails.values.filter { $0.artist?.id == id }
+        guard let artist = owned.first?.artist else { return nil }
+        let stats = owned.compactMap(\.statistics)
+        return LidarrArtistDetail(
+            id: id,
+            artistName: artist.artistName,
+            overview: owned
+                .sorted { ($0.releaseDate ?? "") < ($1.releaseDate ?? "") }
+                .first?.overview,
+            genres: Array(Set(owned.flatMap { $0.genres ?? [] })).sorted(),
+            images: artist.images,
+            foreignArtistId: artist.foreignArtistId,
+            statistics: LidarrLibraryStatistics(
+                albumCount: owned.count,
+                trackCount: stats.compactMap(\.trackCount).reduce(0, +),
+                trackFileCount: stats.compactMap(\.trackFileCount).reduce(0, +),
+                sizeOnDisk: stats.compactMap(\.sizeOnDisk).reduce(0, +)
+            ),
+            ratings: nil,
+            monitored: true
+        )
+    }
+
+    /// `/album?artistId=N` — the artist's albums in the slim list shape.
+    public static func lidarrArtistAlbums(artistId: Int) -> [LidarrAlbumListRecord] {
+        lidarrDetails.values
+            .filter { $0.artist?.id == artistId }
+            .sorted { ($0.releaseDate ?? "") > ($1.releaseDate ?? "") }
+            .map { album in
+                LidarrAlbumListRecord(
+                    id: album.id,
+                    title: album.title,
+                    albumType: album.albumType,
+                    releaseDate: album.releaseDate,
+                    monitored: album.monitored,
+                    statistics: album.statistics,
+                    images: album.images
+                )
+            }
+    }
+
     static func image(seed: String, kind: String = "poster") -> ArrImage {
         let url = poster(label: "", seed: seed, w: 220, h: 330)?.absoluteString
         return ArrImage(coverType: kind, url: url, remoteUrl: url)
@@ -482,7 +526,8 @@ extension DemoMocks {
     static var radarrCredits: [Int: [ArrCredit]] {
         [
             203: [ // Tears of Steel — live-action / VFX hybrid (TMDB 133701)
-                castCredit("Derek de Lint",      "Old Thom",  0, "/8fRRmh8EYZBlUtu1Wlop0j22QcP.jpg"),
+                castCredit("Derek de Lint",      "Old Thom",  0, "/8fRRmh8EYZBlUtu1Wlop0j22QcP.jpg",
+                           tmdbId: DemoPerson.derekDeLint.rawValue),
                 castCredit("Sergio Hasselbaink", "Barly",     1, "/6xjL2LqOEURISAzzFLtYsIVmGT1.jpg"),
                 castCredit("Vanja Rukavina",     "Thom",      2, "/4zzhALIIwYvBFmem3dm6nOZg8py.jpg"),
                 castCredit("Denise Rebergen",    "Celia",     3, "/hBJjiMZsz5WaEgCpkUsw7Z0lekD.jpg"),
@@ -493,12 +538,13 @@ extension DemoMocks {
         ]
     }
 
-    static func castCredit(_ name: String, _ character: String, _ order: Int, _ profilePath: String?) -> ArrCredit {
+    static func castCredit(_ name: String, _ character: String, _ order: Int, _ profilePath: String?,
+                           tmdbId: Int? = nil) -> ArrCredit {
         let images = profilePath.map {
             [ArrCredit.Image(coverType: "headshot", url: nil, remoteUrl: tmdbProfileURL($0))]
         }
         return ArrCredit(
-            personName: name, personTmdbId: nil,
+            personName: name, personTmdbId: tmdbId,
             character: character, order: order,
             type: "cast", images: images
         )
@@ -516,17 +562,20 @@ extension DemoMocks {
             101: [ // Pioneer One — BitTorrent-funded live-action drama (TMDB 33050)
                 seriesCast("po-0", "Alexandra Blatt", "Sofie Larson",        nil),
                 seriesCast("po-1", "Laura Graham",    "Jane",                nil),
-                seriesCast("po-2", "James Rich",      "Tom Taylor",          "/oF7kZnQ0HgqXVCPFmU1t03quHr2.jpg"),
+                seriesCast("po-2", "James Rich",      "Tom Taylor",          "/oF7kZnQ0HgqXVCPFmU1t03quHr2.jpg",
+                           tmdbId: DemoPerson.jamesRich.rawValue),
                 seriesCast("po-3", "Einar Gunn",      "Secretary McClellan", "/eV7WLsX07KLND9ZwpqHHEqG8iUl.jpg"),
                 seriesCast("po-4", "Jack Haley",      "Dr. Zachary Walzer",  "/mnH1MyyWZOogI5X6JHMnoEAkxyq.jpg"),
             ],
         ]
     }
 
-    static func seriesCast(_ id: String, _ name: String, _ role: String, _ profilePath: String?) -> CastMember {
+    static func seriesCast(_ id: String, _ name: String, _ role: String, _ profilePath: String?,
+                           tmdbId: Int? = nil) -> CastMember {
         CastMember(
             id: id, name: name, role: role,
-            imageURL: profilePath.flatMap { URL(string: tmdbProfileURL($0)) }
+            imageURL: profilePath.flatMap { URL(string: tmdbProfileURL($0)) },
+            tmdbPersonId: tmdbId
         )
     }
 

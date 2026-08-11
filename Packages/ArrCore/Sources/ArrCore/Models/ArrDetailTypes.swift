@@ -150,6 +150,24 @@ public struct LidarrAlbumListRecord: Decodable, Identifiable, Sendable {
     let releaseDate: String?
     let monitored: Bool?
     let statistics: LidarrAlbumStats?
+    /// Cover art for the artist view's album rows. Absent from the chat
+    /// tool's JSON payload (it re-encodes its own slim shape).
+    let images: [ArrImage]?
+}
+
+/// `/api/v1/artist/{id}` — the artist-level record behind `LidarrArtistView`.
+/// Lidarr's library entity is the artist (albums hang off it), which is why
+/// search results and the add flow land here rather than on an album.
+public struct LidarrArtistDetail: Decodable {
+    public let id: Int
+    let artistName: String
+    let overview: String?
+    let genres: [String]?
+    let images: [ArrImage]?
+    let foreignArtistId: String?
+    let statistics: LidarrLibraryStatistics?
+    let ratings: LidarrDetailRatings?
+    let monitored: Bool?
 }
 
 public struct LidarrTrackDetail: Decodable, Identifiable {
