@@ -1,18 +1,8 @@
 {
   "images": [
     {
-      "filename": "rotten-tomatoes-dark.svg",
+      "filename": "rotten-tomatoes.svg",
       "idiom": "universal"
-    },
-    {
-      "filename": "rotten-tomatoes-light.svg",
-      "idiom": "universal",
-      "appearances": [
-        {
-          "appearance": "luminosity",
-          "value": "dark"
-        }
-      ]
     }
   ],
   "info": {

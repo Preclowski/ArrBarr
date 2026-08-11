@@ -320,7 +320,7 @@ public struct SearchAddPanel: View {
         }
         if let v = result.metacritic {
             chips.append(RatingChip(label: "MC", value: "\(Int(v))", color: .green,
-                                    url: RatingSiteLink.metacritic(title: result.title), iconName: "rating-metacritic"))
+                                    url: RatingSiteLink.metacritic(title: result.title)))
         }
         return chips
     }

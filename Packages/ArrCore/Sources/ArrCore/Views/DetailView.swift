@@ -862,7 +862,7 @@ public struct DetailView: View {
         }
         if let v = r.metacritic?.value {
             chips.append(RatingChip(label: "MC", value: "\(Int(v))", color: .green,
-                                    url: RatingSiteLink.metacritic(title: title), iconName: "rating-metacritic"))
+                                    url: RatingSiteLink.metacritic(title: title)))
         }
         return chips
     }

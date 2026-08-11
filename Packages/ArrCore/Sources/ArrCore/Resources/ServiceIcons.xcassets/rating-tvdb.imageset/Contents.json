@@ -1,18 +1,8 @@
 {
   "images": [
     {
-      "filename": "tvdb-dark.svg",
+      "filename": "tvdb.svg",
       "idiom": "universal"
-    },
-    {
-      "filename": "tvdb-light.svg",
-      "idiom": "universal",
-      "appearances": [
-        {
-          "appearance": "luminosity",
-          "value": "dark"
-        }
-      ]
     }
   ],
   "info": {

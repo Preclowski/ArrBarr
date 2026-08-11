@@ -73,7 +73,10 @@ public final class PersonStore {
         let task = Task<[SearchResult], Never> {
             guard !key.isEmpty else { return [] }
             guard let credits = try? await TMDBClient(apiKey: key).personTVCredits(personId: personId) else { return [] }
-            return TMDBSearchMapping.series(Self.byPopularity(credits))
+            // TMDB tv_credits list one entry per role/appearance, so a recurring
+            // or guest actor shows the SAME series many times (Seth Rogen ×104
+            // Simpsons episodes). Collapse to one row per series id.
+            return TMDBSearchMapping.series(Self.byPopularity(Self.dedupedById(credits)))
         }
         seriesTasks[personId] = task
         let value = await task.value
@@ -91,6 +94,14 @@ public final class PersonStore {
             return (lhs.year ?? 0) > (rhs.year ?? 0)
         }
     }
+    /// One entry per series id (keeping the first — TMDB lists the primary
+    /// billing first). Fixes recurring/guest actors showing a series once per
+    /// episode.
+    private static func dedupedById(_ shows: [TMDBTVSummary]) -> [TMDBTVSummary] {
+        var seen = Set<Int>()
+        return shows.filter { seen.insert($0.id).inserted }
+    }
+
     private static func byPopularity(_ shows: [TMDBTVSummary]) -> [TMDBTVSummary] {
         shows.sorted { lhs, rhs in
             let lp = lhs.popularity ?? 0, rp = rhs.popularity ?? 0

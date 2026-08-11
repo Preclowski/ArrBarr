@@ -1,18 +1,8 @@
 {
   "images": [
     {
-      "filename": "tmdb-dark.svg",
+      "filename": "tmdb.svg",
       "idiom": "universal"
-    },
-    {
-      "filename": "tmdb-light.svg",
-      "idiom": "universal",
-      "appearances": [
-        {
-          "appearance": "luminosity",
-          "value": "dark"
-        }
-      ]
     }
   ],
   "info": {

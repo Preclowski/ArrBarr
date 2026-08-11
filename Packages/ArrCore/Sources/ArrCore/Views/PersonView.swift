@@ -157,13 +157,13 @@ public struct PersonView: View {
                         SkeletonLines(count: 1)
                     }
                     // External links live at the top (next to the identity),
-                    // not buried under the filmography.
+                    // as the services' brand icons.
                     if let details {
-                        HStack(spacing: 14) {
-                            if let url = details.tmdbURL { externalLink("TMDB", url) }
-                            if let url = details.imdbURL { externalLink("IMDb", url) }
+                        HStack(spacing: 10) {
+                            if let url = details.tmdbURL { serviceLink("rating-tmdb", url, "TMDB") }
+                            if let url = details.imdbURL { serviceLink("rating-imdb", url, "IMDb") }
                         }
-                        .padding(.top, 2)
+                        .padding(.top, 3)
                     }
                 }
                 Spacer(minLength: 0)
@@ -200,9 +200,12 @@ public struct PersonView: View {
     /// already loaded, so switching is a pure local state flip (no fetch, no
     /// list-swap animation — that was the jank) with just the indicator sliding.
     private var filmographyToggle: some View {
-        HStack(spacing: 0) {
-            segment("person.movies.button", count: movieRows.count, .movie)
-            segment("person.series.button", count: seriesRows.count, .series)
+        // Movies show "owned/total" (they cross-reference the Radarr library);
+        // series can't be library-tagged from a TMDB tv id, so just the total.
+        let ownedMovies = movieRows.count { $0.inLibraryArrId != nil }
+        return HStack(spacing: 0) {
+            segment("person.movies.button", count: "\(ownedMovies)/\(movieRows.count)", .movie)
+            segment("person.series.button", count: "\(seriesRows.count)", .series)
         }
         .padding(2)
         .background(Capsule().fill(Color.primary.opacity(0.06)))
@@ -211,16 +214,16 @@ public struct PersonView: View {
         .animation(.smooth(duration: 0.18), value: kind)
     }
 
-    private func segment(_ key: LocalizedStringKey, count: Int, _ value: Kind) -> some View {
+    private func segment(_ key: LocalizedStringKey, count: String, _ value: Kind) -> some View {
         let isActive = kind == value
         return Button {
             kind = value
         } label: {
             HStack(spacing: 4) {
                 Text(key, bundle: .module)
-                // Count appears once the filmography has loaded — "Movies (16)".
+                // Count appears once the filmography has loaded — "Movies 11/123".
                 if !filmographyLoading {
-                    Text(verbatim: "(\(count))")
+                    Text(verbatim: count)
                         .foregroundStyle(.tertiary)
                 }
             }
@@ -312,15 +315,21 @@ public struct PersonView: View {
 
     // MARK: - External links
 
-    private func externalLink(_ label: String, _ url: URL) -> some View {
+    /// A brand-icon link to the service's page for this person.
+    private func serviceLink(_ icon: String, _ url: URL, _ accessibility: String) -> some View {
         Button { PlatformURLOpener.open(url) } label: {
-            HStack(spacing: 3) {
-                Text(verbatim: label).scaledFont(size: 12, weight: .medium)
-                Image(systemName: "arrow.up.right.square").scaledFont(size: 10, weight: .medium)
-            }
-            .foregroundStyle(.secondary)
+            Image(icon, bundle: .module)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(height: 16)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .help(Text(verbatim: accessibility))
+        .accessibilityLabel(Text(verbatim: accessibility))
+        #if os(macOS)
+        .onHover { if $0 { NSCursor.pointingHand.push() } else { NSCursor.pop() } }
+        #endif
     }
 
     // MARK: - Loading

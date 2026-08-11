@@ -1,18 +1,8 @@
 {
   "images": [
     {
-      "filename": "imdb-dark.svg",
+      "filename": "imdb.svg",
       "idiom": "universal"
-    },
-    {
-      "filename": "imdb-light.svg",
-      "idiom": "universal",
-      "appearances": [
-        {
-          "appearance": "luminosity",
-          "value": "dark"
-        }
-      ]
     }
   ],
   "info": {
