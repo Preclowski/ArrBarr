@@ -68,17 +68,16 @@ struct RadarrDetailPanel<Header: View>: View {
             // customFormats; fall back to the stripped inline one
             // from /movie/{id} only when the separate fetch failed.
             //
-            // Lead with the same `library` status badge the list rows
-            // wear, so a detail reached from the Upcoming tab shows the
-            // "you already own this" status the way a queue-reached
-            // detail leads with its Downloading/Upgrade status chip.
+            // The `library` chip moved into the hero card next to the
+            // title (DetailView passes it via `titleBadge`) — membership
+            // is a property of the TITLE, not of one file. The block
+            // itself is captioned "Existing file" instead.
             if !hasActiveDownloads {
-                if let file = radarrMovieFile {
-                    InLibraryBadge()
-                    ExistingFileBanner(movieFile: file)
-                } else if let movieFile = radarrDetail?.movieFile {
-                    InLibraryBadge()
-                    ExistingFileBanner(movieFile: movieFile)
+                if let file = radarrMovieFile ?? radarrDetail?.movieFile {
+                    VStack(alignment: .leading, spacing: 6) {
+                        DetailSectionHeader("Existing file")
+                        ExistingFileBanner(movieFile: file)
+                    }
                 }
             }
 

@@ -449,6 +449,12 @@ public struct EpisodeDetailOverlay: View {
                     // wrapping it has no label at all without this.
                     .accessibilityLabel(Text("detail.showPoster.button", bundle: .module))
                 VStack(alignment: .leading, spacing: 6) {
+                    // Library chip up top (title-level fact) — moved here
+                    // from beside the existing-file banner, matching the
+                    // movie/album heroes.
+                    if episode.hasFile == true {
+                        InLibraryBadge()
+                    }
                     // Series title (with year) shows in content as a
                     // drill-in link — the episode's series context. Only
                     // when `onTapSeries` is set (episode opened straight
@@ -579,10 +585,10 @@ public struct EpisodeDetailOverlay: View {
         } else if let q = queueItem {
             queueFileSection(q)
         } else if let existing = episodeFile {
-            // In library (on disk, not downloading) — lead with the same
-            // "library" badge the movie detail wears.
+            // On disk, not downloading. The library chip lives in the hero
+            // now — this block is captioned by what it actually is.
             VStack(alignment: .leading, spacing: 6) {
-                InLibraryBadge()
+                DetailSectionHeader("Existing file")
                 ExistingFileBanner(episodeFile: existing)
             }
         }
@@ -613,7 +619,12 @@ public struct EpisodeDetailOverlay: View {
                 duplicateDownloadBlock(q)
             }
             if let existing = episodeFile, episode.hasFile == true {
-                ExistingFileBanner(episodeFile: existing)
+                // Upgrade target shared by all the duplicate grabs above —
+                // same "Existing file" caption as the idle in-library block.
+                VStack(alignment: .leading, spacing: 6) {
+                    DetailSectionHeader("Existing file")
+                    ExistingFileBanner(episodeFile: existing)
+                }
             }
         }
     }

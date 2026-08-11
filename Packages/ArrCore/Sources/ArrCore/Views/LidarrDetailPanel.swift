@@ -77,7 +77,11 @@ struct LidarrDetailPanel: View {
                 // lines — a dense tracklist; any stack spacing on top read
                 // as unnatural daylight between bare single-line rows.
                 VStack(alignment: .leading, spacing: 6) {
-                    DetailSectionHeader("detail.tracks.button", count: lidarrTracks.count)
+                    DetailSectionHeader(
+                        "detail.tracks.button",
+                        have: lidarrTracks.count { $0.hasFile == true },
+                        total: lidarrTracks.count
+                    )
                     let mediums = Dictionary(grouping: lidarrTracks, by: { $0.mediumNumber ?? 1 })
                         .sorted { $0.key < $1.key }
                     if mediums.count > 1 {
@@ -135,9 +139,17 @@ struct LidarrDetailPanel: View {
                 .buttonStyle(.plain)
                 .help(Text("detail.showPoster.button", bundle: .module))
             VStack(alignment: .leading, spacing: 4) {
-                Text(album?.title ?? item.title)
-                    .scaledFont(size: 15, weight: .semibold)
-                    .lineLimit(2)
+                HStack(spacing: 5) {
+                    Text(album?.title ?? item.title)
+                        .scaledFont(size: 15, weight: .semibold)
+                        .lineLimit(2)
+                    // Library chip — any track file on disk makes the album
+                    // library-owned. Title-level fact, so it rides the title
+                    // (same slot the movie / series heroes use).
+                    if (album?.statistics?.trackFileCount ?? 0) > 0 {
+                        InLibraryBadge()
+                    }
+                }
                 if let artist = album?.artist {
                     // Artist as subtitle — 12pt medium .secondary.
                     // Subordinate to the 15pt album title above but

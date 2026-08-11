@@ -846,7 +846,9 @@ public struct DetailView: View {
                     posterUrl: arrPosterURL(images: radarrDetail?.images, for: item, in: configStore),
                     fallbackSymbol: "film",
                     posterAspect: 2.0/3.0,
-                    metadataLoading: loading
+                    metadataLoading: loading,
+                    titleBadge: (radarrMovieFile ?? radarrDetail?.movieFile) != nil
+                        ? AnyView(InLibraryBadge()) : nil
                 )
                 RadarrDetailPanel(
                     item: item,
@@ -878,7 +880,9 @@ public struct DetailView: View {
                     posterUrl: arrPosterURL(images: sonarrDetail?.images, for: item, in: configStore),
                     fallbackSymbol: "tv",
                     posterAspect: 2.0/3.0,
-                    metadataLoading: loading
+                    metadataLoading: loading,
+                    // Any episode file on disk makes the series library-owned.
+                    titleBadge: sonarrEpisodeFiles.isEmpty ? nil : AnyView(InLibraryBadge())
                 )
                 SonarrDetailPanel(
                     item: item,
@@ -980,7 +984,8 @@ public struct DetailView: View {
         posterUrl: URL?,
         fallbackSymbol: String,
         posterAspect: CGFloat,
-        metadataLoading: Bool = false
+        metadataLoading: Bool = false,
+        titleBadge: AnyView? = nil
     ) -> some View {
         MediaHeaderCard(
             title: title,
@@ -998,10 +1003,9 @@ public struct DetailView: View {
             posterAspect: posterAspect,
             blurred: configStore.shouldBlurPoster(for: item.source),
             trailing: existingTrailer,
-            // Badge moved next to the status pill in
-            // DownloadProgressCard — one consistent location across
-            // list rows + detail surfaces.
-            titleBadge: nil,
+            // Library chip (owned titles) — moved up here from beside the
+            // existing-file banner: membership is a property of the title.
+            titleBadge: titleBadge,
             onPosterTap: { url in
                 withAnimation(.smooth(duration: 0.22)) {
                     enlargedPoster = url ?? item.posterURL

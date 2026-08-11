@@ -401,6 +401,12 @@ func parseProtocol(_ raw: String?) -> QueueItem.DownloadProtocol {
     switch raw?.lowercased() {
     case "usenet": return .usenet
     case "torrent": return .torrent
+    // Lidarr serialises the .NET type name ("TorrentDownloadProtocol" /
+    // "UsenetDownloadProtocol") instead of Radarr/Sonarr's plain form.
+    // An unknown protocol has real consequences downstream — no download
+    // client resolves for the row, so pause/resume disappear everywhere.
+    case "torrentdownloadprotocol": return .torrent
+    case "usenetdownloadprotocol": return .usenet
     default: return .unknown
     }
 }

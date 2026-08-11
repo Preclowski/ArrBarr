@@ -118,11 +118,15 @@ struct ExistingFileBanner: View {
                             .scaledFont(size: 11)
                             .foregroundStyle(.secondary)
                     }
+                    // Score on the trailing edge — the same right-gutter
+                    // slot queue rows and episode rows give it.
                     if let score = customFormatScore, score != 0 {
+                        Spacer(minLength: 6)
                         ScoreLabel(score: score, size: 11)
                             .help(Text("common.customFormatScore.button", bundle: .module))
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
             if let name = fileName, !name.isEmpty {
                 Text(name)

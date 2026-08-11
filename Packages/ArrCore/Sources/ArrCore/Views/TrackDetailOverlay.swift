@@ -89,6 +89,11 @@ struct TrackDetailOverlay: View {
             // context — artist (drill-in link), album, track number + length —
             // mirroring the album hero's hierarchy.
             VStack(alignment: .leading, spacing: 4) {
+                // Library chip up top (title-level fact), matching the
+                // movie / episode / album heroes.
+                if file != nil {
+                    InLibraryBadge()
+                }
                 if let artist {
                     if let onOpenArtist {
                         Button { onOpenArtist(artist) } label: {
@@ -136,8 +141,10 @@ struct TrackDetailOverlay: View {
     @ViewBuilder
     private var fileSection: some View {
         if let file {
+            // Library chip lives in the hero now; the block is captioned
+            // by what it shows — same as movie / episode details.
             VStack(alignment: .leading, spacing: 6) {
-                InLibraryBadge()
+                DetailSectionHeader("Existing file")
                 ExistingFileBanner(trackFile: file)
             }
         } else if track.hasFile != true {

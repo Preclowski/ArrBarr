@@ -106,7 +106,11 @@ struct SeasonDetailView: View {
                     // Header + rows share a 6pt stack (the CastRow rhythm) so
                     // the label hugs its list instead of floating 12pt above.
                     VStack(alignment: .leading, spacing: 6) {
-                        DetailSectionHeader("queue.episodes.button", count: episodes.count)
+                        DetailSectionHeader(
+                        "queue.episodes.button",
+                        have: episodes.count { $0.hasFile == true },
+                        total: episodes.count
+                    )
                         VStack(alignment: .leading, spacing: 4) {
                             ForEach(episodes.sorted(by: { ($0.episodeNumber ?? 0) < ($1.episodeNumber ?? 0) })) { ep in
                                 EpisodeRow(

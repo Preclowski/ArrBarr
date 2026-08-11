@@ -51,6 +51,15 @@ struct ProtocolParsingTests {
         #expect(parseProtocol("Torrent") == .torrent)
     }
 
+    /// Lidarr's /queue serialises the .NET type name, not the plain form
+    /// Radarr/Sonarr use. `.unknown` here silently strips pause/resume from
+    /// every Lidarr row (no download client resolves for the protocol).
+    @Test("Parses Lidarr's .NET type-name spellings")
+    func lidarrTypeNames() {
+        #expect(parseProtocol("TorrentDownloadProtocol") == .torrent)
+        #expect(parseProtocol("UsenetDownloadProtocol") == .usenet)
+    }
+
     @Test("Returns unknown for nil or unrecognized")
     func unknown() {
         #expect(parseProtocol(nil) == .unknown)
