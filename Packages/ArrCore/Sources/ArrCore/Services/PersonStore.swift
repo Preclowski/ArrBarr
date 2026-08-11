@@ -67,7 +67,7 @@ public final class PersonStore {
     /// TV filmography. Series can't be library-tagged from TMDB tv ids (they're
     /// not tvdb ids), so rows stay add-flow; the row resolves its tvdbId lazily
     /// on tap.
-    public func seriesFilmography(personId: Int, tmdbKey key: String) async -> [SearchResult] {
+    public func seriesFilmography(personId: Int, tmdbKey key: String, sonarrConfig: ServiceConfig) async -> [SearchResult] {
         if let hit = cache.series[personId] { touch(personId); return hit }
         if let running = seriesTasks[personId] { return await running.value }
         let task = Task<[SearchResult], Never> {
@@ -76,7 +76,20 @@ public final class PersonStore {
             // TMDB tv_credits list one entry per role/appearance, so a recurring
             // or guest actor shows the SAME series many times (Seth Rogen ×104
             // Simpsons episodes). Collapse to one row per series id.
-            return TMDBSearchMapping.series(Self.byPopularity(Self.dedupedById(credits)))
+            let rows = TMDBSearchMapping.series(Self.byPopularity(Self.dedupedById(credits)))
+            // Series carry a TMDB tv id, not a tvdb id, so the usual id-based
+            // library map can't tag them. Match on normalized title + year
+            // against the Sonarr library instead — a local join, no per-row
+            // network calls — so an owned series (e.g. The Simpsons) drills into
+            // its detail instead of offering to add a duplicate.
+            let owned = await Self.sonarrOwnershipByTitle(config: sonarrConfig)
+            guard !owned.isEmpty else { return rows }
+            return rows.map { r in
+                if let arrId = owned[Self.titleYearKey(title: r.title, year: r.year)] {
+                    return r.withInLibraryArrId(arrId)
+                }
+                return r
+            }
         }
         seriesTasks[personId] = task
         let value = await task.value
@@ -100,6 +113,24 @@ public final class PersonStore {
     private static func dedupedById(_ shows: [TMDBTVSummary]) -> [TMDBTVSummary] {
         var seen = Set<Int>()
         return shows.filter { seen.insert($0.id).inserted }
+    }
+
+    /// `(normalized title, year) → Sonarr series id` for the whole library, so
+    /// TMDB series (which have no tvdb id) can still be tagged as owned by a
+    /// local title/year join.
+    private static func sonarrOwnershipByTitle(config: ServiceConfig) async -> [String: Int] {
+        guard config.isConfigured else { return [:] }
+        guard let library = try? await SonarrClient(config: config).fetchAllSeries() else { return [:] }
+        var map: [String: Int] = [:]
+        for rec in library {
+            guard let title = rec.title, let arrId = rec.id else { continue }
+            map[titleYearKey(title: title, year: rec.year)] = arrId
+        }
+        return map
+    }
+
+    private static func titleYearKey(title: String, year: Int?) -> String {
+        "\(SearchRelevance.normalize(title))|\(year ?? 0)"
     }
 
     private static func byPopularity(_ shows: [TMDBTVSummary]) -> [TMDBTVSummary] {

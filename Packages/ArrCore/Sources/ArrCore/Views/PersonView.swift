@@ -83,7 +83,12 @@ public struct PersonView: View {
             #endif
 
             ScrollView {
-                VStack(alignment: .leading, spacing: 14) {
+                // A LazyVStack — with the rows' ForEach as DIRECT children — so
+                // a prolific actor's 100+ titles materialise only as they scroll
+                // into view. An eager VStack rendered (and hover-tracked) every
+                // row at once, which pegged the main thread the whole time the
+                // person view was open.
+                LazyVStack(alignment: .leading, spacing: 14) {
                     // Header (photo, bio, external links) and the segmented
                     // toggle are padded to 14; the filmography rows are
                     // full-bleed (they self-inset 12) so they don't sit doubly
@@ -93,7 +98,21 @@ public struct PersonView: View {
                         filmographyToggle
                     }
                     .padding(.horizontal, 14)
-                    filmography
+
+                    let rows = kind == .movie ? movieRows : seriesRows
+                    if filmographyLoading && rows.isEmpty {
+                        SkeletonRows(count: 6).padding(.horizontal, 12)
+                    } else if rows.isEmpty {
+                        Text("person.noTitles.label", bundle: .module)
+                            .scaledFont(size: 12)
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                            .padding(.vertical, 12)
+                    } else {
+                        ForEach(rows) { result in
+                            PersonFilmographyRow(result: result, onTap: { openTitle(result) })
+                        }
+                    }
                 }
                 .padding(.vertical, 12)
             }
@@ -203,9 +222,10 @@ public struct PersonView: View {
         // Movies show "owned/total" (they cross-reference the Radarr library);
         // series can't be library-tagged from a TMDB tv id, so just the total.
         let ownedMovies = movieRows.count { $0.inLibraryArrId != nil }
+        let ownedSeries = seriesRows.count { $0.inLibraryArrId != nil }
         return HStack(spacing: 0) {
             segment("person.movies.button", count: "\(ownedMovies)/\(movieRows.count)", .movie)
-            segment("person.series.button", count: "\(seriesRows.count)", .series)
+            segment("person.series.button", count: "\(ownedSeries)/\(seriesRows.count)", .series)
         }
         .padding(2)
         .background(Capsule().fill(Color.primary.opacity(0.06)))
@@ -244,64 +264,6 @@ public struct PersonView: View {
 
     @Namespace private var kindNS
 
-    @ViewBuilder
-    private var filmography: some View {
-        let rows = kind == .movie ? movieRows : seriesRows
-        if filmographyLoading && rows.isEmpty {
-            SkeletonRows(count: 6)
-                .padding(.horizontal, 12)
-        } else if rows.isEmpty {
-            Text("person.noTitles.label", bundle: .module)
-                .scaledFont(size: 12)
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, alignment: .center)
-                .padding(.vertical, 12)
-        } else {
-            VStack(spacing: 2) {
-                ForEach(rows) { result in
-                    filmographyRow(result)
-                }
-            }
-        }
-    }
-
-    /// A filmography row. Reuses the shared `PosterMetadataRow` primitive
-    /// directly rather than `SearchResultRow`: the person tab already says
-    /// movie-vs-series, so the source badge would be redundant, and one
-    /// affordance (chevron for owned / plus for new) reads cleaner than the
-    /// search row's title-chevron + trailing pair. The second line carries
-    /// rating and genres — the year lives in the title.
-    private func filmographyRow(_ result: SearchResult) -> some View {
-        let owned = result.inLibraryArrId != nil
-        return PosterMetadataRow(
-            posterURL: result.posterURL,
-            posterAPIKey: nil,
-            posterSize: CGSize(width: 30, height: 44),
-            posterBlurred: configStore.shouldBlurPoster(for: result.source),
-            posterFallbackSymbol: result.source.symbol,
-            title: result.year.map { "\(result.title) (\($0))" } ?? result.title,
-            metadataSegments: filmographyMetadata(result),
-            titleBadge: owned ? AnyView(InLibraryBadge()) : nil,
-            showTitleChevron: false,
-            onTap: { openTitle(result) }
-        ) {
-            if owned {
-                LinkChevron(size: 10)
-            } else {
-                Image(systemName: "plus")
-                    .scaledFont(size: 11, weight: .medium)
-                    .foregroundStyle(.secondary)
-            }
-        }
-    }
-
-    private func filmographyMetadata(_ result: SearchResult) -> [String] {
-        var out: [String] = []
-        if let r = result.rating { out.append(String(format: "★%.1f", r)) }
-        out.append(contentsOf: result.genres.prefix(2))
-        return out
-    }
-
     /// Open a filmography title LOCALLY so back returns to this person view.
     /// Owned → the detail (via the arr-internal id); new → the add panel.
     private func openTitle(_ result: SearchResult) {
@@ -315,18 +277,26 @@ public struct PersonView: View {
 
     // MARK: - External links
 
-    /// A brand-icon link to the service's page for this person.
-    private func serviceLink(_ icon: String, _ url: URL, _ accessibility: String) -> some View {
+    /// A brand-icon chip linking to the service's page — icon + text label in a
+    /// bordered pill (matching the rating chips' shape).
+    private func serviceLink(_ icon: String, _ url: URL, _ label: String) -> some View {
         Button { PlatformURLOpener.open(url) } label: {
-            Image(icon, bundle: .module)
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(height: 16)
-                .contentShape(Rectangle())
+            HStack(spacing: 4) {
+                Image(icon, bundle: .module)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(height: 12)
+                Text(verbatim: label)
+                    .scaledFont(size: 10, weight: .semibold)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
+            .overlay(Capsule().strokeBorder(Color.primary.opacity(0.18), lineWidth: 0.75))
+            .contentShape(Capsule())
         }
         .buttonStyle(.plain)
-        .help(Text(verbatim: accessibility))
-        .accessibilityLabel(Text(verbatim: accessibility))
+        .accessibilityLabel(Text(verbatim: label))
         #if os(macOS)
         .onHover { if $0 { NSCursor.pointingHand.push() } else { NSCursor.pop() } }
         #endif
@@ -339,11 +309,83 @@ public struct PersonView: View {
         async let d = PersonStore.shared.details(personId: ref.tmdbId, tmdbKey: key)
         async let m = PersonStore.shared.movieFilmography(
             personId: ref.tmdbId, tmdbKey: key, radarrConfig: configStore.radarr)
-        async let s = PersonStore.shared.seriesFilmography(personId: ref.tmdbId, tmdbKey: key)
+        async let s = PersonStore.shared.seriesFilmography(
+            personId: ref.tmdbId, tmdbKey: key, sonarrConfig: configStore.sonarr)
         details = await d
         detailsLoading = false
         movieRows = await m
         seriesRows = await s
         filmographyLoading = false
+    }
+}
+
+/// A single filmography row. Its own view (not a `func`) so each carries the
+/// hover state for the macOS tooltip — and, inside a `LazyVStack`, only visible
+/// rows exist, so the hover trackers don't add up. Reuses the shared
+/// `PosterMetadataRow` (no source badge — the tab says the kind) and the
+/// existing `SearchResultTooltip`.
+private struct PersonFilmographyRow: View {
+    let result: SearchResult
+    let onTap: () -> Void
+    @EnvironmentObject private var configStore: ConfigStore
+    #if os(macOS)
+    @State private var isHovering = false
+    @State private var showTooltip = false
+    @State private var hoverTask: Task<Void, Never>?
+    private var hasTooltip: Bool {
+        (result.overview.map { !$0.isEmpty } ?? false) || !result.genres.isEmpty
+    }
+    #endif
+
+    private var owned: Bool { result.inLibraryArrId != nil }
+
+    private var metadata: [String] {
+        var out: [String] = []
+        if let r = result.rating { out.append(String(format: "★%.1f", r)) }
+        out.append(contentsOf: result.genres.prefix(2))
+        return out
+    }
+
+    var body: some View {
+        let row = PosterMetadataRow(
+            posterURL: result.posterURL,
+            posterAPIKey: nil,
+            posterSize: CGSize(width: 30, height: 44),
+            posterBlurred: configStore.shouldBlurPoster(for: result.source),
+            posterFallbackSymbol: result.source.symbol,
+            title: result.year.map { "\(result.title) (\($0))" } ?? result.title,
+            metadataSegments: metadata,
+            titleBadge: owned ? AnyView(InLibraryBadge()) : nil,
+            showTitleChevron: false,
+            onTap: onTap
+        ) {
+            if owned {
+                LinkChevron(size: 10)
+            } else {
+                Image(systemName: "plus")
+                    .scaledFont(size: 11, weight: .medium)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        #if os(macOS)
+        row
+            .onHover { hovering in
+                isHovering = hovering
+                hoverTask?.cancel()
+                if hovering, hasTooltip {
+                    hoverTask = Task { @MainActor in
+                        try? await Task.sleep(nanoseconds: 600_000_000)
+                        if !Task.isCancelled, isHovering { showTooltip = true }
+                    }
+                } else {
+                    showTooltip = false
+                }
+            }
+            .tooltipPopover(isPresented: $showTooltip, arrowEdge: .trailing) {
+                SearchResultTooltip(result: result).environmentObject(configStore)
+            }
+        #else
+        row
+        #endif
     }
 }
