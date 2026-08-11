@@ -55,7 +55,12 @@ public final class PersonStore {
             guard !key.isEmpty else { return [] }
             guard let credits = try? await TMDBClient(apiKey: key).personMovieCredits(personId: personId) else { return [] }
             let libraryMap = await ArrLibraryMaps.radarrByTMDBId(config: radarrConfig)
-            return TMDBSearchMapping.movies(Self.byPopularity(credits), libraryMap: libraryMap)
+            // movie_credits also repeats a film once per role. Duplicates are
+            // identical after mapping, which poisons SwiftUI's ForEach
+            // identity — dedupe by TMDB id like the series facet.
+            var seen = Set<Int>()
+            let unique = Self.byPopularity(credits).filter { seen.insert($0.id).inserted }
+            return TMDBSearchMapping.movies(unique, libraryMap: libraryMap)
         }
         movieTasks[personId] = task
         let value = await task.value

@@ -118,7 +118,7 @@ public struct PersonView: View {
                         // re-diffed the whole stack on every state change, which
                         // is what made the entire app stutter.
                         ForEach(rows, id: \.self) { result in
-                            SearchResultRow(result: result) { openTitle(result) }
+                            PersonFilmographyRow(result: result) { openTitle(result) }
                         }
                     }
                 }
@@ -327,3 +327,65 @@ public struct PersonView: View {
     }
 }
 
+
+/// A filmography row: the shared `PosterMetadataRow` with the standard
+/// title chevron and hover tooltip, but deliberately NO source badge (the
+/// tab already says movie-vs-series) and NO trailing +/chevron accessory —
+/// ownership reads from the "In library" pill alone. The second line is the
+/// person-view mix: rating + top genres (the year lives in the title).
+private struct PersonFilmographyRow: View {
+    let result: SearchResult
+    let onTap: () -> Void
+    @EnvironmentObject private var configStore: ConfigStore
+    #if os(macOS)
+    @State private var isHovering = false
+    @State private var showTooltip = false
+    @State private var hoverTask: Task<Void, Never>?
+    private var hasTooltip: Bool {
+        (result.overview.map { !$0.isEmpty } ?? false) || !result.genres.isEmpty
+    }
+    #endif
+
+    private var metadata: [String] {
+        var out: [String] = []
+        if let r = result.rating { out.append(String(format: "★%.1f", r)) }
+        out.append(contentsOf: result.genres.prefix(3))
+        return out
+    }
+
+    var body: some View {
+        let row = PosterMetadataRow(
+            posterURL: result.posterURL,
+            posterAPIKey: nil,
+            posterSize: CGSize(width: 26, height: 38),
+            posterBlurred: configStore.shouldBlurPoster(for: result.source),
+            posterFallbackSymbol: result.source.symbol,
+            title: result.year.map { "\(result.title) (\($0))" } ?? result.title,
+            metadataSegments: metadata,
+            titleBadge: result.inLibraryArrId != nil ? AnyView(InLibraryBadge()) : nil,
+            onTap: onTap
+        ) {
+            EmptyView()
+        }
+        #if os(macOS)
+        row
+            .onHover { hovering in
+                isHovering = hovering
+                hoverTask?.cancel()
+                if hovering, hasTooltip {
+                    hoverTask = Task { @MainActor in
+                        try? await Task.sleep(nanoseconds: 600_000_000)
+                        if !Task.isCancelled, isHovering { showTooltip = true }
+                    }
+                } else {
+                    showTooltip = false
+                }
+            }
+            .tooltipPopover(isPresented: $showTooltip, arrowEdge: .trailing) {
+                SearchResultTooltip(result: result).environmentObject(configStore)
+            }
+        #else
+        row
+        #endif
+    }
+}
