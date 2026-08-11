@@ -34,10 +34,10 @@ public extension View {
     }
 }
 
-/// A person's page: headshot, bio, and filmography rendered as the same
-/// `SearchResultRow`s the search surface uses (owned → detail, new → add).
-/// The external IMDb / TMDB links that cast heads used to open directly now
-/// live here, in the footer.
+/// A person's page: headshot, bio + external-link chips, and the filmography
+/// as `PersonFilmographyRow`s (owned → detail, new → add). The external IMDb /
+/// TMDB links that cast heads used to open directly now live here, in the
+/// header.
 public struct PersonView: View {
     let ref: PersonRef
     @EnvironmentObject private var configStore: ConfigStore
@@ -341,8 +341,9 @@ public struct PersonView: View {
 /// A filmography row: the shared `PosterMetadataRow` with the standard
 /// title chevron and hover tooltip, but deliberately NO source badge (the
 /// tab already says movie-vs-series) and NO trailing +/chevron accessory —
-/// ownership reads from the "In library" pill alone. The second line is the
-/// person-view mix: rating + top genres (the year lives in the title).
+/// ownership reads from the trailing "In library" pill alone. The second
+/// line is the person-view mix: credit role (Actor/Director/Writer, carried
+/// in `subtitle`) + rating + top genres — the year lives in the title.
 private struct PersonFilmographyRow: View {
     let result: SearchResult
     let onTap: () -> Void
@@ -358,8 +359,9 @@ private struct PersonFilmographyRow: View {
 
     private var metadata: [String] {
         var out: [String] = []
+        if let role = result.subtitle, !role.isEmpty { out.append(role) }
         if let r = result.rating { out.append(String(format: "★%.1f", r)) }
-        out.append(contentsOf: result.genres.prefix(3))
+        out.append(contentsOf: result.genres.prefix(2))
         return out
     }
 
@@ -372,10 +374,13 @@ private struct PersonFilmographyRow: View {
             posterFallbackSymbol: result.source.symbol,
             title: result.year.map { "\(result.title) (\($0))" } ?? result.title,
             metadataSegments: metadata,
-            titleBadge: result.inLibraryArrId != nil ? AnyView(InLibraryBadge()) : nil,
             onTap: onTap
         ) {
-            EmptyView()
+            // Ownership reads from the trailing edge — same placement as the
+            // queue / upcoming rows.
+            if result.inLibraryArrId != nil {
+                InLibraryBadge()
+            }
         }
         #if os(macOS)
         row

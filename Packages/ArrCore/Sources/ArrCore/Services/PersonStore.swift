@@ -55,12 +55,9 @@ public final class PersonStore {
             guard !key.isEmpty else { return [] }
             guard let credits = try? await TMDBClient(apiKey: key).personMovieCredits(personId: personId) else { return [] }
             let libraryMap = await ArrLibraryMaps.radarrByTMDBId(config: radarrConfig)
-            // movie_credits also repeats a film once per role. Duplicates are
-            // identical after mapping, which poisons SwiftUI's ForEach
-            // identity — dedupe by TMDB id like the series facet.
-            var seen = Set<Int>()
-            let unique = Self.byPopularity(credits).filter { seen.insert($0.id).inserted }
-            return TMDBSearchMapping.movies(unique, libraryMap: libraryMap)
+            let merged = PersonCreditMerge.merge(cast: credits.cast, crew: credits.crew ?? [])
+            let unique = PersonCreditMerge.byPopularity(merged.credits)
+            return TMDBSearchMapping.movies(unique, libraryMap: libraryMap, roles: merged.roles)
         }
         movieTasks[personId] = task
         let value = await task.value
@@ -78,10 +75,8 @@ public final class PersonStore {
         let task = Task<[SearchResult], Never> {
             guard !key.isEmpty else { return [] }
             guard let credits = try? await TMDBClient(apiKey: key).personTVCredits(personId: personId) else { return [] }
-            // TMDB tv_credits list one entry per role/appearance, so a recurring
-            // or guest actor shows the SAME series many times (Seth Rogen ×104
-            // Simpsons episodes). Collapse to one row per series id.
-            let rows = TMDBSearchMapping.series(Self.byPopularity(Self.dedupedById(credits)))
+            let merged = PersonCreditMerge.merge(cast: credits.cast, crew: credits.crew ?? [])
+            let rows = TMDBSearchMapping.series(PersonCreditMerge.byPopularity(merged.credits), roles: merged.roles)
             // Series carry a TMDB tv id, not a tvdb id, so the usual id-based
             // library map can't tag them. Match on normalized title + year
             // against the Sonarr library instead — a local join, no per-row
@@ -105,21 +100,6 @@ public final class PersonStore {
 
     // MARK: - Helpers
 
-    private static func byPopularity(_ movies: [TMDBMovieSummary]) -> [TMDBMovieSummary] {
-        movies.sorted { lhs, rhs in
-            let lp = lhs.popularity ?? 0, rp = rhs.popularity ?? 0
-            if lp != rp { return lp > rp }
-            return (lhs.year ?? 0) > (rhs.year ?? 0)
-        }
-    }
-    /// One entry per series id (keeping the first — TMDB lists the primary
-    /// billing first). Fixes recurring/guest actors showing a series once per
-    /// episode.
-    private static func dedupedById(_ shows: [TMDBTVSummary]) -> [TMDBTVSummary] {
-        var seen = Set<Int>()
-        return shows.filter { seen.insert($0.id).inserted }
-    }
-
     /// `(normalized title, year) → Sonarr series id` for the whole library, so
     /// TMDB series (which have no tvdb id) can still be tagged as owned by a
     /// local title/year join.
@@ -136,14 +116,6 @@ public final class PersonStore {
 
     private static func titleYearKey(title: String, year: Int?) -> String {
         "\(SearchRelevance.normalize(title))|\(year ?? 0)"
-    }
-
-    private static func byPopularity(_ shows: [TMDBTVSummary]) -> [TMDBTVSummary] {
-        shows.sorted { lhs, rhs in
-            let lp = lhs.popularity ?? 0, rp = rhs.popularity ?? 0
-            if lp != rp { return lp > rp }
-            return (lhs.year ?? 0) > (rhs.year ?? 0)
-        }
     }
 
     private func touch(_ id: Int) {

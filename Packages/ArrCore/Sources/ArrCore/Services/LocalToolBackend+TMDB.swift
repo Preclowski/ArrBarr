@@ -31,18 +31,13 @@ extension LocalToolBackend {
             return ToolCallOutput(text: "Need a personId — run tmdb_search_person first.")
         }
         let client = TMDBClient(apiKey: tmdbApiKey)
-        let credits = try await client.personMovieCredits(personId: personId)
+        let credits = try await client.personMovieCredits(personId: personId).cast
         // TMDB returns credits unordered. Rank by `popularity` (TMDB's own
         // "what people are searching/watching" metric) descending — voteAverage
         // is misleading here because Sandler's best-rated entries are 7.5+
         // niche cameos with a handful of votes, not Happy Gilmore (6.0, 4k
         // votes). Tie-break on year desc so recent stuff floats.
-        let ranked = credits.sorted { lhs, rhs in
-            let lp = lhs.popularity ?? 0
-            let rp = rhs.popularity ?? 0
-            if lp != rp { return lp > rp }
-            return (lhs.year ?? 0) > (rhs.year ?? 0)
-        }
+        let ranked = PersonCreditMerge.byPopularity(credits)
         let libraryMap = await radarrLibraryByTMDBId()
         let results = TMDBSearchMapping.movies(ranked.prefix(25), libraryMap: libraryMap)
         guard !results.isEmpty else {
@@ -58,15 +53,10 @@ extension LocalToolBackend {
             return ToolCallOutput(text: "Need a personId — run tmdb_search_person first.")
         }
         let client = TMDBClient(apiKey: tmdbApiKey)
-        let credits = try await client.personTVCredits(personId: personId)
+        let credits = try await client.personTVCredits(personId: personId).cast
         // Same popularity-desc ranking rationale as the movie path — see
         // tmdbPersonMovieCredits for why voteAverage is the wrong key here.
-        let ranked = credits.sorted { lhs, rhs in
-            let lp = lhs.popularity ?? 0
-            let rp = rhs.popularity ?? 0
-            if lp != rp { return lp > rp }
-            return (lhs.year ?? 0) > (rhs.year ?? 0)
-        }
+        let ranked = PersonCreditMerge.byPopularity(credits)
         let results = TMDBSearchMapping.series(ranked.prefix(25))
         guard !results.isEmpty else {
             return ToolCallOutput(text: "TMDB returned no TV credits for personId \(personId).")

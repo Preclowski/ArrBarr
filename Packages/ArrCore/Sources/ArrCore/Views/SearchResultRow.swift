@@ -32,24 +32,20 @@ public struct SearchResultRow: View {
             posterFallbackSymbol: result.source.symbol,
             title: titleWithYear,
             metadataSegments: metadataSegments,
-            // Title slot: arr identity ("Sonarr"/"Radarr") and, if
-            // the title is already in the library, a quiet "library"
-            // tag. Add-new candidates get no badge — absence of the
-            // library tag is the signal (the `+` affordance on the
-            // trailing edge confirms intent). Avoids burning a chip
-            // on what is effectively the default state.
-            titleBadge: AnyView(HStack(spacing: 4) {
-                SourceGlyphChip(source: result.source)
-                if isInLibrary {
-                    InLibraryBadge()
-                }
-            }),
+            // Title slot: arr identity ("Sonarr"/"Radarr") only. The
+            // library tag lives on the trailing edge with the other
+            // ownership affordances — same placement as the queue /
+            // upcoming rows, so every surface reads the same way.
+            titleBadge: AnyView(SourceGlyphChip(source: result.source)),
             onTap: onTap
         ) {
             if isInLibrary {
-                // Apple-standard "drill in" affordance — same chevron
-                // the system uses in Settings, Music, App Store.
-                LinkChevron(size: 10)
+                HStack(spacing: 6) {
+                    InLibraryBadge()
+                    // Apple-standard "drill in" affordance — same chevron
+                    // the system uses in Settings, Music, App Store.
+                    LinkChevron(size: 10)
+                }
             } else {
                 Image(systemName: "plus")
                     .scaledFont(size: 11, weight: .medium)

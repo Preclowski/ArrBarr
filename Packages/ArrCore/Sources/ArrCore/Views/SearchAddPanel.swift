@@ -50,6 +50,9 @@ public struct SearchAddPanel: View {
     /// True while the TMDB credits fetch is in flight — drives the cast
     /// skeleton so the hero doesn't jump when the strip pops in.
     @State private var castLoading = false
+    /// Cast-head tap → in-app person view, pushed locally so back returns
+    /// here (same wiring as DetailView).
+    @State private var personRef: PersonRef?
 
     public var body: some View {
         ZStack {
@@ -83,6 +86,7 @@ public struct SearchAddPanel: View {
         // root NavigationStack and draws its own `header` (title + FloatingBackButton),
         // so a navigationTitle would propagate up and render a SECOND, stacked
         // header above the real one.
+        .personDestination($personRef)
     }
 
     private var mainContent: some View {
@@ -239,7 +243,9 @@ public struct SearchAddPanel: View {
             // Cast strip with a skeleton while the TMDB fetch is in flight —
             // same fill-in-as-it-lands pattern as DetailView.
             if !cast.isEmpty {
-                CastRow(cast: cast)
+                CastRow(cast: cast, onTapPerson: { member in
+                    if let ref = PersonRef(castMember: member) { personRef = ref }
+                })
             } else if castLoading {
                 SkeletonCastRow()
             }

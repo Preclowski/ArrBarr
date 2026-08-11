@@ -82,9 +82,10 @@ public struct TMDBMovieSummary: Decodable, Sendable, Equatable {
     public let overview: String?
     public let genreIds: [Int]?
     public let character: String?   // present on credits responses
+    public let department: String?  // crew credits only ("Directing"/"Writing"/…)
 
     enum CodingKeys: String, CodingKey {
-        case id, title, overview, character, popularity
+        case id, title, overview, character, popularity, department
         case releaseDate = "release_date"
         case posterPath = "poster_path"
         case voteAverage = "vote_average"
@@ -109,9 +110,10 @@ public struct TMDBTVSummary: Decodable, Sendable, Equatable {
     public let overview: String?
     public let genreIds: [Int]?
     public let character: String?
+    public let department: String?  // crew credits only ("Directing"/"Writing"/…)
 
     enum CodingKeys: String, CodingKey {
-        case id, name, overview, character, popularity
+        case id, name, overview, character, popularity, department
         case firstAirDate = "first_air_date"
         case posterPath = "poster_path"
         case voteAverage = "vote_average"
@@ -127,10 +129,12 @@ public struct TMDBTVSummary: Decodable, Sendable, Equatable {
 
 public struct TMDBMovieCreditsResponse: Decodable, Sendable {
     public let cast: [TMDBMovieSummary]
+    public let crew: [TMDBMovieSummary]?
 }
 
 public struct TMDBTVCreditsResponse: Decodable, Sendable {
     public let cast: [TMDBTVSummary]
+    public let crew: [TMDBTVSummary]?
 }
 
 // MARK: - Movie credits (cast + crew)
@@ -307,18 +311,15 @@ public struct TMDBClient: Sendable {
         return details
     }
 
-    public func personMovieCredits(personId: Int) async throws -> [TMDBMovieSummary] {
-        let resp: TMDBMovieCreditsResponse = try await get(
-            path: "/person/\(personId)/movie_credits", query: []
-        )
-        return resp.cast
+    /// Full credits — acting (`cast`) plus crew. Callers that only care about
+    /// acting read `.cast`; the person view merges directing/writing crew
+    /// credits in via `PersonCreditMerge`.
+    public func personMovieCredits(personId: Int) async throws -> TMDBMovieCreditsResponse {
+        try await get(path: "/person/\(personId)/movie_credits", query: [])
     }
 
-    public func personTVCredits(personId: Int) async throws -> [TMDBTVSummary] {
-        let resp: TMDBTVCreditsResponse = try await get(
-            path: "/person/\(personId)/tv_credits", query: []
-        )
-        return resp.cast
+    public func personTVCredits(personId: Int) async throws -> TMDBTVCreditsResponse {
+        try await get(path: "/person/\(personId)/tv_credits", query: [])
     }
 
     /// TMDB discover. `startYear`/`endYear` (inclusive) expand to ISO

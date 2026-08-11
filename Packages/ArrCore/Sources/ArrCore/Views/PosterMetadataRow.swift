@@ -45,13 +45,6 @@ public struct PosterMetadataRow<TrailingAccessory: View>: View {
     /// Used by Upcoming rows that don't have a backing `entityId` —
     /// nothing meaningful to drill into.
     let disabled: Bool
-    /// The inline drill-in chevron after the title. On by default; callers
-    /// that render their own single trailing affordance (e.g. the person
-    /// view's filmography, which shows one chevron/plus and no source badge)
-    /// turn it off to avoid a double chevron.
-    let showTitleChevron: Bool
-
-
     public init(
         posterURL: URL?,
         posterAPIKey: String?,
@@ -65,7 +58,6 @@ public struct PosterMetadataRow<TrailingAccessory: View>: View {
         metadataSegments2: [String] = [],
         titleBadge: AnyView? = nil,
         disabled: Bool = false,
-        showTitleChevron: Bool = true,
         onTap: @escaping () -> Void,
         @ViewBuilder trailing: @escaping () -> TrailingAccessory
     ) {
@@ -76,7 +68,6 @@ public struct PosterMetadataRow<TrailingAccessory: View>: View {
         self.posterCornerRadius = posterCornerRadius
         self.posterBlurred = posterBlurred
         self.posterFallbackSymbol = posterFallbackSymbol
-        self.showTitleChevron = showTitleChevron
         self.title = title
         self.metadataSegments = metadataSegments
         self.metadataSegments2 = metadataSegments2
@@ -112,7 +103,7 @@ public struct PosterMetadataRow<TrailingAccessory: View>: View {
                         // depending on hover — works on iOS (no hover)
                         // and clarifies macOS rows too. Skipped on
                         // disabled rows (no tap target).
-                        if !disabled, showTitleChevron {
+                        if !disabled {
                             LinkChevron(size: 9)
                         }
                     }

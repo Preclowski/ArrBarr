@@ -14,14 +14,15 @@ public enum TMDBSearchMapping {
     /// tap to the detail view instead of the add flow.
     public static func movies(
         _ movies: some Sequence<TMDBMovieSummary>,
-        libraryMap: [Int: Int] = [:]
+        libraryMap: [Int: Int] = [:],
+        roles: [Int: String] = [:]
     ) -> [SearchResult] {
         movies.map { m in
             SearchResult(
                 id: m.id,
                 foreignId: String(m.id),
                 title: m.title,
-                subtitle: nil,
+                subtitle: roles[m.id],
                 year: m.year,
                 rating: m.voteAverage,
                 imdb: nil, rottenTomatoes: nil, metacritic: nil,
@@ -46,14 +47,15 @@ public enum TMDBSearchMapping {
     /// own lookup can pass a populated map.
     public static func series(
         _ shows: some Sequence<TMDBTVSummary>,
-        libraryMap: [Int: Int] = [:]
+        libraryMap: [Int: Int] = [:],
+        roles: [Int: String] = [:]
     ) -> [SearchResult] {
         shows.map { s in
             SearchResult(
                 id: 0,
                 foreignId: "",
                 title: s.name,
-                subtitle: nil,
+                subtitle: roles[s.id],
                 year: s.year,
                 rating: s.voteAverage,
                 imdb: nil, rottenTomatoes: nil, metacritic: nil,
