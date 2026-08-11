@@ -11,15 +11,22 @@ struct TrackDetailOverlay: View {
     /// (or the file list hasn't loaded), which renders the missing state.
     let file: LidarrTrackFile?
     let albumTitle: String?
-    let artistName: String?
+    /// Album's artist — rendered as a drill-in link when `onOpenArtist` is
+    /// wired (mirrors the album hero's artist line).
+    let artist: LidarrArtist?
     let posterURL: URL?
     var posterAPIKey: String? = nil
+    var onOpenArtist: ((LidarrArtist) -> Void)? = nil
     let onClose: () -> Void
 
     @Environment(\.isDetachedWindow) private var isDetachedWindow
     @State private var enlargedPoster: URL?
 
-    private var navTitle: String {
+    /// Header carries the track NAME (the thing the user tapped); the
+    /// track number moved into the hero's metadata column.
+    private var navTitle: String { track.title ?? "—" }
+
+    private var trackNumberLabel: String {
         String(format: String(localized: "detail.trackLld.label", bundle: .module),
                track.absoluteTrackNumber ?? 0)
     }
@@ -70,7 +77,7 @@ struct TrackDetailOverlay: View {
                 RemotePoster(
                     url: posterURL,
                     apiKey: posterAPIKey,
-                    size: CGSize(width: 84, height: 84),
+                    size: CGSize(width: 110, height: 110),
                     cornerRadius: Tokens.Radius.card,
                     fallbackSymbol: "music.note"
                 )
@@ -78,21 +85,47 @@ struct TrackDetailOverlay: View {
             .buttonStyle(.plain)
             .disabled(posterURL == nil)
 
+            // The title lives in the header now; this column carries the
+            // context — artist (drill-in link), album, track number + length —
+            // mirroring the album hero's hierarchy.
             VStack(alignment: .leading, spacing: 4) {
-                Text(track.title ?? "—")
-                    .scaledFont(size: 15, weight: .semibold)
-                    .lineLimit(3)
+                if let artist {
+                    if let onOpenArtist {
+                        Button { onOpenArtist(artist) } label: {
+                            HStack(spacing: 3) {
+                                Text(artist.artistName)
+                                    .scaledFont(size: 12, weight: .medium)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(2)
+                                LinkChevron()
+                            }
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .help(Text("detail.showArtist.button", bundle: .module))
+                    } else {
+                        Text(artist.artistName)
+                            .scaledFont(size: 12, weight: .medium)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(2)
+                    }
+                }
                 if let albumTitle, !albumTitle.isEmpty {
-                    Text(artistName.map { "\(albumTitle) · \($0)" } ?? albumTitle)
+                    Text(albumTitle)
                         .scaledFont(size: 11)
                         .foregroundStyle(.secondary)
                         .lineLimit(2)
                 }
-                if let dur = track.duration, dur > 0 {
-                    Text(formatDuration(ms: dur))
-                        .scaledFont(size: 11, monospacedDigit: true)
-                        .foregroundStyle(.tertiary)
+                HStack(spacing: 6) {
+                    Text(trackNumberLabel)
+                    if let dur = track.duration, dur > 0 {
+                        SeparatorDot()
+                        Text(formatDuration(ms: dur))
+                            .monospacedDigit()
+                    }
                 }
+                .scaledFont(size: 11)
+                .foregroundStyle(.tertiary)
             }
             Spacer(minLength: 0)
         }
