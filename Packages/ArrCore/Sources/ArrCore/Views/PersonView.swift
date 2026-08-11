@@ -88,7 +88,7 @@ public struct PersonView: View {
                 // into view. An eager VStack rendered (and hover-tracked) every
                 // row at once, which pegged the main thread the whole time the
                 // person view was open.
-                LazyVStack(alignment: .leading, spacing: 14) {
+                LazyVStack(alignment: .leading, spacing: 2) {
                     // Header (photo, bio, external links) and the segmented
                     // toggle are padded to 14; the filmography rows are
                     // full-bleed (they self-inset 12) so they don't sit doubly
@@ -98,6 +98,7 @@ public struct PersonView: View {
                         filmographyToggle
                     }
                     .padding(.horizontal, 14)
+                    .padding(.bottom, 12)
 
                     let rows = kind == .movie ? movieRows : seriesRows
                     if filmographyLoading && rows.isEmpty {
@@ -109,8 +110,15 @@ public struct PersonView: View {
                             .frame(maxWidth: .infinity, alignment: .center)
                             .padding(.vertical, 12)
                     } else {
-                        ForEach(rows) { result in
-                            PersonFilmographyRow(result: result, onTap: { openTitle(result) })
+                        // Identity by \.self, NOT the default Identifiable id:
+                        // series rows all carry `id: 0` (the tvdb id is only
+                        // resolved at add time), and a ForEach full of duplicate
+                        // ids breaks SwiftUI's diffing — it drew the FIRST show
+                        // over and over (the "104 × The Simpsons" bug) and
+                        // re-diffed the whole stack on every state change, which
+                        // is what made the entire app stutter.
+                        ForEach(rows, id: \.self) { result in
+                            SearchResultRow(result: result) { openTitle(result) }
                         }
                     }
                 }
@@ -319,73 +327,3 @@ public struct PersonView: View {
     }
 }
 
-/// A single filmography row. Its own view (not a `func`) so each carries the
-/// hover state for the macOS tooltip — and, inside a `LazyVStack`, only visible
-/// rows exist, so the hover trackers don't add up. Reuses the shared
-/// `PosterMetadataRow` (no source badge — the tab says the kind) and the
-/// existing `SearchResultTooltip`.
-private struct PersonFilmographyRow: View {
-    let result: SearchResult
-    let onTap: () -> Void
-    @EnvironmentObject private var configStore: ConfigStore
-    #if os(macOS)
-    @State private var isHovering = false
-    @State private var showTooltip = false
-    @State private var hoverTask: Task<Void, Never>?
-    private var hasTooltip: Bool {
-        (result.overview.map { !$0.isEmpty } ?? false) || !result.genres.isEmpty
-    }
-    #endif
-
-    private var owned: Bool { result.inLibraryArrId != nil }
-
-    private var metadata: [String] {
-        var out: [String] = []
-        if let r = result.rating { out.append(String(format: "★%.1f", r)) }
-        out.append(contentsOf: result.genres.prefix(2))
-        return out
-    }
-
-    var body: some View {
-        let row = PosterMetadataRow(
-            posterURL: result.posterURL,
-            posterAPIKey: nil,
-            posterSize: CGSize(width: 30, height: 44),
-            posterBlurred: configStore.shouldBlurPoster(for: result.source),
-            posterFallbackSymbol: result.source.symbol,
-            title: result.year.map { "\(result.title) (\($0))" } ?? result.title,
-            metadataSegments: metadata,
-            titleBadge: owned ? AnyView(InLibraryBadge()) : nil,
-            showTitleChevron: false,
-            onTap: onTap
-        ) {
-            if owned {
-                LinkChevron(size: 10)
-            } else {
-                Image(systemName: "plus")
-                    .scaledFont(size: 11, weight: .medium)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        #if os(macOS)
-        row
-            .onHover { hovering in
-                isHovering = hovering
-                hoverTask?.cancel()
-                if hovering, hasTooltip {
-                    hoverTask = Task { @MainActor in
-                        try? await Task.sleep(nanoseconds: 600_000_000)
-                        if !Task.isCancelled, isHovering { showTooltip = true }
-                    }
-                } else {
-                    showTooltip = false
-                }
-            }
-            .tooltipPopover(isPresented: $showTooltip, arrowEdge: .trailing) {
-                SearchResultTooltip(result: result).environmentObject(configStore)
-            }
-        #else
-        row
-        #endif
-    }
-}
