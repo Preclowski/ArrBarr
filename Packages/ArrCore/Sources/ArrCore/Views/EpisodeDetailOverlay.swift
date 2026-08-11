@@ -199,6 +199,7 @@ public struct EpisodeDetailOverlay: View {
                     .foregroundStyle(.primary)
                     .lineLimit(1)
                 Spacer(minLength: 0)
+                headerSearchMenu
                 monitorToggle
                 if let url = warningActionURL {
                     Button { PlatformURLOpener.open(url) } label: {
@@ -269,9 +270,10 @@ public struct EpisodeDetailOverlay: View {
         // bug. Single placement, cluster ordered left-to-right.
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
-                // iOS-only: macOS already carries the bookmark in the self-drawn
-                // header above, and adding it here too would double it up.
+                // iOS-only: macOS already carries these in the self-drawn
+                // header above, and adding them here too would double them up.
                 #if os(iOS)
+                headerSearchMenu
                 monitorToggle
                 #endif
                 // Detached window surfaces Safari in the self-drawn header above
@@ -338,45 +340,26 @@ public struct EpisodeDetailOverlay: View {
     }
 
     private var shouldShowCTAStrip: Bool {
-        // Duplicate grabs: the bottom strip's single pause/cancel would be
-        // ambiguous — each download block carries its own controls instead.
-        let canPauseResume = queueItems.count == 1
+        // Pause/resume only — Search lives in the header now, and duplicate
+        // grabs put the controls on each download block instead of the strip.
+        queueItems.count == 1
             && (queueItem?.status == .downloading || queueItem?.status == .paused)
             && ((queueItem?.isPaused == true && onResumeEpisode != nil)
                 || (queueItem?.isPaused == false && onPauseEpisode != nil))
-        // Library episode that isn't downloading → offer manual search
-        // ("Download"). Aired-only so we don't query indexers for future eps.
-        let canManualSearch = hasAired && queueItem == nil
-        // Trash + Safari moved to the toolbar; bottom strip only renders if a
-        // primary verb (pause/resume, download, search) needs a place. With
-        // duplicate grabs the strip carries manual search alone.
-        return canPauseResume || canManualSearch || queueItems.count > 1
     }
 
+    /// Search moved to the header cluster — the strip only carries the
+    /// pause/cancel verbs, and only for a single active download (with
+    /// duplicates each block controls its own).
     @ViewBuilder
     private var episodeCTAStrip: some View {
         let canPauseResume = queueItems.count == 1
             && (queueItem?.status == .downloading || queueItem?.status == .paused)
             && ((queueItem?.isPaused == true && onResumeEpisode != nil)
                 || (queueItem?.isPaused == false && onPauseEpisode != nil))
-        // Auto-search (queues an EpisodeSearch command); manual "Download" opens
-        // the indexer release list. Manual works for upgrades too (file present),
-        // so it isn't gated on `!hasFile` the way auto-search is.
-        // Standardised: automatic search appears under the SAME rule as manual
-        // search — episode not downloading + aired (works for upgrades too, so
-        // it isn't gated on `!hasFile`).
-        let canSearch = onSearch != nil && hasAired && queueItem == nil
-        let canManualSearch = hasAired && queueItem == nil
         HStack(spacing: 8) {
-            if queueItems.count > 1 {
-                // Duplicate grabs: per-block controls own pause/cancel; the
-                // strip only offers the Search menu.
-                searchMenuButton
-            } else if canPauseResume, let q = queueItem {
+            if canPauseResume, let q = queueItem {
                 ctaPauseResume(q: q)
-                // Middle slot while a single download runs — the same Search
-                // menu, e.g. to grab a different release without cancelling.
-                searchMenuButton
                 #if os(macOS)
                 // macOS: destructive Cancel anchors the trailing edge, away
                 // from the primary verb. iOS keeps it in the nav toolbar.
@@ -384,73 +367,39 @@ public struct EpisodeDetailOverlay: View {
                     ctaCancelProminent
                 }
                 #endif
-            } else if canManualSearch {
-                if canSearch {
-                    searchMenuButton
-                } else {
-                    // No auto-search closure wired — manual is the only
-                    // flavour, so skip the menu and go straight to it.
-                    ctaDownload
-                }
             }
         }
     }
 
-    /// ONE "Search" CTA opening a native automatic/manual menu — same
-    /// pattern as DetailView.searchMenuButton. The button carries the
-    /// in-flight spinner and the queued checkmark.
-    private var searchMenuButton: some View {
-        Menu {
-            Button { performSearch() } label: {
-                Label { Text("Automatic search", bundle: .module) } icon: { Image(systemName: "bolt.fill") }
-            }
-            Button {
-                manualSearchTarget = EpisodeReleaseSearch(target: .episode(episodeId: episode.id, title: navTitleString))
-            } label: {
-                Label { Text("Manual search", bundle: .module) } icon: { Image(systemName: "list.bullet") }
-            }
-        } label: {
-            GlassProminentMenuLabel {
-                if isSearching {
-                    HStack { ProgressView().controlSize(.small).tint(.white) }
-                        .frame(maxWidth: .infinity).padding(.vertical, 7)
-                } else if didSearch {
-                    ctaLabel(icon: "checkmark", text: "detail.searchQueued.button")
-                } else {
-                    ctaLabel(icon: "magnifyingglass", text: "Search")
-                }
-            }
-        }
-        .modifier(GlassProminentMenuStyle())
-        .disabled(isSearching)
-        .accessibilityLabel(isSearching
-                            ? Text("detail.searchingForRelease.label", bundle: .module)
-                            : Text("Search", bundle: .module))
-    }
-
-    private func ctaLabel(icon: String, text: LocalizedStringKey) -> some View {
-        HStack(spacing: 6) {
-            Image(systemName: icon)
-                .scaledFont(size: 11, weight: .semibold)
-                .accessibilityHidden(true)
-            Text(text, bundle: .module)
-                .scaledFont(size: 12, weight: .semibold)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 7)
-    }
-
-    /// Direct manual-search CTA — only used when no auto-search closure is
-    /// wired (a one-item menu would be pointless).
+    /// The episode's Search choice, relocated to the header cluster. Aired
+    /// episodes only (searching indexers for a future episode is noise).
+    /// With no auto-search closure wired, a one-item menu would be pointless —
+    /// the glyph goes straight to the release list instead.
     @ViewBuilder
-    private var ctaDownload: some View {
-        Button {
-            manualSearchTarget = EpisodeReleaseSearch(target: .episode(episodeId: episode.id, title: navTitleString))
-        } label: {
-            ctaLabel(icon: "magnifyingglass", text: "Manual search")
+    private var headerSearchMenu: some View {
+        if hasAired {
+            if onSearch != nil {
+                HeaderSearchMenu(
+                    inFlight: isSearching,
+                    didQueue: didSearch,
+                    onAutomatic: { performSearch() },
+                    onManual: { manualSearchTarget = EpisodeReleaseSearch(target: .episode(episodeId: episode.id, title: navTitleString)) }
+                )
+            } else {
+                Button {
+                    manualSearchTarget = EpisodeReleaseSearch(target: .episode(episodeId: episode.id, title: navTitleString))
+                } label: {
+                    Image(systemName: "magnifyingglass")
+                        .scaledFont(size: 14, weight: .medium)
+                        .foregroundStyle(.secondary)
+                        .frame(width: 22, height: 22)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help(Text("Manual search", bundle: .module))
+                .accessibilityLabel(Text("Manual search", bundle: .module))
+            }
         }
-        .modifier(GlassProminentButtonStyle())
-        .accessibilityLabel(Text("Manual search", bundle: .module))
     }
 
     @ViewBuilder

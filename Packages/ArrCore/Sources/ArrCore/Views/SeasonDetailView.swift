@@ -92,6 +92,7 @@ struct SeasonDetailView: View {
                     .lineLimit(1)
                     .truncationMode(.middle)
                 Spacer(minLength: 0)
+                headerSearchMenu
                 monitorToggle
             }
             .padding(.horizontal, 12)
@@ -127,12 +128,8 @@ struct SeasonDetailView: View {
             }
             .scrollBounceBehavior(.basedOnSize)
             .frame(maxHeight: .infinity)
-            .safeAreaInset(edge: .bottom, spacing: 0) {
-                searchMenuButton
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 10)
-                    .frame(maxWidth: .infinity)
-            }
+            // No bottom strip — the season's Search choice lives in the
+            // header cluster now.
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .posterLightbox(url: $enlargedPoster, apiKey: seriesPosterAPIKey, aspectRatio: 2.0 / 3.0)
@@ -172,6 +169,7 @@ struct SeasonDetailView: View {
         // sibling detail screens already use.
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
+                headerSearchMenu
                 monitorToggle
             }
         }
@@ -180,38 +178,19 @@ struct SeasonDetailView: View {
         #endif
     }
 
-    /// ONE "Search" CTA opening a native automatic/manual menu — same
-    /// pattern as DetailView / EpisodeDetailOverlay. The button carries the
-    /// in-flight spinner and the queued checkmark.
-    private var searchMenuButton: some View {
-        Menu {
-            Button { startAutomaticSearch() } label: {
-                Label { Text("Automatic search", bundle: .module) } icon: { Image(systemName: "bolt.fill") }
-            }
-            Button {
+    /// The season's Search choice, in the header cluster (same component the
+    /// other detail surfaces use).
+    private var headerSearchMenu: some View {
+        HeaderSearchMenu(
+            inFlight: autoSearching,
+            didQueue: autoDidSearch,
+            onAutomatic: { startAutomaticSearch() },
+            onManual: {
                 manualSearchTarget = SeasonReleaseSearch(target: .season(
                     seriesId: drill.seriesId, seasonNumber: drill.seasonNumber,
                     title: "\(drill.seriesTitle) · \(navTitle)"))
-            } label: {
-                Label { Text("Manual search", bundle: .module) } icon: { Image(systemName: "list.bullet") }
             }
-        } label: {
-            GlassProminentMenuLabel {
-                if autoSearching {
-                    HStack { ProgressView().controlSize(.small).tint(.white) }
-                        .frame(maxWidth: .infinity).padding(.vertical, 7)
-                } else if autoDidSearch {
-                    searchLabel(icon: "checkmark", text: "detail.searchQueued.button")
-                } else {
-                    searchLabel(icon: "magnifyingglass", text: "Search")
-                }
-            }
-        }
-        .modifier(GlassProminentMenuStyle())
-        .disabled(autoSearching)
-        .accessibilityLabel(autoSearching
-                            ? Text("detail.searchingForRelease.label", bundle: .module)
-                            : Text("Search", bundle: .module))
+        )
     }
 
     private func startAutomaticSearch() {
@@ -259,12 +238,4 @@ struct SeasonDetailView: View {
         )
     }
 
-    private func searchLabel(icon: String, text: LocalizedStringKey) -> some View {
-        HStack(spacing: 6) {
-            Image(systemName: icon).scaledFont(size: 11, weight: .semibold)
-            Text(text, bundle: .module).scaledFont(size: 12, weight: .semibold)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 7)
-    }
 }

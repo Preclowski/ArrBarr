@@ -931,49 +931,6 @@ public struct GlassButtonStyle: ViewModifier {
     }
 }
 
-/// Menu counterpart of `GlassProminentButtonStyle`. A `Menu` on macOS
-/// IGNORES prominent button styles and renders as a compact dark pill
-/// hugging its label. The fix is NOT to imitate the CTA look — it's to
-/// embed the genuine article: the Menu's label is a real (hit-test-inert)
-/// `Button` wearing `GlassProminentButtonStyle`, so it is pixel-identical
-/// to the CTAs beside it, while this modifier strips the Menu's own
-/// chrome and lets the Menu supply the click handling.
-public struct GlassProminentMenuStyle: ViewModifier {
-    public init() {}
-
-    public func body(content: Content) -> some View {
-        content
-            .menuStyle(.button)
-            .buttonStyle(.plain)
-            .menuIndicator(.hidden)
-    }
-}
-
-/// The Menu-label half of the pair above: an inert Button rendering the
-/// exact prominent glass capsule. `allowsHitTesting(false)` so clicks fall
-/// through to the wrapping Menu.
-public struct GlassProminentMenuLabel<Content: View>: View {
-    var tint: Color = .accentColor
-    @ViewBuilder var content: () -> Content
-
-    public init(tint: Color = .accentColor, @ViewBuilder content: @escaping () -> Content) {
-        self.tint = tint
-        self.content = content
-    }
-
-    public var body: some View {
-        Button(action: {}) { content() }
-            .modifier(GlassProminentButtonStyle())
-            .tint(tint)
-            .allowsHitTesting(false)
-            // The inert Button swallows no clicks — but with the whole label
-            // subtree hit-test-off, the plain-styled Menu had NOTHING hittable
-            // and clicks fell straight through. This transparent capsule is
-            // the hit target the Menu triggers from.
-            .overlay(Color.clear.contentShape(Capsule()))
-    }
-}
-
 public struct GlassProminentButtonStyle: ViewModifier {
     public func body(content: Content) -> some View {
         // Capsule everywhere — one shape decision for every prominent CTA.

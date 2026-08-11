@@ -283,28 +283,11 @@ public struct DetailView: View {
                     // bar would otherwise be empty.
                     // Floating CTA — no material backdrop / divider so the glass
                     // pill reads as an island on top of the content.
-                    if hasActiveDownloads {
-                        if activeDownloadCount > 1 {
-                            // Multiple downloads of this title — a single
-                            // bottom pause/cancel would be ambiguous, so each
-                            // list row carries its own controls and the strip
-                            // offers only manual search.
-                            if let target = manualTarget {
-                                searchMenuButton(target)
-                                    .padding(.horizontal, 14)
-                                    .padding(.vertical, 10)
-                                    .frame(maxWidth: .infinity)
-                            }
-                        } else if canControl && canPauseResume {
-                            downloadCTAStrip
-                                .padding(.horizontal, 14)
-                                .padding(.vertical, 10)
-                                .frame(maxWidth: .infinity)
-                        }
-                    } else if hasBottomSearchCTA {
-                        // Library item that isn't downloading — offer search:
-                        // movie/album → Manual; series → Manual + Automatic (season).
-                        bottomSearchCTA
+                    // Search lives in the header now — the strip only carries
+                    // pause/cancel, and only when there's exactly one download
+                    // (with duplicates each list row controls its own).
+                    if hasActiveDownloads, activeDownloadCount == 1, canControl, canPauseResume {
+                        downloadCTAStrip
                             .padding(.horizontal, 14)
                             .padding(.vertical, 10)
                             .frame(maxWidth: .infinity)
@@ -369,6 +352,7 @@ public struct DetailView: View {
         #if os(iOS)
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
+                headerSearchMenu
                 monitorToggle
                 if let url = arrWebURL(for: item, in: configStore) {
                     Button { PlatformURLOpener.open(url) } label: {
@@ -514,6 +498,7 @@ public struct DetailView: View {
                 .foregroundStyle(.primary)
                 .lineLimit(1)
             Spacer(minLength: 0)
+            headerSearchMenu
             monitorToggle
             if let url = arrWebURL(for: item, in: configStore) {
                 Button { PlatformURLOpener.open(url) } label: {
@@ -531,6 +516,20 @@ public struct DetailView: View {
         #else
         EmptyView()
         #endif
+    }
+
+    /// The Search choice, relocated from the bottom CTA strip into the header
+    /// action cluster (leads it: search, bookmark, safari, trash).
+    @ViewBuilder
+    private var headerSearchMenu: some View {
+        if let target = manualTarget {
+            HeaderSearchMenu(
+                inFlight: autoSearching || searchRunning,
+                didQueue: autoDidSearch,
+                onAutomatic: { startAutomaticSearch() },
+                onManual: { manualSearchTarget = target }
+            )
+        }
     }
 
     // MARK: - Download CTA strip
@@ -561,8 +560,6 @@ public struct DetailView: View {
         }
     }
 
-    private var hasBottomSearchCTA: Bool { manualTarget != nil }
-
     /// The on-disk file a manual search from here would be replacing — the
     /// baseline `ReleaseListView` diffs its candidates against. Movies only: a
     /// Lidarr album is many track files with no single "current" one, and a
@@ -578,46 +575,6 @@ public struct DetailView: View {
         case .sonarr, .lidarr:
             return nil
         }
-    }
-
-    /// Bottom search CTA when the item isn't downloading — ONE "Search"
-    /// button whose tap opens a native menu with the two flavours
-    /// (Automatic / Manual), replacing the old side-by-side pair. The single
-    /// button also carries every progress state (spinner while a sweep runs,
-    /// checkmark right after queueing one), which kills the two-button
-    /// weirdness where the spinner lit the *manual* button first.
-    @ViewBuilder
-    private var bottomSearchCTA: some View {
-        if let target = manualTarget {
-            searchMenuButton(target)
-        }
-    }
-
-    private func searchMenuButton(_ target: ManualSearchTarget) -> some View {
-        Menu {
-            Button { startAutomaticSearch() } label: {
-                Label { Text("Automatic search", bundle: .module) } icon: { Image(systemName: "bolt.fill") }
-            }
-            Button { manualSearchTarget = target } label: {
-                Label { Text("Manual search", bundle: .module) } icon: { Image(systemName: "list.bullet") }
-            }
-        } label: {
-            GlassProminentMenuLabel {
-                if autoSearching || searchRunning {
-                    HStack { ProgressView().controlSize(.small).tint(.white) }
-                        .frame(maxWidth: .infinity).padding(.vertical, 7)
-                } else if autoDidSearch {
-                    searchCTALabel(icon: "checkmark", text: "detail.searchQueued.button")
-                } else {
-                    searchCTALabel(icon: "magnifyingglass", text: "Search")
-                }
-            }
-        }
-        .modifier(GlassProminentMenuStyle())
-        .disabled(autoSearching || searchRunning)
-        .accessibilityLabel(autoSearching || searchRunning
-                            ? Text("detail.searchingForRelease.label", bundle: .module)
-                            : Text("Search", bundle: .module))
     }
 
     /// Fire the server-side sweep and drive the CTA's state machine:
@@ -696,15 +653,6 @@ public struct DetailView: View {
         } catch {}
     }
 
-    private func searchCTALabel(icon: String, text: LocalizedStringKey) -> some View {
-        HStack(spacing: 6) {
-            Image(systemName: icon).scaledFont(size: 11, weight: .semibold)
-            Text(text, bundle: .module).scaledFont(size: 12, weight: .semibold)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 7)
-    }
-
     @ViewBuilder
     private var downloadCTAStrip: some View {
         let hasDownloadControls = hasActiveDownloads && canControl
@@ -716,11 +664,6 @@ public struct DetailView: View {
         if hasDownloadControls, canPauseResume {
             HStack(spacing: 8) {
                 pauseResumeProminent
-                // Middle slot: the same Search menu (automatic / manual) —
-                // e.g. to grab a better release while this one downloads.
-                if let target = manualTarget {
-                    searchMenuButton(target)
-                }
                 #if os(macOS)
                 // macOS: destructive Cancel anchors the trailing edge, away
                 // from the primary verb. iOS keeps delete in the nav toolbar.
