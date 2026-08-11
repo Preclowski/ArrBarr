@@ -2,6 +2,9 @@ import SwiftUI
 
 struct TrackRow: View {
     let track: LidarrTrackDetail
+    /// Tap → per-track detail (file quality / size) — the audio counterpart
+    /// of tapping an episode row.
+    var onTap: (() -> Void)? = nil
 
     /// Title colour. Flipped to match `EpisodeRow.episodeTitleStyle`
     /// post-redesign: on-disk tracks (your library, ready to play)
@@ -14,9 +17,12 @@ struct TrackRow: View {
     }
 
     public var body: some View {
-        // No hover affordance: a track isn't a navigation target (no
-        // per-track detail), so it gets neither the series list's
-        // chevron nor the old background-tint hover — just a static row.
+        Button { onTap?() } label: { row.contentShape(Rectangle()) }
+            .buttonStyle(.plain)
+            .linkRowHover()
+    }
+
+    private var row: some View {
         HStack(spacing: 6) {
             Text(track.trackNumber ?? String(track.absoluteTrackNumber ?? 0))
                 .scaledFont(size: 10, weight: .semibold, monospacedDigit: true)
@@ -30,6 +36,7 @@ struct TrackRow: View {
                 .scaledFont(size: 11)
                 .foregroundStyle(trackTitleStyle)
                 .lineLimit(1)
+            LinkChevron(size: 8)
             Spacer()
             if let dur = track.duration, dur > 0 {
                 Text(formatDuration(ms: dur))

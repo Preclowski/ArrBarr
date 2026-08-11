@@ -33,8 +33,8 @@ struct EpisodeRow: View {
     var seriesPosterAPIKey: String? = nil
 
     /// The row's representative download — first of `queueItems`. All the
-    /// single-item visuals (tint, progress fill, hover actions, tooltip)
-    /// render off this one; the count badge signals when there are more.
+    /// single-item visuals (tint, progress fill, hover actions) render off
+    /// this one; the count badge signals when there are more.
     private var queueItem: QueueItem? { queueItems.first }
 
     @State private var isHovering = false
@@ -225,28 +225,10 @@ struct EpisodeRow: View {
                     .transition(.opacity)
             }
         }
+        // No long-hover tooltip: the episode detail (one tap away) carries
+        // quality / size / score, same as tracks — rows stay quiet.
         .onHover { hovering in
             withAnimation(.easeInOut(duration: 0.12)) { isHovering = hovering }
-            hoverTask?.cancel()
-            if hovering, hasTooltipContent {
-                hoverTask = Task { @MainActor [self] in
-                    try? await Task.sleep(nanoseconds: 600_000_000)
-                    if !Task.isCancelled, self.isHovering { showTooltip = true }
-                }
-            } else {
-                showTooltip = false
-            }
-        }
-        .tooltipPopover(isPresented: $showTooltip, arrowEdge: .leading) {
-            EpisodeRowTooltip(
-                episode: episode,
-                queueItem: queueItem,
-                episodeFile: episodeFile,
-                seriesTitle: seriesTitle,
-                seriesPosterURL: seriesPosterURL,
-                seriesPosterRequiresAuth: seriesPosterRequiresAuth,
-                seriesPosterAPIKey: seriesPosterAPIKey
-            )
         }
         #endif
         // Native macOS confirm sheet for destructive actions — same

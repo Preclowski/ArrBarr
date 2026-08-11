@@ -103,23 +103,28 @@ struct SeasonDetailView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
                     seasonHeader
-                    VStack(alignment: .leading, spacing: 4) {
-                        ForEach(episodes.sorted(by: { ($0.episodeNumber ?? 0) < ($1.episodeNumber ?? 0) })) { ep in
-                            EpisodeRow(
-                                episode: ep,
-                                queueItems: queueByEpisodeId[ep.id] ?? [],
-                                episodeFile: ep.episodeFileId.flatMap { fileByEpisodeFileId[$0] },
-                                onTap: { episode in
-                                    withAnimation(.smooth(duration: 0.22)) { selectedEpisode = episode }
-                                },
-                                onPauseQueueItem: { q in Task { await viewModel.pause(q) } },
-                                onResumeQueueItem: { q in Task { await viewModel.resume(q) } },
-                                onDeleteQueueItem: { q in Task { await viewModel.delete(q) } },
-                                seriesTitle: drill.seriesTitle,
-                                seriesPosterURL: seriesPosterURL,
-                                seriesPosterRequiresAuth: seriesPosterRequiresAuth,
-                                seriesPosterAPIKey: seriesPosterAPIKey
-                            )
+                    // Header + rows share a 6pt stack (the CastRow rhythm) so
+                    // the label hugs its list instead of floating 12pt above.
+                    VStack(alignment: .leading, spacing: 6) {
+                        DetailSectionHeader("queue.episodes.button", count: episodes.count)
+                        VStack(alignment: .leading, spacing: 4) {
+                            ForEach(episodes.sorted(by: { ($0.episodeNumber ?? 0) < ($1.episodeNumber ?? 0) })) { ep in
+                                EpisodeRow(
+                                    episode: ep,
+                                    queueItems: queueByEpisodeId[ep.id] ?? [],
+                                    episodeFile: ep.episodeFileId.flatMap { fileByEpisodeFileId[$0] },
+                                    onTap: { episode in
+                                        withAnimation(.smooth(duration: 0.22)) { selectedEpisode = episode }
+                                    },
+                                    onPauseQueueItem: { q in Task { await viewModel.pause(q) } },
+                                    onResumeQueueItem: { q in Task { await viewModel.resume(q) } },
+                                    onDeleteQueueItem: { q in Task { await viewModel.delete(q) } },
+                                    seriesTitle: drill.seriesTitle,
+                                    seriesPosterURL: seriesPosterURL,
+                                    seriesPosterRequiresAuth: seriesPosterRequiresAuth,
+                                    seriesPosterAPIKey: seriesPosterAPIKey
+                                )
+                            }
                         }
                     }
                 }

@@ -498,8 +498,24 @@ extension DemoMocks {
     ) -> LidarrTrackDetail {
         LidarrTrackDetail(
             id: id, trackNumber: trackNumber, absoluteTrackNumber: absolute,
-            title: title, duration: duration_ms, mediumNumber: 1, hasFile: hasFile
+            title: title, duration: duration_ms, mediumNumber: 1, hasFile: hasFile,
+            trackFileId: hasFile ? 8000 + id : nil
         )
+    }
+
+    /// `/trackfile?albumId=` — one FLAC record per on-disk demo track, ids
+    /// mirroring the `8000 + track id` scheme `track(...)` stamps.
+    public static func lidarrTrackFiles(albumId: Int) -> [LidarrTrackFile] {
+        (lidarrTrackData[albumId] ?? [])
+            .filter { $0.hasFile == true }
+            .map { t in
+                LidarrTrackFile(
+                    id: 8000 + t.id, albumId: albumId,
+                    customFormats: [], customFormatScore: 0,
+                    quality: ArrQuality(quality: ArrQuality.ArrQualityName(name: "FLAC")),
+                    size: Int64((t.duration ?? 200_000) * 130)
+                )
+            }
     }
 
     // MARK: - Cast fixtures

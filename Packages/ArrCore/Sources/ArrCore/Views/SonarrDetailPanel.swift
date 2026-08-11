@@ -39,25 +39,31 @@ struct SonarrDetailPanel<Header: View>: View {
             if let seasons = sonarrDetail?.seasons {
                 let visibleSeasons = seasons.filter { $0.seasonNumber > 0 }
                 if !visibleSeasons.isEmpty {
-                    DetailSectionHeader("detail.seasons.button", count: visibleSeasons.count)
-                    // Each season is a progress-bar summary row; tapping it pushes
-                    // SeasonDetailView (its episodes + that season's search buttons).
-                    VStack(spacing: 3) {
-                        ForEach(visibleSeasons, id: \.seasonNumber) { season in
-                            SeasonRow(
-                                season: season,
-                                episodes: sonarrEpisodes.filter { $0.seasonNumber == season.seasonNumber },
-                                queueByEpisodeId: queueByEpisodeId,
-                                onTap: { onTapSeason(season) }
-                            )
+                    // Header + rows share a 6pt stack (the CastRow rhythm) so
+                    // the label hugs its list instead of floating 12pt above.
+                    VStack(alignment: .leading, spacing: 6) {
+                        DetailSectionHeader("detail.seasons.button", count: visibleSeasons.count)
+                        // Each season is a progress-bar summary row; tapping it pushes
+                        // SeasonDetailView (its episodes + that season's search buttons).
+                        VStack(spacing: 3) {
+                            ForEach(visibleSeasons, id: \.seasonNumber) { season in
+                                SeasonRow(
+                                    season: season,
+                                    episodes: sonarrEpisodes.filter { $0.seasonNumber == season.seasonNumber },
+                                    queueByEpisodeId: queueByEpisodeId,
+                                    onTap: { onTapSeason(season) }
+                                )
+                            }
                         }
                     }
                 }
             } else if isLoading {
                 // Series detail still loading — skeleton the seasons list (its
                 // main content) so the surface isn't an empty column.
-                DetailSectionHeader("detail.seasons.button")
-                SkeletonRows(count: 6)
+                VStack(alignment: .leading, spacing: 6) {
+                    DetailSectionHeader("detail.seasons.button")
+                    SkeletonRows(count: 6)
+                }
             }
             // DownloadSection used to live here for series — the
             // separate "w kolejce" list with all active episode

@@ -170,7 +170,7 @@ public struct LidarrArtistDetail: Decodable {
     let monitored: Bool?
 }
 
-public struct LidarrTrackDetail: Decodable, Identifiable {
+public struct LidarrTrackDetail: Decodable, Identifiable, Hashable {
     public let id: Int
     let trackNumber: String?
     let absoluteTrackNumber: Int?
@@ -178,4 +178,7 @@ public struct LidarrTrackDetail: Decodable, Identifiable {
     let duration: Int?
     let mediumNumber: Int?
     let hasFile: Bool?
+    /// Joins the track to its `/trackfile` record (quality / size / formats)
+    /// in the track detail view. nil when no file is on disk.
+    let trackFileId: Int?
 }

@@ -138,6 +138,7 @@ public struct DetailView: View {
     @State private var sonarrEpisodeFiles: [Int: SonarrEpisodeFile] = [:]
     @State private var lidarrAlbum: LidarrAlbumDetail?
     @State private var lidarrTracks: [LidarrTrackDetail] = []
+    @State private var lidarrTrackFiles: [LidarrTrackFile] = []
     /// Cast strip. Movies pull from Radarr's `/credit` (no key needed);
     /// series from TMDB (Sonarr has no cast endpoint) and only when a TMDB
     /// key is set. Empty = unavailable; the row just doesn't render.
@@ -904,6 +905,7 @@ public struct DetailView: View {
                     item: item,
                     lidarrAlbum: lidarrAlbum,
                     lidarrTracks: lidarrTracks,
+                    lidarrTrackFiles: lidarrTrackFiles,
                     siblings: siblings,
                     hasActiveDownloads: hasActiveDownloads,
                     loadError: loadError,
@@ -1053,8 +1055,10 @@ public struct DetailView: View {
                 let client = LidarrClient(config: configStore.lidarr)
                 async let a = client.fetchAlbumDetails(id: entityId)
                 async let ts = client.fetchTracks(albumId: entityId)
+                async let fs = client.fetchTrackFiles(albumId: entityId)
                 lidarrAlbum = try await a
                 lidarrTracks = try await ts
+                lidarrTrackFiles = (try? await fs) ?? []
             case .whisparr:
                 let client = WhisparrClient(config: configStore.whisparr)
                 radarrDetail = try await client.fetchMovieDetails(id: entityId)

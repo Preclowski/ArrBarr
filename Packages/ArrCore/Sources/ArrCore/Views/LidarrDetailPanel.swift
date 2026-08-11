@@ -5,6 +5,9 @@ struct LidarrDetailPanel: View {
     @EnvironmentObject var configStore: ConfigStore
     let lidarrAlbum: LidarrAlbumDetail?
     let lidarrTracks: [LidarrTrackDetail]
+    /// `/trackfile` records for this album — joined per-track by
+    /// `trackFileId` in the pushed track detail.
+    var lidarrTrackFiles: [LidarrTrackFile] = []
     let siblings: [QueueItem]
     let hasActiveDownloads: Bool
     let loadError: String?
@@ -24,7 +27,28 @@ struct LidarrDetailPanel: View {
     /// view (album list). nil leaves the line as plain text.
     var onOpenArtist: ((LidarrArtist) -> Void)? = nil
 
+    /// Tapped track — pushes the per-track detail (file quality / size),
+    /// the audio counterpart of the episode detail.
+    @State private var selectedTrack: LidarrTrackDetail?
+
     var body: some View {
+        content
+            .navigationDestination(item: $selectedTrack) { track in
+                TrackDetailOverlay(
+                    track: track,
+                    file: track.trackFileId.flatMap { fid in lidarrTrackFiles.first { $0.id == fid } },
+                    albumTitle: lidarrAlbum?.title ?? item.title,
+                    artistName: lidarrAlbum?.artist?.artistName,
+                    posterURL: arrPosterURL(images: lidarrAlbum?.images, for: item, in: configStore)
+                        ?? arrPosterURL(images: lidarrAlbum?.artist?.images, for: item, in: configStore)
+                        ?? item.posterURL,
+                    posterAPIKey: item.posterRequiresAuth ? configStore.lidarr.apiKey : nil,
+                    onClose: { selectedTrack = nil }
+                )
+            }
+    }
+
+    private var content: some View {
         VStack(alignment: .leading, spacing: 12) {
             lidarrHeaderCard
             if let overview = lidarrAlbum?.overview, !overview.isEmpty {
@@ -45,37 +69,39 @@ struct LidarrDetailPanel: View {
             }
 
             if !lidarrTracks.isEmpty {
-                DetailSectionHeader("detail.tracks.button", count: lidarrTracks.count)
-                let mediums = Dictionary(grouping: lidarrTracks, by: { $0.mediumNumber ?? 1 })
-                    .sorted { $0.key < $1.key }
-                // Rows already pad 4pt each, so a 0-spacing stack yields 8pt
-                // between track lines — a dense tracklist. Any stack spacing
-                // on top of that read as unnatural daylight between rows of
-                // bare single-line text (episode rows carry the same metrics
-                // but their card-like fill visually absorbs it).
-                if mediums.count > 1 {
-                    discPillBar(mediums.map { $0.key })
-                    let active = effectiveDiscNumber(in: mediums.map { $0.key }) ?? mediums.first!.key
-                    let tracks = mediums.first(where: { $0.key == active })?.value ?? []
-                    VStack(alignment: .leading, spacing: 0) {
-                        ForEach(tracks.sorted(by: { ($0.absoluteTrackNumber ?? 0) < ($1.absoluteTrackNumber ?? 0) })) { track in
-                            TrackRow(track: track)
+                // Header + list share a 6pt stack (the CastRow rhythm) —
+                // as siblings of the outer `VStack(spacing: 12)` the label
+                // floated 12pt above its own list. Row spacing is 0: rows
+                // already pad 4pt each, so that yields 8pt between track
+                // lines — a dense tracklist; any stack spacing on top read
+                // as unnatural daylight between bare single-line rows.
+                VStack(alignment: .leading, spacing: 6) {
+                    DetailSectionHeader("detail.tracks.button", count: lidarrTracks.count)
+                    let mediums = Dictionary(grouping: lidarrTracks, by: { $0.mediumNumber ?? 1 })
+                        .sorted { $0.key < $1.key }
+                    if mediums.count > 1 {
+                        discPillBar(mediums.map { $0.key })
+                        let active = effectiveDiscNumber(in: mediums.map { $0.key }) ?? mediums.first!.key
+                        let tracks = mediums.first(where: { $0.key == active })?.value ?? []
+                        VStack(alignment: .leading, spacing: 0) {
+                            ForEach(tracks.sorted(by: { ($0.absoluteTrackNumber ?? 0) < ($1.absoluteTrackNumber ?? 0) })) { track in
+                                TrackRow(track: track) { selectedTrack = track }
+                            }
+                        }
+                    } else {
+                        let tracks = mediums.first?.value ?? []
+                        VStack(alignment: .leading, spacing: 0) {
+                            ForEach(tracks.sorted(by: { ($0.absoluteTrackNumber ?? 0) < ($1.absoluteTrackNumber ?? 0) })) { track in
+                                TrackRow(track: track) { selectedTrack = track }
+                            }
                         }
                     }
-                    .padding(.top, 2)
-                } else {
-                    let tracks = mediums.first?.value ?? []
-                    VStack(alignment: .leading, spacing: 0) {
-                        ForEach(tracks.sorted(by: { ($0.absoluteTrackNumber ?? 0) < ($1.absoluteTrackNumber ?? 0) })) { track in
-                            TrackRow(track: track)
-                        }
-                    }
-                    .padding(.top, 2)
                 }
             } else if isLoading {
-                DetailSectionHeader("detail.tracks.button")
-                SkeletonRows(count: 8)
-                    .padding(.top, 6)
+                VStack(alignment: .leading, spacing: 6) {
+                    DetailSectionHeader("detail.tracks.button")
+                    SkeletonRows(count: 8)
+                }
             }
             if let err = loadError {
                 LoadErrorLine(message: err)

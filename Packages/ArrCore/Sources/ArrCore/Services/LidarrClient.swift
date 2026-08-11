@@ -142,7 +142,8 @@ public actor LidarrClient: ArrAPIClient {
         )
     }
 
-    private func fetchTrackFiles(albumId: Int) async throws -> [LidarrTrackFile] {
+    func fetchTrackFiles(albumId: Int) async throws -> [LidarrTrackFile] {
+        if DemoMode.isActive { return DemoMocks.lidarrTrackFiles(albumId: albumId) }
         if let cached = trackFileCache[albumId], cached.expiry > Date() {
             return cached.files
         }
