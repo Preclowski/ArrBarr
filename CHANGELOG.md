@@ -9,6 +9,17 @@ Releases before 0.10.0 are described on the
 
 ## [Unreleased]
 
+## [1.3.1] — 2026-08-12
+
+### Changed
+
+- "Existing file" block is a key-value table (Quality / Size / Score) matching
+  the download spec; format chips and the filename render label-less below it.
+- Score is sign-coloured (green/red) in the plain download spec and the
+  existing-file table.
+- Single active download gets a "Downloading" caption, symmetric with
+  "Existing file".
+
 ## [1.3.0] — 2026-08-12
 
 ### Added
