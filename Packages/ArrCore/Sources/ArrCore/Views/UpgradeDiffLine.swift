@@ -162,7 +162,11 @@ public struct UpgradeDiffTable: View {
             if newScore != 0 {
                 GridRow {
                     label("queue.score.button")
-                    newCell(ScoreLabel.text(newScore))
+                    // Plain spec has no delta column competing for the colour,
+                    // so the score keeps ScoreLabel's sign rule (green
+                    // positive / red negative) — same as the queue list.
+                    ScoreLabel(score: newScore, size: 11, weight: .semibold)
+                        .gridColumnAlignment(.leading)
                 }
             }
             if !newFormats.isEmpty {

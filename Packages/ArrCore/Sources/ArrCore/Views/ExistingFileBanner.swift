@@ -97,44 +97,43 @@ struct ExistingFileBanner: View {
     }
 
     public var body: some View {
-        // No header label, no inline metadata strip — same chrome as
-        // the new-release block above (filename + chip strip). The
-        // "EXISTING FILE" caption it used to crown was carrying its
-        // weight only as a section divider, and the file's own
-        // quality/size/score is already visible inside
-        // DownloadProgressCard's `└─ OLD` upgrade sub-line. Symmetric
-        // siblings: one block for the incoming release, one for the
-        // one on disk, both styled identically.
+        // Key-value grid for Jakość / Rozmiar / Ocena — the same labels,
+        // order and styling as the download section's `UpgradeDiffTable`,
+        // so the on-disk file and the incoming release read as the same
+        // kind of table.
         VStack(alignment: .leading, spacing: 5) {
-            if showMetadata, (quality?.isEmpty == false) || size != nil || (customFormatScore ?? 0) != 0 {
-                HStack(spacing: 6) {
+            Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 8, verticalSpacing: 3) {
+                if showMetadata {
                     if let q = quality, !q.isEmpty {
-                        Text(q)
-                            .scaledFont(size: 12, weight: .semibold)
-                            .foregroundStyle(.primary)
+                        GridRow {
+                            label("queue.quality.button")
+                            value(q, weight: .semibold)
+                        }
                     }
                     if let s = size, s > 0 {
-                        Text(ByteCountFormatter.string(fromByteCount: s, countStyle: .file))
-                            .scaledFont(size: 11)
-                            .foregroundStyle(.secondary)
+                        GridRow {
+                            label("queue.size.button")
+                            value(ByteCountFormatter.string(fromByteCount: s, countStyle: .file))
+                        }
                     }
-                    // Score on the trailing edge — the same right-gutter
-                    // slot queue rows and episode rows give it.
                     if let score = customFormatScore, score != 0 {
-                        Spacer(minLength: 6)
-                        ScoreLabel(score: score, size: 11)
-                            .help(Text("common.customFormatScore.button", bundle: .module))
+                        GridRow {
+                            label("queue.score.button")
+                            // ScoreLabel's sign rule (green positive / red
+                            // negative) — same as the queue list and the
+                            // plain download spec.
+                            ScoreLabel(score: score, size: 11, weight: .semibold)
+                                .gridColumnAlignment(.leading)
+                                .help(Text("common.customFormatScore.button", bundle: .module))
+                        }
                     }
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            if let name = fileName, !name.isEmpty {
-                Text(name)
-                    .scaledFont(size: 11, design: .monospaced)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            // Chips + filename carry no labels — self-describing values,
+            // matching the download spec block (chip strip, then release
+            // name, both full-width under the key-value grid).
             if !customFormats.isEmpty {
                 let newSet: Set<String> = newFormats.map(Set.init) ?? []
                 let highlightRemoved = newFormats != nil
@@ -150,7 +149,32 @@ struct ExistingFileBanner: View {
                     }
                 }
             }
+            if let name = fileName, !name.isEmpty {
+                Text(name)
+                    .scaledFont(size: 11, design: .monospaced)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                    .truncationMode(.middle)
+                    .multilineTextAlignment(.leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder
+    private func label(_ key: LocalizedStringKey) -> some View {
+        Text(key, bundle: .module)
+            .scaledFont(size: 11, weight: .semibold)
+            .foregroundStyle(.secondary)
+            .gridColumnAlignment(.leading)
+    }
+
+    @ViewBuilder
+    private func value(_ text: String, weight: Font.Weight = .regular) -> some View {
+        Text(text)
+            .scaledFont(size: 11, weight: weight)
+            .foregroundStyle(.primary)
+            .lineLimit(1)
+            .gridColumnAlignment(.leading)
     }
 }

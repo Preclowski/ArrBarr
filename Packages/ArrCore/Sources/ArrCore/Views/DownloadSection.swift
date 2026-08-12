@@ -74,7 +74,13 @@ struct DownloadSection: View {
 
     public var body: some View {
         if items.count <= 1 {
-            singleItemBlock(focused)
+            // Same caption treatment as the "Existing file" block below it —
+            // the two sections read as symmetric siblings. The multi-item
+            // variant keeps its own "In queue · N downloads" header line.
+            VStack(alignment: .leading, spacing: 6) {
+                DetailSectionHeader("Downloading")
+                singleItemBlock(focused)
+            }
         } else {
             multiItemBlock
         }
