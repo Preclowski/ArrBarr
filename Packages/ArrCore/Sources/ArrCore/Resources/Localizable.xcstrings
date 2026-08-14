@@ -38743,48 +38743,6 @@
       },
       "comment": "Text field placeholder in settings"
     },
-    "settings.plexTokenHowTo.tooltip": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "In Plex, open any item's ••• menu → Get Info → View XML. The token is the X-Plex-Token value at the end of the address."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "W Plexie otwórz przy dowolnym tytule menu ••• → Uzyskaj informacje → Wyświetl XML. Token to wartość X-Plex-Token na końcu adresu."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Öffne in Plex bei einem beliebigen Titel das •••-Menü → Informationen → XML anzeigen. Der Token ist der Wert X-Plex-Token am Ende der Adresse."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "En Plex, abre el menú ••• de cualquier título → Obtener información → Ver XML. El token es el valor X-Plex-Token al final de la dirección."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dans Plex, ouvrez le menu ••• d'un titre → Obtenir des infos → Afficher le XML. Le jeton est la valeur X-Plex-Token à la fin de l'adresse."
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Open in Plex bij een willekeurige titel het •••-menu → Info tonen → XML bekijken. Het token is de waarde X-Plex-Token aan het eind van het adres."
-          }
-        }
-      },
-      "comment": "Hint in settings on how to obtain a Plex token"
-    },
     "settings.howToFindPlexToken.button": {
       "extractionState": "manual",
       "localizations": {
@@ -39792,48 +39750,6 @@
         }
       },
       "comment": "Button in settings"
-    },
-    "settings.magnetLinks.header": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Magnet links"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Odnośniki magnet"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Magnet-Links"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Enlaces magnet"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Liens magnet"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Magnet-links"
-          }
-        }
-      },
-      "comment": "Settings section header"
     }
   }
 }

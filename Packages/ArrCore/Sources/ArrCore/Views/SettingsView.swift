@@ -547,7 +547,7 @@ public struct SettingsView: View {
         case .general: generalPane
         case .status: ServerStatusView()
         case .mediaManagers: serviceHubPane(mediaManagerSpecs, locked: false, reorderable: true)
-        case .downloadClients: serviceHubPane(downloadClientSpecs, locked: true, showsMagnetHandler: true)
+        case .downloadClients: serviceHubPane(downloadClientSpecs, locked: true)
         case .service(let kind): singleServicePane(for: kind)
         case .mediaServer: MediaServerSettingsPane()
         case .assistant: aiPane
@@ -568,8 +568,7 @@ public struct SettingsView: View {
     private func serviceHubPane(
         _ specs: [ServiceSpec],
         locked: Bool,
-        reorderable: Bool = false,
-        showsMagnetHandler: Bool = false
+        reorderable: Bool = false
     ) -> some View {
         Form {
             Section {
@@ -614,12 +613,6 @@ public struct SettingsView: View {
                     Text("settings.dragToReorderQueue.footer", bundle: .module)
                 }
             }
-
-            #if os(macOS)
-            if showsMagnetHandler {
-                MagnetHandlerSection()
-            }
-            #endif
         }
         .formStyle(.grouped)
         .disabled(locked && !storeManager.isPro)

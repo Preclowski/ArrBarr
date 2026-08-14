@@ -113,17 +113,18 @@ struct MediaServerSettingsPane: View {
         }
     }
 
-    /// How to get the token, per server. Plex is the one that needs real
-    /// instructions: it has no "API keys" screen, and the route everyone in
-    /// the arr ecosystem uses is to open an item's XML and read the token out
-    /// of the URL.
+    /// Where the token comes from, per server.
+    ///
+    /// Jellyfin and Emby name a screen you can walk to, which is short enough
+    /// to say inline. Plex has no "API keys" screen at all — the route is to
+    /// open an item's XML and read the token out of the address bar, which is
+    /// too long to spell out here, so Plex gets the link under Test connection
+    /// instead of a paragraph.
     @ViewBuilder
     private var tokenHint: some View {
         switch configStore.mediaServer.kind {
         case .plex:
-            Text("settings.plexTokenHowTo.tooltip", bundle: .module)
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            EmptyView()
         case .jellyfin:
             Text("settings.jellyfinTokenHowTo.tooltip", bundle: .module)
                 .font(.caption)

@@ -85,22 +85,20 @@ struct ServerStatusView: View {
             case .tmdb:   brandMark("brand-tmdb")
             case .mediaServer:
                 ServiceIcon(mediaServer: ConfigStore.shared.mediaServer.kind, size: 16)
-                    .foregroundStyle(.secondary)
             case .arr:    EmptyView()
             }
         }
     }
 
-    /// Brand mark from `ServiceIcons.xcassets`, sized and tinted like the arr
-    /// icons beside it — the row reads as one family rather than "three logos
-    /// and two SF Symbols".
+    /// Brand mark from `ServiceIcons.xcassets`, sized like the arr icons beside
+    /// it and inheriting the same foreground — dimming it to `.secondary` made
+    /// OpenAI and TMDB read as a lesser class of service than the arrs.
     private func brandMark(_ name: String) -> some View {
         Image(name, bundle: .module)
             .renderingMode(.template)
             .resizable()
             .scaledToFit()
             .frame(width: 16, height: 16)
-            .foregroundStyle(.secondary)
     }
 
     private func statusPill(_ state: ConnectionHealthState) -> some View {
