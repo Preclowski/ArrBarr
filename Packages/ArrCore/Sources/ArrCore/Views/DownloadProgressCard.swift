@@ -206,7 +206,11 @@ public struct DownloadProgressCard: View {
         // reads as a deliberate progress bar rather than a hairline. The
         // detail drops it entirely — progress shows in the Resume/Pause CTA.
         if compactSpec {
-            ThinProgressBar(progress: progress, tint: tint, height: 6)
+            LiveProgress(item: item) { live in
+                // `progressOverride` wins when the card speaks for a pack's
+                // representative row rather than for `item` itself.
+                ThinProgressBar(progress: progressOverride ?? live, tint: tint, height: 6)
+            }
         }
     }
 

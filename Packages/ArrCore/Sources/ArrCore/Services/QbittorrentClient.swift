@@ -153,17 +153,34 @@ public actor QbittorrentClient: DownloadProgressSource, DownloadAddSource {
     /// stores the same hash upper-cased, so the overlay lowercases both sides).
     /// Reuses the existing `/torrents/info` fetch — `progress` + `dlspeed` are
     /// already in the payload, just unused until now.
-    public func fetchProgress() async throws -> [String: DownloadProgress] {
-        let torrents = try await fetchTorrents()
+    public func fetchProgress(ids: Set<String> = []) async throws -> [String: DownloadProgress] {
+        let torrents = try await fetchTorrents(hashes: ids)
         return Dictionary(
             torrents.map { ($0.hash.lowercased(), DownloadProgress(progress: $0.progress, downloadSpeed: $0.dlspeed)) },
             uniquingKeysWith: { _, new in new }
         )
     }
 
-    private func fetchTorrents() async throws -> [QbitTorrent] {
+    /// `/torrents/info` returns the FULL record — some fifty fields including
+    /// `magnet_uri`, `save_path`, `tracker` and `tags` — for every torrent the
+    /// client holds, seeding ones included. On a long-lived seedbox that is the
+    /// single largest thing this app pulls, and all of it is thrown away except
+    /// two numbers per row. `hashes` narrows it to the queue.
+    ///
+    /// Skipped past `maxFilterHashes`: the filter travels in the URL, and a few
+    /// hundred 40-character hashes push it past what proxies in front of a
+    /// WebUI will accept. Above that the unfiltered listing is the safe answer,
+    /// and a queue that long is already the pathological case.
+    private static let maxFilterHashes = 50
+
+    private func fetchTorrents(hashes: Set<String> = []) async throws -> [QbitTorrent] {
+        var query: [URLQueryItem] = []
+        if !hashes.isEmpty, hashes.count <= Self.maxFilterHashes {
+            query.append(URLQueryItem(name: "hashes",
+                                      value: hashes.map { $0.lowercased() }.sorted().joined(separator: "|")))
+        }
         let data = try await authenticated {
-            let url = try http.url(base: config.baseURL, path: "/api/v2/torrents/info")
+            let url = try http.url(base: config.baseURL, path: "/api/v2/torrents/info", query: query)
             return try await http.get(url, headers: authHeaders())
         }
         do {

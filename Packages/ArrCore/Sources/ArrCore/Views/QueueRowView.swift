@@ -349,12 +349,14 @@ public struct QueueRowView: View {
             ZStack {
                 RoundedRectangle(cornerRadius: Tokens.Radius.chip)
                     .fill(.black.opacity(0.5))
-                DownloadProgressRing(
-                    systemName: showsPlay ? "play.fill" : "pause.fill",
-                    progress: item.progress,
-                    diameter: 26,
-                    lineWidth: 2
-                )
+                LiveProgress(item: item) { progress in
+                    DownloadProgressRing(
+                        systemName: showsPlay ? "play.fill" : "pause.fill",
+                        progress: progress,
+                        diameter: 26,
+                        lineWidth: 2
+                    )
+                }
             }
         }
         .buttonStyle(.plain)

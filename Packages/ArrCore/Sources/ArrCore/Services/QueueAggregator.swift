@@ -98,11 +98,13 @@ public final class QueueAggregator: QueueDataProviding {
         // row without one can't be improved by the client either — an empty (or
         // id-less) queue used to poll every configured client forever to enrich
         // nothing, which on an idle stack was the app's whole remaining traffic.
-        let hasTrackableRows = [r.items, s.items, l.items, w.items]
-            .contains { rows in rows.contains { $0.downloadId?.isEmpty == false } }
-        let clientProgress = hasTrackableRows
-            ? await DownloadProgressService.shared.snapshot(configs: downloadClientConfigs())
-            : [:]
+        let trackableIds = Set([r.items, s.items, l.items, w.items].flatMap { rows in
+            rows.compactMap { $0.downloadId?.lowercased() }.filter { !$0.isEmpty }
+        })
+        let clientProgress = trackableIds.isEmpty
+            ? [:]
+            : await DownloadProgressService.shared.snapshot(
+                configs: downloadClientConfigs(), ids: trackableIds)
         return AggregateResult(
             radarr: Self.overlay(r.items, with: clientProgress),
             sonarr: Self.overlay(s.items, with: clientProgress),
@@ -124,9 +126,11 @@ public final class QueueAggregator: QueueDataProviding {
         // The client snapshot is TTL-cached and shared, so asking for it here
         // costs nothing extra when a sibling source just refreshed. Same gate as
         // `fetch()`: no trackable row means nothing to overlay onto.
-        let progress = outcome.items.contains { $0.downloadId?.isEmpty == false }
-            ? await DownloadProgressService.shared.snapshot(configs: downloadClientConfigs())
-            : [:]
+        let ids = Set(outcome.items.compactMap { $0.downloadId?.lowercased() }.filter { !$0.isEmpty })
+        let progress = ids.isEmpty
+            ? [:]
+            : await DownloadProgressService.shared.snapshot(
+                configs: downloadClientConfigs(), ids: ids)
         return SourceQueueResult(
             source: source,
             items: Self.overlay(outcome.items, with: progress),
@@ -155,6 +159,7 @@ public final class QueueAggregator: QueueDataProviding {
             guard let id = item.downloadId?.lowercased(), let p = progress[id] else { return item }
             var copy = item
             copy.progress = p.progress
+            if let speed = p.downloadSpeed { copy.downloadSpeed = speed }
             return copy
         }
     }

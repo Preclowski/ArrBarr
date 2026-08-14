@@ -63,6 +63,12 @@ public struct QueueItem: Identifiable, Equatable, Hashable, Sendable {
     public let sizeTotal: Int64
     public let sizeLeft: Int64
     public let timeLeft: String?
+    /// Bytes per second, when a download client reported one. Not every client
+    /// does — SABnzbd reports a percentage per slot and a speed only for the
+    /// queue as a whole — so `progressRatePerSecond` falls back to the arr's
+    /// own ETA.
+    public var downloadSpeed: Int64? = nil
+
 
     public let customFormats: [String]
     public let customFormatScore: Int
@@ -99,6 +105,7 @@ public struct QueueItem: Identifiable, Equatable, Hashable, Sendable {
         releaseName: String? = nil,
         status: Status, progress: Double, sizeTotal: Int64,
         sizeLeft: Int64, timeLeft: String?,
+        downloadSpeed: Int64? = nil,
         customFormats: [String], customFormatScore: Int,
         quality: String?, releaseGroup: String? = nil, isUpgrade: Bool,
         existingCustomFormats: [String] = [], existingCustomFormatScore: Int? = nil, existingQuality: String? = nil,
@@ -115,6 +122,7 @@ public struct QueueItem: Identifiable, Equatable, Hashable, Sendable {
         self.seasonNumber = seasonNumber; self.episodeNumber = episodeNumber; self.episodeTitle = episodeTitle
         self.status = status; self.progress = progress; self.sizeTotal = sizeTotal
         self.sizeLeft = sizeLeft; self.timeLeft = timeLeft
+        self.downloadSpeed = downloadSpeed
         self.customFormats = customFormats; self.customFormatScore = customFormatScore
         self.quality = quality; self.releaseGroup = releaseGroup
         self.isUpgrade = isUpgrade; self.contentSlug = contentSlug; self.entityId = entityId

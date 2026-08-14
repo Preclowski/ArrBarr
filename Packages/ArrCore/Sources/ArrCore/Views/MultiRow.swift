@@ -160,13 +160,15 @@ struct MultiRow: View {
                     // No dark disc — that backdrop exists to guarantee
                     // contrast over poster artwork; on the plain row it read
                     // as a black blob. The ring tints adaptively instead.
-                    DownloadProgressRing(
-                        systemName: item.isPaused ? "play.fill" : "pause.fill",
-                        progress: item.progress,
-                        diameter: 24,
-                        lineWidth: 2,
-                        tint: .primary
-                    )
+                    LiveProgress(item: item) { progress in
+                        DownloadProgressRing(
+                            systemName: item.isPaused ? "play.fill" : "pause.fill",
+                            progress: progress,
+                            diameter: 24,
+                            lineWidth: 2,
+                            tint: .primary
+                        )
+                    }
                     .frame(width: 30, height: 30)
                     .contentShape(Circle())
                 }

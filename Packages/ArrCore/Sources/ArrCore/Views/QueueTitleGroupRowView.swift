@@ -113,7 +113,9 @@ struct QueueTitleGroupRowView: View {
                 // "43% · 31,5 GB" — aggregate completion + total batch size
                 // (the chip above carries the count).
                 HStack(spacing: 4) {
-                    Text(group.aggregateProgress, format: .percent.precision(.fractionLength(0)))
+                    LiveProgress(group: group) { progress in
+                        Text(progress, format: .percent.precision(.fractionLength(0)))
+                    }
                         .scaledFont(size: 11, monospacedDigit: true)
                         .foregroundStyle(.secondary)
                     if totalSize > 0 {
@@ -129,7 +131,9 @@ struct QueueTitleGroupRowView: View {
                 // Same bar as every other queue row (ThinProgressBar via
                 // DownloadProgressCard's compact variant) — a different bar
                 // style here read as a foreign element.
-                ThinProgressBar(progress: group.aggregateProgress, tint: aggregateTint, height: 6)
+                LiveProgress(group: group) { progress in
+                    ThinProgressBar(progress: progress, tint: aggregateTint, height: 6)
+                }
             }
 
             // THE disclosure affordance — trailing edge, vertically centred,

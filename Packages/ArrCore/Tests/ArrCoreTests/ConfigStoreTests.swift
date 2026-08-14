@@ -20,16 +20,6 @@ struct ConfigStoreTests {
         }
     }
 
-    @Test("Default polling intervals are 5s foreground, 30s background")
-    @MainActor func defaultIntervals() {
-        let (defaults, name) = makeDefaults()
-        defer { UserDefaults.standard.removePersistentDomain(forName: name) }
-
-        let store = ConfigStore(defaults: defaults, secrets: InMemorySecretStore())
-        #expect(store.foregroundInterval == 5)
-        #expect(store.backgroundInterval == 30)
-    }
-
     @Test("Service config round-trips through persistence (including secrets)")
     @MainActor func saveAndLoad() {
         let (defaults, name) = makeDefaults()
@@ -67,19 +57,21 @@ struct ConfigStoreTests {
         #expect(secrets.read(.password(for: .radarr)) == "SENSITIVE-PW")
     }
 
-    @Test("Custom intervals persist")
-    @MainActor func persistIntervals() {
+    /// Both intervals stopped being preferences: the queue is pushed at by
+    /// SignalR, the bars interpolate between fetches, and the background poll
+    /// only runs once realtime has gone silent. Pinned here so re-exposing
+    /// them has to be a deliberate edit — the old test asserted the opposite.
+    @Test("Refresh intervals are hard-locked, not stored")
+    @MainActor func intervalsAreConstants() {
         let (defaults, name) = makeDefaults()
         defer { UserDefaults.standard.removePersistentDomain(forName: name) }
 
-        let secrets = InMemorySecretStore()
-        let store = ConfigStore(defaults: defaults, secrets: secrets)
-        store.foregroundInterval = 15
-        store.backgroundInterval = 120
-
-        let reloaded = ConfigStore(defaults: defaults, secrets: secrets)
-        #expect(reloaded.foregroundInterval == 15)
-        #expect(reloaded.backgroundInterval == 120)
+        let store = ConfigStore(defaults: defaults, secrets: InMemorySecretStore())
+        #expect(store.foregroundInterval == 30)
+        #expect(store.backgroundInterval == 30)
+        // Nothing is written for them, so nothing can be restored either.
+        #expect(defaults.object(forKey: "ArrBarr.foregroundInterval") == nil)
+        #expect(defaults.object(forKey: "ArrBarr.backgroundInterval") == nil)
     }
 
     @Test("config(for:) returns the correct service")

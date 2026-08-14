@@ -58,8 +58,24 @@ public final class ConfigStore: ObservableObject {
     @Published public var transmission: ServiceConfig = .empty
     @Published public var rtorrent: ServiceConfig = .empty
     @Published public var deluge: ServiceConfig = .empty
-    @Published public var foregroundInterval: TimeInterval = 5
-    @Published public var backgroundInterval: TimeInterval = 30
+    /// How often the queue is refetched while the panel is open.
+    ///
+    /// Hard-locked, and deliberately slow. It used to be a Settings picker
+    /// defaulting to 5 s, which on a queue of a hundred-plus rows meant twelve
+    /// full `/queue` fetches a minute — plus one round-trip to every download
+    /// client each time — purely so the progress bars would move. The bars now
+    /// interpolate between readings from the rate that was true at the last one
+    /// (`QueueItem.interpolatedProgress(at:)`), so the fetch only has to keep
+    /// the *facts* current, and 30 s does that. Everything that is a real
+    /// change — a row appearing, finishing, failing — arrives by SignalR push
+    /// long before the next tick.
+    public let foregroundInterval: TimeInterval = 30
+    /// Fallback poll while the panel is closed, used ONLY when realtime has
+    /// gone quiet for every source — a healthy hub skips it entirely (see
+    /// `QueueViewModel.realtimeCoversEverySource`). Also hard-locked: it is a
+    /// safety net, not a preference, and the picker invited people to tune a
+    /// number that is almost never reached.
+    public let backgroundInterval: TimeInterval = 30
     /// How long a realtime connection may stay silent before ArrBarr stops
     /// trusting it and polls instead.
     ///
@@ -250,8 +266,6 @@ public final class ConfigStore: ObservableObject {
     /// continuous slider that nobody actually fine-tunes.
     public static let fontScaleOptions: [Double] = [1.0, 1.20, 1.45]
 
-    public static let foregroundIntervalOptions: [TimeInterval] = [0, 2, 5, 10, 15, 30]
-    public static let backgroundIntervalOptions: [TimeInterval] = [0, 10, 30, 60, 120, 300]
 
     private var defaults: UserDefaults
     private let secrets: SecretStore
@@ -294,8 +308,6 @@ public final class ConfigStore: ObservableObject {
         group.set(true, forKey: groupMigrationDoneKey)
     }
 
-    private static let foregroundIntervalKey = "ArrBarr.foregroundInterval"
-    private static let backgroundIntervalKey = "ArrBarr.backgroundInterval"
     private static let notifyHealthKey = "ArrBarr.notifyHealth"
     private static let notifyRadarrKey = "ArrBarr.notifyRadarr"
     private static let notifySonarrKey = "ArrBarr.notifySonarr"
@@ -430,10 +442,6 @@ public final class ConfigStore: ObservableObject {
         self.transmission = loadService(.transmission)
         self.rtorrent = loadService(.rtorrent)
         self.deluge = loadService(.deluge)
-        let fgKey = Self.foregroundIntervalKey
-        self.foregroundInterval = defaults.object(forKey: fgKey) != nil ? defaults.double(forKey: fgKey) : 5
-        let bgKey = Self.backgroundIntervalKey
-        self.backgroundInterval = defaults.object(forKey: bgKey) != nil ? defaults.double(forKey: bgKey) : 30
         self.notifyHealth = defaults.bool(forKey: Self.notifyHealthKey)
         self.notifyRadarr = defaults.object(forKey: Self.notifyRadarrKey) != nil ? defaults.bool(forKey: Self.notifyRadarrKey) : true
         self.notifySonarr = defaults.object(forKey: Self.notifySonarrKey) != nil ? defaults.bool(forKey: Self.notifySonarrKey) : true
@@ -533,12 +541,6 @@ public final class ConfigStore: ObservableObject {
                 self?.save(kind, cfg)
             }.store(in: &cancellables)
         }
-        $foregroundInterval.dropFirst().sink { [weak self] val in
-            self?.defaults.set(val, forKey: Self.foregroundIntervalKey)
-        }.store(in: &cancellables)
-        $backgroundInterval.dropFirst().sink { [weak self] val in
-            self?.defaults.set(val, forKey: Self.backgroundIntervalKey)
-        }.store(in: &cancellables)
         $notifyHealth.dropFirst().sink { [weak self] val in
             self?.defaults.set(val, forKey: Self.notifyHealthKey)
         }.store(in: &cancellables)

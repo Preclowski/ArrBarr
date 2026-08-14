@@ -128,12 +128,16 @@ public actor DelugeClient: DownloadProgressSource, DownloadAddSource {
     /// returns `{ infohash: { progress, download_payload_rate } }`. Deluge's
     /// `progress` is a 0…100 float, so it's scaled to 0…1. Keyed by lowercased
     /// hash to match the arr's download id.
-    public func fetchProgress() async throws -> [String: DownloadProgress] {
+    public func fetchProgress(ids: Set<String> = []) async throws -> [String: DownloadProgress] {
         guard config.isConfigured else { return [:] }
+        // The first parameter is Deluge's filter dict; an empty one means
+        // "every torrent in the daemon", seeding included.
+        let filter: [String: Any] = ids.isEmpty
+            ? [:] : ["id": ids.map { $0.lowercased() }.sorted()]
         let resp = try await authenticated {
             try await rpc(
                 method: "core.get_torrents_status",
-                params: [[String: Any](), ["progress", "download_payload_rate"]]
+                params: [filter, ["progress", "download_payload_rate"]]
             )
         }
         // Deluge reports failures in-band (HTTP 200 + an `error` envelope), so

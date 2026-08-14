@@ -259,20 +259,6 @@ public final class QueueViewModel {
             }
         }
 
-        configStore.$backgroundInterval
-            .dropFirst()
-            .sink { [weak self] _ in
-                self?.restartBackgroundPolling()
-            }
-            .store(in: &intervalObservers)
-
-        configStore.$foregroundInterval
-            .dropFirst()
-            .sink { [weak self] _ in
-                self?.restartForegroundPolling()
-            }
-            .store(in: &intervalObservers)
-
         configStore.$tonightHours
             .dropFirst()
             .sink { [weak self] hours in
@@ -558,7 +544,15 @@ public final class QueueViewModel {
 
     @MainActor private var realtimeDebounce: [QueueItem.Source: Timer] = [:]
     /// Per-source, so one arr's floor can't suppress another arr's refresh.
-    @MainActor private var lastRefreshAt: [QueueItem.Source: Date] = [:]
+    @MainActor private(set) var lastRefreshAt: [QueueItem.Source: Date] = [:]
+
+    /// When this source's rows were last measured. Progress interpolation runs
+    /// from it — see `QueueItem.interpolatedProgress(at:measuredAt:)`. Falls
+    /// back to `.distantPast`, which reads as "no interpolation".
+    @MainActor
+    public func progressMeasuredAt(for source: QueueItem.Source) -> Date {
+        lastRefreshAt[source] ?? .distantPast
+    }
 
     /// Timer registered in `.common` run loop mode so it keeps firing while the
     /// menu-bar panel is tracking events — a `.default`-mode timer (what
@@ -590,8 +584,44 @@ public final class QueueViewModel {
         let interval = configStore.foregroundInterval
         guard interval > 0 else { return }
         foregroundTimer = Self.commonModeTimer(interval: interval, repeats: true) { [weak self] in
-            Task { await self?.refreshQueues() }
+            Task { [weak self] in
+                guard let self else { return }
+                if await self.canSkipForegroundTick() { return }
+                await self.refreshQueues()
+            }
         }
+    }
+
+    /// Whether the open panel's tick can be answered with nothing.
+    ///
+    /// Two conditions, both required. Realtime has to be covering every source,
+    /// because a push is then what tells us a row appeared, finished or failed
+    /// — the poll is not carrying that news. And nothing may be actively
+    /// downloading, because a downloading row is the only kind whose numbers
+    /// move without an event to announce them.
+    ///
+    /// That second half is what makes a large queue cheap: a hundred rows sat
+    /// in "queued" or "paused" cost twelve `/queue` fetches a minute plus a
+    /// round-trip to every download client, to redraw values that are
+    /// identical every time.
+    ///
+    /// Interpolated bars don't keep the tick alive — they are drawn from the
+    /// last reading and its rate, and a row that is genuinely downloading
+    /// fails this check anyway, so it keeps being refetched.
+    private func canSkipForegroundTick() async -> Bool {
+        guard await realtimeCoversEverySource() else { return false }
+        // The user just pressed something — pause, resume, "download now",
+        // delete — and is watching for it to take. An optimistic override is
+        // exactly that moment, expiry and all, so no new state is needed to
+        // spot it. Without this the row would be painted as downloading while
+        // the tick that would confirm it got skipped, and the override would
+        // quietly expire back to the stale status.
+        let now = Date()
+        if optimisticOverrides.values.contains(where: { $0.expiry >= now }) { return false }
+        let downloading = queues.values.contains { items in
+            items.contains { $0.status == .downloading }
+        }
+        return !downloading
     }
 
     public func stopForegroundPolling() {
@@ -613,10 +643,6 @@ public final class QueueViewModel {
         }
     }
 
-    private func restartForegroundPolling() {
-        guard foregroundTimer != nil else { return }
-        startForegroundPolling()
-    }
 
     /// True when every configured arr has pushed recently enough to vouch for
     /// its own hub — the condition under which polling is worth suppressing.
@@ -1350,6 +1376,10 @@ public final class QueueViewModel {
             try await aggregator.deleteAll(items)
             lastError = nil
             for item in items { applyOptimisticUpdate(.delete, on: item) }
+            // Same as `runAction`: confirm the batch instead of waiting.
+            if let source = items.first?.source {
+                Task { await self.refreshQueue(source: source) }
+            }
         } catch {
             lastError = error.userFacingMessage
         }
@@ -1364,6 +1394,11 @@ public final class QueueViewModel {
             try await aggregator.perform(action, on: item)
             lastError = nil
             applyOptimisticUpdate(action, on: item)
+            // Confirm it for real rather than waiting for the arr to get round
+            // to broadcasting. The override paints the change instantly; this
+            // is what replaces it with a fact — and what makes a "download now"
+            // start being tracked from the moment it is pressed.
+            Task { await self.refreshQueue(source: item.source) }
         } catch {
             let message = error.userFacingMessage
             lastError = message

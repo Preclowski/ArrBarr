@@ -1042,21 +1042,12 @@ public struct SettingsView: View {
             needsYouSection
             tmdbSection
             storageSection
-            Section {
-                Picker(selection: $configStore.foregroundInterval) {
-                    ForEach(ConfigStore.foregroundIntervalOptions, id: \.self) { interval in
-                        Text(Self.formatInterval(interval)).tag(interval)
-                    }
-                } label: { Text("settings.popoverOpen.button", bundle: .module) }
-                Picker(selection: $configStore.backgroundInterval) {
-                    ForEach(ConfigStore.backgroundIntervalOptions, id: \.self) { interval in
-                        Text(Self.formatInterval(interval)).tag(interval)
-                    }
-                } label: { Text("settings.background.button", bundle: .module) }
-                // No picker for `realtimeSilenceTimeout`: it's the tolerance for
-                // a silent realtime connection, which nobody can reason about
-                // without knowing Servarr's push cycle. Hard-locked to 5m.
-            } header: { Text("settings.refreshInterval.button", bundle: .module) }
+            // No refresh-interval pickers. Both are hard-locked (see
+            // `ConfigStore.foregroundInterval`): the queue is pushed at by
+            // SignalR, the bars interpolate between fetches, and the background
+            // poll only runs when realtime has gone silent — so the numbers
+            // there described plumbing rather than anything a user wants to
+            // choose. Same reasoning as `realtimeSilenceTimeout`.
             // Developer/Demo controls moved to the About pane; Siri & Shortcuts
             // is now its own sidebar row (see siriPane).
         }
@@ -1263,15 +1254,6 @@ public struct SettingsView: View {
         return short == build ? "v\(short)" : "v\(short) (\(build))"
     }
 
-    private static func formatInterval(_ seconds: TimeInterval) -> String {
-        if seconds == 0 {
-            return String(localized: "settings.never.button", bundle: .module)
-        } else if seconds < 60 {
-            return "\(Int(seconds))s"
-        } else {
-            return "\(Int(seconds) / 60)m"
-        }
-    }
 
 }
 

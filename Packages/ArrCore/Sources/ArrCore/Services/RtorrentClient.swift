@@ -69,7 +69,9 @@ public actor RtorrentClient: DownloadProgressSource, DownloadAddSource {
     /// `<string>`/`<i8>`/`<i4>` values in document order and chunk them by four.
     /// `d.hash` is upper-case hex → lowercased to match the arr's download id.
     /// The chunking is verified before it's trusted — see the guards below.
-    public func fetchProgress() async throws -> [String: DownloadProgress] {
+    /// `ids` is ignored: `d.multicall2` asks for four scalars over the `main` view; XML-RPC has no
+    /// clean per-hash filter, and the payload is already four values per torrent.
+    public func fetchProgress(ids: Set<String> = []) async throws -> [String: DownloadProgress] {
         guard config.isConfigured else { return [:] }
         let xml = """
         <?xml version="1.0" encoding="UTF-8"?>\

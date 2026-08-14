@@ -140,12 +140,16 @@ public actor TransmissionClient: DownloadProgressSource, DownloadAddSource {
     /// backward-compatible). Fields are read in BOTH casings (`percentDone` for
     /// 2.x–4.0.x, `percent_done` for 4.1.0+) so it survives either server.
     /// Keyed by lowercased hash to match the arr's download id.
-    public func fetchProgress() async throws -> [String: DownloadProgress] {
+    public func fetchProgress(ids: Set<String> = []) async throws -> [String: DownloadProgress] {
         guard config.isConfigured else { return [:] }
         let url = try http.url(base: config.baseURL, path: "/transmission/rpc")
+        // Three fields already, so this is only about row count — but a client
+        // that has been seeding for a year answers with every one of them.
+        var arguments: [String: Any] = ["fields": ["hashString", "percentDone", "rateDownload"]]
+        if !ids.isEmpty { arguments["ids"] = ids.map { $0.lowercased() }.sorted() }
         let bodyDict: [String: Any] = [
             "method": "torrent-get",
-            "arguments": ["fields": ["hashString", "percentDone", "rateDownload"]],
+            "arguments": arguments,
         ]
         let body = try JSONSerialization.data(withJSONObject: bodyDict)
         let data = try await rpcRequest(url: url, body: body)

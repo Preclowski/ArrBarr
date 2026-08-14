@@ -40,12 +40,18 @@ public actor DownloadProgressService {
     /// configured, progress-capable clients when the cache is older than `ttl`;
     /// otherwise serves the cache; coalesces concurrent callers into one fetch.
     /// Returns `[:]` when no client is configured (→ the queue keeps arr values).
-    public func snapshot(configs: [ServiceKind: ServiceConfig]) async -> [String: DownloadProgress] {
+    ///
+    /// `ids` are the download ids the arrs' queues actually reference. They
+    /// narrow the request where the client's API allows it — see
+    /// `DownloadProgressSource.fetchProgress(ids:)`.
+    public func snapshot(
+        configs: [ServiceKind: ServiceConfig], ids: Set<String> = []
+    ) async -> [String: DownloadProgress] {
         let active = resolveSources(configs)
         guard !active.isEmpty else { return [:] }
         if let last = lastRefresh, Date().timeIntervalSince(last) < ttl { return freshCache }
         if let inFlight { return await inFlight.value }
-        let task = Task { await self.refresh(active) }
+        let task = Task { await self.refresh(active, ids: ids) }
         inFlight = task
         let result = await task.value
         // Only clear the slot if it still holds THIS task. The await above is an
@@ -70,7 +76,9 @@ public actor DownloadProgressService {
         return cache
     }
 
-    private func refresh(_ sources: [DownloadProgressSource]) async -> [String: DownloadProgress] {
+    private func refresh(
+        _ sources: [DownloadProgressSource], ids: Set<String>
+    ) async -> [String: DownloadProgress] {
         let results = await withTaskGroup(of: [String: DownloadProgress]?.self) { group in
             for source in sources {
                 // `nil` = this source failed; `[:]` = it answered and has nothing
@@ -78,7 +86,7 @@ public actor DownloadProgressService {
                 // failure stays best-effort (its downloads fall back to the arr
                 // for this cycle), but a cycle where *all* of them failed must
                 // not be mistaken for "every download finished".
-                group.addTask { try? await source.fetchProgress() }
+                group.addTask { try? await source.fetchProgress(ids: ids) }
             }
             var all: [[String: DownloadProgress]?] = []
             for await map in group { all.append(map) }

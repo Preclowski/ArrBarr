@@ -143,7 +143,8 @@ public actor NzbgetClient: DownloadProgressSource, DownloadAddSource {
     /// download rate (that's the global `status` method), so only progress is
     /// overlaid — computed from the 64-bit `…SizeLo/Hi` byte fields. Keyed by the
     /// NZBID as a string (the arr's download id for an NZBGet item).
-    public func fetchProgress() async throws -> [String: DownloadProgress] {
+    /// `ids` is ignored: `listgroups` already returns only the queue — there is nothing wider to narrow.
+    public func fetchProgress(ids: Set<String> = []) async throws -> [String: DownloadProgress] {
         guard config.isConfigured else { return [:] }
         let body: [String: Any] = ["method": "listgroups", "params": [0]]
         let jsonData = try JSONSerialization.data(withJSONObject: body)

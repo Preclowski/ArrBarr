@@ -5193,48 +5193,6 @@
       },
       "comment": "Button in discover"
     },
-    "settings.background.button": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Background"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "W tle"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hintergrund"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Segundo plano"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Arrière-plan"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Achtergrond"
-          }
-        }
-      },
-      "comment": "Button in settings"
-    },
     "common.backgroundWhileCooking.button": {
       "extractionState": "manual",
       "localizations": {
@@ -16911,48 +16869,6 @@
       },
       "comment": "Label in paywall"
     },
-    "settings.popoverOpen.button": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Popover open"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Okno otwarte"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Popover geöffnet"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Panel abierto"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Panneau ouvert"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pop-upvenster open"
-          }
-        }
-      },
-      "comment": "Button in settings"
-    },
     "onboarding.previous.button": {
       "extractionState": "manual",
       "localizations": {
@@ -17750,48 +17666,6 @@
         }
       },
       "comment": "Button in common"
-    },
-    "settings.refreshInterval.button": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Refresh Interval"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Częstotliwość odświeżania"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aktualisierungsintervall"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Intervalo de actualización"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Intervalle d'actualisation"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Verversingsinterval"
-          }
-        }
-      },
-      "comment": "Button in settings"
     },
     "settings.regenerate.button": {
       "extractionState": "manual",

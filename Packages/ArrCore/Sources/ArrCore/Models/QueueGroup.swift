@@ -90,6 +90,28 @@ public struct QueueTitleGroup: Identifiable, Equatable {
         guard !items.isEmpty else { return 0 }
         return items.reduce(0.0) { $0 + $1.progress } / Double(items.count)
     }
+
+    /// The aggregate as drawn at `date`.
+    ///
+    /// Deliberately the measured aggregate PLUS the interpolated delta, rather
+    /// than a re-derivation from each row's interpolated value: the measured
+    /// figure comes from remaining *bytes*, which is more accurate than the
+    /// per-row percentages and is what the bar has always shown. This only adds
+    /// the movement between fetches, so at `.distantPast` it is exactly equal
+    /// to `aggregateProgress`.
+    func aggregateProgress(at date: Date, measuredAt: Date) -> Double {
+        let items = allItems
+        let total = items.reduce(Int64(0)) { $0 + $1.sizeTotal }
+        guard total > 0 else { return aggregateProgress }
+        let gained = items.reduce(0.0) { sum, item in
+            let delta = item.interpolatedProgress(at: date, measuredAt: measuredAt) - item.progress
+            return sum + delta * Double(item.sizeTotal)
+        }
+        return max(0, min(1, aggregateProgress + gained / Double(total)))
+    }
+
+    /// Whether any row in the group is moving — drives the group bar's clock.
+    var isInterpolatingProgress: Bool { allItems.contains { $0.isInterpolatingProgress } }
 }
 
 /// A row in the queue list after the optional by-title pass: either a

@@ -29,5 +29,17 @@ public struct DownloadProgress: Sendable, Equatable {
 /// arr value stays as the fallback. Conformers are actors, so the service can
 /// fan the fetches out in parallel.
 public protocol DownloadProgressSource: Sendable {
-    func fetchProgress() async throws -> [String: DownloadProgress]
+    /// Live progress for the given download ids, keyed by lowercased id.
+    ///
+    /// `ids` is what the arrs' queues actually reference — a hint, not a
+    /// contract. Clients whose progress endpoint can target ids narrow the
+    /// request with it; the rest ignore it, because their endpoint is already
+    /// scoped to the queue (SABnzbd's `mode=queue`, NZBGet's `listgroups`)
+    /// and there is nothing to narrow. Returning extra entries is harmless —
+    /// the overlay matches by id.
+    ///
+    /// It matters most for the torrent clients: a seedbox holds every
+    /// completed torrent forever, so an unfiltered listing grows without bound
+    /// while the set we care about stays the size of the queue.
+    func fetchProgress(ids: Set<String>) async throws -> [String: DownloadProgress]
 }

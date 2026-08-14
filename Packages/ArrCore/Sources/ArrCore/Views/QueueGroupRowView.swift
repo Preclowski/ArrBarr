@@ -586,9 +586,11 @@ public struct TooltipQueueRow: View {
             .background(
                 ZStack(alignment: .leading) {
                     GeometryReader { geo in
-                        Rectangle()
-                            .fill(item.status.tint.opacity(0.16))
-                            .frame(width: geo.size.width * max(0.02, min(1, item.progress)))
+                        LiveProgress(item: item) { progress in
+                            Rectangle()
+                                .fill(item.status.tint.opacity(0.16))
+                                .frame(width: geo.size.width * max(0.02, min(1, progress)))
+                        }
                     }
                 }
                 .clipShape(RoundedRectangle(cornerRadius: Tokens.Radius.chip))

@@ -113,7 +113,8 @@ public actor SabnzbdClient: DownloadProgressSource, DownloadAddSource {
     /// match `QueueItem.downloadId` the same case-insensitive way as torrents).
     /// `percentage` is SAB's own "%" string; SAB exposes no reliable per-slot
     /// speed, so `downloadSpeed` stays nil.
-    public func fetchProgress() async throws -> [String: DownloadProgress] {
+    /// `ids` is ignored: `mode=queue` already returns only the queue — there is nothing wider to narrow.
+    public func fetchProgress(ids: Set<String> = []) async throws -> [String: DownloadProgress] {
         let slots = try await fetchSlots()
         return Dictionary(
             slots.map { ($0.nzo_id.lowercased(), DownloadProgress(progress: (Double($0.percentage) ?? 0) / 100)) },
