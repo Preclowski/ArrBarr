@@ -244,7 +244,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             aiKnowsAboutWhisparr: cs.aiKnowsAboutWhisparr, tmdbApiKey: cs.tmdbApiKey,
             downloadClients: DownloadClientConfigs(
                 qbittorrent: cs.qbittorrent, transmission: cs.transmission, nzbget: cs.nzbget,
-                sabnzbd: cs.sabnzbd, rtorrent: cs.rtorrent, deluge: cs.deluge))
+                sabnzbd: cs.sabnzbd, rtorrent: cs.rtorrent, deluge: cs.deluge),
+            mediaServer: cs.mediaServer)
         let config = MCPServerController.Config(
             hostPort: cs.mcpHostPort, requireAuth: cs.mcpRequireAuth, token: cs.mcpAuthToken,
             disabledTools: cs.mcpDisabledTools, backendInputs: inputs)

@@ -49,10 +49,14 @@ public actor LocalToolBackend: ToolBackend {
     /// report reachability of qBittorrent/Transmission/etc. Empty configs
     /// are skipped. Not needed by any other tool, so it defaults to none.
     let downloadClients: DownloadClientConfigs
+    /// The one media server, when connected. Drives the `media_server_*` tools
+    /// and nothing else — no other tool consults it.
+    let mediaServer: MediaServerConfig
 
     public init(sonarr: ServiceConfig, radarr: ServiceConfig, lidarr: ServiceConfig = .empty,
                 whisparr: ServiceConfig = .empty, aiKnowsAboutWhisparr: Bool = false,
-                tmdbApiKey: String = "", downloadClients: DownloadClientConfigs = .init()) {
+                tmdbApiKey: String = "", downloadClients: DownloadClientConfigs = .init(),
+                mediaServer: MediaServerConfig = .empty) {
         self.sonarr = sonarr
         self.radarr = radarr
         self.lidarr = lidarr
@@ -60,6 +64,7 @@ public actor LocalToolBackend: ToolBackend {
         self.aiKnowsAboutWhisparr = aiKnowsAboutWhisparr
         self.tmdbApiKey = tmdbApiKey
         self.downloadClients = downloadClients
+        self.mediaServer = mediaServer
     }
 
     var tmdbEnabled: Bool { !tmdbApiKey.isEmpty }
@@ -71,7 +76,8 @@ public actor LocalToolBackend: ToolBackend {
             includeLidarr: lidarr.isConfigured,
             includeWhisparr: whisparr.isConfigured && aiKnowsAboutWhisparr,
             includeTMDBMovies: tmdbEnabled && radarr.isConfigured,
-            includeTMDBSeries: tmdbEnabled && sonarr.isConfigured
+            includeTMDBSeries: tmdbEnabled && sonarr.isConfigured,
+            includeMediaServer: mediaServer.isConfigured
         )
     }
 
@@ -89,6 +95,12 @@ public actor LocalToolBackend: ToolBackend {
         // Guard Whisparr tools when the toggle is off
         if name.hasPrefix("whisparr_") && !aiKnowsAboutWhisparr {
             return ToolCallOutput(text: "Whisparr AI access is disabled in Settings.")
+        }
+        // Guard media-server tools when nothing is connected — same shape as
+        // the TMDB guard: a canned line beats a confirmation prompt for a tool
+        // that could only fail.
+        if name.hasPrefix("media_server_") && !mediaServer.isConfigured {
+            return ToolCallOutput(text: "No media server is configured in Settings → Media server.")
         }
         // Guard TMDB tools when no key is configured
         if name.hasPrefix("tmdb_") && !tmdbEnabled {
@@ -155,6 +167,9 @@ public actor LocalToolBackend: ToolBackend {
         case "lidarr_get_artist_albums":    return try await lidarrGetArtistAlbums(arguments)
         case "lidarr_monitor_album":        return try await lidarrMonitorAlbum(arguments)
         case "lidarr_search_album":         return try await lidarrSearchAlbumTool(arguments)
+        case "media_server_watch_history":  return try await mediaServerWatchHistory(arguments)
+        case "media_server_now_playing":    return try await mediaServerNowPlaying()
+        case "media_server_scan_library":   return try await mediaServerScanLibrary()
         default:
             // `callTool` already rejected anything outside the directory, so
             // reaching here means the directory lists a tool this switch never

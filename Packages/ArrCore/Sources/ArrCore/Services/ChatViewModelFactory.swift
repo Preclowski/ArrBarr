@@ -18,6 +18,7 @@ public enum ChatViewModelFactory {
         aiKnowsAboutWhisparr: Bool = false,
         tmdbApiKey: String = "",
         downloadClients: DownloadClientConfigs = .init(),
+        mediaServer: MediaServerConfig = .empty,
         chatProvider: ChatProvider,
         openai: OpenAIConfig,
         appLanguage: String = "system"
@@ -26,7 +27,8 @@ public enum ChatViewModelFactory {
         let backend: ToolBackend = LocalToolBackend(
             sonarr: sonarr, radarr: radarr, lidarr: lidarr,
             whisparr: whisparr, aiKnowsAboutWhisparr: aiKnowsAboutWhisparr,
-            tmdbApiKey: tmdbApiKey, downloadClients: downloadClients
+            tmdbApiKey: tmdbApiKey, downloadClients: downloadClients,
+            mediaServer: mediaServer
         )
 
         let tmdbEnabled = !tmdbApiKey.isEmpty
@@ -36,7 +38,8 @@ public enum ChatViewModelFactory {
             includeLidarr: lidarr.isConfigured,
             includeWhisparr: whisparr.isConfigured && aiKnowsAboutWhisparr,
             includeTMDBMovies: tmdbEnabled && radarr.isConfigured,
-            includeTMDBSeries: tmdbEnabled && sonarr.isConfigured
+            includeTMDBSeries: tmdbEnabled && sonarr.isConfigured,
+            includeMediaServer: mediaServer.isConfigured
         )
 
         let invoke: @Sendable (String, JSONValue) async throws -> ToolCallOutput = { name, args in

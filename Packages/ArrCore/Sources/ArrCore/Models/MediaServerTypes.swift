@@ -102,9 +102,9 @@ public struct MediaServerHandshake: Sendable, Equatable {
 
 public enum MediaServerError: LocalizedError {
     case notConfigured
-    /// The action exists on some servers but not this one — "empty trash" is
-    /// a Plex concept; Jellyfin and Emby have no trash to empty.
-    case unsupported(action: String, server: String)
+    /// "Empty trash" is a Plex concept — Jellyfin and Emby delete an item when
+    /// its file goes, so there is nothing to purge.
+    case trashUnsupported(server: String)
     /// Jellyfin / Emby need a user id for play state and none could be found.
     case noUserResolved
 
@@ -112,8 +112,8 @@ public enum MediaServerError: LocalizedError {
         switch self {
         case .notConfigured:
             return String(localized: "Media server is not configured.", bundle: .module)
-        case .unsupported(let action, let server):
-            return String(localized: "\(server) does not support \(action).", bundle: .module)
+        case .trashUnsupported(let server):
+            return String(localized: "\(server) has no trash to empty.", bundle: .module)
         case .noUserResolved:
             return String(localized: "Couldn't work out which user to read play state for.", bundle: .module)
         }

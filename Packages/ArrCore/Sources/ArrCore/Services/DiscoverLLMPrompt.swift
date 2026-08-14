@@ -19,10 +19,22 @@ public enum DiscoverLLMPrompt {
         case malformedJSON(underlying: Error)
     }
 
+    /// Titles the connected media server says the user has already watched.
+    ///
+    /// Serves two purposes in one list, which is why it is a single parameter:
+    /// it is the best taste signal available (far better than a mood string
+    /// alone), and it is an exclusion list — recommending something already
+    /// watched is the fastest way to make the deck feel useless.
+    ///
+    /// Capped by the caller (`MediaServerIndex.watchHistoryLimit`); the cap is
+    /// re-applied here so a caller that forgets can't blow up the prompt.
+    public static let maxWatchedInPrompt = 40
+
     public static func build(mood: String,
                              count: Int,
                              exclude: [String],
-                             kindHint: DiscoverMediaSelection = .movie) -> String {
+                             kindHint: DiscoverMediaSelection = .movie,
+                             watched: [String] = []) -> String {
         var lines: [String] = []
         switch kindHint {
         case .movie:
@@ -50,6 +62,14 @@ public enum DiscoverLLMPrompt {
         if !exclude.isEmpty {
             lines.append("Do NOT include any of these already-shown titles:")
             lines.append(exclude.joined(separator: ", "))
+        }
+        let recentlyWatched = Array(watched.prefix(maxWatchedInPrompt))
+        if !recentlyWatched.isEmpty {
+            lines.append(
+                "The user recently watched these — use them to infer taste, " +
+                "and do NOT recommend any of them again:"
+            )
+            lines.append(recentlyWatched.joined(separator: ", "))
         }
         return lines.joined(separator: "\n")
     }

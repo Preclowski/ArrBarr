@@ -113,6 +113,10 @@ fastest via SwiftPM:
 - **Realtime**: `RealtimeUpdates` consumes Servarr SignalR/WebSocket. Servarr
   nests `action` inside `arguments[0].body` — parse that envelope, and force a
   reconnect on system wake (`queueVM.systemDidWake()`).
+- **Media server**: ONE of Plex / Jellyfin / Emby (`MediaServerConfig`, not a
+  `ServiceKind`). `MediaServerIndex` is a lock-guarded snapshot — not an actor —
+  so poster resolution stays synchronous; it supplies artwork overrides, the
+  Quiz's watch history, and the `media_server_*` tools. Control-gated.
 - **Season grouping**: `QueueGroup` wraps multiple `QueueItem`s; `.real` packs
   share a downloadId, `.virtual` bundles have independent progress.
 - **Custom progress bars**: `GeometryReader` + `RoundedRectangle`, not

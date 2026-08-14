@@ -16,7 +16,8 @@ public enum ChatToolCatalog {
         includeLidarr: Bool = false,
         includeWhisparr: Bool = false,
         includeTMDBMovies: Bool = false,
-        includeTMDBSeries: Bool = false
+        includeTMDBSeries: Bool = false,
+        includeMediaServer: Bool = false
     ) -> [MCPTool] {
         var arr: [MCPTool] = []
         if includeSonarr { arr.append(contentsOf: sonarrTools) }
@@ -58,6 +59,11 @@ public enum ChatToolCatalog {
         if includeSonarr || includeRadarr {
             arr.append(contentsOf: customFormatTools)
         }
+        // Media-server tools stand alone: they read Plex / Jellyfin / Emby and
+        // touch no arr, so they are gated only on that connection existing.
+        if includeMediaServer {
+            arr.append(contentsOf: mediaServerTools)
+        }
         return arr
     }
 
@@ -68,11 +74,13 @@ public enum ChatToolCatalog {
         includeLidarr: Bool = false,
         includeWhisparr: Bool = false,
         includeTMDBMovies: Bool = false,
-        includeTMDBSeries: Bool = false
+        includeTMDBSeries: Bool = false,
+        includeMediaServer: Bool = false
     ) -> [LLMTool] {
         tools(includeSonarr: includeSonarr, includeRadarr: includeRadarr,
               includeLidarr: includeLidarr, includeWhisparr: includeWhisparr,
-              includeTMDBMovies: includeTMDBMovies, includeTMDBSeries: includeTMDBSeries).map {
+              includeTMDBMovies: includeTMDBMovies, includeTMDBSeries: includeTMDBSeries,
+              includeMediaServer: includeMediaServer).map {
             LLMTool(name: $0.name, description: $0.description, inputSchema: $0.inputSchema)
         }
     }
@@ -90,7 +98,20 @@ public enum ChatToolCatalog {
         public let summary: String
         /// Apps the tool drives — rendered as a row of brand icons.
         public let services: [ServiceKind]
+        /// SF Symbol shown instead of brand icons. Set for tools that drive
+        /// something outside the `ServiceKind` roster — the media server has
+        /// no brand mark in the icon set, and inventing one per server would
+        /// mean three more assets for a row of a settings list.
+        public let systemImage: String?
         public var id: String { name }
+
+        public init(name: String, summary: String, services: [ServiceKind],
+                    systemImage: String? = nil) {
+            self.name = name
+            self.summary = summary
+            self.services = services
+            self.systemImage = systemImage
+        }
     }
 
     /// Flat directory of every catalog tool, in catalog order. The pane shows
@@ -125,6 +146,12 @@ public enum ChatToolCatalog {
             .init(name: "get_title_details", summary: "Details & cast for one title", services: [.sonarr, .radarr]),
             .init(name: "custom_formats", summary: "Inspect custom-format scoring", services: [.sonarr, .radarr]),
             .init(name: "list_download_queue", summary: "Show the active download queue", services: [.sonarr, .radarr]),
+            .init(name: "media_server_watch_history", summary: "What was recently watched",
+                  services: [], systemImage: "play.tv"),
+            .init(name: "media_server_now_playing", summary: "What is playing right now",
+                  services: [], systemImage: "play.circle"),
+            .init(name: "media_server_scan_library", summary: "Ask the media server to rescan",
+                  services: [], systemImage: "arrow.clockwise"),
         ]
     }
 
@@ -632,6 +659,48 @@ public enum ChatToolCatalog {
             USE THIS for "is everything working", "what's the state of my setup", "are there any issues", "any problems with Sonarr / qBittorrent", "is my download client connected". DO NOT use `sonarr_get_series` / `radarr_get_movies` for status questions — those list library contents and say nothing about health.
 
             Output is plain text (no cards). Relay the per-service summary briefly. Inline the most actionable warnings if any.
+            """,
+            inputSchema: .object(["type": .string("object"), "properties": .object([:])])
+        ),
+    ]
+
+    // MARK: - Media server (Plex / Jellyfin / Emby)
+
+    private static let mediaServerTools: [MCPTool] = [
+        MCPTool(
+            name: "media_server_watch_history",
+            description: """
+            What the user has recently FINISHED watching on their media server (Plex / Jellyfin / Emby), newest first. Returns title, year and when it was watched; episodes are reported as their series.
+
+            USE THIS for "what have I watched lately", "did I already see X", "recommend something based on what I watch", "what did I finish this week". It is the only source of watch state — the arrs know what was downloaded, never what was played.
+
+            DO NOT use this to list the library (that's `radarr_get_movies` / `sonarr_get_series`) or to see what is playing right now (that's `media_server_now_playing`).
+            """,
+            inputSchema: .object([
+                "type": .string("object"),
+                "properties": .object([
+                    "limit": .object([
+                        "type": .string("integer"),
+                        "description": .string("How many recent plays to return. Defaults to 20, capped at 100."),
+                    ]),
+                ]),
+            ])
+        ),
+        MCPTool(
+            name: "media_server_now_playing",
+            description: """
+            Active playback sessions on the media server right now: what is playing, which user, on which device, and whether the server is transcoding or direct-playing.
+
+            USE THIS for "is anyone watching", "what's playing", "who's using the server", "is it transcoding". Returns an empty list when nothing is playing — say so plainly rather than guessing.
+            """,
+            inputSchema: .object(["type": .string("object"), "properties": .object([:])])
+        ),
+        MCPTool(
+            name: "media_server_scan_library",
+            description: """
+            Ask the media server to rescan its libraries, so a title an arr just imported shows up without waiting for the server's own schedule.
+
+            USE THIS after an import the user is waiting on ("it finished downloading but it's not in Plex"). This queues work on the server and needs the user's confirmation; the result reports only that the request was accepted, not that the scan has finished.
             """,
             inputSchema: .object(["type": .string("object"), "properties": .object([:])])
         ),

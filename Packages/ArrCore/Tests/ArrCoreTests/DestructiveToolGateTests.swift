@@ -15,14 +15,20 @@ import Testing
 @Suite("Destructive-tool gate")
 struct DestructiveToolGateTests {
 
-    /// Whisparr and TMDB are switched ON so the two prefix guards in `callTool`
-    /// can't short-circuit a tool before it reaches the gate — otherwise this
-    /// suite would silently stop covering any future `whisparr_*` mutation.
-    /// Every arr is left unconfigured: nothing may touch the network.
+    /// Whisparr, TMDB and the media server are switched ON so the three prefix
+    /// guards in `callTool` can't short-circuit a tool before it reaches the
+    /// gate — otherwise this suite would silently stop covering any future
+    /// `whisparr_*` or `media_server_*` mutation. Every arr is left
+    /// unconfigured, and the media server points at an address nothing answers
+    /// on: the gate must throw before anything reaches the network.
     private func backend() -> LocalToolBackend {
         LocalToolBackend(
             sonarr: .empty, radarr: .empty, lidarr: .empty, whisparr: .empty,
-            aiKnowsAboutWhisparr: true, tmdbApiKey: "tmdb-key"
+            aiKnowsAboutWhisparr: true, tmdbApiKey: "tmdb-key",
+            mediaServer: MediaServerConfig(
+                enabled: true, kind: .plex,
+                baseURL: "http://127.0.0.1:1", token: "test-token"
+            )
         )
     }
 
@@ -88,6 +94,7 @@ struct DestructiveToolGateTests {
             "sonarr_search_episodes", // manual indexer searches — they grab releases
             "radarr_search_movie",
             "lidarr_search_album",
+            "media_server_scan_library", // queues work on the user's media server
         ]
         #expect(Set(destructiveCatalogTools) == expected)
     }

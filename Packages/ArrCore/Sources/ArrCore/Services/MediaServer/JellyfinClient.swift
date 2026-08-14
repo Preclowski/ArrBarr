@@ -153,10 +153,7 @@ struct JellyfinClient: MediaServerClient {
         // when their files do, at the next scan. Surfaced as an explicit
         // "unsupported" so Settings can hide the button instead of offering one
         // that always fails.
-        throw MediaServerError.unsupported(
-            action: String(localized: "emptying the trash", bundle: .module),
-            server: config.kind.displayName
-        )
+        throw MediaServerError.trashUnsupported(server: config.kind.displayName)
     }
 
     func nowPlaying() async throws -> [MediaServerSession] {

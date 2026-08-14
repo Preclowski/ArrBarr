@@ -81,6 +81,15 @@ public final class MediaServerIndex: @unchecked Sendable {
         return !byKey.isEmpty
     }
 
+    /// Distinct titles in the snapshot. Counted over entries rather than keys —
+    /// a title with both a tmdb and an imdb id occupies two keys and is still
+    /// one title, which is the number Settings should show.
+    public var indexedTitleCount: Int {
+        lock.lock()
+        defer { lock.unlock() }
+        return Set(byKey.values.map(\.itemId)).count
+    }
+
     public var lastRefreshedAt: Date? {
         lock.lock()
         defer { lock.unlock() }

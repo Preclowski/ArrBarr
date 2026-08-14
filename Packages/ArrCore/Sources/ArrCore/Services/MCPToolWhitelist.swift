@@ -61,6 +61,11 @@ public enum MCPToolWhitelist {
         "get_title_details",
         "custom_formats",
         "list_download_queue",
+        // Media server — both are plain reads of play state.
+        // `media_server_scan_library` is NOT here: it queues work on someone's
+        // server, which is exactly the class of thing the user wants to approve.
+        "media_server_watch_history",
+        "media_server_now_playing",
     ]
 
     /// True when the named tool needs an explicit user confirmation before it

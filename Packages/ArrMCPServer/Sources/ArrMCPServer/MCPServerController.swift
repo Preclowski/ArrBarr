@@ -25,12 +25,17 @@ public actor MCPServerController {
         public let aiKnowsAboutWhisparr: Bool
         public let tmdbApiKey: String
         public let downloadClients: DownloadClientConfigs
+        /// The one media server, when connected — drives the `media_server_*`
+        /// tools. Defaulted so existing call sites (and tests) compile unchanged.
+        public let mediaServer: MediaServerConfig
         public init(sonarr: ServiceConfig, radarr: ServiceConfig, lidarr: ServiceConfig,
                     whisparr: ServiceConfig, aiKnowsAboutWhisparr: Bool, tmdbApiKey: String,
-                    downloadClients: DownloadClientConfigs) {
+                    downloadClients: DownloadClientConfigs,
+                    mediaServer: MediaServerConfig = .empty) {
             self.sonarr = sonarr; self.radarr = radarr; self.lidarr = lidarr; self.whisparr = whisparr
             self.aiKnowsAboutWhisparr = aiKnowsAboutWhisparr; self.tmdbApiKey = tmdbApiKey
             self.downloadClients = downloadClients
+            self.mediaServer = mediaServer
         }
     }
 
@@ -105,14 +110,15 @@ public actor MCPServerController {
         let backend = LocalToolBackend(
             sonarr: i.sonarr, radarr: i.radarr, lidarr: i.lidarr, whisparr: i.whisparr,
             aiKnowsAboutWhisparr: i.aiKnowsAboutWhisparr, tmdbApiKey: i.tmdbApiKey,
-            downloadClients: i.downloadClients)
+            downloadClients: i.downloadClients, mediaServer: i.mediaServer)
         let tmdbEnabled = !i.tmdbApiKey.isEmpty
         let catalog = ChatToolCatalog.tools(
             includeSonarr: i.sonarr.isConfigured, includeRadarr: i.radarr.isConfigured,
             includeLidarr: i.lidarr.isConfigured,
             includeWhisparr: i.whisparr.isConfigured && i.aiKnowsAboutWhisparr,
             includeTMDBMovies: tmdbEnabled && i.radarr.isConfigured,
-            includeTMDBSeries: tmdbEnabled && i.sonarr.isConfigured)
+            includeTMDBSeries: tmdbEnabled && i.sonarr.isConfigured,
+            includeMediaServer: i.mediaServer.isConfigured)
         let router = MCPCallRouter(backend: backend, catalog: catalog,
                                    disabled: config.disabledTools, logger: logger)
         let exposed = catalog.filter { !config.disabledTools.contains($0.name) }.count

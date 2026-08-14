@@ -52,6 +52,7 @@ public struct SettingsView: View {
         case mediaManagers
         case downloadClients
         case service(ServiceKind)
+        case mediaServer
         case assistant
         case mcp
         case icloud
@@ -413,6 +414,8 @@ public struct SettingsView: View {
             .tag(SettingsSection.mediaManagers)
         Label { Text("settings.downloadClients.button", bundle: .module) } icon: { Image(systemName: "arrow.down.circle") }
             .tag(SettingsSection.downloadClients)
+        Label { Text("settings.mediaServer.label", bundle: .module) } icon: { Image(systemName: "play.tv") }
+            .tag(SettingsSection.mediaServer)
         Label { Text("settings.assistant.button", bundle: .module) } icon: { Image(systemName: "sparkles") }
             .tag(SettingsSection.assistant)
         Label { Text("settings.mcp.label", bundle: .module) } icon: { Image(systemName: "point.3.connected.trianglepath.dotted") }
@@ -450,6 +453,7 @@ public struct SettingsView: View {
             .init(section: .service($0.kind), title: $0.title, kind: $0.kind, systemImage: "")
         }
         items += [
+            .init(section: .mediaServer, title: String(localized: "settings.mediaServer.label", bundle: .module), kind: nil, systemImage: "play.tv"),
             .init(section: .assistant, title: String(localized: "settings.assistant.button", bundle: .module), kind: nil, systemImage: "sparkles"),
             .init(section: .mcp, title: String(localized: "settings.mcp.label", bundle: .module), kind: nil, systemImage: "point.3.connected.trianglepath.dotted"),
         ]
@@ -523,6 +527,7 @@ public struct SettingsView: View {
         case .mediaManagers: return Text("settings.mediaManagers.button", bundle: .module)
         case .downloadClients: return Text("settings.downloadClients.button", bundle: .module)
         case .service(let kind): return Text(verbatim: kind.displayName)
+        case .mediaServer: return Text("settings.mediaServer.label", bundle: .module)
         case .assistant: return Text("settings.assistant.button", bundle: .module)
         case .mcp: return Text("settings.mcp.label", bundle: .module)
         case .icloud: return Text("settings.icloud.label", bundle: .module)
@@ -539,6 +544,7 @@ public struct SettingsView: View {
         case .mediaManagers: serviceHubPane(mediaManagerSpecs, locked: false, reorderable: true)
         case .downloadClients: serviceHubPane(downloadClientSpecs, locked: true, showsMagnetHandler: true)
         case .service(let kind): singleServicePane(for: kind)
+        case .mediaServer: MediaServerSettingsPane()
         case .assistant: aiPane
         case .mcp: MCPSettingsPane()
         case .icloud: ICloudSettingsView()
@@ -712,6 +718,7 @@ public struct SettingsView: View {
             iosSettingsLink("settings.status.button", systemImage: "waveform.path.ecg") { ServerStatusView() }
             iosSettingsLink("Media managers", systemImage: "server.rack") { iosMediaManagersForm }
             iosSettingsLink("Download clients", systemImage: "arrow.down.circle") { iosDownloadClientsForm }
+            iosSettingsLink("settings.mediaServer.label", systemImage: "play.tv") { MediaServerSettingsPane() }
             iosSettingsLink("Assistant", systemImage: "sparkles") { iosAIForm }
             if AppCapabilities.isAppStore {
                 iosSettingsLink("iCloud", systemImage: "icloud") { ICloudSettingsView() }
@@ -1215,7 +1222,9 @@ public struct SettingsView: View {
 
 }
 
-private struct ProLockOverlay: View {
+/// Internal, not private: the media-server pane lives in its own file and
+/// needs the same lock.
+struct ProLockOverlay: View {
     @ObservedObject private var store = StoreManager.shared
     let feature: ProFeature
     var body: some View {

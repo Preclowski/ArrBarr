@@ -47,6 +47,7 @@ public final class ChatViewModelHolder {
                 rtorrent: store.rtorrent,
                 deluge: store.deluge
             ),
+            mediaServer: store.mediaServer,
             chatProvider: store.chatProvider,
             openai: store.openai,
             appLanguage: store.appLanguage
@@ -69,6 +70,10 @@ public final class ChatViewModelHolder {
             store.sabnzbd.baseURL, store.sabnzbd.apiKey, "\(store.sabnzbd.enabled)",
             store.rtorrent.baseURL, store.rtorrent.apiKey, "\(store.rtorrent.enabled)",
             store.deluge.baseURL, store.deluge.apiKey, "\(store.deluge.enabled)",
+            // Media server — a changed server / URL / token must rebuild the
+            // backend so the `media_server_*` tools stop talking to the old one.
+            store.mediaServer.kind.rawValue, store.mediaServer.baseURL,
+            store.mediaServer.token, "\(store.mediaServer.enabled)",
             store.chatProvider.rawValue,
             store.openai.baseURL, store.openai.apiKey, store.openai.model,
             // appLanguage is intentionally NOT part of the signature: changing

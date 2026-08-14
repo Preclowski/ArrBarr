@@ -181,7 +181,7 @@ struct MCPSettingsPane: View {
                     .foregroundStyle(.secondary)
             }
             Spacer(minLength: 8)
-            appIcons(tool.services)
+            toolIcons(tool)
             // `.labelsHidden()` strips the switch from the accessibility tree
             // as well — every tool row would announce as an anonymous "off".
             Toggle("", isOn: toolBinding(tool.name))
@@ -198,6 +198,22 @@ struct MCPSettingsPane: View {
     /// spills the remainder into a `+N` chip so wide-reaching tools (health
     /// touches every service) don't blow out the row.
     private static let maxVisibleIcons = 4
+
+    /// A tool's icon strip: brand marks for arr / download-client tools, or a
+    /// single SF Symbol for the ones that drive something outside that roster
+    /// (the media server, which has no brand mark in the icon set).
+    @ViewBuilder
+    private func toolIcons(_ tool: ChatToolCatalog.MCPToolInfo) -> some View {
+        if let systemImage = tool.systemImage, tool.services.isEmpty {
+            Image(systemName: systemImage)
+                .font(.system(size: 13))
+                .foregroundStyle(.secondary)
+                .accessibilityLabel(Text("settings.mediaServer.label", bundle: .module))
+        } else {
+            appIcons(tool.services)
+        }
+    }
+
     @ViewBuilder
     private func appIcons(_ services: [ServiceKind]) -> some View {
         let visible = services.prefix(Self.maxVisibleIcons)

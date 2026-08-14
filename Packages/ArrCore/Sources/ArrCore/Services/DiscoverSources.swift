@@ -21,9 +21,14 @@ public enum DiscoverSources {
 
             let all = try await fetchAll()
             let filtered = all.filter { rec in
-                filter.matches(year: rec.year, monitored: rec.monitored,
-                               hasFile: rec.hasFile, genres: rec.genres,
-                               runtime: rec.runtime)
+                // Already watched on the media server is the one exclusion the
+                // arrs can't express: the deck is "what should I put on
+                // tonight", and a film the user finished last week is the
+                // wrong answer to that question.
+                guard !MediaServerIndex.shared.isWatched(rec.mediaServerKeys) else { return false }
+                return filter.matches(year: rec.year, monitored: rec.monitored,
+                                      hasFile: rec.hasFile, genres: rec.genres,
+                                      runtime: rec.runtime)
             }
             let shuffled = filtered.shuffled()
             return shuffled.compactMap { rec -> DiscoverItem? in
@@ -69,9 +74,12 @@ public enum DiscoverSources {
 
             let all = try await fetchAll()
             let filtered = all.filter { rec in
+                // See the Radarr source: fully-watched series drop out of the
+                // deck too.
+                guard !MediaServerIndex.shared.isWatched(rec.mediaServerKeys) else { return false }
                 // Use simple decade + monitored matching; SonarrLibraryRecord
                 // has no `hasFile` or `genres` field.
-                filter.matches(year: rec.year, monitored: rec.monitored)
+                return filter.matches(year: rec.year, monitored: rec.monitored)
             }
             let shuffled = filtered.shuffled()
             return shuffled.compactMap { rec -> DiscoverItem? in
@@ -111,8 +119,16 @@ public enum DiscoverSources {
         count: Int = 20
     ) -> DiscoverViewModel.LLMSource {
         return { exclude, mood in
+            // Watch history is the strongest signal the app has about taste,
+            // and it costs one synchronous read — the index is already kept
+            // warm by the queue's polling loop. Empty when no media server is
+            // connected, which leaves the prompt exactly as it was.
+            let watched = MediaServerIndex.shared.recentlyWatched().map { watch in
+                watch.year.map { "\(watch.title) (\($0))" } ?? watch.title
+            }
             let prompt = DiscoverLLMPrompt.build(
-                mood: mood, count: count, exclude: exclude, kindHint: kindHint
+                mood: mood, count: count, exclude: exclude, kindHint: kindHint,
+                watched: watched
             )
             let response = try await provider.respond(prompt: prompt, tools: [], history: [])
             let parsed: DiscoverLLMPrompt.Response

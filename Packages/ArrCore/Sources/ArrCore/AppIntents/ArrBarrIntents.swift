@@ -21,7 +21,8 @@ enum ArrIntentSupport {
                 qbittorrent: cs.qbittorrent, transmission: cs.transmission,
                 nzbget: cs.nzbget, sabnzbd: cs.sabnzbd,
                 rtorrent: cs.rtorrent, deluge: cs.deluge
-            )
+            ),
+            mediaServer: cs.mediaServer
         )
     }
 
