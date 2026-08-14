@@ -229,7 +229,7 @@ public enum DemoMocks {
         daysAhead: Int = 0, hoursAhead: Int = 0,
         releaseType: String, hasFile: Bool,
         posterSeed: String, aspect: Aspect,
-        entityId: Int? = nil
+        entityId: Int? = nil, trackCount: Int? = nil
     ) -> UpcomingItem {
         let cal = Calendar.current
         let withDays = cal.date(byAdding: .day, value: daysAhead, to: Date()) ?? Date()
@@ -256,7 +256,8 @@ public enum DemoMocks {
             posterRequiresAuth: false,
             imdb: imdb,
             runtime: runtime,
-            entityId: entityId
+            entityId: entityId,
+            trackCount: trackCount
         )
     }
 

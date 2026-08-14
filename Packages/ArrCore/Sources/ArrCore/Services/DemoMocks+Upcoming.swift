@@ -40,7 +40,7 @@ extension DemoMocks {
                 title: "Brad Sucks — Out of It",
                 daysAhead: 4, releaseType: "Album", hasFile: false,
                 posterSeed: "bradsucks", aspect: .square,
-                entityId: 302
+                entityId: 302, trackCount: 11
             ),
             // This week: movie physical release.
             upcomingItem(

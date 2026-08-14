@@ -33,6 +33,11 @@ public struct UpcomingItem: Identifiable, Equatable, Sendable, Codable {
     /// just like a queue tap. `nil` when the source didn't carry one
     /// (e.g. demo entries without a matching backend record).
     public let entityId: Int?
+    /// Lidarr only: how many tracks the album has, when the arr knows the
+    /// tracklist yet. Carried as a number rather than a formatted string so the
+    /// row can pluralize it in the user's language — a service-layer
+    /// `String(localized:)` resolves once, at fetch time.
+    public var trackCount: Int? = nil
     /// Sonarr only: the on-disk episode file's id (calendar entries carry a
     /// SERIES `entityId`, so the tooltip needs this to find the right file).
     public var episodeFileId: Int? = nil
@@ -60,7 +65,8 @@ public struct UpcomingItem: Identifiable, Equatable, Sendable, Codable {
         releaseStatus: String? = nil,
         ratingRt: Double? = nil, ratingMetacritic: Double? = nil,
         qualityProfileId: Int? = nil,
-        seasonNumber: Int? = nil, episodeNumber: Int? = nil
+        seasonNumber: Int? = nil, episodeNumber: Int? = nil,
+        trackCount: Int? = nil
     ) {
         self.id = id; self.source = source; self.title = title; self.subtitle = subtitle
         self.airDate = airDate; self.releaseType = releaseType
@@ -74,6 +80,7 @@ public struct UpcomingItem: Identifiable, Equatable, Sendable, Codable {
         self.ratingRt = ratingRt; self.ratingMetacritic = ratingMetacritic
         self.qualityProfileId = qualityProfileId
         self.seasonNumber = seasonNumber; self.episodeNumber = episodeNumber
+        self.trackCount = trackCount
     }
 
     /// Compact when-label for one-line rows (the queue's "This week"

@@ -411,6 +411,29 @@ struct LidarrCalendarArtTests {
         #expect(records[2].artist == nil)
     }
 
+    @Test("An upcoming album carries its track count for the row's second line")
+    func calendarTrackCount() throws {
+        let json = """
+        [
+          {"id": 95, "title": "Known Tracklist", "releaseDate": "2026-09-01",
+           "statistics": {"trackCount": 11, "trackFileCount": 0}},
+          {"id": 96, "title": "Tracklist Not Published Yet", "releaseDate": "2026-09-02",
+           "statistics": {"trackCount": 0, "trackFileCount": 0}},
+          {"id": 97, "title": "No Statistics At All", "releaseDate": "2026-09-03"}
+        ]
+        """
+        let records = try JSONDecoder().decode([LidarrCalendarRecord].self, from: Data(json.utf8))
+        let items = records.compactMap {
+            LidarrClient.unifyCalendar($0, baseURL: "http://localhost:8686")
+        }
+        #expect(items.count == 3)
+        #expect(items[0].trackCount == 11)
+        // An unreleased album often has no tracklist yet, and "0 tracks" would
+        // be a claim the data doesn't support — the row simply omits it.
+        #expect(items[1].trackCount == nil)
+        #expect(items[2].trackCount == nil)
+    }
+
     /// Lidarr ships release dates as calendar days, not instants — the shape
     /// `parseArrDate` anchors at *local* midnight so today's releases don't
     /// disappear for anyone west of Greenwich.

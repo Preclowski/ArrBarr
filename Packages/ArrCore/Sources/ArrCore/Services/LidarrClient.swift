@@ -348,7 +348,10 @@ public actor LidarrClient: ArrAPIClient {
         ])
     }
 
-    private static func unifyCalendar(_ r: LidarrCalendarRecord, baseURL: String) -> UpcomingItem? {
+    /// Internal rather than private for the same reason as `unify`: this is
+    /// where every field on an Upcoming album row is decided, and the tests
+    /// pin it directly.
+    static func unifyCalendar(_ r: LidarrCalendarRecord, baseURL: String) -> UpcomingItem? {
         guard let dateStr = r.releaseDate, let date = parseArrDate(dateStr) else { return nil }
 
         let artistName = r.artist?.artistName
@@ -376,7 +379,11 @@ public actor LidarrClient: ArrAPIClient {
             overview: r.overview,
             posterURL: poster,
             posterRequiresAuth: auth,
-            entityId: r.id
+            entityId: r.id,
+            // Only when the arr actually knows the tracklist. An unreleased
+            // album often has none yet, and "0 tracks" would be a claim the
+            // data doesn't support.
+            trackCount: tracks > 0 ? tracks : nil
         )
     }
 

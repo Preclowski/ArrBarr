@@ -91,9 +91,22 @@ public struct UpcomingRowView: View {
     /// cramming `S04E03 · Title · Airing · IMDb · runtime` onto one overflowing
     /// line. Movies (no episode subtitle) collapse to title + rating.
     ///
-    /// Episode info (S00E00 · title) — its own line.
+    /// Episode info (S00E00 · title) — its own line. For a Lidarr album there
+    /// is no episode, so the line carries the track count instead: "12 tracks"
+    /// is the one fact that distinguishes an upcoming single from an LP.
     private var episodeSegments: [String] {
-        [item.subtitle.flatMap { $0.isEmpty ? nil : $0 }].compactMap { $0 }
+        [
+            item.subtitle.flatMap { $0.isEmpty ? nil : $0 },
+            trackCountSegment,
+        ].compactMap { $0 }
+    }
+
+    /// Pluralized in the view rather than in the client, so it follows the
+    /// user's language. Same phrasing as the artist page's album rows.
+    private var trackCountSegment: String? {
+        guard let count = item.trackCount, count > 0 else { return nil }
+        return String.localizedStringWithFormat(
+            String(localized: "%lld tracks", bundle: .module), count)
     }
 
     /// Release type / IMDb / runtime — the rating line below the episode line.
