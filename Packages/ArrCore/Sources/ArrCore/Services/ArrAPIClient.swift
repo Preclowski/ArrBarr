@@ -73,6 +73,11 @@ extension ArrAPIClient {
         for (cached, value) in await TitleMetadataStore.shared.metadata(for: ids.map(key)) {
             byId[cached.id] = value
         }
+        // Deliberately after the cache read, and applied again to the fresh
+        // records below: which artwork wins is a property of the CURRENT media
+        // server connection, not of whenever the entry happened to be cached.
+        // Baking it in on write is what left queue rows on the arr's poster
+        // while detail views — which resolve live — showed the server's.
         let missing = ids.filter { byId[$0] == nil }
         guard !missing.isEmpty else { return byId }
 
@@ -95,7 +100,9 @@ extension ArrAPIClient {
             }
         }
         if !fresh.isEmpty { await TitleMetadataStore.shared.store(fresh) }
-        return byId
+        // The store keeps the arr's artwork; the media server's is layered on
+        // here, over cached and freshly-fetched records alike.
+        return byId.mapValues { $0.applyingMediaServerArtwork() }
     }
 
     /// Shout when the arr says its queue holds more rows than the single page

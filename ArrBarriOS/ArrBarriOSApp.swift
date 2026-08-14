@@ -37,7 +37,7 @@ struct ArrBarriOSApp: App {
                 // cache lives in Caches/ (OS-purgeable) so it never fills the
                 // disk, but this trims the long tail. macOS does the same in
                 // its AppDelegate.
-                .task { await PosterStore.shared.purge() }
+                .task { await AppCaches.purgeExpired() }
                 // QA / screenshot hook: launch with env ARRBARR_DEMO_SUITE=1 to
                 // enter demo mode without the Settings toggle (iOS can't relaunch
                 // itself). Mirrors the in-app toggle exactly — persist the flag,

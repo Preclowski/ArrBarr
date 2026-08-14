@@ -51,12 +51,11 @@ public actor RadarrClient: ArrAPIClient {
     private func resolveMovieMetadata(ids: [Int], baseURL: String) async -> [Int: TitleMetadataStore.Metadata] {
         await resolveMetadata(ids: ids, source: .radarr, kind: .movie) { id in
             guard let detail = try? await self.fetchMovieDetails(id: id) else { return nil }
-            let (poster, auth) = (detail.images ?? []).posterURL(
-                baseURL: baseURL, mediaServerKeys: detail.mediaServerKeys
-            )
+            let (poster, auth) = (detail.images ?? []).posterURL(baseURL: baseURL)
             return TitleMetadataStore.Metadata(
                 title: detail.title, year: detail.year, slug: detail.titleSlug,
-                posterURL: poster, posterRequiresAuth: auth
+                posterURL: poster, posterRequiresAuth: auth,
+                mediaServerKeys: detail.mediaServerKeys.map(\.rawKey)
             )
         }
     }

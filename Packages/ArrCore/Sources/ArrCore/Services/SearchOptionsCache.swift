@@ -53,10 +53,4 @@ public final class SearchOptionsCache {
         entries[key] = entry
     }
 
-    /// Test seam / explicit invalidation hook. Currently unused but cheap to
-    /// keep around — Settings could fire it when the user changes profiles
-    /// in the arr UI and wants to see the change immediately.
-    public func invalidate() {
-        entries.removeAll()
-    }
 }

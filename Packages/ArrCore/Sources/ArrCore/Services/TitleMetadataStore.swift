@@ -48,12 +48,29 @@ public actor TitleMetadataStore {
         /// 404s in the arr's web UI rather than redirecting — which is why the
         /// library sweep re-seeds every entry it finds.
         public var slug: String?
-        /// The *resolved* poster URL, not the `[ArrImage]` array it came from.
-        /// `posterURL(baseURL:coverTypes:)` is pure over (images, baseURL) and
-        /// the base URL is already baked into the key, so resolving on write
-        /// halves the record and removes a decode step from every row.
+        /// The *arr's own* resolved poster URL, not the `[ArrImage]` array it
+        /// came from. `posterURL(baseURL:coverTypes:)` is pure over (images,
+        /// baseURL) and the base URL is already baked into the key, so
+        /// resolving on write halves the record and removes a decode step from
+        /// every row.
+        ///
+        /// Deliberately NOT the media server's artwork, even when one is
+        /// connected — see `mediaServerKeys`.
         public var posterURL: URL?
         public var posterRequiresAuth: Bool
+        /// Provider ids (`"tmdb:157336"`) this title can be matched by on a
+        /// media server, in `MediaServerExternalKey.rawKey` form.
+        ///
+        /// Stored so the media-server poster can be resolved at READ time. It
+        /// used to be baked in on write, which quietly meant "whatever server
+        /// was connected the first time this title was seen": entries cached
+        /// before Plex was set up kept the arr's artwork for the store's whole
+        /// 30-day retention, while detail views — which resolve live — showed
+        /// the Plex one. Connecting, switching or disabling a server is now
+        /// visible on the next poll, and there is no cache to clear for it.
+        ///
+        /// Optional so records written before this field decode unchanged.
+        public var mediaServerKeys: [String]?
 
         public init(
             title: String,
@@ -62,6 +79,7 @@ public actor TitleMetadataStore {
             slug: String? = nil,
             posterURL: URL? = nil,
             posterRequiresAuth: Bool = false,
+            mediaServerKeys: [String]? = nil,
         ) {
             self.title = title
             self.secondary = secondary
@@ -69,6 +87,24 @@ public actor TitleMetadataStore {
             self.slug = slug
             self.posterURL = posterURL
             self.posterRequiresAuth = posterRequiresAuth
+            self.mediaServerKeys = mediaServerKeys
+        }
+
+        /// This record with the connected media server's artwork substituted,
+        /// when the server holds the title. Unchanged when no server is
+        /// connected, the index hasn't loaded, or the title isn't on it —
+        /// which is what makes it safe to apply on every read.
+        ///
+        /// A media-server poster carries its token in a header rather than in
+        /// the URL, so it never "requires auth" in the arr sense.
+        public func applyingMediaServerArtwork() -> Metadata {
+            guard let raw = mediaServerKeys, !raw.isEmpty else { return self }
+            let keys = raw.compactMap(MediaServerExternalKey.init(rawKey:))
+            guard let override = MediaServerIndex.shared.posterURL(for: keys) else { return self }
+            var copy = self
+            copy.posterURL = override
+            copy.posterRequiresAuth = false
+            return copy
         }
     }
 

@@ -588,11 +588,39 @@ public actor PosterStore {
     }
 
     /// Wipe one tier. Internal on purpose — user-facing clearing goes through
+    /// `AppCaches.clearArtwork()`, which also drops the derived tints, and
     /// `SpotlightIndexer.clearIndex()`, which knows the icon store and the
     /// Spotlight index have to be cleared together.
     func clear(tier: PosterTier) {
         guard let dir = Self.directory(tier) else { return }
         try? FileManager.default.removeItem(at: dir)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+    }
+
+    /// Wipe every tier, on disk and in memory. `.full` has no directory — it
+    /// lives in the memory cache alone — so the in-memory sweep is not an
+    /// optimisation here, it is the only thing that clears it.
+    func clearAllTiers() {
+        for tier in PosterTier.allCases { clear(tier: tier) }
+        memory.removeAllObjects()
+        negativeCache.removeAll()
+    }
+
+    /// Bytes the on-disk tiers occupy. Walks the directories rather than
+    /// tracking a running total: the OS can reclaim the disposable tiers behind
+    /// our back (see `PosterTier.isDisposable`), so a counter would drift.
+    func diskUsage() -> Int64 {
+        let fm = FileManager.default
+        var total: Int64 = 0
+        for tier in PosterTier.allCases {
+            guard let dir = Self.directory(tier),
+                  let entries = try? fm.contentsOfDirectory(
+                      at: dir, includingPropertiesForKeys: [.fileSizeKey]
+                  ) else { continue }
+            for entry in entries {
+                total += Int64((try? entry.resourceValues(forKeys: [.fileSizeKey]))?.fileSize ?? 0)
+            }
+        }
+        return total
     }
 }

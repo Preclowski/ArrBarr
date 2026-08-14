@@ -16,6 +16,32 @@ public enum MediaServerExternalKey: Hashable, Sendable {
     case tmdb(Int)
     case tvdb(Int)
     case imdb(String)
+
+    /// Compact, stable text form — `"tmdb:157336"`, `"imdb:tt0816692"`.
+    ///
+    /// Spelled by hand rather than derived from `Codable`: these are written
+    /// into `title-metadata.json` and have to survive every future refactor of
+    /// the enum. A synthesized encoding of an enum with associated values is an
+    /// implementation detail that could change shape under us.
+    public var rawKey: String {
+        switch self {
+        case .tmdb(let id): return "tmdb:\(id)"
+        case .tvdb(let id): return "tvdb:\(id)"
+        case .imdb(let id): return "imdb:\(id)"
+        }
+    }
+
+    public init?(rawKey: String) {
+        let parts = rawKey.split(separator: ":", maxSplits: 1)
+        guard parts.count == 2, !parts[1].isEmpty else { return nil }
+        let value = String(parts[1])
+        switch parts[0] {
+        case "tmdb": guard let n = Int(value) else { return nil }; self = .tmdb(n)
+        case "tvdb": guard let n = Int(value) else { return nil }; self = .tvdb(n)
+        case "imdb": self = .imdb(value)
+        default: return nil
+        }
+    }
 }
 
 /// One title as the media server knows it.

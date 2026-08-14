@@ -29,6 +29,10 @@ public struct SettingsView: View {
     /// `configStore.appLanguage` to decide whether the "restart required"
     /// footer should appear — `nil` until the view first appears.
     @State private var initialAppLanguage: String?
+    /// Bytes the poster cache occupies, refreshed when the pane appears and
+    /// after a clear. `nil` until the first measurement lands.
+    @State private var artworkBytes: Int64?
+    @State private var isClearingArtwork = false
     #if os(macOS)
     /// Which sidebar row is selected in the macOS System-Settings-style layout.
     @State private var macSelection: SettingsSection = .general
@@ -90,6 +94,7 @@ public struct SettingsView: View {
         .onAppear {
             if initialAppLanguage == nil { initialAppLanguage = configStore.appLanguage }
         }
+        .task { refreshArtworkBytes() }
         // Paywall presentation is handled centrally (iOS: a sheet on
         // iOSAppRoot's TabView; macOS: a dedicated NSWindow opened by
         // AppDelegate observing StoreManager.gatedFeature). The Download
@@ -842,6 +847,7 @@ public struct SettingsView: View {
             upcomingSection
             needsYouSection
             tmdbSection
+            storageSection
             // No theme picker on iOS — it always follows the system
             // appearance (forced in ConfigStore).
             // iOS has no "Show warnings" toggle and no refresh-interval
@@ -1035,6 +1041,7 @@ public struct SettingsView: View {
             upcomingSection
             needsYouSection
             tmdbSection
+            storageSection
             Section {
                 Picker(selection: $configStore.foregroundInterval) {
                     ForEach(ConfigStore.foregroundIntervalOptions, id: \.self) { interval in
@@ -1150,6 +1157,53 @@ public struct SettingsView: View {
             }
             .disabled(!configStore.showTonight)
         } header: { Text("Upcoming", bundle: .module) }
+    }
+
+    /// Storage: what the app is holding on disk, and the one button that gives
+    /// it back. Artwork only — see `AppCaches` for why the metadata store and
+    /// the in-memory caches are not offered here.
+    @ViewBuilder
+    private var storageSection: some View {
+        Section {
+            LabeledContent {
+                if let artworkBytes {
+                    Text(verbatim: ByteCountFormatter.string(fromByteCount: artworkBytes, countStyle: .file))
+                        .foregroundStyle(.secondary)
+                } else {
+                    ProgressView().controlSize(.small)
+                }
+            } label: {
+                Text("settings.imageCache.label", bundle: .module)
+            }
+            Button {
+                clearArtworkCache()
+            } label: {
+                Label { Text("settings.clearImageCache.button", bundle: .module) } icon: { Image(systemName: "trash") }
+            }
+            // Nothing to reclaim is a reason to say so, not to offer a button
+            // that does nothing perceptible.
+            .disabled(isClearingArtwork || (artworkBytes ?? 0) == 0)
+        } header: {
+            Text("settings.storage.label", bundle: .module)
+        } footer: {
+            Text("settings.imageCache.tooltip", bundle: .module)
+        }
+    }
+
+    private func refreshArtworkBytes() {
+        Task { artworkBytes = await AppCaches.artworkBytes() }
+    }
+
+    private func clearArtworkCache() {
+        isClearingArtwork = true
+        Task {
+            await AppCaches.clearArtwork()
+            // The icon tier backs the Spotlight index, so put its thumbnails
+            // back rather than leaving results iconless until the next launch.
+            SpotlightIndexer.reindex(configStore: configStore)
+            artworkBytes = await AppCaches.artworkBytes()
+            isClearingArtwork = false
+        }
     }
 
     /// Everything "Needs you" in one place. The three controls read as one

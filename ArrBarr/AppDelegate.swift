@@ -113,8 +113,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
 
-        Task.detached { await PosterStore.shared.purge() }
-        Task.detached { await TitleMetadataStore.shared.purge() }
+        Task.detached { await AppCaches.purgeExpired() }
 
         // Index the library into Spotlight (search "american pie" → result).
         // `--clear-intents` instead wipes ArrBarr's own Spotlight entries and

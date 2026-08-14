@@ -152,6 +152,60 @@ struct DiscoverPromptWatchHistoryTests {
     }
 }
 
+@Suite("Cached poster resolution")
+struct CachedPosterResolutionTests {
+
+    private func metadata(keys: [MediaServerExternalKey]) -> TitleMetadataStore.Metadata {
+        TitleMetadataStore.Metadata(
+            title: "Inception", year: 2010,
+            posterURL: URL(string: "http://radarr:7878/MediaCover/1/poster.jpg"),
+            posterRequiresAuth: true,
+            mediaServerKeys: keys.map(\.rawKey)
+        )
+    }
+
+    @Test("External keys survive a round trip through their stored text form")
+    func rawKeyRoundTrip() {
+        let keys: [MediaServerExternalKey] = [.tmdb(157336), .tvdb(121361), .imdb("tt0816692")]
+        for key in keys {
+            #expect(MediaServerExternalKey(rawKey: key.rawKey) == key)
+        }
+        #expect(MediaServerExternalKey(rawKey: "tmdb:") == nil)
+        #expect(MediaServerExternalKey(rawKey: "nope:1") == nil)
+        #expect(MediaServerExternalKey(rawKey: "157336") == nil)
+    }
+
+    @Test("A cached record keeps the arr's artwork when no server holds the title")
+    func noOverrideWithoutIndex() {
+        // The bug this guards: the override used to be baked in at WRITE time,
+        // so an entry cached before a media server was connected kept the arr's
+        // poster for the store's whole retention while detail views showed the
+        // server's.
+        let record = metadata(keys: [.tmdb(157336)])
+        let resolved = record.applyingMediaServerArtwork()
+        #expect(resolved.posterURL == record.posterURL)
+        #expect(resolved.posterRequiresAuth)
+    }
+
+    @Test("A record with no external ids is returned untouched")
+    func noKeysNoOverride() {
+        let record = metadata(keys: [])
+        #expect(record.applyingMediaServerArtwork() == record)
+    }
+
+    @Test("Records written before the ids existed still decode")
+    func decodesLegacyRecord() throws {
+        // `mediaServerKeys` is optional precisely so an existing
+        // title-metadata.json survives the upgrade.
+        let json = #"{"title":"Inception","posterRequiresAuth":false}"#
+        let decoded = try JSONDecoder().decode(
+            TitleMetadataStore.Metadata.self, from: Data(json.utf8))
+        #expect(decoded.title == "Inception")
+        #expect(decoded.mediaServerKeys == nil)
+        #expect(decoded.applyingMediaServerArtwork() == decoded)
+    }
+}
+
 @Suite("MediaServerPosterAccess")
 struct MediaServerPosterAccessTests {
 

@@ -95,7 +95,10 @@ public enum PosterTint {
 
     /// Test seam — the deck holds these for the life of the process, so a
     /// test that populates it would otherwise leak into the next one.
-    static func resetCache() { cache.removeAll() }
+    /// Drop every derived colour. Public because `AppCaches.clearArtwork()`
+    /// has to: these are keyed by poster URL and would otherwise outlive the
+    /// images they were sampled from.
+    public static func resetCache() { cache.removeAll() }
 }
 
 extension PlatformImage {
