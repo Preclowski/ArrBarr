@@ -53,7 +53,10 @@ struct ServerStatusView: View {
             serviceIcon(service)
                 .frame(width: 20)
             VStack(alignment: .leading, spacing: 1) {
-                Text(verbatim: service.displayName)
+                // "Plex", not "Media server": the row sits next to Radarr and
+                // Sonarr, which name themselves, and the connected server is
+                // the thing whose health this is.
+                Text(verbatim: Self.rowTitle(service))
                 if let detail = Self.detailText(snapshot.state) {
                     Text(verbatim: detail)
                         .font(.caption)
@@ -78,17 +81,26 @@ struct ServerStatusView: View {
             ServiceIcon(kind: kind, size: 16)
         } else {
             switch service {
-            case .openai: Image(systemName: "sparkles").foregroundStyle(.secondary)
-            case .tmdb:   Image(systemName: "film").foregroundStyle(.secondary)
-            // Brand mark of whichever server is connected — the row's own name
-            // is generic ("Media server"), so this is what identifies it at a
-            // glance next to the arr marks above.
+            case .openai: brandMark("brand-openai")
+            case .tmdb:   brandMark("brand-tmdb")
             case .mediaServer:
                 ServiceIcon(mediaServer: ConfigStore.shared.mediaServer.kind, size: 16)
                     .foregroundStyle(.secondary)
             case .arr:    EmptyView()
             }
         }
+    }
+
+    /// Brand mark from `ServiceIcons.xcassets`, sized and tinted like the arr
+    /// icons beside it — the row reads as one family rather than "three logos
+    /// and two SF Symbols".
+    private func brandMark(_ name: String) -> some View {
+        Image(name, bundle: .module)
+            .renderingMode(.template)
+            .resizable()
+            .scaledToFit()
+            .frame(width: 16, height: 16)
+            .foregroundStyle(.secondary)
     }
 
     private func statusPill(_ state: ConnectionHealthState) -> some View {
@@ -285,6 +297,14 @@ struct ServerStatusView: View {
 
     /// Every configured monitored service, in display order: arrs, then
     /// download clients, then the AI services.
+    /// Display name for a status row. Everything names itself except the media
+    /// server, whose `displayName` has to stay generic (the enum case carries
+    /// no kind — there is only ever one connection, and it lives in config).
+    private static func rowTitle(_ service: MonitoredService) -> String {
+        guard case .mediaServer = service else { return service.displayName }
+        return ConfigStore.shared.mediaServer.kind.displayName
+    }
+
     private static func configuredServices() -> [MonitoredService] {
         let store = ConfigStore.shared
         return MonitoredService.allCases.filter { $0.isConfigured(in: store) }

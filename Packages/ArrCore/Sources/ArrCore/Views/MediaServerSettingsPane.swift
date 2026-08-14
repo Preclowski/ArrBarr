@@ -88,8 +88,15 @@ struct MediaServerSettingsPane: View {
                 .apiKeyField()
 
                 tokenHint
-
                 testRow
+                if configStore.mediaServer.kind == .plex {
+                    // Under the test rather than beside the field: someone who
+                    // has a token pastes it and presses Test, and only reaches
+                    // for instructions once that fails.
+                    Link(destination: URL(string: "https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/")!) {
+                        Label { Text("settings.howToFindPlexToken.button", bundle: .module) } icon: { Image(systemName: "questionmark.circle") }
+                    }
+                }
             }
         } header: {
             HStack(spacing: 6) {
@@ -103,10 +110,6 @@ struct MediaServerSettingsPane: View {
                 }
                 Text("settings.mediaServer.label", bundle: .module)
             }
-        } footer: {
-            Text("settings.mediaServerUsedFor.tooltip", bundle: .module)
-                .font(.caption)
-                .foregroundStyle(.secondary)
         }
     }
 
@@ -121,9 +124,6 @@ struct MediaServerSettingsPane: View {
             Text("settings.plexTokenHowTo.tooltip", bundle: .module)
                 .font(.caption)
                 .foregroundStyle(.secondary)
-            Link(destination: URL(string: "https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/")!) {
-                Label { Text("settings.howToFindPlexToken.button", bundle: .module) } icon: { Image(systemName: "questionmark.circle") }
-            }
         case .jellyfin:
             Text("settings.jellyfinTokenHowTo.tooltip", bundle: .module)
                 .font(.caption)
@@ -208,7 +208,11 @@ struct MediaServerSettingsPane: View {
             }
             if let refreshedAt = indexSummary.refreshedAt {
                 LabeledContent {
-                    Text(refreshedAt, style: .relative)
+                    // A coarse, still string rather than `.relative`, which
+                    // ticks the seconds up live and reads like a countdown to
+                    // something. Nothing is counting down; this is just when we
+                    // last read the server.
+                    Text(verbatim: Self.agoFormatter.localizedString(for: refreshedAt, relativeTo: Date()))
                         .foregroundStyle(.secondary)
                 } label: {
                     Text("settings.lastUpdated.label", bundle: .module)
@@ -220,8 +224,19 @@ struct MediaServerSettingsPane: View {
             .disabled(actionState == .running)
         } header: {
             Text("settings.artworkAndHistory.label", bundle: .module)
+        } footer: {
+            Text("settings.artworkAndHistory.tooltip", bundle: .module)
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
     }
+
+    /// Whole-unit relative dates ("2 minutes ago"), never seconds.
+    private static let agoFormatter: RelativeDateTimeFormatter = {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .full
+        return formatter
+    }()
 
     // MARK: - Bindings
     //

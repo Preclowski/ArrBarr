@@ -38784,48 +38784,6 @@
       },
       "comment": "Text field placeholder in settings"
     },
-    "settings.mediaServerUsedFor.tooltip": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Used for artwork and for what you have already watched — which the Quiz takes into account."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Służy do okładek i do tego, co już obejrzałeś — Quiz bierze to pod uwagę."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wird für Artwork und für bereits Gesehenes genutzt — das Quiz berücksichtigt es."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Se usa para las carátulas y para lo que ya has visto, algo que el Quiz tiene en cuenta."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sert aux affiches et à ce que vous avez déjà vu — le Quiz en tient compte."
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wordt gebruikt voor artwork en voor wat je al gezien hebt — de Quiz houdt daar rekening mee."
-          }
-        }
-      },
-      "comment": "Footer in settings explaining what the media server is used for"
-    },
     "settings.plexTokenHowTo.tooltip": {
       "extractionState": "manual",
       "localizations": {
@@ -39959,6 +39917,90 @@
         }
       },
       "comment": "Footer in settings explaining the image cache"
+    },
+    "settings.artworkAndHistory.tooltip": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ArrBarr reads the server: posters for titles it also has, and what you have finished watching, which the Quiz uses. Refreshed every 15 minutes. Nothing is written back."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ArrBarr czyta z serwera: plakaty tytułów, które serwer też ma, oraz to, co obejrzałeś do końca — z czego korzysta Quiz. Odświeżane co 15 minut. Nic nie jest zapisywane z powrotem."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ArrBarr liest vom Server: Poster für Titel, die auch dort liegen, und was du zu Ende gesehen hast — das nutzt das Quiz. Alle 15 Minuten aktualisiert. Es wird nichts zurückgeschrieben."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ArrBarr lee del servidor: carátulas de los títulos que también tiene y lo que has terminado de ver, que usa el Quiz. Se actualiza cada 15 minutos. No se escribe nada de vuelta."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ArrBarr lit depuis le serveur : les affiches des titres qu'il possède aussi, et ce que vous avez fini de regarder, dont le Quiz se sert. Actualisé toutes les 15 minutes. Rien n'est réécrit."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ArrBarr leest van de server: posters van titels die daar ook staan en wat je hebt uitgekeken, wat de Quiz gebruikt. Elke 15 minuten ververst. Er wordt niets teruggeschreven."
+          }
+        }
+      },
+      "comment": "Footer explaining what is read from the media server"
+    },
+    "settings.magnetLinks.systemRefused.tooltip": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS refused. A sandboxed app can't claim a link type by itself — pick ArrBarr in your browser the next time it asks which app should open a magnet link."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS odmówił. Aplikacja w piaskownicy nie może sama przejąć typu odnośnika — wybierz ArrBarr w przeglądarce, gdy następnym razem zapyta, czym otworzyć magnet."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS hat abgelehnt. Eine Sandbox-App kann einen Linktyp nicht selbst übernehmen — wähle ArrBarr im Browser, wenn er das nächste Mal fragt, womit ein Magnet-Link geöffnet werden soll."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS lo rechazó. Una app en zona de pruebas no puede reclamar un tipo de enlace por sí sola: elige ArrBarr en tu navegador la próxima vez que pregunte con qué abrir un enlace magnet."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS a refusé. Une app en bac à sable ne peut pas revendiquer un type de lien elle-même — choisissez ArrBarr dans votre navigateur la prochaine fois qu'il demande quoi utiliser pour un lien magnet."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS weigerde. Een app in de sandbox kan een linktype niet zelf claimen — kies ArrBarr in je browser wanneer die vraagt waarmee een magnet-link geopend moet worden."
+          }
+        }
+      },
+      "comment": "Shown when macOS refuses to make the app the magnet-link handler"
     }
   }
 }

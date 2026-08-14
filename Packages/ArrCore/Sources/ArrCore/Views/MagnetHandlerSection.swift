@@ -1,4 +1,5 @@
 import SwiftUI
+import os
 
 #if os(macOS)
 import AppKit
@@ -58,7 +59,15 @@ struct MagnetHandlerSection: View {
                 try await MagnetHandler.release()
             }
         } catch {
-            failure = error.localizedDescription
+            // The system's own message is unhelpfully generic here ("the file
+            // couldn't be opened"), so log what it actually was — domain and
+            // code are what tell a sandbox refusal apart from a missing bundle.
+            let nsError = error as NSError
+            MagnetHandler.logger.error(
+                "magnet handler \(wanted ? "claim" : "release", privacy: .public) failed: \(nsError.domain, privacy: .public) \(nsError.code, privacy: .public) — \(nsError.localizedDescription, privacy: .public)"
+            )
+            failure = (error as? MagnetHandlerError)?.errorDescription
+                ?? String(localized: "settings.magnetLinks.systemRefused.tooltip", bundle: .module)
         }
         isDefault = MagnetHandler.isDefault
     }
@@ -67,6 +76,7 @@ struct MagnetHandlerSection: View {
 /// The `magnet:` scheme registration — kept out of the view so the check, the
 /// claim and the hand-back have one testable home.
 enum MagnetHandler {
+    static let logger = Logger(category: "MagnetHandler")
     static let scheme = "magnet"
     /// Bundle URL of whoever held the scheme before we took it, so turning the
     /// toggle back off is a real hand-back rather than a no-op. macOS offers no
