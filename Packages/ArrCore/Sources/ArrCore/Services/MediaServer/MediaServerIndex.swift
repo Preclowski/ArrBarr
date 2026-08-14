@@ -74,13 +74,6 @@ public final class MediaServerIndex: @unchecked Sendable {
         return watchHistory
     }
 
-    /// True when a snapshot exists and holds at least one title.
-    public var hasEntries: Bool {
-        lock.lock()
-        defer { lock.unlock() }
-        return !byKey.isEmpty
-    }
-
     /// Distinct titles in the snapshot. Counted over entries rather than keys —
     /// a title with both a tmdb and an imdb id occupies two keys and is still
     /// one title, which is the number Settings should show.
@@ -113,10 +106,7 @@ public final class MediaServerIndex: @unchecked Sendable {
         guard config.isConfigured else {
             // Feature switched off or half-configured: drop whatever we hold so
             // the app stops showing a disconnected server's artwork.
-            byKey.removeAll()
-            watchHistory.removeAll()
-            snapshotConfig = nil
-            lastRefresh = nil
+            reset()
             return false
         }
         if snapshotConfig != config { return true }
@@ -166,10 +156,15 @@ public final class MediaServerIndex: @unchecked Sendable {
     /// change is visible immediately instead of at the next poll.
     public func clear() {
         lock.lock()
+        reset()
+        lock.unlock()
+    }
+
+    /// Caller must hold `lock`.
+    private func reset() {
         byKey.removeAll()
         watchHistory.removeAll()
         snapshotConfig = nil
         lastRefresh = nil
-        lock.unlock()
     }
 }

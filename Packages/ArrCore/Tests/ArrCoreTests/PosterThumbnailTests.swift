@@ -51,12 +51,23 @@ struct PosterThumbnailTests {
         let card = try #require(PosterStore.sourceURL(for: original, tier: .card))
         #expect(icon.path.contains("/w185/"))
         #expect(card.path.contains("/w780/"))
-        // The lightbox wants what the source has, so no rewrite at all.
+        // An `original` URL is already what the lightbox wants, so asking for
+        // `original` is a no-op rewrite.
         #expect(PosterStore.sourceURL(for: original, tier: .full) == nil)
         // TheTVDB's `_t` is a thumbnail — fine for an icon, too small to stand
         // in for a card, so a card must fall through to the full-size URL.
         let tvdb = URL(string: "https://artworks.thetvdb.com/banners/v4/series/1/posters/x.jpg")!
         #expect(PosterStore.sourceURL(for: tvdb, tier: .card) == nil)
+    }
+
+    @Test("The lightbox upgrades a small variant to the original")
+    func lightboxUpgradesToOriginal() throws {
+        // TMDB person portraits are built at w185 (`TMDBClient.profileURL`),
+        // and the lightbox zooms to 5×: without the upgrade, tapping a
+        // portrait enlarged a 185-pixel image.
+        let portrait = URL(string: "https://image.tmdb.org/t/p/w185/face.jpg")!
+        let full = try #require(PosterStore.sourceURL(for: portrait, tier: .full))
+        #expect(full.path.contains("/original/"))
     }
 
     // MARK: - Retention policy

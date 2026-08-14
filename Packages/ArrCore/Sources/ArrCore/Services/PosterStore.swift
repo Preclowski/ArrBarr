@@ -95,11 +95,18 @@ public enum PosterTier: String, Sendable, CaseIterable {
     }
 
     /// The CDN's own size variant for this tier, if the host has one.
+    ///
+    /// `.full` asks for `original` rather than "leave the URL alone", because
+    /// the URL it is handed is usually already a *small* variant: TMDB person
+    /// portraits are built at `w185` (`TMDBClient.profileURL`), and the
+    /// lightbox zooms to 5×. Without the upgrade, tapping a portrait enlarged
+    /// a 185-pixel image. Swapping to a size the URL already has is a no-op,
+    /// so an `original` URL stays untouched.
     fileprivate var tmdbSize: String? {
         switch self {
         case .icon: return "w185"
         case .card: return "w780"
-        case .full: return nil
+        case .full: return "original"
         }
     }
 }
@@ -350,7 +357,10 @@ public actor PosterStore {
                 .appendingPathComponent(base + "_t")
                 .appendingPathExtension(ext)
         default:
-            return nil
+            // Plex / Jellyfin / Emby resize on request, but only for the host
+            // the user actually connected — hence the config lookup rather
+            // than a host literal like the two CDNs above.
+            return MediaServerPosterAccess.shared.sizedURL(for: url, tier: tier)
         }
     }
 
@@ -358,6 +368,12 @@ public actor PosterStore {
         var request = URLRequest(url: url)
         if let apiKey, !apiKey.isEmpty {
             request.setValue(apiKey, forHTTPHeaderField: "X-Api-Key")
+        }
+        // The media server's token never appears in the URL — it would be
+        // persisted with the poster URL and hashed into the cache key. It is
+        // resolved per request instead; see `MediaServerPosterAccess`.
+        for (field, value) in MediaServerPosterAccess.shared.headers(for: url) {
+            request.setValue(value, forHTTPHeaderField: field)
         }
         do {
             let (data, response) = try await session.data(for: request)

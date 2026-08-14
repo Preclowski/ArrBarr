@@ -192,7 +192,7 @@ public final class QueueAggregator: QueueDataProviding {
             }
             return HistoryResult(items: HistoryItem.collapsingImportBatches(items), error: nil)
         } catch {
-            let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+            let message = error.userFacingMessage
             return HistoryResult(items: [], error: message)
         }
     }
@@ -275,7 +275,7 @@ public final class QueueAggregator: QueueDataProviding {
             // looks fine. Settings is where missing config/keys are reported.
             return ([], nil, false)
         } catch {
-            let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+            let message = error.userFacingMessage
             // Genuine failure (HTTP status, transport/timeout, decode). Log the
             // full reflection — a DecodingError's coding path or a URLError's
             // numeric code — since the UI string drops it. Keep it `.private`,

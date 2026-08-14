@@ -512,6 +512,7 @@ public final class ConfigStore: ObservableObject {
             self.mediaServer = .empty
         }
         self.mediaServer.token = secrets.read(.mediaServerToken) ?? self.mediaServer.token
+        MediaServerPosterAccess.shared.update(self.mediaServer)
         self.mcpEnabled = defaults.bool(forKey: Self.mcpEnabledKey)
         self.mcpHostPort = defaults.string(forKey: Self.mcpHostPortKey) ?? "127.0.0.1:8080"
         // Default-true migration: an absent key means the user never touched
@@ -654,6 +655,10 @@ public final class ConfigStore: ObservableObject {
         }.store(in: &cancellables)
         $mediaServer.dropFirst().sink { [weak self] cfg in
             guard let self else { return }
+            // One writer for the poster layer's copy of the connection, so a
+            // token change can never leave `PosterStore` authenticating with a
+            // stale one.
+            MediaServerPosterAccess.shared.update(cfg)
             self.setOrDelete(cfg.token, for: .mediaServerToken)
             var stripped = cfg
             stripped.token = ""

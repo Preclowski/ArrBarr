@@ -13,22 +13,16 @@ struct MediaServerSettingsPane: View {
     @EnvironmentObject var configStore: ConfigStore
     @ObservedObject private var storeManager = StoreManager.shared
 
-    @State private var testState: TestState = .idle
-    @State private var actionState: ActionState = .idle
+    /// Two independent operations, one shape: the connection test and the
+    /// maintenance buttons both run, then either say a short thing or show the
+    /// error they came back with.
+    @State private var testState: OperationState = .idle
+    @State private var actionState: OperationState = .idle
     @State private var indexSummary: IndexSummary = .init(titles: 0, refreshedAt: nil)
 
-    private enum TestState: Equatable {
-        case idle, testing
-        case success(String)
-        case failure(String)
-    }
-
-    /// Result of the last "Scan library" / "Empty trash" press. Both are
-    /// fire-and-forget on the server side, so the only honest feedback is
-    /// "the request went through" or the error it came back with.
-    private enum ActionState: Equatable {
+    private enum OperationState: Equatable {
         case idle, running
-        case done(String)
+        case succeeded(String)
         case failed(String)
     }
 
@@ -42,11 +36,11 @@ struct MediaServerSettingsPane: View {
     var body: some View {
         Form {
             connectionSection
-            if configStore.mediaServer.enabled {
-                if configStore.mediaServer.isConfigured {
-                    librarySection
-                    indexSection
-                }
+            // Both need a reachable connection to say anything true, and
+            // `isConfigured` already implies `enabled`.
+            if configStore.mediaServer.isConfigured {
+                librarySection
+                indexSection
             }
         }
         .formStyle(.grouped)
@@ -146,25 +140,32 @@ struct MediaServerSettingsPane: View {
             Button { runTest() } label: { Text("queue.testConnection.button", bundle: .module) }
                 .modifier(GlassButtonStyle())
                 .controlSize(.small)
-                .disabled(testState == .testing || !configStore.mediaServer.isConfigured)
+                .disabled(testState == .running || !configStore.mediaServer.isConfigured)
 
-            switch testState {
-            case .idle:
-                EmptyView()
-            case .testing:
-                ProgressView().controlSize(.small)
-            case .success(let msg):
-                Label(msg, systemImage: "checkmark.circle.fill")
-                    .font(.caption)
-                    .foregroundStyle(.green)
-                    .lineLimit(1)
-            case .failure(let msg):
-                Label(msg, systemImage: "xmark.circle.fill")
-                    .font(.caption)
-                    .foregroundStyle(.red)
-                    .lineLimit(2)
-                    .help(msg)
-            }
+            status(testState)
+        }
+    }
+
+    /// The one rendering of an operation's outcome, shared by the test row and
+    /// the maintenance buttons.
+    @ViewBuilder
+    private func status(_ state: OperationState) -> some View {
+        switch state {
+        case .idle:
+            EmptyView()
+        case .running:
+            ProgressView().controlSize(.small)
+        case .succeeded(let msg):
+            Label(msg, systemImage: "checkmark.circle.fill")
+                .font(.caption)
+                .foregroundStyle(.green)
+                .lineLimit(1)
+        case .failed(let msg):
+            Label(msg, systemImage: "xmark.circle.fill")
+                .font(.caption)
+                .foregroundStyle(.red)
+                .lineLimit(2)
+                .help(msg)
         }
     }
 
@@ -187,22 +188,7 @@ struct MediaServerSettingsPane: View {
                 .disabled(actionState == .running)
             }
 
-            switch actionState {
-            case .idle:
-                EmptyView()
-            case .running:
-                ProgressView().controlSize(.small)
-            case .done(let msg):
-                Label(msg, systemImage: "checkmark.circle.fill")
-                    .font(.caption)
-                    .foregroundStyle(.green)
-            case .failed(let msg):
-                Label(msg, systemImage: "xmark.circle.fill")
-                    .font(.caption)
-                    .foregroundStyle(.red)
-                    .lineLimit(2)
-                    .help(msg)
-            }
+            status(actionState)
         } header: {
             Text("settings.library.label", bundle: .module)
         } footer: {
@@ -288,7 +274,7 @@ struct MediaServerSettingsPane: View {
                 var cfg = configStore.mediaServer
                 cfg.baseURL = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
                 configStore.mediaServer = cfg
-                if testState != .idle && testState != .testing { testState = .idle }
+                invalidateTestResult()
             }
         )
     }
@@ -300,19 +286,25 @@ struct MediaServerSettingsPane: View {
                 var cfg = configStore.mediaServer
                 cfg.token = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
                 configStore.mediaServer = cfg
-                if testState != .idle && testState != .testing { testState = .idle }
+                invalidateTestResult()
             }
         )
     }
 
     // MARK: - Actions
 
+    /// Drop a stale verdict once the fields it was about have changed — but
+    /// never interrupt a test that is still running.
+    private func invalidateTestResult() {
+        if testState != .running { testState = .idle }
+    }
+
     private func runTest() {
-        testState = .testing
+        testState = .running
         let config = configStore.mediaServer
         Task {
             guard let client = MediaServerClientFactory.make(config: config) else {
-                testState = .failure(String(localized: "settings.enterAValidUrl.tooltip", bundle: .module))
+                testState = .failed(String(localized: "settings.enterAValidUrl.tooltip", bundle: .module))
                 return
             }
             do {
@@ -324,13 +316,13 @@ struct MediaServerSettingsPane: View {
                     cfg.userId = userId
                     configStore.mediaServer = cfg
                 }
-                testState = .success(handshake.versionLine)
+                testState = .succeeded(handshake.versionLine)
                 // A successful test is the moment the index can finally be
                 // built — don't make the user wait for the next poll.
                 await MediaServerIndex.shared.refresh(config: configStore.mediaServer)
                 refreshIndexSummary()
             } catch {
-                testState = .failure(message(for: error))
+                testState = .failed(error.userFacingMessage)
             }
         }
     }
@@ -349,17 +341,17 @@ struct MediaServerSettingsPane: View {
                 switch action {
                 case .scan:
                     try await client.scanLibraries()
-                    actionState = .done(String(localized: "settings.scanRequested.label", bundle: .module))
+                    actionState = .succeeded(String(localized: "settings.scanRequested.label", bundle: .module))
                 case .emptyTrash:
                     try await client.emptyTrash()
-                    actionState = .done(String(localized: "settings.trashEmptied.label", bundle: .module))
+                    actionState = .succeeded(String(localized: "settings.trashEmptied.label", bundle: .module))
                 case .reindex:
                     await MediaServerIndex.shared.refresh(config: config)
                     refreshIndexSummary()
-                    actionState = .done(String(localized: "settings.upToDate.label", bundle: .module))
+                    actionState = .succeeded(String(localized: "settings.upToDate.label", bundle: .module))
                 }
             } catch {
-                actionState = .failed(message(for: error))
+                actionState = .failed(error.userFacingMessage)
             }
         }
     }
@@ -369,9 +361,5 @@ struct MediaServerSettingsPane: View {
             titles: MediaServerIndex.shared.indexedTitleCount,
             refreshedAt: MediaServerIndex.shared.lastRefreshedAt
         )
-    }
-
-    private func message(for error: Error) -> String {
-        (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
     }
 }

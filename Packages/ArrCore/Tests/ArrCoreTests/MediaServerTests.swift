@@ -88,27 +88,10 @@ struct MediaServerConfigTests {
         #expect(MediaServerKind.jellyfin.authHeaders(token: "T")["Authorization"]
                 == "MediaBrowser Token=\"T\"")
     }
-
-    @Test("Only Jellyfin and Emby need a resolved user id")
-    func userIdRequirement() {
-        #expect(!MediaServerKind.plex.requiresUserId)
-        #expect(MediaServerKind.jellyfin.requiresUserId)
-        #expect(MediaServerKind.emby.requiresUserId)
-    }
 }
 
 @Suite("MediaServerIndex")
 struct MediaServerIndexTests {
-
-    private func entry(itemId: String, keys: [MediaServerExternalKey],
-                       poster: String?, watched: Bool = false) -> MediaServerEntry {
-        MediaServerEntry(
-            itemId: itemId, kind: .movie, title: "T", year: 2010,
-            posterURL: poster.flatMap(URL.init(string:)),
-            externalKeys: keys, watched: watched, playCount: watched ? 1 : 0,
-            lastPlayed: nil
-        )
-    }
 
     @Test("An empty index returns no poster and no watch state")
     func emptyIndexIsInert() {
@@ -166,6 +149,78 @@ struct DiscoverPromptWatchHistoryTests {
         let prompt = DiscoverLLMPrompt.build(mood: "m", count: 5, exclude: [], watched: many)
         #expect(prompt.contains("Title 40"))
         #expect(!prompt.contains("Title 41"))
+    }
+}
+
+@Suite("MediaServerPosterAccess")
+struct MediaServerPosterAccessTests {
+
+    private let plex = MediaServerConfig(enabled: true, kind: .plex,
+                                         baseURL: "http://nas:32400", token: "sekret")
+    private let jellyfin = MediaServerConfig(enabled: true, kind: .jellyfin,
+                                             baseURL: "http://nas:8096", token: "sekret")
+
+    @Test("Only the connected server's own URLs are recognised")
+    func ownership() {
+        #expect(MediaServerPosterAccess.owns(URL(string: "http://nas:32400/library/metadata/1/thumb/2")!, config: plex))
+        // Different port — a Jellyfin on the same box is a different server.
+        #expect(!MediaServerPosterAccess.owns(URL(string: "http://nas:8096/x")!, config: plex))
+        #expect(!MediaServerPosterAccess.owns(URL(string: "https://nas:32400/x")!, config: plex))
+        #expect(!MediaServerPosterAccess.owns(URL(string: "https://image.tmdb.org/t/p/w500/x.jpg")!, config: plex))
+    }
+
+    @Test("The token travels as a header, never in the URL")
+    func tokenIsAHeaderOnly() {
+        let access = MediaServerPosterAccess(config: plex)
+        let mine = URL(string: "http://nas:32400/library/metadata/1/thumb/2")!
+        #expect(access.headers(for: mine)["X-Plex-Token"] == "sekret")
+        // The resolved URL is persisted and hashed into cache keys, so the
+        // token must not appear anywhere in it.
+        #expect(!mine.absoluteString.contains("sekret"))
+        #expect(access.sizedURL(for: mine, tier: .icon)?.absoluteString.contains("sekret") != true)
+    }
+
+    @Test("Someone else's poster never carries our token")
+    func noTokenLeakToOtherHosts() {
+        let access = MediaServerPosterAccess(config: plex)
+        #expect(access.headers(for: URL(string: "https://image.tmdb.org/t/p/w500/x.jpg")!).isEmpty)
+    }
+
+    @Test("Plex resizes through the transcoder, carrying the original path")
+    func plexSizing() throws {
+        let url = URL(string: "http://nas:32400/library/metadata/1/thumb/1690")!
+        let sized = try #require(MediaServerPosterAccess.sizedURL(for: url, tier: .icon, config: plex))
+        let items = try #require(URLComponents(url: sized, resolvingAgainstBaseURL: false)?.queryItems)
+        #expect(sized.path == "/photo/:/transcode")
+        #expect(items.first { $0.name == "width" }?.value == "288")
+        #expect(items.first { $0.name == "url" }?.value == "/library/metadata/1/thumb/1690")
+        #expect(items.first { $0.name == "upscale" }?.value == "0")
+    }
+
+    @Test("Jellyfin and Emby take a maxWidth, keeping the tag they already carry")
+    func jellyfinSizing() throws {
+        let url = URL(string: "http://nas:8096/Items/abc/Images/Primary?tag=t1")!
+        let sized = try #require(MediaServerPosterAccess.sizedURL(for: url, tier: .card, config: jellyfin))
+        let items = try #require(URLComponents(url: sized, resolvingAgainstBaseURL: false)?.queryItems)
+        #expect(items.first { $0.name == "maxWidth" }?.value == "1200")
+        #expect(items.first { $0.name == "tag" }?.value == "t1")
+    }
+
+    @Test("The lightbox tier asks for no resizing at all")
+    func fullTierStaysOriginal() {
+        // `.full` backs the pinch-zoom sheet, which goes to 5× — the one place
+        // that must get whatever the server has.
+        #expect(PosterTier.full.maxPixelSize == nil)
+        for config in [plex, jellyfin] {
+            let url = URL(string: "\(config.baseURL)/Items/abc/Images/Primary")!
+            #expect(MediaServerPosterAccess.sizedURL(for: url, tier: .full, config: config) == nil)
+        }
+    }
+
+    @Test("Foreign hosts are left to the CDN variant logic")
+    func foreignHostsUnsized() {
+        let tmdb = URL(string: "https://image.tmdb.org/t/p/original/x.jpg")!
+        #expect(MediaServerPosterAccess.sizedURL(for: tmdb, tier: .icon, config: plex) == nil)
     }
 }
 

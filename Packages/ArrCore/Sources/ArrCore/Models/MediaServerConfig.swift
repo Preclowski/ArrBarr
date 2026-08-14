@@ -48,27 +48,6 @@ public enum MediaServerKind: String, Codable, CaseIterable, Identifiable, Sendab
             ]
         }
     }
-
-    /// Query-parameter name that carries the token on image URLs.
-    ///
-    /// Poster URLs are handed to `PosterStore`, which fetches them with no
-    /// per-host header knowledge, so the token has to ride in the query string.
-    var imageTokenQueryName: String {
-        switch self {
-        case .plex: return "X-Plex-Token"
-        case .jellyfin, .emby: return "api_key"
-        }
-    }
-
-    /// Whether this server needs a user id to answer watch-state questions.
-    /// Plex reports `viewCount` on the item itself for the token's own user;
-    /// Jellyfin and Emby scope play state per user, so they need one.
-    var requiresUserId: Bool {
-        switch self {
-        case .plex: return false
-        case .jellyfin, .emby: return true
-        }
-    }
 }
 
 /// The single media-server connection. Mirrors `ServiceConfig`'s shape closely

@@ -28,7 +28,6 @@ struct PlexClient: MediaServerClient {
 
     private struct Identity: Decodable {
         let version: String?
-        let friendlyName: String?
     }
 
     private struct Sections: Decodable {
@@ -39,7 +38,6 @@ struct PlexClient: MediaServerClient {
         let key: String
         /// "movie", "show", "artist", "photo".
         let type: String?
-        let title: String?
     }
 
     private struct Items: Decodable {
@@ -194,8 +192,7 @@ struct PlexClient: MediaServerClient {
     // MARK: - Mapping
 
     private func entry(from item: Item) -> MediaServerEntry? {
-        guard let ratingKey = item.ratingKey, let title = item.title else { return nil }
-        let kind: MediaServerItemKind = item.type == "show" ? .show : .movie
+        guard let ratingKey = item.ratingKey else { return nil }
 
         var keys: [MediaServerExternalKey] = []
         for guid in item.Guid ?? [] {
@@ -208,28 +205,20 @@ struct PlexClient: MediaServerClient {
         }
         guard !keys.isEmpty else { return nil }
 
+        // Deliberately token-free — see `MediaServerPosterAccess`. This URL is
+        // copied into queue items and persisted, so the credential travels as a
+        // header at fetch time instead.
         let poster: URL? = item.thumb.flatMap { thumb in
             try? http.url(base: normalizedBaseURL, path: thumb)
-        }.map { tokenized($0) }
+        }
 
-        let watched: Bool = {
-            if kind == .show {
-                guard let leaves = item.leafCount, leaves > 0 else { return false }
-                return (item.viewedLeafCount ?? 0) >= leaves
-            }
-            return (item.viewCount ?? 0) > 0
-        }()
+        // Shows report no `viewCount` of their own, so "watched" means every
+        // leaf episode is.
+        let watched: Bool = item.type == "show"
+            ? (item.leafCount ?? 0) > 0 && (item.viewedLeafCount ?? 0) >= (item.leafCount ?? 0)
+            : (item.viewCount ?? 0) > 0
 
-        return MediaServerEntry(
-            itemId: ratingKey,
-            kind: kind,
-            title: title,
-            year: item.year,
-            posterURL: poster,
-            externalKeys: keys,
-            watched: watched,
-            playCount: item.viewCount ?? 0,
-            lastPlayed: item.lastViewedAt.map { Date(timeIntervalSince1970: TimeInterval($0)) }
-        )
+        return MediaServerEntry(itemId: ratingKey, posterURL: poster,
+                                externalKeys: keys, watched: watched)
     }
 }

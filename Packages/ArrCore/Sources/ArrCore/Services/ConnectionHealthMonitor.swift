@@ -108,7 +108,7 @@ actor ConnectionHealthMonitor {
                                     detail: handshake.versionLine, message: nil)
             }
         } catch {
-            let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+            let message = error.userFacingMessage
             return ProbeOutcome(service: service, success: false, detail: nil, message: message)
         }
     }

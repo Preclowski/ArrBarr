@@ -17,19 +17,13 @@ public protocol MediaServerClient: Sendable {
     /// Ask the server to rescan its libraries.
     func scanLibraries() async throws
 
-    /// Purge entries whose files are gone. Plex only — see
-    /// `MediaServerError.unsupported`.
+    /// Purge entries whose files are gone. Plex only — the others throw
+    /// `MediaServerError.trashUnsupported`.
     func emptyTrash() async throws
 
     func nowPlaying() async throws -> [MediaServerSession]
 
     func recentlyWatched(limit: Int) async throws -> [MediaServerWatch]
-}
-
-public extension MediaServerClient {
-    /// Whether the trash action should be offered at all. Settings hides the
-    /// button rather than showing one that always errors.
-    var supportsEmptyTrash: Bool { config.kind == .plex }
 }
 
 public enum MediaServerClientFactory {
@@ -62,15 +56,6 @@ extension MediaServerClient {
         return base
     }
 
-    /// Append the server's image token to a poster URL. `PosterStore` fetches
-    /// with no per-host header knowledge, so the token has to be in the query.
-    func tokenized(_ url: URL) -> URL {
-        guard var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return url }
-        var items = components.queryItems ?? []
-        items.append(URLQueryItem(name: config.kind.imageTokenQueryName, value: config.token))
-        components.queryItems = items
-        return components.url ?? url
-    }
 }
 
 /// Parses the provider-id strings the servers hand out.

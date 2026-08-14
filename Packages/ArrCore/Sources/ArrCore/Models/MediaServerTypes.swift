@@ -19,32 +19,29 @@ public enum MediaServerExternalKey: Hashable, Sendable {
 }
 
 /// One title as the media server knows it.
+///
+/// Deliberately narrow: the server reports far more (titles, years, play
+/// counts, last-played dates), but the app joins on ids and asks only two
+/// questions of the answer — "which artwork?" and "seen it?". Fields nothing
+/// reads would be fields nothing keeps correct.
 public struct MediaServerEntry: Sendable, Equatable {
     /// The server's own id — `ratingKey` on Plex, `Id` on Jellyfin/Emby.
+    /// Distinct titles are counted by it, since one title occupies several
+    /// index keys.
     public let itemId: String
-    public let kind: MediaServerItemKind
-    public let title: String
-    public let year: Int?
-    /// Ready-to-fetch poster URL, token already in the query string.
+    /// Token-free, so it can be persisted and cached; see
+    /// `MediaServerPosterAccess`.
     public let posterURL: URL?
     /// Every provider id this title exposes. All of them become index keys.
     public let externalKeys: [MediaServerExternalKey]
     public let watched: Bool
-    public let playCount: Int
-    public let lastPlayed: Date?
 
-    public init(itemId: String, kind: MediaServerItemKind, title: String, year: Int?,
-                posterURL: URL?, externalKeys: [MediaServerExternalKey],
-                watched: Bool, playCount: Int, lastPlayed: Date?) {
+    public init(itemId: String, posterURL: URL?,
+                externalKeys: [MediaServerExternalKey], watched: Bool) {
         self.itemId = itemId
-        self.kind = kind
-        self.title = title
-        self.year = year
         self.posterURL = posterURL
         self.externalKeys = externalKeys
         self.watched = watched
-        self.playCount = playCount
-        self.lastPlayed = lastPlayed
     }
 }
 

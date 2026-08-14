@@ -100,6 +100,19 @@ public enum HTTPError: LocalizedError {
     }
 }
 
+public extension Error {
+    /// The message to put in front of a user.
+    ///
+    /// `localizedDescription` alone is not it: for a `LocalizedError` it falls
+    /// back to a generic "operation couldn't be completed" wrapper and drops
+    /// the `errorDescription` the type went to the trouble of writing — which
+    /// for `HTTPError` is where the *arr's* own reason lives. Eight call sites
+    /// spelled this out identically before it lived here.
+    var userFacingMessage: String {
+        (self as? LocalizedError)?.errorDescription ?? localizedDescription
+    }
+}
+
 public struct HTTPClient {
     /// Per-request timeout. arr endpoints return small JSON over the LAN, so
     /// 15s of inactivity is generous — but it bounds how long a hung/restarting

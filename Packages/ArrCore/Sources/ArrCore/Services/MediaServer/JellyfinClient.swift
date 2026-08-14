@@ -226,30 +226,20 @@ struct JellyfinClient: MediaServerClient {
     }
 
     private func entry(from item: Item) -> MediaServerEntry? {
-        guard let id = item.Id, let name = item.Name else { return nil }
+        guard let id = item.Id else { return nil }
         let keys = MediaServerGuidParser.keys(fromProviderIds: item.ProviderIds ?? [:])
         guard !keys.isEmpty else { return nil }
 
-        let poster: URL? = {
-            guard let tag = item.ImageTags?["Primary"] else { return nil }
-            guard let url = try? http.url(
+        // Token-free on purpose — see `MediaServerPosterAccess`.
+        let poster: URL? = item.ImageTags?["Primary"].flatMap { tag in
+            try? http.url(
                 base: normalizedBaseURL,
                 path: "/Items/\(id)/Images/Primary",
                 query: [URLQueryItem(name: "tag", value: tag)]
-            ) else { return nil }
-            return tokenized(url)
-        }()
+            )
+        }
 
-        return MediaServerEntry(
-            itemId: id,
-            kind: item.itemType == "Series" ? .show : .movie,
-            title: name,
-            year: item.ProductionYear,
-            posterURL: poster,
-            externalKeys: keys,
-            watched: item.UserData?.Played ?? false,
-            playCount: item.UserData?.PlayCount ?? 0,
-            lastPlayed: item.UserData?.LastPlayedDate.flatMap(Self.parseDate)
-        )
+        return MediaServerEntry(itemId: id, posterURL: poster, externalKeys: keys,
+                                watched: item.UserData?.Played ?? false)
     }
 }

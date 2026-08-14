@@ -1337,7 +1337,7 @@ public final class QueueViewModel {
             lastError = nil
             for item in items { applyOptimisticUpdate(.delete, on: item) }
         } catch {
-            lastError = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+            lastError = error.userFacingMessage
         }
     }
 
@@ -1351,7 +1351,7 @@ public final class QueueViewModel {
             lastError = nil
             applyOptimisticUpdate(action, on: item)
         } catch {
-            let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+            let message = error.userFacingMessage
             lastError = message
             // Pin the client red ONLY when the failure proves the client itself
             // is unreachable / misconfigured — NOT when a reachable client

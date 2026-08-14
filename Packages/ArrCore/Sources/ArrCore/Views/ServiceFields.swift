@@ -216,7 +216,7 @@ struct ServiceFields: View {
                     NotificationCenter.default.post(name: .arrBarrConfigValidated, object: nil)
                 }
             } catch {
-                let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+                let message = error.userFacingMessage
                 await MainActor.run {
                     testState = .failure(message)
                     ConnectionHealth.shared.forceDown(.arr(kind), message: message)
