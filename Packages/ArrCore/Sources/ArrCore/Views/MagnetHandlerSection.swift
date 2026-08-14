@@ -1,88 +1,68 @@
 import SwiftUI
-import os
 
 #if os(macOS)
 import AppKit
 
-/// Whether ArrBarr is the system handler for `magnet:` links, as a toggle.
+/// Who currently opens `magnet:` links, as a read-only row.
 ///
-/// The toggle reads the *system's* answer, not a preference of ours — that's
-/// the only truthful source, since the user can reassign the scheme from
-/// another app at any time. Turning it on claims the scheme; turning it off
-/// hands it back to whoever held it before (see `MagnetHandler`).
+/// It used to be a toggle. It could never work: `NSWorkspace`'s
+/// `setDefaultApplication(at:toOpenURLsWithScheme:)` fails inside the App
+/// Sandbox with `NSCocoaErrorDomain 256` wrapping `permErr` (-54), because
+/// Launch Services refuses to let a sandboxed app change application
+/// bindings. Apple's DTS confirms this is by design and not expected to work;
+/// the same call against the same bundle succeeds from an unsandboxed process,
+/// which is what pinned the cause down. ArrBarr is sandboxed in every build.
+///
+/// So the row states the fact instead of offering an action that returns an
+/// error nobody can act on. Handling the links themselves has always worked —
+/// the scheme is declared in `Info.plist`, so ArrBarr is offered as a choice
+/// and `AppDelegate.application(_:open:)` takes it from there.
 struct MagnetHandlerSection: View {
-    @State private var isDefault = MagnetHandler.isDefault
-    @State private var failure: String?
+    @State private var handler: URL? = MagnetHandler.currentHandler
+
+    private var isArrBarr: Bool { MagnetHandler.isDefault }
 
     var body: some View {
         Section {
-            Toggle(isOn: binding) {
+            LabeledContent {
+                Text(verbatim: handlerName)
+                    .foregroundStyle(.secondary)
+            } label: {
                 Text("Magnet links", bundle: .module)
             }
-            // Why the switch can refuse to go back off lives here rather than
-            // in a helper line under the row — it's an edge case, not
-            // something worth a permanent paragraph.
-            .help(Text("Opens magnet links from your browser in ArrBarr. Turning this off restores the app that handled them before.", bundle: .module))
-
-            if let failure {
-                Text(failure)
-                    .font(.footnote)
-                    .foregroundStyle(.red)
-            }
+        } header: {
+            Text("settings.magnetLinks.header", bundle: .module)
+        } footer: {
+            Text(isArrBarr
+                 ? "settings.magnetLinks.arrbarrHandles.tooltip"
+                 : "settings.magnetLinks.otherHandles.tooltip",
+                 bundle: .module)
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
-        // The confirmation is answered outside our process, so the truth is
-        // re-read when the app comes back to the front rather than assumed
-        // from the call's own result.
+        // The association is changed outside our process, so re-read it when
+        // the app comes back to the front rather than caching an answer that
+        // may have gone stale while the user was in a browser's settings.
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
-            isDefault = MagnetHandler.isDefault
+            handler = MagnetHandler.currentHandler
         }
     }
 
-    private var binding: Binding<Bool> {
-        Binding(
-            get: { isDefault },
-            set: { wanted in
-                Task { await apply(wanted) }
-            }
-        )
-    }
-
-    private func apply(_ wanted: Bool) async {
-        failure = nil
-        // Optimistic, then corrected by the real state below: without this the
-        // switch sits in its old position for the whole system round-trip.
-        isDefault = wanted
-        do {
-            if wanted {
-                try await MagnetHandler.claim()
-            } else {
-                try await MagnetHandler.release()
-            }
-        } catch {
-            // The system's own message is unhelpfully generic here ("the file
-            // couldn't be opened"), so log what it actually was — domain and
-            // code are what tell a sandbox refusal apart from a missing bundle.
-            let nsError = error as NSError
-            MagnetHandler.logger.error(
-                "magnet handler \(wanted ? "claim" : "release", privacy: .public) failed: \(nsError.domain, privacy: .public) \(nsError.code, privacy: .public) — \(nsError.localizedDescription, privacy: .public)"
-            )
-            failure = (error as? MagnetHandlerError)?.errorDescription
-                ?? String(localized: "settings.magnetLinks.systemRefused.tooltip", bundle: .module)
+    /// The handling app's name, or a plain "none" — never a raw path, which is
+    /// noise in a settings row.
+    private var handlerName: String {
+        guard let handler else {
+            return String(localized: "search.none.button", bundle: .module)
         }
-        isDefault = MagnetHandler.isDefault
+        return FileManager.default.displayName(atPath: handler.path)
     }
 }
 
-/// The `magnet:` scheme registration — kept out of the view so the check, the
-/// claim and the hand-back have one testable home.
+/// Who holds the `magnet:` scheme. Read-only by necessity — see
+/// `MagnetHandlerSection` for why claiming it is impossible from a sandboxed
+/// app.
 enum MagnetHandler {
-    static let logger = Logger(category: "MagnetHandler")
     static let scheme = "magnet"
-    /// Bundle URL of whoever held the scheme before we took it, so turning the
-    /// toggle back off is a real hand-back rather than a no-op. macOS offers no
-    /// way to *clear* a scheme's handler — only to point it somewhere — so
-    /// without this there'd be nothing to turn off to.
-    private static let previousHandlerKey = "ArrBarr.magnetPreviousHandler"
 
     /// A syntactically valid, harmless magnet used only to ask LaunchServices
     /// who would open one.
@@ -96,37 +76,6 @@ enum MagnetHandler {
     /// beside a released one reports the truth for the copy you're actually in.
     static var isDefault: Bool {
         currentHandler?.standardizedFileURL == Bundle.main.bundleURL.standardizedFileURL
-    }
-
-    static func claim() async throws {
-        if let previous = currentHandler, previous.standardizedFileURL != Bundle.main.bundleURL.standardizedFileURL {
-            UserDefaults.standard.set(previous.path, forKey: previousHandlerKey)
-        }
-        try await NSWorkspace.shared.setDefaultApplication(at: Bundle.main.bundleURL, toOpenURLsWithScheme: scheme)
-    }
-
-    /// Hand the scheme back. Throws when there's nothing to hand it back to —
-    /// the honest outcome, since macOS can't leave a scheme unassigned.
-    static func release() async throws {
-        guard let path = UserDefaults.standard.string(forKey: previousHandlerKey),
-              FileManager.default.fileExists(atPath: path) else {
-            throw MagnetHandlerError.noPreviousHandler
-        }
-        try await NSWorkspace.shared.setDefaultApplication(
-            at: URL(fileURLWithPath: path),
-            toOpenURLsWithScheme: scheme
-        )
-        UserDefaults.standard.removeObject(forKey: previousHandlerKey)
-    }
-}
-
-enum MagnetHandlerError: LocalizedError {
-    case noPreviousHandler
-    var errorDescription: String? {
-        String(
-            localized: "macOS has no app to hand magnet links back to. Pick one in another app's settings.",
-            bundle: .module
-        )
     }
 }
 #endif

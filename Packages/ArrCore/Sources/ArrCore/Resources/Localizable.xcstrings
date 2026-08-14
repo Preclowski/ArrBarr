@@ -39960,47 +39960,131 @@
       },
       "comment": "Footer explaining what is read from the media server"
     },
-    "settings.magnetLinks.systemRefused.tooltip": {
+    "settings.magnetLinks.header": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "macOS refused. A sandboxed app can't claim a link type by itself — pick ArrBarr in your browser the next time it asks which app should open a magnet link."
+            "value": "Magnet links"
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "macOS odmówił. Aplikacja w piaskownicy nie może sama przejąć typu odnośnika — wybierz ArrBarr w przeglądarce, gdy następnym razem zapyta, czym otworzyć magnet."
+            "value": "Odnośniki magnet"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "macOS hat abgelehnt. Eine Sandbox-App kann einen Linktyp nicht selbst übernehmen — wähle ArrBarr im Browser, wenn er das nächste Mal fragt, womit ein Magnet-Link geöffnet werden soll."
+            "value": "Magnet-Links"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "macOS lo rechazó. Una app en zona de pruebas no puede reclamar un tipo de enlace por sí sola: elige ArrBarr en tu navegador la próxima vez que pregunte con qué abrir un enlace magnet."
+            "value": "Enlaces magnet"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "macOS a refusé. Une app en bac à sable ne peut pas revendiquer un type de lien elle-même — choisissez ArrBarr dans votre navigateur la prochaine fois qu'il demande quoi utiliser pour un lien magnet."
+            "value": "Liens magnet"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "macOS weigerde. Een app in de sandbox kan een linktype niet zelf claimen — kies ArrBarr in je browser wanneer die vraagt waarmee een magnet-link geopend moet worden."
+            "value": "Magnet-links"
           }
         }
       },
-      "comment": "Shown when macOS refuses to make the app the magnet-link handler"
+      "comment": "Settings section header"
+    },
+    "settings.magnetLinks.arrbarrHandles.tooltip": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Magnet links open in ArrBarr. macOS doesn't let an app in the sandbox change this itself — to hand it to another app, use your browser's prompt the next time you click one."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Odnośniki magnet otwierają się w ArrBarr. macOS nie pozwala aplikacji w piaskownicy zmienić tego samodzielnie — żeby oddać je innej aplikacji, skorzystaj z pytania przeglądarki przy następnym kliknięciu."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Magnet-Links öffnen sich in ArrBarr. macOS lässt eine App in der Sandbox das nicht selbst ändern — um sie einer anderen App zu geben, nutze die Nachfrage deines Browsers beim nächsten Klick."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los enlaces magnet se abren en ArrBarr. macOS no permite que una app en zona de pruebas cambie esto por sí sola: para cederlos a otra app, usa el aviso del navegador la próxima vez que pulses uno."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les liens magnet s'ouvrent dans ArrBarr. macOS ne laisse pas une app en bac à sable changer cela elle-même — pour les confier à une autre app, utilisez l'invite de votre navigateur au prochain clic."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Magnet-links openen in ArrBarr. macOS staat een app in de sandbox niet toe dit zelf te wijzigen — geef ze aan een andere app via de vraag van je browser bij de volgende klik."
+          }
+        }
+      },
+      "comment": "Footer shown when ArrBarr already opens magnet links"
+    },
+    "settings.magnetLinks.otherHandles.tooltip": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS doesn't let an app in the sandbox claim a link type, so ArrBarr can't switch this for you. Click a magnet link in your browser and pick ArrBarr when it asks which app to use."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS nie pozwala aplikacji w piaskownicy przejąć typu odnośnika, więc ArrBarr nie przełączy tego za Ciebie. Kliknij magnet w przeglądarce i wskaż ArrBarr, gdy zapyta, czym go otworzyć."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS lässt eine App in der Sandbox keinen Linktyp übernehmen, ArrBarr kann das also nicht für dich umstellen. Klicke im Browser auf einen Magnet-Link und wähle ArrBarr, wenn er fragt."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS no permite que una app en zona de pruebas reclame un tipo de enlace, así que ArrBarr no puede cambiarlo por ti. Pulsa un enlace magnet en el navegador y elige ArrBarr cuando pregunte."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS ne laisse pas une app en bac à sable revendiquer un type de lien ; ArrBarr ne peut donc pas le changer pour vous. Cliquez sur un lien magnet dans votre navigateur et choisissez ArrBarr quand il vous le demande."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS staat een app in de sandbox niet toe een linktype te claimen, dus ArrBarr kan dit niet voor je omzetten. Klik op een magnet-link in je browser en kies ArrBarr wanneer die het vraagt."
+          }
+        }
+      },
+      "comment": "Footer shown when another app opens magnet links"
     }
   }
 }
