@@ -1123,9 +1123,7 @@ public struct SettingsView: View {
                 Text("settings.queueGrouping.expanded.option", bundle: .module)
                     .tag(QueueTitleGroupingMode.expanded)
             } label: { Text("settings.queueGrouping.label", bundle: .module) }
-        } header: { Text("Queue", bundle: .module) } footer: {
-            Text("settings.queueGrouping.footer", bundle: .module)
-        }
+        } header: { Text("Queue", bundle: .module) }
     }
 
     /// The Upcoming banner: one switch, since its window is hard-locked to
@@ -1176,8 +1174,6 @@ public struct SettingsView: View {
             .disabled(isClearingArtwork || (artworkBytes ?? 0) == 0)
         } header: {
             Text("settings.storage.label", bundle: .module)
-        } footer: {
-            Text("settings.imageCache.tooltip", bundle: .module)
         }
     }
 

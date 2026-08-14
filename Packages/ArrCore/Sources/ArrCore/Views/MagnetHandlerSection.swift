@@ -20,8 +20,6 @@ import AppKit
 struct MagnetHandlerSection: View {
     @State private var handler: URL? = MagnetHandler.currentHandler
 
-    private var isArrBarr: Bool { MagnetHandler.isDefault }
-
     var body: some View {
         Section {
             LabeledContent {
@@ -32,13 +30,6 @@ struct MagnetHandlerSection: View {
             }
         } header: {
             Text("settings.magnetLinks.header", bundle: .module)
-        } footer: {
-            Text(isArrBarr
-                 ? "settings.magnetLinks.arrbarrHandles.tooltip"
-                 : "settings.magnetLinks.otherHandles.tooltip",
-                 bundle: .module)
-                .font(.caption)
-                .foregroundStyle(.secondary)
         }
         // The association is changed outside our process, so re-read it when
         // the app comes back to the front rather than caching an answer that
@@ -70,12 +61,6 @@ enum MagnetHandler {
 
     static var currentHandler: URL? {
         NSWorkspace.shared.urlForApplication(toOpen: probe)
-    }
-
-    /// Compares bundle URLs rather than identifiers so a debug build running
-    /// beside a released one reports the truth for the copy you're actually in.
-    static var isDefault: Bool {
-        currentHandler?.standardizedFileURL == Bundle.main.bundleURL.standardizedFileURL
     }
 }
 #endif

@@ -38206,47 +38206,6 @@
         }
       }
     },
-    "settings.queueGrouping.footer": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bundle a title's multiple downloads under one collapsible row."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fasst mehrere Downloads eines Titels unter einer aufklappbaren Zeile zusammen."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Agrupa varias descargas de un título en una fila plegable."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Regroupe les téléchargements d'un même titre sous une ligne dépliable."
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bundelt meerdere downloads van één titel onder één inklapbare rij."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Łączy wiele pobierań jednego tytułu w jeden rozwijany wiersz."
-          }
-        }
-      }
-    },
     "library.episodes.label": {
       "extractionState": "manual",
       "localizations": {
@@ -39078,48 +39037,6 @@
       },
       "comment": "Button in settings"
     },
-    "settings.scanAsksTheServer.tooltip": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Scanning asks the server to look for new files. It runs in the background and may take a while."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Skanowanie prosi serwer o wyszukanie nowych plików. Działa w tle i może chwilę potrwać."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Beim Scannen sucht der Server nach neuen Dateien. Das läuft im Hintergrund und kann dauern."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Al escanear, el servidor busca archivos nuevos. Se ejecuta en segundo plano y puede tardar."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "L'analyse demande au serveur de chercher de nouveaux fichiers. Elle s'exécute en arrière-plan et peut prendre du temps."
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bij het scannen zoekt de server naar nieuwe bestanden. Dat gebeurt op de achtergrond en kan even duren."
-          }
-        }
-      },
-      "comment": "Footer in settings explaining the library actions"
-    },
     "settings.artworkAndHistory.label": {
       "extractionState": "manual",
       "localizations": {
@@ -39876,90 +39793,6 @@
       },
       "comment": "Button in settings"
     },
-    "settings.imageCache.tooltip": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Posters and portraits already downloaded. Clearing them frees the space; they come back as you browse."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pobrane już plakaty i portrety. Wyczyszczenie zwalnia miejsce, a wrócą przy przeglądaniu."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bereits geladene Poster und Porträts. Das Leeren gibt den Platz frei; sie kommen beim Blättern zurück."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Carátulas y retratos ya descargados. Vaciarlos libera el espacio; vuelven a medida que navegas."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Affiches et portraits déjà téléchargés. Les vider libère l'espace ; ils reviennent au fil de la navigation."
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Al gedownloade posters en portretten. Legen maakt de ruimte vrij; ze komen terug tijdens het bladeren."
-          }
-        }
-      },
-      "comment": "Footer in settings explaining the image cache"
-    },
-    "settings.artworkAndHistory.tooltip": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ArrBarr reads the server: posters for titles it also has, and what you have finished watching, which the Quiz uses. Refreshed every 15 minutes. Nothing is written back."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ArrBarr czyta z serwera: plakaty tytułów, które serwer też ma, oraz to, co obejrzałeś do końca — z czego korzysta Quiz. Odświeżane co 15 minut. Nic nie jest zapisywane z powrotem."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ArrBarr liest vom Server: Poster für Titel, die auch dort liegen, und was du zu Ende gesehen hast — das nutzt das Quiz. Alle 15 Minuten aktualisiert. Es wird nichts zurückgeschrieben."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ArrBarr lee del servidor: carátulas de los títulos que también tiene y lo que has terminado de ver, que usa el Quiz. Se actualiza cada 15 minutos. No se escribe nada de vuelta."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ArrBarr lit depuis le serveur : les affiches des titres qu'il possède aussi, et ce que vous avez fini de regarder, dont le Quiz se sert. Actualisé toutes les 15 minutes. Rien n'est réécrit."
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ArrBarr leest van de server: posters van titels die daar ook staan en wat je hebt uitgekeken, wat de Quiz gebruikt. Elke 15 minuten ververst. Er wordt niets teruggeschreven."
-          }
-        }
-      },
-      "comment": "Footer explaining what is read from the media server"
-    },
     "settings.magnetLinks.header": {
       "extractionState": "manual",
       "localizations": {
@@ -40001,90 +39834,6 @@
         }
       },
       "comment": "Settings section header"
-    },
-    "settings.magnetLinks.arrbarrHandles.tooltip": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Magnet links open in ArrBarr. macOS doesn't let an app in the sandbox change this itself — to hand it to another app, use your browser's prompt the next time you click one."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Odnośniki magnet otwierają się w ArrBarr. macOS nie pozwala aplikacji w piaskownicy zmienić tego samodzielnie — żeby oddać je innej aplikacji, skorzystaj z pytania przeglądarki przy następnym kliknięciu."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Magnet-Links öffnen sich in ArrBarr. macOS lässt eine App in der Sandbox das nicht selbst ändern — um sie einer anderen App zu geben, nutze die Nachfrage deines Browsers beim nächsten Klick."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Los enlaces magnet se abren en ArrBarr. macOS no permite que una app en zona de pruebas cambie esto por sí sola: para cederlos a otra app, usa el aviso del navegador la próxima vez que pulses uno."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Les liens magnet s'ouvrent dans ArrBarr. macOS ne laisse pas une app en bac à sable changer cela elle-même — pour les confier à une autre app, utilisez l'invite de votre navigateur au prochain clic."
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Magnet-links openen in ArrBarr. macOS staat een app in de sandbox niet toe dit zelf te wijzigen — geef ze aan een andere app via de vraag van je browser bij de volgende klik."
-          }
-        }
-      },
-      "comment": "Footer shown when ArrBarr already opens magnet links"
-    },
-    "settings.magnetLinks.otherHandles.tooltip": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "macOS doesn't let an app in the sandbox claim a link type, so ArrBarr can't switch this for you. Click a magnet link in your browser and pick ArrBarr when it asks which app to use."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "macOS nie pozwala aplikacji w piaskownicy przejąć typu odnośnika, więc ArrBarr nie przełączy tego za Ciebie. Kliknij magnet w przeglądarce i wskaż ArrBarr, gdy zapyta, czym go otworzyć."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "macOS lässt eine App in der Sandbox keinen Linktyp übernehmen, ArrBarr kann das also nicht für dich umstellen. Klicke im Browser auf einen Magnet-Link und wähle ArrBarr, wenn er fragt."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "macOS no permite que una app en zona de pruebas reclame un tipo de enlace, así que ArrBarr no puede cambiarlo por ti. Pulsa un enlace magnet en el navegador y elige ArrBarr cuando pregunte."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "macOS ne laisse pas une app en bac à sable revendiquer un type de lien ; ArrBarr ne peut donc pas le changer pour vous. Cliquez sur un lien magnet dans votre navigateur et choisissez ArrBarr quand il vous le demande."
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "macOS staat een app in de sandbox niet toe een linktype te claimen, dus ArrBarr kan dit niet voor je omzetten. Klik op een magnet-link in je browser en kies ArrBarr wanneer die het vraagt."
-          }
-        }
-      },
-      "comment": "Footer shown when another app opens magnet links"
     }
   }
 }

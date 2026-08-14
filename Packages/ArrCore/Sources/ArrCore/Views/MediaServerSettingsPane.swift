@@ -191,10 +191,6 @@ struct MediaServerSettingsPane: View {
             status(actionState)
         } header: {
             Text("settings.library.label", bundle: .module)
-        } footer: {
-            Text("settings.scanAsksTheServer.tooltip", bundle: .module)
-                .font(.caption)
-                .foregroundStyle(.secondary)
         }
     }
 
@@ -224,10 +220,6 @@ struct MediaServerSettingsPane: View {
             .disabled(actionState == .running)
         } header: {
             Text("settings.artworkAndHistory.label", bundle: .module)
-        } footer: {
-            Text("settings.artworkAndHistory.tooltip", bundle: .module)
-                .font(.caption)
-                .foregroundStyle(.secondary)
         }
     }
 
