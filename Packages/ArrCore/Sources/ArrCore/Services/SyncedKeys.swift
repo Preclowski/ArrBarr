@@ -15,6 +15,7 @@ public enum SyncedKeys {
             "ArrBarr.tonightVisibleCount",
             "ArrBarr.aiEnabled", "ArrBarr.chatProvider", "ArrBarr.openai",
             "ArrBarr.collapsedArrs", "ArrBarr.queueTitleGrouping",
+            "ArrBarr.mediaServer",
         ]
         for kind in ServiceKind.allCases {
             keys.insert("ArrBarr.config.\(kind.rawValue)")

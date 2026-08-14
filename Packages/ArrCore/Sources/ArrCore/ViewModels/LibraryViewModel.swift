@@ -131,7 +131,9 @@ public final class LibraryViewModel {
     private static func unify(_ records: [RadarrLibraryRecord], baseURL: String, profiles: [Int: String]) -> [LibraryEntry] {
         records.compactMap { r in
             guard let id = r.id, let title = r.title else { return nil }
-            let (poster, auth) = (r.images ?? []).posterURL(baseURL: baseURL)
+            let (poster, auth) = (r.images ?? []).posterURL(
+                baseURL: baseURL, mediaServerKeys: r.mediaServerKeys
+            )
             return LibraryEntry(
                 id: "radarr-\(id)", source: .radarr, arrId: id, title: title,
                 year: r.year, posterURL: poster, posterRequiresAuth: auth,
@@ -156,7 +158,9 @@ public final class LibraryViewModel {
     private static func unify(_ records: [SonarrLibraryRecord], baseURL: String, profiles: [Int: String]) -> [LibraryEntry] {
         records.compactMap { r in
             guard let id = r.id, let title = r.title else { return nil }
-            let (poster, auth) = (r.images ?? []).posterURL(baseURL: baseURL)
+            let (poster, auth) = (r.images ?? []).posterURL(
+                baseURL: baseURL, mediaServerKeys: r.mediaServerKeys
+            )
             let files = r.statistics?.episodeFileCount ?? 0
             let total = r.statistics?.episodeCount ?? 0
             return LibraryEntry(

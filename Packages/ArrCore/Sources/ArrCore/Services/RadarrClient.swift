@@ -51,7 +51,9 @@ public actor RadarrClient: ArrAPIClient {
     private func resolveMovieMetadata(ids: [Int], baseURL: String) async -> [Int: TitleMetadataStore.Metadata] {
         await resolveMetadata(ids: ids, source: .radarr, kind: .movie) { id in
             guard let detail = try? await self.fetchMovieDetails(id: id) else { return nil }
-            let (poster, auth) = (detail.images ?? []).posterURL(baseURL: baseURL)
+            let (poster, auth) = (detail.images ?? []).posterURL(
+                baseURL: baseURL, mediaServerKeys: detail.mediaServerKeys
+            )
             return TitleMetadataStore.Metadata(
                 title: detail.title, year: detail.year, slug: detail.titleSlug,
                 posterURL: poster, posterRequiresAuth: auth
@@ -252,7 +254,7 @@ public actor RadarrClient: ArrAPIClient {
         guard let dateStr, let date = parseArrDate(dateStr) else { return nil }
 
         let title = r.year.map { "\(r.title) (\($0))" } ?? r.title
-        let (poster, auth) = (r.images ?? []).posterURL(baseURL: baseURL)
+        let (poster, auth) = (r.images ?? []).posterURL(baseURL: baseURL, mediaServerKeys: r.mediaServerKeys)
 
         return UpcomingItem(
             id: "radarr-cal-\(r.id)",
@@ -306,7 +308,9 @@ public actor RadarrClient: ArrAPIClient {
         var poster = cached?.posterURL
         var posterAuth = cached?.posterRequiresAuth ?? false
         if poster == nil {
-            (poster, posterAuth) = (r.movie?.images ?? []).posterURL(baseURL: baseURL)
+            (poster, posterAuth) = (r.movie?.images ?? []).posterURL(
+                baseURL: baseURL, mediaServerKeys: r.movie?.mediaServerKeys ?? []
+            )
         }
 
         let existingFile = (r.movieId ?? r.movie?.id).flatMap { fileMap[$0] }

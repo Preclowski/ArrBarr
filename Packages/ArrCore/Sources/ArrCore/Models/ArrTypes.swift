@@ -170,6 +170,8 @@ public struct RadarrMovie: Decodable {
     let id: Int
     let title: String
     let year: Int?
+    /// TMDB id — the media server's join key. See `SonarrSeries.tvdbId`.
+    var tmdbId: Int? = nil
     let originalTitle: String?
     let hasFile: Bool?
     let titleSlug: String?
@@ -233,6 +235,10 @@ public struct SonarrSeries: Decodable {
     let id: Int
     let title: String
     let year: Int?
+    /// TVDB id — how the media server's series entries are matched. Always on
+    /// the wire (Sonarr keys on TVDB); newly decoded. `var … = nil` so demo
+    /// mocks' memberwise inits keep compiling.
+    var tvdbId: Int? = nil
     let titleSlug: String?
     let images: [ArrImage]?
     // Calendar fetches the series with `includeSeries=true`, so both of
@@ -457,6 +463,9 @@ public struct RadarrCalendarRecord: Decodable {
     var certification: String? = nil
     var status: String? = nil
     var qualityProfileId: Int? = nil
+    /// TMDB id — the media server's join key for movies. See
+    /// `SonarrSeries.tvdbId` for why this is a `var` with a default.
+    var tmdbId: Int? = nil
 }
 
 public struct SonarrCalendarRecord: Decodable {
@@ -821,6 +830,26 @@ public extension Array where Element == ArrImage {
     /// - Parameter baseURL: The arr server base URL (used when only a local path is available).
     /// - Parameter coverTypes: Cover type names to match, in priority order (default: `["poster"]`).
     /// - Returns: the URL plus whether it requires the X-Api-Key header.
+    /// As `posterURL(baseURL:coverTypes:)`, but preferring the connected media
+    /// server's artwork when it holds this title.
+    ///
+    /// The override lives here rather than at the view because `RemotePoster`
+    /// only ever receives a URL — it has no idea *which* title it is drawing,
+    /// so it cannot do the lookup. Callers that know the title's provider ids
+    /// pass them in; everyone else keeps calling the two-argument version and
+    /// nothing changes.
+    ///
+    /// A media-server poster carries its token in the query string, so the
+    /// returned "requires auth" flag is false: `PosterStore` fetches it with no
+    /// arr headers at all.
+    func posterURL(baseURL: String, coverTypes: [String] = ["poster"],
+                   mediaServerKeys: [MediaServerExternalKey]) -> (URL?, Bool) {
+        if let override = MediaServerIndex.shared.posterURL(for: mediaServerKeys) {
+            return (override, false)
+        }
+        return posterURL(baseURL: baseURL, coverTypes: coverTypes)
+    }
+
     func posterURL(baseURL: String, coverTypes: [String] = ["poster"]) -> (URL?, Bool) {
         let normalized = coverTypes.map { $0.lowercased() }
         let match = first { img in

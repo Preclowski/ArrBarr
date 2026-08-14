@@ -656,6 +656,24 @@ public final class QueueViewModel {
         startBackgroundPolling(refreshNow: false)
     }
 
+    /// Kick the media-server index if it has gone stale. Fire-and-forget: the
+    /// queue never waits on it, and a failure just leaves the previous snapshot
+    /// (or none) in place.
+    ///
+    /// Gated on Control here as well as in Settings — an entitlement that lapses
+    /// leaves a configured server behind, and this is the loop that would keep
+    /// talking to it.
+    private func refreshMediaServerIndex() {
+        let config = configStore.mediaServer
+        guard StoreManager.shared.isPro else {
+            MediaServerIndex.shared.clear()
+            return
+        }
+        Task.detached(priority: .utility) {
+            await MediaServerIndex.shared.refreshIfStale(config: config)
+        }
+    }
+
     public func refresh() async {
         // Queue-not-drop: if a refresh is already in flight, set
         // `pendingRefresh` and bail out. After the in-flight one finishes
@@ -670,6 +688,11 @@ public final class QueueViewModel {
             return
         }
         isRefreshing = true
+        // Keep the media-server snapshot warm off the back of the poll we're
+        // already doing. `refreshIfStale` is a lock and a date comparison in the
+        // common case — the actual fetch happens roughly four times an hour —
+        // and it runs detached so a slow media server can never delay the queue.
+        refreshMediaServerIndex()
         // Stamped for `scheduleRealtimeRefresh`'s rate floor. Every source counts
         // as just-refreshed, because this path fetches all of them.
         let now = Date()

@@ -12,6 +12,7 @@ struct PaywallHero: View {
         case .queueAction:     QueuePaywallHero()
         case .addTitle:        AddTitlePaywallHero()
         case .downloadClients: DownloadClientsPaywallHero()
+        case .mediaServer:     MediaServerPaywallHero()
         }
     }
 }
@@ -146,6 +147,41 @@ private struct AddTitlePaywallHero: View {
 }
 
 // MARK: - Download clients
+
+// MARK: - Media server
+
+/// Three server names under a "watched" tick — the two things the integration
+/// actually buys the user: a choice of server, and play state coming back.
+private struct MediaServerPaywallHero: View {
+    private let servers: [(String, String)] = [
+        ("Plex", "play.rectangle.fill"),
+        ("Jellyfin", "sparkles.tv.fill"),
+        ("Emby", "tv.fill"),
+    ]
+
+    var body: some View {
+        HeroCard(symbol: "play.tv", titleKey: "Media server") {
+            HStack(spacing: 8) {
+                ForEach(servers, id: \.0) { server in
+                    VStack(spacing: 5) {
+                        Image(systemName: server.1)
+                            .scaledFont(size: 16, weight: .semibold)
+                            .foregroundStyle(.tint)
+                        Text(verbatim: server.0)
+                            .scaledFont(size: 9, weight: .medium)
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background(
+                        RoundedRectangle(cornerRadius: Tokens.Radius.card, style: .continuous)
+                            .fill(Color.primary.opacity(0.06))
+                    )
+                }
+            }
+        }
+    }
+}
 
 private struct DownloadClientsPaywallHero: View {
     private let clients: [(String, String)] = [

@@ -32,11 +32,17 @@ func arrWebURL(for item: QueueItem, in configStore: ConfigStore) -> URL? {
 /// Resolve a poster URL from an arr's `images` array against its base URL.
 /// Falls back to `item.posterURL` (set when the source had no images list)
 /// is the caller's job — this only resolves the images side.
+///
+/// `mediaServerKeys` lets the connected media server's artwork win over the
+/// arr's — callers that have the title's provider ids pass them, the rest get
+/// the previous behaviour.
 @MainActor
 func arrPosterURL(images: [ArrImage]?, for item: QueueItem,
-                  in configStore: ConfigStore) -> URL? {
+                  in configStore: ConfigStore,
+                  mediaServerKeys: [MediaServerExternalKey] = []) -> URL? {
     let baseURL = configStore.serviceConfig(for: item.source).baseURL
-    return images?.posterURL(baseURL: baseURL, coverTypes: ["poster", "cover"]).0
+    return images?.posterURL(baseURL: baseURL, coverTypes: ["poster", "cover"],
+                             mediaServerKeys: mediaServerKeys).0
 }
 
 // MARK: - Header search menu

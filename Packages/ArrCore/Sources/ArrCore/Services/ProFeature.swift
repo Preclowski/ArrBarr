@@ -9,6 +9,7 @@ public enum ProFeature: String, CaseIterable, Sendable {
     case downloadClients
     case addTitle
     case queueAction
+    case mediaServer
 
     /// Short headline for the contextual paywall line.
     public var localizedTitleKey: String {
@@ -17,6 +18,7 @@ public enum ProFeature: String, CaseIterable, Sendable {
         case .downloadClients: return "Download clients are a Control feature"
         case .addTitle:        return "Adding titles is a Control feature"
         case .queueAction:     return "Managing downloads is a Control feature"
+        case .mediaServer:     return "Media servers are a Control feature"
         }
     }
 
@@ -27,6 +29,7 @@ public enum ProFeature: String, CaseIterable, Sendable {
         case .queueAction:     return "Manage your downloads"
         case .addTitle:        return "Add new titles"
         case .downloadClients: return "Connect download clients"
+        case .mediaServer:     return "Connect your media server"
         }
     }
 
@@ -37,6 +40,7 @@ public enum ProFeature: String, CaseIterable, Sendable {
         case .queueAction:     return "Pause, resume and remove downloads right from ArrBarr."
         case .addTitle:        return "Find a movie or show and add it in one tap."
         case .downloadClients: return "Add and manage SABnzbd, qBittorrent and the rest."
+        case .mediaServer:     return "Pull artwork and watch history from Plex, Jellyfin or Emby."
         }
     }
 }

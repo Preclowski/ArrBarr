@@ -23,6 +23,10 @@ public struct SecretKey: Sendable, Equatable {
     }
     public static let openAIKey = SecretKey(account: "secret.openai.apiKey", synced: true, deviceOnly: false)
     public static let tmdbKey   = SecretKey(account: "secret.tmdb.apiKey", synced: true, deviceOnly: false)
+    /// Plex `X-Plex-Token` / Jellyfin / Emby API key. Syncs like the arr keys —
+    /// the same media server answers to every device on the LAN, so re-typing
+    /// the token on the phone is friction with no security payoff.
+    public static let mediaServerToken = SecretKey(account: "secret.mediaServer.token", synced: true, deviceOnly: false)
     /// The MCP server bearer token gates a server bound to one machine, so it is
     /// never synced and stays device-only.
     public static let mcpBearer = SecretKey(account: "secret.mcp.bearer", synced: false, deviceOnly: true)
@@ -38,6 +42,7 @@ public struct SecretKey: Sendable, Equatable {
         }
         keys.append(.openAIKey)
         keys.append(.tmdbKey)
+        keys.append(.mediaServerToken)
         return keys
     }()
 }

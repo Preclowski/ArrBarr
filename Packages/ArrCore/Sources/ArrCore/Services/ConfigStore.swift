@@ -146,6 +146,10 @@ public final class ConfigStore: ObservableObject {
     /// genre / decade.
     @Published public var tmdbApiKey: String = ""
 
+    /// The one media server (Plex / Jellyfin / Emby) ArrBarr reads artwork and
+    /// watch state from. Disabled by default — the whole feature is opt-in.
+    @Published public var mediaServer: MediaServerConfig = .empty
+
     // MARK: - MCP server (mock)
     //
     // MCP-server config (enable, bind address, bearer auth, per-tool opt-out).
@@ -322,6 +326,7 @@ public final class ConfigStore: ObservableObject {
     private static let chatProviderKey = "ArrBarr.chatProvider"
     nonisolated static let openaiConfigKey = "ArrBarr.openai"
     nonisolated static let tmdbApiKeyKey = "ArrBarr.tmdbApiKey"
+    nonisolated static let mediaServerKey = "ArrBarr.mediaServer"
     private static let mcpEnabledKey = "ArrBarr.mcpEnabled"
     private static let mcpHostPortKey = "ArrBarr.mcpHostPort"
     private static let mcpRequireAuthKey = "ArrBarr.mcpRequireAuth"
@@ -405,6 +410,7 @@ public final class ConfigStore: ObservableObject {
         }
         move(.openAIKey)
         move(.tmdbKey)
+        move(.mediaServerToken)
         if recoveredAny { defaults.set(false, forKey: secretsMigratedKey) }
     }
 
@@ -499,6 +505,13 @@ public final class ConfigStore: ObservableObject {
         }
         self.openai.apiKey = secrets.read(.openAIKey) ?? self.openai.apiKey
         self.tmdbApiKey = secrets.read(.tmdbKey) ?? (defaults.string(forKey: Self.tmdbApiKeyKey) ?? "")
+        if let data = defaults.data(forKey: Self.mediaServerKey),
+           let cfg = try? JSONDecoder().decode(MediaServerConfig.self, from: data) {
+            self.mediaServer = cfg
+        } else {
+            self.mediaServer = .empty
+        }
+        self.mediaServer.token = secrets.read(.mediaServerToken) ?? self.mediaServer.token
         self.mcpEnabled = defaults.bool(forKey: Self.mcpEnabledKey)
         self.mcpHostPort = defaults.string(forKey: Self.mcpHostPortKey) ?? "127.0.0.1:8080"
         // Default-true migration: an absent key means the user never touched
@@ -638,6 +651,15 @@ public final class ConfigStore: ObservableObject {
         $tmdbApiKey.dropFirst().sink { [weak self] val in
             self?.setOrDelete(val, for: .tmdbKey)
             self?.defaults.removeObject(forKey: Self.tmdbApiKeyKey)
+        }.store(in: &cancellables)
+        $mediaServer.dropFirst().sink { [weak self] cfg in
+            guard let self else { return }
+            self.setOrDelete(cfg.token, for: .mediaServerToken)
+            var stripped = cfg
+            stripped.token = ""
+            if let data = try? JSONEncoder().encode(stripped) {
+                self.defaults.set(data, forKey: Self.mediaServerKey)
+            }
         }.store(in: &cancellables)
         $mcpEnabled.dropFirst().sink { [weak self] val in
             self?.defaults.set(val, forKey: Self.mcpEnabledKey)
@@ -935,6 +957,15 @@ public final class ConfigStore: ObservableObject {
             defaults.removeObject(forKey: tmdbApiKeyKey)
         }
 
+        if let data = defaults.data(forKey: mediaServerKey),
+           var cfg = try? JSONDecoder().decode(MediaServerConfig.self, from: data),
+           !cfg.token.isEmpty, store(cfg.token, .mediaServerToken) {
+            cfg.token = ""
+            if let updated = try? JSONEncoder().encode(cfg) {
+                defaults.set(updated, forKey: mediaServerKey)
+            }
+        }
+
         if allVerified { defaults.set(true, forKey: secretsMigratedKey) }
     }
 
@@ -986,6 +1017,7 @@ public final class ConfigStore: ObservableObject {
             }
             lift(.openAIKey, from: plaintext)
             lift(.tmdbKey, from: plaintext)
+            lift(.mediaServerToken, from: plaintext)
             lift(.mcpBearer, from: plaintext)
         }
     }

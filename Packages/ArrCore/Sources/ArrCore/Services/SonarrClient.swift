@@ -104,7 +104,9 @@ public actor SonarrClient: ArrAPIClient {
     private func resolveSeriesMetadata(ids: [Int], baseURL: String) async -> [Int: TitleMetadataStore.Metadata] {
         await resolveMetadata(ids: ids, source: .sonarr, kind: .series) { id in
             guard let detail = try? await self.fetchSeriesDetails(id: id) else { return nil }
-            let (poster, auth) = (detail.images ?? []).posterURL(baseURL: baseURL)
+            let (poster, auth) = (detail.images ?? []).posterURL(
+                baseURL: baseURL, mediaServerKeys: detail.mediaServerKeys
+            )
             return TitleMetadataStore.Metadata(
                 title: detail.title, year: detail.year, slug: detail.titleSlug,
                 posterURL: poster, posterRequiresAuth: auth
@@ -468,7 +470,9 @@ public actor SonarrClient: ArrAPIClient {
                 subtitle = code
             }
         }
-        let (poster, auth) = (r.series?.images ?? []).posterURL(baseURL: baseURL)
+        let (poster, auth) = (r.series?.images ?? []).posterURL(
+            baseURL: baseURL, mediaServerKeys: r.series?.mediaServerKeys ?? []
+        )
 
         // Sonarr returns runtime + ratings on the series, not the episode.
         // SonarrLookupRatings.value is the IMDb score on calendar payloads —
@@ -577,7 +581,9 @@ public actor SonarrClient: ArrAPIClient {
         var poster = cached?.posterURL
         var posterAuth = cached?.posterRequiresAuth ?? false
         if poster == nil {
-            (poster, posterAuth) = (r.series?.images ?? []).posterURL(baseURL: baseURL)
+            (poster, posterAuth) = (r.series?.images ?? []).posterURL(
+                baseURL: baseURL, mediaServerKeys: r.series?.mediaServerKeys ?? []
+            )
         }
 
         let existingFile = (r.episode?.episodeFileId).flatMap { id in id > 0 ? fileMap[id] : nil }
