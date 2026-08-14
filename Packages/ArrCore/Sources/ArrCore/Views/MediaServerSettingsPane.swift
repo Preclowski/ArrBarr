@@ -87,16 +87,10 @@ struct MediaServerSettingsPane: View {
                 }
                 .apiKeyField()
 
+                // Same slot the other two servers put their hint in, so the
+                // three read identically: how to get a token, then the test.
                 tokenHint
                 testRow
-                if configStore.mediaServer.kind == .plex {
-                    // Under the test rather than beside the field: someone who
-                    // has a token pastes it and presses Test, and only reaches
-                    // for instructions once that fails.
-                    Link(destination: URL(string: "https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/")!) {
-                        Label { Text("settings.howToFindPlexToken.button", bundle: .module) } icon: { Image(systemName: "questionmark.circle") }
-                    }
-                }
             }
         } header: {
             HStack(spacing: 6) {
@@ -116,15 +110,17 @@ struct MediaServerSettingsPane: View {
     /// Where the token comes from, per server.
     ///
     /// Jellyfin and Emby name a screen you can walk to, which is short enough
-    /// to say inline. Plex has no "API keys" screen at all — the route is to
-    /// open an item's XML and read the token out of the address bar, which is
-    /// too long to spell out here, so Plex gets the link under Test connection
-    /// instead of a paragraph.
+    /// to say inline. Plex gets a link in the same slot instead — see below.
     @ViewBuilder
     private var tokenHint: some View {
         switch configStore.mediaServer.kind {
         case .plex:
-            EmptyView()
+            // A link rather than a sentence: Plex has no "API keys" screen, and
+            // the route (open an item's XML, read the token out of the address
+            // bar) is longer than a settings row should carry.
+            Link(destination: URL(string: "https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/")!) {
+                Label { Text("settings.howToFindPlexToken.button", bundle: .module) } icon: { Image(systemName: "questionmark.circle") }
+            }
         case .jellyfin:
             Text("settings.jellyfinTokenHowTo.tooltip", bundle: .module)
                 .font(.caption)

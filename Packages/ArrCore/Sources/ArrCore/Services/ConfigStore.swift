@@ -268,7 +268,9 @@ public final class ConfigStore: ObservableObject {
 
 
     private var defaults: UserDefaults
-    private let secrets: SecretStore
+    /// Follows the backing store — see `useStore`. A `let` here is what let
+    /// demo mode write into the real profile's secrets.
+    private var secrets: SecretStore
     private var cancellables: Set<AnyCancellable> = []
 
     /// Backing store for `ConfigStore.shared`: the demo suite while demo is
@@ -394,7 +396,14 @@ public final class ConfigStore: ObservableObject {
     /// pinned to a signature that changes on every rebuild (login-password
     /// prompt each time).
     nonisolated static func makeDefaultSecretStore(defaults: UserDefaults) -> SecretStore {
-        AppCapabilities.keychainSharingAvailable
+        // Demo mode is an isolated profile, and that has to include secrets.
+        // The Keychain is process-wide — it has no notion of which UserDefaults
+        // suite is in play — so demo gets a store backed by the demo suite
+        // instead. Without this, editing any service while demo was on wrote
+        // into the REAL profile's secrets, and a field that happened to be
+        // empty deleted one. That is exactly how the Plex token vanished.
+        if DemoMode.isActive { return UserDefaultsSecretStore(defaults: defaults) }
+        return AppCapabilities.keychainSharingAvailable
             ? KeychainSecretStore()
             : UserDefaultsSecretStore(defaults: defaults)
     }
@@ -709,6 +718,11 @@ public final class ConfigStore: ObservableObject {
         guard target !== defaults else { return }
         cancellables.removeAll()
         defaults = target
+        // The secret store follows the suite. It used to be fixed at init, so
+        // after a swap the app read and wrote the OTHER profile's secrets: in
+        // demo mode every save went to the real profile, and any save whose
+        // token field was empty deleted the real one for good.
+        secrets = Self.makeDefaultSecretStore(defaults: target)
         applyValues(from: target)
         setupSinks()
     }

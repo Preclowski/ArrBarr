@@ -74,6 +74,64 @@ struct ConfigStoreTests {
         #expect(defaults.object(forKey: "ArrBarr.backgroundInterval") == nil)
     }
 
+    @Test("The media-server token survives a relaunch")
+    @MainActor func mediaServerTokenRoundTrips() {
+        let (defaults, name) = makeDefaults()
+        defer { UserDefaults.standard.removePersistentDomain(forName: name) }
+
+        // The real store for an ad-hoc build, not the in-memory one: this is
+        // exactly the path that was losing the token.
+        let secrets = UserDefaultsSecretStore(defaults: defaults)
+        let store = ConfigStore(defaults: defaults, secrets: secrets)
+        store.mediaServer = MediaServerConfig(
+            enabled: true, kind: .plex,
+            baseURL: "https://plex.example.com", token: "SEKRET"
+        )
+
+        // Never in the plist blob…
+        let blob = try! #require(defaults.data(forKey: "ArrBarr.mediaServer"))
+        #expect(!String(data: blob, encoding: .utf8)!.contains("SEKRET"))
+        // …but in the secret store, and back after a relaunch.
+        #expect(secrets.read(.mediaServerToken) == "SEKRET")
+
+        let reloaded = ConfigStore(defaults: defaults, secrets: UserDefaultsSecretStore(defaults: defaults))
+        #expect(reloaded.mediaServer.token == "SEKRET")
+        #expect(reloaded.mediaServer.baseURL == "https://plex.example.com")
+        #expect(reloaded.mediaServer.isConfigured)
+    }
+
+    /// Demo mode is an isolated profile and that has to include secrets. The
+    /// secret store used to be fixed at init, so after the swap the app kept
+    /// reading and writing the REAL profile's secrets — and any save whose
+    /// token field was empty deleted one for good. That is how a working Plex
+    /// token disappeared across a relaunch.
+    @Test("Demo mode never touches the real profile's secrets")
+    @MainActor func demoSuiteKeepsSecretsIsolated() {
+        let (real, realName) = makeDefaults()
+        let (demo, demoName) = makeDefaults()
+        defer {
+            UserDefaults.standard.removePersistentDomain(forName: realName)
+            UserDefaults.standard.removePersistentDomain(forName: demoName)
+        }
+
+        let store = ConfigStore(defaults: real, secrets: UserDefaultsSecretStore(defaults: real))
+        store.mediaServer = MediaServerConfig(
+            enabled: true, kind: .plex, baseURL: "https://plex.example.com", token: "SEKRET"
+        )
+        #expect(UserDefaultsSecretStore(defaults: real).read(.mediaServerToken) == "SEKRET")
+
+        // Enter "demo": the demo suite has no media server, so the config goes
+        // empty — and the empty token must not reach the real secret store.
+        store.useStore(demo)
+        store.mediaServer = MediaServerConfig()
+
+        #expect(UserDefaultsSecretStore(defaults: real).read(.mediaServerToken) == "SEKRET")
+
+        // Back on the real profile the token is still there.
+        store.useStore(real)
+        #expect(store.mediaServer.token == "SEKRET")
+    }
+
     @Test("config(for:) returns the correct service")
     @MainActor func configForKind() {
         let (defaults, name) = makeDefaults()
