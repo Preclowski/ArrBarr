@@ -714,14 +714,21 @@ actor SignalRConnection {
     /// Map a Servarr resource name to our event surface. Queue + file-import
     /// changes drive refresh/notifications; everything else surfaces as
     /// `.other` for any future listener.
+    /// `name` is matched case-INSENSITIVELY. Servarr broadcasts the resource
+    /// name lowercased — the wire says `moviefile` / `trackfile` /
+    /// `episodefile`, not the camelCase spelling the API documentation uses.
+    /// Matching the camelCase literals meant every file-import broadcast fell
+    /// through to `.other` and `.fileImported` was never emitted by anything,
+    /// on any source: an import was noticed only via the separate `queue`
+    /// broadcast, and only if that one wasn't skipped.
     static func events(
         forName name: String, action: String, source: QueueItem.Source,
         body: [String: Any]? = nil
     ) -> [RealtimeEvent] {
-        switch name {
+        switch name.lowercased() {
         case "queue":
             return [.queueChanged(source: source)]
-        case "episodeFile", "movieFile", "trackFile":
+        case "episodefile", "moviefile", "trackfile":
             return [.fileImported(source: source), .queueChanged(source: source)]
         case "queue/status":
             // The one Servarr broadcast that ships its resource inline

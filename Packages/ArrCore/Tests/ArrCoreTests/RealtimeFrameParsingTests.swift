@@ -19,11 +19,32 @@ struct RealtimeFrameParsingTests {
                 == .events([.queueChanged(source: .radarr)]))
     }
 
-    @Test("A file-import invocation maps to fileImported + queueChanged")
-    func fileImported() {
-        let frame = #"{"type":1,"target":"receiveMessage","arguments":[{"body":{"action":"updated"},"name":"movieFile"}]}"#
+    /// The names here are the ones a live hub actually sends, captured off
+    /// Radarr and Lidarr: **lowercase**. This test used to assert the
+    /// camelCase spelling from the API docs (`movieFile`), which is why the
+    /// mismatch survived — the parser and the test agreed with each other and
+    /// disagreed with the wire, so `.fileImported` was never emitted in
+    /// production for any source.
+    @Test("A file-import invocation maps to fileImported + queueChanged",
+          arguments: ["moviefile", "episodefile", "trackfile"])
+    func fileImported(_ name: String) {
+        let frame = #"{"type":1,"target":"receiveMessage","arguments":[{"body":{"action":"updated"},"name":"\#(name)"}]}"#
         #expect(SignalRConnection.parse(frame: frame, source: .sonarr)
                 == .events([.fileImported(source: .sonarr), .queueChanged(source: .sonarr)]))
+    }
+
+    /// Belt and braces: whatever casing a future Servarr picks, the mapping
+    /// holds.
+    @Test("Resource names match regardless of casing")
+    func nameCasingIsIgnored() {
+        for name in ["movieFile", "MovieFile", "MOVIEFILE"] {
+            let frame = #"{"type":1,"target":"receiveMessage","arguments":[{"body":{"action":"updated"},"name":"\#(name)"}]}"#
+            #expect(SignalRConnection.parse(frame: frame, source: .radarr)
+                    == .events([.fileImported(source: .radarr), .queueChanged(source: .radarr)]))
+        }
+        let queue = #"{"type":1,"target":"receiveMessage","arguments":[{"body":{"action":"sync"},"name":"Queue"}]}"#
+        #expect(SignalRConnection.parse(frame: queue, source: .radarr)
+                == .events([.queueChanged(source: .radarr)]))
     }
 
     /// `QueueStatusController` is the one Servarr broadcast that sends its

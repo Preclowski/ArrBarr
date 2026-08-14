@@ -430,6 +430,20 @@ public final class QueueViewModel {
     @MainActor
     private func noteQueueStatus(_ status: QueueStatus, for source: QueueItem.Source) {
         latestStatus[source] = status
+        // …and act on it. Servarr broadcasts `queue` BEFORE `queue/status` —
+        // measured 5 s apart on a live hub — so when the sync arrived,
+        // `latestStatus` still held the summary from before the change and
+        // `canSkipRefresh` skipped on stale evidence. Recording the new
+        // summary without scheduling anything left nothing to correct that:
+        // with the hub healthy the background poll is skipped entirely, so the
+        // change waited for Servarr's next unconditional queue broadcast — one
+        // to two minutes for an import that had already finished.
+        //
+        // The skip stays: it is what makes an idle hub free. This is the other
+        // half of it — the one broadcast that ships its resource inline is
+        // evidence of a real change, so it schedules a refresh on its own.
+        guard statusAtLastFetch[source] != status else { return }
+        scheduleRealtimeRefresh(source: source)
     }
 
     /// Whether a `queue` push can be answered with nothing at all.
