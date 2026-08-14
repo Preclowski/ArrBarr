@@ -32,6 +32,12 @@ public extension ServiceKind {
     }
 }
 
+public extension MediaServerKind {
+    /// Brand icon asset in `ServiceIcons.xcassets`. All three ship one, so
+    /// unlike `ServiceKind` this is never nil.
+    var brandIconName: String { rawValue }
+}
+
 /// A service's brand icon: a monochrome vector (tinted by the inherited
 /// foreground style, so it adapts to light/dark automatically) sized at a
 /// point size that tracks the user's font-scale preset — exactly like the
@@ -52,6 +58,12 @@ public struct ServiceIcon: View {
     public init(kind: ServiceKind, size: CGFloat) {
         self.brandName = kind.brandIconName
         self.fallbackSymbol = kind.symbol
+        self.size = size
+    }
+
+    public init(mediaServer kind: MediaServerKind, size: CGFloat) {
+        self.brandName = kind.brandIconName
+        self.fallbackSymbol = "play.tv"
         self.size = size
     }
 

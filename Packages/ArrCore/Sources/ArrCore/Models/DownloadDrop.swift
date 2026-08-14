@@ -79,8 +79,13 @@ public struct DownloadDrop: Identifiable, Sendable, Equatable {
     /// bare hash-only magnets, which is why callers fall back to the raw link.
     private static func magnetName(_ url: URL) -> String? {
         guard let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems else { return nil }
-        let name = items.first { $0.name == "dn" }?.value?.trimmingCharacters(in: .whitespaces)
-        return (name?.isEmpty == false) ? name : nil
+        // `+` is a legal sub-delimiter, so URLComponents leaves it literal —
+        // but trackers write `dn` in form encoding, where it means a space.
+        // Without this the window titles a drop "The+Movie+2019".
+        let raw = items.first { $0.name == "dn" }?.value?
+            .replacingOccurrences(of: "+", with: " ")
+            .trimmingCharacters(in: .whitespaces)
+        return (raw?.isEmpty == false) ? raw : nil
     }
 }
 

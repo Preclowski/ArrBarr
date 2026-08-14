@@ -9,6 +9,10 @@ public enum MonitoredService: Hashable, Sendable, Identifiable {
     case arr(ServiceKind)
     case openai
     case tmdb
+    /// The one connected media server (Plex / Jellyfin / Emby). Which server it
+    /// is lives in `ConfigStore.mediaServer`, not in the case — there is only
+    /// ever one, and a per-kind case would imply otherwise.
+    case mediaServer
 
     /// The 6 download clients — the non-arr `ServiceKind` cases. These are not
     /// fetched on the normal queue cycle, so they need active probing.
@@ -18,13 +22,13 @@ public enum MonitoredService: Hashable, Sendable, Identifiable {
     /// Every monitored target, arrs first (declaration order) then download
     /// clients, then the AI services.
     public static var allCases: [MonitoredService] {
-        ServiceKind.allCases.map { .arr($0) } + [.openai, .tmdb]
+        ServiceKind.allCases.map { .arr($0) } + [.mediaServer, .openai, .tmdb]
     }
 
     /// Targets that are NOT live-fetched by the queue refresh and therefore
     /// require their own probe: the download clients + the AI services.
     public static var probeTargets: [MonitoredService] {
-        downloadClientKinds.map { .arr($0) } + [.openai, .tmdb]
+        downloadClientKinds.map { .arr($0) } + [.mediaServer, .openai, .tmdb]
     }
 
     public var id: String {
@@ -32,6 +36,7 @@ public enum MonitoredService: Hashable, Sendable, Identifiable {
         case .arr(let kind): return "arr.\(kind.rawValue)"
         case .openai: return "openai"
         case .tmdb: return "tmdb"
+        case .mediaServer: return "mediaServer"
         }
     }
 
@@ -40,6 +45,10 @@ public enum MonitoredService: Hashable, Sendable, Identifiable {
         case .arr(let kind): return kind.displayName
         case .openai: return "OpenAI"
         case .tmdb: return "TMDB"
+        // Named generically because the case is: the row's detail line carries
+        // the version the handshake reported ("Plex 1.40.2"), which says which
+        // server it is more precisely than a stale display name could.
+        case .mediaServer: return String(localized: "settings.mediaServer.label", bundle: .module)
         }
     }
 
@@ -78,6 +87,8 @@ public enum MonitoredService: Hashable, Sendable, Identifiable {
             return store.openai.isConfigured
         case .tmdb:
             return !store.tmdbApiKey.isEmpty
+        case .mediaServer:
+            return store.mediaServer.isConfigured
         }
     }
 }

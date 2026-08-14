@@ -169,6 +169,28 @@ struct DiscoverPromptWatchHistoryTests {
     }
 }
 
+@Suite("Media server health monitoring")
+struct MediaServerMonitoringTests {
+
+    @Test("The media server is a monitored service and needs its own probe")
+    func isMonitored() {
+        #expect(MonitoredService.allCases.contains(.mediaServer))
+        // Nothing in the queue refresh touches it, so it can't ride along on
+        // the arr fetch the way Radarr/Sonarr do.
+        #expect(MonitoredService.probeTargets.contains(.mediaServer))
+        #expect(!MonitoredService.mediaServer.isArr)
+        #expect(!MonitoredService.mediaServer.isDownloadClient)
+        #expect(MonitoredService.mediaServer.serviceKind == nil)
+    }
+
+    @Test("Every media server ships a brand icon")
+    func brandIcons() {
+        for kind in MediaServerKind.allCases {
+            #expect(kind.brandIconName == kind.rawValue)
+        }
+    }
+}
+
 @Suite("Media server tool gating")
 struct MediaServerToolGatingTests {
 

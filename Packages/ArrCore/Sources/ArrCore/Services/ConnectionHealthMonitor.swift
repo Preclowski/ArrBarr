@@ -17,11 +17,15 @@ actor ConnectionHealthMonitor {
         var clients: [ServiceKind: ServiceConfig]
         var openai: OpenAIConfig?
         var tmdbKey: String?
+        /// Non-nil only when a media server is configured.
+        var mediaServer: MediaServerConfig?
 
-        init(clients: [ServiceKind: ServiceConfig] = [:], openai: OpenAIConfig? = nil, tmdbKey: String? = nil) {
+        init(clients: [ServiceKind: ServiceConfig] = [:], openai: OpenAIConfig? = nil,
+             tmdbKey: String? = nil, mediaServer: MediaServerConfig? = nil) {
             self.clients = clients
             self.openai = openai
             self.tmdbKey = tmdbKey
+            self.mediaServer = mediaServer
         }
     }
 
@@ -59,6 +63,7 @@ actor ConnectionHealthMonitor {
         var targets: [MonitoredService] = inputs.clients.keys.map { .arr($0) }
         if inputs.openai != nil { targets.append(.openai) }
         if inputs.tmdbKey != nil { targets.append(.tmdb) }
+        if inputs.mediaServer != nil { targets.append(.mediaServer) }
 
         return await withTaskGroup(of: ProbeOutcome.self) { group in
             for target in targets {
@@ -91,6 +96,16 @@ actor ConnectionHealthMonitor {
                 }
                 try await TMDBClient(apiKey: key).testConnection()
                 return ProbeOutcome(service: service, success: true, detail: nil, message: nil)
+            case .mediaServer:
+                guard let cfg = inputs.mediaServer,
+                      let client = MediaServerClientFactory.make(config: cfg) else {
+                    return ProbeOutcome(service: service, success: false, detail: nil, message: nil)
+                }
+                // The handshake's version line doubles as the row's detail
+                // ("Plex 1.40.2"), which is what names the server in Status.
+                let handshake = try await client.testConnection()
+                return ProbeOutcome(service: service, success: true,
+                                    detail: handshake.versionLine, message: nil)
             }
         } catch {
             let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription

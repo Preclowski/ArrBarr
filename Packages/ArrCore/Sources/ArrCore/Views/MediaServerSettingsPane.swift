@@ -65,17 +65,22 @@ struct MediaServerSettingsPane: View {
 
     private var connectionSection: some View {
         Section {
-            Toggle(isOn: enabledBinding) { Text("settings.enabled.button", bundle: .module) }
+            // One segmented control instead of a switch plus a picker: the
+            // integration has exactly four states and naming all four —
+            // including Off — says more than a toggle whose label has to be
+            // read together with a separate picker below it.
+            Picker(selection: selectionBinding) {
+                ForEach(MediaServerKind.allCases) { kind in
+                    Text(verbatim: kind.displayName).tag(Optional(kind))
+                }
+                Text("settings.mediaServer.off.option", bundle: .module)
+                    .tag(MediaServerKind?.none)
+            } label: {
+                Text("settings.server.label", bundle: .module)
+            }
+            .pickerStyle(.segmented)
 
             if configStore.mediaServer.enabled {
-                Picker(selection: kindBinding) {
-                    ForEach(MediaServerKind.allCases) { kind in
-                        Text(verbatim: kind.displayName).tag(kind)
-                    }
-                } label: {
-                    Text("settings.server.label", bundle: .module)
-                }
-
                 TextField(text: baseURLBinding,
                           prompt: Text(verbatim: configStore.mediaServer.kind.urlPlaceholder)) {
                     Text("settings.url.label", bundle: .module)
@@ -93,7 +98,17 @@ struct MediaServerSettingsPane: View {
                 testRow
             }
         } header: {
-            Text("settings.mediaServer.label", bundle: .module)
+            HStack(spacing: 6) {
+                // Brand mark only once a server is actually chosen — Off has
+                // no brand, and a generic glyph there would read as a fourth
+                // server rather than the absence of one.
+                if configStore.mediaServer.enabled {
+                    ServiceIcon(mediaServer: configStore.mediaServer.kind, size: 12)
+                        .foregroundStyle(.secondary)
+                        .accessibilityHidden(true)
+                }
+                Text("settings.mediaServer.label", bundle: .module)
+            }
         } footer: {
             Text("settings.mediaServerUsedFor.tooltip", bundle: .module)
                 .font(.caption)
@@ -229,34 +244,39 @@ struct MediaServerSettingsPane: View {
     // assigning it back is the only shape that triggers exactly one save per
     // keystroke instead of none.
 
-    private var enabledBinding: Binding<Bool> {
+    /// The segmented control's value: a server, or `nil` for Off. Collapses
+    /// `enabled` and `kind` into the one thing the user is actually choosing.
+    ///
+    /// Switching servers clears the token and the resolved user id — they
+    /// belong to one server, and carrying them across would leave a config
+    /// that looks complete and authenticates against nothing. Switching to Off
+    /// keeps them, so turning the same server back on doesn't mean re-pasting
+    /// a token.
+    private var selectionBinding: Binding<MediaServerKind?> {
         Binding(
-            get: { configStore.mediaServer.enabled },
+            get: { configStore.mediaServer.enabled ? configStore.mediaServer.kind : nil },
             set: { newValue in
                 var cfg = configStore.mediaServer
-                cfg.enabled = newValue
-                withAnimation { configStore.mediaServer = cfg }
-                if !newValue { MediaServerIndex.shared.clear(); refreshIndexSummary() }
-            }
-        )
-    }
-
-    private var kindBinding: Binding<MediaServerKind> {
-        Binding(
-            get: { configStore.mediaServer.kind },
-            set: { newValue in
-                var cfg = configStore.mediaServer
-                guard cfg.kind != newValue else { return }
+                guard let newValue else {
+                    cfg.enabled = false
+                    withAnimation { configStore.mediaServer = cfg }
+                    MediaServerIndex.shared.clear()
+                    refreshIndexSummary()
+                    return
+                }
+                let switchedServer = cfg.kind != newValue
                 cfg.kind = newValue
-                // A token and a resolved user belong to one server. Carrying
-                // them across a switch would produce a config that looks
-                // complete and authenticates against nothing.
-                cfg.token = ""
-                cfg.userId = ""
-                configStore.mediaServer = cfg
-                testState = .idle
-                MediaServerIndex.shared.clear()
-                refreshIndexSummary()
+                cfg.enabled = true
+                if switchedServer {
+                    cfg.token = ""
+                    cfg.userId = ""
+                }
+                withAnimation { configStore.mediaServer = cfg }
+                if switchedServer {
+                    testState = .idle
+                    MediaServerIndex.shared.clear()
+                    refreshIndexSummary()
+                }
             }
         )
     }

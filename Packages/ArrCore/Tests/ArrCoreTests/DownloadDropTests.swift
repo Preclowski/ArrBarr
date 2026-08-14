@@ -105,6 +105,16 @@ struct DownloadDropSuite {
             #expect(drop.displayName == url.absoluteString)
         }
 
+        @Test("A form-encoded dn reads as spaces, not plus signs")
+        func magnetPlusEncodedName() throws {
+            // Trackers write `dn` in form encoding. URLComponents leaves `+`
+            // literal (it is a legal sub-delimiter), so the window used to
+            // title the drop "The+Matrix+1999".
+            let url = URL(string: "magnet:?xt=urn:btih:abc123&dn=The+Matrix+1999")!
+            let drop = try #require(DownloadDrop(url: url))
+            #expect(drop.displayName == "The Matrix 1999")
+        }
+
         @Test("Extensions decide the protocol, and anything else is ignored")
         func fileKinds() throws {
             let dir = URL(fileURLWithPath: NSTemporaryDirectory())

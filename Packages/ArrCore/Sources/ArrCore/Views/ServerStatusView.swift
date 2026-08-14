@@ -80,6 +80,12 @@ struct ServerStatusView: View {
             switch service {
             case .openai: Image(systemName: "sparkles").foregroundStyle(.secondary)
             case .tmdb:   Image(systemName: "film").foregroundStyle(.secondary)
+            // Brand mark of whichever server is connected — the row's own name
+            // is generic ("Media server"), so this is what identifies it at a
+            // glance next to the arr marks above.
+            case .mediaServer:
+                ServiceIcon(mediaServer: ConfigStore.shared.mediaServer.kind, size: 16)
+                    .foregroundStyle(.secondary)
             case .arr:    EmptyView()
             }
         }

@@ -333,6 +333,12 @@ public final class QueueViewModel {
             .debounce(for: .seconds(1.5), scheduler: DispatchQueue.main)
             .sink { [weak self] _ in self?.reprobe(.tmdb) }
             .store(in: &intervalObservers)
+        configStore.$mediaServer
+            .dropFirst()
+            .removeDuplicates()
+            .debounce(for: .seconds(1.5), scheduler: DispatchQueue.main)
+            .sink { [weak self] _ in self?.reprobe(.mediaServer) }
+            .store(in: &intervalObservers)
 
         // A successful "Test Connection" in Settings posts this — refresh now
         // so a freshly-saved key clears any stale per-arr error immediately.
@@ -879,7 +885,11 @@ public final class QueueViewModel {
         }
         let openai = configStore.openai.isConfigured ? configStore.openai : nil
         let tmdb = configStore.tmdbApiKey.isEmpty ? nil : configStore.tmdbApiKey
-        return .init(clients: clients, openai: openai, tmdbKey: tmdb)
+        // Control-gated like the index refresh: a lapsed entitlement must not
+        // leave a probe quietly talking to the user's server every minute.
+        let mediaServer = (configStore.mediaServer.isConfigured && StoreManager.shared.isPro)
+            ? configStore.mediaServer : nil
+        return .init(clients: clients, openai: openai, tmdbKey: tmdb, mediaServer: mediaServer)
     }
 
     /// "Needs you" rows for the non-arr services currently `.down` (download

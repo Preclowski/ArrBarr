@@ -1148,7 +1148,6 @@ public struct SettingsView: View {
             } label: {
                 Text("settings.upcomingVisibleCount.label", bundle: .module)
             }
-            .pickerStyle(.segmented)
             .disabled(!configStore.showTonight)
         } header: { Text("Upcoming", bundle: .module) }
     }
