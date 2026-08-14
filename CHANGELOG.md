@@ -9,6 +9,37 @@ Releases before 0.10.0 are described on the
 
 ## [Unreleased]
 
+## [2.0.0-rc1] — 2026-08-14
+
+Release candidate. Not published to the Homebrew tap — download the DMG from
+the release page.
+
+### Added
+
+- Media server: connect one of Plex, Jellyfin or Emby (Control). Artwork comes
+  from the server when it has the title, watch history feeds the Quiz, and the
+  new Settings pane offers Scan library and — Plex only — Empty trash.
+- Media server has its own row in Settings → Status, with a health probe.
+- Chat / MCP tools: `media_server_watch_history`, `media_server_now_playing`
+  and `media_server_scan_library` (the last one asks before it runs).
+- Queue grouping by title: a title's two or more downloads fold into one
+  collapsible row with aggregate progress and Pause / Resume / Delete all.
+  Off / collapsed / expanded in Settings.
+- Library tab: a browsable cover grid of everything on the arrs, with status
+  filters, sort, and local substring search.
+- Upcoming albums show their track count.
+
+### Changed
+
+- "Always visible items" is a menu picker instead of a segmented control.
+
+### Fixed
+
+- Enlarging a cast portrait fetched the 185-pixel thumbnail and zoomed it to
+  5× instead of the original.
+- Magnet links titled a download "The+Matrix+1999" — `dn` is form-encoded, so
+  `+` is a space.
+
 ## [1.3.1] — 2026-08-12
 
 ### Changed

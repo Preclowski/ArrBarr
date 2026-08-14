@@ -205,13 +205,17 @@ jobs:
             v[0-9]*.[0-9]*.[0-9]*) ;;
             *) echo "::error::Release tag '$TAG' is not of the form vMAJOR.MINOR.PATCH."; exit 1 ;;
           esac
+          # A pre-release tag (v2.0.0-rc1) carries the same MARKETING_VERSION as
+          # the release it leads to: CFBundleShortVersionString must be
+          # period-separated integers, so the -rcN suffix lives in the tag only.
           EXPECTED="${TAG#v}"
+          EXPECTED="${EXPECTED%%-*}"
           PLIST="build/Build/Products/Release/ArrBarr.app/Contents/Info.plist"
           SHORT="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$PLIST")"
           BUILD="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$PLIST")"
           echo "tag=$TAG  CFBundleShortVersionString=$SHORT  CFBundleVersion=$BUILD"
           if [ "$SHORT" != "$EXPECTED" ]; then
-            echo "::error::Tag '$TAG' implies version $EXPECTED, but the built app reports $SHORT. Update MARKETING_VERSION in ArrBarr.xcodeproj (all targets) or retag."
+            echo "::error::Tag '$TAG' implies marketing version $EXPECTED, but the built app reports $SHORT. Update MARKETING_VERSION in ArrBarr.xcodeproj (all targets) or retag."
             exit 1
           fi
           if [ -z "$BUILD" ] || [ "$BUILD" = "0" ]; then
@@ -269,7 +273,12 @@ jobs:
       # DMG is attached to the release. Previously a missed `sed` made `git
       # commit` fail after the upload had already happened, leaving a published
       # release whose Homebrew cask still pointed at the previous version.
+      # Skipped for pre-releases: the cask is the stable channel, and pushing an
+      # rc to it would hand every `brew upgrade` user a release candidate they
+      # never opted into. The DMG below is still attached, so a pre-release is
+      # downloadable from its Releases page.
       - name: Prepare Homebrew cask
+        if: github.event.release.prerelease == false
         env:
           TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
         run: |
@@ -324,6 +333,7 @@ jobs:
         run: gh release upload "${{ github.event.release.tag_name }}" ArrBarr.dmg --clobber
 
       - name: Push Homebrew cask
+        if: github.event.release.prerelease == false
         run: |
           set -euo pipefail
           git -C tap push || {
