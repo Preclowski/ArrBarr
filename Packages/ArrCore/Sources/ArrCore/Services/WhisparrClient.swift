@@ -49,6 +49,21 @@ public actor WhisparrClient: ArrAPIClient {
         return page.records.map { Self.unify($0, baseURL: baseURL, fileMap: fileMap, meta: meta) }
     }
 
+    /// Single-movie flavour for the Library tooltip's lazy detail fetch —
+    /// same shape as `RadarrClient.fetchMovieFile` (Whisparr is a fork).
+    func fetchMovieFile(movieId: Int) async throws -> ArrFile? {
+        if DemoMode.isActive { return nil }
+        guard config.isConfigured else { throw HTTPError.notConfigured }
+        let url = try http.url(
+            base: config.baseURL,
+            path: "\(apiBase)/moviefile",
+            query: [URLQueryItem(name: "movieId", value: String(movieId))]
+        )
+        let data = try await http.get(url, headers: apiHeaders)
+        let files = (try? JSONDecoder().decode([ArrFile].self, from: data)) ?? []
+        return files.first
+    }
+
     /// Ported from `RadarrClient` — Whisparr's queue used to carry the on-disk
     /// file inline and no longer does.
     private func fetchMovieFiles(movieIds: Set<Int>) async throws -> [Int: RadarrMovieFile] {
@@ -192,8 +207,14 @@ public actor WhisparrClient: ArrAPIClient {
             posterURL: poster,
             posterRequiresAuth: auth,
             imdb: r.ratings?.imdb?.value,
+            tmdb: r.ratings?.tmdb?.value,
             runtime: r.runtime,
-            entityId: r.id
+            entityId: r.id,
+            genres: r.genres ?? [],
+            releaseStatus: r.status,
+            ratingRt: r.ratings?.rottenTomatoes?.value,
+            ratingMetacritic: r.ratings?.metacritic?.value,
+            qualityProfileId: r.qualityProfileId
         )
     }
 

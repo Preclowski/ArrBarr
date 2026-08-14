@@ -1,5 +1,29 @@
 import SwiftUI
 
+/// Known arr availability/run states ("released", "inCinemas", "continuing",
+/// …) mapped to localized labels; unknown values fall back to the
+/// capitalized raw string. Shared by the Library tooltip and the movie
+/// detail's existing-file banner so both spell the states identically.
+enum ArrReleaseStatusLabel {
+    static func text(_ raw: String?, locale: Locale) -> String? {
+        guard let raw, !raw.isEmpty else { return nil }
+        let keys: [String: String] = [
+            "tba": "library.release.tba",
+            "announced": "library.release.announced",
+            "incinemas": "library.release.inCinemas",
+            "released": "library.release.released",
+            "deleted": "library.release.deleted",
+            "continuing": "library.release.continuing",
+            "ended": "library.release.ended",
+            "upcoming": "library.release.upcoming",
+        ]
+        if let key = keys[raw.lowercased()] {
+            return AppLocalized.string(key, locale: locale)
+        }
+        return raw.capitalized
+    }
+}
+
 /// Banner describing the file an arr already has on disk for this item.
 /// Two callers:
 ///   - upgrade-in-progress (queue item) — fields come from the queue
@@ -26,16 +50,23 @@ struct ExistingFileBanner: View {
     /// upcoming" callers, where this banner is the ONLY place quality appears, so
     /// omitting it made the detail look broken (filename + formats but no quality).
     var showMetadata: Bool
+    /// Extra file facts, mirroring the Library tooltip (movie callers only —
+    /// the queue/episode/track variants leave them nil).
+    var releaseGroup: String?
+    var languages: String?
 
     init(quality: String?, size: Int64?, customFormatScore: Int?,
          customFormats: [String], fileName: String?, newFormats: [String]? = nil,
-         showMetadata: Bool = false) {
+         showMetadata: Bool = false,
+         releaseGroup: String? = nil, languages: String? = nil) {
         self.quality = quality; self.size = size
         self.customFormatScore = customFormatScore
         self.customFormats = customFormats
         self.fileName = fileName
         self.newFormats = newFormats
         self.showMetadata = showMetadata
+        self.releaseGroup = releaseGroup
+        self.languages = languages
     }
 
     /// Build the banner from a queue row's `existing*` fields (upgrade-time
@@ -55,15 +86,19 @@ struct ExistingFileBanner: View {
     }
 
     /// Build the banner from an arr's library `movieFile` — the file the
-    /// user already owns, no queue activity required.
+    /// user already owns, no queue activity required. (Release status is a
+    /// TITLE fact and lives in the hero card next to the library badge.)
     init(movieFile: ArrFile) {
+        let languages = (movieFile.languages ?? []).compactMap(\.name)
         self.init(
             quality: movieFile.quality?.name,
             size: movieFile.size,
             customFormatScore: movieFile.customFormatScore,
             customFormats: (movieFile.customFormats ?? []).map(\.name),
             fileName: movieFile.relativePath,
-            showMetadata: true
+            showMetadata: true,
+            releaseGroup: movieFile.releaseGroup,
+            languages: languages.isEmpty ? nil : languages.joined(separator: ", ")
         )
     }
 
@@ -116,15 +151,18 @@ struct ExistingFileBanner: View {
                             value(ByteCountFormatter.string(fromByteCount: s, countStyle: .file))
                         }
                     }
-                    if let score = customFormatScore, score != 0 {
+                    // Same rows, same order as the Library tooltip: group,
+                    // languages, release status — then chips + filename below.
+                    if let releaseGroup, !releaseGroup.isEmpty {
                         GridRow {
-                            label("queue.score.button")
-                            // ScoreLabel's sign rule (green positive / red
-                            // negative) — same as the queue list and the
-                            // plain download spec.
-                            ScoreLabel(score: score, size: 11, weight: .semibold)
-                                .gridColumnAlignment(.leading)
-                                .help(Text("common.customFormatScore.button", bundle: .module))
+                            label("Release group")
+                            value(releaseGroup)
+                        }
+                    }
+                    if let languages, !languages.isEmpty {
+                        GridRow {
+                            label("Languages")
+                            value(languages)
                         }
                     }
                 }
@@ -133,8 +171,11 @@ struct ExistingFileBanner: View {
 
             // Chips + filename carry no labels — self-describing values,
             // matching the download spec block (chip strip, then release
-            // name, both full-width under the key-value grid).
-            if !customFormats.isEmpty {
+            // name, both full-width under the key-value grid). The score
+            // rides as the strip's trailing chip — the same placement every
+            // tooltip / queue row gives it (it used to be a labelled grid
+            // row here, the one surface that differed).
+            if !customFormats.isEmpty || (customFormatScore ?? 0) != 0 {
                 let newSet: Set<String> = newFormats.map(Set.init) ?? []
                 let highlightRemoved = newFormats != nil
                 TooltipFlowLayout(spacing: 4) {
@@ -147,15 +188,19 @@ struct ExistingFileBanner: View {
                         let isRemoved = highlightRemoved && !newSet.contains(cf)
                         TagChip(text: cf, color: isRemoved ? .red : .primary)
                     }
+                    if let score = customFormatScore, score != 0 {
+                        ScoreChip(score: score)
+                    }
                 }
             }
             if let name = fileName, !name.isEmpty {
+                // Never truncated; a lone filename renders primary (only the
+                // old side of a diff goes secondary).
                 Text(name)
                     .scaledFont(size: 11, design: .monospaced)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
-                    .truncationMode(.middle)
+                    .foregroundStyle(.primary)
                     .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
         }

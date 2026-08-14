@@ -1,11 +1,62 @@
 import SwiftUI
 
+/// Long-hover tooltip for any surface presenting an `UpcomingItem` (the
+/// Upcoming tab's rows, the queue's "Next week" banner rows). Owns the
+/// 600 ms dwell AND the three-state routing: a live download shows the
+/// QUEUE tooltip for its row; otherwise the upcoming tooltip (library
+/// style when downloaded, library-minus-file when not out yet).
+struct UpcomingHoverTooltip: ViewModifier {
+    let item: UpcomingItem
+    @EnvironmentObject var configStore: ConfigStore
+
+    func body(content: Content) -> some View {
+        // Shared 600 ms hover plumbing (see `HoverTooltip`); this modifier
+        // only owns the three-state ROUTING.
+        content.hoverTooltip {
+            if let active = activeQueueItem {
+                QueueItemTooltip(
+                    item: active,
+                    apiKey: active.posterRequiresAuth ? apiKey : nil,
+                    locale: configStore.currentLocale
+                )
+                .environmentObject(configStore)
+            } else {
+                UpcomingItemTooltip(item: item, apiKey: apiKey)
+                    .environmentObject(configStore)
+            }
+        }
+    }
+
+    private var apiKey: String? {
+        configStore.serviceConfig(for: item.source).apiKey
+    }
+
+    /// The live queue row for THIS calendar entry, if one is downloading.
+    /// Movies match on the arr record id; episodes need season+episode on
+    /// top (the series id alone matches every episode of the show).
+    private var activeQueueItem: QueueItem? {
+        guard let entityId = item.entityId else { return nil }
+        let pool = QueueViewModel.shared.items(for: item.source)
+        switch item.source {
+        case .sonarr:
+            guard let sn = item.seasonNumber, let en = item.episodeNumber else { return nil }
+            return pool.first { $0.entityId == entityId && $0.seasonNumber == sn && $0.episodeNumber == en }
+        case .radarr, .whisparr, .lidarr:
+            return pool.first { $0.entityId == entityId }
+        }
+    }
+}
+
+extension View {
+    /// See `UpcomingHoverTooltip`.
+    func upcomingTooltip(item: UpcomingItem) -> some View {
+        modifier(UpcomingHoverTooltip(item: item))
+    }
+}
+
 public struct UpcomingRowView: View {
     let item: UpcomingItem
     @EnvironmentObject var configStore: ConfigStore
-    @State private var isHovering = false
-    @State private var showTooltip = false
-    @State private var hoverTask: Task<Void, Never>?
 
     public var body: some View {
         PosterMetadataRow(
@@ -32,27 +83,7 @@ public struct UpcomingRowView: View {
                     .foregroundStyle(.tertiary)
             }
         }
-        #if os(macOS)
-        // Long-hover rich tooltip — same 600 ms gate + .leading
-        // anchor as the queue rows', so the muscle memory carries
-        // across surfaces.
-        .onHover { hovering in
-            isHovering = hovering
-            hoverTask?.cancel()
-            if hovering {
-                hoverTask = Task { @MainActor [self] in
-                    try? await Task.sleep(nanoseconds: 600_000_000)
-                    if !Task.isCancelled && self.isHovering { showTooltip = true }
-                }
-            } else {
-                showTooltip = false
-            }
-        }
-        .tooltipPopover(isPresented: $showTooltip, arrowEdge: .trailing) {
-            UpcomingItemTooltip(item: item, apiKey: apiKeyForSource)
-                .environmentObject(configStore)
-        }
-        #endif
+        .upcomingTooltip(item: item)
     }
 
     /// Row layout is three lines on every platform: title / episode / rating.
@@ -70,10 +101,23 @@ public struct UpcomingRowView: View {
     /// a section header, so repeating it per row would just be noise.
     private var ratingSegments: [String] {
         [
-            item.releaseType.flatMap { $0.isEmpty ? nil : $0 },
-            item.imdb.map { String(format: "IMDb %.1f", $0) },
+            item.releaseTypeText(locale: configStore.currentLocale),
+            ratingSegment,
             item.runtime.flatMap { $0 > 0 ? "\($0) min" : nil },
         ].compactMap { $0 }
+    }
+
+    /// Rating text for the row — TVDB for series; movies IMDb with a TMDB
+    /// fallback (unreleased titles usually only have a TMDB score yet).
+    /// Same source/fallback order the tooltip's rating pill uses.
+    private var ratingSegment: String? {
+        // Zero = not rated yet — hidden, same rule as the pill factories.
+        if item.source == .sonarr {
+            return item.imdb.flatMap { $0 > 0 ? String(format: "TVDB %.1f", $0) : nil }
+        }
+        if let v = item.imdb, v > 0 { return String(format: "IMDb %.1f", v) }
+        if let v = item.tmdb, v > 0 { return String(format: "TMDB %.1f", v) }
+        return nil
     }
 
     private func openDetail() {
@@ -124,6 +168,46 @@ public struct UpcomingItemTooltip: View {
     let item: UpcomingItem
     var apiKey: String? = nil
     @EnvironmentObject var configStore: ConfigStore
+    /// Normalized on-disk file facts, whichever arr they came from —
+    /// `/moviefile` for movies, `/episodefile` (via the series map, keyed by
+    /// the calendar's `episodeFileId`) for episodes.
+    struct FileFacts {
+        let quality: String?
+        let size: Int64?
+        let releaseGroup: String?
+        let languages: [String]
+        let formats: [String]
+        let score: Int
+        let fileName: String?
+
+        init(_ f: ArrFile) {
+            quality = f.quality?.name
+            size = f.size
+            releaseGroup = f.releaseGroup
+            languages = (f.languages ?? []).compactMap(\.name)
+            formats = (f.customFormats ?? []).map(\.name)
+            score = f.customFormatScore ?? 0
+            fileName = f.relativePath
+        }
+
+        // Episodes carry ONLY what the episode surfaces (detail banner)
+        // show: quality, size, formats, file name. No group/languages —
+        // the tooltip must stay a subset of the library/detail views for
+        // the same entity type, never a superset.
+        init(_ f: SonarrEpisodeFile) {
+            quality = f.quality?.name
+            size = f.size
+            releaseGroup = nil
+            languages = []
+            formats = (f.customFormats ?? []).map(\.name)
+            score = f.customFormatScore ?? 0
+            fileName = f.relativePath
+        }
+    }
+
+    @State private var fileDetails: FileFacts?
+    /// Assigned quality-profile name — lazily resolved like the file facts.
+    @State private var profileName: String?
 
     public var body: some View {
         MediaTooltipChrome(
@@ -132,49 +216,132 @@ public struct UpcomingItemTooltip: View {
             posterURL: item.posterURL,
             posterRequiresAuth: item.posterRequiresAuth,
             apiKey: apiKey,
-            posterSize: posterSize,
+            posterSize: MediaTooltipChrome<EmptyView>.posterSize(for: item.source),
             blurred: configStore.shouldBlurPoster(for: item.source),
             fallbackSymbol: item.source.symbol,
-            overview: item.overview
+            // Corner grammar mirrors the Library tooltip exactly:
+            // [context: release status][status: ownership].
+            contextChip: ArrReleaseStatusLabel.text(item.releaseStatus, locale: configStore.currentLocale)
+                .map { AnyView(TagChip(text: $0)) },
+            statusChip: AnyView(StateChip(
+                text: AppLocalized.string(
+                    item.hasFile ? "Downloaded"
+                        : (item.airDate > Date() ? "library.status.notAvailable" : "search.missing.button"),
+                    locale: configStore.currentLocale),
+                color: item.hasFile ? .green : (item.airDate > Date() ? .blue : .red)
+            ))
         ) {
-            Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 10, verticalSpacing: 3) {
-                row("Airs", value: item.airDateFormatted(locale: configStore.currentLocale))
-                if let t = item.releaseType, !t.isEmpty {
-                    // Dotted key (not the bare literal "Type") — the string
-                    // catalog symbol generator rejects "Type" as too close to a
-                    // Swift reserved word.
-                    row("upcoming.type.label", value: t)
+            // Library-tooltip order: genres → rating pills → runtime · cert →
+            // table → overview → quality strip → filename.
+            if !item.genres.isEmpty {
+                GenreChips(genres: item.genres)
+            }
+            TooltipRatingPills(chips: ratingChips)
+            if !runtimeCertLine.isEmpty {
+                Text(verbatim: runtimeCertLine)
+                    .scaledFont(size: 11)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+            TooltipInfoGrid(lines: infoLines)
+            TooltipOverview(text: item.overview)
+            if profileName != nil || fileDetails.map({ !$0.formats.isEmpty || $0.score != 0 }) == true {
+                TooltipFlowLayout(spacing: 3) {
+                    if let profileName {
+                        ProfileChip(name: profileName)
+                    }
+                    ForEach(fileDetails?.formats ?? [], id: \.self) { TagChip(text: $0) }
+                    if let score = fileDetails?.score, score != 0 {
+                        ScoreChip(score: score)
+                    }
                 }
-                if let r = item.runtime, r > 0 {
-                    row("Runtime", value: "\(r) min")
+                .padding(.top, 2)
+            }
+            TooltipFileName(name: fileDetails?.fileName)
+        }
+        .task {
+            // Assigned profile — independent of the file (shown for
+            // not-yet-released entries too, same as the Library tooltip).
+            if profileName == nil, let profileId = item.qualityProfileId {
+                let config = configStore.config(for: item.source.serviceKind)
+                profileName = await SearchClient.profileNameMap(config: config, source: item.source)[profileId]
+            }
+            guard item.hasFile, fileDetails == nil, let entityId = item.entityId else { return }
+            switch item.source {
+            case .radarr:
+                if let f = try? await RadarrClient(config: configStore.radarr).fetchMovieFile(movieId: entityId) {
+                    fileDetails = FileFacts(f)
                 }
-                if let v = item.imdb {
-                    // Info-grid rows keep TEXT labels — brand icons live only
-                    // in chip chrome (RatingPill).
-                    row("IMDb", value: String(format: "%.1f", v))
+            case .whisparr:
+                if let f = try? await WhisparrClient(config: configStore.whisparr).fetchMovieFile(movieId: entityId) {
+                    fileDetails = FileFacts(f)
                 }
+            case .sonarr:
+                // entityId is the SERIES id; the calendar's episodeFileId
+                // picks this episode's file out of the series map.
+                guard let fileId = item.episodeFileId else { break }
+                let map = (try? await SonarrClient(config: configStore.sonarr).fetchEpisodeFileMap(seriesId: entityId)) ?? [:]
+                if let f = map[fileId] {
+                    fileDetails = FileFacts(f)
+                }
+            case .lidarr:
+                break
             }
         }
     }
 
-    private var posterSize: CGSize {
-        switch item.source {
-        case .radarr, .sonarr, .whisparr: return CGSize(width: 90, height: 135)
-        case .lidarr: return CGSize(width: 90, height: 90)
-        }
+    /// "119 min · R" — the same line the Library tooltip puts under the
+    /// rating pills (runtime moved OUT of the info grid for parity).
+    private var runtimeCertLine: String {
+        var parts: [String] = []
+        if let r = item.runtime, r > 0 { parts.append("\(r) min") }
+        if let c = item.certification, !c.isEmpty { parts.append(c) }
+        return parts.joined(separator: " · ")
     }
 
-    @ViewBuilder
-    private func row(_ label: String, value: String) -> some View {
-        GridRow(alignment: .firstTextBaseline) {
-            Text(LocalizedStringKey(label), bundle: .module)
-                .scaledFont(size: 11)
-                .foregroundStyle(.secondary)
-                .gridColumnAlignment(.leading)
-            Text(value)
-                .scaledFont(size: 11)
-                .foregroundStyle(.primary)
-                .frame(maxWidth: .infinity, alignment: .leading)
+    /// Sonarr's calendar score is TVDB-sourced (it rides in `item.imdb` for
+    /// historical reasons). Movies: IMDb, falling back to TMDB — unreleased
+    /// titles usually have a TMDB score long before an IMDb one.
+    /// Full pill set, same as the Library tooltip. Zero-hiding lives in the
+    /// RatingChip factories.
+    private var ratingChips: [RatingChip] {
+        if item.source == .sonarr {
+            return [item.imdb.flatMap { RatingChip.tvdb($0) }].compactMap { $0 }
         }
+        return [
+            item.imdb.flatMap { RatingChip.imdb($0) },
+            item.tmdb.flatMap { RatingChip.tmdb($0) },
+            item.ratingRt.flatMap { RatingChip.rottenTomatoes($0) },
+            item.ratingMetacritic.flatMap { RatingChip.metacritic($0) },
+        ].compactMap { $0 }
+    }
+
+    private var infoLines: [TooltipInfoLine] {
+        var lines: [TooltipInfoLine] = [
+            TooltipInfoLine(labelKey: "Airs", value: item.airDateTimeFormatted(locale: configStore.currentLocale)),
+        ]
+        if let t = item.releaseTypeText(locale: configStore.currentLocale) {
+            // Dotted key (not the bare literal "Type") — the string catalog
+            // symbol generator rejects "Type" as too close to a Swift
+            // reserved word.
+            lines.append(TooltipInfoLine(labelKey: "upcoming.type.label", value: t))
+        }
+        // On-disk file facts (lazy-fetched) — the same rows the Library
+        // tooltip carries, so an owned title reads identically in both.
+        if let file = fileDetails {
+            if let q = file.quality, !q.isEmpty {
+                lines.append(TooltipInfoLine(labelKey: "Quality", value: q))
+            }
+            if let s = file.size, s > 0 {
+                lines.append(TooltipInfoLine(labelKey: "Size", value: ByteCountFormatter.string(fromByteCount: s, countStyle: .file)))
+            }
+            if let g = file.releaseGroup, !g.isEmpty {
+                lines.append(TooltipInfoLine(labelKey: "Release group", value: g))
+            }
+            if !file.languages.isEmpty {
+                lines.append(TooltipInfoLine(labelKey: "Languages", value: file.languages.joined(separator: ", ")))
+            }
+        }
+        return lines
     }
 }

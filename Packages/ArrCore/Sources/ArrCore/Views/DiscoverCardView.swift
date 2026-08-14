@@ -3,18 +3,14 @@ import SwiftUI
 /// Build the colored rating chips for a SearchResult — same vocabulary
 /// as queue/search rows (IMDb yellow, RT red, MC green, ★ TMDB fallback).
 func discoverRatingChips(for result: SearchResult) -> [RatingChip] {
-    var out: [RatingChip] = []
-    if let imdb = result.imdb {
-        out.append(RatingChip(label: "IMDb", value: String(format: "%.1f", imdb), color: .yellow))
-    }
-    if let rt = result.rottenTomatoes {
-        out.append(RatingChip(label: "RT", value: "\(Int(rt))%", color: .red))
-    }
-    if let mc = result.metacritic {
-        out.append(RatingChip(label: "MC", value: "\(Int(mc))", color: .green))
-    }
-    if result.imdb == nil, let r = result.rating {
-        out.append(RatingChip(label: "★", value: String(format: "%.1f", r), color: .yellow))
+    var out: [RatingChip] = [
+        result.imdb.flatMap { RatingChip.imdb($0) },
+        result.rottenTomatoes.flatMap { RatingChip.rottenTomatoes($0) },
+        result.metacritic.flatMap { RatingChip.metacritic($0) },
+    ].compactMap { $0 }
+    if result.imdb == nil, let r = result.rating,
+       let chip = result.source == .sonarr ? RatingChip.tvdb(r) : RatingChip.tmdb(r) {
+        out.append(chip)
     }
     return out
 }

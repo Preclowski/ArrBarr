@@ -908,9 +908,19 @@ public final class QueueViewModel {
     // MARK: - Derived state
 
     static func tonightSlice(from upcoming: [UpcomingItem], hours: Int) -> [UpcomingItem] {
-        let now = Date()
-        let cutoff = now.addingTimeInterval(TimeInterval(hours) * 3600)
-        return upcoming.filter { $0.airDate >= now && $0.airDate <= cutoff }
+        // Lower bound is the START OF TODAY — the same rule the Upcoming
+        // tab's "Dziś" section uses. `>= now` silently dropped everything
+        // that already aired today (and every date-only movie release,
+        // which parses to midnight), so "This week" showed no "today" at
+        // all past breakfast.
+        let startOfToday = Calendar.current.startOfDay(for: Date())
+        let cutoff = Date().addingTimeInterval(TimeInterval(hours) * 3600)
+        // Sorted here (not just inherited from the input) so the banner can
+        // NEVER disagree with the Upcoming tab's ordering, whatever the
+        // caller handed us (cold-start snapshot, per-source merge, …).
+        return upcoming
+            .filter { $0.airDate >= startOfToday && $0.airDate <= cutoff }
+            .sorted { $0.airDate < $1.airDate }
     }
 
     static func computeNeedsYou(

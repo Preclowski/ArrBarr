@@ -427,133 +427,72 @@ public struct QueueItemTooltip: View {
     @EnvironmentObject var configStore: ConfigStore
 
     public var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            PosterBlurContainer(blurred: configStore.shouldBlurPoster(for: item.source), cornerRadius: Tokens.Radius.card) {
-                RemotePoster(
-                    url: item.posterURL,
-                    apiKey: apiKey,
-                    size: posterSize,
-                    cornerRadius: Tokens.Radius.card,
-                    fallbackSymbol: item.source.symbol
-                )
-            }
+        // Shared tooltip chrome — one footprint/header/poster treatment for
+        // every media tooltip (see MediaTooltipChrome).
+        MediaTooltipChrome(
+            title: item.title,
+            subtitle: item.subtitle,
+            posterURL: item.posterURL,
+            posterRequiresAuth: apiKey != nil,
+            apiKey: apiKey,
+            posterSize: MediaTooltipChrome<EmptyView>.posterSize(for: item.source),
+            blurred: configStore.shouldBlurPoster(for: item.source),
+            fallbackSymbol: item.source.symbol,
+            // Corner grammar: [context: client][status: Upgrade/New].
+            contextChip: item.downloadClient.map { AnyView(DownloadClientLabel(name: $0, size: 10)) },
+            statusChip: AnyView(MediaBadgeCluster(isUpgrade: item.isUpgrade, size: .medium))
+        ) {
             tooltipContent
-        }
-        .padding(12)
-        .frame(width: 480)
-        // No `.background(.regularMaterial)` — that would paint a SwiftUI
-        // material brighter than NSPopover's native chrome, making the
-        // tooltip read as a lighter rectangle next to the parent popover.
-        // PopoverBehaviorAdjuster clears the hosting view's layer instead
-        // so the native chrome shines through and the tooltip matches.
-    }
-
-    private var posterSize: CGSize {
-        switch item.source {
-        case .radarr, .sonarr, .whisparr: return CGSize(width: 110, height: 165)
-        case .lidarr: return CGSize(width: 110, height: 110)
-        }
-    }
-
-    private var tooltipContent: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            header
-            // Experiment: upgrades now use the extracted side-by-side
-            // `UpgradeDiffView` (current file → incoming, with gained/lost
-            // format chips) instead of the inline grid diff. The grid then
-            // only carries the contextual extras the diff view doesn't cover
-            // (indexer, release file name, replaced on-disk path).
-            if item.isUpgrade {
-                UpgradeDiffView(item: item, showFilenames: true)
-            }
-            infoGrid
-
-            // For non-upgrades the side-by-side doesn't apply, so keep the
-            // plain custom-format chip strip. Upgrades get their gained/lost
-            // chips from `UpgradeDiffView` above.
-            if !item.isUpgrade, !item.customFormats.isEmpty || item.customFormatScore != 0 {
-                customFormatChipStrip(
-                    tags: item.customFormats,
-                    score: item.customFormatScore != 0 ? item.customFormatScore : nil
-                )
-            }
-        }
-    }
-
-    private var header: some View {
-        VStack(alignment: .leading, spacing: 1) {
-            // Match QueueRowView's title pattern: title + Upgrade tag
-            // adjacent on the left, download client neutralised on the
-            // trailing edge. The colour-collision rationale that drove
-            // the change on the row applies to the tooltip too — the
-            // tooltip just had it independently.
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text(item.title)
-                    .scaledFont(size: 13, weight: .semibold)
-                    .lineLimit(2)
-                Spacer(minLength: 4)
-                // Upgrade/New badge sits on the right next to the download
-                // client (not crowding the title on the left).
-                MediaBadgeCluster(isUpgrade: item.isUpgrade, size: .medium)
-                if let client = item.downloadClient {
-                    DownloadClientLabel(name: client, size: 10)
-                }
-            }
-            if let sub = item.subtitle {
-                Text(sub)
-                    .scaledFont(size: 11)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
         }
     }
 
     @ViewBuilder
-    private var infoGrid: some View {
-        Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 10, verticalSpacing: 3) {
-            // Quality / Size only for non-upgrades — for upgrades the incoming
-            // quality and size already live in `UpgradeDiffView` above.
-            if !item.isUpgrade {
-                if let q = item.quality, !q.isEmpty {
-                    row("Quality", value: "\(q) · \(sizeString)")
-                } else {
-                    row("Size", value: sizeString)
-                }
-            }
-            if let indexer = item.indexer, !indexer.isEmpty {
-                row("Indexer", value: indexer)
-            }
-            // Release file name: only for non-upgrades here. Upgrades render
-            // the old→new quality diff AND both filenames (untruncated) inside
-            // `UpgradeDiffView` above, so the grid stays out of their way and
-            // only carries the indexer — otherwise the tooltip showed the same
-            // comparison twice (the arrow diff plus a stacked duplicate).
-            if !item.isUpgrade, let file = item.releaseName, !file.isEmpty {
-                row("File", value: file, mono: true, wraps: true)
-            }
+    private var tooltipContent: some View {
+        // Experiment: upgrades now use the extracted side-by-side
+        // `UpgradeDiffView` (current file → incoming, with gained/lost
+        // format chips) instead of the inline grid diff. The grid then
+        // only carries the contextual extras the diff view doesn't cover
+        // (indexer, release file name, replaced on-disk path).
+        if item.isUpgrade {
+            UpgradeDiffView(item: item, showFilenames: true)
         }
+        TooltipInfoGrid(lines: infoLines)
+
+        // For non-upgrades the side-by-side doesn't apply, so keep the
+        // plain custom-format chip strip. Upgrades get their gained/lost
+        // chips from `UpgradeDiffView` above.
+        if !item.isUpgrade, !item.customFormats.isEmpty || item.customFormatScore != 0 {
+            customFormatChipStrip(
+                tags: item.customFormats,
+                score: item.customFormatScore != 0 ? item.customFormatScore : nil
+            )
+        }
+        // Only for non-upgrades: upgrades render both filenames inside
+        // `UpgradeDiffView`, so repeating one here doubled the comparison.
+        if !item.isUpgrade {
+            TooltipFileName(name: item.releaseName)
+        }
+    }
+
+    private var infoLines: [TooltipInfoLine] {
+        var lines: [TooltipInfoLine] = []
+        // Quality / Size only for non-upgrades — for upgrades the incoming
+        // quality and size already live in `UpgradeDiffView` above. One
+        // fact per row (the "q · size" splice was the odd one out).
+        if !item.isUpgrade {
+            if let q = item.quality, !q.isEmpty {
+                lines.append(TooltipInfoLine(labelKey: "Quality", value: q))
+            }
+            lines.append(TooltipInfoLine(labelKey: "Size", value: sizeString))
+        }
+        if let indexer = item.indexer, !indexer.isEmpty {
+            lines.append(TooltipInfoLine(labelKey: "Indexer", value: indexer))
+        }
+        return lines
     }
 
     private var sizeString: String {
         ByteCountFormatter.string(fromByteCount: item.sizeTotal, countStyle: .file)
-    }
-
-    @ViewBuilder
-    private func row(_ label: String, value: String, valueColor: Color? = nil, mono: Bool = false, wraps: Bool = false) -> some View {
-        GridRow(alignment: .firstTextBaseline) {
-            Text(LocalizedStringKey(label), bundle: .module)
-                .scaledFont(size: 11)
-                .foregroundStyle(.secondary)
-                .gridColumnAlignment(.leading)
-            Text(value)
-                .font(mono ? .system(size: 11, design: .monospaced) : .system(size: 11))
-                .foregroundStyle(valueColor.map { AnyShapeStyle($0) } ?? AnyShapeStyle(.primary))
-                .lineLimit(wraps ? nil : 2)
-                .truncationMode(.middle)
-                .multilineTextAlignment(.leading)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, alignment: .leading)
-        }
     }
 }
 

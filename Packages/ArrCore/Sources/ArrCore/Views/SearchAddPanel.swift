@@ -317,9 +317,8 @@ public struct SearchAddPanel: View {
         var chips: [RatingChip] = []
         // Direct links where an id exists (imdbId; movie result.id IS the
         // TMDB id, series result.id the TVDB id) — site search otherwise.
-        if let v = result.imdb {
-            chips.append(RatingChip(label: "IMDb", value: String(format: "%.1f", v), color: .yellow,
-                                    url: RatingSiteLink.imdb(id: result.imdbId, title: result.title), iconName: "rating-imdb"))
+        if let v = result.imdb, let chip = RatingChip.imdb(v, linkTitle: result.title, imdbId: result.imdbId) {
+            chips.append(chip)
         }
         if let v = result.rating {
             let isSeries = result.source == .sonarr

@@ -18,7 +18,6 @@ public struct QueueSectionView: View {
     /// "Sonarr", so repeating it as a section header is just chrome
     /// the user has to scroll past.
     var hideHeader: Bool = false
-    @State private var hoveringHistory = false
 
     /// Total individual queue items represented by this section's entries.
     /// Singletons count as 1; groups contribute their member count.
@@ -68,19 +67,7 @@ public struct QueueSectionView: View {
                     .truncationMode(.middle)
                     .help(error)
             } else if let onShowHistory {
-                Button(action: onShowHistory) {
-                    HStack(spacing: 2) {
-                        Text("queue.showHistory.button", bundle: .module)
-                        Image(systemName: "chevron.right")
-                            .scaledFont(size: 8, weight: .semibold)
-                            .accessibilityHidden(true)
-                    }
-                    .scaledFont(size: 10)
-                    .foregroundStyle(hoveringHistory ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.tertiary))
-                }
-                .buttonStyle(.plain)
-                .onHover { hoveringHistory = $0 }
-                .help(Text("queue.showHistory.button", bundle: .module))
+                ShowHistoryLink(action: onShowHistory)
             }
         }
         .padding(.horizontal, 12)

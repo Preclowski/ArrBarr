@@ -487,7 +487,13 @@ public actor SonarrClient: ArrAPIClient {
             posterRequiresAuth: auth,
             imdb: r.series?.ratings?.value,
             runtime: r.series?.runtime,
-            entityId: r.seriesId
+            entityId: r.seriesId,
+            episodeFileId: r.episodeFileId,
+            genres: r.series?.genres ?? [],
+            releaseStatus: r.series?.status,
+            qualityProfileId: r.series?.qualityProfileId,
+            seasonNumber: r.seasonNumber,
+            episodeNumber: r.episodeNumber
         )
     }
 

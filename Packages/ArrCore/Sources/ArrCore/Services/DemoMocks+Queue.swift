@@ -156,6 +156,11 @@ extension DemoMocks {
                              size: 350_000_000, fileName: "Pioneer.One.S01E03.480p.WEBRip-OLD.mkv")),
             (4, "Brave New Earth", .paused, 0.34, 420, ["x264", "AAC 2.0"], false, nil),
             (5, "Foothold", .queued, 0.0, 60, [], false, nil),
+            // E06 (two-part finale halves grabbed separately) — pad the title
+            // group so the by-title grouping demo shows a real pile-up.
+            (6, "War of the World, Part 1", .downloading, 0.21, 240, ["x264", "AAC 2.0"], false, nil),
+            (7, "War of the World, Part 2", .downloading, 0.12, 240, ["x264", "AAC 2.0"], false, nil),
+            (8, "Alone in the Night", .queued, 0.0, 60, [], false, nil),
         ]
         return releases.map { rel in
             queueItem(

@@ -203,9 +203,9 @@ struct LidarrArtistView: View {
                 if let genres = artist?.genres, !genres.isEmpty {
                     GenreChips(genres: genres)
                 }
-                if let r = artist?.ratings, let v = r.value, v > 0 {
+                if let v = artist?.ratings?.value, let chip = RatingChip.plain(v) {
                     HStack(spacing: 6) {
-                        RatingPill(chip: RatingChip(label: "Rating", value: String(format: "%.1f", v), color: .yellow))
+                        RatingPill(chip: chip)
                     }
                     .padding(.top, 2)
                 }

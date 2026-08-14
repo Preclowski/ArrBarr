@@ -217,7 +217,7 @@ struct SeasonDetailView: View {
 
     private var ratings: [RatingChip] {
         guard let v = sonarrDetail?.ratings?.value else { return [] }
-        return [RatingChip(label: "Rating", value: String(format: "%.1f", v), color: .yellow)]
+        return [RatingChip.plain(v)].compactMap { $0 }
     }
 
     /// Same hero card as the series view — poster + overview + metadata. Title is

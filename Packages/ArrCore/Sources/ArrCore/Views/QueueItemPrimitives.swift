@@ -592,10 +592,11 @@ public extension View {
 /// same. Callers slot whatever metadata-specific content fits in
 /// the middle (rating chips, info grid, …) via `@ViewBuilder`.
 ///
-/// Not used by `QueueItemTooltip` — that one has its own infoGrid +
-/// inline upgrade diff + CF strip + chip diff stack which is too
-/// idiosyncratic to fit a generic chrome. The two simpler tooltips
-/// (search results + upcoming items) share this base.
+/// Every rich tooltip goes through this chrome now (queue rows, season
+/// packs, library tiles, search results, upcoming rows) — one 480 pt
+/// footprint, one poster size, one header style. The lone hold-out is
+/// `CastTooltip` (a fixed-size person card with async fill), which shares
+/// no anatomy with media tooltips.
 public struct MediaTooltipChrome<Content: View>: View {
     let title: String
     let year: Int?
@@ -606,9 +607,20 @@ public struct MediaTooltipChrome<Content: View>: View {
     let posterSize: CGSize
     let blurred: Bool
     let fallbackSymbol: String
-    let overview: String?
     let frameWidth: CGFloat
+    /// The title-row corner takes AT MOST two chips, typed so a third
+    /// can't sneak in and squeeze the title: `contextChip` (who/where —
+    /// download client, release status) then `statusChip` (ownership /
+    /// download state — Pobrane, Upgrade/New). No loose text here ever;
+    /// counts and other facts belong in the info grid.
+    let contextChip: AnyView?
+    let statusChip: AnyView?
     @ViewBuilder let content: () -> Content
+
+    /// The canonical tooltip poster: 2:3, or square for Lidarr covers.
+    public static func posterSize(for source: QueueItem.Source) -> CGSize {
+        source == .lidarr ? CGSize(width: 110, height: 110) : CGSize(width: 110, height: 165)
+    }
 
     public init(
         title: String,
@@ -617,11 +629,12 @@ public struct MediaTooltipChrome<Content: View>: View {
         posterURL: URL?,
         posterRequiresAuth: Bool = false,
         apiKey: String? = nil,
-        posterSize: CGSize = CGSize(width: 90, height: 135),
+        posterSize: CGSize = CGSize(width: 110, height: 165),
         blurred: Bool = false,
         fallbackSymbol: String = "photo",
-        overview: String? = nil,
-        frameWidth: CGFloat = 420,
+        frameWidth: CGFloat = 480,
+        contextChip: AnyView? = nil,
+        statusChip: AnyView? = nil,
         @ViewBuilder content: @escaping () -> Content
     ) {
         self.title = title
@@ -633,8 +646,9 @@ public struct MediaTooltipChrome<Content: View>: View {
         self.posterSize = posterSize
         self.blurred = blurred
         self.fallbackSymbol = fallbackSymbol
-        self.overview = overview
         self.frameWidth = frameWidth
+        self.contextChip = contextChip
+        self.statusChip = statusChip
         self.content = content
     }
 
@@ -651,9 +665,18 @@ public struct MediaTooltipChrome<Content: View>: View {
             }
             VStack(alignment: .leading, spacing: 6) {
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(titleWithYear)
-                        .scaledFont(size: 13, weight: .semibold)
-                        .lineLimit(2)
+                    HStack(alignment: .firstTextBaseline, spacing: 6) {
+                        Text(titleWithYear)
+                            .scaledFont(size: 13, weight: .semibold)
+                            .lineLimit(2)
+                        if contextChip != nil || statusChip != nil {
+                            Spacer(minLength: 4)
+                            HStack(spacing: 4) {
+                                if let contextChip { contextChip }
+                                if let statusChip { statusChip }
+                            }
+                        }
+                    }
                     if let sub = subtitle, !sub.isEmpty {
                         Text(sub)
                             .scaledFont(size: 11)
@@ -665,14 +688,10 @@ public struct MediaTooltipChrome<Content: View>: View {
                 // dropped — tooltip's typographic hierarchy (semibold
                 // title vs. body text) already separates the two
                 // visually, and an explicit hairline added noise.
+                // Synopsis placement is the caller's job (TooltipOverview,
+                // directly under its info grid) — appending it here put it
+                // below the chips/filename on file-bearing tooltips.
                 content()
-                if let overview, !overview.isEmpty {
-                    Text(overview)
-                        .scaledFont(size: 11)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(8)
-                        .padding(.top, 2)
-                }
             }
         }
         .padding(12)

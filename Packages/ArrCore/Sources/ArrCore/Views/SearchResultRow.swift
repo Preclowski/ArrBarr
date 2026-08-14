@@ -5,9 +5,6 @@ public struct SearchResultRow: View {
     let onTap: () -> Void
 
     @EnvironmentObject var configStore: ConfigStore
-    @State private var isHovering = false
-    @State private var showTooltip = false
-    @State private var hoverTask: Task<Void, Never>?
 
     /// True when the search result carries enough metadata to populate
     /// a tooltip — guards against renderering empty popover chrome on
@@ -49,21 +46,8 @@ public struct SearchResultRow: View {
         #if os(macOS)
         // Long-hover rich tooltip — reuses the overview / genres /
         // ratings that arr's lookup already sent with this result, no
-        // additional network call. Same 600 ms gate as queue rows so
-        // the muscle memory carries.
-        .onHover { hovering in
-            isHovering = hovering
-            hoverTask?.cancel()
-            if hovering, hasTooltipContent {
-                hoverTask = Task { @MainActor [self] in
-                    try? await Task.sleep(nanoseconds: 600_000_000)
-                    if !Task.isCancelled && self.isHovering { showTooltip = true }
-                }
-            } else {
-                showTooltip = false
-            }
-        }
-        .tooltipPopover(isPresented: $showTooltip, arrowEdge: .trailing) {
+        // additional network call. Shared 600 ms plumbing (HoverTooltip).
+        .hoverTooltip(enabled: hasTooltipContent) {
             SearchResultTooltip(result: result)
                 .environmentObject(configStore)
         }
@@ -87,10 +71,10 @@ public struct SearchResultRow: View {
     private var metadataSegments: [String] {
         [
             result.subtitle.flatMap { $0.isEmpty ? nil : $0 },
-            result.imdb.map { String(format: "IMDb %.1f", $0) },
-            result.rottenTomatoes.map { "RT \(Int($0))%" },
-            result.metacritic.map { "MC \(Int($0))" },
-            result.imdb == nil ? result.rating.map { String(format: "★%.1f", $0) } : nil,
+            result.imdb.flatMap { $0 > 0 ? String(format: "IMDb %.1f", $0) : nil },
+            result.rottenTomatoes.flatMap { $0 > 0 ? "RT \(Int($0))%" : nil },
+            result.metacritic.flatMap { $0 > 0 ? "MC \(Int($0))" : nil },
+            result.imdb == nil ? result.rating.flatMap { $0 > 0 ? String(format: "★%.1f", $0) : nil } : nil,
             result.runtime.flatMap { $0 > 0 ? "\($0) min" : nil },
             result.certification.flatMap { $0.isEmpty ? nil : $0 },
         ].compactMap { $0 }
@@ -115,60 +99,51 @@ public struct SearchResultTooltip: View {
             year: result.year,
             subtitle: result.subtitle,
             posterURL: result.posterURL,
-            posterSize: posterSize,
+            posterSize: MediaTooltipChrome<EmptyView>.posterSize(for: result.source),
             blurred: configStore.shouldBlurPoster(for: result.source),
-            fallbackSymbol: result.source.symbol,
-            overview: result.overview
+            fallbackSymbol: result.source.symbol
         ) {
             VStack(alignment: .leading, spacing: 6) {
+                // Same order as detail heroes / the library tooltip:
+                // genres (GenreChips), rating pills, then extras.
                 if !result.genres.isEmpty {
-                    TooltipFlowLayout(spacing: 3) {
-                        ForEach(result.genres, id: \.self) { TagChip(text: $0) }
-                    }
+                    GenreChips(genres: result.genres)
                 }
-                if !ratingChips.isEmpty {
-                    HStack(spacing: 6) {
-                        ForEach(ratingChips, id: \.label) { RatingPill(chip: $0) }
-                    }
-                }
-                if let n = result.network, !n.isEmpty {
-                    Text(n)
-                        .scaledFont(size: 11)
-                        .foregroundStyle(.secondary)
-                }
+                TooltipRatingPills(chips: ratingChips)
+                TooltipInfoGrid(lines: infoLines)
+                TooltipOverview(text: result.overview)
             }
         }
     }
 
-    private var posterSize: CGSize {
-        switch result.source {
-        case .radarr, .sonarr, .whisparr: return CGSize(width: 90, height: 135)
-        case .lidarr: return CGSize(width: 90, height: 90)
+    /// Labeled facts — the same table form every other tooltip carries.
+    /// `network` holds Sonarr's network or Radarr's studio; label follows.
+    private var infoLines: [TooltipInfoLine] {
+        var lines: [TooltipInfoLine] = []
+        if let n = result.network, !n.isEmpty {
+            lines.append(TooltipInfoLine(
+                labelKey: result.source == .sonarr ? "search.network.label" : "search.studio.label",
+                value: n
+            ))
         }
+        if let r = result.runtime, r > 0 {
+            lines.append(TooltipInfoLine(labelKey: "Runtime", value: "\(r) min"))
+        }
+        return lines
     }
 
     /// Same brand-icon pills as the detail headers (`RatingPill`), minus the
     /// links — a tooltip is hover chrome, not a click target. The bare-rating
     /// fallback is TVDB-sourced for Sonarr results and TMDB otherwise.
     private var ratingChips: [RatingChip] {
-        var chips: [RatingChip] = []
-        if let v = result.imdb {
-            chips.append(RatingChip(label: "IMDb", value: String(format: "%.1f", v),
-                                    color: .yellow, iconName: "rating-imdb"))
-        }
-        if let v = result.rottenTomatoes {
-            chips.append(RatingChip(label: "RT", value: "\(Int(v))%",
-                                    color: .red, iconName: "rating-rt"))
-        }
-        if let v = result.metacritic {
-            chips.append(RatingChip(label: "MC", value: "\(Int(v))", color: .green))
-        }
-        if result.imdb == nil, let v = result.rating {
-            chips.append(result.source == .sonarr
-                ? RatingChip(label: "TVDB", value: String(format: "%.1f", v),
-                             color: .blue, iconName: "rating-tvdb")
-                : RatingChip(label: "TMDB", value: String(format: "%.1f", v),
-                             color: .teal, iconName: "rating-tmdb"))
+        var chips: [RatingChip] = [
+            result.imdb.flatMap { RatingChip.imdb($0) },
+            result.rottenTomatoes.flatMap { RatingChip.rottenTomatoes($0) },
+            result.metacritic.flatMap { RatingChip.metacritic($0) },
+        ].compactMap { $0 }
+        if result.imdb == nil, let v = result.rating,
+           let chip = result.source == .sonarr ? RatingChip.tvdb(v) : RatingChip.tmdb(v) {
+            chips.append(chip)
         }
         return chips
     }

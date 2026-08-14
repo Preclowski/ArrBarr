@@ -166,6 +166,8 @@ struct UpgradeDiffView: View {
                 }
             }
             if showFilenames, let name = side.filename, !name.isEmpty {
+                // New/only file primary; the "current" side drops to
+                // secondary while comparing.
                 Text(name)
                     .scaledFont(size: 11, design: .monospaced)
                     .foregroundStyle(comparing ? AnyShapeStyle(.secondary) : AnyShapeStyle(.primary))
@@ -200,6 +202,8 @@ struct UpgradeDiffView: View {
         if (incomingName?.isEmpty == false) || (currentName?.isEmpty == false) {
             VStack(alignment: .leading, spacing: 3) {
                 if let name = incomingName, !name.isEmpty {
+                    // Incoming = primary; the ⇱ outgoing line below is
+                    // secondary.
                     Text(name)
                         .scaledFont(size: 11, design: .monospaced)
                         .foregroundStyle(.primary)

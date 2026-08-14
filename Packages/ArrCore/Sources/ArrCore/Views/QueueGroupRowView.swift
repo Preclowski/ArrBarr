@@ -316,35 +316,47 @@ public struct QueueGroupTooltip: View {
     private var rep: QueueItem { group.representative }
 
     public var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            PosterBlurContainer(blurred: configStore.shouldBlurPoster(for: rep.source), cornerRadius: Tokens.Radius.card) {
-                RemotePoster(
-                    url: rep.posterURL,
-                    apiKey: apiKey,
-                    size: CGSize(width: 110, height: 165),
-                    cornerRadius: Tokens.Radius.card,
-                    fallbackSymbol: "tv"
-                )
-            }
+        // Shared tooltip chrome — see MediaTooltipChrome.
+        MediaTooltipChrome(
+            title: rep.title,
+            posterURL: rep.posterURL,
+            posterRequiresAuth: apiKey != nil,
+            apiKey: apiKey,
+            blurred: configStore.shouldBlurPoster(for: rep.source),
+            fallbackSymbol: "tv",
+            contextChip: rep.downloadClient.map { AnyView(DownloadClientLabel(name: $0, size: 10)) }
+        ) {
             tooltipContent
         }
-        .padding(12)
-        .frame(width: 480)
-        // See QueueItemTooltip — letting NSPopover's native chrome paint
-        // the backdrop instead of `.regularMaterial` keeps tooltip and
-        // parent popover visually unified.
     }
 
+    @ViewBuilder
     private var tooltipContent: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            header
-            infoGrid
+            // Season · episode-count line (localized plural lives in Text
+            // interpolation, so it stays a view, not a chrome subtitle string).
+            HStack(spacing: 4) {
+                if let label = seasonLabel {
+                    Text(label)
+                    SeparatorDot()
+                }
+                Text("\(group.memberCount) episodes", bundle: .module)
+            }
+            .scaledFont(size: 11)
+            .foregroundStyle(.secondary)
+            TooltipInfoGrid(lines: infoLines)
 
             if !rep.customFormats.isEmpty || rep.customFormatScore != 0 {
                 customFormatChipStrip(
                     tags: rep.customFormats,
                     score: rep.customFormatScore != 0 ? rep.customFormatScore : nil
                 )
+            }
+
+            // Pack release name — inside the upgrade summary's diff card when
+            // one renders (uniform upgrade); bare down here otherwise, so it
+            // isn't shown twice.
+            if uniformExistingFile == nil {
+                TooltipFileName(name: rep.releaseName)
             }
 
             // Variant A — every upgrade episode is replacing the same kind
@@ -380,7 +392,6 @@ public struct QueueGroupTooltip: View {
                     .padding(.top, 4)
                 episodeQueueList
             }
-        }
     }
 
     /// Snapshot of an episode's existing-file metadata used to detect
@@ -481,55 +492,16 @@ public struct QueueGroupTooltip: View {
     }
 
 
-    private var header: some View {
-        VStack(alignment: .leading, spacing: 1) {
-            HStack(alignment: .top, spacing: 6) {
-                Text(rep.title)
-                    .scaledFont(size: 13, weight: .semibold)
-                    .lineLimit(2)
-                Spacer(minLength: 4)
-                if let client = rep.downloadClient {
-                    let color = downloadClientColor(client)
-                    Text(client)
-                        .scaledFont(size: 9, weight: .semibold)
-                        .foregroundStyle(color)
-                        .padding(.horizontal, 5)
-                        .padding(.vertical, 2)
-                        .overlay(RoundedRectangle(cornerRadius: Tokens.Radius.chip).stroke(color.opacity(0.30), lineWidth: 0.75))
-                        .lineLimit(1)
-                        .fixedSize()
-                }
-            }
-            HStack(spacing: 4) {
-                if let label = seasonLabel {
-                    Text(label)
-                    SeparatorDot()
-                }
-                Text("\(group.memberCount) episodes", bundle: .module)
-            }
-            .scaledFont(size: 11)
-            .foregroundStyle(.secondary)
+    private var infoLines: [TooltipInfoLine] {
+        var lines: [TooltipInfoLine] = []
+        if let q = rep.quality, !q.isEmpty {
+            lines.append(TooltipInfoLine(labelKey: "Quality", value: q))
         }
-    }
-
-    @ViewBuilder
-    private var infoGrid: some View {
-        Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 10, verticalSpacing: 3) {
-            if let q = rep.quality, !q.isEmpty {
-                row("Quality", value: "\(q) · \(sizeString)")
-            } else {
-                row("Size", value: sizeString)
-            }
-            if let indexer = rep.indexer, !indexer.isEmpty {
-                row("Indexer", value: indexer)
-            }
-            // The new pack release name lives inside the upgrade summary's
-            // diff card when we render one (uniform upgrade). Only surface it
-            // here otherwise so it isn't shown twice.
-            if uniformExistingFile == nil, let file = rep.releaseName, !file.isEmpty {
-                row("File", value: file, mono: true, wraps: true)
-            }
+        lines.append(TooltipInfoLine(labelKey: "Size", value: sizeString))
+        if let indexer = rep.indexer, !indexer.isEmpty {
+            lines.append(TooltipInfoLine(labelKey: "Indexer", value: indexer))
         }
+        return lines
     }
 
     private var seasonLabel: String? {
@@ -551,25 +523,6 @@ public struct QueueGroupTooltip: View {
         ByteCountFormatter.string(fromByteCount: rep.sizeTotal, countStyle: .file)
     }
 
-    @ViewBuilder
-    private func row(_ label: String, value: String, mono: Bool = false, wraps: Bool = false) -> some View {
-        GridRow(alignment: .firstTextBaseline) {
-            Text(LocalizedStringKey(label), bundle: .module)
-                // Match the detail view's UpgradeDiffTable label
-                // typography (semibold secondary) so the tooltip's
-                // fact rows read the same as the detail diff.
-                .scaledFont(size: 11, weight: .semibold)
-                .foregroundStyle(.secondary)
-                .gridColumnAlignment(.leading)
-            Text(value)
-                .font(mono ? .system(size: 11, design: .monospaced) : .system(size: 11))
-                .lineLimit(wraps ? nil : 2)
-                .truncationMode(.middle)
-                .multilineTextAlignment(.leading)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, alignment: .leading)
-        }
-    }
 }
 
 /// Compact queue row used inside the season-pack tooltip. Mirrors the

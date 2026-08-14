@@ -143,6 +143,9 @@ public struct DetailView: View {
     /// series from TMDB (Sonarr has no cast endpoint) and only when a TMDB
     /// key is set. Empty = unavailable; the row just doesn't render.
     @State private var cast: [CastMember] = []
+    /// Assigned quality-profile name ("Remux + WEB 2160p") — the hero's
+    /// profile chip. Resolved from `/qualityprofile` alongside the detail.
+    @State private var qualityProfileName: String?
     @State private var loading = true
     @State private var loadError: String?
     /// Cast-head → person view push, owned locally so back returns here.
@@ -847,8 +850,7 @@ public struct DetailView: View {
                     fallbackSymbol: "film",
                     posterAspect: 2.0/3.0,
                     metadataLoading: loading,
-                    titleBadge: (radarrMovieFile ?? radarrDetail?.movieFile) != nil
-                        ? AnyView(InLibraryBadge()) : nil
+                    titleBadge: movieTitleBadge
                 )
                 RadarrDetailPanel(
                     item: item,
@@ -882,7 +884,7 @@ public struct DetailView: View {
                     posterAspect: 2.0/3.0,
                     metadataLoading: loading,
                     // Any episode file on disk makes the series library-owned.
-                    titleBadge: sonarrEpisodeFiles.isEmpty ? nil : AnyView(InLibraryBadge())
+                    titleBadge: seriesTitleBadge
                 )
                 SonarrDetailPanel(
                     item: item,
@@ -932,29 +934,44 @@ public struct DetailView: View {
             }
     }
 
+    /// Movie hero's title-slot badges: the "library" membership chip plus
+    /// the release-status chip ("Released" / "In cinemas"). Release status
+    /// is a fact of the TITLE, so it lives here next to the library label —
+    /// not down in the existing-file banner, which describes one file.
+    private var movieTitleBadge: AnyView? {
+        let inLibrary = (radarrMovieFile ?? radarrDetail?.movieFile) != nil
+        let release = ArrReleaseStatusLabel.text(radarrDetail?.status, locale: configStore.currentLocale)
+        guard inLibrary || release != nil || qualityProfileName != nil else { return nil }
+        // Release status leads (the movie's own state), then the assigned
+        // quality profile, then membership.
+        return AnyView(HStack(spacing: 4) {
+            if let release { TagChip(text: release) }
+            if let profile = qualityProfileName { ProfileChip(name: profile) }
+            if inLibrary { InLibraryBadge() }
+        })
+    }
+
+    /// Series hero's title badges — assigned profile + library membership.
+    private var seriesTitleBadge: AnyView? {
+        let inLibrary = !sonarrEpisodeFiles.isEmpty
+        guard inLibrary || qualityProfileName != nil else { return nil }
+        return AnyView(HStack(spacing: 4) {
+            if let profile = qualityProfileName { ProfileChip(name: profile) }
+            if inLibrary { InLibraryBadge() }
+        })
+    }
+
     private func movieRatingChipsFor(_ detail: RadarrMovieDetail?) -> [RatingChip] {
         guard let r = detail?.ratings else { return [] }
         // Radarr's detail payload carries no imdbId, so the IMDb pill links
         // to the site's search; TMDB gets a direct record link via tmdbId.
         let title = detail?.title ?? splitTitleAndYear(item.title).title
-        var chips: [RatingChip] = []
-        if let v = r.imdb?.value {
-            chips.append(RatingChip(label: "IMDb", value: String(format: "%.1f", v), color: .yellow,
-                                    url: RatingSiteLink.imdb(id: nil, title: title), iconName: "rating-imdb"))
-        }
-        if let v = r.tmdb?.value {
-            chips.append(RatingChip(label: "TMDB", value: String(format: "%.1f", v), color: .teal,
-                                    url: RatingSiteLink.tmdbMovie(id: detail?.tmdbId, title: title), iconName: "rating-tmdb"))
-        }
-        if let v = r.rottenTomatoes?.value {
-            chips.append(RatingChip(label: "RT", value: "\(Int(v))%", color: .red,
-                                    url: RatingSiteLink.rottenTomatoes(title: title), iconName: "rating-rt"))
-        }
-        if let v = r.metacritic?.value {
-            chips.append(RatingChip(label: "MC", value: "\(Int(v))", color: .green,
-                                    url: RatingSiteLink.metacritic(title: title)))
-        }
-        return chips
+        return [
+            r.imdb?.value.flatMap { RatingChip.imdb($0, linkTitle: title) },
+            r.tmdb?.value.flatMap { RatingChip.tmdb($0, linkTitle: title, tmdbId: detail?.tmdbId) },
+            r.rottenTomatoes?.value.flatMap { RatingChip.rottenTomatoes($0, linkTitle: title) },
+            r.metacritic?.value.flatMap { RatingChip.metacritic($0, linkTitle: title) },
+        ].compactMap { $0 }
     }
 
     private func sonarrRatingChipsFor(_ detail: SonarrSeriesDetail?) -> [RatingChip] {
@@ -962,8 +979,7 @@ public struct DetailView: View {
         // Sonarr's rating is TVDB-sourced — link to the TVDB series page
         // (the detail payload has no tvdbId here, so it goes via search).
         let title = detail?.title ?? splitTitleAndYear(item.title).title
-        return [RatingChip(label: "TVDB", value: String(format: "%.1f", v), color: .blue,
-                           url: RatingSiteLink.tvdbSeries(id: nil, title: title), iconName: "rating-tvdb")]
+        return [RatingChip.tvdb(v, linkTitle: title)].compactMap { $0 }
     }
 
     // MARK: - Shared header card
@@ -1020,6 +1036,13 @@ public struct DetailView: View {
 
     // MARK: - Loading
 
+    /// `/qualityprofile` name for an id — nil on any failure (the chip
+    /// simply doesn't render). Shared lookup (SearchClient.profileNameMap).
+    private static func profileName(id: Int?, config: ServiceConfig, source: QueueItem.Source) async -> String? {
+        guard let id else { return nil }
+        return await SearchClient.profileNameMap(config: config, source: source)[id]
+    }
+
     private func load(showSpinner: Bool = true) async {
         if showSpinner { loading = true }
         loadError = nil
@@ -1042,6 +1065,8 @@ public struct DetailView: View {
                 async let file = (try? client.fetchMovieFile(movieId: entityId)) ?? nil
                 radarrDetail = try await detail
                 radarrMovieFile = await file
+                qualityProfileName = await Self.profileName(
+                    id: radarrDetail?.qualityProfileId, config: configStore.radarr, source: .radarr)
                 cast = await CastProvider.movieCast(
                     radarrMovieId: entityId, tmdbId: radarrDetail?.tmdbId, configStore: configStore)
             case .sonarr:
@@ -1052,6 +1077,8 @@ public struct DetailView: View {
                 sonarrDetail = try await d
                 sonarrEpisodes = try await eps
                 sonarrEpisodeFiles = await files
+                qualityProfileName = await Self.profileName(
+                    id: sonarrDetail?.qualityProfileId, config: configStore.sonarr, source: .sonarr)
                 cast = await CastProvider.seriesCast(
                     tmdbId: sonarrDetail?.tmdbId, tvdbId: sonarrDetail?.tvdbId,
                     demoSeriesId: entityId, configStore: configStore)
@@ -1066,6 +1093,8 @@ public struct DetailView: View {
             case .whisparr:
                 let client = WhisparrClient(config: configStore.whisparr)
                 radarrDetail = try await client.fetchMovieDetails(id: entityId)
+                qualityProfileName = await Self.profileName(
+                    id: radarrDetail?.qualityProfileId, config: configStore.whisparr, source: .whisparr)
             }
         } catch {
             loadError = "Couldn't load details: \(error.localizedDescription)"

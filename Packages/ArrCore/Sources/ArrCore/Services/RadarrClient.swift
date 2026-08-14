@@ -266,8 +266,15 @@ public actor RadarrClient: ArrAPIClient {
             posterURL: poster,
             posterRequiresAuth: auth,
             imdb: r.ratings?.imdb?.value,
+            tmdb: r.ratings?.tmdb?.value,
             runtime: r.runtime,
-            entityId: r.id
+            entityId: r.id,
+            genres: r.genres ?? [],
+            certification: r.certification,
+            releaseStatus: r.status,
+            ratingRt: r.ratings?.rottenTomatoes?.value,
+            ratingMetacritic: r.ratings?.metacritic?.value,
+            qualityProfileId: r.qualityProfileId
         )
     }
 

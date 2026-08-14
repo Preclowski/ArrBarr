@@ -12,11 +12,12 @@ struct ReleaseNameBlock: View {
     var body: some View {
         if let release, !release.isEmpty {
             VStack(alignment: .leading, spacing: 3) {
+                // Colour rule: the new (or only) filename is primary; the
+                // replaced one below drops to secondary.
                 Text(release)
                     .scaledFont(size: 11, design: .monospaced)
                     .foregroundStyle(.primary)
-                    .lineLimit(2)
-                    .truncationMode(.middle)
+                    .fixedSize(horizontal: false, vertical: true)
                 if let existing, !existing.isEmpty, existing != release {
                     HStack(alignment: .firstTextBaseline, spacing: 4) {
                         Image(systemName: "arrow.turn.down.right")
@@ -25,8 +26,7 @@ struct ReleaseNameBlock: View {
                         Text(existing)
                             .scaledFont(size: 11, design: .monospaced)
                             .foregroundStyle(.secondary)
-                            .lineLimit(2)
-                            .truncationMode(.middle)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                 }
             }

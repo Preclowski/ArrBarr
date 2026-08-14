@@ -831,6 +831,7 @@ public struct SettingsView: View {
             // Section *order* lives on the Media-managers screen (the same
             // roster, drag-sorted there); this screen keeps what each queue
             // section shows.
+            queueGroupingSection
             upcomingSection
             needsYouSection
             tmdbSection
@@ -1023,6 +1024,7 @@ public struct SettingsView: View {
             }
             // What each queue section shows. Their *order* is dragged on the
             // Media-managers page, which lists the same arrs.
+            queueGroupingSection
             upcomingSection
             needsYouSection
             tmdbSection
@@ -1103,13 +1105,44 @@ public struct SettingsView: View {
 
     // MARK: - Queue sections
 
+    /// By-title queue grouping. One picker doubles as the on/off switch and
+    /// the default disclosure state — Off keeps the flat list, the other two
+    /// bundle a title's ≥2 downloads under a collapsible header.
+    private var queueGroupingSection: some View {
+        Section {
+            Picker(selection: $configStore.queueTitleGrouping) {
+                Text("settings.queueGrouping.off.option", bundle: .module)
+                    .tag(QueueTitleGroupingMode.off)
+                Text("settings.queueGrouping.collapsed.option", bundle: .module)
+                    .tag(QueueTitleGroupingMode.collapsed)
+                Text("settings.queueGrouping.expanded.option", bundle: .module)
+                    .tag(QueueTitleGroupingMode.expanded)
+            } label: { Text("settings.queueGrouping.label", bundle: .module) }
+        } header: { Text("Queue", bundle: .module) } footer: {
+            Text("settings.queueGrouping.footer", bundle: .module)
+        }
+    }
+
     /// The Upcoming banner: one switch, since its window is hard-locked to
     /// 7 days (see `ConfigStore.tonightHoursOptions`).
     private var upcomingSection: some View {
         Section {
             Toggle(isOn: $configStore.showTonight) {
-                Text("settings.showUpcoming.label", bundle: .module)
+                Text("settings.showUpcomingInQueue.label", bundle: .module)
             }
+            Picker(selection: $configStore.tonightVisibleCount) {
+                ForEach(ConfigStore.tonightVisibleOptions, id: \.self) { option in
+                    if option == 0 {
+                        Text("search.all.button", bundle: .module).tag(0)
+                    } else {
+                        Text(verbatim: "\(option)").tag(option)
+                    }
+                }
+            } label: {
+                Text("settings.upcomingVisibleCount.label", bundle: .module)
+            }
+            .pickerStyle(.segmented)
+            .disabled(!configStore.showTonight)
         } header: { Text("Upcoming", bundle: .module) }
     }
 

@@ -28,6 +28,8 @@ public struct RadarrMovieDetail: Decodable {
     /// didn't decode" hides the monitor toggle instead of rendering a
     /// bookmark that lies about state.
     var monitored: Bool? = nil
+    /// Assigned quality profile — resolved to a name for the hero's chip.
+    var qualityProfileId: Int? = nil
 }
 
 public struct RadarrDetailRatings: Decodable {
@@ -70,6 +72,8 @@ public struct SonarrSeriesDetail: Decodable {
     let firstAired: String?
     /// See `RadarrMovieDetail.monitored`.
     var monitored: Bool? = nil
+    /// See `RadarrMovieDetail.qualityProfileId`.
+    var qualityProfileId: Int? = nil
 }
 
 public struct SonarrDetailRatings: Decodable {
@@ -126,6 +130,8 @@ public struct LidarrAlbumDetail: Decodable {
     let statistics: LidarrAlbumStats?
     /// See `RadarrMovieDetail.monitored`.
     var monitored: Bool? = nil
+    /// See `RadarrMovieDetail.qualityProfileId`.
+    var qualityProfileId: Int? = nil
 }
 
 public struct LidarrDetailRatings: Decodable {

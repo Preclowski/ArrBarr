@@ -124,8 +124,15 @@ public final class ConfigStore: ObservableObject {
     /// originally an indexer-only toggle; the persisted key is unchanged so
     /// existing preferences carry over.)
     @Published public var showWarnings: Bool = true
+    /// By-title queue grouping: off / collapsed (default) / expanded — see
+    /// `QueueTitleGroupingMode`. Collapsed vs expanded only sets the default
+    /// disclosure state of the groups.
+    @Published public var queueTitleGrouping: QueueTitleGroupingMode = .collapsed
     @Published public var collapsedArrs: Set<String> = []
     @Published public var tonightHours: Int = 168
+    /// How many "This week" rows stay visible without expanding.
+    /// 0 = all (no Show more/less at all).
+    @Published public var tonightVisibleCount: Int = 3
     /// Last `WelcomeContent.currentVersion` the user dismissed. `nil` means
     /// they've never seen the welcome screen — first launch shows the
     /// firstRun variant.
@@ -169,6 +176,8 @@ public final class ConfigStore: ObservableObject {
     /// the rest were rounding to 72h anyway. Kept as `@Published Int`
     /// for source-compat with subscribers; nothing writes to it now.
     public static let tonightHoursOptions = [168]
+    /// Picker options for `tonightVisibleCount` — 0 renders as "All".
+    public static let tonightVisibleOptions = [3, 5, 0]
 
     public static let appLanguageOptions: [(code: String, label: String)] = [
         ("system", "System"),
@@ -303,8 +312,10 @@ public final class ConfigStore: ObservableObject {
     private static let arrOrderKey = "ArrBarr.arrOrder"
     private static let showTonightKey = "ArrBarr.showTonight"
     private static let showNeedsYouKey = "ArrBarr.showNeedsYou"
+    private static let queueTitleGroupingKey = "ArrBarr.queueTitleGrouping"
     private static let collapsedArrsKey = "ArrBarr.collapsedArrs"
     private static let tonightHoursKey = "ArrBarr.tonightHours"
+    private static let tonightVisibleCountKey = "ArrBarr.tonightVisibleCount"
     private static let showIndexerIssuesKey = "ArrBarr.showIndexerIssues"
     private static let welcomeSeenVersionKey = "ArrBarr.welcomeSeenVersion"
     private static let aiEnabledKey = "ArrBarr.aiEnabled"
@@ -458,11 +469,16 @@ public final class ConfigStore: ObservableObject {
         self.foregroundInterval = 5
         self.appearance = "system"
         #endif
+        self.queueTitleGrouping = QueueTitleGroupingMode(
+            rawValue: defaults.string(forKey: Self.queueTitleGroupingKey) ?? ""
+        ) ?? .collapsed
         self.collapsedArrs = Set(defaults.stringArray(forKey: Self.collapsedArrsKey) ?? [])
         // Hard-coded to 7 days (168h). Old stored values from when the
         // picker was UI-exposed are ignored — users get the new
         // default regardless.
         self.tonightHours = 168
+        self.tonightVisibleCount = defaults.object(forKey: Self.tonightVisibleCountKey) != nil
+            ? defaults.integer(forKey: Self.tonightVisibleCountKey) : 3
         self.welcomeSeenVersion = defaults.string(forKey: Self.welcomeSeenVersionKey)
         self.aiEnabled = defaults.object(forKey: Self.aiEnabledKey) != nil
             ? defaults.bool(forKey: Self.aiEnabledKey) : false
@@ -567,11 +583,17 @@ public final class ConfigStore: ObservableObject {
         $showWarnings.dropFirst().sink { [weak self] val in
             self?.defaults.set(val, forKey: Self.showIndexerIssuesKey)
         }.store(in: &cancellables)
+        $queueTitleGrouping.dropFirst().sink { [weak self] val in
+            self?.defaults.set(val.rawValue, forKey: Self.queueTitleGroupingKey)
+        }.store(in: &cancellables)
         $collapsedArrs.dropFirst().sink { [weak self] val in
             self?.defaults.set(Array(val), forKey: Self.collapsedArrsKey)
         }.store(in: &cancellables)
         $tonightHours.dropFirst().sink { [weak self] val in
             self?.defaults.set(val, forKey: Self.tonightHoursKey)
+        }.store(in: &cancellables)
+        $tonightVisibleCount.dropFirst().sink { [weak self] val in
+            self?.defaults.set(val, forKey: Self.tonightVisibleCountKey)
         }.store(in: &cancellables)
         $appearance.dropFirst().sink { [weak self] val in
             self?.defaults.set(val, forKey: Self.appearanceKey)

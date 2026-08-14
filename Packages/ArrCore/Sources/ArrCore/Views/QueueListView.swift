@@ -47,6 +47,12 @@ struct QueueListView: View {
     ///     don't fight — which is what keeps this solid rather than a hack.
     @Binding var selecting: Bool
     @State private var selected = Set<String>()
+    /// By-title groups the user toggled AWAY from the mode's default
+    /// disclosure state (collapsed default → holds the expanded ones, and
+    /// vice versa). Keyed by the group's stable title key, so it survives
+    /// members joining/leaving on realtime refreshes; in-memory only, so a
+    /// fresh popover session starts back at the default.
+    @State private var toggledTitleGroups = Set<String>()
     /// Last individually-toggled row — the anchor a ⇧-click extends from
     /// (Finder semantics). Cleared when selecting mode ends.
     @State private var lastAnchorID: String?
@@ -325,11 +331,18 @@ struct QueueListView: View {
 
     /// Every selectable row in display order — arr-section rows only (headers,
     /// Needs-you and Next-week rows aren't selectable). One source of truth for
-    /// both `selectedItems()` and the drag range math.
+    /// both `selectedItems()` and the drag range math. Title-group headers are
+    /// deliberately not selectable, and a collapsed group's hidden children
+    /// aren't either — selecting inside a group requires expanding it.
     private var orderedSelectableEntries: [QueueRowEntry] {
         orderedEntries.flatMap { entry -> [QueueRowEntry] in
-            if case .arr(let source) = entry { return self.entries(for: source) }
-            return []
+            guard case .arr(let source) = entry else { return [] }
+            return displayRows(for: source).flatMap { display -> [QueueRowEntry] in
+                switch display {
+                case .entry(let e): return [e]
+                case .titleGroup(let g): return isGroupExpanded(g) ? g.entries : []
+                }
+            }
         }
     }
 
@@ -442,7 +455,7 @@ struct QueueListView: View {
                 .plainQueueRow(insets: Self.headerRowInsets)
         }
         if !collapsed {
-                let rows = entries(for: source)
+                let rows = displayRows(for: source)
                 if rows.isEmpty {
                     if isUnreachable {
                         // Calm "can't reach this server" line instead of a blank
@@ -461,12 +474,91 @@ struct QueueListView: View {
                     // A reachable error with nothing cached → render nothing; the
                     // header badge already explains it.
                 } else {
-                    ForEach(rows) { entry in
-                        swipeableRow(for: entry, isStale: isStale)
+                    ForEach(rows) { display in
+                        displayRowView(display, isStale: isStale)
                     }
                 }
             }
     }
+
+    /// One display row → its List rows. A pass-through entry stays a single
+    /// swipeable row; a title group emits a disclosure header plus (when
+    /// expanded) its member rows under it, with a small leading indent that
+    /// marks them as the group's children.
+    @ViewBuilder
+    private func displayRowView(_ display: QueueDisplayRow, isStale: Bool) -> some View {
+        switch display {
+        case .entry(let entry):
+            swipeableRow(for: entry, isStale: isStale)
+        case .titleGroup(let group):
+            titleGroupHeader(group, isStale: isStale)
+            if isGroupExpanded(group) {
+                ForEach(group.entries) { entry in
+                    swipeableRow(for: entry, isStale: isStale, indented: true)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func titleGroupHeader(_ group: QueueTitleGroup, isStale: Bool) -> some View {
+        let header = QueueTitleGroupRowView(
+            group: group,
+            isExpanded: isGroupExpanded(group),
+            onToggle: {
+                withAnimation(.smooth(duration: 0.22)) { toggleTitleGroup(group) }
+            },
+            // Series-level detail: episode coords stripped so DetailView opens
+            // the title, whose download section lists every sibling — that IS
+            // the group's "dedicated view".
+            onShowDetail: { onShowDetail(group.representative.seasonContext()) },
+            onPauseAll: { [weak viewModel] in
+                let items = group.allItems
+                Task { for item in items { await viewModel?.pause(item) } }
+            },
+            onResumeAll: { [weak viewModel] in
+                let items = group.allItems
+                Task { for item in items { await viewModel?.resume(item) } }
+            },
+            onDeleteAll: { [weak viewModel] in
+                let items = group.allItems
+                Task { await viewModel?.deleteAll(items) }
+            }
+        )
+        .environment(\.queueOffline, viewModel.isFullyOffline || isStale)
+        #if os(iOS)
+        header
+            .plainQueueRow()
+            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                if !viewModel.isFullyOffline, !isStale {
+                    Button(role: .destructive) {
+                        requestGroupDeleteConfirm(group)
+                    } label: {
+                        Image(systemName: "trash")
+                    }
+                    .accessibilityLabel(Text("queue.delete.button", bundle: .module))
+                }
+            }
+        #else
+        header.plainQueueRow()
+        #endif
+    }
+
+    #if os(iOS)
+    /// Same confirm the header's context menu posts — the swipe button must
+    /// not hard-delete N downloads without one.
+    private func requestGroupDeleteConfirm(_ group: QueueTitleGroup) {
+        let items = group.allItems
+        ConfirmCenter.request(PendingConfirm(
+            title: "Cancel \(group.downloadCount) downloads?",
+            message: "This will remove every download of this title from the client.",
+            confirmLabel: "Cancel downloads",
+            cancelLabel: "Keep downloads",
+            isDestructive: true,
+            onConfirm: { [weak viewModel] in Task { await viewModel?.deleteAll(items) } }
+        ))
+    }
+    #endif
 
     /// A queue row plus its swipe actions. Native `.swipeActions` are **iOS-only**:
     /// on macOS the same SwiftUI `List` + swipe-to-delete throws an AppKit
@@ -477,12 +569,17 @@ struct QueueListView: View {
     /// a full swipe *reveals* the button instead of auto-committing a destructive
     /// delete (also dodges the same auto-commit race on iOS).
     @ViewBuilder
-    private func swipeableRow(for entry: QueueRowEntry, isStale: Bool) -> some View {
+    private func swipeableRow(for entry: QueueRowEntry, isStale: Bool, indented: Bool = false) -> some View {
         let content = rowView(for: entry)
             // Per-section offline: a stale/unreachable arr's rows can't be acted
             // on, so block their right-click menu (and poster control) even when
             // only THIS arr is down — the List-level value only covers all-arrs.
             .environment(\.queueOffline, viewModel.isFullyOffline || isStale)
+            // Members of an expanded title group keep the list's shared
+            // leading edge; the child marker is a bare 24pt TRAILING inset —
+            // the rows end short of the right edge, under the header's
+            // chevron column, which is enough to read them as the group's.
+            .padding(.trailing, indented ? 24 : 0)
         #if os(iOS)
         let row = content.plainQueueRow()
         row
@@ -568,15 +665,7 @@ struct QueueListView: View {
                     .lineLimit(1)
                     .truncationMode(.middle)
             } else if let onShowHistory {
-                Button { onShowHistory(source) } label: {
-                    HStack(spacing: 2) {
-                        Text("queue.showHistory.button", bundle: .module)
-                        Image(systemName: "chevron.right").scaledFont(size: 8, weight: .semibold)
-                    }
-                    .scaledFont(size: 10)
-                    .foregroundStyle(.tertiary)
-                }
-                .buttonStyle(.plain)
+                ShowHistoryLink { onShowHistory(source) }
             }
         }
     }
@@ -626,7 +715,9 @@ struct QueueListView: View {
     @ViewBuilder
     private func tonightSection() -> some View {
         let items = viewModel.tonight
-        let visible = viewModel.tonightExpanded ? items : Array(items.prefix(4))
+        // 0 = "always show all" (Settings) — the expander never renders then.
+        let limit = configStore.tonightVisibleCount
+        let visible = (viewModel.tonightExpanded || limit == 0) ? items : Array(items.prefix(limit))
         let overflow = items.count - visible.count
         let collapsed = configStore.isCollapsed(ConfigStore.tonightOrderKey)
         QueueHeaderRow(
@@ -648,7 +739,7 @@ struct QueueListView: View {
             ForEach(Array(visible.enumerated()), id: \.element.id) { offset, item in
                 TonightBannerRow(
                     item: item,
-                    timeString: Self.tonightTimeFormatter.string(from: item.airDate),
+                    timeString: item.airDateCompact(locale: configStore.currentLocale),
                     onTap: { openUpcomingDetail(item) }
                 )
                 // A little air between the header and the first content row.
@@ -660,6 +751,12 @@ struct QueueListView: View {
             }
             if overflow > 0 && !viewModel.tonightExpanded {
                 tonightShowMoreButton
+                    .padding(.leading, QueueHeaderMetrics.contentIndent)
+                    .plainQueueRow()
+            } else if viewModel.tonightExpanded && limit != 0 && items.count > limit {
+                // Symmetric collapse — before this, an expanded peek could
+                // only be un-expanded by waiting out the 30 s auto-collapse.
+                tonightShowLessButton
                     .padding(.leading, QueueHeaderMetrics.contentIndent)
                     .plainQueueRow()
             }
@@ -679,6 +776,25 @@ struct QueueListView: View {
                 Text("queue.showMore.button", bundle: .module)
                     .scaledFont(size: 10)
                 Image(systemName: "chevron.down")
+                    .scaledFont(size: 9, weight: .medium)
+            }
+            .foregroundStyle(.tertiary)
+        }
+        .buttonStyle(.plain)
+        .padding(.top, 2)
+    }
+
+    private var tonightShowLessButton: some View {
+        Button {
+            bannerCollapseTask?.cancel()
+            withAnimation(.smooth(duration: 0.22)) {
+                viewModel.setTonightExpanded(false)
+            }
+        } label: {
+            HStack(spacing: 3) {
+                Text("discover.showLess.button", bundle: .module)
+                    .scaledFont(size: 10)
+                Image(systemName: "chevron.up")
                     .scaledFont(size: 9, weight: .medium)
             }
             .foregroundStyle(.tertiary)
@@ -716,12 +832,6 @@ struct QueueListView: View {
         }
     }
 
-    private static let tonightTimeFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.dateStyle = .none
-        f.timeStyle = .short
-        return f
-    }()
     #endif
 
     private var emptyState: some View {
@@ -833,6 +943,27 @@ struct QueueListView: View {
         }
     }
 
+    /// The rendered rows: base entries plus the optional by-title layer
+    /// (`queueTitleGrouping` setting; `off` keeps the flat list).
+    private func displayRows(for source: QueueItem.Source) -> [QueueDisplayRow] {
+        let base = entries(for: source)
+        guard configStore.queueTitleGrouping != .off else {
+            return base.map { .entry($0) }
+        }
+        return QueueGrouping.groupByTitle(base)
+    }
+
+    /// Disclosure state = the mode's default XOR "user toggled this one".
+    private func isGroupExpanded(_ group: QueueTitleGroup) -> Bool {
+        let defaultExpanded = configStore.queueTitleGrouping == .expanded
+        return toggledTitleGroups.contains(group.id) ? !defaultExpanded : defaultExpanded
+    }
+
+    private func toggleTitleGroup(_ group: QueueTitleGroup) {
+        if toggledTitleGroups.contains(group.id) { toggledTitleGroups.remove(group.id) }
+        else { toggledTitleGroups.insert(group.id) }
+    }
+
     private func itemCount(_ source: QueueItem.Source) -> Int {
         entries(for: source).reduce(0) { sum, entry in
             switch entry {
@@ -893,6 +1024,9 @@ private struct TonightBannerRow: View {
         }
         .buttonStyle(.plain)
         .disabled(item.entityId == nil)
+        // Same long-hover tooltip (and queue/library routing) as the
+        // Upcoming tab's rows — one calendar entry, one tooltip everywhere.
+        .upcomingTooltip(item: item)
     }
 }
 #endif

@@ -184,6 +184,15 @@ public actor SearchClient {
 
     // MARK: - Profiles & folders
 
+    /// `/qualityprofile` reduced to id → name; failures collapse to an
+    /// empty map. The ONE profile-name lookup — the Library view-model,
+    /// DetailView's hero chip and the Upcoming tooltip all resolve through
+    /// this instead of three hand-rolled copies.
+    static func profileNameMap(config: ServiceConfig, source: QueueItem.Source) async -> [Int: String] {
+        let profiles = (try? await SearchClient(config: config, source: source).fetchQualityProfiles()) ?? []
+        return Dictionary(profiles.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
+    }
+
     func fetchQualityProfiles() async throws -> [QualityProfile] {
         if DemoMode.isActive {
             return [

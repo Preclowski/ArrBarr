@@ -29,6 +29,11 @@ public struct PosterMetadataRow<TrailingAccessory: View>: View {
     /// don't).
     let title: String
     let metadataSegments: [String]
+    /// Optional per-segment tint aligned by index with `metadataSegments`;
+    /// `nil` (or a missing index — the array may be shorter) keeps the
+    /// default `.secondary`. Lets a row colour a status word (Library:
+    /// green Downloaded / red Missing) without forking the row chrome.
+    let metadataSegmentColors: [Color?]
     /// Optional second metadata line, rendered below the first. Lets a row
     /// split overflowing metadata across two lines (e.g. Upcoming on iOS:
     /// episode info on line 1, rating/runtime/type on line 2). Empty = one line.
@@ -38,6 +43,10 @@ public struct PosterMetadataRow<TrailingAccessory: View>: View {
     /// metadata segment (a coloured chip reads at a glance; an extra
     /// "· In library" string does not). `nil` keeps the title alone.
     let titleBadge: AnyView?
+    /// Optional chip leading the FIRST metadata line (Library's status
+    /// chip). Rendered before the text segments, no separator dot — the
+    /// chip's own outline already sets it apart.
+    let metadataBadge: AnyView?
     /// Right-hand accessory. Pass `EmptyView()` if you don't want one.
     let trailing: () -> TrailingAccessory
     let onTap: () -> Void
@@ -55,8 +64,10 @@ public struct PosterMetadataRow<TrailingAccessory: View>: View {
         posterFallbackSymbol: String = "",
         title: String,
         metadataSegments: [String],
+        metadataSegmentColors: [Color?] = [],
         metadataSegments2: [String] = [],
         titleBadge: AnyView? = nil,
+        metadataBadge: AnyView? = nil,
         disabled: Bool = false,
         onTap: @escaping () -> Void,
         @ViewBuilder trailing: @escaping () -> TrailingAccessory
@@ -70,8 +81,10 @@ public struct PosterMetadataRow<TrailingAccessory: View>: View {
         self.posterFallbackSymbol = posterFallbackSymbol
         self.title = title
         self.metadataSegments = metadataSegments
+        self.metadataSegmentColors = metadataSegmentColors
         self.metadataSegments2 = metadataSegments2
         self.titleBadge = titleBadge
+        self.metadataBadge = metadataBadge
         self.disabled = disabled
         self.onTap = onTap
         self.trailing = trailing
@@ -107,12 +120,17 @@ public struct PosterMetadataRow<TrailingAccessory: View>: View {
                             LinkChevron(size: 9)
                         }
                     }
-                    if !metadataSegments.isEmpty {
-                        metadataLine(metadataSegments)
-                            .scaledFont(size: 10)
+                    if metadataBadge != nil || !metadataSegments.isEmpty {
+                        HStack(spacing: 5) {
+                            if let metadataBadge {
+                                metadataBadge
+                            }
+                            metadataLine(metadataSegments, colors: metadataSegmentColors)
+                        }
+                        .scaledFont(size: 10)
                     }
                     if !metadataSegments2.isEmpty {
-                        metadataLine(metadataSegments2)
+                        metadataLine(metadataSegments2, colors: [])
                             .scaledFont(size: 10)
                     }
                 }
@@ -135,13 +153,17 @@ public struct PosterMetadataRow<TrailingAccessory: View>: View {
     }
 
     @ViewBuilder
-    private func metadataLine(_ segments: [String]) -> some View {
+    private func metadataLine(_ segments: [String], colors: [Color?]) -> some View {
         HStack(spacing: 4) {
             ForEach(Array(segments.enumerated()), id: \.offset) { idx, seg in
                 if idx > 0 {
                     SeparatorDot()
                 }
-                Text(seg).foregroundStyle(.secondary)
+                Text(seg)
+                    .foregroundStyle(
+                        (idx < colors.count ? colors[idx] : nil)
+                            .map { AnyShapeStyle($0) } ?? AnyShapeStyle(.secondary)
+                    )
             }
         }
     }

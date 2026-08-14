@@ -73,3 +73,30 @@ extension QueueHeaderRow where Trailing == EmptyView {
         )
     }
 }
+
+/// "Show history ›" trailing link for section headers. Shared by the native
+/// queue list and the search-mode section header so both get the same hover
+/// affordance (accent tint + pointer feedback) — the list copy used to be a
+/// static `.tertiary` label and read as dead text next to every other link.
+struct ShowHistoryLink: View {
+    let action: () -> Void
+    @State private var hovering = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 2) {
+                Text("queue.showHistory.button", bundle: .module)
+                Image(systemName: "chevron.right")
+                    .scaledFont(size: 8, weight: .semibold)
+                    .accessibilityHidden(true)
+            }
+            .scaledFont(size: 10)
+            // Brighten, don't tint — every other inline link (LinkChevron)
+            // answers hover by stepping up the gray ramp, not going accent.
+            .foregroundStyle(hovering ? AnyShapeStyle(.primary) : AnyShapeStyle(.tertiary))
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering = $0 }
+        .help(Text("queue.showHistory.button", bundle: .module))
+    }
+}

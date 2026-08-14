@@ -8,7 +8,7 @@ public struct ArrQueuePage<Record: Decodable>: Decodable {
     let records: [Record]
 }
 
-public struct ArrCustomFormat: Decodable, Equatable {
+public struct ArrCustomFormat: Decodable, Equatable, Sendable {
     // `id` is optional because some arr endpoints (notably Radarr's
     // movie detail when CFs are referenced rather than embedded) ship
     // the format with a name but no id. A required `id` made the
@@ -183,6 +183,13 @@ public struct ArrFile: Decodable {
     let quality: ArrQuality?
     let size: Int64?
     let relativePath: String?
+    /// Library tooltip extras — lazily fetched via `/moviefile?movieId=`.
+    var releaseGroup: String? = nil
+    var languages: [ArrFileLanguage]? = nil
+}
+
+public struct ArrFileLanguage: Decodable {
+    let name: String?
 }
 
 public struct RadarrMovieFile: Decodable {
@@ -233,6 +240,10 @@ public struct SonarrSeries: Decodable {
     // SonarrLookupRatings just wraps a `value: Double?` — reuse it.
     let runtime: Int?
     let ratings: SonarrLookupRatings?
+    /// Library-tooltip parity for the Upcoming tooltip.
+    var genres: [String]? = nil
+    var status: String? = nil
+    var qualityProfileId: Int? = nil
 }
 
 public struct SonarrEpisode: Decodable {
@@ -321,6 +332,9 @@ public struct LidarrCalendarRecord: Decodable {
     let overview: String?
     let artist: LidarrArtist?
     let images: [ArrImage]?
+    /// Albums have no `hasFile` bool — ownership is derived from the
+    /// track/file tallies (same shape the library endpoint ships).
+    var statistics: LidarrLibraryStatistics? = nil
 }
 
 // MARK: - History
@@ -437,6 +451,12 @@ public struct RadarrCalendarRecord: Decodable {
     // returns identical movie records, just filtered by release window.
     let runtime: Int?
     let ratings: RadarrLookupRatings?
+    /// Library-tooltip parity for the Upcoming tooltip: the calendar record
+    /// IS a full movie resource — decode the same title facts.
+    var genres: [String]? = nil
+    var certification: String? = nil
+    var status: String? = nil
+    var qualityProfileId: Int? = nil
 }
 
 public struct SonarrCalendarRecord: Decodable {
@@ -449,6 +469,9 @@ public struct SonarrCalendarRecord: Decodable {
     let hasFile: Bool?
     let overview: String?
     let series: SonarrSeries?
+    /// On-disk file id when `hasFile` — the Upcoming tooltip's route to the
+    /// episode's file details.
+    var episodeFileId: Int? = nil
 }
 
 // MARK: - Search Lookup
@@ -510,7 +533,7 @@ public struct SonarrLookupRecord: Decodable {
     let status: String?
 }
 
-public struct SonarrLookupRatings: Decodable {
+public struct SonarrLookupRatings: Decodable, Sendable, Equatable {
     let value: Double?
     /// TVDB vote count. Sonarr has always returned it; we used to drop it,
     /// which meant `bayesianQuality` never shrank a series rating and a
@@ -531,6 +554,8 @@ public struct LidarrLibraryRecord: Decodable, Sendable, Equatable {
     public let monitored: Bool?
     public let images: [ArrImage]?
     public let statistics: LidarrLibraryStatistics?
+    /// See `SonarrLibraryRecord.qualityProfileId`.
+    public var qualityProfileId: Int? = nil
 }
 public struct LidarrLibraryStatistics: Decodable, Sendable, Equatable {
     public let albumCount: Int?
@@ -598,6 +623,21 @@ public struct MetadataProfile: Decodable, Sendable, Equatable, Identifiable {
     public let name: String
 }
 
+/// Minimal movie-file projection for library records — just the quality
+/// name. The full `RadarrMovieFile` isn't Sendable/Equatable and the
+/// library surfaces need nothing else from it.
+public struct ArrLibraryFile: Decodable, Sendable, Equatable {
+    public struct Quality: Decodable, Sendable, Equatable {
+        public struct Name: Decodable, Sendable, Equatable { let name: String? }
+        let quality: Name?
+    }
+    let quality: Quality?
+    var customFormats: [ArrCustomFormat]? = nil
+    var customFormatScore: Int? = nil
+    var relativePath: String? = nil
+    var qualityName: String? { quality?.quality?.name }
+}
+
 // Used to fetch existing library ids and list library contents
 public struct RadarrLibraryRecord: Decodable, Sendable, Equatable {
     let id: Int?
@@ -618,6 +658,20 @@ public struct RadarrLibraryRecord: Decodable, Sendable, Equatable {
     let certification: String?
     let studio: String?
     let sizeOnDisk: Int64?
+    /// Radarr availability ("announced" / "inCinemas" / "released") — the
+    /// Library tooltip's release-status row.
+    var status: String? = nil
+    /// Radarr's computed "can this be grabbed yet" flag (minimumAvailability
+    /// vs release state) — splits Missing into Missing / Not available.
+    var isAvailable: Bool? = nil
+    /// Library tab: the on-disk file's actual quality ("WEBDL-1080p").
+    /// Present in `/api/v3/movie` whenever `hasFile` — we just never
+    /// decoded it before.
+    var movieFile: ArrLibraryFile? = nil
+    /// Library tab fallback when there's no file yet — resolved to the
+    /// profile's name via `/qualityprofile`. (`var … = nil` so the demo
+    /// mocks' memberwise inits keep compiling; Decodable still decodes it.)
+    var qualityProfileId: Int? = nil
 }
 public struct SonarrLibraryRecord: Decodable, Sendable, Equatable {
     let id: Int?
@@ -636,6 +690,13 @@ public struct SonarrLibraryRecord: Decodable, Sendable, Equatable {
     let overview: String?
     /// See `RadarrLibraryRecord.titleSlug` — same field, same reason.
     let titleSlug: String?
+    /// Series have no single file quality — the Library tab shows the
+    /// assigned profile's name instead. (`var … = nil`: see RadarrLibraryRecord.)
+    var qualityProfileId: Int? = nil
+    /// TVDB rating — feeds the Library tab's rating sort.
+    var ratings: SonarrLookupRatings? = nil
+    /// Library tooltip garnish — always on the wire, newly decoded.
+    var genres: [String]? = nil
 }
 public struct SonarrLibraryStatistics: Decodable, Sendable, Equatable {
     let episodeCount: Int?
@@ -704,6 +765,9 @@ public struct WhisparrCalendarRecord: Decodable {
     // Whisparr is a Radarr fork and returns the same shape for scenes.
     let runtime: Int?
     let ratings: RadarrLookupRatings?
+    var genres: [String]? = nil
+    var status: String? = nil
+    var qualityProfileId: Int? = nil
 }
 
 public struct WhisparrHistoryRecord: Decodable {
@@ -729,6 +793,11 @@ public struct WhisparrLibraryRecord: Decodable, Sendable, Equatable {
     public let monitored: Bool?
     public let images: [ArrImage]?
     public let sizeOnDisk: Int64?
+    /// See `RadarrLibraryRecord.movieFile` / `qualityProfileId` / `status`.
+    public var movieFile: ArrLibraryFile? = nil
+    public var qualityProfileId: Int? = nil
+    public var status: String? = nil
+    public var isAvailable: Bool? = nil
 }
 
 public struct WhisparrLookupRecord: Decodable {

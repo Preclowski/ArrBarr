@@ -22,7 +22,7 @@ struct CustomFormatChips: View {
                 TagChip(text: f, color: isAdded ? .green : .primary)
             }
             if score != 0 {
-                TagChip(text: ScoreLabel.text(score), color: ScoreLabel.color(score))
+                ScoreChip(score: score)
             }
         }
     }

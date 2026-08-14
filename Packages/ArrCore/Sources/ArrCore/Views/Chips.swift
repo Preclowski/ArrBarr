@@ -15,7 +15,9 @@ public func customFormatChipStrip(tags: [String], score: Int?) -> some View {
         TooltipFlowLayout(spacing: 3) {
             ForEach(tags, id: \.self) { TagChip(text: $0) }
             if let score, score != 0 {
-                TagChip(text: ScoreLabel.text(score), color: ScoreLabel.color(score))
+                // Chip metrics, no stroke — aligns with the TagChips without
+                // reading as one more custom format.
+                ScoreChip(score: score)
             }
         }
         .padding(.top, 2)
@@ -87,6 +89,65 @@ public struct InLibraryBadge: View {
             .overlay(
                 RoundedRectangle(cornerRadius: Tokens.Radius.chip)
                     .stroke(Color.accentColor.opacity(0.55), lineWidth: 1)
+            )
+    }
+}
+
+/// Score slot for a custom-format strip: the signed coloured number set
+/// in a chip's exact metrics (same padding, same 9 pt line) so it
+/// baseline-aligns with the TagChips beside it — but with NO stroke, so
+/// it doesn't read as one more format.
+public struct ScoreChip: View {
+    let score: Int
+
+    public init(score: Int) {
+        self.score = score
+    }
+
+    public var body: some View {
+        ScoreLabel(score: score, size: 9, weight: .semibold)
+            .padding(.horizontal, 5)
+            .padding(.vertical, 1)
+    }
+}
+
+/// Quality-profile chip — purple, so the profile can't be mistaken for
+/// one of the custom-format chips it shares a strip with. One component,
+/// every surface (hero title row, library/upcoming tooltips).
+public struct ProfileChip: View {
+    let name: String
+
+    public init(name: String) {
+        self.name = name
+    }
+
+    public var body: some View {
+        TagChip(text: name, color: .purple)
+    }
+}
+
+/// Outline state chip — tinted semibold text with a stronger tinted
+/// stroke than `TagChip`. The ONE rendering for ownership/download-state
+/// words ("Downloaded", "Missing", "8/10") — Library rows/tiles/tooltips
+/// and the Upcoming tooltip all draw their state through this.
+public struct StateChip: View {
+    let text: String
+    var color: Color = .secondary
+
+    public init(text: String, color: Color = .secondary) {
+        self.text = text
+        self.color = color
+    }
+
+    public var body: some View {
+        Text(verbatim: text)
+            .scaledFont(size: 9, weight: .semibold)
+            .foregroundStyle(color)
+            .padding(.horizontal, 5)
+            .padding(.vertical, 1)
+            .overlay(
+                RoundedRectangle(cornerRadius: Tokens.Radius.chip)
+                    .stroke(color.opacity(0.55), lineWidth: 1)
             )
     }
 }
@@ -206,13 +267,8 @@ public struct CustomFormatStrip: View {
                             .overlay(RoundedRectangle(cornerRadius: Tokens.Radius.chip).stroke(Color.primary.opacity(0.22), lineWidth: 0.75))
                     }
                     if score != 0 {
-                        let scoreColor = ScoreLabel.color(score)
-                        Text(verbatim: ScoreLabel.text(score))
-                            .scaledFont(size: 9, weight: .semibold)
-                            .foregroundStyle(scoreColor)
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 1)
-                            .overlay(RoundedRectangle(cornerRadius: Tokens.Radius.chip).stroke(scoreColor.opacity(0.30), lineWidth: 0.75))
+                        // Chip metrics, no stroke (see ScoreChip).
+                        ScoreChip(score: score)
                     }
                 }
                 .fixedSize()

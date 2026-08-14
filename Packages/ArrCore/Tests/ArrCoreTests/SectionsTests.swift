@@ -83,15 +83,28 @@ struct TonightSliceTests {
         #expect(result.map(\.id) == ["soon"])
     }
 
-    @Test("Items in the past are excluded")
+    @Test("Earlier-today items are kept; before-today are excluded")
     @MainActor
     func pastItems() {
+        // "Today" pinned to just-after-midnight so it is unambiguously today
+        // AND unambiguously earlier than "future" — a `now - 1h` offset would
+        // cross midnight when the suite runs late at night and flake.
+        let startOfToday = Calendar.current.startOfDay(for: Date())
+        let earlierToday = UpcomingItem(
+            id: "today", source: .sonarr, title: "today", subtitle: nil,
+            airDate: startOfToday.addingTimeInterval(60),
+            releaseType: nil, hasFile: false, overview: nil
+        )
         let items = [
-            upcoming(id: "past", source: .sonarr, in: -60 * 60),
+            earlierToday,
+            upcoming(id: "yesterday", source: .sonarr, in: -30 * 3600),
             upcoming(id: "future", source: .radarr, in: 60 * 60),
         ]
+        // The banner's lower bound is the START OF TODAY (same as the
+        // Upcoming tab's "Today" section) — an episode that aired this
+        // morning still belongs in "This week"; yesterday's does not.
         let result = QueueViewModel.tonightSlice(from: items, hours: 12)
-        #expect(result.map(\.id) == ["future"])
+        #expect(result.map(\.id) == ["today", "future"])
     }
 
     @Test("24h window pulls in items 12h-24h out")

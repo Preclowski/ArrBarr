@@ -359,6 +359,12 @@ public actor LidarrClient: ArrAPIClient {
             (poster, auth) = (r.artist?.images?.posterURL(baseURL: baseURL, coverTypes: ["poster", "cover"]) ?? (nil, false))
         }
 
+        // An album is "downloaded" when every track has a file — the same
+        // completeness rule the Library tab applies to Lidarr entries.
+        // (`hasFile: false` used to be hardcoded, so Upcoming never showed
+        // the library badge / Downloaded chip for music.)
+        let tracks = r.statistics?.trackCount ?? 0
+        let trackFiles = r.statistics?.trackFileCount ?? 0
         return UpcomingItem(
             id: "lidarr-cal-\(r.id)",
             source: .lidarr,
@@ -366,7 +372,7 @@ public actor LidarrClient: ArrAPIClient {
             subtitle: nil,
             airDate: date,
             releaseType: "Album",
-            hasFile: false,
+            hasFile: tracks > 0 && trackFiles >= tracks,
             overview: r.overview,
             posterURL: poster,
             posterRequiresAuth: auth,

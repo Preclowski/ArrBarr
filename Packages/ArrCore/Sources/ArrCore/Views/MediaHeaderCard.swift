@@ -27,6 +27,60 @@ public struct RatingChip {
     }
 }
 
+/// The ONE place each rating source's label, colour, brand icon, value
+/// format and deep-link rule live. Call sites (detail heroes, search/add
+/// panel, tooltips, discover cards) build chips exclusively through these,
+/// so a chip for the same source can't render differently between views.
+///
+/// `linkTitle == nil` → unlinked pill (the tooltip convention: hover chrome,
+/// not a click target). Passing a title links to the site's record when an
+/// id is known, its search otherwise.
+///
+/// Every factory returns `nil` for a zero/absent score — 0.0 is "not rated
+/// yet", not a rating, and hiding it HERE means no surface can disagree.
+public extension RatingChip {
+    static func imdb(_ value: Double, linkTitle: String? = nil, imdbId: String? = nil) -> RatingChip? {
+        guard value > 0 else { return nil }
+        return RatingChip(label: "IMDb", value: String(format: "%.1f", value), color: .yellow,
+                          url: linkTitle.flatMap { RatingSiteLink.imdb(id: imdbId, title: $0) },
+                          iconName: "rating-imdb")
+    }
+
+    static func tmdb(_ value: Double, linkTitle: String? = nil, tmdbId: Int? = nil) -> RatingChip? {
+        guard value > 0 else { return nil }
+        return RatingChip(label: "TMDB", value: String(format: "%.1f", value), color: .teal,
+                          url: linkTitle.flatMap { RatingSiteLink.tmdbMovie(id: tmdbId, title: $0) },
+                          iconName: "rating-tmdb")
+    }
+
+    static func tvdb(_ value: Double, linkTitle: String? = nil, tvdbId: Int? = nil) -> RatingChip? {
+        guard value > 0 else { return nil }
+        return RatingChip(label: "TVDB", value: String(format: "%.1f", value), color: .blue,
+                          url: linkTitle.flatMap { RatingSiteLink.tvdbSeries(id: tvdbId, title: $0) },
+                          iconName: "rating-tvdb")
+    }
+
+    static func rottenTomatoes(_ value: Double, linkTitle: String? = nil) -> RatingChip? {
+        guard value > 0 else { return nil }
+        return RatingChip(label: "RT", value: "\(Int(value))%", color: .red,
+                          url: linkTitle.flatMap { RatingSiteLink.rottenTomatoes(title: $0) },
+                          iconName: "rating-rt")
+    }
+
+    static func metacritic(_ value: Double, linkTitle: String? = nil) -> RatingChip? {
+        guard value > 0 else { return nil }
+        return RatingChip(label: "MC", value: "\(Int(value))", color: .green,
+                          url: linkTitle.flatMap { RatingSiteLink.metacritic(title: $0) })
+    }
+
+    /// Sourceless score (Lidarr artists/albums, Sonarr seasons) — a plain
+    /// yellow "Rating" pill with no brand mark or link.
+    static func plain(_ value: Double) -> RatingChip? {
+        guard value > 0 else { return nil }
+        return RatingChip(label: "Rating", value: String(format: "%.1f", value), color: .yellow)
+    }
+}
+
 /// Builders for the pages a rating chip can deep-link to. Direct record
 /// links when an id is known; the site's search otherwise — RT and
 /// Metacritic ids never reach the arr payloads at all.

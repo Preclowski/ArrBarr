@@ -42,6 +42,9 @@ public struct PopoverContentView: View {
     @State private var historySource: QueueItem.Source?
     @State private var historyRefreshNonce = 0
     @State private var searchViewModel = SearchViewModel()
+    /// Library tab's per-arr cache — owned here (not inside the tab view) so
+    /// switching tabs doesn't drop the fetched libraries.
+    @State private var libraryViewModel = LibraryViewModel()
     @State private var chatHolder = ChatViewModelHolder()
     @State private var searchResult: SearchResult?
     @State private var detailItem: QueueItem?
@@ -148,12 +151,26 @@ public struct PopoverContentView: View {
 
     enum Tab: String, CaseIterable {
         case queue = "Queue"
+        case library = "Library"
         case upcoming = "Upcoming"
         case chat = "Chat"
         // `.add` (Search) removed — the queue's floating filter bar
         // now doubles as a global search. Empty filter → queue rows;
         // typing → queue rows that match + library/add-new candidates
         // pulled via `SearchViewModel`. One surface, both jobs.
+
+        /// Every tab renders as its glyph by default; only the ACTIVE tab
+        /// expands to its text label. Four labels ("Nadchodzące",
+        /// "Warteschlange") never fit the 400 pt bar side by side — one
+        /// label + three glyphs always do.
+        var symbol: String {
+            switch self {
+            case .queue: return "arrow.down.circle"
+            case .library: return "books.vertical"
+            case .upcoming: return "calendar"
+            case .chat: return "bubble.left.and.bubble.right"
+            }
+        }
     }
 
     public var body: some View {
@@ -405,6 +422,8 @@ public struct PopoverContentView: View {
                                 searchResult: $searchResult,
                                 selecting: $queueSelecting
                             )
+                        case .library:
+                            LibraryTabContent(viewModel: libraryViewModel)
                         case .upcoming: UpcomingTabContent(viewModel: viewModel)
                         case .chat:
                             ChatTabContent(chatHolder: chatHolder)
@@ -714,14 +733,28 @@ public struct PopoverContentView: View {
                     // Bundle.main, where the package's pl/de/es/fr
                     // translations don't live.
                     HStack(spacing: 3) {
-                        ZStack {
+                        // Active tab = its text label; every other tab = its
+                        // glyph. The selection indicator resizes from the
+                        // measured `tabFrames`, so the icon→text width jump
+                        // animates inside the same selection spring.
+                        // Explicit `.transition(.opacity)` on both branches:
+                        // without it the freshly-inserted Text picks up the
+                        // default insertion transition inside the animated
+                        // HStack relayout and reads as "the label slides in
+                        // from the left" instead of a crossfade-in-place.
+                        if selectedTab == tab {
                             Text(LocalizedStringKey(tab.rawValue), bundle: .module)
                                 .scaledFont(size: 12, weight: .semibold)
-                                .opacity(0)
-                                .accessibilityHidden(true)
-                            Text(LocalizedStringKey(tab.rawValue), bundle: .module)
-                                .scaledFont(size: 12, weight: selectedTab == tab ? .semibold : .regular)
-                                .foregroundStyle(selectedTab == tab ? .primary : .secondary)
+                                .foregroundStyle(.primary)
+                                .fixedSize(horizontal: true, vertical: false)
+                                .transition(.opacity)
+                        } else {
+                            Image(systemName: tab.symbol)
+                                .scaledFont(size: 13, weight: .medium)
+                                .foregroundStyle(.secondary)
+                                .accessibilityLabel(Text(LocalizedStringKey(tab.rawValue), bundle: .module))
+                                .help(Text(LocalizedStringKey(tab.rawValue), bundle: .module))
+                                .transition(.opacity)
                         }
                         if tab == .chat && !storeManager.isPro {
                             Image(systemName: "lock.fill")
@@ -770,7 +803,26 @@ public struct PopoverContentView: View {
         #if os(macOS)
         .animation(.easeOut(duration: 0.12), value: commandKey.isHeld)
         #endif
-        .onPreferenceChange(TabFrames.self) { tabFrames = $0 }
+        .onPreferenceChange(TabFrames.self) { newFrames in
+            // The icon⇄text swap moves EVERY tab's frame (the old active tab
+            // narrows, the new one widens, everything downstream shifts).
+            // This preference fires OUT OF BAND from the selection spring, so
+            // an unanimated assignment made the indicator snap to the new
+            // geometry mid-flight — selecting rightward it read as the pill
+            // teleporting left and sliding back in from the window edge.
+            // (Leftward looked fine only because the target tab sits before
+            // the width change, so its minX barely moves.) Animating the
+            // assignment with the SAME spring folds the correction into one
+            // continuous glide. First layout populates without animation —
+            // there's nothing on screen to glide from yet.
+            if tabFrames.isEmpty {
+                tabFrames = newFrames
+            } else {
+                withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
+                    tabFrames = newFrames
+                }
+            }
+        }
         .background(
             // Indicator reads from `tabFrames` so it lines up exactly
             // with each label's intrinsic width — slides between tabs
