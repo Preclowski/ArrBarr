@@ -16,8 +16,6 @@ struct SonarrDetailPanel<Header: View>: View {
     /// Tapping a cast head opens the person view (host owns the push target).
     var onTapPerson: ((CastMember) -> Void)? = nil
     @Binding var sonarrDetail: SonarrSeriesDetail?
-    let sonarrEpisodes: [SonarrEpisodeDetail]
-    let sonarrEpisodeFiles: [Int: SonarrEpisodeFile]
     /// Tap handler for a season row — DetailView pushes `SeasonDetailView`.
     let onTapSeason: (SonarrSeasonInfo) -> Void
 
@@ -49,8 +47,11 @@ struct SonarrDetailPanel<Header: View>: View {
                             ForEach(visibleSeasons, id: \.seasonNumber) { season in
                                 SeasonRow(
                                     season: season,
-                                    episodes: sonarrEpisodes.filter { $0.seasonNumber == season.seasonNumber },
-                                    queueByEpisodeId: queueByEpisodeId,
+                                    // Straight off the queue siblings by season
+                                    // number — no episode join to miss.
+                                    queueItems: siblings.filter {
+                                        $0.arrQueueId != 0 && $0.seasonNumber == season.seasonNumber
+                                    },
                                     onTap: { onTapSeason(season) }
                                 )
                             }
@@ -79,25 +80,6 @@ struct SonarrDetailPanel<Header: View>: View {
                 LoadErrorLine(message: err)
             }
         }
-    }
-
-    /// Map episode-id → ALL active queue items, built from `siblings`
-    /// (queue items for this series) joined to the loaded
-    /// `sonarrEpisodes`. Powers the per-episode in-progress
-    /// indicator + hover action icons that replaced the standalone
-    /// "in queue" list. A list so duplicate grabs of the same episode
-    /// all stay visible (the old single-value map dropped one).
-    private var queueByEpisodeId: [Int: [QueueItem]] {
-        var map: [Int: [QueueItem]] = [:]
-        for q in siblings where q.arrQueueId != 0 {
-            guard let sn = q.seasonNumber, let en = q.episodeNumber else { continue }
-            if let ep = sonarrEpisodes.first(where: {
-                $0.seasonNumber == sn && $0.episodeNumber == en
-            }) {
-                map[ep.id, default: []].append(q)
-            }
-        }
-        return map
     }
 
 }

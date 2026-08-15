@@ -324,7 +324,14 @@ public struct QueueGroupTooltip: View {
             apiKey: apiKey,
             blurred: configStore.shouldBlurPoster(for: rep.source),
             fallbackSymbol: "tv",
-            contextChip: rep.downloadClient.map { AnyView(DownloadClientLabel(name: $0, size: 10)) }
+            contextChip: rep.downloadClient.map { AnyView(DownloadClientLabel(name: $0, size: 10)) },
+            // Same corner grammar as the single-item tooltip: the Upgrade
+            // badge lives in the header, not as an indigo banner over the
+            // diff. Only when the whole pack is one uniform upgrade — a
+            // mixed pack keeps its per-episode treatment below.
+            statusChip: uniformExistingFile != nil
+                ? AnyView(MediaBadgeCluster(isUpgrade: true, size: .medium))
+                : nil
         ) {
             tooltipContent
         }
@@ -343,29 +350,32 @@ public struct QueueGroupTooltip: View {
             }
             .scaledFont(size: 11)
             .foregroundStyle(.secondary)
+
+            // Variant A — every upgrade episode is replacing the same kind of
+            // file, so the pack reads as ONE upgrade. Same layout as the
+            // single-item tooltip: bare side-by-side diff first, then the info
+            // grid with only what the diff doesn't cover (indexer).
+            if let uniform = uniformExistingFile {
+                replacesSummary(uniform: uniform)
+            }
+
             TooltipInfoGrid(lines: infoLines)
 
-            if !rep.customFormats.isEmpty || rep.customFormatScore != 0 {
+            // Upgrades get their gained/lost/kept chips from the diff above —
+            // only a non-uniform pack still needs the plain strip.
+            if uniformExistingFile == nil,
+               !rep.customFormats.isEmpty || rep.customFormatScore != 0 {
                 customFormatChipStrip(
                     tags: rep.customFormats,
                     score: rep.customFormatScore != 0 ? rep.customFormatScore : nil
                 )
             }
 
-            // Pack release name — inside the upgrade summary's diff card when
-            // one renders (uniform upgrade); bare down here otherwise, so it
-            // isn't shown twice.
-            if uniformExistingFile == nil {
-                TooltipFileName(name: rep.releaseName)
-            }
-
-            // Variant A — every upgrade episode is replacing the same kind
-            // of file. Render the summary card once between the header and
-            // the episode list; per-episode rows then collapse to just
-            // status/code/title/progress.
-            if let uniform = uniformExistingFile {
-                replacesSummary(uniform: uniform)
-            }
+            // No file names anywhere in this tooltip: a pack is one release
+            // replacing N files, so the release name plus N on-disk names is
+            // a wall of near-identical mono text under a card whose job is
+            // the season summary. The single-item tooltip and the detail view
+            // still name files — that's where one download means one name.
 
             if !group.items.isEmpty {
                 // Header reads "Season 0X" when every queue item shares
@@ -435,37 +445,25 @@ public struct QueueGroupTooltip: View {
         return first
     }
 
+    /// The pack's upgrade diff — identical treatment to the single-item
+    /// tooltip: no banner, no tinted card, just the side-by-side comparison
+    /// (current → incoming) at the top of the content column. The header's
+    /// Upgrade badge and the "N episodes" line already say what the old
+    /// indigo "replacing all N episodes" caption said.
     @ViewBuilder
     private func replacesSummary(uniform: ExistingFingerprint) -> some View {
-        let upgradeCount = group.items.filter(\.isUpgrade).count
         let rep = group.representative
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 4) {
-                Image(systemName: "arrow.up.doc.fill")
-                    .scaledFont(size: 9)
-                    .foregroundStyle(.indigo)
-                Text(String(format: String(localized: "detail.replacingAllLldEpisodes.label", bundle: .module), upgradeCount))
-                    .scaledFont(size: 9, weight: .semibold)
-                    .textCase(.uppercase)
-                    .tracking(0.5)
-                    .foregroundStyle(.indigo)
-            }
-            // Same side-by-side diff as everywhere else (current → incoming),
-            // built from the pack's uniform existing fingerprint vs the shared
-            // incoming release. The incoming pack release name rides along via
-            // `showFilenames` so the diff card carries the new file name (the
-            // per-episode old file names it replaces are listed on each row of
-            // the episode list below — a pack is one release replacing N files,
-            // so there's no single old name to show here).
-            UpgradeDiffView(
-                current: .init(quality: uniform.quality, score: uniform.score, size: nil, formats: uniform.formats),
-                incoming: .init(quality: rep.quality, score: rep.customFormatScore, size: nil, formats: rep.customFormats, filename: rep.releaseName),
-                showFilenames: true
-            )
-        }
-        .padding(8)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.indigo.opacity(0.08), in: RoundedRectangle(cornerRadius: Tokens.Radius.card))
+        // Built from the pack's uniform existing fingerprint vs the shared
+        // incoming release. The incoming side carries the pack size; the
+        // current side has none, since the pack replaces N distinct files.
+        // No file names (`showFilenames: false`) — see tooltipContent.
+        UpgradeDiffView(
+            current: .init(quality: uniform.quality, score: uniform.score, size: nil, formats: uniform.formats),
+            incoming: .init(quality: rep.quality,
+                            score: rep.customFormatScore,
+                            size: rep.sizeTotal > 0 ? rep.sizeTotal : nil,
+                            formats: rep.customFormats)
+        )
     }
 
     /// Replaces the legacy episode list + heavy "existing files" block with
@@ -477,16 +475,12 @@ public struct QueueGroupTooltip: View {
     private var episodeQueueList: some View {
         // Every member of the (now only) `.pack` group shares one physical
         // release — quality + new-format chips would just repeat the pack
-        // header on every row, so hide them. Each upgrade row does show the
-        // per-episode old file name it replaces (`showExistingFile`), since a
-        // pack replaces N distinct on-disk files the summary card can't name.
+        // header on every row, so hide them. The per-episode old file names
+        // are hidden too: N mono sub-lines turned the episode list into a
+        // paths dump instead of a scannable "01, 02, 03…" contents list.
         VStack(alignment: .leading, spacing: 4) {
             ForEach(group.items) { it in
-                TooltipQueueRow(
-                    item: it,
-                    showExistingFile: true,
-                    showNewFileMeta: false
-                )
+                TooltipQueueRow(item: it, showNewFileMeta: false)
             }
         }
     }
@@ -494,10 +488,16 @@ public struct QueueGroupTooltip: View {
 
     private var infoLines: [TooltipInfoLine] {
         var lines: [TooltipInfoLine] = []
-        if let q = rep.quality, !q.isEmpty {
-            lines.append(TooltipInfoLine(labelKey: "Quality", value: q))
+        // Quality / Size only when there's no upgrade diff above — otherwise
+        // the incoming quality and pack size already live in it, and repeating
+        // them under the comparison is what made the pack read as "spec first,
+        // diff second" instead of a plain upgrade.
+        if uniformExistingFile == nil {
+            if let q = rep.quality, !q.isEmpty {
+                lines.append(TooltipInfoLine(labelKey: "Quality", value: q))
+            }
+            lines.append(TooltipInfoLine(labelKey: "Size", value: sizeString))
         }
-        lines.append(TooltipInfoLine(labelKey: "Size", value: sizeString))
         if let indexer = rep.indexer, !indexer.isEmpty {
             lines.append(TooltipInfoLine(labelKey: "Indexer", value: indexer))
         }
@@ -527,16 +527,9 @@ public struct QueueGroupTooltip: View {
 
 /// Compact queue row used inside the season-pack tooltip. Mirrors the
 /// detail-view multi-row look: status icon, episode code, headline,
-/// percent, thin progress bar, custom-format chips, and an indigo arrow
-/// when the episode is replacing an existing file.
+/// percent, thin progress bar and custom-format chips.
 public struct TooltipQueueRow: View {
     let item: QueueItem
-    /// When true, render the name of the on-disk file this episode
-    /// replaces as a `⇱ …` mono sub-line under the row (upgrade rows
-    /// only). A season pack is one release replacing N distinct files,
-    /// so the shared summary card can't name them — each row names its
-    /// own, keeping the old→new file diff complete for the pack.
-    var showExistingFile: Bool = false
     /// When false, the row hides quality + new-custom-format chips —
     /// they would otherwise repeat the pack header's identical info on
     /// every episode. Set false for real `.pack` groups where every
@@ -545,9 +538,8 @@ public struct TooltipQueueRow: View {
     /// different new-file metadata.
     var showNewFileMeta: Bool = true
 
-    public init(item: QueueItem, showExistingFile: Bool = false, showNewFileMeta: Bool = true) {
+    public init(item: QueueItem, showNewFileMeta: Bool = true) {
         self.item = item
-        self.showExistingFile = showExistingFile
         self.showNewFileMeta = showNewFileMeta
     }
 
@@ -600,22 +592,6 @@ public struct TooltipQueueRow: View {
                     ForEach(item.customFormats, id: \.self) { TagChip(text: $0) }
                 }
                 .padding(.top, 1)
-            }
-            // Old file this episode replaces — same `⇱` mono grammar the
-            // single-item UpgradeDiffView uses for its replaced-file line,
-            // truncated in the middle to stay dense in the pack list.
-            if showExistingFile, item.isUpgrade, let old = item.existingFileName, !old.isEmpty {
-                HStack(alignment: .firstTextBaseline, spacing: 4) {
-                    Text(verbatim: "⇱")
-                        .scaledFont(size: 11, weight: .semibold)
-                        .foregroundStyle(.tertiary)
-                    Text(old)
-                        .scaledFont(size: 10, design: .monospaced)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                }
-                .padding(.horizontal, 6)
             }
         }
     }

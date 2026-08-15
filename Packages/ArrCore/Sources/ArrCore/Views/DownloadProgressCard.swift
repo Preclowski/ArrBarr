@@ -171,6 +171,13 @@ public struct DownloadProgressCard: View {
                                 oldFormats: [],
                                 newFilename: nil,
                                 oldFilename: nil,
+                                // Where the grab came from — previously
+                                // tooltip-only, which left both the movie and
+                                // series details without the indexer. Lives
+                                // inside the grid so it shares the label
+                                // column and row spacing with Quality / Size /
+                                // Score instead of floating above them.
+                                indexer: item.indexer,
                                 tint: tint
                             )
                         }
@@ -179,10 +186,9 @@ public struct DownloadProgressCard: View {
                     // block so it doesn't read as glued to the bar.
                     .padding(.top, 5)
 
-                    // Where the grab came from — previously tooltip-only,
-                    // which left both the movie and series details without
-                    // the indexer.
-                    if let indexer = item.indexer, !indexer.isEmpty {
+                    // The upgrade layout is a side-by-side card, not a label
+                    // grid, so its indexer stays a free-standing line.
+                    if willShowDiff, let indexer = item.indexer, !indexer.isEmpty {
                         HStack(alignment: .firstTextBaseline, spacing: 8) {
                             Text("Indexer", bundle: .module)
                                 .scaledFont(size: 11, weight: .semibold)

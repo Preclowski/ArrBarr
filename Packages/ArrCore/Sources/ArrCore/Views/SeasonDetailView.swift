@@ -120,13 +120,6 @@ struct SeasonDetailView: View {
                                     onTap: { episode in
                                         withAnimation(.smooth(duration: 0.22)) { selectedEpisode = episode }
                                     },
-                                    onPauseQueueItem: { q in Task { await viewModel.pause(q) } },
-                                    onResumeQueueItem: { q in Task { await viewModel.resume(q) } },
-                                    onDeleteQueueItem: { q in Task { await viewModel.delete(q) } },
-                                    seriesTitle: drill.seriesTitle,
-                                    seriesPosterURL: seriesPosterURL,
-                                    seriesPosterRequiresAuth: seriesPosterRequiresAuth,
-                                    seriesPosterAPIKey: seriesPosterAPIKey
                                 )
                             }
                         }

@@ -4,10 +4,9 @@ struct EpisodeRow: View {
     let episode: SonarrEpisodeDetail
     /// ALL active queue items matched to this episode (usually 0 or 1;
     /// 2+ when the same episode was grabbed twice). Drives the
-    /// "downloading" indicator + swaps hover-overlay icons from
-    /// magnifyingglass (search) to pause/resume/trash. The row renders
-    /// off the first item and flags extras with a count badge — the
-    /// episode detail lists and controls each download separately.
+    /// "downloading" indicator. The row renders off the first item and
+    /// flags extras with a count badge — the episode detail lists each
+    /// download separately. Controlling them is the queue's job.
     var queueItems: [QueueItem] = []
     /// Episode-file payload when this episode is on disk. Used to render
     /// the file's custom-format score in the right gutter — same
@@ -19,41 +18,21 @@ struct EpisodeRow: View {
     /// episode detail surface. `nil` keeps the row passive (the
     /// legacy behaviour) for callers that don't want this drill-down.
     var onTap: ((SonarrEpisodeDetail) -> Void)? = nil
-    /// Queue-item actions surfaced in the hover overlay when there's
-    /// an active download for this episode.
-    var onPauseQueueItem: ((QueueItem) -> Void)? = nil
-    var onResumeQueueItem: ((QueueItem) -> Void)? = nil
-    var onDeleteQueueItem: ((QueueItem) -> Void)? = nil
-    /// Series identity for the long-hover tooltip — lets it render
-    /// the queue-tooltip chrome (poster + series title + season /
-    /// episode subtitle) instead of an episode-only slim card.
-    var seriesTitle: String? = nil
-    var seriesPosterURL: URL? = nil
-    var seriesPosterRequiresAuth: Bool = false
-    var seriesPosterAPIKey: String? = nil
 
     /// The row's representative download — first of `queueItems`. All the
-    /// single-item visuals (tint, progress fill, hover actions) render off
-    /// this one; the count badge signals when there are more.
+    /// single-item visuals (tint, progress fill) render off this one; the
+    /// count badge signals when there are more.
     private var queueItem: QueueItem? { queueItems.first }
 
+    @EnvironmentObject private var configStore: ConfigStore
+    /// Long-hover tooltip (same 600 ms gate as the queue rows). Only rows
+    /// with an active download get one — it carries the episode's upgrade
+    /// diff, which is the one thing the row itself can't show. Rows without
+    /// a download have nothing the row text doesn't already say.
+    @Environment(\.suppressRowTooltip) private var suppressRowTooltip
     @State private var isHovering = false
-    @State private var showDeleteConfirm = false
-    /// Long-hover popover (same 600 ms gate as queue rows). Shows
-    /// quality / size / score + upgrade diff when there's something
-    /// useful to surface; suppressed for missing-aired rows where
-    /// the tooltip would just repeat the row text.
     @State private var showTooltip = false
     @State private var hoverTask: Task<Void, Never>?
-
-    /// Gate for the long-hover popover. We only surface a tooltip
-    /// when there's actually something to show — either an active
-    /// download (with optional upgrade diff context) or an on-disk
-    /// file (quality / score / size). Missing-aired or not-aired
-    /// rows have nothing the row text doesn't already say.
-    private var hasTooltipContent: Bool {
-        queueItem != nil || episodeFile != nil
-    }
 
     /// `S02E04`-style episode identifier rendered on the trailing
     /// edge. Same format the tooltip header uses.
@@ -118,17 +97,6 @@ struct EpisodeRow: View {
                 if onTap != nil {
                     LinkChevron(size: 8)
                 }
-                // Per-row Upgrade / New tag — same component the
-                // queue rows use, sized .small so it stays subordinate
-                // to the title. Only shown when there's an active
-                // queue item (no point flagging "New" for an episode
-                // that isn't being downloaded right now).
-                if let q = queueItem {
-                    // `.subtle` (no capsule background) because the row
-                    // is already tinted with the status colour — a
-                    // second filled chip on top read as noisy.
-                    MediaBadgeCluster(isUpgrade: q.isUpgrade, size: .subtle)
-                }
                 // Duplicate-grab flag: the same episode has 2+ active
                 // downloads. The row shows the first one's progress; the
                 // badge says there's more — the episode detail lists each.
@@ -151,6 +119,10 @@ struct EpisodeRow: View {
                 // not-aired rows keep the date since there's no diff
                 // to compute.
                 if let q = queueItem {
+                    // Per-row Upgrade / New tag — same component the queue
+                    // rows use. Lives on the trailing edge, immediately ahead
+                    // of the score, instead of interrupting the title.
+                    MediaBadgeCluster(isUpgrade: q.isUpgrade, size: .subtle)
                     // The incoming file's own score. It used to be a delta
                     // against the file on disk, which made this gutter mean
                     // something different from the identical-looking gutter
@@ -207,91 +179,38 @@ struct EpisodeRow: View {
             }
             .clipShape(RoundedRectangle(cornerRadius: Tokens.Radius.chip))
         )
-        // Bare-icon hover overlay — same gradient + glyph pattern as
-        // QueueRowView's action cluster. Provides a search affordance
-        // for missing-aired episodes without re-purposing the right-
-        // edge state indicator.
+        // No hover ACTIONS: the row is a link into the episode detail.
+        // Pausing / resuming / cancelling a download happens in the queue,
+        // which owns those controls. It does keep the long-hover tooltip —
+        // the same `QueueItemTooltip` the queue rows show, so a downloading
+        // episode's upgrade diff reads identically wherever you meet it.
         #if os(macOS)
-        // Hover overlay: queue-item actions when there's an active
-        // download, otherwise a search icon for aired episodes. No
-        // gradient backdrop — bare icons sit over the row's natural
-        // tint (status fill for in-progress, transparent otherwise),
-        // matching Mail / Music row-hover treatment.
-        .overlay(alignment: .trailing) {
-            // Only active downloads get hover actions now (pause/resume/trash);
-            // per-episode search moved to the DetailView bottom CTA.
-            if isHovering, queueItem != nil {
-                hoverActionOverlay
-                    .transition(.opacity)
+        .onHover { hovering in
+            isHovering = hovering
+            hoverTask?.cancel()
+            if hovering && !suppressRowTooltip && queueItem != nil {
+                hoverTask = Task { @MainActor [self] in
+                    try? await Task.sleep(nanoseconds: 600_000_000)
+                    if !Task.isCancelled && self.isHovering { showTooltip = true }
+                }
+            } else {
+                showTooltip = false
             }
         }
-        // No long-hover tooltip: the episode detail (one tap away) carries
-        // quality / size / score, same as tracks — rows stay quiet.
-        .onHover { hovering in
-            withAnimation(.easeInOut(duration: 0.12)) { isHovering = hovering }
+        .tooltipPopover(isPresented: $showTooltip, arrowEdge: .trailing) {
+            if let q = queueItem {
+                QueueItemTooltip(
+                    item: q,
+                    apiKey: q.posterRequiresAuth ? configStore.sonarr.apiKey : nil,
+                    locale: configStore.currentLocale
+                )
+            }
         }
         #endif
-        // Native macOS confirm sheet for destructive actions — same
-        // pattern Apple uses across Finder / Mail / Photos. Replaces
-        // the bespoke `InlineConfirmCard` popovers we had on the row.
-        .confirmationDialog(
-            Text("queue.cancelThisDownload.tooltip", bundle: .module),
-            isPresented: $showDeleteConfirm,
-            titleVisibility: .visible
-        ) {
-            Button(role: .destructive) {
-                if let q = queueItem { onDeleteQueueItem?(q) }
-            } label: { Text("queue.cancelDownload.button", bundle: .module) }
-            Button(role: .cancel) {} label: { Text("queue.keepDownload.button", bundle: .module) }
-        } message: {
-            Text(String(format: String(localized: "detail.thisWillRemoveFrom.tooltip", bundle: .module), queueItem?.title ?? episode.title ?? ""))
-        }
         // Publishes row-hover to the `LinkChevron` above so it brightens whenever
         // the cursor is anywhere over the row, not just on the 8pt glyph.
         .linkRowHover()
     }
-
-    /// Hover overlay on the trailing edge — pause/resume/trash for an active
-    /// download. Same bare-icon language as QueueRowView. (Per-episode search
-    /// moved to the DetailView bottom CTA, so non-queue rows have no overlay.)
-    #if os(macOS)
-    @ViewBuilder
-    private var hoverActionOverlay: some View {
-        if let q = queueItem {
-            HStack(spacing: 2) {
-                queueActionIcons(for: q)
-            }
-            .padding(.trailing, 6)
-        }
-    }
-
-    @ViewBuilder
-    private func queueActionIcons(for q: QueueItem) -> some View {
-        // Music/Podcasts pattern: primary action visible (pause/resume
-        // — the toggle most-clicked), Remove tucked into `⋯` menu.
-        // Single secondary action still gets the menu shell so the row
-        // grammar stays consistent across surfaces.
-        if q.status == .downloading || q.status == .paused {
-            if q.isPaused, let onResume = onResumeQueueItem {
-                IconButton(symbol: "play.fill", helpKey: "Resume episode download",
-                           accessibilityLabel: "Resume episode") { onResume(q) }
-            } else if !q.isPaused, let onPause = onPauseQueueItem {
-                IconButton(symbol: "pause.fill", helpKey: "Pause episode download",
-                           accessibilityLabel: "Pause episode") { onPause(q) }
-            }
-        }
-        if onDeleteQueueItem != nil {
-            IconOverflowMenu(accessibilityLabel: "More actions") {
-                Button(role: .destructive) {
-                    showDeleteConfirm = true
-                } label: {
-                    Label(String(localized: "queue.cancelDownload.button", bundle: .module),
-                          systemImage: "trash")
-                }
-            }
-        }
-    }
-    #endif
 
     @ViewBuilder
     private var stateIndicator: some View {

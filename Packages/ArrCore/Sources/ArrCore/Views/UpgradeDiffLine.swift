@@ -24,6 +24,10 @@ public struct UpgradeDiffTable: View {
     /// nil hides the row.
     let newFilename: String?
     let oldFilename: String?
+    /// Where the grab came from. Rendered as the last row of the grid so it
+    /// picks up the same label column and 3pt row rhythm as the spec rows —
+    /// as a free-standing line above the grid it read as an outlier.
+    let indexer: String?
     let tint: Color
 
     public init(
@@ -37,6 +41,7 @@ public struct UpgradeDiffTable: View {
         oldFormats: [String] = [],
         newFilename: String? = nil,
         oldFilename: String? = nil,
+        indexer: String? = nil,
         tint: Color = .accentColor
     ) {
         self.newQuality = newQuality
@@ -49,6 +54,7 @@ public struct UpgradeDiffTable: View {
         self.oldFormats = oldFormats
         self.newFilename = newFilename
         self.oldFilename = oldFilename
+        self.indexer = indexer
         self.tint = tint
     }
 
@@ -138,6 +144,7 @@ public struct UpgradeDiffTable: View {
                         .gridCellColumns(4)
                 }
             }
+            indexerRow(columns: 4)
         }
     }
 
@@ -188,6 +195,22 @@ public struct UpgradeDiffTable: View {
                         .lineLimit(2)
                         .truncationMode(.middle)
                 }
+            }
+            indexerRow(columns: 1)
+        }
+    }
+
+    /// Last grid row — the indexer the release was grabbed from. `columns`
+    /// spans the value across the diff layout's OLD / arrow / NEW / delta
+    /// cells; the plain layout only has one value column.
+    @ViewBuilder
+    private func indexerRow(columns: Int) -> some View {
+        if let indexer, !indexer.isEmpty {
+            GridRow {
+                label("Indexer")
+                Text(indexer)
+                    .scaledFont(size: 11)
+                    .gridCellColumns(columns)
             }
         }
     }

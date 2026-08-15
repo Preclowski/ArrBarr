@@ -5,22 +5,24 @@ import SwiftUI
 /// `SeasonDetailView` (episodes + that season's search buttons).
 struct SeasonRow: View {
     let season: SonarrSeasonInfo
-    /// This season's episodes — only used to detect an in-progress download for
-    /// the status tint/icon (the episode list itself lives in SeasonDetailView).
-    let episodes: [SonarrEpisodeDetail]
-    var queueByEpisodeId: [Int: [QueueItem]] = [:]
+    /// Every queue item belonging to THIS season — taken straight off the
+    /// series' queue siblings by season number. It used to be derived by
+    /// joining an episode-id map against the loaded episode array, which meant
+    /// a season pack left no trace on the row whenever that join missed
+    /// (episodes not loaded yet, or a pack member without an episode number).
+    var queueItems: [QueueItem] = []
     var onTap: () -> Void = {}
 
     private var stats: SonarrSeasonStats? { season.statistics }
     private var have: Int { stats?.episodeFileCount ?? 0 }
     private var total: Int { stats?.totalEpisodeCount ?? stats?.episodeCount ?? 0 }
     private var pct: Double { total > 0 ? min(1.0, Double(have) / Double(total)) : 0 }
-    private var anyDownloading: Bool {
-        episodes.contains { ep in
-            guard let items = queueByEpisodeId[ep.id] else { return false }
-            return items.contains { $0.status == .downloading || $0.status == .queued || $0.status == .importing }
-        }
-    }
+    private var anyDownloading: Bool { !queueItems.isEmpty }
+    /// A season whose incoming download replaces files already on disk. The
+    /// row otherwise looked identical to a fresh grab — same blue fill, same
+    /// "10/10" — with nothing saying the season is being upgraded, while the
+    /// episode rows inside it carry exactly this badge.
+    private var isUpgrade: Bool { queueItems.contains(where: \.isUpgrade) }
     private var isComplete: Bool { total > 0 && have >= total }
     /// Sonarr's own flag for THIS season — never derived from its episodes.
     /// arr has no tri-state here either, so neither do we. `nil` (older
@@ -47,6 +49,11 @@ struct SeasonRow: View {
                 Text(String(format: "Season %02d", season.seasonNumber))
                     .scaledFont(size: 12, weight: .medium)
                 Spacer(minLength: 8)
+                // Same Upgrade / New vocabulary the episode rows use, and the
+                // same place: trailing edge, ahead of the row's number.
+                if anyDownloading {
+                    MediaBadgeCluster(isUpgrade: isUpgrade, size: .subtle)
+                }
                 Text(verbatim: "\(have)/\(total)")
                     .scaledFont(size: 10, monospacedDigit: true)
                     .foregroundStyle(isComplete ? Color.green : Color.secondary)
