@@ -188,8 +188,14 @@ public actor SearchClient {
     /// empty map. The ONE profile-name lookup — the Library view-model,
     /// DetailView's hero chip and the Upcoming tooltip all resolve through
     /// this instead of three hand-rolled copies.
+    ///
+    /// Reads through `SearchOptionsCache`, which already holds this exact
+    /// payload for the add panel. Before that, every detail open and every
+    /// Upcoming row refetched the whole profile list to resolve one id.
     static func profileNameMap(config: ServiceConfig, source: QueueItem.Source) async -> [Int: String] {
-        let profiles = (try? await SearchClient(config: config, source: source).fetchQualityProfiles()) ?? []
+        let profiles = await SearchOptionsCache.shared.qualityProfiles(config: config, source: source) {
+            (try? await SearchClient(config: config, source: source).fetchQualityProfiles()) ?? []
+        }
         return Dictionary(profiles.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
     }
 

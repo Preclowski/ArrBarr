@@ -2,7 +2,7 @@ import Foundation
 
 // MARK: - Shared
 
-public struct QualityProfile: Decodable, Identifiable {
+public struct QualityProfile: Decodable, Identifiable, Sendable {
     public let id: Int
     let name: String
 }

@@ -486,10 +486,10 @@ public final class ConfigStore: ObservableObject {
         self.showWarnings = defaults.object(forKey: Self.showIndexerIssuesKey) != nil ? defaults.bool(forKey: Self.showIndexerIssuesKey) : true
         #if os(iOS)
         // iOS settings are intentionally minimal: warnings are off (errors
-        // only), foreground polling is a fixed 5s, and the theme always follows
-        // the system (no pickers for any of these).
+        // only) and the theme always follows the system (no pickers for
+        // either). Polling cadence is no longer among them — it is hard-locked
+        // to `foregroundInterval` on every platform now.
         self.showWarnings = false
-        self.foregroundInterval = 5
         self.appearance = "system"
         #endif
         self.queueTitleGrouping = QueueTitleGroupingMode(
