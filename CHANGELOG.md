@@ -9,6 +9,33 @@ Releases before 0.10.0 are described on the
 
 ## [Unreleased]
 
+## [2.0.0-rc2] — 2026-08-15
+
+Release candidate. Not published to the Homebrew tap — download the DMG from
+the release page.
+
+### Added
+
+- Enlarged poster: a zoom slider on macOS, and right-click to save the image
+  to Downloads. The slider and the close button fade out when idle.
+
+### Changed
+
+- Quality-profile chip is a neutral filled tag instead of purple, and leads
+  the movie hero's badge row.
+- Episode rows drop their hover pause / resume / cancel actions — the queue
+  owns those — and gain the queue's long-hover tooltip.
+- Upgrade / New tag on an episode row moved to the trailing edge.
+- Season-pack tooltip shows the upgrade diff the same way the single-item
+  tooltip does, and no longer lists file names.
+- Indexer moved into the detail info grid.
+
+### Fixed
+
+- Quality profiles are fetched once per arr instead of on every detail open
+  and every Upcoming row.
+- iOS build was broken by a stale assignment to a now-constant poll interval.
+
 ## [2.0.0-rc1] — 2026-08-14
 
 Release candidate. Not published to the Homebrew tap — download the DMG from
