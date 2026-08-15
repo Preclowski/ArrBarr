@@ -359,6 +359,98 @@ public struct PosterLightbox: View {
     @State private var offset: CGSize = .zero
     @State private var baseOffset: CGSize = .zero
 
+    #if os(macOS)
+    /// macOS has no pinch here: the menu-bar surface is a non-activating
+    /// `NSPanel` and trackpad `.magnify` events never reach it — not the
+    /// SwiftUI gesture, not even a local `NSEvent` monitor. (The same view
+    /// pinches fine in the detached window, which is a real `NSWindow`.) So
+    /// the Mac gets an explicit slider instead, which also serves Macs with
+    /// a mouse. It fades out when the pointer leaves or goes idle so it
+    /// never sits on top of the artwork it exists to reveal — and so does the
+    /// close button, on the same timer: two pieces of chrome fading on
+    /// separate schedules would read as a glitch.
+    @State private var showsControls = false
+    @State private var idleHide: Task<Void, Never>?
+    /// True for the whole drag. A held mouse button stops delivering hover,
+    /// so without this the idle countdown expires *while* you are scrubbing
+    /// and the control fades out from under the pointer.
+    @State private var isScrubbing = false
+
+    /// Result of the last save, shown briefly then cleared. Not tied to
+    /// `showsControls`: a confirmation that fades on the chrome's timer would
+    /// vanish the moment the pointer left, which is exactly when you look.
+    @State private var saveOutcome: PosterSaveOutcome?
+
+    private enum PosterSaveOutcome { case saved, failed }
+
+    private func savePosterToDownloads() {
+        Task {
+            let outcome = await Self.writePosterToDownloads(url: url, apiKey: apiKey)
+            withAnimation(.smooth(duration: 0.2)) { saveOutcome = outcome }
+            try? await Task.sleep(for: .seconds(2.5))
+            withAnimation(.smooth(duration: 0.3)) { saveOutcome = nil }
+        }
+    }
+
+    /// Writes the `.full` copy — the one on screen — into ~/Downloads.
+    ///
+    /// Reads it out of `PosterStore` rather than re-fetching: the lightbox has
+    /// already pulled that exact tier, so the common case touches no network
+    /// at all. Requires `com.apple.security.files.downloads.read-write`; the
+    /// sandbox denies the write without it.
+    private static func writePosterToDownloads(url: URL, apiKey: String?) async -> PosterSaveOutcome {
+        var data = PosterStore.storedData(for: url, tier: .full)
+        if data == nil {
+            _ = await PosterStore.shared.image(for: url, tier: .full, apiKey: apiKey)
+            data = PosterStore.storedData(for: url, tier: .full)
+        }
+        guard let data else { return .failed }
+
+        let fm = FileManager.default
+        guard let dir = try? fm.url(for: .downloadsDirectory, in: .userDomainMask,
+                                    appropriateFor: nil, create: false) else { return .failed }
+        // *arr artwork is served as .../MediaCover/12/poster.jpg, so the last
+        // component is all we get for a name. Never overwrite: a second save
+        // of a different title would otherwise clobber the first.
+        let stem = url.deletingPathExtension().lastPathComponent
+        let base = stem.isEmpty ? "poster" : stem
+        let ext = url.pathExtension.isEmpty ? "jpg" : url.pathExtension
+        var target = dir.appendingPathComponent("\(base).\(ext)")
+        var suffix = 2
+        while fm.fileExists(atPath: target.path) {
+            target = dir.appendingPathComponent("\(base) \(suffix).\(ext)")
+            suffix += 1
+        }
+        do { try data.write(to: target) } catch { return .failed }
+        return .saved
+    }
+
+    /// Show the bar and restart the idle countdown.
+    private func revealControls() {
+        idleHide?.cancel()
+        withAnimation(.smooth(duration: 0.18)) { showsControls = true }
+        idleHide = Task {
+            try? await Task.sleep(for: .seconds(2.5))
+            guard !Task.isCancelled, !isScrubbing else { return }
+            withAnimation(.smooth(duration: 0.3)) { showsControls = false }
+        }
+    }
+    #endif
+
+    /// Applies one step of a zoom, from whichever input drives it.
+    private func setZoom(_ value: CGFloat) {
+        zoom = min(max(value, 1), 5)
+    }
+
+    /// End of a zoom: commit it, and recentre if we landed back at fit —
+    /// otherwise a pan made while zoomed leaves the fitted poster off-screen.
+    private func commitZoom() {
+        baseZoom = zoom
+        if zoom <= 1.01 {
+            withAnimation(.smooth(duration: 0.2)) { offset = .zero; baseOffset = .zero }
+        }
+    }
+
     public var body: some View {
         ZStack(alignment: .topTrailing) {
             // Frosted-glass scrim — `.regularMaterial` blurs the
@@ -398,21 +490,17 @@ public struct PosterLightbox: View {
                 .offset(offset)
                 // Likewise the lift shadow: it needs a surface to fall on.
                 .shadow(color: .black.opacity(fullBleed ? 0 : 0.5), radius: 20, y: 8)
-                // Pinch to zoom (iOS finger / macOS trackpad), drag to pan
-                // once zoomed. `.onChanged` drives the live scale; the two
-                // gestures run simultaneously so you can pinch-and-pan.
+                // Pinch to zoom, drag to pan once zoomed. iOS only — see the
+                // `showsControls` note above for why the Mac gets a slider.
+                #if os(iOS)
                 .gesture(
-                    MagnificationGesture()
+                    MagnifyGesture()
                         .onChanged { value in
-                            zoom = min(max(baseZoom * value, 1), 5)
+                            setZoom(baseZoom * value.magnification)
                         }
-                        .onEnded { _ in
-                            baseZoom = zoom
-                            if zoom <= 1.01 {
-                                withAnimation(.smooth(duration: 0.2)) { offset = .zero; baseOffset = .zero }
-                            }
-                        }
+                        .onEnded { _ in commitZoom() }
                 )
+                #endif
                 .simultaneousGesture(
                     DragGesture()
                         .onChanged { value in
@@ -433,6 +521,19 @@ public struct PosterLightbox: View {
                         onDismiss()
                     }
                 }
+                #if os(macOS)
+                // On the artwork only, not the whole lightbox: over a square
+                // cover's letterbox bands there is no image to act on.
+                .contextMenu {
+                    Button(action: savePosterToDownloads) {
+                        Label {
+                            Text("detail.savePoster.button", bundle: .module)
+                        } icon: {
+                            Image(systemName: "square.and.arrow.down")
+                        }
+                    }
+                }
+                #endif
                 .position(x: geo.size.width / 2, y: geo.size.height / 2)
             }
             // Only the artwork bleeds past the safe area — without this the
@@ -468,8 +569,125 @@ public struct PosterLightbox: View {
             // the artwork goes full-bleed.
             .shadow(color: .black.opacity(0.45), radius: 8, y: 2)
             .padding(12)
+            #if os(macOS)
+            // Fades on the same timer as the zoom slider. Deliberately still
+            // hit-testable while invisible: clicking where it sits dismisses
+            // either way (tap-anywhere already does), and taking hit-testing
+            // away risks taking the Esc shortcut with it. iOS keeps it up
+            // permanently — there is no pointer there to bring it back.
+            .opacity(showsControls ? 1 : 0)
+            #endif
+
+            #if os(macOS)
+            VStack(spacing: 10) {
+                if saveOutcome != nil { saveNote }
+                zoomBar
+                    .opacity(showsControls ? 1 : 0)
+                    // Not just invisible — an idle bar must not eat clicks
+                    // meant for the tap-to-dismiss underneath it.
+                    .allowsHitTesting(showsControls)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+            .padding(.bottom, 16)
+            #endif
+        }
+        #if os(macOS)
+        // Reveal on any pointer movement over the lightbox, then let it time
+        // out. `.onContinuousHover` rather than `.onHover` so a pointer that
+        // stops and starts again inside the window brings it back.
+        .onContinuousHover { phase in
+            switch phase {
+            case .active: revealControls()
+            // Not while scrubbing: a drag that wanders off the window edge
+            // still owns the pointer, and yanking the control mid-drag is the
+            // same bug as letting the idle timer do it.
+            case .ended where !isScrubbing:
+                idleHide?.cancel()
+                withAnimation(.smooth(duration: 0.3)) { showsControls = false }
+            case .ended: break
+            @unknown default: break
+            }
+        }
+        // Show it once on open so it is discoverable at all — the countdown
+        // takes it away again on its own.
+        .onAppear { revealControls() }
+        .onDisappear { idleHide?.cancel() }
+        #endif
+    }
+
+    #if os(macOS)
+    @ViewBuilder
+    private var saveNote: some View {
+        Group {
+            switch saveOutcome {
+            case .failed: Text("detail.savePoster.failed", bundle: .module)
+            default: Text("detail.savePoster.saved", bundle: .module)
+            }
+        }
+        .scaledFont(size: 11, weight: .medium)
+        .foregroundStyle(.white)
+        // Same treatment as the slider: legibility from a shadow rather than
+        // from a slab laid over the artwork.
+        .shadow(color: .black.opacity(0.65), radius: 4, y: 1)
+        .transition(.opacity)
+    }
+
+    private static let zoomBarWidth: CGFloat = 180
+    private static let zoomKnob: CGFloat = 12
+
+    /// Hand-drawn rather than a `Slider`, for the same reason the progress
+    /// bars are: the stock control paints its filled half in the accent
+    /// colour, which vanishes over light artwork, and there is no way to
+    /// recolour just that half. White-on-dark-capsule reads over any poster.
+    private var zoomBar: some View {
+        let span = Self.zoomBarWidth - Self.zoomKnob
+        let fraction = (zoom - 1) / 4
+        return ZStack(alignment: .leading) {
+            Capsule()
+                .fill(.black.opacity(0.4))
+                .frame(height: 4)
+            Capsule()
+                .fill(.white)
+                .frame(width: Self.zoomKnob / 2 + span * fraction, height: 4)
+            Circle()
+                .fill(.white)
+                .frame(width: Self.zoomKnob, height: Self.zoomKnob)
+                .offset(x: span * fraction)
+        }
+        .frame(width: Self.zoomBarWidth, height: Self.zoomKnob)
+        .shadow(color: .black.opacity(0.55), radius: 4, y: 1)
+        // Padding first, then the hit shape: a 12pt-tall grab target is a
+        // dart game. The padding stays invisible — no fill goes on it.
+        .padding(.vertical, 8)
+        .contentShape(Rectangle())
+        .gesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { value in
+                    isScrubbing = true
+                    let f = min(max((value.location.x - Self.zoomKnob / 2) / span, 0), 1)
+                    setZoom(1 + f * 4)
+                    baseZoom = zoom
+                    revealControls()
+                }
+                .onEnded { _ in
+                    isScrubbing = false
+                    commitZoom()
+                    revealControls()
+                }
+        )
+        .onContinuousHover { _ in revealControls() }
+        .accessibilityLabel(Text("detail.zoomPoster.slider", bundle: .module))
+        .accessibilityValue(Text(verbatim: String(format: "%.1f×", zoom)))
+        .accessibilityAdjustableAction { direction in
+            switch direction {
+            case .increment: setZoom(zoom + 0.5)
+            case .decrement: setZoom(zoom - 0.5)
+            @unknown default: break
+            }
+            commitZoom()
         }
     }
+    #endif
 }
 
 /// Coloured capsule for a rating value (IMDb, RT, MC, …).
