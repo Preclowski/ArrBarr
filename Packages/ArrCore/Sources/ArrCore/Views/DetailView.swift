@@ -898,8 +898,6 @@ public struct DetailView: View {
                     cast: cast,
                     onTapPerson: openPerson,
                     sonarrDetail: $sonarrDetail,
-                    sonarrEpisodes: sonarrEpisodes,
-                    sonarrEpisodeFiles: sonarrEpisodeFiles,
                     onTapSeason: { season in
                         seasonDrill = SeasonDrill(
                             seriesId: item.entityId ?? 0,
@@ -945,11 +943,12 @@ public struct DetailView: View {
         let inLibrary = (radarrMovieFile ?? radarrDetail?.movieFile) != nil
         let release = ArrReleaseStatusLabel.text(radarrDetail?.status, locale: configStore.currentLocale)
         guard inLibrary || release != nil || qualityProfileName != nil else { return nil }
-        // Release status leads (the movie's own state), then the assigned
-        // quality profile, then membership.
+        // Profile leads, then release status, then membership — matching the
+        // series hero, where the profile has always come first. It is the
+        // setting you came to check; the release status is background.
         return AnyView(HStack(spacing: 4) {
-            if let release { TagChip(text: release) }
             if let profile = qualityProfileName { ProfileChip(name: profile) }
+            if let release { TagChip(text: release) }
             if inLibrary { InLibraryBadge() }
         })
     }

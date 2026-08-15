@@ -111,9 +111,16 @@ public struct ScoreChip: View {
     }
 }
 
-/// Quality-profile chip — purple, so the profile can't be mistaken for
-/// one of the custom-format chips it shares a strip with. One component,
-/// every surface (hero title row, library/upcoming tooltips).
+/// Quality-profile chip. One component, every surface (hero title row,
+/// library/upcoming tooltips).
+///
+/// Filled rather than outlined, and deliberately *un*tinted. It shares a
+/// strip with the custom-format chips, the accent-tinted "library" badge
+/// and the orange "queued" badge, so it does have to stay distinguishable —
+/// but it earns that from the fill, the way `SourceGlyphChip` does, instead
+/// of from a hue. The purple this replaces was the only saturated colour in
+/// the strip and read as an alert rather than a label. Text metrics stay
+/// `TagChip`'s so it still baseline-aligns with the chips beside it.
 public struct ProfileChip: View {
     let name: String
 
@@ -122,7 +129,12 @@ public struct ProfileChip: View {
     }
 
     public var body: some View {
-        TagChip(text: name, color: .purple)
+        Text(verbatim: name)
+            .scaledFont(size: 9, weight: .medium)
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 5)
+            .padding(.vertical, 1)
+            .background(Color.primary.opacity(0.08), in: RoundedRectangle(cornerRadius: Tokens.Radius.chip))
     }
 }
 
