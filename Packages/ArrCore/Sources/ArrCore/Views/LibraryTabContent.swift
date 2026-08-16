@@ -40,13 +40,14 @@ struct LibraryTabContent: View {
     }
 
     private enum SortMode: CaseIterable {
-        case title, year, size, imdb, tmdb, rating
+        case title, releaseDate, dateAdded, size, imdb, tmdb, rating
 
         /// Brand names (IMDb/TMDB) render verbatim; the rest localize.
         var label: Text {
             switch self {
             case .title: return Text("library.sort.title", bundle: .module)
-            case .year: return Text("library.sort.year", bundle: .module)
+            case .releaseDate: return Text("library.sort.releaseDate", bundle: .module)
+            case .dateAdded: return Text("library.sort.dateAdded", bundle: .module)
             case .size: return Text("queue.size.button", bundle: .module)
             case .imdb: return Text(verbatim: "IMDb")
             case .tmdb: return Text(verbatim: "TMDB")
@@ -54,25 +55,49 @@ struct LibraryTabContent: View {
             }
         }
 
-        var symbol: String {
+        /// What the menu row draws. The rating axes ARE services, so they wear
+        /// the service's own mark rather than a third identical star.
+        ///
+        /// The `-mono` assets, not the full-colour ones `RatingPill` uses: a
+        /// menu row is a monochrome context (SF Symbols on the rows above),
+        /// and the colour marks are filled artwork that can't be templated —
+        /// IMDb's is a plaque with the letters drawn on top, so its silhouette
+        /// is a solid blob. These are single-path silhouettes, so they tint
+        /// themselves like every other glyph in the menu.
+        enum Glyph {
+            case symbol(String)
+            /// Asset name in `ServiceIcons.xcassets`.
+            case brand(String)
+        }
+
+        /// `.rating` is whichever single score the source ships, so its mark
+        /// depends on the source: TVDB's for Sonarr, and a plain star for
+        /// Lidarr, whose score is its metadata provider's and wears no mark
+        /// we have.
+        func glyph(for source: QueueItem.Source) -> Glyph {
             switch self {
-            case .title: return "textformat"
-            case .year: return "calendar"
-            case .size: return "internaldrive"
-            case .imdb, .tmdb, .rating: return "star"
+            case .title: return .symbol("textformat")
+            case .releaseDate: return .symbol("calendar")
+            case .dateAdded: return .symbol("tray.and.arrow.down")
+            case .size: return .symbol("internaldrive")
+            case .imdb: return .brand("rating-imdb-mono")
+            case .tmdb: return .brand("rating-tmdb-mono")
+            case .rating: return source == .sonarr ? .brand("rating-tvdb-mono") : .symbol("star")
             }
         }
     }
 
     /// Radarr exposes IMDb and TMDB as two separate sort axes (mirroring its
-    /// own UI); Sonarr has one TVDB score; Lidarr/Whisparr ship no ratings on
-    /// the library endpoint. Lidarr also has no year.
+    /// own UI); Sonarr and Lidarr each ship one score, so both get `.rating`;
+    /// Whisparr ships none. Lidarr has no release date either — that belongs
+    /// to an artist's albums, not the artist — but every arr dates what it
+    /// added, so `.dateAdded` is offered everywhere.
     private var availableSorts: [SortMode] {
         switch source {
-        case .radarr: return [.title, .year, .size, .imdb, .tmdb]
-        case .sonarr: return [.title, .year, .size, .rating]
-        case .whisparr: return [.title, .year, .size]
-        case .lidarr: return [.title, .size]
+        case .radarr: return [.title, .releaseDate, .dateAdded, .size, .imdb, .tmdb]
+        case .sonarr: return [.title, .releaseDate, .dateAdded, .size, .rating]
+        case .whisparr: return [.title, .releaseDate, .dateAdded, .size]
+        case .lidarr: return [.title, .dateAdded, .size, .rating]
         }
     }
 
@@ -102,14 +127,24 @@ struct LibraryTabContent: View {
         let query = filterText.trimmingCharacters(in: .whitespacesAndNewlines)
         var out = allEntries.filter { matches($0, filter: statusFilter) }
         if !query.isEmpty {
-            out = out.filter { $0.title.localizedCaseInsensitiveContains(query) }
+            // Searches the entry's whole alias set, not its visible title:
+            // accents folded ("leon" → "Léon"), and every translated name the
+            // arr knows ("leon zawodowiec"). A raw compare on `title` hid both,
+            // which reads as "you don't own it" — the one wrong answer this
+            // app must never give.
+            out = TitleMatch.indexedFilter(out, query: query, index: \.searchIndex)
         }
         switch sort {
         case .title:
             out.sort { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
-        case .year:
-            // Newest first; yearless entries sink to the end.
-            out.sort { ($0.year ?? Int.min, $1.title) > ($1.year ?? Int.min, $0.title) }
+        case .releaseDate:
+            // Newest first; undated entries sink to the end. Title breaks ties
+            // ascending — hence the flipped operands on the second element.
+            out.sort { ($0.releaseSortKey, $1.title) > ($1.releaseSortKey, $0.title) }
+        case .dateAdded:
+            // Most recently added first — "what did I just add" is the whole
+            // point of this axis.
+            out.sort { ($0.dateAdded ?? .distantPast, $1.title) > ($1.dateAdded ?? .distantPast, $0.title) }
         case .size:
             out.sort { $0.sizeOnDisk > $1.sizeOnDisk }
         case .imdb:
@@ -117,7 +152,7 @@ struct LibraryTabContent: View {
         case .tmdb:
             out.sort { ($0.ratingTmdb ?? -1) > ($1.ratingTmdb ?? -1) }
         case .rating:
-            out.sort { ($0.ratingTvdb ?? -1) > ($1.ratingTvdb ?? -1) }
+            out.sort { ($0.ratingArr ?? -1) > ($1.ratingArr ?? -1) }
         }
         return out
     }
@@ -204,14 +239,23 @@ struct LibraryTabContent: View {
                     Label {
                         Text(verbatim: s.displayName)
                     } icon: {
-                        Image(systemName: s == source ? "checkmark" : s.symbol)
+                        // The arr's own mark rather than a generic film/tv
+                        // glyph. These assets ship as templates, so they tint
+                        // themselves and sit in the menu as monochrome as the
+                        // SF Symbols they replace.
+                        if s == source {
+                            Image(systemName: "checkmark")
+                        } else {
+                            MenuBrandIcon(asset: s.brandIconName, template: true)
+                        }
                     }
                 }
             }
         } label: {
             HStack(spacing: 4) {
-                Image(systemName: source.symbol)
-                    .scaledFont(size: 10, weight: .medium)
+                // Trigger chip is an ordinary view, so the shared `ServiceIcon`
+                // works here — only the menu ROWS need the pre-sized variant.
+                ServiceIcon(source: source, size: 10)
                 Text(verbatim: source.displayName)
                     .scaledFont(size: 11, weight: .semibold)
                 Image(systemName: "chevron.down")
@@ -288,6 +332,18 @@ struct LibraryTabContent: View {
         .accessibilityLabel(Text(viewMode == .grid ? "library.view.list" : "library.view.grid", bundle: .module))
     }
 
+    /// SF Symbol or brand mark for one sort row — both monochrome, both
+    /// tinted by the menu.
+    @ViewBuilder
+    private func sortGlyph(_ glyph: SortMode.Glyph) -> some View {
+        switch glyph {
+        case .symbol(let name):
+            Image(systemName: name)
+        case .brand(let asset):
+            MenuBrandIcon(asset: asset, template: true)
+        }
+    }
+
     private var sortMenu: some View {
         Menu {
             ForEach(availableSorts, id: \.self) { mode in
@@ -295,7 +351,14 @@ struct LibraryTabContent: View {
                     Label {
                         mode.label
                     } icon: {
-                        Image(systemName: sort == mode ? "checkmark" : mode.symbol)
+                        // Selection still wins the slot — a row that only
+                        // changed its glyph doesn't read as "this is the
+                        // active sort".
+                        if sort == mode {
+                            Image(systemName: "checkmark")
+                        } else {
+                            sortGlyph(mode.glyph(for: source))
+                        }
                     }
                 }
             }
@@ -427,6 +490,16 @@ struct LibraryTabContent: View {
         .contentShape(Capsule())
         .onTapGesture { filterFocused = true }
         .glassyFloatingBar(focused: filterFocused)
+        // Typeable the moment Library is on screen, whether the panel opened
+        // on this tab or the user switched to it — same as Chat, and the same
+        // end state the Queue reaches via `PopoverContentView`. (Queue's field
+        // is driven from up there because it's the global search and ⌘N / the
+        // Add intent aim at it too; this one and Chat's own theirs.)
+        //
+        // Hopped to the next main-actor turn because the field is not in the
+        // responder chain during `onAppear`, and an assignment made before it
+        // is there is silently dropped.
+        .onAppear { Task { @MainActor in filterFocused = true } }
     }
 }
 
@@ -442,20 +515,6 @@ private extension LibraryEntry {
 
     var isMonitored: Bool { state != .unmonitored }
 
-    /// Status tint matching the arr web UIs' state colours: green =
-    /// downloaded, orange = partially downloaded, red = missing.
-    /// Unmonitored stays untinted (the row/tile is already dimmed).
-    var statusColor: Color? {
-        switch state {
-        case .complete: return .green
-        case .partial: return .orange
-        case .missing: return .red
-        // Radarr paints not-yet-available blue — nothing is wrong, there's
-        // just nothing to grab yet.
-        case .notAvailable: return .blue
-        case .unmonitored: return nil
-        }
-    }
 
     /// Localized availability/run label — shared mapping with the movie
     /// detail's existing-file banner (see `ArrReleaseStatusLabel`).
@@ -489,21 +548,10 @@ private extension LibraryEntry {
     }
 
     /// One status word (or the x/y count for partially-downloaded series /
-    /// artists). Drives the list row's first metadata segment and the
-    /// tooltip's Status line.
+    /// artists). Drives the tooltip's Status line; the chip renders the same
+    /// mapping via `MediaStateChip`.
     func statusText(locale: Locale) -> String {
-        switch state {
-        case .complete:
-            return AppLocalized.string("Downloaded", locale: locale)
-        case .partial:
-            return "\(fileCount ?? 0)/\(totalCount ?? 0)"
-        case .missing:
-            return AppLocalized.string("search.missing.button", locale: locale)
-        case .notAvailable:
-            return AppLocalized.string("library.status.notAvailable", locale: locale)
-        case .unmonitored:
-            return AppLocalized.string("Unmonitored", locale: locale)
-        }
+        state.statusText(have: fileCount, total: totalCount, locale: locale)
     }
 
     var sizeText: String? {
@@ -613,20 +661,30 @@ private struct LibraryListRow: View {
         return entry.title
     }
 
-    /// Status lives in the title-slot chip; the metadata line carries the
-    /// facts: episode/track counts, on-disk quality, assigned profile.
-    /// (File size deliberately absent — it's in the tooltip and grid meta.)
+    /// Status is a chip at the row's trailing edge now, so the metadata line
+    /// opens with the file size — the fact you actually scan a library list
+    /// for — and continues with episode/track counts and on-disk quality. The
+    /// assigned profile leads the line as a chip (see `profileBadge`).
     private var metadataSegments: [String] {
         var segments: [String] = []
+        if let size = entry.sizeText { segments.append(size) }
         // Series / artists show how much of the thing is on disk ("142/150");
         // skipped for partial, where the chip already IS that count.
         if entry.state != .partial, let total = entry.totalCount, total > 0 {
             segments.append("\(entry.fileCount ?? 0)/\(total)")
         }
-        // Both axes on purpose: what's on disk AND what the arr aims for.
+        // Both axes on purpose: what's on disk AND what the arr aims for —
+        // the quality here, the profile in the chip.
         if let quality = entry.fileQuality { segments.append(quality) }
-        if let profile = entry.profileName { segments.append(profile) }
         return segments
+    }
+
+    /// The assigned quality profile, drawn as the same `ProfileChip` the
+    /// detail hero and this tab's own tooltip use. As a bare dot-joined
+    /// segment it read as another quality string sitting next to the real
+    /// one; the chip says "this is the target, not what's on disk".
+    private var profileBadge: AnyView? {
+        entry.profileName.map { AnyView(ProfileChip(name: $0)) }
     }
 
     var body: some View {
@@ -638,10 +696,17 @@ private struct LibraryListRow: View {
             posterFallbackSymbol: entry.source.symbol,
             title: rowTitle,
             metadataSegments: metadataSegments,
-            metadataBadge: AnyView(LibraryStatusChip(entry: entry)),
+            metadataBadge: profileBadge,
             onTap: { entry.openDetail() }
         ) {
-            MonitorBookmark(isMonitored: entry.isMonitored)
+            // Status sits at the row's trailing edge, so the chips line up in
+            // a column down the list instead of starting at a different x on
+            // every row (which is what pinning them to the title did). Its old
+            // slot on the metadata line went to the file size.
+            HStack(spacing: 6) {
+                LibraryStatusChip(entry: entry)
+                MonitorBookmark(isMonitored: entry.isMonitored)
+            }
         }
         .opacity(entry.state == .unmonitored ? 0.55 : 1)
         .libraryTooltip(entry: entry, apiKey: apiKey)
@@ -659,9 +724,11 @@ private struct LibraryStatusChip: View {
     @EnvironmentObject var configStore: ConfigStore
 
     var body: some View {
-        StateChip(
-            text: entry.statusText(locale: configStore.currentLocale),
-            color: entry.statusColor ?? .secondary
+        MediaStateChip(
+            state: entry.state,
+            have: entry.fileCount,
+            total: entry.totalCount,
+            locale: configStore.currentLocale
         )
     }
 }
@@ -787,7 +854,7 @@ private struct LibraryEntryTooltip: View {
                 entry.ratingMetacritic.flatMap { RatingChip.metacritic($0) },
             ].compactMap { $0 }
         case .sonarr:
-            chips = [entry.ratingTvdb.flatMap { RatingChip.tvdb($0) }].compactMap { $0 }
+            chips = [entry.ratingArr.flatMap { RatingChip.tvdb($0) }].compactMap { $0 }
         case .lidarr:
             break
         }

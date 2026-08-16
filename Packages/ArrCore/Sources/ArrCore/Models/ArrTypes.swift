@@ -571,6 +571,13 @@ public struct LidarrLibraryRecord: Decodable, Sendable, Equatable {
     public let statistics: LidarrLibraryStatistics?
     /// See `SonarrLibraryRecord.qualityProfileId`.
     public var qualityProfileId: Int? = nil
+    /// See `RadarrLibraryRecord.added`. Artists have no release date of their
+    /// own — that belongs to their albums — so this is the only date sort
+    /// Lidarr can offer.
+    public var added: String? = nil
+    /// Artist rating from Lidarr's metadata provider. Always on the wire; the
+    /// Library tab's rating sort is the first thing to read it.
+    public var ratings: LidarrLookupRatings? = nil
 }
 public struct LidarrLibraryStatistics: Decodable, Sendable, Equatable {
     public let albumCount: Int?
@@ -588,7 +595,7 @@ public struct LidarrLookupRecord: Decodable {
     public let ratings: LidarrLookupRatings?
     public let genres: [String]?
 }
-public struct LidarrLookupRatings: Decodable {
+public struct LidarrLookupRatings: Decodable, Sendable, Equatable {
     public let value: Double?
     /// See `SonarrLookupRatings.votes` — same dropped-signal fix.
     public var votes: Int? = nil
@@ -653,6 +660,24 @@ public struct ArrLibraryFile: Decodable, Sendable, Equatable {
     var qualityName: String? { quality?.quality?.name }
 }
 
+/// One entry of an arr's alternate-title list — the translated, regional and
+/// scene names a title is also known by ("Leon zawodowiec" for "Léon: The
+/// Professional"). Radarr sources them from TMDB; Sonarr's are TVDB/XEM
+/// aliases, so its coverage is thinner.
+///
+/// Shared by the inline `alternateTitles[]` on a library record and by
+/// Radarr's dedicated `/alttitle` table, which is why `movieId` is here at
+/// all: inline it's redundant, standalone it's the only join key.
+public struct ArrAlternateTitle: Decodable, Sendable, Equatable {
+    public let title: String?
+    public var movieId: Int? = nil
+
+    public init(title: String?, movieId: Int? = nil) {
+        self.title = title
+        self.movieId = movieId
+    }
+}
+
 // Used to fetch existing library ids and list library contents
 public struct RadarrLibraryRecord: Decodable, Sendable, Equatable {
     let id: Int?
@@ -687,6 +712,22 @@ public struct RadarrLibraryRecord: Decodable, Sendable, Equatable {
     /// profile's name via `/qualityprofile`. (`var … = nil` so the demo
     /// mocks' memberwise inits keep compiling; Decodable still decodes it.)
     var qualityProfileId: Int? = nil
+    /// The title in its own language ("Nuovo Cinema Paradiso"). Always on the
+    /// wire; feeding the library filter is the first thing that wanted it.
+    var originalTitle: String? = nil
+    /// When the movie was added to Radarr — the Library tab's "Date added"
+    /// sort. ISO 8601 on the wire, parsed at unify time.
+    var added: String? = nil
+    /// Radarr's three release dates. The Library tab sorts on the earliest
+    /// one that exists: a film is "released" the day it first reached anyone,
+    /// and only the physical date is guaranteed absent for streaming titles.
+    var inCinemas: String? = nil
+    var digitalRelease: String? = nil
+    var physicalRelease: String? = nil
+    /// Translated / regional names. Whether `/api/v3/movie` inlines these
+    /// varies by Radarr version — `RadarrClient.alternateTitleMap` falls back
+    /// to the `/alttitle` table when it doesn't.
+    var alternateTitles: [ArrAlternateTitle]? = nil
 }
 public struct SonarrLibraryRecord: Decodable, Sendable, Equatable {
     let id: Int?
@@ -718,6 +759,16 @@ public struct SonarrLibraryRecord: Decodable, Sendable, Equatable {
     /// *id* — before this, TMDB series could only be joined on title + year,
     /// which is how a same-titled show got mistaken for one you own.
     var tmdbId: Int? = nil
+    /// Aliases from TVDB / TheXEM. Sonarr always inlines these on
+    /// `/api/v3/series` (see the payload note in `SonarrClient.fetchQueue`),
+    /// so unlike Radarr there's no fallback endpoint to reach for. They're
+    /// scene names first and translations second, so coverage of foreign
+    /// titles is thinner here than for movies.
+    var alternateTitles: [ArrAlternateTitle]? = nil
+    /// See `RadarrLibraryRecord.added`.
+    var added: String? = nil
+    /// First episode's air date — a series' equivalent of a release date.
+    var firstAired: String? = nil
 }
 public struct SonarrLibraryStatistics: Decodable, Sendable, Equatable {
     let episodeCount: Int?
@@ -819,6 +870,8 @@ public struct WhisparrLibraryRecord: Decodable, Sendable, Equatable {
     public var qualityProfileId: Int? = nil
     public var status: String? = nil
     public var isAvailable: Bool? = nil
+    /// See `RadarrLibraryRecord.added`.
+    public var added: String? = nil
 }
 
 public struct WhisparrLookupRecord: Decodable {

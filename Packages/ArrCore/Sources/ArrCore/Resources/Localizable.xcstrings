@@ -37178,43 +37178,84 @@
         }
       }
     },
-    "library.sort.year": {
+    "library.sort.dateAdded": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Year"
+            "value": "Date added"
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Rok"
+            "value": "Data dodania"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Jahr"
+            "value": "Hinzugefügt am"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Año"
+            "value": "Fecha de adición"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Année"
+            "value": "Date d'ajout"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Jaar"
+            "value": "Toegevoegd op"
+          }
+        }
+      }
+    },
+    "library.sort.releaseDate": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Release date"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Data wydania"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erscheinungsdatum"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fecha de estreno"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Date de sortie"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Releasedatum"
           }
         }
       }

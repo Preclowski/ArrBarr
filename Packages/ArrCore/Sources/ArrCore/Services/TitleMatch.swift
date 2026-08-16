@@ -15,9 +15,11 @@ import Foundation
 /// user already knows they own, and nothing else.
 public enum TitleMatch {
 
-    /// Case, accent, punctuation and article-insensitive form. Everything
-    /// compares in this space; nothing compares raw.
-    public static func normalize(_ raw: String) -> String {
+    /// Case, accent, width and punctuation-insensitive form — articles intact.
+    /// This is the space a live filter field compares in: dropping a leading
+    /// article here would empty the list the moment someone types "a" or "the"
+    /// on the way to a longer query.
+    public static func fold(_ raw: String) -> String {
         let folded = raw.folding(options: [.diacriticInsensitive, .caseInsensitive, .widthInsensitive],
                                  locale: nil)
         // Punctuation becomes a space rather than vanishing, so "wall-e" and
@@ -26,7 +28,51 @@ public enum TitleMatch {
             if ch.isLetter || ch.isNumber { return ch }
             return " "
         })
-        let tokens = cleaned.split(separator: " ").map(String.init)
+        return cleaned.split(separator: " ").joined(separator: " ")
+    }
+
+    /// Every name one title can be found by — its own, its original-language
+    /// one, its translations — folded and joined into a single haystack.
+    ///
+    /// Built once when the library loads, not per keystroke. That ordering is
+    /// the whole point: folding is an ICU call, and a shelf of 3000 titles
+    /// with ~25 aliases each is ~75k of them, which is a visibly janky filter
+    /// field if it happens per keypress and free if it happens per refresh.
+    ///
+    /// Entries join on a newline. `fold` emits only letters, digits and
+    /// spaces, so a newline is a boundary no folded query can contain, and a
+    /// query therefore cannot match across two different titles.
+    public static func searchIndex(_ titles: [String?]) -> String {
+        var seen = Set<String>()
+        return titles
+            .compactMap { $0.map(fold) }
+            .filter { !$0.isEmpty && seen.insert($0).inserted }
+            .joined(separator: "\n")
+    }
+
+    /// Substring filter over prepared `searchIndex` blobs — "leon" keeps
+    /// "Léon: The Professional", "wall e" keeps "WALL·E". For incremental
+    /// filter fields, where the user narrows a list they can already see;
+    /// `matches` is the ranked variant, for when they're naming one they
+    /// can't.
+    ///
+    /// Order is the caller's — a filter field must not reshuffle the grid
+    /// under the cursor on every keystroke. The query folds once; the
+    /// candidates were folded at index-build time.
+    public static func indexedFilter<T>(
+        _ candidates: [T],
+        query: String,
+        index: (T) -> String
+    ) -> [T] {
+        let folded = fold(query)
+        guard !folded.isEmpty else { return candidates }
+        return candidates.filter { index($0).contains(folded) }
+    }
+
+    /// `fold`, plus a leading article dropped. Everything that *ranks* titles
+    /// compares in this space; nothing compares raw.
+    public static func normalize(_ raw: String) -> String {
+        let tokens = fold(raw).split(separator: " ").map(String.init)
         guard let first = tokens.first else { return "" }
         // Drop a leading article only when something follows it — "The Thing"
         // becomes "thing", but the film "The The" would not become nothing.

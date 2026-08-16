@@ -79,3 +79,49 @@ public struct ServiceIcon: View {
         }
     }
 }
+
+/// A brand mark for use **inside a `Menu`'s rows**.
+///
+/// `ServiceIcon` is the right thing everywhere else and would be wrong here:
+/// a macOS menu row is an AppKit menu item, so SwiftUI hands the `Image`
+/// straight to AppKit, which draws it at the NSImage's own size and ignores
+/// the `.resizable().frame(…)` the view asked for. These assets are 512-point
+/// vectors — which is how a sort menu ended up with logos the height of the
+/// screen. So the resize happens on the *image*, before SwiftUI sees it.
+struct MenuBrandIcon: View {
+    let asset: String
+    var side: CGFloat = 14
+    /// Tint like an SF Symbol instead of drawing the artwork's own colours.
+    /// The arr marks and the `rating-*-mono` marks are single-path
+    /// silhouettes and template cleanly; the full-colour `rating-*` artwork
+    /// does not — IMDb's is a filled plaque with the letters drawn on top, so
+    /// its silhouette is a solid blob.
+    var template: Bool
+
+    var body: some View {
+        if let image = Self.sized(asset, side: side, template: template) {
+            Image(platformImage: image)
+        } else {
+            // An asset that didn't resolve draws nothing rather than an
+            // oversized fallback.
+            Color.clear.frame(width: side, height: side)
+        }
+    }
+
+    private static func sized(_ asset: String, side: CGFloat, template: Bool) -> PlatformImage? {
+        #if os(macOS)
+        guard let original = Bundle.module.image(forResource: asset),
+              let copy = original.copy() as? NSImage else { return nil }
+        copy.size = NSSize(width: side, height: side)
+        copy.isTemplate = template
+        return copy
+        #else
+        guard let original = UIImage(named: asset, in: .module, with: nil) else { return nil }
+        let box = CGSize(width: side, height: side)
+        let scaled = UIGraphicsImageRenderer(size: box).image { _ in
+            original.draw(in: CGRect(origin: .zero, size: box))
+        }
+        return template ? scaled.withRenderingMode(.alwaysTemplate) : scaled
+        #endif
+    }
+}

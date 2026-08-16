@@ -15,6 +15,76 @@ struct TitleMatchTests {
         #expect(TitleMatch.normalize("The") == "the")
     }
 
+    /// A shelf of (visible title, every name it answers to) pairs, indexed the
+    /// way the library load indexes it.
+    private func shelf(_ titles: [(String, [String?])]) -> [(title: String, index: String)] {
+        titles.map { (title: $0.0, index: TitleMatch.searchIndex($0.1)) }
+    }
+
+    private func filter(_ shelf: [(title: String, index: String)], _ query: String) -> [String] {
+        TitleMatch.indexedFilter(shelf, query: query, index: \.index).map(\.title)
+    }
+
+    @Test("The library filter field ignores accents and punctuation")
+    func indexedFilterIgnoresAccents() {
+        let library = shelf([
+            ("Léon: The Professional", ["Léon: The Professional"]),
+            ("Amélie", ["Amélie"]),
+            ("WALL·E", ["WALL·E"]),
+            ("Casablanca", ["Casablanca"]),
+        ])
+        #expect(filter(library, "leon") == ["Léon: The Professional"])
+        #expect(filter(library, "amelie") == ["Amélie"])
+        #expect(filter(library, "wall e") == ["WALL·E"])
+        #expect(filter(library, "blanca") == ["Casablanca"])
+        #expect(filter(library, "dune").isEmpty)
+    }
+
+    @Test("A title found by the name it has in the user's own language")
+    func indexedFilterFindsTranslations() {
+        let library = shelf([
+            ("Léon: The Professional", ["Léon: The Professional", "Leon zawodowiec", "Der Profi"]),
+            ("Casablanca", ["Casablanca"]),
+        ])
+        #expect(filter(library, "zawodowiec") == ["Léon: The Professional"])
+        #expect(filter(library, "der profi") == ["Léon: The Professional"])
+        // The original-language title is in the index too, not just aliases.
+        #expect(filter(library, "leon zawod") == ["Léon: The Professional"])
+    }
+
+    @Test("A query can't match across two different titles")
+    func indexedFilterDoesNotSpanEntries() {
+        // "professional der" would match a naively space-joined blob. The
+        // newline boundary is what stops it — folding never emits one.
+        let library = shelf([("Léon", ["Léon: The Professional", "Der Profi"])])
+        #expect(filter(library, "professional der").isEmpty)
+        #expect(filter(library, "professional") == ["Léon"])
+    }
+
+    @Test("Typing an article on the way to a longer query doesn't empty the grid")
+    func indexedFilterKeepsArticles() {
+        let library = shelf([("The Matrix", ["The Matrix"]), ("A Serious Man", ["A Serious Man"])])
+        // `normalize` would strip these to nothing and match everything /
+        // nothing; the filter field folds without dropping articles.
+        #expect(filter(library, "the") == ["The Matrix"])
+        #expect(filter(library, "a s") == ["A Serious Man"])
+    }
+
+    @Test("An empty filter keeps the shelf, in the caller's order")
+    func indexedFilterPassesEverythingThrough() {
+        let library = shelf([("Zodiac", ["Zodiac"]), ("Alien", ["Alien"]), ("Memento", ["Memento"])])
+        #expect(filter(library, "   ") == ["Zodiac", "Alien", "Memento"])
+    }
+
+    @Test("The index drops duplicates and empties instead of carrying them")
+    func searchIndexDedupes() {
+        // An arr that repeats the main title as an alternate (they do) must not
+        // double the blob, and a nil original title must not leave a blank line
+        // — a blank line would make an empty-ish query match everything.
+        let index = TitleMatch.searchIndex(["Dune", nil, "Dune", "  ", "DUNE", "Diuna"])
+        #expect(index == "dune\ndiuna")
+    }
+
     @Test("The ways a person actually types a title they own all match")
     func humanTypingMatches() {
         let title = TitleMatch.normalize("The Godfather")

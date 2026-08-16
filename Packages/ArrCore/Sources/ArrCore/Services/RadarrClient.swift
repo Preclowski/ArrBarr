@@ -244,6 +244,44 @@ public actor RadarrClient: ArrAPIClient {
         return (try? JSONDecoder().decode([RadarrLibraryRecord].self, from: data)) ?? []
     }
 
+    /// Alternate titles keyed by movie id, for the library filter's search
+    /// index.
+    ///
+    /// Two sources, in order. Radarr inlines `alternateTitles[]` on
+    /// `/api/v3/movie` in some versions and omits them in others, so the
+    /// inline lists are read first — they need no extra request and their
+    /// join to a movie is structural, so it cannot be wrong. Only when the
+    /// whole library came back without a single one does this fall back to
+    /// the dedicated `/alttitle` table, joined on `movieId`.
+    ///
+    /// Best-effort throughout: a missing endpoint (or a `movieId` that newer
+    /// Radarr leaves empty now that alt titles hang off movie *metadata*)
+    /// costs the filter some reach and nothing else, so a failure here must
+    /// never fail a library load.
+    func alternateTitleMap(for movies: [RadarrLibraryRecord]) async -> [Int: [String]] {
+        var inline: [Int: [String]] = [:]
+        for movie in movies {
+            guard let id = movie.id else { continue }
+            let titles = (movie.alternateTitles ?? []).compactMap(\.title).filter { !$0.isEmpty }
+            if !titles.isEmpty { inline[id] = titles }
+        }
+        if !inline.isEmpty { return inline }
+
+        guard !DemoMode.isActive, config.isConfigured, !config.apiKey.isEmpty,
+              let url = try? http.url(base: config.baseURL, path: "\(apiBase)/alttitle"),
+              let data = try? await http.get(url, headers: apiHeaders),
+              let rows = try? JSONDecoder().decode([ArrAlternateTitle].self, from: data)
+        else { return [:] }
+
+        var out: [Int: [String]] = [:]
+        for row in rows {
+            guard let id = row.movieId, id > 0,
+                  let title = row.title, !title.isEmpty else { continue }
+            out[id, default: []].append(title)
+        }
+        return out
+    }
+
     private static func unifyCalendar(_ r: RadarrCalendarRecord, baseURL: String) -> UpcomingItem? {
         let (dateStr, releaseType): (String?, String) =
             if r.digitalRelease != nil { (r.digitalRelease, "Digital") }

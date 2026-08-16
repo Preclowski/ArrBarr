@@ -76,6 +76,68 @@ public struct SourceGlyphChip: View {
 /// solid-fill genre / rating chips so the badge reads as a status
 /// tag, not a content tag. Accent-tinted to match the chevron
 /// drill-in affordance these rows already use.
+public extension LibraryEntry.FileState {
+    /// Status tint matching the arr web UIs' state colours: green =
+    /// downloaded, orange = partially downloaded, red = missing. Unmonitored
+    /// stays untinted (the surface showing it is already dimmed).
+    var chipColor: Color? {
+        switch self {
+        case .complete: return .green
+        case .partial: return .orange
+        case .missing: return .red
+        // Radarr paints not-yet-available blue — nothing is wrong, there's
+        // just nothing to grab yet.
+        case .notAvailable: return .blue
+        case .unmonitored: return nil
+        }
+    }
+
+    /// One status word, or the x/y count for partially-downloaded series and
+    /// artists. `have`/`total` are only read for the counted states.
+    func statusText(have: Int?, total: Int?, locale: Locale) -> String {
+        switch self {
+        case .complete:
+            return AppLocalized.string("Downloaded", locale: locale)
+        case .partial:
+            return "\(have ?? 0)/\(total ?? 0)"
+        case .missing:
+            if let total, total > 0 { return "\(have ?? 0)/\(total)" }
+            return AppLocalized.string("search.missing.button", locale: locale)
+        case .notAvailable:
+            return AppLocalized.string("library.status.notAvailable", locale: locale)
+        case .unmonitored:
+            return AppLocalized.string("Unmonitored", locale: locale)
+        }
+    }
+}
+
+/// How much of a title is on disk, as one chip. The Library tab's rows, tiles
+/// and tooltips draw it from a `LibraryEntry`; the detail heroes compute the
+/// same state from the arr's own payload. One mapping, so "Downloaded" is the
+/// same word and the same green everywhere.
+public struct MediaStateChip: View {
+    let state: LibraryEntry.FileState
+    /// Files on disk / files expected — only rendered for the counted states
+    /// (a series part-way through, a movie is complete or it isn't).
+    var have: Int? = nil
+    var total: Int? = nil
+    let locale: Locale
+
+    public init(state: LibraryEntry.FileState, have: Int? = nil, total: Int? = nil, locale: Locale) {
+        self.state = state
+        self.have = have
+        self.total = total
+        self.locale = locale
+    }
+
+    public var body: some View {
+        StateChip(
+            text: state.statusText(have: have, total: total, locale: locale),
+            color: state.chipColor ?? .secondary
+        )
+    }
+}
+
 public struct InLibraryBadge: View {
     public init() {}
 
