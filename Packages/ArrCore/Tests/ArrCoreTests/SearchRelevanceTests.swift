@@ -17,7 +17,7 @@ private func result(
     sourceRank: Int = 0
 ) -> SearchResult {
     SearchResult(
-        id: id, foreignId: foreignId, title: title, subtitle: nil,
+        externalId: id, foreignId: foreignId, title: title, subtitle: nil,
         year: year, rating: rating, votes: votes,
         imdb: nil, rottenTomatoes: nil, metacritic: nil,
         overview: nil, runtime: nil, genres: [], network: nil,
@@ -205,7 +205,7 @@ struct SearchRelevanceRankingTests {
             result("Audition", id: 4),
         ]
         let sorted = SearchRelevance.sortedByRelevance(results, input: .text("audi"))
-        #expect(sorted.map(\.id) == [3, 4, 2, 1])
+        #expect(sorted.map(\.externalId) == [3, 4, 2, 1])
     }
 
     /// Nothing to rank by means nothing to reorder — the caller's own order
@@ -213,14 +213,14 @@ struct SearchRelevanceRankingTests {
     @Test("An empty query leaves the caller's order untouched")
     func emptyQueryPreservesOrder() {
         let results = [result("Zed", id: 1), result("Alpha", id: 2)]
-        #expect(SearchRelevance.sortedByRelevance(results, input: .text("   ")).map(\.id) == [1, 2])
+        #expect(SearchRelevance.sortedByRelevance(results, input: .text("   ")).map(\.externalId) == [1, 2])
     }
 
     @Test("The legacy string entry point matches the input-typed one")
     func legacyQueryOverload() {
         let results = [result("Foo Bar Baz", id: 1), result("Foo", id: 2)]
-        #expect(SearchRelevance.sortedByRelevance(results, query: "foo").map(\.id)
-                == SearchRelevance.sortedByRelevance(results, input: .text("foo")).map(\.id))
+        #expect(SearchRelevance.sortedByRelevance(results, query: "foo").map(\.externalId)
+                == SearchRelevance.sortedByRelevance(results, input: .text("foo")).map(\.externalId))
     }
 }
 
@@ -463,7 +463,7 @@ struct SearchRelevanceModifierTests {
         let obscure = result("Foo Baz", id: 2, sourceRank: 30)
 
         let sorted = SearchRelevance.sortedByRelevance([obscure, popular], input: .text("foo"))
-        #expect(sorted.map(\.id) == [1, 2])
+        #expect(sorted.map(\.externalId) == [1, 2])
     }
 
     /// Upstream position is a nudge, not a verdict — it must never drag a
@@ -474,7 +474,7 @@ struct SearchRelevanceModifierTests {
         let prefixButFirst = result("Foo Bar Baz", id: 2, sourceRank: 0)
 
         let sorted = SearchRelevance.sortedByRelevance([prefixButFirst, exactButDeep], input: .text("foo"))
-        #expect(sorted.map(\.id) == [1, 2])
+        #expect(sorted.map(\.externalId) == [1, 2])
     }
 }
 
@@ -538,19 +538,19 @@ struct DemoSearchRefTests {
         let imdbId = try #require(target.imdbId)
 
         let hits = DemoMocks.searchResults(for: "imdb:\(imdbId)", source: .radarr)
-        #expect(hits.map(\.id) == [target.id])
+        #expect(hits.map(\.externalId) == [target.externalId])
 
         // …and survives the ranker's ref filter, which is the step that used
         // to throw the record away even when the lookup found it.
         let sorted = SearchRelevance.sortedByRelevance(hits, input: QueryParser.parse("imdb:\(imdbId)"))
-        #expect(sorted.map(\.id) == [target.id])
+        #expect(sorted.map(\.externalId) == [target.externalId])
     }
 
     @Test("A TMDB ref resolves against the demo pool")
     func demoResolvesTMDBRef() throws {
         let target = try #require(DemoMocks.radarrSearchPool.first)
-        let hits = DemoMocks.searchResults(for: "tmdb:\(target.id)", source: .radarr)
-        #expect(hits.map(\.id) == [target.id])
+        let hits = DemoMocks.searchResults(for: "tmdb:\(target.externalId)", source: .radarr)
+        #expect(hits.map(\.externalId) == [target.externalId])
     }
 
     /// Every demo record carries an id so both id schemes are exercisable.

@@ -114,7 +114,7 @@ public struct DemoChatProvider: LLMProvider {
 
     private static let moviePool: [SearchResult] = [
         SearchResult(
-            id: 335984, foreignId: "335984",
+            externalId: 335984, foreignId: "335984",
             title: "Blade Runner 2049", subtitle: nil, year: 2017,
             rating: 8.0, imdb: 8.0, rottenTomatoes: 88, metacritic: 81,
             overview: "Thirty years after the events of the first film, a new blade runner unearths a long-buried secret that has the potential to plunge what's left of society into chaos.",
@@ -125,7 +125,7 @@ public struct DemoChatProvider: LLMProvider {
             source: .radarr, inLibraryArrId: nil
         ),
         SearchResult(
-            id: 693134, foreignId: "693134",
+            externalId: 693134, foreignId: "693134",
             title: "Dune: Part Two", subtitle: nil, year: 2024,
             rating: 8.4, imdb: 8.5, rottenTomatoes: 92, metacritic: 79,
             overview: "Paul Atreides unites with the Fremen and begins a spiritual and martial journey to become Muad'Dib, while seeking revenge against the conspirators who destroyed his family.",
@@ -136,7 +136,7 @@ public struct DemoChatProvider: LLMProvider {
             source: .radarr, inLibraryArrId: nil
         ),
         SearchResult(
-            id: 666277, foreignId: "666277",
+            externalId: 666277, foreignId: "666277",
             title: "Past Lives", subtitle: nil, year: 2023,
             rating: 7.9, imdb: 7.8, rottenTomatoes: 96, metacritic: 94,
             overview: "Nora and Hae Sung, two deeply connected childhood friends, are wrest apart after Nora's family emigrates from South Korea. Two decades later, they are reunited for one fateful week.",
@@ -147,7 +147,7 @@ public struct DemoChatProvider: LLMProvider {
             source: .radarr, inLibraryArrId: nil
         ),
         SearchResult(
-            id: 545611, foreignId: "545611",
+            externalId: 545611, foreignId: "545611",
             title: "Everything Everywhere All at Once", subtitle: nil, year: 2022,
             rating: 8.0, imdb: 7.8, rottenTomatoes: 94, metacritic: 81,
             overview: "An aging Chinese immigrant is swept up in an insane adventure, where she alone can save the world by exploring other universes connecting with the lives she could have led.",
@@ -158,7 +158,7 @@ public struct DemoChatProvider: LLMProvider {
             source: .radarr, inLibraryArrId: nil
         ),
         SearchResult(
-            id: 76600, foreignId: "76600",
+            externalId: 76600, foreignId: "76600",
             title: "Avatar: The Way of Water", subtitle: nil, year: 2022,
             rating: 7.6, imdb: 7.6, rottenTomatoes: 76, metacritic: 67,
             overview: "Set more than a decade after the events of the first film, learn the story of the Sully family, the trouble that follows them, the lengths they go to keep each other safe, and the tragedies they endure.",
@@ -169,7 +169,7 @@ public struct DemoChatProvider: LLMProvider {
             source: .radarr, inLibraryArrId: nil
         ),
         SearchResult(
-            id: 502356, foreignId: "502356",
+            externalId: 502356, foreignId: "502356",
             title: "The Super Mario Bros. Movie", subtitle: nil, year: 2023,
             rating: 7.0, imdb: 7.0, rottenTomatoes: 59, metacritic: 46,
             overview: "While working underground to fix a water main, Brooklyn plumbers — and brothers — Mario and Luigi are transported down a mysterious pipe and wander into a magical new world.",
@@ -180,7 +180,7 @@ public struct DemoChatProvider: LLMProvider {
             source: .radarr, inLibraryArrId: nil
         ),
         SearchResult(
-            id: 872585, foreignId: "872585",
+            externalId: 872585, foreignId: "872585",
             title: "Oppenheimer", subtitle: nil, year: 2023,
             rating: 8.1, imdb: 8.3, rottenTomatoes: 93, metacritic: 90,
             overview: "The story of J. Robert Oppenheimer's role in the development of the atomic bomb during World War II.",
@@ -191,7 +191,7 @@ public struct DemoChatProvider: LLMProvider {
             source: .radarr, inLibraryArrId: nil
         ),
         SearchResult(
-            id: 346698, foreignId: "346698",
+            externalId: 346698, foreignId: "346698",
             title: "Barbie", subtitle: nil, year: 2023,
             rating: 7.1, imdb: 6.8, rottenTomatoes: 88, metacritic: 80,
             overview: "Barbie suffers a crisis that leads her to question her world and her existence.",
@@ -205,7 +205,7 @@ public struct DemoChatProvider: LLMProvider {
 
     private static let seriesPool: [SearchResult] = [
         SearchResult(
-            id: 369802, foreignId: "369802",
+            externalId: 369802, foreignId: "369802",
             title: "Severance", subtitle: "2 seasons", year: 2022,
             rating: 8.7, imdb: nil, rottenTomatoes: nil, metacritic: nil,
             overview: "Mark leads a team of office workers whose memories have been surgically divided between their work and personal lives. When a mysterious colleague appears outside of work, it begins a journey to discover the truth.",
@@ -216,7 +216,7 @@ public struct DemoChatProvider: LLMProvider {
             source: .sonarr, inLibraryArrId: nil
         ),
         SearchResult(
-            id: 388477, foreignId: "388477",
+            externalId: 388477, foreignId: "388477",
             title: "The Bear", subtitle: "3 seasons", year: 2022,
             rating: 8.6, imdb: nil, rottenTomatoes: nil, metacritic: nil,
             overview: "A young chef from the fine dining world returns to Chicago to run his deceased brother's Italian beef sandwich shop.",
@@ -227,7 +227,7 @@ public struct DemoChatProvider: LLMProvider {
             source: .sonarr, inLibraryArrId: nil
         ),
         SearchResult(
-            id: 386818, foreignId: "386818",
+            externalId: 386818, foreignId: "386818",
             title: "Andor", subtitle: "1 season", year: 2022,
             rating: 8.4, imdb: nil, rottenTomatoes: nil, metacritic: nil,
             overview: "In an era filled with danger, deception and intrigue, Cassian Andor embarks on the path that is destined to turn him into a rebel hero.",
@@ -238,7 +238,7 @@ public struct DemoChatProvider: LLMProvider {
             source: .sonarr, inLibraryArrId: nil
         ),
         SearchResult(
-            id: 408463, foreignId: "408463",
+            externalId: 408463, foreignId: "408463",
             title: "Shogun", subtitle: "1 season", year: 2024,
             rating: 8.8, imdb: nil, rottenTomatoes: nil, metacritic: nil,
             overview: "In Japan in the year 1600, at the dawn of a century-defining civil war, Lord Yoshii Toranaga is fighting for his life as his enemies on the Council of Regents unite against him.",
@@ -249,7 +249,7 @@ public struct DemoChatProvider: LLMProvider {
             source: .sonarr, inLibraryArrId: nil
         ),
         SearchResult(
-            id: 392276, foreignId: "392276",
+            externalId: 392276, foreignId: "392276",
             title: "House of the Dragon", subtitle: "2 seasons", year: 2022,
             rating: 8.4, imdb: nil, rottenTomatoes: nil, metacritic: nil,
             overview: "The Targaryen dynasty is at the absolute apex of its power, with more than 15 dragons under their yoke. Most empires crumble from such heights. In the case of the Targaryens, their slow fall begins almost 193 years before the events of Game of Thrones.",
@@ -260,7 +260,7 @@ public struct DemoChatProvider: LLMProvider {
             source: .sonarr, inLibraryArrId: nil
         ),
         SearchResult(
-            id: 392256, foreignId: "392256",
+            externalId: 392256, foreignId: "392256",
             title: "Fallout", subtitle: "1 season", year: 2024,
             rating: 8.4, imdb: nil, rottenTomatoes: nil, metacritic: nil,
             overview: "In a future, post-apocalyptic Los Angeles brought about by nuclear decimation, citizens must live in underground bunkers to protect themselves from radiation, mutants and bandits.",
@@ -271,7 +271,7 @@ public struct DemoChatProvider: LLMProvider {
             source: .sonarr, inLibraryArrId: nil
         ),
         SearchResult(
-            id: 396583, foreignId: "396583",
+            externalId: 396583, foreignId: "396583",
             title: "The Last of Us", subtitle: "1 season", year: 2023,
             rating: 8.7, imdb: nil, rottenTomatoes: nil, metacritic: nil,
             overview: "Twenty years after modern civilization has been destroyed, Joel, a hardened survivor, is hired to smuggle Ellie, a 14-year-old girl, out of an oppressive quarantine zone.",
@@ -282,7 +282,7 @@ public struct DemoChatProvider: LLMProvider {
             source: .sonarr, inLibraryArrId: nil
         ),
         SearchResult(
-            id: 359774, foreignId: "359774",
+            externalId: 359774, foreignId: "359774",
             title: "Slow Horses", subtitle: "4 seasons", year: 2022,
             rating: 8.3, imdb: nil, rottenTomatoes: nil, metacritic: nil,
             overview: "Follow a team of British intelligence agents who serve as a dumping ground department of MI5 due to their career-ending mistakes.",

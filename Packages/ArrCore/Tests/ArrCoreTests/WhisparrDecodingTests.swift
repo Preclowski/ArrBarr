@@ -339,7 +339,7 @@ struct WhisparrLookupDecodingTests {
         let record = try #require(records.first)
         let result = try #require(SearchClient.unifyWhisparr(record, baseURL: baseURL))
 
-        #expect(result.id == 987654)
+        #expect(result.externalId == 987654)
         #expect(result.foreignId == "987654")
         #expect(result.title == "Scene Title")
         #expect(result.year == 2024)
@@ -370,9 +370,9 @@ struct WhisparrLookupDecodingTests {
         // The synthesized id only has to be non-negative and stable within a
         // run — it's derived from the foreign id's hash, which Swift seeds
         // per process, so its actual value is not a contract.
-        #expect(result.id >= 0)
+        #expect(result.externalId >= 0)
         let again = try #require(SearchClient.unifyWhisparr(record, baseURL: baseURL))
-        #expect(again.id == result.id)
+        #expect(again.externalId == result.externalId)
     }
 
     /// With no id of any kind there is nothing to add to the library or route

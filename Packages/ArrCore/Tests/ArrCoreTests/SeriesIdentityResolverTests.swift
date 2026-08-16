@@ -151,9 +151,9 @@ struct SeriesIdentityResolverTests {
             let record = await SeriesIdentityResolver.sonarrRecord(
                 tmdbTVId: Fixtures.tmdbTVId, sonarrConfig: config(port: 8001), tmdbKey: "k")
 
-            #expect(record?.id == Fixtures.tvdbId)
+            #expect(record?.externalId == Fixtures.tvdbId)
             #expect(record?.year == 2005)
-            #expect(record?.id != Fixtures.decoyTVDBId)
+            #expect(record?.externalId != Fixtures.decoyTVDBId)
             // The regression itself: no request may carry the bare title as
             // its search term.
             #expect(ResolverStub.state.requests(matching: "term=The%20Closer").isEmpty)
@@ -172,7 +172,7 @@ struct SeriesIdentityResolverTests {
             let record = await SeriesIdentityResolver.sonarrRecord(
                 tmdbTVId: Fixtures.tmdbTVId, sonarrConfig: config(port: 8002), tmdbKey: "k")
 
-            #expect(record?.id == Fixtures.tvdbId)
+            #expect(record?.externalId == Fixtures.tvdbId)
             #expect(record?.title == "The Closer")
             #expect(record?.overview == "The one they meant.")
             // Rejecting the fuzzy answer is what forced the TMDB hop.
@@ -188,7 +188,7 @@ struct SeriesIdentityResolverTests {
             let record = await SeriesIdentityResolver.sonarrRecord(
                 tmdbTVId: Fixtures.tmdbTVId, sonarrConfig: config(port: 8003), tmdbKey: "k")
 
-            #expect(record?.id == Fixtures.tvdbId)
+            #expect(record?.externalId == Fixtures.tvdbId)
             #expect(ResolverStub.state.requests(matching: "/external_ids").isEmpty)
         }
     }
@@ -230,7 +230,7 @@ struct SeriesIdentityResolverTests {
             let again = await SeriesIdentityResolver.sonarrRecord(
                 tmdbTVId: Fixtures.tmdbTVId, sonarrConfig: cfg, tmdbKey: "k")
 
-            #expect(again?.id == Fixtures.tvdbId)
+            #expect(again?.externalId == Fixtures.tvdbId)
             #expect(ResolverStub.state.requests.count == firstCount)
         }
     }
@@ -245,8 +245,8 @@ struct SeriesIdentityResolverTests {
                 tmdbTVId: Fixtures.tmdbTVId, sonarrConfig: cfg, tmdbKey: "k")
             let (first, second) = await (a, b)
 
-            #expect(first?.id == Fixtures.tvdbId)
-            #expect(second?.id == Fixtures.tvdbId)
+            #expect(first?.externalId == Fixtures.tvdbId)
+            #expect(second?.externalId == Fixtures.tvdbId)
             #expect(ResolverStub.state.requests(matching: "/external_ids").count == 1)
         }
     }
@@ -262,12 +262,12 @@ struct SeriesIdentityResolverTests {
             defer { vm.reset() }
 
             let lean = TMDBSearchMapping.series([tvSummary()]).first!
-            #expect(lean.id == 0)
+            #expect(lean.externalId == 0)
             #expect(lean.tmdbTVId == Fixtures.tmdbTVId)
 
             let enriched = await vm.enrich(lean)
 
-            #expect(enriched?.id == Fixtures.tvdbId)
+            #expect(enriched?.externalId == Fixtures.tvdbId)
             #expect(enriched?.overview == "The one they meant.")
             #expect(ResolverStub.state.requests(matching: "term=The%20Closer").isEmpty)
         }
@@ -292,7 +292,7 @@ struct SeriesIdentityResolverTests {
             let enriched = await vm.enrich(lean)
 
             // Identity and metadata come from Sonarr…
-            #expect(enriched?.id == Fixtures.tvdbId)
+            #expect(enriched?.externalId == Fixtures.tvdbId)
             #expect(enriched?.runtime == 45)
             #expect(enriched?.network == "TNT")
             // …the image the user is looking at does not change under them.

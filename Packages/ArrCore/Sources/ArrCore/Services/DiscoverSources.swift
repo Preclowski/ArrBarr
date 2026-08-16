@@ -41,7 +41,7 @@ public enum DiscoverSources {
                     // derived from a library card point at an unrelated title;
                     // the arr id has its own homes — `inLibraryArrId` and the
                     // card's `.openDetail(arrId:)` action.
-                    id: rec.tmdbId ?? 0, foreignId: rec.tmdbId.map(String.init) ?? "",
+                    externalId: rec.tmdbId ?? 0, foreignId: rec.tmdbId.map(String.init) ?? "",
                     title: title, subtitle: nil,
                     year: rec.year,
                     rating: rec.ratings?.tmdb?.value,
@@ -94,7 +94,7 @@ public enum DiscoverSources {
                 let result = SearchResult(
                     // The tvdbId, for the same reason as the movie source
                     // above — `id` names the title, not the arr record.
-                    id: rec.tvdbId ?? 0, foreignId: rec.tvdbId.map(String.init) ?? "",
+                    externalId: rec.tvdbId ?? 0, foreignId: rec.tvdbId.map(String.init) ?? "",
                     title: title, subtitle: nil,
                     year: rec.year, rating: nil, imdb: nil,
                     rottenTomatoes: nil, metacritic: nil,
@@ -156,7 +156,7 @@ public enum DiscoverSources {
                     let tmdbId = first.tmdbId ?? 0
                     let poster: URL? = posterURL(from: first.images)
                     let result = SearchResult(
-                        id: tmdbId, foreignId: tmdbId == 0 ? "" : String(tmdbId),
+                        externalId: tmdbId, foreignId: tmdbId == 0 ? "" : String(tmdbId),
                         title: first.title, subtitle: nil,
                         year: first.year,
                         rating: first.ratings?.tmdb?.value,
@@ -178,7 +178,7 @@ public enum DiscoverSources {
                     let tvdbId = first.tvdbId ?? 0
                     let poster: URL? = posterURL(from: first.images)
                     let result = SearchResult(
-                        id: tvdbId, foreignId: tvdbId == 0 ? "" : String(tvdbId),
+                        externalId: tvdbId, foreignId: tvdbId == 0 ? "" : String(tvdbId),
                         title: first.title, subtitle: nil,
                         year: first.year,
                         rating: first.ratings?.value,

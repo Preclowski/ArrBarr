@@ -322,7 +322,7 @@ public actor LocalToolBackend: ToolBackend {
             // The external ref rides along on every line. Without it the model
             // has no id for a title it is about to name in prose — and asked to
             // link that title, it will reach into memory and invent one.
-            let ref = r.id == 0 ? "" : " — \(r.mediaRef.urlString)"
+            let ref = r.mediaRef.isAddressable ? " — \(r.mediaRef.urlString)" : ""
             return "• \(r.title)\(yearPart)\(ref)"
         }
         // No more "pass tvdbId to sonarr_add_series" instruction — add tools

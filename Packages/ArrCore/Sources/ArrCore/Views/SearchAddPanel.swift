@@ -24,7 +24,7 @@ public struct SearchAddPanel: View {
         _result = State(initialValue: result)
         self.viewModel = viewModel
         self.onBack = onBack
-        self.identityKey = "\(result.source.rawValue):\(result.tmdbTVId ?? result.id)"
+        self.identityKey = result.id
     }
 
     /// Trailer for the title being added. Nil = no clip (or no TMDB key for
@@ -334,10 +334,10 @@ public struct SearchAddPanel: View {
         switch result.source {
         case .radarr, .whisparr:
             cast = await CastProvider.movieCast(
-                radarrMovieId: nil, tmdbId: result.id, configStore: configStore)
+                radarrMovieId: nil, tmdbId: result.externalId, configStore: configStore)
         case .sonarr:
             cast = await CastProvider.seriesCast(
-                tmdbId: result.tmdbTVId, tvdbId: result.id, demoSeriesId: nil,
+                tmdbId: result.tmdbTVId, tvdbId: result.externalId, demoSeriesId: nil,
                 configStore: configStore)
         case .lidarr:
             break  // no TMDB cast for music
@@ -394,8 +394,8 @@ public struct SearchAddPanel: View {
         if let v = result.rating {
             let isSeries = result.source == .sonarr
             let url = isSeries
-                ? RatingSiteLink.tvdbSeries(id: result.id, title: result.title)
-                : RatingSiteLink.tmdbMovie(id: result.id, title: result.title)
+                ? RatingSiteLink.tvdbSeries(id: result.externalId, title: result.title)
+                : RatingSiteLink.tmdbMovie(id: result.externalId, title: result.title)
             chips.append(RatingChip(label: isSeries ? "TVDB" : "TMDB",
                                     value: String(format: "%.1f", v), color: isSeries ? .blue : .teal,
                                     url: url, iconName: isSeries ? "rating-tvdb" : "rating-tmdb"))

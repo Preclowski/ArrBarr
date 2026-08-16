@@ -15,7 +15,7 @@ struct ChatPersonTests {
 
     private func result(id: Int, title: String, source: QueueItem.Source) -> SearchResult {
         SearchResult(
-            id: id, foreignId: String(id), title: title, subtitle: nil,
+            externalId: id, foreignId: String(id), title: title, subtitle: nil,
             year: 2019, rating: nil, imdb: nil, rottenTomatoes: nil,
             metacritic: nil, overview: nil, runtime: nil,
             genres: [], network: nil, certification: nil,

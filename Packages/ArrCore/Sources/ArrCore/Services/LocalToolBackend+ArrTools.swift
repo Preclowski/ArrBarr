@@ -107,7 +107,7 @@ extension LocalToolBackend {
         // is tvdbId for series / tmdbId for movies — matches the library
         // map's keys exactly.
         let tagged = resolved.map { entry -> SearchResult in
-            guard let arrId = libraryMap[entry.result.id] else { return entry.result }
+            guard let arrId = libraryMap[entry.result.externalId] else { return entry.result }
             return entry.result.withInLibraryArrId(arrId)
         }
         let results = excludeOwned ? tagged.filter { $0.inLibraryArrId == nil } : tagged
@@ -611,7 +611,10 @@ extension LocalToolBackend {
         let secondary = try await client.lookup(query: bareQuery)
         let secondaryYear = secondary.filter { $0.year == year }
         // Merge: year-matching from broader search first, then everything else.
-        var seen = Set<Int>()
+        // Keyed on row identity, not the foreign key: a TMDB-sourced series
+        // has no foreign key yet, so every one of them used to look like the
+        // same row and all but the first were dropped.
+        var seen = Set<String>()
         var merged: [SearchResult] = []
         for r in secondaryYear + primary + secondary where seen.insert(r.id).inserted {
             merged.append(r)

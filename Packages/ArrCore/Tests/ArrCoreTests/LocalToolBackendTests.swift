@@ -492,7 +492,7 @@ struct LocalToolBackendTests {
         #expect(result?.source == .lidarr)
         #expect(result?.year == nil)
         // id is hashed from foreignArtistId — must be non-negative
-        if let id = result?.id {
+        if let id = result?.externalId {
             #expect(id >= 0)
         }
     }

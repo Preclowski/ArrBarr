@@ -105,7 +105,7 @@ extension DemoMocks {
         seed: String, role: String, ownedId: Int?
     ) -> SearchResult {
         SearchResult(
-            id: id, foreignId: String(id), title: title, subtitle: role,
+            externalId: id, foreignId: String(id), title: title, subtitle: role,
             year: year, rating: rating,
             imdb: nil, rottenTomatoes: nil, metacritic: nil,
             overview: nil, runtime: nil, genres: [], network: nil,
@@ -122,7 +122,7 @@ extension DemoMocks {
         seed: String, role: String, ownedId: Int?
     ) -> SearchResult {
         SearchResult(
-            id: 0, foreignId: "", title: title, subtitle: role,
+            externalId: 0, foreignId: "", title: title, subtitle: role,
             year: year, rating: rating,
             imdb: nil, rottenTomatoes: nil, metacritic: nil,
             overview: nil, runtime: nil, genres: [], network: nil,

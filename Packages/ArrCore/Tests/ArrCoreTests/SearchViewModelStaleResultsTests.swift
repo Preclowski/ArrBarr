@@ -11,7 +11,7 @@ import Foundation
 struct SearchViewModelStaleResultsTests {
     private func result(id: Int) -> SearchResult {
         SearchResult(
-            id: id, foreignId: "f\(id)", title: "title \(id)", subtitle: nil,
+            externalId: id, foreignId: "f\(id)", title: "title \(id)", subtitle: nil,
             year: nil, rating: nil, imdb: nil, rottenTomatoes: nil,
             metacritic: nil, overview: nil, runtime: nil,
             genres: [], network: nil, certification: nil,

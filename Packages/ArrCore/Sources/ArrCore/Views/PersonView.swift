@@ -120,14 +120,15 @@ public struct PersonView: View {
                             .frame(maxWidth: .infinity, alignment: .center)
                             .padding(.vertical, 12)
                     } else {
-                        // Identity by \.self, NOT the default Identifiable id:
-                        // series rows all carry `id: 0` (the tvdb id is only
-                        // resolved at add time), and a ForEach full of duplicate
-                        // ids breaks SwiftUI's diffing — it drew the FIRST show
-                        // over and over (the "104 × The Simpsons" bug) and
-                        // re-diffed the whole stack on every state change, which
-                        // is what made the entire app stutter.
-                        ForEach(rows, id: \.self) { result in
+                        // Plain `Identifiable` again. This used to key on
+                        // `\.self` because every series row carried `id: 0` and
+                        // a ForEach full of duplicate ids breaks SwiftUI's
+                        // diffing — it drew the FIRST show over and over (the
+                        // "104 × The Simpsons" bug) and re-diffed the whole
+                        // stack on every state change. `SearchResult.id` is a
+                        // real per-row identity now, so the workaround (and
+                        // hashing an entire struct per row) can go.
+                        ForEach(rows) { result in
                             PersonFilmographyRow(result: result) { openTitle(result) }
                         }
                     }

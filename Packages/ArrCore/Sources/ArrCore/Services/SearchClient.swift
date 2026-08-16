@@ -320,7 +320,7 @@ public actor SearchClient {
         // write path is the last place to start guessing: this used to fall
         // back to a title lookup and take the first hit, which quietly added
         // a different series with the same name to the user's library.
-        let tvdbId = result.id
+        let tvdbId = result.externalId
         guard tvdbId > 0 else {
             throw HTTPError.decoding(NSError(
                 domain: "ArrBarr.SonarrAdd",
@@ -471,7 +471,7 @@ public actor SearchClient {
         guard let tmdbId = r.tmdbId else { return nil }
         let (poster, _) = (r.images?.posterURL(baseURL: baseURL) ?? (nil, false))
         return SearchResult(
-            id: tmdbId, foreignId: String(tmdbId),
+            externalId: tmdbId, foreignId: String(tmdbId),
             title: r.title, subtitle: nil,
             year: r.year, rating: r.ratings?.tmdb?.value,
             // TMDB vote_count — feeds the Bayesian tie-breaker in
@@ -498,7 +498,7 @@ public actor SearchClient {
         let seasons = r.statistics?.seasonCount
         let subtitle = seasons.map { "\($0) season\($0 == 1 ? "" : "s")" }
         return SearchResult(
-            id: tvdbId, foreignId: String(tvdbId),
+            externalId: tvdbId, foreignId: String(tvdbId),
             title: r.title, subtitle: subtitle,
             year: r.year, rating: r.ratings?.value,
             // TVDB vote count — was never passed, so the Bayesian shrinkage
@@ -533,7 +533,7 @@ public actor SearchClient {
         }
         let poster = r.images?.posterURL(baseURL: baseURL) ?? (nil, false)
         return SearchResult(
-            id: stableId,
+            externalId: stableId,
             foreignId: foreign,
             title: r.title,
             subtitle: nil,
@@ -566,7 +566,7 @@ public actor SearchClient {
         let subtitle = [r.artist?.artistName, r.albumType]
             .compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · ")
         return SearchResult(
-            id: stableId,
+            externalId: stableId,
             foreignId: foreign,
             title: r.title,
             subtitle: subtitle.isEmpty ? r.disambiguation : subtitle,
@@ -598,7 +598,7 @@ public actor SearchClient {
         let (poster, _) = r.images?.posterURL(baseURL: baseURL, coverTypes: ["poster", "cover"]) ?? (nil, false)
         let stableId = abs(foreign.hashValue) & 0x7fffffff
         return SearchResult(
-            id: stableId,
+            externalId: stableId,
             foreignId: foreign,
             title: r.artistName,
             subtitle: r.disambiguation,

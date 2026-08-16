@@ -79,7 +79,7 @@ extension LocalToolBackend {
                 let tmdbId = first.tmdbId ?? 0
                 let poster = (first.images ?? []).posterURL(baseURL: radarr.baseURL).0
                 let resultBase = SearchResult(
-                    id: tmdbId, foreignId: tmdbId == 0 ? "" : String(tmdbId),
+                    externalId: tmdbId, foreignId: tmdbId == 0 ? "" : String(tmdbId),
                     title: first.title, subtitle: nil,
                     year: first.year,
                     rating: first.ratings?.tmdb?.value,
@@ -110,7 +110,7 @@ extension LocalToolBackend {
                 let tvdbId = first.tvdbId ?? 0
                 let poster = (first.images ?? []).posterURL(baseURL: sonarr.baseURL).0
                 let resultBase = SearchResult(
-                    id: tvdbId, foreignId: tvdbId == 0 ? "" : String(tvdbId),
+                    externalId: tvdbId, foreignId: tvdbId == 0 ? "" : String(tvdbId),
                     title: first.title, subtitle: nil,
                     year: first.year,
                     rating: first.ratings?.value,
@@ -265,7 +265,7 @@ extension LocalToolBackend {
                                 let tmdbId = first.tmdbId ?? 0
                                 let poster: URL? = (first.images ?? []).posterURL(baseURL: radarrClient.config.baseURL).0
                                 let result = SearchResult(
-                                    id: tmdbId, foreignId: tmdbId == 0 ? "" : String(tmdbId),
+                                    externalId: tmdbId, foreignId: tmdbId == 0 ? "" : String(tmdbId),
                                     title: first.title, subtitle: nil,
                                     year: first.year,
                                     rating: first.ratings?.tmdb?.value,
@@ -292,7 +292,7 @@ extension LocalToolBackend {
                                 let tvdbId = first.tvdbId ?? 0
                                 let poster: URL? = (first.images ?? []).posterURL(baseURL: sonarrClient.config.baseURL).0
                                 let result = SearchResult(
-                                    id: tvdbId, foreignId: tvdbId == 0 ? "" : String(tvdbId),
+                                    externalId: tvdbId, foreignId: tvdbId == 0 ? "" : String(tvdbId),
                                     title: first.title, subtitle: nil,
                                     year: first.year,
                                     rating: first.ratings?.value,
@@ -328,7 +328,7 @@ extension LocalToolBackend {
         for anchorList in perAnchor {
             for item in anchorList {
                 guard seen.insert(item.dedupKey).inserted else { continue }
-                let metadataId = item.result.id
+                let metadataId = item.result.externalId
                 if let arrId = libraryMap[metadataId] {
                     if libraryMode == "new" { continue }
                     let owned = item.result.withInLibraryArrId(arrId)

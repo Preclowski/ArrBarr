@@ -155,17 +155,17 @@ public enum MediaRef: Hashable, Sendable {
 public extension SearchResult {
     /// Source-aware canonical identity. Lets call sites compare or
     /// route by `MediaRef` without re-deriving the scheme from
-    /// `source` + `id` everywhere.
+    /// `source` + `externalId` everywhere.
     var mediaRef: MediaRef {
         switch source {
-        case .radarr, .whisparr: return .tmdb(id)
+        case .radarr, .whisparr: return .tmdb(externalId)
         case .sonarr:
-            // A TMDB-sourced row has no tvdbId yet (`id` is still 0) but does
-            // know which show it is. Saying so — rather than reporting
+            // A TMDB-sourced row has no tvdbId yet (`externalId` is still 0)
+            // but does know which show it is. Saying so — rather than reporting
             // `.tvdb(0)`, an id that names nothing — is what lets these rows be
             // linked and routed at all.
-            if id == 0, let tmdbTVId { return .tmdbTV(tmdbTVId) }
-            return .tvdb(id)
+            if externalId == 0, let tmdbTVId { return .tmdbTV(tmdbTVId) }
+            return .tvdb(externalId)
         case .lidarr:            return .musicBrainz(foreignId)
         }
     }

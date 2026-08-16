@@ -4,10 +4,10 @@ import Foundation
 
 @Suite("DiscoverItem & DiscoverFilter")
 struct DiscoverItemTests {
-    private func mockSearchResult(id: Int = 42, title: String = "Drive",
+    private func mockSearchResult(externalId: Int = 42, title: String = "Drive",
                                   year: Int? = 2011) -> SearchResult {
         SearchResult(
-            id: id, foreignId: String(id), title: title, subtitle: nil,
+            externalId: externalId, foreignId: String(externalId), title: title, subtitle: nil,
             year: year, rating: nil, imdb: nil, rottenTomatoes: nil,
             metacritic: nil, overview: "drive overview", runtime: 100,
             genres: ["Crime"], network: nil, certification: nil,
@@ -17,14 +17,14 @@ struct DiscoverItemTests {
 
     @Test("dedupKey prefers the TMDB id carried in foreignId")
     func dedupKeyUsesTmdbIdFromForeignId() {
-        let item = DiscoverItem(result: mockSearchResult(id: 42), action: .addToRadarr)
+        let item = DiscoverItem(result: mockSearchResult(externalId: 42), action: .addToRadarr)
         #expect(item.dedupKey == "tmdb:42")
     }
 
     @Test("dedupKey falls back to title+year when there is no foreignId")
     func dedupKeyFallsBackToTitleYear() {
         let result = SearchResult(
-            id: 0, foreignId: "", title: "Untitled", subtitle: nil,
+            externalId: 0, foreignId: "", title: "Untitled", subtitle: nil,
             year: 1999, rating: nil, imdb: nil, rottenTomatoes: nil,
             metacritic: nil, overview: nil, runtime: nil,
             genres: [], network: nil, certification: nil,
@@ -109,7 +109,7 @@ struct DiscoverItemTests {
         let items = (try? await source(DiscoverFilter())) ?? []
         let card = items.first
 
-        #expect(card?.result.id == 550)
+        #expect(card?.result.externalId == 550)
         #expect(card?.result.mediaRef == .tmdb(550))
         // The arr id is still there, in the two places that mean "the record".
         #expect(card?.result.inLibraryArrId == 4242)

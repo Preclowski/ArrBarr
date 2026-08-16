@@ -76,7 +76,7 @@ enum SeriesIdentityResolver {
         }
         // A resolved record is also the answer to "what is its tvdbId", so the
         // add path never re-resolves what the panel already worked out.
-        if let id = record?.id, id > 0 { tvdbIds.store(id, for: tmdbTVId) }
+        if let id = record?.externalId, id > 0 { tvdbIds.store(id, for: tmdbTVId) }
         return record
     }
 
@@ -101,7 +101,7 @@ enum SeriesIdentityResolver {
             // even when TMDB has no tvdb id on file.
             let record = await sonarrRecord(
                 tmdbTVId: tmdbTVId, sonarrConfig: sonarrConfig, tmdbKey: tmdbKey)
-            return (record?.id).flatMap { $0 > 0 ? $0 : nil }
+            return (record?.externalId).flatMap { $0 > 0 ? $0 : nil }
         }
     }
 
@@ -125,7 +125,7 @@ enum SeriesIdentityResolver {
         let fingerprint = sonarrConfig.identityFingerprint
         if acceptsTMDBTerm[fingerprint] != false {
             let candidates = (try? await client.lookup(query: MediaRef.tmdbTV(tmdbTVId).lookupTerm)) ?? []
-            if let hit = candidates.first(where: { $0.tmdbTVId == tmdbTVId && $0.id > 0 }) {
+            if let hit = candidates.first(where: { $0.tmdbTVId == tmdbTVId && $0.externalId > 0 }) {
                 acceptsTMDBTerm[fingerprint] = true
                 logResolution(tmdbTVId, hit, via: "sonarr tmdb: term")
                 return hit
@@ -160,7 +160,7 @@ enum SeriesIdentityResolver {
     /// diagnostic you cannot read afterwards is not a diagnostic.
     private static func logResolution(_ tmdbTVId: Int, _ record: SearchResult, via route: String) {
         log.notice("""
-            tmdb tv \(tmdbTVId, privacy: .public) → tvdb \(record.id, privacy: .public) \
+            tmdb tv \(tmdbTVId, privacy: .public) → tvdb \(record.externalId, privacy: .public) \
             "\(record.title, privacy: .public)" (\(record.year ?? 0, privacy: .public)) via \(route, privacy: .public)
             """)
     }
@@ -181,7 +181,7 @@ enum SeriesIdentityResolver {
     /// back and we'd rather have nothing.
     private static func lookupTVDB(_ tvdbId: Int, client: SearchClient) async -> SearchResult? {
         let candidates = (try? await client.lookup(input: .ref(.tvdb(tvdbId)))) ?? []
-        return candidates.first { $0.id == tvdbId }
+        return candidates.first { $0.externalId == tvdbId }
     }
 
     #if DEBUG

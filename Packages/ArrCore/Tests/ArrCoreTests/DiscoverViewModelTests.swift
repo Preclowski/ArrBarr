@@ -15,7 +15,7 @@ struct DiscoverViewModelTests {
 
     private func makeItem(_ id: Int, _ origin: DiscoverItem.Origin) -> DiscoverItem {
         let r = SearchResult(
-            id: id, foreignId: String(id), title: "T\(id)", subtitle: nil,
+            externalId: id, foreignId: String(id), title: "T\(id)", subtitle: nil,
             year: 2010, rating: nil, imdb: nil, rottenTomatoes: nil,
             metacritic: nil, overview: nil, runtime: 100,
             genres: [], network: nil, certification: nil,

@@ -217,7 +217,7 @@ extension DemoMocks {
         let discoverable = radarrSearchPool.map { result in
             RadarrLookupRecord(
                 // id 0 = not in the library; the card renders as addable.
-                id: 0, tmdbId: result.id, title: result.title, year: result.year,
+                id: 0, tmdbId: result.externalId, title: result.title, year: result.year,
                 overview: result.overview, runtime: result.runtime,
                 ratings: RadarrLookupRatings(
                     tmdb: RadarrLookupRatingValue(value: result.rating, votes: 900),
@@ -245,7 +245,7 @@ extension DemoMocks {
         }
         let discoverable = sonarrSearchPool.map { result in
             SonarrLookupRecord(
-                id: 0, tvdbId: result.id, title: result.title, year: result.year,
+                id: 0, tvdbId: result.externalId, title: result.title, year: result.year,
                 overview: result.overview,
                 ratings: SonarrLookupRatings(value: result.rating),
                 images: poster(from: result),

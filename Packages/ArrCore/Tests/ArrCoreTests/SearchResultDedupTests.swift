@@ -6,7 +6,7 @@ import Foundation
 struct SearchResultDedupTests {
     private func result(id: Int, foreignId: String = "foreign", title: String = "title", inLibraryArrId: Int?) -> SearchResult {
         SearchResult(
-            id: id, foreignId: foreignId, title: title, subtitle: nil,
+            externalId: id, foreignId: foreignId, title: title, subtitle: nil,
             year: nil, rating: nil, imdb: nil, rottenTomatoes: nil,
             metacritic: nil, overview: nil, runtime: nil,
             genres: [], network: nil, certification: nil,
@@ -37,7 +37,7 @@ struct SearchResultDedupTests {
         let lib = [result(id: 1, inLibraryArrId: 42), result(id: 2, inLibraryArrId: 99)]
         let queue: [QueueRowEntry] = [.single(queueItem(entityId: 42))]
         let out = SearchResultDedup.removingQueueDuplicates(libraryResults: lib, queueRows: queue)
-        #expect(out.map(\.id) == [2])
+        #expect(out.map(\.externalId) == [2])
     }
 
     @Test("Result matching any member of a group is removed")
@@ -54,7 +54,7 @@ struct SearchResultDedupTests {
         let lib = [result(id: 1, inLibraryArrId: nil)]
         let queue: [QueueRowEntry] = [.single(queueItem(entityId: 42))]
         let out = SearchResultDedup.removingQueueDuplicates(libraryResults: lib, queueRows: queue)
-        #expect(out.map(\.id) == [1])
+        #expect(out.map(\.externalId) == [1])
     }
 
     @Test("Queue items with nil entityId never match")
@@ -62,14 +62,14 @@ struct SearchResultDedupTests {
         let lib = [result(id: 1, inLibraryArrId: 42)]
         let queue: [QueueRowEntry] = [.single(queueItem(entityId: nil))]
         let out = SearchResultDedup.removingQueueDuplicates(libraryResults: lib, queueRows: queue)
-        #expect(out.map(\.id) == [1])
+        #expect(out.map(\.externalId) == [1])
     }
 
     @Test("Empty queue passes library through unchanged")
     func emptyQueue() {
         let lib = [result(id: 1, inLibraryArrId: 42), result(id: 2, inLibraryArrId: 99)]
         let out = SearchResultDedup.removingQueueDuplicates(libraryResults: lib, queueRows: [])
-        #expect(out.map(\.id) == [1, 2])
+        #expect(out.map(\.externalId) == [1, 2])
     }
 
     @Test("Preserves order of surviving results")
@@ -81,6 +81,6 @@ struct SearchResultDedupTests {
         ]
         let queue: [QueueRowEntry] = [.single(queueItem(entityId: 2))]
         let out = SearchResultDedup.removingQueueDuplicates(libraryResults: lib, queueRows: queue)
-        #expect(out.map(\.id) == [1, 3])
+        #expect(out.map(\.externalId) == [1, 3])
     }
 }

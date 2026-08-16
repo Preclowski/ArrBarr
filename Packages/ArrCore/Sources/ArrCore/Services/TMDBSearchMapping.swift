@@ -19,7 +19,7 @@ public enum TMDBSearchMapping {
     ) -> [SearchResult] {
         movies.map { m in
             SearchResult(
-                id: m.id,
+                externalId: m.id,
                 foreignId: String(m.id),
                 title: m.title,
                 subtitle: roles[m.id],
@@ -54,7 +54,7 @@ public enum TMDBSearchMapping {
     ) -> [SearchResult] {
         shows.map { s in
             SearchResult(
-                id: 0,
+                externalId: 0,
                 foreignId: "",
                 title: s.name,
                 subtitle: roles[s.id],

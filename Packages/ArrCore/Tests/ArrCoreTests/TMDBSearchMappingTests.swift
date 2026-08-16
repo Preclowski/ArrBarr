@@ -18,7 +18,7 @@ struct TMDBSearchMappingTests {
          "vote_average": 8.4, "genre_ids": [18], "overview": "…"}
         """#)
         let result = TMDBSearchMapping.movies([m]).first
-        #expect(result?.id == 550)
+        #expect(result?.externalId == 550)
         #expect(result?.foreignId == "550")
         #expect(result?.year == 1999)
         #expect(result?.source == .radarr)
@@ -42,7 +42,7 @@ struct TMDBSearchMappingTests {
         """#)
         let result = TMDBSearchMapping.series([s]).first
         // `id` is the tvdbId slot, which TMDB can't fill.
-        #expect(result?.id == 0)
+        #expect(result?.externalId == 0)
         // …but the row is no longer anonymous: this is what every downstream
         // consumer resolves from, instead of re-finding the show by name.
         #expect(result?.tmdbTVId == 1396)
@@ -68,5 +68,23 @@ struct TMDBSearchMappingTests {
         let rows = TMDBSearchMapping.series([owned, namesake], libraryMap: [1234: 42])
         #expect(rows.first?.inLibraryArrId == 42)
         #expect(rows.last?.inLibraryArrId == nil)
+    }
+
+
+    /// The "104 × The Simpsons" bug: every TMDB series row had `id: 0`, so a
+    /// `ForEach` saw one repeated identity and drew the first show over and
+    /// over. `SearchResult.id` is a composite now, and the rows that still
+    /// cannot identify themselves fall back to title + year rather than
+    /// collapsing onto each other.
+    @Test("Every series row has its own identity, even without a tvdbId")
+    func seriesRowsHaveDistinctIdentities() throws {
+        let a = try decodeTV(#"{"id": 1396, "name": "Breaking Bad", "first_air_date": "2008-01-20"}"#)
+        let b = try decodeTV(#"{"id": 1434, "name": "Family Guy", "first_air_date": "1999-01-31"}"#)
+        let rows = TMDBSearchMapping.series([a, b])
+
+        #expect(rows[0].externalId == 0 && rows[1].externalId == 0)
+        #expect(rows[0].id != rows[1].id)
+        #expect(rows[0].id == "sonarr:tmdbtv:1396")
+        #expect(Set(rows.map(\.id)).count == rows.count)
     }
 }

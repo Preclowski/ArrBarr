@@ -36,7 +36,7 @@ extension DemoMocks {
     static var radarrSearchPool: [SearchResult] {
         [
             SearchResult(
-                id: 10003, foreignId: "10003",
+                externalId: 10003, foreignId: "10003",
                 title: "Elephants Dream", subtitle: nil,
                 year: 2006,
                 rating: 7.0,
@@ -51,7 +51,7 @@ extension DemoMocks {
                 imdbId: "tt0010003"
             ),
             SearchResult(
-                id: 10004, foreignId: "10004",
+                externalId: 10004, foreignId: "10004",
                 title: "Spring", subtitle: nil,
                 year: 2019,
                 rating: 7.8,
@@ -66,7 +66,7 @@ extension DemoMocks {
                 imdbId: "tt0010004"
             ),
             SearchResult(
-                id: 10005, foreignId: "10005",
+                externalId: 10005, foreignId: "10005",
                 title: "Charge", subtitle: nil,
                 year: 2018,
                 rating: 7.0,
@@ -81,7 +81,7 @@ extension DemoMocks {
                 imdbId: "tt0010005"
             ),
             SearchResult(
-                id: 10006, foreignId: "10006",
+                externalId: 10006, foreignId: "10006",
                 title: "Agent 327: Operation Barbershop", subtitle: nil,
                 year: 2017,
                 rating: 7.4,
@@ -96,7 +96,7 @@ extension DemoMocks {
                 imdbId: "tt0010006"
             ),
             SearchResult(
-                id: 10007, foreignId: "10007",
+                externalId: 10007, foreignId: "10007",
                 title: "Hero", subtitle: nil,
                 year: 2018,
                 rating: 7.2,
@@ -111,7 +111,7 @@ extension DemoMocks {
                 imdbId: "tt0010007"
             ),
             SearchResult(
-                id: 10008, foreignId: "10008",
+                externalId: 10008, foreignId: "10008",
                 title: "Coffee Run", subtitle: nil,
                 year: 2020,
                 rating: 7.1,
@@ -126,7 +126,7 @@ extension DemoMocks {
                 imdbId: "tt0010008"
             ),
             SearchResult(
-                id: 10009, foreignId: "10009",
+                externalId: 10009, foreignId: "10009",
                 title: "Cosmos Laundromat", subtitle: nil,
                 year: 2015,
                 rating: 7.5,
@@ -146,7 +146,7 @@ extension DemoMocks {
     static var lidarrSearchPool: [SearchResult] {
         [
             SearchResult(
-                id: 30001, foreignId: "b7ffd2af-418f-4be2-bdd1-22f8b48613da",
+                externalId: 30001, foreignId: "b7ffd2af-418f-4be2-bdd1-22f8b48613da",
                 title: "Nine Inch Nails",
                 subtitle: "Industrial rock",
                 year: nil,
@@ -162,7 +162,7 @@ extension DemoMocks {
                 imdbId: "tt0030001"
             ),
             SearchResult(
-                id: 30002, foreignId: "1ce18a52-ca5f-4f34-9bc6-5f2af0d33f5e",
+                externalId: 30002, foreignId: "1ce18a52-ca5f-4f34-9bc6-5f2af0d33f5e",
                 title: "Brad Sucks",
                 subtitle: "One-man band",
                 year: nil,
@@ -178,7 +178,7 @@ extension DemoMocks {
                 imdbId: "tt0030002"
             ),
             SearchResult(
-                id: 30003, foreignId: "30c4c46c-2c4e-44a3-b9f2-c0ultonforeignid",
+                externalId: 30003, foreignId: "30c4c46c-2c4e-44a3-b9f2-c0ultonforeignid",
                 title: "Jonathan Coulton",
                 subtitle: "Geek folk",
                 year: nil,
@@ -194,7 +194,7 @@ extension DemoMocks {
                 imdbId: "tt0030003"
             ),
             SearchResult(
-                id: 30004, foreignId: "kevinmacleod-incompetech",
+                externalId: 30004, foreignId: "kevinmacleod-incompetech",
                 title: "Kevin MacLeod",
                 subtitle: "Royalty-free composer",
                 year: nil,
@@ -210,7 +210,7 @@ extension DemoMocks {
                 imdbId: "tt0030004"
             ),
             SearchResult(
-                id: 30005, foreignId: "tobu-musicbrainz",
+                externalId: 30005, foreignId: "tobu-musicbrainz",
                 title: "Tobu",
                 subtitle: "Electronic / EDM",
                 year: nil,
@@ -226,7 +226,7 @@ extension DemoMocks {
                 imdbId: "tt0030005"
             ),
             SearchResult(
-                id: 30006, foreignId: "komiku-fma",
+                externalId: 30006, foreignId: "komiku-fma",
                 title: "Komiku",
                 subtitle: "Chiptune / 8-bit",
                 year: nil,
@@ -247,7 +247,7 @@ extension DemoMocks {
     static var whisparrSearchPool: [SearchResult] {
         [
             SearchResult(
-                id: 40001, foreignId: "40001",
+                externalId: 40001, foreignId: "40001",
                 title: "Kitten Cam: Backyard Drama", subtitle: nil,
                 year: 2024,
                 rating: 8.4,
@@ -262,7 +262,7 @@ extension DemoMocks {
                 imdbId: "tt0040001"
             ),
             SearchResult(
-                id: 40002, foreignId: "40002",
+                externalId: 40002, foreignId: "40002",
                 title: "The Black Cat Chronicles", subtitle: nil,
                 year: 2023,
                 rating: 7.8,
@@ -277,7 +277,7 @@ extension DemoMocks {
                 imdbId: "tt0040002"
             ),
             SearchResult(
-                id: 40003, foreignId: "40003",
+                externalId: 40003, foreignId: "40003",
                 title: "Nine Lives of Mittens", subtitle: nil,
                 year: 2022,
                 rating: 7.1,
@@ -292,7 +292,7 @@ extension DemoMocks {
                 imdbId: "tt0040003"
             ),
             SearchResult(
-                id: 40004, foreignId: "40004",
+                externalId: 40004, foreignId: "40004",
                 title: "Whiskers & Whispers", subtitle: nil,
                 year: 2024,
                 rating: 6.9,
@@ -307,7 +307,7 @@ extension DemoMocks {
                 imdbId: "tt0040004"
             ),
             SearchResult(
-                id: 40005, foreignId: "40005",
+                externalId: 40005, foreignId: "40005",
                 title: "Cat Burglar", subtitle: nil,
                 year: 2021,
                 rating: 7.3,
@@ -322,7 +322,7 @@ extension DemoMocks {
                 imdbId: "tt0040005"
             ),
             SearchResult(
-                id: 40006, foreignId: "40006",
+                externalId: 40006, foreignId: "40006",
                 title: "Garage Cat Files", subtitle: nil,
                 year: 2024,
                 rating: 7.6,
@@ -342,7 +342,7 @@ extension DemoMocks {
     static var sonarrSearchPool: [SearchResult] {
         [
             SearchResult(
-                id: 20001, foreignId: "20001",
+                externalId: 20001, foreignId: "20001",
                 title: "Pioneer One", subtitle: "1 season",
                 year: 2010,
                 rating: 7.4,
@@ -357,7 +357,7 @@ extension DemoMocks {
                 imdbId: "tt0020001"
             ),
             SearchResult(
-                id: 20002, foreignId: "20002",
+                externalId: 20002, foreignId: "20002",
                 title: "Caminandes", subtitle: "1 season",
                 year: 2013,
                 rating: 7.6,

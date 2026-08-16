@@ -15,7 +15,16 @@ public struct RootFolder: Decodable, Identifiable {
 // MARK: - Search result (unified)
 
 public struct SearchResult: Identifiable, Equatable, Hashable, Sendable {
-    public var id: Int                  // arr's internal id (tmdbId for Radarr, tvdbId for Sonarr)
+    /// The external key this row is addressed by: tmdbId for Radarr/Whisparr,
+    /// tvdbId for Sonarr, a hashed MusicBrainz id for Lidarr.
+    ///
+    /// Named for what it is. It used to be called `id`, which made it both the
+    /// foreign key AND SwiftUI's row identity — two jobs that disagree the
+    /// moment a row can't fill it in. TMDB-sourced series left it `0`, so every
+    /// such row claimed the same identity (`ForEach` drew the first show over
+    /// and over) and every `map[result.id]` lookup silently asked about title
+    /// zero. `id` below is now identity; this is the key.
+    var externalId: Int
     var foreignId: String        // tmdbId/tvdbId as string — used in POST body
     let title: String
     let subtitle: String?        // nil for movies; "X seasons" for shows
@@ -72,7 +81,7 @@ public struct SearchResult: Identifiable, Equatable, Hashable, Sendable {
     /// about the show we asked about.
     let tmdbTVId: Int?
 
-    init(id: Int, foreignId: String, title: String, subtitle: String?,
+    init(externalId: Int, foreignId: String, title: String, subtitle: String?,
          year: Int?, rating: Double?, votes: Int? = nil,
          imdb: Double?, rottenTomatoes: Double?,
          metacritic: Double?, overview: String?, runtime: Int?,
@@ -82,7 +91,7 @@ public struct SearchResult: Identifiable, Equatable, Hashable, Sendable {
          imdbId: String? = nil, sourceRank: Int = 0,
          isLidarrAlbum: Bool = false,
          tmdbTVId: Int? = nil) {
-        self.id = id
+        self.externalId = externalId
         self.foreignId = foreignId
         self.title = title
         self.subtitle = subtitle
@@ -104,6 +113,21 @@ public struct SearchResult: Identifiable, Equatable, Hashable, Sendable {
         self.sourceRank = sourceRank
         self.isLidarrAlbum = isLidarrAlbum
         self.tmdbTVId = tmdbTVId
+    }
+
+    /// Row identity: the source plus whatever external ref the row can prove.
+    ///
+    /// A composite string rather than the foreign key, because the foreign key
+    /// is not always known — a TMDB series carries a `tmdbtv:` ref and no
+    /// tvdbId at all. Rows that can't identify themselves at all fall back to
+    /// title + year, which is the weakest honest answer and still unique
+    /// enough for a list; it is never used to look anything up.
+    public var id: String {
+        let ref = mediaRef
+        guard ref.isAddressable else {
+            return "\(source.rawValue):\(title.lowercased())|\(year ?? 0)"
+        }
+        return "\(source.rawValue):\(ref.urlString)"
     }
 
     /// Re-stamp `inLibraryArrId`. Used by tools (suggest_titles, *_search)
@@ -141,7 +165,7 @@ public struct SearchResult: Identifiable, Equatable, Hashable, Sendable {
     /// must have been proven, never matched by title.
     func withTVDBId(_ tvdbId: Int) -> SearchResult {
         var copy = self
-        copy.id = tvdbId
+        copy.externalId = tvdbId
         copy.foreignId = String(tvdbId)
         return copy
     }

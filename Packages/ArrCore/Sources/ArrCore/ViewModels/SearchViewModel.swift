@@ -289,7 +289,7 @@ public final class SearchViewModel {
             // an "In library" pill + drill into DetailView; addable
             // rows flow into SearchAddPanel.
             return raw.map { result in
-                if let arrId = map[result.id] {
+                if let arrId = map[result.externalId] {
                     return result.withInLibraryArrId(arrId)
                 }
                 return result
@@ -326,13 +326,13 @@ public final class SearchViewModel {
     func enrich(_ result: SearchResult) async -> SearchResult? {
         switch result.source {
         case .radarr:
-            guard let client = client(for: result.source), result.id > 0 else { return nil }
-            return (try? await client.lookup(query: "tmdb:\(result.id)").first)?
+            guard let client = client(for: result.source), result.externalId > 0 else { return nil }
+            return (try? await client.lookup(query: "tmdb:\(result.externalId)").first)?
                 .withArtwork(from: result)
         case .sonarr:
-            if result.id > 0 {
+            if result.externalId > 0 {
                 guard let client = client(for: result.source) else { return nil }
-                return (try? await client.lookup(query: "tvdb:\(result.id)").first)?
+                return (try? await client.lookup(query: "tvdb:\(result.externalId)").first)?
                     .withArtwork(from: result)
             }
             // A TMDB tv id is not a tvdbId. Resolve it properly (library
@@ -430,7 +430,7 @@ public final class SearchViewModel {
         // against. Resolve it here, by id, before the write — the client
         // refuses an unresolved row rather than guessing at one by title.
         var result = result
-        if result.id <= 0, let tmdbTVId = result.tmdbTVId,
+        if result.externalId <= 0, let tmdbTVId = result.tmdbTVId,
            let tvdbId = await SeriesIdentityResolver.tvdbId(
                tmdbTVId: tmdbTVId, sonarrConfig: configs[.sonarr] ?? .empty,
                tmdbKey: tmdbApiKey) {
