@@ -56,6 +56,20 @@ private func trailerEmbedHTML(key: String, autoplay: Bool) -> String {
         // The player's own fullscreen button, which is now the ONLY one —
         // ours sat next to it doing the same job worse.
         "fs=1",
+        // Everything the embed API lets us switch off, off. What's left is
+        // play/pause, the scrubber, volume and fullscreen — the controls a
+        // trailer actually needs.
+        //
+        // No annotation / card overlays on the video.
+        "iv_load_policy=3",
+        // Captions stay off unless the viewer turns them on.
+        "cc_load_policy=0",
+        // Grey progress bar instead of YouTube red — the one piece of chrome
+        // colour the API does expose.
+        "color=white",
+        // Deprecated by YouTube in 2023 (the logo shows regardless now) but
+        // still accepted and free to send.
+        "modestbranding=1",
         "origin=\(trailerEmbedOrigin)",
         // Makes the player post its state (including error codes) to the
         // parent frame — the only way to see WHY a clip refuses to play.

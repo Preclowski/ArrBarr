@@ -115,10 +115,12 @@ public struct PopoverContentView: View {
     /// Put the caret in the tab's text field so the panel is typeable the
     /// instant it opens.
     ///
-    /// Queue only — its floating bar is the global search. Upcoming has no
-    /// field to focus, and Chat focuses its own on appear (the field lives
-    /// inside `ChatView`, and it appears both on open and on tab switch, so
-    /// driving it from here would just be a second owner of the same state).
+    /// Queue only — its floating bar is the global search, and ⌘N plus the Add
+    /// intent aim at it from out here too. Upcoming has no field to focus, and
+    /// Chat and Library each focus their own on appear (the field lives inside
+    /// `ChatView` / `LibraryTabContent`, and it appears both on open and on tab
+    /// switch, so driving it from here would just be a second owner of the same
+    /// state).
     ///
     /// Hopped to the next main-actor turn rather than set inline: on the
     /// `onAppear` pass the field isn't in the responder chain yet, and an
@@ -508,7 +510,8 @@ public struct PopoverContentView: View {
                 EpisodeQuickDetail(
                     item: item,
                     viewModel: viewModel,
-                    originLabel: LocalizedStringKey(selectedTab.rawValue)
+                    originLabel: LocalizedStringKey(selectedTab.rawValue),
+                    onBack: { self.detailItem = nil }
                 )
             } else {
                 DetailView(

@@ -24,6 +24,13 @@ public struct SeriesPushRequest: Hashable {
     }
 }
 
+/// A series' (season, episode) slot — the key queue rows are resolved to
+/// episode ids through, since a queue row carries the numbers, not the id.
+struct EpisodeSlot: Hashable {
+    let season: Int
+    let episode: Int
+}
+
 /// Direct-entry episode detail used when the user taps a Sonarr queue
 /// row that's for a specific episode. Skips the intermediate Series
 /// (DetailView) level — the user lands straight on the episode they
@@ -44,10 +51,14 @@ public struct EpisodeQuickDetail: View {
     var originLabel: LocalizedStringKey = "Details"
 
     @Environment(\.isDetachedWindow) private var isDetachedWindow
-    /// Pops this episode push in the detached window, where the wrapped
-    /// EpisodeDetailOverlay's own back button (its only back affordance there)
-    /// fires `onClose`. The attached panel pops via the native nav chevron.
-    @Environment(\.dismiss) private var dismiss
+    /// Pops this episode push — the pusher clears the binding that presented
+    /// it, exactly as the sibling `DetailView` destination does.
+    ///
+    /// NOT `@Environment(\.dismiss)`: reading it inside a `navigationDestination`
+    /// body re-invalidates that body on every display cycle, which pinned the
+    /// whole popover — this view, the season screen pushed on top of it and
+    /// every episode row in it — at ~85 body passes a second.
+    var onBack: () -> Void
 
     @State private var sonarrDetail: SonarrSeriesDetail?
     @State private var fullEpisode: SonarrEpisodeDetail?
@@ -65,15 +76,24 @@ public struct EpisodeQuickDetail: View {
     /// Season drill-down — pushed when the user taps the hero's "Season N" link.
     /// Nests under THIS view (like `seriesPush`) so back returns to the episode.
     @State private var seasonPush: SeasonDrill?
+    /// (season, episode) → episode id, rebuilt with `allEpisodes` in `load`.
+    /// See `seasonQueueByEpisodeId`, which resolves queue rows to episodes on
+    /// every body pass and can't afford a linear scan of a long series.
+    /// Only ids live here, never episode payloads: `monitored` is flipped
+    /// optimistically in `allEpisodes`, and a second copy of the episodes would
+    /// be one more thing to keep in sync (and to render stale).
+    @State private var episodeIdBySlot: [EpisodeSlot: Int] = [:]
 
     public init(
         item: QueueItem,
         viewModel: QueueViewModel,
-        originLabel: LocalizedStringKey = "Details"
+        originLabel: LocalizedStringKey = "Details",
+        onBack: @escaping () -> Void
     ) {
         self.item = item
         self.viewModel = viewModel
         self.originLabel = originLabel
+        self.onBack = onBack
     }
 
     public var body: some View {
@@ -89,7 +109,7 @@ public struct EpisodeQuickDetail: View {
             apiKey: configStore.sonarr.apiKey,
             episodeFile: displayEpisode.episodeFileId.flatMap { episodeFileMap[$0] },
             queueItems: liveQueueItems,
-            onClose: { dismiss() },
+            onClose: onBack,
             onSearch: { episodeId in
                 let client = SonarrClient(config: configStore.sonarr)
                 try? await client.searchEpisodes(episodeIds: [episodeId])
@@ -245,13 +265,19 @@ public struct EpisodeQuickDetail: View {
     /// episode-id → all active queue items for this series — feeds
     /// SeasonDetailView's per-episode download indicators when pushed from
     /// the hero's season link. List-valued so duplicate grabs stay visible.
+    ///
+    /// Runs inside the `navigationDestination` closure, i.e. on every body pass
+    /// of this view — which is every queue tick. The season/episode → id lookup
+    /// therefore goes through `episodeIdBySlot` rather than a linear scan of
+    /// `allEpisodes`: on a 450-episode series like Law & Order the scan turned
+    /// each pass into `queue × 450` comparisons.
     private var seasonQueueByEpisodeId: [Int: [QueueItem]] {
         guard let id = item.entityId else { return [:] }
         var map: [Int: [QueueItem]] = [:]
         for q in viewModel.items(for: .sonarr) where q.entityId == id && q.arrQueueId != 0 {
             guard let sn = q.seasonNumber, let en = q.episodeNumber else { continue }
-            if let ep = allEpisodes.first(where: { $0.seasonNumber == sn && $0.episodeNumber == en }) {
-                map[ep.id, default: []].append(q)
+            if let epId = episodeIdBySlot[EpisodeSlot(season: sn, episode: en)] {
+                map[epId, default: []].append(q)
             }
         }
         return map
@@ -269,6 +295,15 @@ public struct EpisodeQuickDetail: View {
             let files = try await filesReq
             self.sonarrDetail = detail
             self.allEpisodes = episodes
+            self.episodeIdBySlot = Dictionary(
+                episodes.compactMap { ep in
+                    guard let sn = ep.seasonNumber, let en = ep.episodeNumber else { return nil }
+                    return (EpisodeSlot(season: sn, episode: en), ep.id)
+                },
+                // A series that lists the same slot twice keeps the first record,
+                // which is the one the episode list renders.
+                uniquingKeysWith: { first, _ in first }
+            )
             self.fullEpisode = episodes.first {
                 $0.seasonNumber == item.seasonNumber
                     && $0.episodeNumber == item.episodeNumber

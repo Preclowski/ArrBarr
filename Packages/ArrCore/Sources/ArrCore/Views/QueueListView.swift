@@ -157,7 +157,15 @@ struct QueueListView: View {
         // Propagate the away-from-LAN state so each row hides its mutating
         // controls (the header chip is the single explanation).
         .environment(\.queueOffline, viewModel.isFullyOffline)
-        .environment(\.defaultMinListRowHeight, 0)
+        // 1, not 0: rows carry their own padding, so the floor only has to stay
+        // out of the way — but macOS backs `List` with an `NSTableView`, whose
+        // `rowHeight` must be POSITIVE. A zero floor made SwiftUI's list
+        // coordinator push `setRowHeight: 0` on every graph update; AppKit
+        // rejected it ("ERROR: Negative values for rowHeight not allowed
+        // (0.000)"), the context never converged, and the hosting view
+        // re-rendered at display rate — ~77 body passes a second for everything
+        // in the popover, including whatever detail screen was pushed on top.
+        .environment(\.defaultMinListRowHeight, 1)
         // macOS List indents scroll content by default; zero it so rows /
         // banners are genuinely full-width (each brings its own padding).
         // No placement filter — newer macOS adds horizontal margins beyond
