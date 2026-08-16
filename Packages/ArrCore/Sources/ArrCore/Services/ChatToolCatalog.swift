@@ -34,9 +34,9 @@ public enum ChatToolCatalog {
         if includeSonarr || includeRadarr {
             arr.append(contentsOf: suggestTools)
         }
-        // list_download_queue spans Sonarr + Radarr; expose it whenever
-        // either is configured.
-        if includeSonarr || includeRadarr {
+        // list_download_queue spans every arr; expose it whenever any one of
+        // them is configured.
+        if includeSonarr || includeRadarr || includeLidarr || includeWhisparr {
             arr.append(contentsOf: queueTools)
         }
         // Unified calendar spans every configured arr; expose it whenever
@@ -144,7 +144,8 @@ public enum ChatToolCatalog {
                   services: [.sonarr, .radarr, .lidarr, .whisparr, .sabnzbd, .nzbget, .qbittorrent, .transmission, .rtorrent, .deluge]),
             .init(name: "get_title_details", summary: "Details & cast for one title", services: [.sonarr, .radarr]),
             .init(name: "custom_formats", summary: "Inspect custom-format scoring", services: [.sonarr, .radarr]),
-            .init(name: "list_download_queue", summary: "Show the active download queue", services: [.sonarr, .radarr]),
+            .init(name: "list_download_queue", summary: "Show the active download queue",
+                  services: [.sonarr, .radarr, .lidarr, .whisparr]),
             .init(name: "media_server_watch_history", summary: "What was recently watched",
                   services: [], systemImage: "play.tv"),
             .init(name: "media_server_now_playing", summary: "What is playing right now",
@@ -841,7 +842,7 @@ public enum ChatToolCatalog {
         MCPTool(
             name: "list_download_queue",
             description: """
-            List the active Sonarr/Radarr download queue — what is currently downloading, queued, importing, or stalled. Each item shows its status and progress.
+            List the active download queue across every configured arr — Sonarr, Radarr, Lidarr and Whisparr — covering what is currently downloading, queued, importing, or stalled. Each item shows its status and progress, and which service it belongs to. This is the WHOLE queue: don't tell the user music or a scene isn't downloading because you only looked at TV and movies.
 
             When an item is an UPGRADE of a file already in the library, the result ALSO reports the existing file's quality / custom formats / score / size alongside the incoming release's (rendered as `UPGRADE: <old> → <new>`). USE that diff to explain to the user how the two differ and WHY the new release is better — higher resolution, better source (e.g. Bluray/Remux over WEB), added HDR/Dolby Vision, higher custom-format score, etc.
 

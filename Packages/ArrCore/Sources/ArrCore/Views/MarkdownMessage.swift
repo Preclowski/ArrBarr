@@ -42,9 +42,17 @@ struct MarkdownMessage: View {
     var body: some View {
         let doc = Document(parsing: source)
         Group {
+            // A message that is ENTIRELY spoiler gets the blurred block, never
+            // inline redaction. Inline redaction hides glyphs by colouring them
+            // clear, which is fine for a phrase inside a sentence and reads as a
+            // broken, empty bubble when it's the whole message — the block at
+            // least says "Tap to reveal".
+            if let hidden = fullyHiddenBody {
+                spoilerBlockView(hidden)
+            }
             // Prose-only messages render as ONE Text so a drag selects the whole
             // answer (see `flattened`). Everything else keeps the stacked path.
-            if !hasSpoilers, let flat = flattened(doc) {
+            else if !hasSpoilers, let flat = flattened(doc) {
                 Text(flat)
                     .multilineTextAlignment(.leading)
                     .fixedSize(horizontal: false, vertical: true)
@@ -221,6 +229,25 @@ struct MarkdownMessage: View {
     }
 
     // MARK: - Block spoiler
+
+    /// The message's text when *all* of it is spoiler — nothing outside the
+    /// markers but whitespace. Returns nil for a message with any visible prose
+    /// (that one redacts inline, in place) and for one with no spoilers at all.
+    private var fullyHiddenBody: String? {
+        let segments = ChatSpoilerMarkup.parse(source)
+        var hidden: [String] = []
+        for segment in segments {
+            switch segment {
+            case .spoiler(let body):
+                hidden.append(body)
+            case .text(let plain):
+                // Any real prose outside the markers and this isn't a
+                // whole-message spoiler.
+                guard plain.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
+            }
+        }
+        return hidden.isEmpty ? nil : hidden.joined(separator: "\n\n")
+    }
 
     /// If a paragraph is exactly one `||spoiler||` (no other prose), returns the
     /// inner text — it renders as a blurred, tap-to-reveal block.

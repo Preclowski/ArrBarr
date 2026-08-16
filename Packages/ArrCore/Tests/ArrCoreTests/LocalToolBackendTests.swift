@@ -697,10 +697,53 @@ struct LocalToolBackendTests {
 
     @Test("list_download_queue not configured returns informative string")
     func listQueueNotConfigured() async throws {
-        let b = LocalToolBackend(sonarr: .empty, radarr: .empty)
+        let b = LocalToolBackend(sonarr: .empty, radarr: .empty, lidarr: .empty, whisparr: .empty)
         let output = try await b.callTool(name: "list_download_queue", arguments: .object([:]))
-        #expect(output.text == "Sonarr and Radarr are not configured.")
+        #expect(output.text == "No arr is configured.")
         #expect(output.rich == nil)
+    }
+
+    @Test("The queue tool is offered by a music-only setup, and covers Lidarr")
+    func listQueueSpansEveryArr() {
+        // The regression this guards: the tool asked Sonarr + Radarr only, so a
+        // Lidarr download was absent from an answer that read as the whole
+        // queue — and a Lidarr-only user was never offered the tool at all.
+        let names = ChatToolCatalog.tools(
+            includeSonarr: false, includeRadarr: false, includeLidarr: true
+        ).map(\.name)
+        #expect(names.contains("list_download_queue"))
+    }
+
+    @Test("A hidden Whisparr stays out of the queue listing")
+    func listQueueRespectsWhisparrGate() async throws {
+        // `aiKnowsAboutWhisparr` is off, so its queue must not ride in on a
+        // tool that spans every arr — an arr the user hid from the model must
+        // stay hidden.
+        let configured = ServiceConfig(enabled: true, baseURL: "http://whisparr.test",
+                                       apiKey: "k", username: "", password: "")
+        let b = LocalToolBackend(sonarr: .empty, radarr: .empty, lidarr: .empty,
+                                 whisparr: configured, aiKnowsAboutWhisparr: false)
+        let output = try await b.callTool(name: "list_download_queue", arguments: .object([:]))
+        #expect(output.text == "No arr is configured.")
+    }
+
+    @Test("An upgrade with no existing-file fields doesn't count as carrying one")
+    func existingFileMetadataNeedsFields() {
+        #expect(upgradeItem().hasExistingFileMetadata)
+        #expect(!plainItem().hasExistingFileMetadata)
+        // The case the detail panel turns on: an arr that flags the upgrade but
+        // ships none of the `existing*` fields. `isUpgrade` alone would have the
+        // panel hide its standalone "Existing file" block in favour of a diff
+        // sub-line that then renders nothing.
+        let flaggedButEmpty = QueueItem(
+            id: "radarr-3", source: .radarr, arrQueueId: 3,
+            downloadId: nil, downloadProtocol: .torrent, downloadClient: "qbit",
+            title: "Léon", subtitle: nil, status: .downloading,
+            progress: 0.2, sizeTotal: 10, sizeLeft: 8, timeLeft: nil,
+            customFormats: [], customFormatScore: 0, quality: "2160p", isUpgrade: true,
+            contentSlug: nil
+        )
+        #expect(!flaggedButEmpty.hasExistingFileMetadata)
     }
 
     private func upgradeItem() -> QueueItem {

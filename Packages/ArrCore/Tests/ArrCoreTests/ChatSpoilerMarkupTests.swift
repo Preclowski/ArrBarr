@@ -48,6 +48,24 @@ struct ChatSpoilerMarkupTests {
         #expect(ChatSpoilerMarkup.parse("a |||| b") == [.text("a |||| b")])
     }
 
+    @Test("Markers must hug their body — prose with two loose `||` runs stays visible")
+    func looseMarkersAreNotSpoilers() {
+        // The regression this guards: any second `||` used to close the first,
+        // so everything between them was redacted to invisible glyphs. A whole
+        // paragraph of an ordinary answer would render as an empty bubble.
+        #expect(ChatSpoilerMarkup.parse("use a || b, or c || d")
+                == [.text("use a || b, or c || d")])
+        #expect(!ChatSpoilerMarkup.containsSpoiler("| Diuna || 2021 |"))
+        // Opener hugs, closer doesn't — still not a spoiler; both ends must.
+        #expect(!ChatSpoilerMarkup.containsSpoiler("a ||b, c || d"))
+    }
+
+    @Test("A real spoiler after a rejected pair is still found")
+    func realSpoilerAfterLooseMarkers() {
+        #expect(ChatSpoilerMarkup.parse("a || b ||twist||")
+                == [.text("a || b "), .spoiler("twist")])
+    }
+
     @Test("containsSpoiler detects a well-formed spoiler")
     func detects() {
         #expect(ChatSpoilerMarkup.containsSpoiler("the ||twist|| is here"))

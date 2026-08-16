@@ -8,6 +8,14 @@ public enum ChatSpoilerSegment: Equatable, Sendable {
 
 /// Parses the lightweight spoiler markup the assistant may emit: text wrapped
 /// in double pipes — `||hidden||` — is a spoiler the UI redacts until tapped.
+///
+/// The markers must hug their body: `||twist||` is a spoiler, `a || b` is not.
+/// That rule is load-bearing, not cosmetic. Redacted text renders as invisible
+/// glyphs, so a false positive doesn't degrade — it blanks a whole paragraph of
+/// an ordinary answer, and the reader is left with an empty-looking bubble and
+/// no idea it can be clicked. Prose that merely contains two `||` runs (a
+/// logical-or in a code span, a Markdown table with empty cells) used to hit
+/// exactly that, because any second `||` closed the first.
 public enum ChatSpoilerMarkup {
     private static let marker = "||"
 
@@ -25,11 +33,13 @@ public enum ChatSpoilerMarkup {
             let afterOpen = rest[open.upperBound...]
             guard let close = afterOpen.range(of: marker) else { break }
             let body = afterOpen[afterOpen.startIndex..<close.lowerBound]
-            if body.isEmpty {
-                // `||||` — not a spoiler; keep the markers as literal text and
-                // continue scanning past them.
-                pending += rest[rest.startIndex..<close.upperBound]
-                rest = rest[close.upperBound...]
+            if body.isEmpty || body.first!.isWhitespace || body.last!.isWhitespace {
+                // Either `||||`, or markers that don't hug their body — not a
+                // spoiler. Keep them as literal text and carry on scanning from
+                // just past the OPENER (not past the closer): the run we just
+                // rejected as a closer may well be the opener of a real spoiler.
+                pending += rest[rest.startIndex..<open.upperBound]
+                rest = rest[open.upperBound...]
                 continue
             }
             pending += rest[rest.startIndex..<open.lowerBound]

@@ -808,18 +808,27 @@ extension LocalToolBackend {
 
     // MARK: - Download queue
 
-    /// Lists the active Sonarr + Radarr download queue. Items already carry
-    /// both the incoming release's quality/format metadata AND the existing
-    /// library file's (`existing*` fields, populated during queue unification),
-    /// so the model gets everything it needs to explain an upgrade in a single
-    /// call — no extra API round-trips beyond `fetchQueue()`.
+    /// Lists the active download queue across every configured arr. Items
+    /// already carry both the incoming release's quality/format metadata AND
+    /// the existing library file's (`existing*` fields, populated during queue
+    /// unification), so the model gets everything it needs to explain an
+    /// upgrade in a single call — no extra API round-trips beyond
+    /// `fetchQueue()`.
+    ///
+    /// Sonarr and Radarr used to be the whole list, which meant a Lidarr
+    /// download was missing from an answer that read as complete — the popover
+    /// aggregates all four, so the tool disagreeing with the UI is worse than
+    /// it sounds. Whisparr rides the same `aiKnowsAboutWhisparr` gate as its
+    /// own tools: an arr the user hid from the model must not leak back in via
+    /// a queue listing.
     func listDownloadQueue(_ args: JSONValue) async throws -> ToolCallOutput {
         let configured: [(QueueItem.Source, ServiceConfig)] = [
-            (.sonarr, sonarr), (.radarr, radarr),
+            (.sonarr, sonarr), (.radarr, radarr), (.lidarr, lidarr),
+            (.whisparr, aiKnowsAboutWhisparr ? whisparr : .empty),
         ].filter { $0.1.isConfigured }
 
         guard !configured.isEmpty else {
-            return ToolCallOutput(text: "Sonarr and Radarr are not configured.")
+            return ToolCallOutput(text: "No arr is configured.")
         }
 
         // One HTTP per arr — fan out in parallel, tolerate one side failing.
@@ -831,9 +840,10 @@ extension LocalToolBackend {
                     do {
                         let queue: [QueueItem]
                         switch source {
-                        case .sonarr: queue = try await SonarrClient(config: cfg).fetchQueue()
-                        case .radarr: queue = try await RadarrClient(config: cfg).fetchQueue()
-                        default:      queue = []
+                        case .sonarr:   queue = try await SonarrClient(config: cfg).fetchQueue()
+                        case .radarr:   queue = try await RadarrClient(config: cfg).fetchQueue()
+                        case .lidarr:   queue = try await LidarrClient(config: cfg).fetchQueue()
+                        case .whisparr: queue = try await WhisparrClient(config: cfg).fetchQueue()
                         }
                         return (source, .success(queue))
                     } catch {
