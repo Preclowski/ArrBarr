@@ -82,7 +82,10 @@ public enum WidgetDataStore {
     /// Set explicitly by a test that wants to inspect the file; otherwise a
     /// per-process temp directory, chosen once.
     nonisolated(unsafe) static var snapshotDirectoryOverrideForTesting: URL?
-    private nonisolated(unsafe) static var cachedTestDirectory: URL?
+    /// Resolved once per process. `.some(nil)` is the answer "not a test
+    /// process" — worth remembering too, or a Debug build of the app would
+    /// re-scan every bundle and every argument on each refresh.
+    private nonisolated(unsafe) static var cachedTestDirectory: URL??
 
     /// Four markers because no single one covers both runners. Under Xcode's
     /// XCTest host the class and the env vars are there; under SwiftPM the
@@ -104,7 +107,10 @@ public enum WidgetDataStore {
         snapshotLock.lock()
         defer { snapshotLock.unlock() }
         if let cached = cachedTestDirectory { return cached }
-        guard Self.isRunningUnderTests() else { return nil }
+        guard Self.isRunningUnderTests() else {
+            cachedTestDirectory = .some(nil)
+            return nil
+        }
         let dir = URL(fileURLWithPath: NSTemporaryDirectory())
             .appendingPathComponent("ArrBarrTestSnapshots-\(ProcessInfo.processInfo.processIdentifier)")
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
@@ -175,6 +181,17 @@ public enum WidgetDataStore {
             snapshotLog.error(
                 "upcoming snapshot write failed: \(lastError.localizedDescription, privacy: .public)"
             )
+        }
+    }
+
+    /// The read, off the caller's thread — the counterpart of `saveUpcoming`,
+    /// and for the same reason: this resolves the same App Group container,
+    /// and the app's cold start is a worse place to stall than a refresh. The
+    /// widget's `TimelineProvider` keeps using the synchronous form; it runs
+    /// in its own extension process with nothing to freeze.
+    public static func loadUpcomingAsync() async -> [UpcomingItem] {
+        await withCheckedContinuation { continuation in
+            snapshotQueue.async { continuation.resume(returning: loadUpcoming()) }
         }
     }
 

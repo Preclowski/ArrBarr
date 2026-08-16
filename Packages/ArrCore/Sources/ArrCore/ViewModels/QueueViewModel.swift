@@ -241,10 +241,15 @@ public final class QueueViewModel {
         // unreachable (away from the home LAN). The first successful refresh
         // replaces it. Skipped in demo mode (which seeds its own data).
         if autostart, !DemoMode.isActive {
-            let cached = WidgetDataStore.loadUpcoming()
-            if !cached.isEmpty {
+            Task { @MainActor [weak self] in
+                let cached = await WidgetDataStore.loadUpcomingAsync()
+                guard let self, !cached.isEmpty else { return }
+                // A live refresh may have finished while the snapshot was
+                // being read. It is strictly fresher, so the cache defers to
+                // it instead of painting yesterday's calendar over it.
+                guard self.upcoming.isEmpty else { return }
                 self.upcoming = cached
-                self.tonight = Self.tonightSlice(from: cached, hours: configStore.tonightHours)
+                self.tonight = Self.tonightSlice(from: cached, hours: self.configStore.tonightHours)
             }
         }
         // Coalesce bursts of queue events (Sonarr can emit several within

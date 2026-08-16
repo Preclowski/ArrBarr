@@ -35,7 +35,13 @@ public enum DiscoverSources {
                 guard let arrId = rec.id, let title = rec.title else { return nil }
                 let poster: URL? = posterURL(from: rec.images)
                 let result = SearchResult(
-                    id: arrId, foreignId: rec.tmdbId.map(String.init) ?? "",
+                    // `id` is the FOREIGN id for every other producer of a
+                    // SearchResult (tmdbId here), and `mediaRef` reads it as
+                    // one. Putting the arr-internal id here made every ref
+                    // derived from a library card point at an unrelated title;
+                    // the arr id has its own homes — `inLibraryArrId` and the
+                    // card's `.openDetail(arrId:)` action.
+                    id: rec.tmdbId ?? 0, foreignId: rec.tmdbId.map(String.init) ?? "",
                     title: title, subtitle: nil,
                     year: rec.year,
                     rating: rec.ratings?.tmdb?.value,
@@ -86,7 +92,9 @@ public enum DiscoverSources {
                 guard let arrId = rec.id, let title = rec.title else { return nil }
                 let poster: URL? = posterURL(from: rec.images)
                 let result = SearchResult(
-                    id: arrId, foreignId: rec.tvdbId.map(String.init) ?? "",
+                    // The tvdbId, for the same reason as the movie source
+                    // above — `id` names the title, not the arr record.
+                    id: rec.tvdbId ?? 0, foreignId: rec.tvdbId.map(String.init) ?? "",
                     title: title, subtitle: nil,
                     year: rec.year, rating: nil, imdb: nil,
                     rottenTomatoes: nil, metacritic: nil,

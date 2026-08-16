@@ -90,4 +90,29 @@ struct DiscoverItemTests {
         #expect(!f.matches(year: 2010, monitored: true, hasFile: true,
                            genres: ["Comedy"], runtime: 95))
     }
+
+    /// A Quiz card built from the library used to carry the arr's *internal*
+    /// record id in `SearchResult.id`, which `mediaRef` reads as a foreign id.
+    /// Every ref derived from such a card therefore named a different title,
+    /// and the chat's library cross-reference keyed on it looked up the wrong
+    /// row. The arr id lives in `inLibraryArrId` and in the card's action.
+    @Test("A library-sourced card identifies the title, not the arr record")
+    @MainActor
+    func libraryCardCarriesForeignId() async {
+        let record = RadarrLibraryRecord(
+            id: 4242, tmdbId: 550, title: "Fight Club", year: 1999, hasFile: true,
+            titleSlug: nil, monitored: true, images: nil, genres: ["Drama"],
+            runtime: 139, overview: nil, ratings: nil, certification: nil,
+            studio: nil, sizeOnDisk: nil)
+        let source = DiscoverSources.radarrLibrary(fetchAll: { [record] })
+
+        let items = (try? await source(DiscoverFilter())) ?? []
+        let card = items.first
+
+        #expect(card?.result.id == 550)
+        #expect(card?.result.mediaRef == .tmdb(550))
+        // The arr id is still there, in the two places that mean "the record".
+        #expect(card?.result.inLibraryArrId == 4242)
+        #expect(card?.action == .openDetail(source: .radarr, arrId: 4242))
+    }
 }
