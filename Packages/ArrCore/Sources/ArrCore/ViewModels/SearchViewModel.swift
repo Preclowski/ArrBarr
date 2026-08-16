@@ -301,15 +301,20 @@ public final class SearchViewModel {
     /// overview and (via the panel's id-keyed tasks) the cast. Every route
     /// here is now id-based: TMDB ids for movies, `SeriesIdentityResolver`
     /// for TMDB-sourced series.
+    /// Every return here keeps the row's own artwork (`withArtwork(from:)`):
+    /// the point is richer *metadata*, and swapping the poster mid-panel made
+    /// a correct enrichment look exactly like the wrong-series bug.
     func enrich(_ result: SearchResult) async -> SearchResult? {
         switch result.source {
         case .radarr:
             guard let client = client(for: result.source), result.id > 0 else { return nil }
-            return try? await client.lookup(query: "tmdb:\(result.id)").first
+            return (try? await client.lookup(query: "tmdb:\(result.id)").first)?
+                .withArtwork(from: result)
         case .sonarr:
             if result.id > 0 {
                 guard let client = client(for: result.source) else { return nil }
-                return try? await client.lookup(query: "tvdb:\(result.id)").first
+                return (try? await client.lookup(query: "tvdb:\(result.id)").first)?
+                    .withArtwork(from: result)
             }
             // A TMDB tv id is not a tvdbId. Resolve it properly (library
             // snapshot → verified `tmdb:N` → TMDB `/external_ids`) instead of
@@ -317,7 +322,7 @@ public final class SearchViewModel {
             guard let tmdbTVId = result.tmdbTVId else { return nil }
             return await SeriesIdentityResolver.sonarrRecord(
                 tmdbTVId: tmdbTVId, sonarrConfig: configs[.sonarr] ?? .empty,
-                tmdbKey: tmdbApiKey)
+                tmdbKey: tmdbApiKey)?.withArtwork(from: result)
         case .lidarr, .whisparr:
             return nil
         }

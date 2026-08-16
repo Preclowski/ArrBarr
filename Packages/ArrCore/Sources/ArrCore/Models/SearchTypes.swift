@@ -45,7 +45,7 @@ public struct SearchResult: Identifiable, Equatable, Hashable, Sendable {
     let genres: [String]
     let network: String?         // Sonarr network / Radarr studio
     let certification: String?   // Radarr only
-    let posterURL: URL?
+    var posterURL: URL?
     let source: QueueItem.Source
     /// Set when the backend has cross-referenced this result with the arr's
     /// library and found a match. Carries the arr's internal record id so the
@@ -117,6 +117,21 @@ public struct SearchResult: Identifiable, Equatable, Hashable, Sendable {
     func withInLibraryArrId(_ id: Int?) -> SearchResult {
         var copy = self
         copy.inLibraryArrId = id
+        return copy
+    }
+
+    /// Keep the artwork the caller is already looking at.
+    ///
+    /// Enrichment replaces a TMDB-sourced row with the arr's own record, and
+    /// that record's poster comes from the arr (TVDB art for Sonarr). The
+    /// image therefore changed the instant a title was opened — which reads as
+    /// "this is a different show", and is indistinguishable from the bug where
+    /// it actually WAS a different show. The metadata upgrade is worth having;
+    /// the artwork swap is not.
+    func withArtwork(from row: SearchResult) -> SearchResult {
+        guard let poster = row.posterURL else { return self }
+        var copy = self
+        copy.posterURL = poster
         return copy
     }
 

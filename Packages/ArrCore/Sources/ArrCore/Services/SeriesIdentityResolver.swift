@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 /// The one place a TMDB **tv** id becomes a Sonarr-addressable series.
 ///
@@ -37,6 +38,12 @@ enum SeriesIdentityResolver {
     /// snapshot, which answers without ever producing a Sonarr record.
     private static let tvdbIds = CoalescingCache<Int, Int?>(
         capacity: 200, shouldStore: { $0 != nil })
+
+    /// Every resolution is logged with both ids and the title it landed on.
+    /// "Is this the same show?" is not answerable by looking at a poster —
+    /// artwork differs between TMDB and TVDB for the *same* series — so the
+    /// answer has to come from the ids, and this is where they are known.
+    private static let log = Logger(subsystem: AppLog.subsystem, category: "SeriesIdentity")
 
     /// Per-server memory of whether Sonarr understood `term=tmdb:N`. Keyed by
     /// the config fingerprint so switching servers re-probes. `false` skips
@@ -107,7 +114,10 @@ enum SeriesIdentityResolver {
 
         // 1. Free: the user already owns it, so both ids are in the snapshot.
         if let owned = await ArrLibraryMaps.sonarrTVDBByTMDBId(config: sonarrConfig)[tmdbTVId] {
-            if let record = await lookupTVDB(owned, client: client) { return record }
+            if let record = await lookupTVDB(owned, client: client) {
+                logResolution(tmdbTVId, record, via: "library")
+                return record
+            }
         }
 
         // 2. One request that both resolves and enriches — if this Sonarr
@@ -117,6 +127,7 @@ enum SeriesIdentityResolver {
             let candidates = (try? await client.lookup(query: "tmdb:\(tmdbTVId)")) ?? []
             if let hit = candidates.first(where: { $0.tmdbTVId == tmdbTVId && $0.id > 0 }) {
                 acceptsTMDBTerm[fingerprint] = true
+                logResolution(tmdbTVId, hit, via: "sonarr tmdb: term")
                 return hit
             }
             // Either the server searched the literal string, or it knows the
@@ -128,9 +139,25 @@ enum SeriesIdentityResolver {
 
         // 3. TMDB's own cross-reference, then an exact lookup.
         guard let tvdb = await externalTVDBId(tmdbTVId: tmdbTVId, tmdbKey: tmdbKey) else {
+            log.error("tmdb tv \(tmdbTVId, privacy: .public): unresolved — no tvdb id, nothing substituted")
             return nil
         }
-        return await lookupTVDB(tvdb, client: client)
+        let record = await lookupTVDB(tvdb, client: client)
+        if let record {
+            logResolution(tmdbTVId, record, via: "tmdb external_ids")
+        } else {
+            log.error("tmdb tv \(tmdbTVId, privacy: .public) → tvdb \(tvdb, privacy: .public): sonarr returned no matching record")
+        }
+        return record
+    }
+
+    /// One line per resolution, naming both ids, the route and what came back
+    /// — enough to settle "same show or not?" from the log alone.
+    private static func logResolution(_ tmdbTVId: Int, _ record: SearchResult, via route: String) {
+        log.info("""
+            tmdb tv \(tmdbTVId, privacy: .public) → tvdb \(record.id, privacy: .public) \
+            "\(record.title, privacy: .public)" (\(record.year ?? 0, privacy: .public)) via \(route, privacy: .public)
+            """)
     }
 
     /// `/tv/{id}/external_ids` — the only TMDB request this type ever makes,
