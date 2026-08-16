@@ -68,9 +68,11 @@ public final class PersonStore {
         return value
     }
 
-    /// TV filmography. Series can't be library-tagged from TMDB tv ids (they're
-    /// not tvdb ids), so rows stay add-flow; the row resolves its tvdbId lazily
-    /// on tap.
+    /// TV filmography, structurally identical to the movie path: TMDB credits
+    /// in, `SearchResult`s out, owned rows tagged from a library map keyed by
+    /// TMDB id. The tvdbId a row eventually needs is resolved lazily, on tap,
+    /// by `SeriesIdentityResolver` — never here, so a 100-title filmography
+    /// costs one credits call and no per-row requests.
     public func seriesFilmography(personId: Int, tmdbKey key: String, sonarrConfig: ServiceConfig) async -> [SearchResult] {
         if DemoMode.isActive { return DemoMocks.personSeries(personId: personId) }
         if let hit = cache.series[personId] { touch(personId); return hit }
@@ -78,21 +80,16 @@ public final class PersonStore {
         let task = Task<[SearchResult], Never> {
             guard !key.isEmpty else { return [] }
             guard let credits = try? await TMDBClient(apiKey: key).personTVCredits(personId: personId) else { return [] }
+            // Sonarr ships TMDB's series id on the library resource, so
+            // ownership is an id match off the shared `LibraryIndex`
+            // snapshot. This replaced a normalized title + year join, which
+            // could tag a same-titled show as the one you own — and which
+            // fetched the whole Sonarr library itself, bypassing the index.
+            let libraryMap = await ArrLibraryMaps.sonarrByTMDBId(config: sonarrConfig)
             let merged = PersonCreditMerge.merge(cast: credits.cast, crew: credits.crew ?? [])
-            let rows = TMDBSearchMapping.series(PersonCreditMerge.byPopularity(merged.credits), roles: merged.roles)
-            // Series carry a TMDB tv id, not a tvdb id, so the usual id-based
-            // library map can't tag them. Match on normalized title + year
-            // against the Sonarr library instead — a local join, no per-row
-            // network calls — so an owned series (e.g. The Simpsons) drills into
-            // its detail instead of offering to add a duplicate.
-            let owned = await Self.sonarrOwnershipByTitle(config: sonarrConfig)
-            guard !owned.isEmpty else { return rows }
-            return rows.map { r in
-                if let arrId = owned[Self.titleYearKey(title: r.title, year: r.year)] {
-                    return r.withInLibraryArrId(arrId)
-                }
-                return r
-            }
+            return TMDBSearchMapping.series(
+                PersonCreditMerge.byPopularity(merged.credits),
+                libraryMap: libraryMap, roles: merged.roles)
         }
         seriesTasks[personId] = task
         let value = await task.value
@@ -102,24 +99,6 @@ public final class PersonStore {
     }
 
     // MARK: - Helpers
-
-    /// `(normalized title, year) → Sonarr series id` for the whole library, so
-    /// TMDB series (which have no tvdb id) can still be tagged as owned by a
-    /// local title/year join.
-    private static func sonarrOwnershipByTitle(config: ServiceConfig) async -> [String: Int] {
-        guard config.isConfigured else { return [:] }
-        guard let library = try? await SonarrClient(config: config).fetchAllSeries() else { return [:] }
-        var map: [String: Int] = [:]
-        for rec in library {
-            guard let title = rec.title, let arrId = rec.id else { continue }
-            map[titleYearKey(title: title, year: rec.year)] = arrId
-        }
-        return map
-    }
-
-    private static func titleYearKey(title: String, year: Int?) -> String {
-        "\(SearchRelevance.normalize(title))|\(year ?? 0)"
-    }
 
     private func touch(_ id: Int) {
         lru.removeAll { $0 == id }

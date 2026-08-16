@@ -334,6 +334,25 @@ public struct TMDBClient: Sendable {
         let tv_results: [TVResult]
     }
 
+    /// The inverse of `tvIdFromTVDB`: a TMDB tv id → the show's TVDB id, via
+    /// `/tv/{id}/external_ids`. Sonarr speaks tvdbId and nothing else, so this
+    /// is the one authoritative bridge from a TMDB-sourced series row to a
+    /// Sonarr record. Nil when TMDB has no tvdb id on file — and nil must stay
+    /// nil at the call site rather than degrading into a title search, since
+    /// matching a show by name is precisely how the wrong series got opened.
+    public func tvdbIdFromTVId(_ tvId: Int) async throws -> Int? {
+        let resp: TMDBExternalIDs = try await get(
+            path: "/tv/\(tvId)/external_ids",
+            query: []
+        )
+        guard let tvdb = resp.tvdb_id, tvdb > 0 else { return nil }
+        return tvdb
+    }
+
+    private struct TMDBExternalIDs: Decodable {
+        let tvdb_id: Int?
+    }
+
     /// `/person/{id}`. Biography is localized by the account's TMDB language;
     /// when the localized one comes back empty we retry in English so the
     /// person view isn't blank for non-English locales.

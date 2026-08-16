@@ -783,6 +783,48 @@
         }
       }
     },
+    "search.unresolvedSeries.error": {
+      "comment": "Error shown when a TMDB-sourced series can't be resolved to a TVDB id, so it can't be added. %@ is the series title.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't identify the series “%@”. Add it from the + search instead."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nie udało się jednoznacznie ustalić serialu „%@”. Dodaj go z wyszukiwarki +."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Serie „%@“ konnte nicht eindeutig bestimmt werden. Füge sie über die +-Suche hinzu."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se pudo identificar la serie «%@». Añádela desde la búsqueda +."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossible d’identifier la série « %@ ». Ajoutez-la depuis la recherche +."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kon de serie ‘%@’ niet identificeren. Voeg hem toe via de +-zoekopdracht."
+          }
+        }
+      }
+    },
     "settings.showWarnings.label": {
       "comment": "Settings toggle: show arr warnings, not just errors",
       "extractionState": "manual",

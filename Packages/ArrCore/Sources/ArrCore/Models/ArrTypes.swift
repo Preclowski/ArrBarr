@@ -530,6 +530,12 @@ public struct SonarrLookupRecord: Decodable {
     /// See `RadarrLookupRecord.imdbId` — Sonarr's lookup carries it too, so
     /// an `imdb:ttN` query can resolve a series as well as a movie.
     var imdbId: String? = nil
+    /// TMDB series id, when SkyHook knows one. The verification gate in
+    /// `SeriesIdentityResolver` reads it: a `term=tmdb:N` lookup is only
+    /// trusted when the record that comes back actually carries that id
+    /// (older Sonarr treats the unknown prefix as literal search text and
+    /// answers with whatever the string fuzzy-matches).
+    var tmdbId: Int? = nil
     let title: String
     let year: Int?
     let overview: String?
@@ -706,6 +712,12 @@ public struct SonarrLibraryRecord: Decodable, Sendable, Equatable {
     var ratings: SonarrLookupRatings? = nil
     /// Library tooltip garnish — always on the wire, newly decoded.
     var genres: [String]? = nil
+    /// TMDB's own series id. Sonarr v3+ ships it on `/api/v3/series` (same
+    /// field `SonarrSeries` already decodes); we simply never read it here.
+    /// It is what lets a TMDB-sourced row be matched against the library by
+    /// *id* — before this, TMDB series could only be joined on title + year,
+    /// which is how a same-titled show got mistaken for one you own.
+    var tmdbId: Int? = nil
 }
 public struct SonarrLibraryStatistics: Decodable, Sendable, Equatable {
     let episodeCount: Int?

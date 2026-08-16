@@ -39,21 +39,33 @@ public extension RadarrLibraryRecord {
 
 public extension SonarrLibraryRecord {
     var mediaServerKeys: [MediaServerExternalKey] {
-        tvdbId.map { [.tvdb($0)] } ?? []
+        var keys: [MediaServerExternalKey] = []
+        // TVDB first, tmdb as the second chance — same order and reasoning as
+        // `SonarrSeriesDetail`, now that the library record decodes tmdbId too.
+        if let tvdbId { keys.append(.tvdb(tvdbId)) }
+        if let tmdbId, tmdbId > 0 { keys.append(.tmdb(tmdbId)) }
+        return keys
     }
 }
 
 public extension SearchResult {
     /// A lookup result's ids, in the form the media-server index is keyed by.
     /// Radarr results carry a TMDB id in `.id`, Sonarr results a TVDB id —
-    /// except TMDB-sourced series rows, which carry `0` (see
-    /// `TMDBSearchMapping.series`) and therefore can't be matched at all.
+    /// and TMDB-sourced series rows, whose `id` is still `0`, carry their TMDB
+    /// series id in `tmdbTVId`. That last one is why these rows can be matched
+    /// at all now: watched state used to be silently unavailable for every
+    /// series that came from TMDB rather than from Sonarr's own lookup.
     var mediaServerKeys: [MediaServerExternalKey] {
-        guard id != 0 else { return [] }
         switch source {
-        case .radarr, .whisparr: return [.tmdb(id)]
-        case .sonarr:            return [.tvdb(id)]
-        case .lidarr:            return []
+        case .radarr, .whisparr:
+            return id != 0 ? [.tmdb(id)] : []
+        case .sonarr:
+            var keys: [MediaServerExternalKey] = []
+            if id != 0 { keys.append(.tvdb(id)) }
+            if let tmdbTVId, tmdbTVId > 0 { keys.append(.tmdb(tmdbTVId)) }
+            return keys
+        case .lidarr:
+            return []
         }
     }
 }

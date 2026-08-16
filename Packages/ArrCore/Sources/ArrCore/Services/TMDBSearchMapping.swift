@@ -38,13 +38,15 @@ public enum TMDBSearchMapping {
         }
     }
 
-    /// TMDB series → `SearchResult`. The TV path is fuzzier than movies: Sonarr
-    /// indexes by tvdbId while TMDB exposes its own tv id, so we stash `0` in
-    /// `id` — the add-tap path then falls back to a title lookup and Sonarr
-    /// resolves the right tvdbId at add time. `libraryMap` (tvdbId → Sonarr
-    /// series id) can only tag results that already carry a real tvdbId, so
-    /// TMDB-discover rows stay untagged; callers that resolved through Sonarr's
-    /// own lookup can pass a populated map.
+    /// TMDB series → `SearchResult`. Sonarr indexes by tvdbId while TMDB
+    /// exposes its own tv id, so `id` (the tvdbId slot) stays `0` here and the
+    /// TMDB id rides in `tmdbTVId` instead. That field is the whole point of
+    /// this mapping: every consumer — ownership tagging, cast, trailer, the
+    /// add flow — resolves from it by id. Nothing downstream may re-find the
+    /// show by title; that is what opened the wrong series.
+    ///
+    /// `libraryMap` is **tmdbId → Sonarr series id** (`ArrLibraryMaps
+    /// .sonarrByTMDBId`), so these rows tag exactly like the movie ones.
     public static func series(
         _ shows: some Sequence<TMDBTVSummary>,
         libraryMap: [Int: Int] = [:],
@@ -65,7 +67,9 @@ public enum TMDBSearchMapping {
                 network: nil,
                 certification: nil,
                 posterURL: TMDBClient.imageURL(path: s.posterPath),
-                source: .sonarr
+                source: .sonarr,
+                inLibraryArrId: libraryMap[s.id],
+                tmdbTVId: s.id
             )
         }
     }

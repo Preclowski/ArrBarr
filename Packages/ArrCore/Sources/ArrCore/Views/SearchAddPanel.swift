@@ -10,11 +10,21 @@ public struct SearchAddPanel: View {
 
     @ObservedObject private var storeManager = StoreManager.shared
 
+    /// Identity of the title this panel was opened for, frozen at init.
+    ///
+    /// The cast / trailer tasks used to key on `result.id`, which enrichment
+    /// *changes* for a TMDB-sourced series (0 → the resolved tvdbId). That
+    /// re-ran both fetches mid-panel — the visible half of the wrong-series
+    /// bug, since the second run was the one that repainted the strip. The
+    /// panel shows one title for its whole life, so its task key is constant.
+    private let identityKey: String
+
     public init(result: SearchResult, viewModel: SearchViewModel,
                 onBack: @escaping () -> Void) {
         _result = State(initialValue: result)
         self.viewModel = viewModel
         self.onBack = onBack
+        self.identityKey = "\(result.source.rawValue):\(result.tmdbTVId ?? result.id)"
     }
 
     /// Trailer for the title being added. Nil = no clip (or no TMDB key for
@@ -173,7 +183,7 @@ public struct SearchAddPanel: View {
             selectedRootFolder = viewModel.rootFolders.first?.path
             selectedMetadataProfileId = viewModel.metadataProfiles.first?.id
         }
-        .task(id: result.id) {
+        .task(id: identityKey) {
             // `addError` lives on the shared SearchViewModel, so a failed add
             // ("this movie has already been added") stuck around and rendered
             // under the form of the *next* title the user opened. Clear it
@@ -181,7 +191,7 @@ public struct SearchAddPanel: View {
             viewModel.addError = nil
             await loadCast()
         }
-        .task(id: result.id) { await resolveTrailer() }
+        .task(id: identityKey) { await resolveTrailer() }
         // Deciding whether to ADD is when a trailer is worth most, so the panel
         // presents it exactly like the detail view does.
         .trailerOverlay(key: $presentedTrailer)
@@ -240,8 +250,10 @@ public struct SearchAddPanel: View {
                 radarrTrailerId: nil, tmdbId: id, configStore: configStore
             )
         case .tvdb(let id):
+            // Same as the cast strip: pass the TMDB id when the row has one,
+            // so this costs one request instead of a `/find` plus one.
             trailerKey = await TrailerProvider.seriesTrailerKey(
-                tmdbId: nil, tvdbId: id, configStore: configStore
+                tmdbId: result.tmdbTVId, tvdbId: id, configStore: configStore
             )
         case .musicBrainz, .imdb:
             break
@@ -304,7 +316,10 @@ public struct SearchAddPanel: View {
     /// Fetch the cast via the shared `CastProvider`. Supplementary — silent on
     /// failure / no key. The result's `id` carries the TMDB movie id for
     /// movies and the TVDB series id for series (see `SearchResult`), which is
-    /// exactly what each cast path keys on.
+    /// exactly what each cast path keys on — plus `tmdbTVId` for series, which
+    /// TMDB can serve directly. Handing that over skips the `/find` hop the
+    /// provider would otherwise make, and it is the only route that works at
+    /// all for a TMDB-sourced row (whose tvdbId slot is still 0).
     private func loadCast() async {
         guard !configStore.tmdbApiKey.isEmpty else { return }
         castLoading = true
@@ -315,7 +330,8 @@ public struct SearchAddPanel: View {
                 radarrMovieId: nil, tmdbId: result.id, configStore: configStore)
         case .sonarr:
             cast = await CastProvider.seriesCast(
-                tmdbId: nil, tvdbId: result.id, demoSeriesId: nil, configStore: configStore)
+                tmdbId: result.tmdbTVId, tvdbId: result.id, demoSeriesId: nil,
+                configStore: configStore)
         case .lidarr:
             break  // no TMDB cast for music
         }

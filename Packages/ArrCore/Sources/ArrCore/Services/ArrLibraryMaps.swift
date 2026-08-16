@@ -30,4 +30,33 @@ public enum ArrLibraryMaps {
         }
         return map
     }
+
+    /// Sonarr: `tmdbId → series.id` — the TV counterpart of
+    /// `radarrByTMDBId`, and what tags TMDB-sourced series rows as owned.
+    ///
+    /// This exists because the alternative was a title + year join, which is
+    /// a guess: two different shows can share a name and a year. Sonarr has
+    /// shipped `tmdbId` on the series resource all along; reading it turns
+    /// that guess into an id match, at no extra request (the snapshot behind
+    /// `LibraryIndex` is the same one every other map reads).
+    public static func sonarrByTMDBId(config: ServiceConfig) async -> [Int: Int] {
+        var map: [Int: Int] = [:]
+        for rec in await LibraryIndex.shared.series(config: config) {
+            if let tmdb = rec.tmdbId, tmdb > 0, let arrId = rec.id { map[tmdb] = arrId }
+        }
+        return map
+    }
+
+    /// Sonarr: `tmdbId → tvdbId`, straight off the library snapshot.
+    ///
+    /// The free first step of series identity resolution: for anything the
+    /// user already owns, both ids are in memory, so translating a TMDB row
+    /// to the id Sonarr wants costs zero requests.
+    public static func sonarrTVDBByTMDBId(config: ServiceConfig) async -> [Int: Int] {
+        var map: [Int: Int] = [:]
+        for rec in await LibraryIndex.shared.series(config: config) {
+            if let tmdb = rec.tmdbId, tmdb > 0, let tvdb = rec.tvdbId, tvdb > 0 { map[tmdb] = tvdb }
+        }
+        return map
+    }
 }

@@ -58,6 +58,19 @@ public struct SearchResult: Identifiable, Equatable, Hashable, Sendable {
     /// lookups return records with disjoint shapes, so the flag is stamped at
     /// unify time rather than re-derived downstream.
     let isLidarrAlbum: Bool
+    /// TMDB's own **series** id, for `.sonarr` rows only.
+    ///
+    /// `id` carries the tvdbId for series, which TMDB-sourced rows (person
+    /// filmography, `tmdb_discover_series`) simply do not have — they used to
+    /// arrive with `id: 0` and no way back to the show they came from, so the
+    /// add panel re-found the series by *title* and cheerfully opened a
+    /// different one. This is the identity that makes that lookup exact; it
+    /// is also what cast and trailer prefer, since both key on TMDB.
+    ///
+    /// Set on Sonarr lookup records too (SkyHook ships it), which is what
+    /// lets `SeriesIdentityResolver` verify that a `tmdb:N` lookup answered
+    /// about the show we asked about.
+    let tmdbTVId: Int?
 
     init(id: Int, foreignId: String, title: String, subtitle: String?,
          year: Int?, rating: Double?, votes: Int? = nil,
@@ -67,7 +80,8 @@ public struct SearchResult: Identifiable, Equatable, Hashable, Sendable {
          posterURL: URL?, source: QueueItem.Source,
          inLibraryArrId: Int? = nil,
          imdbId: String? = nil, sourceRank: Int = 0,
-         isLidarrAlbum: Bool = false) {
+         isLidarrAlbum: Bool = false,
+         tmdbTVId: Int? = nil) {
         self.id = id
         self.foreignId = foreignId
         self.title = title
@@ -89,6 +103,7 @@ public struct SearchResult: Identifiable, Equatable, Hashable, Sendable {
         self.imdbId = imdbId
         self.sourceRank = sourceRank
         self.isLidarrAlbum = isLidarrAlbum
+        self.tmdbTVId = tmdbTVId
     }
 
     /// Re-stamp `inLibraryArrId` without retyping every other field.
@@ -107,7 +122,30 @@ public struct SearchResult: Identifiable, Equatable, Hashable, Sendable {
             posterURL: self.posterURL, source: self.source,
             inLibraryArrId: id,
             imdbId: self.imdbId, sourceRank: self.sourceRank,
-            isLidarrAlbum: self.isLidarrAlbum
+            isLidarrAlbum: self.isLidarrAlbum,
+            tmdbTVId: self.tmdbTVId
+        )
+    }
+
+    /// Stamp the resolved tvdbId onto a TMDB-sourced series row (`id == 0`),
+    /// keeping `tmdbTVId` so cast and trailer still take the TMDB route.
+    /// Only `SeriesIdentityResolver`'s callers should produce this — the id
+    /// must have been proven, never matched by title.
+    func withTVDBId(_ tvdbId: Int) -> SearchResult {
+        SearchResult(
+            id: tvdbId, foreignId: String(tvdbId),
+            title: self.title, subtitle: self.subtitle,
+            year: self.year, rating: self.rating, votes: self.votes,
+            imdb: self.imdb, rottenTomatoes: self.rottenTomatoes,
+            metacritic: self.metacritic,
+            overview: self.overview, runtime: self.runtime,
+            genres: self.genres, network: self.network,
+            certification: self.certification,
+            posterURL: self.posterURL, source: self.source,
+            inLibraryArrId: self.inLibraryArrId,
+            imdbId: self.imdbId, sourceRank: self.sourceRank,
+            isLidarrAlbum: self.isLidarrAlbum,
+            tmdbTVId: self.tmdbTVId
         )
     }
 }

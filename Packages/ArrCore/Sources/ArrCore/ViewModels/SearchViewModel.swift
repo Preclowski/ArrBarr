@@ -293,34 +293,34 @@ public final class SearchViewModel {
 
     /// Replace a TMDB-sourced "lean" SearchResult with the arr's own lookup
     /// hit so the SearchAddPanel hero card shows the full IMDB/RT/Metacritic
-    /// + runtime + genre chips that the `+` path gets natively. Returns nil
-    /// (caller keeps the lean version) when the arr can't enrich the row —
-    /// Lidarr/Whisparr already come from their own lookups, and TMDB-TV
-    /// items with no tvdbId fall back to a title match that may miss.
+    /// + runtime + genre chips that the `+` path gets natively.
+    ///
+    /// Returns nil — caller keeps the lean row — whenever the swap can't be
+    /// made on an id. Enrichment is cosmetic; identity is not, and a row
+    /// enriched from a same-titled *different* show replaced the poster, the
+    /// overview and (via the panel's id-keyed tasks) the cast. Every route
+    /// here is now id-based: TMDB ids for movies, `SeriesIdentityResolver`
+    /// for TMDB-sourced series.
     func enrich(_ result: SearchResult) async -> SearchResult? {
-        guard let client = client(for: result.source) else { return nil }
-        let candidates: [SearchResult]
-        do {
-            switch result.source {
-            case .radarr:
-                guard result.id > 0 else { return nil }
-                candidates = try await client.lookup(query: "tmdb:\(result.id)")
-            case .sonarr:
-                if result.id > 0 {
-                    candidates = try await client.lookup(query: "tvdb:\(result.id)")
-                } else {
-                    // TMDB-TV ids aren't TVDB ids — fall back to title match
-                    // and accept the first identical-title hit.
-                    let raw = try await client.lookup(query: result.title)
-                    candidates = raw.filter { $0.title.lowercased() == result.title.lowercased() }
-                }
-            case .lidarr, .whisparr:
-                return nil
+        switch result.source {
+        case .radarr:
+            guard let client = client(for: result.source), result.id > 0 else { return nil }
+            return try? await client.lookup(query: "tmdb:\(result.id)").first
+        case .sonarr:
+            if result.id > 0 {
+                guard let client = client(for: result.source) else { return nil }
+                return try? await client.lookup(query: "tvdb:\(result.id)").first
             }
-        } catch {
+            // A TMDB tv id is not a tvdbId. Resolve it properly (library
+            // snapshot → verified `tmdb:N` → TMDB `/external_ids`) instead of
+            // re-finding the show by name.
+            guard let tmdbTVId = result.tmdbTVId else { return nil }
+            return await SeriesIdentityResolver.sonarrRecord(
+                tmdbTVId: tmdbTVId, sonarrConfig: configs[.sonarr] ?? .empty,
+                tmdbKey: tmdbApiKey)
+        case .lidarr, .whisparr:
             return nil
         }
-        return candidates.first
     }
 
     func loadOptions(source: QueueItem.Source) async {
@@ -402,6 +402,16 @@ public final class SearchViewModel {
         guard let client = sonarrClient else { return }
         isAdding = true; addError = nil
         defer { isAdding = false }
+        // A TMDB-sourced row carries a TMDB tv id, not the tvdbId Sonarr posts
+        // against. Resolve it here, by id, before the write — the client
+        // refuses an unresolved row rather than guessing at one by title.
+        var result = result
+        if result.id <= 0, let tmdbTVId = result.tmdbTVId,
+           let tvdbId = await SeriesIdentityResolver.tvdbId(
+               tmdbTVId: tmdbTVId, sonarrConfig: configs[.sonarr] ?? .empty,
+               tmdbKey: tmdbApiKey) {
+            result = result.withTVDBId(tvdbId)
+        }
         do {
             let arrId = try await client.addSeries(result, qualityProfileId: qualityProfileId,
                                                   rootFolderPath: rootFolderPath, monitor: monitor,

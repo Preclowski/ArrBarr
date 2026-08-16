@@ -49,7 +49,7 @@ extension DemoMocks {
         switch DemoPerson(rawValue: personId) {
         case .jamesRich:
             return [
-                demoSeriesRow(title: "Pioneer One", year: 2010, rating: 7.1,
+                demoSeriesRow(tmdbTVId: 301, title: "Pioneer One", year: 2010, rating: 7.1,
                               seed: "pioneerone", role: roleActor, ownedId: 101),
             ]
         default:
@@ -115,8 +115,10 @@ extension DemoMocks {
         )
     }
 
+    /// `id: 0` mirrors the real TMDB path — a series row carries its TMDB id,
+    /// not a tvdbId, until something resolves it.
     private static func demoSeriesRow(
-        title: String, year: Int, rating: Double,
+        tmdbTVId: Int, title: String, year: Int, rating: Double,
         seed: String, role: String, ownedId: Int?
     ) -> SearchResult {
         SearchResult(
@@ -126,7 +128,8 @@ extension DemoMocks {
             overview: nil, runtime: nil, genres: [], network: nil,
             certification: nil,
             posterURL: poster(label: title, seed: seed),
-            source: .sonarr, inLibraryArrId: ownedId
+            source: .sonarr, inLibraryArrId: ownedId,
+            tmdbTVId: tmdbTVId
         )
     }
 }
