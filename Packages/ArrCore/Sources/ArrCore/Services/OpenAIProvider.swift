@@ -83,6 +83,33 @@ public struct OpenAIProvider: LLMProvider {
         return LLMResponse(text: text, toolCalls: toolCalls, toolResults: nil)
     }
 
+    // MARK: - History window
+
+    /// Which slice of the conversation goes to the model.
+    ///
+    /// Not a plain `suffix(n)`: one tool round costs at least two messages, so a
+    /// fixed message count silently evicts the user's actual QUESTION after a
+    /// few rounds — the model then sees nothing but its own tool traffic and
+    /// keeps digging, which is exactly how a "list this artist's albums" turn
+    /// span out into six rounds of unrelated calls. So the current turn (from
+    /// the last user message on) is kept whole and earlier context only fills
+    /// what's left of the budget.
+    ///
+    /// If a single turn is longer than the budget, the user message is still
+    /// pinned and the MIDDLE of the turn is what gets dropped — the question and
+    /// the freshest results are the two things worth keeping.
+    static func window(_ history: [ChatMessage], budget: Int = 16) -> [ChatMessage] {
+        guard history.count > budget else { return history }
+        let turnStart = history.lastIndex { $0.role == .user } ?? history.startIndex
+        let turn = Array(history[turnStart...])
+
+        guard turn.count <= budget else {
+            return [turn[0]] + turn.suffix(budget - 1)
+        }
+        let earlier = history[..<turnStart].suffix(budget - turn.count)
+        return Array(earlier) + turn
+    }
+
     // MARK: - Request building (pure — tested independently)
 
     static func buildRequestBody(model: String, prompt: String, tools: [LLMTool], history: [ChatMessage], replyLanguage: String = "English") -> ChatCompletionsRequest {
@@ -90,8 +117,8 @@ public struct OpenAIProvider: LLMProvider {
         let systemMessage = ChatCompletionsRequest.Message(
             role: "system",
             content: """
-            You are ArrBarr's in-app assistant for \(arrs) — and a film buff at heart.
-            You speak concisely but with real passion for film and TV. You run your own homelab on the same *arr stack, so you talk to the user as a fellow self-hoster: when it helps, you share a hard-won tip on quality profiles, custom formats or release groups — never lecturing. Passion shows in your word choice, not your length: keep it short.
+            You are ArrBarr's in-app assistant for \(arrs) — and a film, TV and music obsessive at heart.
+            You speak concisely but with real passion for what the user is asking about: a film, a series, a band, an album, a pressing. Music is not a lesser tab — an album gets the same enthusiasm and the same specificity as a film (the producer, the session, the pressing, the run of records around it), and Lidarr is as much your stack as Radarr. You run your own homelab on the same *arr stack, so you talk to the user as a fellow self-hoster: when it helps, you share a hard-won tip on quality profiles, custom formats or release groups — never lecturing. Passion shows in your word choice, not your length: keep it short.
             Always reply in the same language as the user's latest message — this takes priority. Only when their language is genuinely unclear, default to \(replyLanguage). Keep media titles exactly as the user wrote them.
             Call a tool when the request needs server data or an action. Otherwise just answer.
             Only use tools from the provided list.
@@ -103,15 +130,21 @@ public struct OpenAIProvider: LLMProvider {
               • Markdown tables — ideal for comparing a few titles/specs
                 side by side (e.g. quality, size, score across releases)
               • bullet or numbered lists
-              • inline emphasis: **bold**, *italic*, `code`, [link](url)
+              • inline emphasis: **bold**, *italic*, `code`
+              • in-app links ONLY, in the two forms described below — never a
+                web URL
               • headings sparingly (## only, for a longer structured answer)
             Avoid emoji. Keep replies short — usually one short paragraph; reach
             for a table or list only when it genuinely helps (comparisons or
             multi-field data), not for one or two items.
 
-            When you talk about a specific film or show you genuinely know
+            \(SystemPromptComposer.linkingClause)
+
+            When you talk about a specific film, show, album or artist you genuinely know
             (never guess, never invent facts), PROACTIVELY offer one short fun
-            fact or behind-the-scenes tidbit — don't wait to be asked. Wrap
+            fact or behind-the-scenes tidbit — don't wait to be asked; for a
+            record that means the session, the producer, the sample, the split
+            that came after it. Wrap
             ANY words that reveal a plot point (a twist, an ending, a death,
             who did it) in double pipes: ||like this||. The app hides what's
             inside behind a tap-to-reveal, so wrapping is always safe — lean
@@ -132,14 +165,15 @@ public struct OpenAIProvider: LLMProvider {
         )
 
         var msgs: [ChatCompletionsRequest.Message] = [systemMessage]
+        let history = Self.window(history)
         // Track the tool-call IDs emitted by assistant messages WITHIN this
-        // window. `suffix(8)` can begin mid tool-sequence, slicing off the
+        // window. Trimming can begin mid tool-sequence, slicing off the
         // `assistant`+`tool_calls` that a `tool` result answers — and OpenAI
         // rejects an orphaned tool message ("messages with role 'tool' must be
         // a response to a preceding message with 'tool_calls'"). Only emit a
         // tool result whose call survived into this window.
         var emittedToolCallIDs = Set<String>()
-        for msg in history.suffix(8) {
+        for msg in history {
             switch msg.role {
             case .user:
                 msgs.append(.init(role: "user", content: msg.content, tool_calls: nil, tool_call_id: nil))
@@ -177,7 +211,15 @@ public struct OpenAIProvider: LLMProvider {
                 ))
             }
         }
-        msgs.append(.init(role: "user", content: prompt, tool_calls: nil, tool_call_id: nil))
+        // An empty prompt means "continue from the tool results already in the
+        // history" — the mid-loop rounds. Those results are ALREADY here as
+        // properly-roled `tool` messages; appending a copy as a `user` turn (the
+        // old behaviour) told the model the human had just pasted a tool log at
+        // it, which reads as a fresh instruction and is what sent it off calling
+        // more tools instead of answering.
+        if !prompt.isEmpty {
+            msgs.append(.init(role: "user", content: prompt, tool_calls: nil, tool_call_id: nil))
+        }
 
         let apiTools = tools.map { t in
             ChatCompletionsRequest.Tool(

@@ -127,7 +127,7 @@ public final class ChatViewModel {
                 // its own assistant carrier so every tool result has a matching
                 // preceding tool_call in the OpenAI history; the prose rides on
                 // the first carrier only.
-                var resultSummaries: [String] = []
+                var ranAnyTool = false
                 for (index, call) in toolCalls.enumerated() {
                     messages.append(ChatMessage(
                         role: .assistant,
@@ -151,7 +151,7 @@ public final class ChatViewModel {
                                 toolCall: call,
                                 toolResult: "(cancelled by user)"
                             ))
-                            resultSummaries.append("Tool \(call.name) was cancelled by the user.")
+                            ranAnyTool = true
                             continue
                         }
                         preApproved = args
@@ -186,7 +186,7 @@ public final class ChatViewModel {
                             toolCall: call,
                             toolResult: "(cancelled by user)"
                         ))
-                        resultSummaries.append("Tool \(call.name) was cancelled by the user.")
+                        ranAnyTool = true
                         continue
                     } catch {
                         output = ToolCallOutput(text: "(tool error: \(error.localizedDescription))")
@@ -199,9 +199,15 @@ public final class ChatViewModel {
                         toolResult: output.text,
                         richContent: output.rich
                     ))
-                    resultSummaries.append("Tool \(call.name) returned: \(output.text)")
+                    ranAnyTool = true
                 }
-                nextPrompt = resultSummaries.joined(separator: "\n")
+                // Next round carries NO prompt. Every result is already in
+                // `messages` as a properly-roled tool message, which is what the
+                // provider sends; re-sending the same text as a user turn told
+                // the model the human had just pasted tool output at it, and it
+                // answered that instead of the original question — the tool-call
+                // spiral. An empty prompt means "continue from what's there".
+                nextPrompt = ranAnyTool ? "" : nil
             }
             if roundsLeft == 0 {
                 lastError = "Reached the maximum number of tool-call rounds."

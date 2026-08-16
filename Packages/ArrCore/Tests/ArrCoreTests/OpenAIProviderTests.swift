@@ -10,7 +10,12 @@ struct OpenAIProviderTests {
         nonisolated(unsafe) static var nextResponseBody: Data = Data()
         nonisolated(unsafe) static var nextStatus: Int = 200
 
-        override class func canInit(with request: URLRequest) -> Bool { true }
+        // Scoped to this suite's hosts. Answering every request — suites run in
+        // parallel — serves other suites their neighbour's fixture, and the victim
+        // sees impossible values (zero requests for a call it definitely made).
+        override class func canInit(with request: URLRequest) -> Bool {
+            request.url?.host == "openrouter.ai"
+        }
         override class func canonicalRequest(for r: URLRequest) -> URLRequest { r }
         override func startLoading() {
             Self.lastRequest = request
@@ -156,5 +161,60 @@ struct OpenAIProviderTests {
     func replyLanguageName() {
         #expect(ChatViewModelFactory.replyLanguageName(appLanguage: "pl") == "Polish")
         #expect(ChatViewModelFactory.replyLanguageName(appLanguage: "de") == "German")
+    }
+
+    // MARK: - History window (the tool-call spiral)
+
+    private func msg(_ role: ChatMessage.Role, _ text: String) -> ChatMessage {
+        ChatMessage(role: role, content: text)
+    }
+
+    @Test("Mid-loop rounds carry no duplicate user turn")
+    func emptyPromptAddsNoUserMessage() {
+        let history = [msg(.user, "co gra Tilda"), msg(.tool, "tmdb_search_person")]
+        let body = OpenAIProvider.buildRequestBody(model: "m", prompt: "", tools: [], history: history)
+        // The tool result is already in history as its own message; a copy of it
+        // as a `user` turn is what used to restart the model's planning.
+        #expect(body.messages.filter { $0.role == "user" }.map(\.content) == ["co gra Tilda"])
+    }
+
+    @Test("A first-round prompt is still sent")
+    func promptStillSent() {
+        let body = OpenAIProvider.buildRequestBody(model: "m", prompt: "hi", tools: [], history: [])
+        #expect(body.messages.last?.role == "user")
+        #expect(body.messages.last?.content == "hi")
+    }
+
+    @Test("The window keeps the user's question no matter how many tool rounds ran")
+    func windowPinsTheQuestion() {
+        var history = [msg(.user, "daj listę albumów Daft Punk")]
+        // 12 tool rounds' worth of carrier+result — far past any fixed suffix.
+        for i in 0..<24 { history.append(msg(i.isMultiple(of: 2) ? .assistant : .tool, "noise \(i)")) }
+
+        let windowed = OpenAIProvider.window(history)
+        #expect(windowed.count <= 16)
+        #expect(windowed.first?.content == "daj listę albumów Daft Punk")
+        // …and the freshest results survive too.
+        #expect(windowed.last?.content == "noise 23")
+    }
+
+    @Test("Short histories pass through untouched")
+    func windowLeavesShortHistoriesAlone() {
+        let history = [msg(.user, "a"), msg(.assistant, "b"), msg(.user, "c")]
+        #expect(OpenAIProvider.window(history).map(\.content) == ["a", "b", "c"])
+    }
+
+    @Test("Earlier turns fill whatever budget the current turn leaves")
+    func windowKeepsEarlierContext() {
+        var history: [ChatMessage] = []
+        for i in 0..<20 { history.append(msg(i.isMultiple(of: 2) ? .user : .assistant, "old \(i)")) }
+        history.append(msg(.user, "new question"))
+        history.append(msg(.tool, "result"))
+
+        let windowed = OpenAIProvider.window(history)
+        #expect(windowed.count == 16)
+        #expect(windowed.suffix(2).map(\.content) == ["new question", "result"])
+        // The rest is the most recent earlier context, not the oldest.
+        #expect(windowed.first?.content == "old 6")
     }
 }
