@@ -44,7 +44,7 @@ public actor LibraryIndex {
 
     public func movies(config: ServiceConfig) async -> [RadarrLibraryRecord] {
         guard config.isConfigured else { return [] }
-        let fingerprint = Self.fingerprint(config)
+        let fingerprint = config.identityFingerprint
         if let slot = movieSlot, slot.fingerprint == fingerprint, Self.isFresh(slot.fetchedAt) {
             return slot.records
         }
@@ -67,7 +67,7 @@ public actor LibraryIndex {
 
     public func series(config: ServiceConfig) async -> [SonarrLibraryRecord] {
         guard config.isConfigured else { return [] }
-        let fingerprint = Self.fingerprint(config)
+        let fingerprint = config.identityFingerprint
         if let slot = seriesSlot, slot.fingerprint == fingerprint, Self.isFresh(slot.fetchedAt) {
             return slot.records
         }
@@ -108,7 +108,4 @@ public actor LibraryIndex {
         Date().timeIntervalSince(stamp) < ttl
     }
 
-    private static func fingerprint(_ config: ServiceConfig) -> String {
-        "\(config.baseURL)|\(config.apiKey.count)"
-    }
 }

@@ -24,15 +24,19 @@ import Foundation
 ///
 /// Cost shape: rendering a 100-row filmography costs nothing here (resolution
 /// is lazy, on tap), and TMDB is only consulted for titles the user does *not*
-/// own. Results are held in a small session LRU with in-flight coalescing —
-/// the same pattern as `CastProvider`, whose cache this deliberately mirrors.
+/// own. Results are held in a `CoalescingCache`, so a second tap on the same
+/// title — or two taps racing — costs nothing.
 @MainActor
 enum SeriesIdentityResolver {
-    private static var recordCache: [String: SearchResult] = [:]
-    private static var tvdbCache: [Int: Int] = [:]
-    private static var lru: [String] = []
-    private static var inflight: [String: Task<SearchResult?, Never>] = [:]
-    private static let capacity = 40
+    /// Nil is a *miss*, not an answer: a title we couldn't prove today may
+    /// resolve once Sonarr is reachable or the TMDB key is pasted.
+    private static let records = CoalescingCache<String, SearchResult?>(
+        capacity: 40, shouldStore: { $0 != nil })
+    /// `tmdbTVId → tvdbId`, the half of a resolution the add path needs on its
+    /// own. Separate from `records` because it is also filled by the library
+    /// snapshot, which answers without ever producing a Sonarr record.
+    private static let tvdbIds = CoalescingCache<Int, Int?>(
+        capacity: 200, shouldStore: { $0 != nil })
 
     /// Per-server memory of whether Sonarr understood `term=tmdb:N`. Keyed by
     /// the config fingerprint so switching servers re-probes. `false` skips
@@ -60,21 +64,12 @@ enum SeriesIdentityResolver {
         tmdbTVId: Int, sonarrConfig: ServiceConfig, tmdbKey: String
     ) async -> SearchResult? {
         guard tmdbTVId > 0, !DemoMode.isActive, sonarrConfig.isConfigured else { return nil }
-        let key = "\(Self.fingerprint(sonarrConfig)):\(tmdbTVId)"
-        if let hit = recordCache[key] { touch(key); return hit }
-        if let running = inflight[key] { return await running.value }
-        let task = Task<SearchResult?, Never> {
+        let record = await records.value(for: "\(sonarrConfig.identityFingerprint):\(tmdbTVId)") {
             await resolveRecord(tmdbTVId: tmdbTVId, sonarrConfig: sonarrConfig, tmdbKey: tmdbKey)
         }
-        inflight[key] = task
-        let record = await task.value
-        inflight[key] = nil
-        if let record {
-            recordCache[key] = record
-            if record.id > 0 { tvdbCache[tmdbTVId] = record.id }
-            touch(key)
-            trim()
-        }
+        // A resolved record is also the answer to "what is its tvdbId", so the
+        // add path never re-resolves what the panel already worked out.
+        if let id = record?.id, id > 0 { tvdbIds.store(id, for: tmdbTVId) }
         return record
     }
 
@@ -85,20 +80,22 @@ enum SeriesIdentityResolver {
         tmdbTVId: Int, sonarrConfig: ServiceConfig, tmdbKey: String
     ) async -> Int? {
         guard tmdbTVId > 0, !DemoMode.isActive else { return nil }
-        if let cached = tvdbCache[tmdbTVId] { return cached }
-        if sonarrConfig.isConfigured,
-           let owned = await ArrLibraryMaps.sonarrTVDBByTMDBId(config: sonarrConfig)[tmdbTVId] {
-            tvdbCache[tmdbTVId] = owned
-            return owned
+        return await tvdbIds.value(for: tmdbTVId) {
+            // Cheapest first: an owned series has both ids in the library
+            // snapshot already, so this costs no request at all.
+            if sonarrConfig.isConfigured,
+               let owned = await ArrLibraryMaps.sonarrTVDBByTMDBId(config: sonarrConfig)[tmdbTVId] {
+                return owned
+            }
+            if let external = await externalTVDBId(tmdbTVId: tmdbTVId, tmdbKey: tmdbKey) {
+                return external
+            }
+            // Still an id route, not a title one: Sonarr may know the tmdb id
+            // even when TMDB has no tvdb id on file.
+            let record = await sonarrRecord(
+                tmdbTVId: tmdbTVId, sonarrConfig: sonarrConfig, tmdbKey: tmdbKey)
+            return (record?.id).flatMap { $0 > 0 ? $0 : nil }
         }
-        if let resolved = await externalTVDBId(tmdbTVId: tmdbTVId, tmdbKey: tmdbKey) {
-            return resolved
-        }
-        // Last resort is still an id route, not a title one: Sonarr may know
-        // the tmdb id even when TMDB has no tvdb id on file.
-        return await sonarrRecord(
-            tmdbTVId: tmdbTVId, sonarrConfig: sonarrConfig, tmdbKey: tmdbKey
-        ).map(\.id).flatMap { $0 > 0 ? $0 : nil }
     }
 
     // MARK: - Resolution
@@ -110,13 +107,12 @@ enum SeriesIdentityResolver {
 
         // 1. Free: the user already owns it, so both ids are in the snapshot.
         if let owned = await ArrLibraryMaps.sonarrTVDBByTMDBId(config: sonarrConfig)[tmdbTVId] {
-            tvdbCache[tmdbTVId] = owned
             if let record = await lookupTVDB(owned, client: client) { return record }
         }
 
         // 2. One request that both resolves and enriches — if this Sonarr
         //    understands the prefix, and if the answer proves it did.
-        let fingerprint = Self.fingerprint(sonarrConfig)
+        let fingerprint = sonarrConfig.identityFingerprint
         if acceptsTMDBTerm[fingerprint] != false {
             let candidates = (try? await client.lookup(query: "tmdb:\(tmdbTVId)")) ?? []
             if let hit = candidates.first(where: { $0.tmdbTVId == tmdbTVId && $0.id > 0 }) {
@@ -137,15 +133,14 @@ enum SeriesIdentityResolver {
         return await lookupTVDB(tvdb, client: client)
     }
 
-    /// `/tv/{id}/external_ids`, memoised. The only TMDB request this type ever
-    /// makes, and only for titles that missed both cheaper routes.
+    /// `/tv/{id}/external_ids` — the only TMDB request this type ever makes,
+    /// and only for titles that missed both cheaper routes. Memoisation lives
+    /// in `tvdbIds`, which wraps every route into this one.
     private static func externalTVDBId(tmdbTVId: Int, tmdbKey: String) async -> Int? {
-        if let cached = tvdbCache[tmdbTVId] { return cached }
         guard !tmdbKey.isEmpty,
               let tvdb = try? await TMDBClient(apiKey: tmdbKey, session: session).tvdbIdFromTVId(tmdbTVId),
               tvdb > 0
         else { return nil }
-        tvdbCache[tmdbTVId] = tvdb
         return tvdb
     }
 
@@ -157,32 +152,12 @@ enum SeriesIdentityResolver {
         return candidates.first { $0.id == tvdbId }
     }
 
-    // MARK: - Cache
-
-    private static func fingerprint(_ config: ServiceConfig) -> String {
-        "\(config.baseURL)|\(config.apiKey.count)"
-    }
-
-    private static func touch(_ key: String) {
-        lru.removeAll { $0 == key }
-        lru.append(key)
-    }
-
-    private static func trim() {
-        while lru.count > capacity {
-            let evicted = lru.removeFirst()
-            recordCache[evicted] = nil
-        }
-    }
-
     #if DEBUG
     /// Tests share one process; identity caches must not leak between them.
     static func resetForTesting() {
         sessionOverrideForTesting = nil
-        recordCache = [:]
-        tvdbCache = [:]
-        lru = []
-        inflight = [:]
+        records.removeAll()
+        tvdbIds.removeAll()
         acceptsTMDBTerm = [:]
     }
     #endif

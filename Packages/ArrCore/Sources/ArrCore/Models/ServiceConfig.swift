@@ -15,6 +15,16 @@ public struct ServiceConfig: Codable, Equatable, Sendable {
         self.password = password
     }
 
+    /// Cache key for "is this still the same server?".
+    ///
+    /// Anything caching per-server state (`LibraryIndex`'s snapshot,
+    /// `SeriesIdentityResolver`'s resolutions and its `tmdb:` capability
+    /// probe) has to notice when the user re-points a service, and must do it
+    /// identically — two definitions drifting apart would mean one cache
+    /// serving another server's data. The key length stands in for the key
+    /// itself so the value never lands in a log or a cache dump.
+    public var identityFingerprint: String { "\(baseURL)|\(apiKey.count)" }
+
     public var isConfigured: Bool {
         guard enabled else { return false }
         guard let url = URL(string: baseURL),

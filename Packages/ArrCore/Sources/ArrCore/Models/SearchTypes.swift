@@ -15,8 +15,8 @@ public struct RootFolder: Decodable, Identifiable {
 // MARK: - Search result (unified)
 
 public struct SearchResult: Identifiable, Equatable, Hashable, Sendable {
-    public let id: Int                  // arr's internal id (tmdbId for Radarr, tvdbId for Sonarr)
-    let foreignId: String        // tmdbId/tvdbId as string — used in POST body
+    public var id: Int                  // arr's internal id (tmdbId for Radarr, tvdbId for Sonarr)
+    var foreignId: String        // tmdbId/tvdbId as string — used in POST body
     let title: String
     let subtitle: String?        // nil for movies; "X seasons" for shows
     let year: Int?
@@ -51,7 +51,7 @@ public struct SearchResult: Identifiable, Equatable, Hashable, Sendable {
     /// library and found a match. Carries the arr's internal record id so the
     /// chat UI can route a tap to DetailView instead of the add flow.
     /// `nil` for non-cross-referenced results (e.g. regular `*_search` calls).
-    let inLibraryArrId: Int?
+    var inLibraryArrId: Int?
     /// Lidarr only: true when this row is an ALBUM (`/album/lookup`), false
     /// for artists (`/artist/lookup`). The two route differently on tap —
     /// albums open/add the album, artists open the artist view — and the two
@@ -106,25 +106,18 @@ public struct SearchResult: Identifiable, Equatable, Hashable, Sendable {
         self.tmdbTVId = tmdbTVId
     }
 
-    /// Re-stamp `inLibraryArrId` without retyping every other field.
-    /// Used by tools (suggest_titles, *_search) that resolve results
-    /// first and then cross-reference against a library map.
+    /// Re-stamp `inLibraryArrId`. Used by tools (suggest_titles, *_search)
+    /// that resolve results first and then cross-reference against a library
+    /// map.
+    ///
+    /// A mutating copy rather than a field-by-field rebuild. The rebuild had
+    /// to name every property, so adding one silently dropped it here — the
+    /// failure mode being a freshly-added id that vanishes between the
+    /// mapping that set it and the row that needed it.
     func withInLibraryArrId(_ id: Int?) -> SearchResult {
-        SearchResult(
-            id: self.id, foreignId: self.foreignId,
-            title: self.title, subtitle: self.subtitle,
-            year: self.year, rating: self.rating, votes: self.votes,
-            imdb: self.imdb, rottenTomatoes: self.rottenTomatoes,
-            metacritic: self.metacritic,
-            overview: self.overview, runtime: self.runtime,
-            genres: self.genres, network: self.network,
-            certification: self.certification,
-            posterURL: self.posterURL, source: self.source,
-            inLibraryArrId: id,
-            imdbId: self.imdbId, sourceRank: self.sourceRank,
-            isLidarrAlbum: self.isLidarrAlbum,
-            tmdbTVId: self.tmdbTVId
-        )
+        var copy = self
+        copy.inLibraryArrId = id
+        return copy
     }
 
     /// Stamp the resolved tvdbId onto a TMDB-sourced series row (`id == 0`),
@@ -132,21 +125,10 @@ public struct SearchResult: Identifiable, Equatable, Hashable, Sendable {
     /// Only `SeriesIdentityResolver`'s callers should produce this — the id
     /// must have been proven, never matched by title.
     func withTVDBId(_ tvdbId: Int) -> SearchResult {
-        SearchResult(
-            id: tvdbId, foreignId: String(tvdbId),
-            title: self.title, subtitle: self.subtitle,
-            year: self.year, rating: self.rating, votes: self.votes,
-            imdb: self.imdb, rottenTomatoes: self.rottenTomatoes,
-            metacritic: self.metacritic,
-            overview: self.overview, runtime: self.runtime,
-            genres: self.genres, network: self.network,
-            certification: self.certification,
-            posterURL: self.posterURL, source: self.source,
-            inLibraryArrId: self.inLibraryArrId,
-            imdbId: self.imdbId, sourceRank: self.sourceRank,
-            isLidarrAlbum: self.isLidarrAlbum,
-            tmdbTVId: self.tmdbTVId
-        )
+        var copy = self
+        copy.id = tvdbId
+        copy.foreignId = String(tvdbId)
+        return copy
     }
 }
 

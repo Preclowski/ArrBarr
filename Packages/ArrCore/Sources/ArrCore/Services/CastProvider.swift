@@ -13,12 +13,11 @@ import Foundation
 /// cast at all).
 @MainActor
 enum CastProvider {
-    private static var cache: [String: [CastMember]] = [:]
-    /// LRU order, oldest first. Kept tiny — cast strips are ~16 people and a
-    /// user rarely revisits more than a handful of titles per session.
-    private static var lru: [String] = []
-    private static var inflight: [String: Task<[CastMember], Never>] = [:]
-    private static let capacity = 40
+    /// Misses stay uncached (see `CoalescingCache`): an empty strip is usually
+    /// a transient "not ready yet" — an unreleased title with no credits, or a
+    /// fetch blip — and pinning it would keep the row empty all session.
+    private static let cache = CoalescingCache<String, [CastMember]>(
+        capacity: 40, shouldStore: { !$0.isEmpty })
 
     // MARK: - Public API
 
@@ -27,7 +26,7 @@ enum CastProvider {
     /// the caller has no Radarr id (e.g. a TMDB-sourced add-panel result).
     static func movieCast(radarrMovieId: Int?, tmdbId: Int?, configStore: ConfigStore) async -> [CastMember] {
         let key = "movie:\(radarrMovieId.map(String.init) ?? "-"):\(tmdbId.map(String.init) ?? "-")"
-        return await resolve(key) {
+        return await cache.value(for: key) {
             await fetchMovieCast(radarrMovieId: radarrMovieId, tmdbId: tmdbId, configStore: configStore)
         }
     }
@@ -36,45 +35,8 @@ enum CastProvider {
     /// to a tmdb id via TMDB `/find`. `demoSeriesId` serves demo fixtures.
     static func seriesCast(tmdbId: Int?, tvdbId: Int?, demoSeriesId: Int?, configStore: ConfigStore) async -> [CastMember] {
         let key = "series:\(tmdbId.map(String.init) ?? "-"):\(tvdbId.map(String.init) ?? "-"):\(demoSeriesId.map(String.init) ?? "-")"
-        return await resolve(key) {
+        return await cache.value(for: key) {
             await fetchSeriesCast(tmdbId: tmdbId, tvdbId: tvdbId, demoSeriesId: demoSeriesId, configStore: configStore)
-        }
-    }
-
-    // MARK: - Cache + coalescing
-
-    private static func resolve(_ key: String, _ work: @escaping () async -> [CastMember]) async -> [CastMember] {
-        if let hit = cache[key] {
-            touch(key)
-            return hit
-        }
-        if let running = inflight[key] {
-            return await running.value
-        }
-        let task = Task { await work() }
-        inflight[key] = task
-        let members = await task.value
-        inflight[key] = nil
-        // Only cache a non-empty result: an empty strip is usually a transient
-        // "not ready yet" (unreleased movie with no credits, a fetch blip), and
-        // caching it would pin the row empty for the session.
-        if !members.isEmpty {
-            cache[key] = members
-            touch(key)
-            trim()
-        }
-        return members
-    }
-
-    private static func touch(_ key: String) {
-        lru.removeAll { $0 == key }
-        lru.append(key)
-    }
-
-    private static func trim() {
-        while lru.count > capacity {
-            let evicted = lru.removeFirst()
-            cache[evicted] = nil
         }
     }
 
