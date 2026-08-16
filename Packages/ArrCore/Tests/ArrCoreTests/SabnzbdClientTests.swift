@@ -16,7 +16,7 @@ private final class SabMockURLProtocol: URLProtocol, @unchecked Sendable {
     // parallel — serves other suites their neighbour's fixture, and the victim
     // sees impossible values (zero requests for a call it definitely made).
     override class func canInit(with request: URLRequest) -> Bool {
-        request.url?.host == "localhost"
+        request.url?.host == "sab.test"
     }
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
 
@@ -76,7 +76,7 @@ private func thrownError(_ body: () async throws -> Void) async -> (any Error)? 
 // MARK: - Fixtures
 
 private let sabConfig = ServiceConfig(
-    enabled: true, baseURL: "http://localhost:8080",
+    enabled: true, baseURL: "http://sab.test:8080",
     apiKey: "sab-key", username: "", password: ""
 )
 
@@ -84,12 +84,12 @@ private let sabConfig = ServiceConfig(
 /// (it only checks the URL), so it's the shape that has to be caught by the
 /// client's own key guard.
 private let keylessConfig = ServiceConfig(
-    enabled: true, baseURL: "http://localhost:8080",
+    enabled: true, baseURL: "http://sab.test:8080",
     apiKey: "", username: "", password: ""
 )
 
 private let disabledConfig = ServiceConfig(
-    enabled: false, baseURL: "http://localhost:8080",
+    enabled: false, baseURL: "http://sab.test:8080",
     apiKey: "sab-key", username: "", password: ""
 )
 

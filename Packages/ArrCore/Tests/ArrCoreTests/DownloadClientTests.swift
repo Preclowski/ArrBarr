@@ -11,7 +11,7 @@ private final class MockURLProtocol: URLProtocol, @unchecked Sendable {
     // parallel — serves other suites their neighbour's fixture, and the victim
     // sees impossible values (zero requests for a call it definitely made).
     override class func canInit(with request: URLRequest) -> Bool {
-        request.url?.host == "localhost"
+        request.url?.host == "dl-client.test"
     }
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
 
@@ -82,17 +82,17 @@ private func textResponse(url: URL, text: String, statusCode: Int = 200, headers
 }
 
 private let testConfig = ServiceConfig(
-    enabled: true, baseURL: "http://localhost:6789",
+    enabled: true, baseURL: "http://dl-client.test:6789",
     apiKey: "", username: "admin", password: "secret"
 )
 
 private let disabledConfig = ServiceConfig(
-    enabled: false, baseURL: "http://localhost:6789",
+    enabled: false, baseURL: "http://dl-client.test:6789",
     apiKey: "", username: "", password: ""
 )
 
 private let delugeConfig = ServiceConfig(
-    enabled: true, baseURL: "http://localhost:8112",
+    enabled: true, baseURL: "http://dl-client.test:8112",
     apiKey: "", username: "", password: "deluge"
 )
 
@@ -492,7 +492,7 @@ struct DownloadClientTests {
                 return jsonResponse(url: request.url!, json: ["result": false, "error": NSNull(), "id": 1])
             }
 
-            let client = DelugeClient(config: ServiceConfig(enabled: true, baseURL: "http://localhost:8112", apiKey: "", username: "", password: "wrong"), session: mockSessionWithCookies())
+            let client = DelugeClient(config: ServiceConfig(enabled: true, baseURL: "http://dl-client.test:8112", apiKey: "", username: "", password: "wrong"), session: mockSessionWithCookies())
             await #expect(throws: DelugeError.self) {
                 try await client.perform(.pause, hash: "abc")
             }
@@ -564,11 +564,11 @@ struct DownloadClientTests {
     @Suite("QbittorrentClient")
     struct QbittorrentClientTests {
         private static let loginConfig = ServiceConfig(
-            enabled: true, baseURL: "http://localhost:8080",
+            enabled: true, baseURL: "http://dl-client.test:8080",
             apiKey: "", username: "admin", password: "secret"
         )
         private static let apiKeyConfig = ServiceConfig(
-            enabled: true, baseURL: "http://localhost:8080",
+            enabled: true, baseURL: "http://dl-client.test:8080",
             apiKey: "", username: "", password: "mykey"
         )
 
@@ -642,7 +642,7 @@ struct DownloadClientTests {
                 return textResponse(url: request.url!, text: "ok")
             }
             let client = HTTPClient(session: mockSession())
-            _ = try await client.get(URL(string: "http://localhost:7878/api/v3/queue")!)
+            _ = try await client.get(URL(string: "http://dl-client.test:7878/api/v3/queue")!)
             #expect(captured == HTTPClient.requestTimeout)
             #expect((captured ?? .infinity) < 60)
         }

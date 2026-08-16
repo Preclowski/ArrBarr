@@ -13,7 +13,7 @@ private final class DropMockURLProtocol: URLProtocol, @unchecked Sendable {
     // parallel — serves other suites their neighbour's fixture, and the victim
     // sees impossible values (zero requests for a call it definitely made).
     override class func canInit(with request: URLRequest) -> Bool {
-        request.url?.host == "localhost"
+        request.url?.host == "dl-drop.test"
     }
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
 
@@ -67,7 +67,7 @@ private func body(of request: URLRequest) -> String {
     return String(data: data, encoding: .utf8) ?? ""
 }
 
-private func config(_ url: String = "http://localhost:8080", user: String = "u", pass: String = "p") -> ServiceConfig {
+private func config(_ url: String = "http://dl-drop.test:8080", user: String = "u", pass: String = "p") -> ServiceConfig {
     ServiceConfig(enabled: true, baseURL: url, apiKey: "key", username: user, password: pass)
 }
 

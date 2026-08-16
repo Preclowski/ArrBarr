@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 /// The single owner of TMDB people data — biography detail and filmography —
 /// shared by the person view and (later) the cast-head tooltip.
@@ -19,6 +20,7 @@ public final class PersonStore {
         var movies: [Int: [SearchResult]] = [:]
         var series: [Int: [SearchResult]] = [:]
     }
+    private let log = Logger(subsystem: AppLog.subsystem, category: "SeriesIdentity")
     private var cache = Cache()
     private var lru: [Int] = []
     private let capacity = 30
@@ -87,9 +89,22 @@ public final class PersonStore {
             // fetched the whole Sonarr library itself, bypassing the index.
             let libraryMap = await ArrLibraryMaps.sonarrByTMDBId(config: sonarrConfig)
             let merged = PersonCreditMerge.merge(cast: credits.cast, crew: credits.crew ?? [])
-            return TMDBSearchMapping.series(
+            let rows = TMDBSearchMapping.series(
                 PersonCreditMerge.byPopularity(merged.credits),
                 libraryMap: libraryMap, roles: merged.roles)
+            // Owned rows drill straight into a library record, bypassing
+            // `SeriesIdentityResolver` and its log — so the pairing is
+            // recorded here instead. Same question as everywhere else in this
+            // flow: which show, by id, not by how the poster looks. Only the
+            // owned ones (a handful per person), never the whole filmography.
+            for row in rows where row.inLibraryArrId != nil {
+                log.info("""
+                    filmography: "\(row.title, privacy: .public)" (\(row.year ?? 0, privacy: .public)) \
+                    tmdb tv \(row.tmdbTVId ?? 0, privacy: .public) → sonarr series \
+                    \(row.inLibraryArrId ?? 0, privacy: .public)
+                    """)
+            }
+            return rows
         }
         seriesTasks[personId] = task
         let value = await task.value
