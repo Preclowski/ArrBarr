@@ -21,6 +21,11 @@ public final class SearchViewModel {
     public struct StarringSection: Identifiable, Equatable {
         public let person: TMDBPerson
         public let titles: [SearchResult]
+        /// True when the query was a full name ("rhea seehorn") — the person is
+        /// then the *answer*, not a footnote, so the host renders this section
+        /// above the title results instead of under them. `titles` may be empty
+        /// in this mode; the header row alone still routes to the person view.
+        public var isPrimary: Bool = false
         public var id: Int { person.id }
     }
     /// Single sticky flag — true from the first keystroke until the
@@ -243,14 +248,28 @@ public final class SearchViewModel {
         if scope == .people {
             return (ranked, nil)
         }
-        // All scope: only a confident, well-known match earns a section.
-        guard let top = ranked.first, PersonRelevance.isConfidentHeadliner(top, query: term) else {
+        // All scope: a full name is unambiguous and always earns a section; a
+        // single token has to clear the popularity floor instead.
+        guard let top = ranked.first else { return ([], nil) }
+        let isFullName = PersonRelevance.isFullNameMatch(top, query: term)
+        guard isFullName || PersonRelevance.isConfidentHeadliner(top, query: term) else {
             return ([], nil)
         }
-        let titles = await PersonStore.shared.movieFilmography(
+        // Movies first, series as the fallback: a TV-only actor (Rhea Seehorn,
+        // Bryan Cranston's Better Call Saul co-lead) has a thin-to-empty movie
+        // list, and used to be dropped entirely for it.
+        var titles = await PersonStore.shared.movieFilmography(
             personId: top.id, tmdbKey: tmdbApiKey, radarrConfig: configs[.radarr] ?? .empty)
-        guard !titles.isEmpty else { return ([], nil) }
-        return ([], StarringSection(person: top, titles: Array(titles.prefix(8))))
+        if titles.isEmpty {
+            titles = await PersonStore.shared.seriesFilmography(
+                personId: top.id, tmdbKey: tmdbApiKey, sonarrConfig: configs[.sonarr] ?? .empty)
+        }
+        // A named person stands on their own — the header row alone opens the
+        // person view. Only the ambiguous single-token match still needs
+        // filmography to justify hijacking a title search.
+        guard isFullName || !titles.isEmpty else { return ([], nil) }
+        return ([], StarringSection(person: top, titles: Array(titles.prefix(8)),
+                                    isPrimary: isFullName))
     }
 
     /// One source's lookup. `generation` is the same gate `search` applies to

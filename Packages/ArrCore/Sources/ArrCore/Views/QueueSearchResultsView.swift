@@ -62,6 +62,13 @@ struct QueueSearchResultsView: View {
                 }
             }
             VStack(alignment: .leading, spacing: 0) {
+                // "Starring X" — an all-scope person match and their top
+                // titles. A full-name query ("rhea seehorn") means the person
+                // IS the result, so that section leads; a single-token match
+                // ("hanks") stays a footnote under the titles it annotates.
+                if let starring = searchViewModel.starring, starring.isPrimary {
+                    starringSection(starring)
+                }
                 ForEach(combined) { r in
                     SearchResultRow(result: r) {
                         if r.inLibraryArrId != nil {
@@ -71,9 +78,7 @@ struct QueueSearchResultsView: View {
                         }
                     }
                 }
-                // "Starring X" — an all-scope confident person match and their
-                // top titles, under the plain title results.
-                if let starring = searchViewModel.starring {
+                if let starring = searchViewModel.starring, !starring.isPrimary {
                     starringSection(starring)
                 }
             }
@@ -156,25 +161,33 @@ struct QueueSearchResultsView: View {
     @ViewBuilder
     private func starringSection(_ section: SearchViewModel.StarringSection) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Button { onSelectPerson(personRef(section.person)) } label: {
-                HStack(spacing: 8) {
-                    RemotePoster(
-                        url: section.person.profileURL, apiKey: nil, tier: .icon,
-                        size: CGSize(width: 22, height: 22), cornerRadius: 11,
-                        fallbackSymbol: "person.fill"
-                    )
-                    Text(String.localizedStringWithFormat(
-                        NSLocalizedString("search.starring", bundle: .module, comment: ""), section.person.name))
-                        .scaledFont(size: 11, weight: .semibold)
-                        .foregroundStyle(.secondary)
-                    LinkChevron(size: 9)
-                    Spacer(minLength: 0)
+            // Leading the results, the person gets the same full-weight row the
+            // People scope uses — the muted "Starring X" caption is sized to
+            // annotate titles above it, and reads as a footer when it's the
+            // answer to the query.
+            if section.isPrimary {
+                personRow(section.person)
+            } else {
+                Button { onSelectPerson(personRef(section.person)) } label: {
+                    HStack(spacing: 8) {
+                        RemotePoster(
+                            url: section.person.profileURL, apiKey: nil, tier: .icon,
+                            size: CGSize(width: 22, height: 22), cornerRadius: 11,
+                            fallbackSymbol: "person.fill"
+                        )
+                        Text(String.localizedStringWithFormat(
+                            NSLocalizedString("search.starring", bundle: .module, comment: ""), section.person.name))
+                            .scaledFont(size: 11, weight: .semibold)
+                            .foregroundStyle(.secondary)
+                        LinkChevron(size: 9)
+                        Spacer(minLength: 0)
+                    }
+                    .contentShape(Rectangle())
                 }
-                .contentShape(Rectangle())
+                .buttonStyle(.plain)
+                .padding(.horizontal, 12)
+                .padding(.top, 8)
             }
-            .buttonStyle(.plain)
-            .padding(.horizontal, 12)
-            .padding(.top, 8)
 
             ForEach(section.titles) { r in
                 SearchResultRow(result: r) {

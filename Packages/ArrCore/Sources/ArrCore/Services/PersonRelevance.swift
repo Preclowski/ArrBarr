@@ -51,4 +51,25 @@ enum PersonRelevance {
         let allMatched = qTokens.allSatisfy { qt in nTokens.contains { $0.hasPrefix(qt) } }
         return allMatched && (person.popularity ?? 0) >= 8
     }
+
+    /// Whether the query reads as somebody's **full name** — at least two
+    /// tokens, every one of them covering a distinct token of the name.
+    ///
+    /// This is the unambiguous case, so it carries no popularity floor and no
+    /// filmography requirement: "rhea seehorn" can only mean the person, and a
+    /// TV-only actor with a thin movie list is still exactly who was asked
+    /// for. `isConfidentHeadliner` keeps guarding the ambiguous single-token
+    /// queries, where a popularity floor is what stops "alien" or "hanks" from
+    /// dragging a namesake into a title search.
+    static func isFullNameMatch(_ person: TMDBPerson, query: String) -> Bool {
+        let qTokens = SearchRelevance.normalize(query).split(separator: " ").map(String.init)
+        guard qTokens.count >= 2 else { return false }
+        var remaining = SearchRelevance.normalize(person.name).split(separator: " ").map(String.init)
+        guard remaining.count >= qTokens.count else { return false }
+        for qt in qTokens {
+            guard let hit = remaining.firstIndex(where: { $0.hasPrefix(qt) }) else { return false }
+            remaining.remove(at: hit)
+        }
+        return true
+    }
 }

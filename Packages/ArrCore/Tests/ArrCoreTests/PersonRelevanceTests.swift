@@ -37,6 +37,33 @@ struct PersonRelevanceTests {
         #expect(!PersonRelevance.isConfidentHeadliner(obscure, query: "hanks"))
     }
 
+    @Test("A full name matches regardless of popularity")
+    func fullNameIgnoresPopularity() throws {
+        // The case that sent us here: a TV-only actor sits far below the
+        // headliner popularity floor, but "rhea seehorn" can't mean anything
+        // else.
+        let seehorn = try person("Rhea Seehorn", popularity: 2)
+        #expect(!PersonRelevance.isConfidentHeadliner(seehorn, query: "rhea seehorn"))
+        #expect(PersonRelevance.isFullNameMatch(seehorn, query: "rhea seehorn"))
+        #expect(PersonRelevance.isFullNameMatch(seehorn, query: "  Rhea   Seehorn "))
+    }
+
+    @Test("A single token is never a full-name match")
+    func fullNameNeedsTwoTokens() throws {
+        let seehorn = try person("Rhea Seehorn", popularity: 2)
+        #expect(!PersonRelevance.isFullNameMatch(seehorn, query: "seehorn"))
+        #expect(!PersonRelevance.isFullNameMatch(seehorn, query: "rhea"))
+    }
+
+    @Test("A full-name match needs every token on a distinct name token")
+    func fullNameNeedsDistinctTokens() throws {
+        let hanks = try person("Tom Hanks", popularity: 40)
+        // A repeated token must not satisfy itself twice.
+        #expect(!PersonRelevance.isFullNameMatch(hanks, query: "tom tom"))
+        // A movie title that happens to prefix one name token isn't a person.
+        #expect(!PersonRelevance.isFullNameMatch(hanks, query: "tom cruise"))
+    }
+
     @Test("Punctuation folds so hyphens and accents match")
     func punctuationFolding() throws {
         let p = try person("Joseph Gordon-Levitt", popularity: 20)
