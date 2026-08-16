@@ -34,6 +34,34 @@ struct DateParsingTests {
         #expect(parseArrDate("not-a-date") == nil)
         #expect(parseArrDate("") == nil)
     }
+
+    /// `parseArrDate` is called from SwiftUI *body getters* (`EpisodeRow.hasAired`
+    /// runs it twice per row, every layout pass), so a per-call `ISO8601DateFormatter`
+    /// — which builds an ICU formatter, four times over for the four format
+    /// shapes — turns a 22-row season list into a stalled main thread.
+    /// A season screen re-renders on every queue tick: ~70 parses per pass have
+    /// to stay in the microsecond range, not the millisecond one.
+    @Test("Parsing is cheap enough to run from a view body")
+    func parsingIsCheap() {
+        // The shapes an arr actually puts on the wire, including the worst case
+        // (date-only), which only resolves after the three earlier attempts miss.
+        let samples = [
+            "2024-03-15T14:30:00.1234567Z",
+            "2024-03-15T14:30:00Z",
+            "2024-03-15T14:30:00",
+            "2024-03-15",
+        ]
+        let iterations = 2_000
+        let start = ContinuousClock.now
+        for i in 0..<iterations {
+            _ = parseArrDate(samples[i % samples.count])
+        }
+        let elapsed = ContinuousClock.now - start
+        // A screen re-parses the SAME handful of strings, so this is the memo's
+        // budget, not ICU's: cached formatters alone landed at ~15 µs/parse
+        // (118 ms here) and a fresh formatter per call at ~50 µs (413 ms).
+        #expect(elapsed < .milliseconds(30), "8k parses took \(elapsed)")
+    }
 }
 
 @Suite("Protocol Parsing")

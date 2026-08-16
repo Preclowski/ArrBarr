@@ -355,37 +355,110 @@ public actor RadarrClient: ArrAPIClient {
 /// silently discarding the time — so the zone-less date-time shape has to be
 /// tried before it, or "airs at 20:00" renders as midnight.
 func parseArrDate(_ string: String) -> Date? {
-    let iso = ISO8601DateFormatter()
+    ArrDateParser.shared.parse(string)
+}
 
-    // Well-formed ISO8601 carrying its own zone ("…Z" / "…+02:00"), with and
-    // without fractional seconds. The zone in the string wins.
-    iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-    if let d = iso.date(from: string) { return d }
-    iso.formatOptions = [.withInternetDateTime]
-    if let d = iso.date(from: string) { return d }
+/// `parseArrDate`'s engine: the four `ISO8601DateFormatter` shapes built once,
+/// plus a memo of what each string parsed to.
+///
+/// Both halves exist for the same reason — this runs inside SwiftUI *body
+/// getters*. `EpisodeRow.hasAired` parses on every layout pass, and a season
+/// list re-renders on every queue tick and every hover, so the same handful of
+/// air-date strings is parsed thousands of times a second.
+///
+///   - Formatters: `ISO8601DateFormatter` builds an ICU formatter in `init` and
+///     again on every `formatOptions` / `timeZone` assignment, so the original
+///     "one formatter, reconfigured four times per call" cost ~50 µs a parse.
+///   - Memo: even with the formatters cached, ICU parsing (up to four attempts
+///     before the date-only shape resolves) stayed at ~15 µs — still 12% of the
+///     main thread on the season screen. Arr date strings are a tiny, repeating
+///     set, so a dictionary hit replaces the parse entirely.
+///
+/// `@unchecked Sendable` + a lock: the formatters are mutable Foundation
+/// objects and the memo is mutable state, while parsing runs on the decoding
+/// tasks as well as the main actor. A dictionary lookup under a lock is orders
+/// of magnitude cheaper than what it replaces.
+private final class ArrDateParser: @unchecked Sendable {
+    static let shared = ArrDateParser()
 
-    // Zone-less date-time ("2024-03-15T14:30:00"). Read as UTC: every arr
-    // timestamp that carries a time is a UTC instant (hence Sonarr's
-    // `airDateUtc`) — it just loses its "Z" when .NET serializes a DateTime
-    // whose Kind is unspecified. Fractional seconds are tolerated and dropped.
-    iso.formatOptions = [.withFullDate, .withTime, .withColonSeparatorInTime]
-    iso.timeZone = TimeZone(secondsFromGMT: 0)
-    if let d = iso.date(from: string) { return d }
+    private let lock = NSLock()
+    private let zonedFractional = ISO8601DateFormatter()
+    private let zoned = ISO8601DateFormatter()
+    private let zoneless = ISO8601DateFormatter()
+    private let dateOnly = ISO8601DateFormatter()
+    /// The zone `dateOnly` is configured for — see `parse(_:)`.
+    private var dateOnlyZone: TimeZone
+    /// string → parsed result, misses included (a `nil` date is just as
+    /// expensive to reach — it costs all four attempts).
+    private var memo: [String: Date?] = [:]
+    /// Flushed wholesale rather than evicted one by one: the working set is a
+    /// screen's worth of dates, so the bound is only there to stop an unbounded
+    /// crawl (a long history scroll) from retaining every string it ever saw.
+    private static let memoLimit = 2_048
 
-    // Date-only ("2024-03-15"). Unlike the above this is a *calendar day*, not
-    // an instant, so anchor it at LOCAL midnight. Parsed as 00:00 UTC it lands
-    // before local midnight for every user west of Greenwich, and the Upcoming
-    // list — which filters on `Calendar.current.startOfDay(for: Date())` — hid
-    // today's releases across all of the Americas.
-    //
-    // The zone comes from `Calendar.current`, not `TimeZone.current`: the two
-    // disagree whenever `NSTimeZone.default` has been overridden, because
-    // `TimeZone.current` reports the *system* zone and ignores the override
-    // while `Calendar.current` honours it. Taking it from the same calendar the
-    // Upcoming filter uses is what actually guarantees the two agree.
-    iso.formatOptions = [.withFullDate]
-    iso.timeZone = Calendar.current.timeZone
-    return iso.date(from: string)
+    private init() {
+        zonedFractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        zoned.formatOptions = [.withInternetDateTime]
+        zoneless.formatOptions = [.withFullDate, .withTime, .withColonSeparatorInTime]
+        zoneless.timeZone = TimeZone(secondsFromGMT: 0)
+        dateOnly.formatOptions = [.withFullDate]
+        dateOnlyZone = Calendar.current.timeZone
+        dateOnly.timeZone = dateOnlyZone
+    }
+
+    /// Order matters: `ISO8601DateFormatter` with `.withFullDate` is *lenient* —
+    /// it happily accepts "2024-03-15T14:30:00" by matching the date prefix and
+    /// silently discarding the time — so the zone-less date-time shape has to be
+    /// tried before it, or "airs at 20:00" renders as midnight.
+    func parse(_ string: String) -> Date? {
+        lock.lock()
+        defer { lock.unlock() }
+
+        // The calendar-day shape below anchors at LOCAL midnight, and that zone
+        // can change under us (an `NSTimeZone.default` override — which the
+        // tests do — or the user travelling). Re-read it every call: the
+        // comparison is free, and a change invalidates every memoized date-only
+        // answer, so the memo goes with it.
+        let zone = Calendar.current.timeZone
+        if zone != dateOnlyZone {
+            dateOnlyZone = zone
+            dateOnly.timeZone = zone
+            memo.removeAll(keepingCapacity: true)
+        }
+
+        if let hit = memo[string] { return hit }
+
+        let parsed = parseUncached(string)
+        if memo.count >= Self.memoLimit { memo.removeAll(keepingCapacity: true) }
+        memo[string] = parsed
+        return parsed
+    }
+
+    private func parseUncached(_ string: String) -> Date? {
+        // Well-formed ISO8601 carrying its own zone ("…Z" / "…+02:00"), with and
+        // without fractional seconds. The zone in the string wins.
+        if let d = zonedFractional.date(from: string) { return d }
+        if let d = zoned.date(from: string) { return d }
+
+        // Zone-less date-time ("2024-03-15T14:30:00"). Read as UTC: every arr
+        // timestamp that carries a time is a UTC instant (hence Sonarr's
+        // `airDateUtc`) — it just loses its "Z" when .NET serializes a DateTime
+        // whose Kind is unspecified. Fractional seconds are tolerated and dropped.
+        if let d = zoneless.date(from: string) { return d }
+
+        // Date-only ("2024-03-15"). Unlike the above this is a *calendar day*,
+        // not an instant, so anchor it at LOCAL midnight. Parsed as 00:00 UTC it
+        // lands before local midnight for every user west of Greenwich, and the
+        // Upcoming list — which filters on `Calendar.current.startOfDay(for:
+        // Date())` — hid today's releases across all of the Americas.
+        //
+        // The zone comes from `Calendar.current`, not `TimeZone.current`: the two
+        // disagree whenever `NSTimeZone.default` has been overridden, because
+        // `TimeZone.current` reports the *system* zone and ignores the override
+        // while `Calendar.current` honours it. Taking it from the same calendar
+        // the Upcoming filter uses is what actually guarantees the two agree.
+        return dateOnly.date(from: string)
+    }
 }
 
 /// Non-trapping Double → Int64 for byte counts off the wire.

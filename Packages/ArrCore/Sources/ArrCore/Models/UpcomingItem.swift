@@ -90,19 +90,13 @@ public struct UpcomingItem: Identifiable, Equatable, Sendable, Codable {
     public func airDateCompact(locale: Locale) -> String {
         let cal = Calendar.current
         if cal.isDateInToday(airDate) {
-            let time = DateFormatter()
-            time.locale = locale
-            time.dateStyle = .none
-            time.timeStyle = .short
-            return time.string(from: airDate)
+            return CachedDateFormatters.styles(date: .none, time: .short, locale: locale)
+                .string(from: airDate)
         }
         if cal.isDateInTomorrow(airDate) {
             return AppLocalized.string("upcoming.tomorrow.button", locale: locale)
         }
-        let f = DateFormatter()
-        f.locale = locale
-        f.setLocalizedDateFormatFromTemplate("dMMM")
-        return f.string(from: airDate)
+        return CachedDateFormatters.template("dMMM", locale: locale).string(from: airDate)
     }
 
     /// Tooltip form: the full relative/absolute date plus the air time
@@ -112,10 +106,7 @@ public struct UpcomingItem: Identifiable, Equatable, Sendable, Codable {
         let date = airDateFormatted(locale: locale)
         let comps = Calendar.current.dateComponents([.hour, .minute], from: airDate)
         guard (comps.hour ?? 0) != 0 || (comps.minute ?? 0) != 0 else { return date }
-        let time = DateFormatter()
-        time.locale = locale
-        time.dateStyle = .none
-        time.timeStyle = .short
+        let time = CachedDateFormatters.styles(date: .none, time: .short, locale: locale)
         return "\(date), \(time.string(from: airDate))"
     }
 
