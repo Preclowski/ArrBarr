@@ -6,16 +6,21 @@ public actor SearchClient {
     // Indexer searches via the arr go out to trackers/Usenet and routinely
     // take longer than the short refresh budget — give them headroom so chat
     // "search" tools don't time out at 15s.
-    private let http = HTTPClient(timeout: 60)
+    private let http: HTTPClient
 
     private var apiBase: String {
         source == .lidarr ? "/api/v1" : "/api/v3"
     }
     // .whisparr stays /api/v3 — no change needed since lidarr is the special case
 
-    init(config: ServiceConfig, source: QueueItem.Source) {
+    /// `session` exists for tests: several suites register process-wide
+    /// `URLProtocol` stubs that answer *every* request, so a test that needs
+    /// its own traffic back hands in an ephemeral session carrying only its
+    /// own stub. Production callers take the default.
+    init(config: ServiceConfig, source: QueueItem.Source, session: URLSession = .shared) {
         self.config = config
         self.source = source
+        self.http = HTTPClient(session: session, timeout: 60)
     }
 
     private var headers: [String: String] { ["X-Api-Key": config.apiKey] }

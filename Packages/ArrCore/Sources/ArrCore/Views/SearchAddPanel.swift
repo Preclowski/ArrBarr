@@ -255,6 +255,13 @@ public struct SearchAddPanel: View {
             trailerKey = await TrailerProvider.seriesTrailerKey(
                 tmdbId: result.tmdbTVId, tvdbId: id, configStore: configStore
             )
+        case .tmdbTV(let id):
+            // A row that hasn't been resolved to a tvdbId yet — TMDB is the
+            // only side that knows this show, and it is the side serving the
+            // clip anyway.
+            trailerKey = await TrailerProvider.seriesTrailerKey(
+                tmdbId: id, tvdbId: nil, configStore: configStore
+            )
         case .musicBrainz, .imdb:
             break
         }
@@ -531,7 +538,9 @@ public struct SearchAddPanel: View {
                     await viewModel.addMovie(result, qualityProfileId: pid,
                                             rootFolderPath: folder, monitor: radarrMonitor,
                                             searchOnAdd: searchOnAdd)
-                case .tvdb:
+                // Not yet resolved to a tvdbId — `addSeries` does that by id
+                // before it posts, and refuses if it can't.
+                case .tvdb, .tmdbTV:
                     await viewModel.addSeries(result, qualityProfileId: pid,
                                              rootFolderPath: folder, monitor: sonarrMonitor,
                                              seriesType: seriesType, seasonFolder: seasonFolder,

@@ -22,6 +22,15 @@ import Foundation
 public enum MediaRef: Hashable, Sendable {
     case tmdb(Int)
     case tvdb(Int)
+    /// TMDB's **series** id — a different id space from `.tmdb`, which is
+    /// TMDB's movie id. Kept as its own case rather than reusing `.tmdb`
+    /// precisely because the two are not interchangeable: the same number
+    /// names a different title in each, and conflating them is how a link
+    /// ends up opening something else entirely.
+    ///
+    /// No arr resolves this directly (see `compatibleSources`) — it must go
+    /// through `SeriesIdentityResolver` to become a `.tvdb` ref first.
+    case tmdbTV(Int)
     case musicBrainz(String)
     case imdb(String)        // "ttNNNNNNN" — verbatim, including prefix
 
@@ -32,6 +41,13 @@ public enum MediaRef: Hashable, Sendable {
         switch self {
         case .tmdb:        return [.radarr, .whisparr]
         case .tvdb:        return [.sonarr]
+        // Deliberately empty, and a safety rail rather than an omission: no
+        // arr can look a TMDB series id up. An empty set makes
+        // `lookup(input: .ref(_:))` short-circuit and `ensureRefCompatible`
+        // refuse, so the only way from here to Sonarr is through
+        // `SeriesIdentityResolver` — which proves the identity instead of
+        // matching a title.
+        case .tmdbTV:      return []
         case .musicBrainz: return [.lidarr]
         // Both Radarr and Sonarr accept `imdb:ttN` on /lookup. Asking a
         // server that doesn't is harmless now that the ranker matches on the
@@ -52,6 +68,12 @@ public enum MediaRef: Hashable, Sendable {
         switch self {
         case .tmdb(let id):        return "tmdb:\(id)"
         case .tvdb(let id):        return "tvdb:\(id)"
+        // Sonarr's SkyHook understands this on newer versions and treats it
+        // as literal search text on older ones, so nothing may trust the
+        // answer without checking the record's own tmdbId — which is
+        // `SeriesIdentityResolver`'s job. `compatibleSources` is empty, so no
+        // plain `.ref(_:)` lookup ever reaches an arr with this term.
+        case .tmdbTV(let id):      return "tmdb:\(id)"
         case .musicBrainz(let id): return id
         case .imdb(let id):        return "imdb:\(id)"
         }
@@ -66,8 +88,24 @@ public enum MediaRef: Hashable, Sendable {
         switch self {
         case .tmdb(let id):        return "tmdb:\(id)"
         case .tvdb(let id):        return "tvdb:\(id)"
+        // Its own scheme, not "tmdb:", because the two id spaces disagree
+        // about what any given number means — a round-trip through a shared
+        // scheme would silently turn a series into some unrelated movie.
+        case .tmdbTV(let id):      return "tmdbtv:\(id)"
         case .musicBrainz(let id): return "mb:\(id)"
         case .imdb(let id):        return "imdb:\(id)"
+        }
+    }
+
+    /// False for a ref whose id slot is empty — `.tvdb(0)` and friends, which
+    /// a row that couldn't identify itself still produces. Such a ref must
+    /// never be printed for the model or handed to a router: it looks like an
+    /// id and resolves to nothing.
+    public var isAddressable: Bool {
+        switch self {
+        case .tmdb(let id), .tvdb(let id), .tmdbTV(let id): return id > 0
+        case .musicBrainz(let id): return !id.isEmpty
+        case .imdb(let id):        return id.count > 2
         }
     }
 
@@ -88,6 +126,9 @@ public enum MediaRef: Hashable, Sendable {
         case "tvdb":
             guard let n = Int(value) else { return nil }
             self = .tvdb(n)
+        case "tmdbtv":
+            guard let n = Int(value) else { return nil }
+            self = .tmdbTV(n)
         case "mb", "musicbrainz", "lidarr":
             // Sanity: MBIDs are 36-char GUIDs ("xxxxxxxx-xxxx-..."),
             // but Lidarr also accepts other foreign-id forms in some
@@ -116,7 +157,13 @@ public extension SearchResult {
     var mediaRef: MediaRef {
         switch source {
         case .radarr, .whisparr: return .tmdb(id)
-        case .sonarr:            return .tvdb(id)
+        case .sonarr:
+            // A TMDB-sourced row has no tvdbId yet (`id` is still 0) but does
+            // know which show it is. Saying so — rather than reporting
+            // `.tvdb(0)`, an id that names nothing — is what lets these rows be
+            // linked and routed at all.
+            if id == 0, let tmdbTVId { return .tmdbTV(tmdbTVId) }
+            return .tvdb(id)
         case .lidarr:            return .musicBrainz(foreignId)
         }
     }

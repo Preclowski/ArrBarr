@@ -177,7 +177,12 @@ extension LocalToolBackend {
             // can type into the search bar verbatim, and what the
             // deep-link layer expects — one canonical string scheme
             // for external IDs across read and write paths.
-            let ref = r.id == 0 ? "n/a" : r.mediaRef.urlString
+            // TMDB series print `tmdbtv:N` — their own id space, resolved to a
+            // tvdbId only when something opens them. Before that case existed
+            // they printed "n/a", which meant the model had nothing to link a
+            // series with. Still "n/a" for a row that can't identify itself at
+            // all, rather than a `tvdb:0` that names nothing.
+            let ref = r.mediaRef.isAddressable ? r.mediaRef.urlString : "n/a"
             out += "\n- \(r.title)\(year)\(rating)\(owned) — \(ref)"
         }
         if results.count > 15 { out += "\n…and \(results.count - 15) more." }
