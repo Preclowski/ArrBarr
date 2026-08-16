@@ -567,6 +567,35 @@ extension DemoMocks {
         )
     }
 
+    /// Production countries (ISO 3166-1), keyed by demo entityId. Live, these
+    /// come from TMDB; demo has no key, so the fixtures stand in — the Blender
+    /// open movies really are Dutch productions.
+    public static func radarrMovieCountries(movieId: Int) -> [String] {
+        radarrCountries[movieId] ?? []
+    }
+
+    public static func sonarrSeriesCountries(seriesId: Int) -> [String] {
+        sonarrCountries[seriesId] ?? []
+    }
+
+    static var radarrCountries: [Int: [String]] {
+        [
+            201: ["NL"],        // Big Buck Bunny
+            202: ["NL"],        // Sintel
+            203: ["NL"],        // Tears of Steel
+            204: ["NL"],        // Elephants Dream
+            401: ["US"],
+            402: ["US"],
+        ]
+    }
+
+    static var sonarrCountries: [Int: [String]] {
+        [
+            101: ["US"],        // Pioneer One
+            102: ["NL"],        // Caminandes
+        ]
+    }
+
     /// Series cast, keyed by demo series entityId. Backs the demo branch of
     /// `CastProvider.seriesCast` (Sonarr has no `/credit` endpoint, so this
     /// stands in for the TMDB lookup the live app would do).

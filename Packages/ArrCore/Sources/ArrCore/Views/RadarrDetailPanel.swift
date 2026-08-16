@@ -27,6 +27,25 @@ struct RadarrDetailPanel<Header: View>: View {
     var onResumeItem: ((QueueItem) -> Void)? = nil
     var onDeleteItem: ((QueueItem) -> Void)? = nil
 
+    /// True only when the download section's own `└─ OLD` sub-line is showing
+    /// the file on disk, which makes the standalone block below it a
+    /// duplicate.
+    ///
+    /// That happens for exactly one shape: a single active grab that is an
+    /// upgrade AND arrived with the `existing*` fields populated. Two grabs
+    /// collapse the section into the compact multi-row list, which drops the
+    /// diff on purpose (one shared old file repeated per row is noise) — and
+    /// the old rule, "hide the block whenever anything is downloading", then
+    /// hid the fact everywhere. The same gap swallowed a lone non-upgrade grab
+    /// of a movie that already had a file.
+    private var downloadsCarryExistingFile: Bool {
+        // `siblings.count` (not the active count) is the split DownloadSection
+        // itself uses to choose single vs. multi layout — mirror it exactly, or
+        // this predicate disagrees with what's actually on screen.
+        guard hasActiveDownloads, siblings.count <= 1 else { return false }
+        return item.isUpgrade && item.hasExistingFileMetadata
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             // Synopsis now renders inside the header card's right column
@@ -62,17 +81,17 @@ struct RadarrDetailPanel<Header: View>: View {
                 )
             }
 
-            // Standalone "already in library" banner — only when
-            // there's no active download. Prefer the separately-
-            // fetched `radarrMovieFile` because it carries
-            // customFormats; fall back to the stripped inline one
+            // Standalone "already in library" block — shown unless the
+            // download section is already carrying the same fact inline.
+            // Prefer the separately-fetched `radarrMovieFile` because it
+            // carries customFormats; fall back to the stripped inline one
             // from /movie/{id} only when the separate fetch failed.
             //
             // The `library` chip moved into the hero card next to the
             // title (DetailView passes it via `titleBadge`) — membership
             // is a property of the TITLE, not of one file. The block
             // itself is captioned "Existing file" instead.
-            if !hasActiveDownloads {
+            if !downloadsCarryExistingFile {
                 if let file = radarrMovieFile ?? radarrDetail?.movieFile {
                     VStack(alignment: .leading, spacing: 6) {
                         DetailSectionHeader("Existing file")

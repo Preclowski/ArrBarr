@@ -464,6 +464,49 @@ public struct TMDBClient: Sendable {
         return env.results
     }
 
+    // MARK: - Production countries
+    //
+    // Neither Radarr nor Sonarr carries a country of production — the arr
+    // resources stop at `originalLanguage` — so TMDB is the only source for
+    // it. Both endpoints are asked for the ISO 3166-1 codes only; the display
+    // name is resolved locally against the user's locale rather than taking
+    // TMDB's English `name`, so the row follows the app's language.
+
+    private struct TMDBCountries: Decodable {
+        struct Country: Decodable { let iso_3166_1: String? }
+        let production_countries: [Country]?
+        let origin_country: [String]?
+    }
+
+    /// ISO 3166-1 alpha-2 codes for a movie. `production_countries` is the
+    /// authoritative list; `origin_country` is the fallback for the (older)
+    /// records where TMDB only filled the latter.
+    public func movieCountries(movieId: Int) async throws -> [String] {
+        let resp: TMDBCountries = try await get(path: "/movie/\(movieId)", query: [])
+        return Self.codes(from: resp, preferOrigin: false)
+    }
+
+    /// ISO 3166-1 alpha-2 codes for a series. TV records key on
+    /// `origin_country` (where the show was made) — `production_countries`
+    /// on TV is the co-production/finance list, so it's the fallback here.
+    public func tvCountries(tvId: Int) async throws -> [String] {
+        let resp: TMDBCountries = try await get(path: "/tv/\(tvId)", query: [])
+        return Self.codes(from: resp, preferOrigin: true)
+    }
+
+    private static func codes(from resp: TMDBCountries, preferOrigin: Bool) -> [String] {
+        let production = (resp.production_countries ?? []).compactMap(\.iso_3166_1)
+        let origin = resp.origin_country ?? []
+        let ordered = preferOrigin ? [origin, production] : [production, origin]
+        let picked = ordered.first { !$0.isEmpty } ?? []
+        // TMDB occasionally repeats a code across the two lists and, rarely,
+        // within one — dedupe while keeping TMDB's order (primary first).
+        var seen = Set<String>()
+        return picked
+            .map { $0.uppercased() }
+            .filter { !$0.isEmpty && seen.insert($0).inserted }
+    }
+
     // MARK: - Image URLs
 
     /// `path` is the `poster_path` / `profile_path` we get from TMDB —

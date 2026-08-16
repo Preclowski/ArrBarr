@@ -138,6 +138,17 @@ public struct QueueItem: Identifiable, Equatable, Hashable, Sendable {
     public var isPaused: Bool { status == .paused }
     public var isCompleted: Bool { status == .completed }
 
+    /// Whether the row actually carries facts about the file it would replace.
+    /// `isUpgrade` alone isn't enough — an arr can flag an upgrade and ship
+    /// none of the `existing*` fields — and every surface that draws the
+    /// old→new diff has to make the same call, so it lives here rather than
+    /// being re-derived per view.
+    public var hasExistingFileMetadata: Bool {
+        (existingQuality.map { !$0.isEmpty } ?? false)
+            || (existingSize ?? 0) > 0
+            || (existingCustomFormatScore ?? 0) != 0
+    }
+
     /// Copy with the episode coordinates cleared. A detail view auto-drills to
     /// a specific episode only when `episodeNumber` is set — season-pack rows
     /// pass this so the detail opens the SEASON instead.

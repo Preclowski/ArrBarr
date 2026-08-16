@@ -1,4 +1,5 @@
 import SwiftUI
+import os
 
 /// Identity of a person to open — pushed as a `navigationDestination(item:)`
 /// from cast heads. Carries just enough to render the header instantly (name +
@@ -332,6 +333,28 @@ public struct PersonView: View {
 
     // MARK: - Loading
 
+    /// Says out loud when the label that opened this page and the person the id
+    /// actually resolves to are two different people.
+    ///
+    /// The page is keyed by TMDB person id and nothing here can mix two people
+    /// up — the cast tile's name, headshot and id all come from ONE arr credit
+    /// record, `PersonStore` caches by id, `PosterStore` by SHA-256 of the URL.
+    /// So when the headshot you tapped and the photo that loads are different
+    /// faces, the disagreement arrived in the data: a credit whose name and
+    /// image don't belong to the `personTmdbId` beside them. Invisible unless
+    /// someone recognises the face, hence the log.
+    ///
+    /// `.notice` (never read back at info level) and both names `.private` —
+    /// they are people.
+    private static func warnIfIdentityDisagrees(ref: PersonRef, details: TMDBPersonDetails?) {
+        guard let details,
+              TitleMatch.normalize(details.name) != TitleMatch.normalize(ref.name) else { return }
+        Logger(category: "SeriesIdentity").notice("""
+            person \(ref.tmdbId, privacy: .public): opened as "\(ref.name, privacy: .private)" \
+            but tmdb calls that id "\(details.name, privacy: .private)"
+            """)
+    }
+
     private func loadInitial() async {
         let key = configStore.tmdbApiKey
         async let d = PersonStore.shared.details(personId: ref.tmdbId, tmdbKey: key)
@@ -341,6 +364,7 @@ public struct PersonView: View {
             personId: ref.tmdbId, tmdbKey: key, sonarrConfig: configStore.sonarr)
         details = await d
         detailsLoading = false
+        Self.warnIfIdentityDisagrees(ref: ref, details: details)
         movieRows = await m
         seriesRows = await s
         filmographyLoading = false

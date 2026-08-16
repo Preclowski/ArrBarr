@@ -138,6 +138,10 @@ public struct MediaHeaderCard: View {
     var runtime: Int?
     var network: String?
     var certification: String?
+    /// Country of production, as ISO 3166-1 alpha-2 codes — rendered as
+    /// locale-localized names in the metadata row. Codes rather than names so
+    /// the row follows a live language switch (see `AppLocalized`).
+    var countries: [String]
     var genres: [String]
     var ratings: [RatingChip]
     /// Synopsis text. When present it renders in the right column
@@ -181,6 +185,10 @@ public struct MediaHeaderCard: View {
     /// so callers that always pass complete data are unaffected.
     var metadataLoading: Bool = false
 
+    /// Drives the country names' language. Read from the environment (not
+    /// `Locale.current`) so a live language switch re-renders the row.
+    @Environment(\.locale) private var locale
+
     public init(
         title: String,
         subtitle: String? = nil,
@@ -188,6 +196,7 @@ public struct MediaHeaderCard: View {
         runtime: Int? = nil,
         network: String? = nil,
         certification: String? = nil,
+        countries: [String] = [],
         genres: [String] = [],
         ratings: [RatingChip] = [],
         overview: String? = nil,
@@ -211,6 +220,7 @@ public struct MediaHeaderCard: View {
         self.runtime = runtime
         self.network = network
         self.certification = certification
+        self.countries = countries
         self.genres = genres
         self.ratings = ratings
         self.overview = overview
@@ -258,7 +268,7 @@ public struct MediaHeaderCard: View {
                 if !genres.isEmpty {
                     GenreChips(genres: genres)
                 }
-                // Row 1 — metadata: runtime · network · certification.
+                // Row 1 — metadata: runtime · network · certification · country.
                 if hasMetadataRow {
                     metadataRow
                 } else if metadataLoading {
@@ -310,6 +320,7 @@ public struct MediaHeaderCard: View {
         (runtime ?? 0) > 0
             || (network.map { !$0.isEmpty } ?? false)
             || (certification.map { !$0.isEmpty } ?? false)
+            || !countries.isEmpty
     }
 
     private func posterView(width: CGFloat, height: CGFloat) -> some View {
@@ -325,15 +336,17 @@ public struct MediaHeaderCard: View {
         )
     }
 
-    /// Metadata row under the genres: runtime · network · certification
-    /// (dot-joined plain text). Ratings get their own row below this.
+    /// Metadata row under the genres: runtime · network · certification ·
+    /// country (dot-joined plain text). Ratings get their own row below this.
     @ViewBuilder
     private var metadataRow: some View {
         HStack(spacing: 6) {
+            let countryNames = CountryProvider.displayNames(countries, locale: locale)
             let segments: [String] = [
                 (runtime ?? 0) > 0 ? "\(runtime!) min" : nil,
                 network.flatMap { $0.isEmpty ? nil : $0 },
                 certification.flatMap { $0.isEmpty ? nil : $0 },
+                countryNames.isEmpty ? nil : countryNames.joined(separator: " / "),
             ].compactMap { $0 }
             ForEach(Array(segments.enumerated()), id: \.offset) { idx, segment in
                 if idx > 0 { SeparatorDot() }

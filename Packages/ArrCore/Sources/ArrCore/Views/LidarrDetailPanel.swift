@@ -119,6 +119,15 @@ struct LidarrDetailPanel: View {
         }
     }
 
+    /// Tracks on disk vs tracks on the release — same Downloaded / x/y /
+    /// Missing vocabulary the movie and series heroes and the Library tab use.
+    private func albumFileState(_ stats: LidarrAlbumStats) -> LibraryEntry.FileState {
+        let have = stats.trackFileCount ?? 0
+        let total = stats.totalTrackCount ?? 0
+        if total > 0, have >= total { return .complete }
+        return have > 0 ? .partial : .missing
+    }
+
     private var lidarrHeaderCard: some View {
         let album = lidarrAlbum
         let posterUrl = arrPosterURL(images: album?.images, for: item, in: configStore)
@@ -139,16 +148,19 @@ struct LidarrDetailPanel: View {
                 }
             )
             VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 5) {
-                    Text(album?.title ?? item.title)
-                        .scaledFont(size: 15, weight: .semibold)
-                        .lineLimit(2)
-                    // Library chip — any track file on disk makes the album
-                    // library-owned. Title-level fact, so it rides the title
-                    // (same slot the movie / series heroes use).
-                    if (album?.statistics?.trackFileCount ?? 0) > 0 {
-                        InLibraryBadge()
-                    }
+                // No album title here: the surface's own header already
+                // carries it (`DetailView.navTitleString`), and the movie /
+                // series heroes hide theirs for the same reason
+                // (`MediaHeaderCard.showTitle`). The state chip keeps its
+                // home — floated above the artist line, the same place the
+                // shared card puts a badge once the title moves out.
+                if let stats = album?.statistics {
+                    MediaStateChip(
+                        state: albumFileState(stats),
+                        have: stats.trackFileCount,
+                        total: stats.totalTrackCount,
+                        locale: configStore.currentLocale
+                    )
                 }
                 if let artist = album?.artist {
                     // Artist as subtitle — 12pt medium .secondary.
@@ -286,8 +298,7 @@ struct LidarrDetailPanel: View {
 
     private var lidarrYear: String? {
         guard let dateStr = lidarrAlbum?.releaseDate, let date = parseArrDate(dateStr) else { return nil }
-        let f = DateFormatter(); f.dateFormat = "yyyy"
-        return f.string(from: date)
+        return CachedDateFormatters.format("yyyy").string(from: date)
     }
 
     private var lidarrGenres: [String] { lidarrAlbum?.genres ?? [] }

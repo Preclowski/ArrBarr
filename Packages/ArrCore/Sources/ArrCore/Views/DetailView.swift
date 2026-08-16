@@ -51,12 +51,17 @@ public struct DetailView: View {
     /// SonarrDetailPanel's map). A list, not a single item — two grabs of the
     /// same episode (auto + manual) both stay visible; the old last-writer-wins
     /// dictionary silently hid one of them.
+    ///
+    /// Read from the `navigationDestination` closure, i.e. on every body pass:
+    /// the slot → id lookup goes through `episodeIdBySlot` rather than scanning
+    /// `sonarrEpisodes`, which on a long-running series cost `queue × episodes`
+    /// comparisons per pass (same fix as `EpisodeQuickDetail`'s copy).
     private var sonarrQueueByEpisodeId: [Int: [QueueItem]] {
         var map: [Int: [QueueItem]] = [:]
         for q in siblings where q.arrQueueId != 0 {
             guard let sn = q.seasonNumber, let en = q.episodeNumber else { continue }
-            if let ep = sonarrEpisodes.first(where: { $0.seasonNumber == sn && $0.episodeNumber == en }) {
-                map[ep.id, default: []].append(q)
+            if let epId = episodeIdBySlot[EpisodeSlot(season: sn, episode: en)] {
+                map[epId, default: []].append(q)
             }
         }
         return map
@@ -130,6 +135,10 @@ public struct DetailView: View {
     @State private var radarrMovieFile: ArrFile?
     @State private var sonarrDetail: SonarrSeriesDetail?
     @State private var sonarrEpisodes: [SonarrEpisodeDetail] = []
+    /// (season, episode) → episode id, rebuilt with `sonarrEpisodes`. Ids only,
+    /// never episode payloads — `monitored` is flipped optimistically in
+    /// `sonarrEpisodes` and a second copy would be one more thing to go stale.
+    @State private var episodeIdBySlot: [EpisodeSlot: Int] = [:]
     /// `episodeFileId → file` map for the whole series. Fetched alongside
     /// `sonarrEpisodes` so downloaded `EpisodeRow`s can render their
     /// custom-format score in the right gutter instead of falling back to
@@ -143,6 +152,10 @@ public struct DetailView: View {
     /// series from TMDB (Sonarr has no cast endpoint) and only when a TMDB
     /// key is set. Empty = unavailable; the row just doesn't render.
     @State private var cast: [CastMember] = []
+    /// Country of production (ISO 3166-1) for the hero's metadata row. TMDB-only
+    /// — neither arr carries it — so empty whenever no key is set; the segment
+    /// just doesn't render.
+    @State private var countries: [String] = []
     /// Assigned quality-profile name ("Remux + WEB 2160p") — the hero's
     /// profile chip. Resolved from `/qualityprofile` alongside the detail.
     @State private var qualityProfileName: String?
@@ -952,27 +965,63 @@ public struct DetailView: View {
     /// is a fact of the TITLE, so it lives here next to the library label —
     /// not down in the existing-file banner, which describes one file.
     private var movieTitleBadge: AnyView? {
-        let inLibrary = (radarrMovieFile ?? radarrDetail?.movieFile) != nil
         let release = ArrReleaseStatusLabel.text(radarrDetail?.status, locale: configStore.currentLocale)
-        guard inLibrary || release != nil || qualityProfileName != nil else { return nil }
-        // Profile leads, then release status, then membership — matching the
-        // series hero, where the profile has always come first. It is the
-        // setting you came to check; the release status is background.
+        // Nothing to say until the detail lands — a bare "Missing" while the
+        // fetch is still in flight would be a claim we can't back yet.
+        guard radarrDetail != nil || qualityProfileName != nil else { return nil }
+        // Profile leads, then release status, then state — matching the series
+        // hero, where the profile has always come first. It is the setting you
+        // came to check; the release status is background.
         return AnyView(HStack(spacing: 4) {
             if let profile = qualityProfileName { ProfileChip(name: profile) }
             if let release { TagChip(text: release) }
-            if inLibrary { InLibraryBadge() }
+            if radarrDetail != nil {
+                MediaStateChip(state: movieFileState, locale: configStore.currentLocale)
+            }
         })
     }
 
-    /// Series hero's title badges — assigned profile + library membership.
+    /// Downloaded / Missing, rather than the old "library" tag. Membership is
+    /// implied — you can't have a file for something you don't own — and the
+    /// tag left the question you actually opened the panel with unanswered.
+    private var movieFileState: LibraryEntry.FileState {
+        guard (radarrMovieFile ?? radarrDetail?.movieFile) == nil else { return .complete }
+        if radarrDetail?.monitored == false { return .unmonitored }
+        return .missing
+    }
+
+    /// Series hero's title badges — assigned profile + how much is on disk.
     private var seriesTitleBadge: AnyView? {
-        let inLibrary = !sonarrEpisodeFiles.isEmpty
-        guard inLibrary || qualityProfileName != nil else { return nil }
+        guard sonarrDetail != nil || qualityProfileName != nil else { return nil }
+        let counts = seriesEpisodeCounts
         return AnyView(HStack(spacing: 4) {
             if let profile = qualityProfileName { ProfileChip(name: profile) }
-            if inLibrary { InLibraryBadge() }
+            if sonarrDetail != nil {
+                MediaStateChip(state: seriesFileState, have: counts.have, total: counts.total,
+                               locale: configStore.currentLocale)
+            }
         })
+    }
+
+    /// Files on disk vs episodes expected, summed from the season statistics —
+    /// the arr's own numbers, which is what makes this agree with the Library
+    /// tab. Counting `sonarrEpisodes` instead would call every ongoing series
+    /// half-missing, since unaired episodes are in that list too.
+    private var seriesEpisodeCounts: (have: Int, total: Int) {
+        let seasons = sonarrDetail?.seasons ?? []
+        return (
+            have: seasons.reduce(0) { $0 + ($1.statistics?.episodeFileCount ?? 0) },
+            total: seasons.reduce(0) { $0 + ($1.statistics?.episodeCount ?? 0) }
+        )
+    }
+
+    private var seriesFileState: LibraryEntry.FileState {
+        if sonarrDetail?.monitored == false { return .unmonitored }
+        let counts = seriesEpisodeCounts
+        if counts.total > 0, counts.have >= counts.total { return .complete }
+        if counts.have > 0 { return .partial }
+        // Nothing aired yet is not the same as nothing grabbed.
+        return counts.total > 0 ? .missing : .notAvailable
     }
 
     // MARK: - Trailer
@@ -1105,6 +1154,9 @@ public struct DetailView: View {
             runtime: runtime,
             network: nil,
             certification: certification,
+            // Straight off the view's state rather than a parameter: every
+            // caller wants the country of the title this view is showing.
+            countries: countries,
             genres: genres,
             ratings: ratings,
             overview: overview,
@@ -1165,8 +1217,11 @@ public struct DetailView: View {
                 radarrMovieFile = await file
                 qualityProfileName = await Self.profileName(
                     id: radarrDetail?.qualityProfileId, config: configStore.radarr, source: .radarr)
+                async let movieCountries = CountryProvider.movieCountries(
+                    tmdbId: radarrDetail?.tmdbId, demoMovieId: entityId, configStore: configStore)
                 cast = await CastProvider.movieCast(
                     radarrMovieId: entityId, tmdbId: radarrDetail?.tmdbId, configStore: configStore)
+                countries = await movieCountries
             case .sonarr:
                 let client = SonarrClient(config: configStore.sonarr)
                 async let d = client.fetchSeriesDetails(id: entityId)
@@ -1174,12 +1229,25 @@ public struct DetailView: View {
                 async let files = (try? client.fetchEpisodeFileMap(seriesId: entityId)) ?? [:]
                 sonarrDetail = try await d
                 sonarrEpisodes = try await eps
+                episodeIdBySlot = Dictionary(
+                    sonarrEpisodes.compactMap { ep in
+                        guard let sn = ep.seasonNumber, let en = ep.episodeNumber else { return nil }
+                        return (EpisodeSlot(season: sn, episode: en), ep.id)
+                    },
+                    // A series listing the same slot twice keeps the first
+                    // record — the one the episode list renders.
+                    uniquingKeysWith: { first, _ in first }
+                )
                 sonarrEpisodeFiles = await files
                 qualityProfileName = await Self.profileName(
                     id: sonarrDetail?.qualityProfileId, config: configStore.sonarr, source: .sonarr)
+                async let seriesCountries = CountryProvider.seriesCountries(
+                    tmdbId: sonarrDetail?.tmdbId, tvdbId: sonarrDetail?.tvdbId,
+                    demoSeriesId: entityId, configStore: configStore)
                 cast = await CastProvider.seriesCast(
                     tmdbId: sonarrDetail?.tmdbId, tvdbId: sonarrDetail?.tvdbId,
                     demoSeriesId: entityId, configStore: configStore)
+                countries = await seriesCountries
             case .lidarr:
                 let client = LidarrClient(config: configStore.lidarr)
                 async let a = client.fetchAlbumDetails(id: entityId)

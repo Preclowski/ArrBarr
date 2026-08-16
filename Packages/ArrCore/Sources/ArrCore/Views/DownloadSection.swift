@@ -63,15 +63,6 @@ struct DownloadSection: View {
         items.sorted { ($0.subtitle ?? "") < ($1.subtitle ?? "") }
     }
 
-    /// Mirrors QueueRowView.hasExistingFileMetadata — guards the
-    /// inline "↳ old metadata" diff row from rendering empty when an
-    /// upgrade item has no existing-file fields populated.
-    private func hasExistingFileMetadata(_ item: QueueItem) -> Bool {
-        (item.existingQuality.map { !$0.isEmpty } ?? false)
-            || (item.existingSize ?? 0) > 0
-            || (item.existingCustomFormatScore ?? 0) != 0
-    }
-
     public var body: some View {
         if items.count <= 1 {
             // Same caption treatment as the "Existing file" block below it —
