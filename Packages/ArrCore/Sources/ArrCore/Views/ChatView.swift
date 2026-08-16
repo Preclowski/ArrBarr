@@ -42,6 +42,17 @@ public struct ChatView: View {
             .padding(.horizontal, 10)
             .padding(.bottom, 10)
         }
+        // Titles and people the assistant links in its prose open in-app rather
+        // than in a browser. Anything that isn't a well-formed `arrbarr://`
+        // chat link — including an `arrbarr://` URL we don't recognise — is left
+        // to the system, so ordinary http links behave exactly as before.
+        .environment(\.openURL, OpenURLAction { url in
+            guard let link = ChatLink(url: url) else {
+                return url.scheme == ChatLink.scheme ? .discarded : .systemAction
+            }
+            ChatLinkRouter.open(link)
+            return .handled
+        })
     }
 
     @State private var clearHovered: Bool = false
@@ -84,9 +95,23 @@ public struct ChatView: View {
                         }
                     }
                 } else {
+                    // One person, one card per answer — see ChatPersonCardDedupe.
+                    // Computed over the whole history rather than stored on the
+                    // messages, because which card wins depends on tool calls
+                    // that hadn't happened yet when the earlier one arrived.
+                    let adjusted = ChatPersonCardDedupe.adjustments(for: viewModel.messages)
+                    // Ids the tools actually returned. Handed to every bubble so
+                    // a link the model invented never becomes clickable.
+                    let knownLinks = ChatLinkVerification.knownKeys(in: viewModel.messages)
+                    // Present-but-nil means the message lost its only content —
+                    // a person card another call in the same turn now owns — so
+                    // it drops out of the list entirely, header and all.
+                    let visible = viewModel.messages.filter {
+                        !Self.shouldHide($0) && adjusted[$0.id] != ChatRichContent??.some(nil)
+                    }
                     LazyVStack(alignment: .leading, spacing: 8) {
-                        ForEach(viewModel.messages.filter { !Self.shouldHide($0) }) { msg in
-                            MessageBubble(message: msg).id(msg.id)
+                        ForEach(visible) { msg in
+                            MessageBubble(message: msg, richOverride: adjusted[msg.id] ?? nil).id(msg.id)
                         }
                         if viewModel.isThinking {
                             ThinkingRow()
@@ -98,6 +123,7 @@ public struct ChatView: View {
                         // bubble landed behind the bar).
                         Color.clear.frame(height: 84).id("chatBottom")
                     }
+                    .environment(\.chatKnownLinkKeys, knownLinks)
                     .padding(.horizontal, 12)
                     .padding(.bottom, 12)
                     // Extra top inset so the floating "New chat" pill doesn't
@@ -154,6 +180,10 @@ public struct ChatView: View {
             TextField(text: $draft, prompt: Text("chat.askAnything.button", bundle: .module), axis: .vertical) {
                 Text("chat.askAnything.button", bundle: .module)
             }
+                // 14pt, like both filter bars — the chat field used to inherit
+                // the platform default (13 on macOS), so the two "same" glass
+                // pills sat on different type sizes.
+                .scaledFont(size: 14)
                 .textFieldStyle(.plain)
                 .focused($inputFocused)
                 .onSubmit(send)
@@ -173,15 +203,29 @@ public struct ChatView: View {
                 .lineLimit(1...4)
             Button(action: send) {
                 Image(systemName: "arrow.up.circle.fill")
-                    .scaledFont(size: 22)
+                    .scaledFont(size: 21)
+                    // The glyph is taller than a line of text, and it was the
+                    // tallest thing in the row — so it, not the text, set the
+                    // bar's height and made the chat pill ~5pt fatter than the
+                    // filter pills. Measuring it as one text line puts both
+                    // bars on the same geometry; the icon still DRAWS at full
+                    // size, it just doesn't get a vote on the height.
+                    .frame(height: 17)
             }
             .buttonStyle(.plain)
             .disabled(draft.trimmingCharacters(in: .whitespaces).isEmpty || viewModel.isThinking)
             .accessibilityLabel(Text("chat.send.button", bundle: .module))
         }
         .padding(.horizontal, 14)
-        .padding(.vertical, 8)
-        .glassyFloatingBar(focused: inputFocused)
+        // 14/10 insets — the queue and library filter bars to the point, so the
+        // three glass pills are one control family and not three near-misses.
+        .padding(.vertical, 10)
+        // Fixed radius, not a capsule: the field grows to 4 lines, and a capsule
+        // re-derives its radius from the (now much taller) height, ballooning
+        // into a lozenge. 18.5 = half the one-line height (17pt of text + 2×10
+        // padding), i.e. exactly the capsule the filter bars draw — so at rest
+        // they are indistinguishable, and growing just adds straight sides.
+        .glassyFloatingBar(focused: inputFocused, cornerRadius: 18.5)
         // Typeable the moment Chat is on screen, whether the panel just opened
         // on this tab or the user switched to it. Hopped to the next main-actor
         // turn because the field is not in the responder chain during
@@ -212,8 +256,13 @@ public struct ChatView: View {
 
 private struct MessageBubble: View {
     let message: ChatMessage
+    /// Payload to draw instead of the message's own, when the de-duplicator
+    /// stripped a person card another tool call in the same turn now owns.
+    var richOverride: ChatRichContent?
     @State private var expanded = false
     @EnvironmentObject var configStore: ConfigStore
+
+    private var rich: ChatRichContent? { richOverride ?? message.richContent }
 
     /// iMessage-style routing: user prompts on the trailing edge in an accent
     /// bubble, assistant prose leading in a secondary bubble. LLM tool calls
@@ -228,7 +277,7 @@ private struct MessageBubble: View {
         case .assistant:
             row(trailing: false) { assistantBubble(message.content) }
         case .llmTool:
-            if message.richContent != nil {
+            if rich != nil {
                 row(trailing: false, fullWidth: true) {
                     carouselSection(headerKey: "Tool call: \(message.content)")
                 }
@@ -265,6 +314,12 @@ private struct MessageBubble: View {
             .fixedSize(horizontal: false, vertical: true)
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
+            // Permanent gutter for the copy badge, so the glyph never lands on
+            // the last line's text and nothing reflows when it lights up — plus a
+            // little floor under it so it isn't pressed against the bubble's edge.
+            .padding(.trailing, CopyBadge.gutter)
+            .padding(.bottom, CopyBadge.floor)
+            .overlay(alignment: .bottomTrailing) { CopyBadge(text: text, tint: .white) }
             .background(Color.accentColor, in: RoundedRectangle(cornerRadius: 14))
     }
 
@@ -278,6 +333,12 @@ private struct MessageBubble: View {
             .fixedSize(horizontal: false, vertical: true)
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
+            .padding(.trailing, CopyBadge.gutter)
+            .padding(.bottom, CopyBadge.floor)
+            // Copy takes the raw Markdown source — the whole answer in one go,
+            // and the fallback for the messages MarkdownMessage still has to
+            // render as separate, separately-selectable views (tables, code).
+            .overlay(alignment: .bottomTrailing) { CopyBadge(text: text) }
             .background(Color.primary.opacity(0.07), in: RoundedRectangle(cornerRadius: 14))
             // textSelection is owned by MarkdownMessage (it disables selection on
             // spoiler messages so the reveal tap works).
@@ -326,7 +387,7 @@ private struct MessageBubble: View {
     /// is wired by the carousel itself.
     @ViewBuilder
     private func carouselSection(headerKey: String) -> some View {
-        if let rich = message.richContent {
+        if let rich {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 6) {
                     Image(systemName: "wrench.and.screwdriver")
@@ -386,6 +447,65 @@ private struct MessageBubble: View {
         return AttributedString(s)
     }
 
+}
+
+/// Copy-the-whole-message affordance, living in the bubble's bottom-right
+/// corner. Selection inside a bubble is per-`Text` by nature, so this is the
+/// guaranteed way to take an entire answer — including the messages that have to
+/// render as several views (tables, code). It copies the raw Markdown source.
+///
+/// Inside the bubble on purpose: an earlier version sat *below* it and only
+/// appeared on hover, which made it unreachable — the pointer had to leave the
+/// bubble to get to the badge, and leaving hid it again. So it's always visible,
+/// just quiet, and the bubble reserves `gutter` points on the right for it.
+private struct CopyBadge: View {
+    let text: String
+    /// Assistant bubbles inherit `.secondary`; the accent-filled user bubble
+    /// needs white to stay legible on it.
+    var tint: Color?
+    @State private var hovering = false
+    @State private var copied = false
+
+    /// Trailing space the bubble reserves so the badge never overlaps text.
+    static let gutter: CGFloat = 18
+    /// Extra bottom padding on the bubble so the badge has room to breathe
+    /// instead of sitting on the rounded edge.
+    static let floor: CGFloat = 4
+
+    var body: some View {
+        Button(action: copy) {
+            Image(systemName: copied ? "checkmark" : "doc.on.doc")
+                .scaledFont(size: 9, weight: .medium)
+                .foregroundStyle(tint ?? .secondary)
+                // Hit area a fingertip / careless mouse can actually land on.
+                .frame(width: 18, height: 17)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .opacity(copied ? 1 : (hovering ? 0.95 : 0.35))
+        .animation(.easeOut(duration: 0.15), value: hovering)
+        .animation(.easeOut(duration: 0.15), value: copied)
+        .onHover { hovering = $0 }
+        .help(Text("Copy message", bundle: .module))
+        .accessibilityLabel(Text("Copy message", bundle: .module))
+        .padding(.trailing, 3)
+        .padding(.bottom, 2)
+    }
+
+    private func copy() {
+        #if os(macOS)
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
+        #else
+        UIPasteboard.general.string = text
+        #endif
+        copied = true
+        // Back to the plain glyph once the confirmation has been read.
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 1_500_000_000)
+            copied = false
+        }
+    }
 }
 
 private struct ThinkingRow: View {

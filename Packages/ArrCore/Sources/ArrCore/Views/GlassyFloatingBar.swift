@@ -16,8 +16,15 @@ public extension View {
     ///   is deliberately gentle: enough to say "this one is live", not enough to
     ///   turn the field into the brightest thing in the popover.
     ///   Defaults false, so non-input callers (toolbar islands) are unchanged.
-    func glassyFloatingBar(focused: Bool = false) -> some View {
-        modifier(GlassyFloatingBarModifier(lift: focused ? GlassyFloatingBarModifier.litTint : 0))
+    /// - Parameter cornerRadius: `nil` (the default) keeps the capsule — right
+    ///   for anything whose height never changes. Pass a radius for a field that
+    ///   *grows* (the multi-line chat input): a capsule's radius is half its
+    ///   height, so a growing capsule keeps inflating its own corners until the
+    ///   bar reads as a lozenge/circle. A fixed continuous radius sized to the
+    ///   one-line height looks identical at rest and simply gets taller.
+    func glassyFloatingBar(focused: Bool = false, cornerRadius: CGFloat? = nil) -> some View {
+        modifier(GlassyFloatingBarModifier(lift: focused ? GlassyFloatingBarModifier.litTint : 0,
+                                           cornerRadius: cornerRadius))
             // Sits *above* the modifier on purpose — this is what drives its
             // `animatableData`; put it inside and there's nothing left to
             // interpolate. Asymmetric on purpose too: lighting up is a response
@@ -103,6 +110,27 @@ private struct GlassPillModifier: ViewModifier {
     }
 }
 
+/// The bar's outline: a capsule by default, a fixed-radius continuous rounded
+/// rect when a radius is given. One `InsettableShape` for both so the glass,
+/// the `stroke` rim and the `strokeBorder` focus rim can all use it (SwiftUI
+/// ships no type-erased *insettable* shape, hence the hand-rolled wrapper).
+private struct BarShape: InsettableShape {
+    var cornerRadius: CGFloat?
+    var inset: CGFloat = 0
+
+    func path(in rect: CGRect) -> Path {
+        let r = rect.insetBy(dx: inset, dy: inset)
+        guard let cornerRadius else { return Capsule().path(in: r) }
+        return RoundedRectangle(cornerRadius: max(0, cornerRadius - inset), style: .continuous).path(in: r)
+    }
+
+    func inset(by amount: CGFloat) -> BarShape {
+        var copy = self
+        copy.inset += amount
+        return copy
+    }
+}
+
 /// `Animatable` is what actually makes the colour *move*. `.glassEffect`'s tint
 /// isn't animatable on its own — hand it a new tint and it cuts straight to it,
 /// so the pill used to snap between states no matter what `.animation` said.
@@ -115,6 +143,14 @@ private struct GlassyFloatingBarModifier: ViewModifier, Animatable {
     /// list, so it takes very little white to read as "active" — the earlier
     /// 0.26 lit up hard enough to pull the eye off the content it belongs to.
     var lift: Double
+
+    /// `nil` → capsule. Otherwise a fixed continuous corner radius, so a bar
+    /// that grows vertically keeps the corners it had on one line.
+    var cornerRadius: CGFloat?
+
+    /// One shape for the glass, the rims and the shadows — they must agree or
+    /// the rim floats off the material's edge.
+    private var shape: BarShape { BarShape(cornerRadius: cornerRadius) }
 
     var animatableData: Double {
         get { lift }
@@ -149,19 +185,19 @@ private struct GlassyFloatingBarModifier: ViewModifier, Animatable {
     private func base(_ content: Content) -> some View {
         #if os(macOS)
         if #available(macOS 26.0, *) {
-            content.glassEffect(.regular.tint(Color.white.opacity(lift)), in: .capsule)
+            content.glassEffect(.regular.tint(Color.white.opacity(lift)), in: shape)
         } else {
             content
-                .background(Capsule().fill(Color.white.opacity(lift * 0.7)))
-                .background(.regularMaterial, in: Capsule())
+                .background(shape.fill(Color.white.opacity(lift * 0.7)))
+                .background(.regularMaterial, in: shape)
         }
         #else
         if #available(iOS 26.0, *) {
-            content.glassEffect(.regular.tint(Color.white.opacity(lift)), in: .capsule)
+            content.glassEffect(.regular.tint(Color.white.opacity(lift)), in: shape)
         } else {
             content
-                .background(Capsule().fill(Color.white.opacity(lift * 0.7)))
-                .background(.regularMaterial, in: Capsule())
+                .background(shape.fill(Color.white.opacity(lift * 0.7)))
+                .background(.regularMaterial, in: shape)
         }
         #endif
     }
@@ -172,7 +208,7 @@ private struct GlassyFloatingBarModifier: ViewModifier, Animatable {
             // small content (single label, three dots) renders so subtly the
             // capsule outline dissolves into the popover vibrancy; narrow pills
             // (Add, kebab) need the explicit edge to read as a pill.
-            .overlay(Capsule().stroke(Color.primary.opacity(0.10), lineWidth: 0.5))
+            .overlay(shape.stroke(Color.primary.opacity(0.10), lineWidth: 0.5))
             // No focus *ring* — the lit glass is the cue. What focus adds here
             // is only the edge catching a bit more light, plus lift: a deeper
             // drop shadow and a whisper of white halo, so the active field
@@ -180,7 +216,7 @@ private struct GlassyFloatingBarModifier: ViewModifier, Animatable {
             // with the (now gentler) tint, so the whole focus state stays a hint
             // rather than a highlight. Every focused layer is 0-opacity at rest
             // → non-input callers (toolbar islands, "New chat") are unchanged.
-            .overlay(Capsule().strokeBorder(Color.white.opacity(0.12 * t), lineWidth: 0.75))
+            .overlay(shape.strokeBorder(Color.white.opacity(0.12 * t), lineWidth: 0.75))
             .shadow(color: .black.opacity(0.10 + 0.12 * t), radius: 8 + 3 * t, y: 2 + t)
             .shadow(color: .white.opacity(0.07 * t), radius: 7)
     }
