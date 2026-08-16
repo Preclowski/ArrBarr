@@ -449,13 +449,40 @@ extension LocalToolBackend {
             let total = rec.statistics?.totalTrackCount ?? rec.statistics?.trackCount ?? 0
             return "• albumId=\(rec.id) · \(rec.title)\(yearPart)\(typePart) · \(mon) \(have)/\(total) tracks"
         }
-        var out = "Artist \(artistId) has \(filtered.count) album\(filtered.count == 1 ? "" : "s")"
+        // Name the artist, don't just echo the id back. An id-only header
+        // ("Artist 1 has 36 albums") is unverifiable: if the id was wrong, the
+        // model can't tell, and its only recovery is to start guessing again.
+        let name = await artistName(id: artistId)
+        let who = name.map { "\($0) (artistId=\(artistId))" } ?? "artistId=\(artistId)"
+        var out = "\(who) has \(filtered.count) album\(filtered.count == 1 ? "" : "s")"
         if !typeFilter.isEmpty { out += " (type=\(typeFilter))" }
         out += ":\n" + lines.joined(separator: "\n")
         if filtered.count > cap {
             out += "\n(\(filtered.count - cap) more not shown — narrow with albumType to see them all.)"
         }
-        return ToolCallOutput(text: out)
+        // Same cards the rest of the chat gets, for the one library the chat
+        // could only answer in prose. Covers come from Lidarr, so the shown
+        // slice is what the rail renders — no second fetch.
+        let cards = shown.map { rec in
+            ChatAlbum(
+                id: rec.id,
+                title: rec.title,
+                year: Self.yearFromReleaseDate(rec.releaseDate),
+                albumType: rec.albumType,
+                monitored: rec.monitored ?? false,
+                trackFileCount: rec.statistics?.trackFileCount ?? 0,
+                trackCount: rec.statistics?.totalTrackCount ?? rec.statistics?.trackCount ?? 0,
+                images: rec.images ?? []
+            )
+        }
+        return ToolCallOutput(text: out, rich: .albums(artist: name, albums: Array(cards)))
+    }
+
+    /// Name for a Lidarr artist id — best effort, purely so the albums answer
+    /// can say whose albums these are.
+    private func artistName(id: Int) async -> String? {
+        guard let artists = try? await LidarrClient(config: lidarr).fetchAllArtists() else { return nil }
+        return artists.first { $0.id == id }?.artistName
     }
 
     /// Helper: extract YYYY from an ISO-ish release date.
@@ -718,9 +745,16 @@ extension LocalToolBackend {
             filterMatch: { rec, q in (rec.artistName ?? "").lowercased().contains(q) },
             line: { r in
                 let name = r.artistName ?? "(untitled)"
-                let idPart = r.foreignArtistId.map { " · foreignArtistId=\($0)" } ?? ""
+                // artistId FIRST, and unmissable: `lidarr_get_artist_albums`
+                // requires it, and this is the only tool that can supply it.
+                // While these rows printed just the MusicBrainz foreignArtistId,
+                // the model had no way to satisfy that requirement — so it
+                // guessed small integers, got some other artist's albums, and
+                // spiralled trying to reconcile the mismatch.
+                let ids = [r.id.map { "artistId=\($0)" }, r.foreignArtistId.map { "foreignArtistId=\($0)" }]
+                    .compactMap { $0 }.joined(separator: " · ")
                 let albumCount = r.statistics?.albumCount.map { " · \($0) album\($0 == 1 ? "" : "s")" } ?? ""
-                return "• \(name)\(idPart)\(albumCount)"
+                return "• \(name)\(ids.isEmpty ? "" : " · " + ids)\(albumCount)"
             },
             rich: { .libraryArtists($0) }
         )

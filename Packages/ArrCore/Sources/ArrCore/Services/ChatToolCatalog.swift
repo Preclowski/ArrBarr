@@ -133,10 +133,8 @@ public enum ChatToolCatalog {
             .init(name: "lidarr_search_album", summary: "Force an album search", services: [.lidarr]),
             .init(name: "whisparr_search", summary: "Search adult scenes to add", services: [.whisparr]),
             .init(name: "whisparr_get_movies", summary: "List Whisparr library", services: [.whisparr]),
-            .init(name: "tmdb_search_person", summary: "Find a person by name", services: [.radarr, .sonarr]),
-            .init(name: "tmdb_person_movie_credits", summary: "Movies a person worked on", services: [.radarr]),
+            .init(name: "tmdb_search_person", summary: "Find a person and their filmography", services: [.radarr, .sonarr]),
             .init(name: "tmdb_discover_movies", summary: "Discover movies by genre / year", services: [.radarr]),
-            .init(name: "tmdb_person_tv_credits", summary: "Shows a person worked on", services: [.sonarr]),
             .init(name: "tmdb_discover_series", summary: "Discover series by genre / year", services: [.sonarr]),
             .init(name: "suggest_titles", summary: "Curated title suggestions", services: [.sonarr, .radarr]),
             .init(name: "check_titles", summary: "Check titles against your library", services: [.sonarr, .radarr]),
@@ -284,7 +282,7 @@ public enum ChatToolCatalog {
 
             NOT for titles you can already name — that is `check_titles`, which answers a whole list in one call. Use this one when you do NOT have the titles yet and are exploring the shelf by filter. A call with no arguments returns a random sample, labelled as such: it is flavour, not reconnaissance, and it proves nothing about whether any particular film is owned. If your next move would be `check_titles`, skip this call entirely and go straight there.
 
-            Title matching tolerates accents, articles and typos. For cast / crew queries use tmdb_search_person + tmdb_person_movie_credits (the library has no crew data). For service health use `health`.
+            Title matching tolerates accents, articles and typos. For cast / crew queries use tmdb_search_person, with `credits` set when the ask is what they made (the library has no crew data). For service health use `health`.
             """,
             inputSchema: .object([
                 "type": .string("object"),
@@ -320,7 +318,7 @@ public enum ChatToolCatalog {
                 "properties": .object([
                     "movieId": .object([
                         "type": .string("integer"),
-                        "description": .string("Radarr movie id. Get via radarr_get_movies or tmdb_person_movie_credits (the cross-reference there fills it in for owned movies)."),
+                        "description": .string("Radarr movie id. Get via radarr_get_movies, or from tmdb_search_person with credits (its cross-reference fills it in for owned movies)."),
                     ]),
                 ]),
                 "required": .array([.string("movieId")]),
@@ -347,7 +345,7 @@ public enum ChatToolCatalog {
         ),
         MCPTool(
             name: "lidarr_get_artists",
-            description: "List music artists currently in the Lidarr library. Use this when the user references an artist they already follow.",
+            description: "The user's music library. FIRST CHOICE for any question about a musician, band or album — a musician is NOT a tmdb_search_person query, that tool only knows film work. Each row carries `artistId`, which is what lidarr_get_artist_albums needs; there is no other way to get it, so never invent one. `query` filters by name — pass it, an unfiltered list of a whole library is noise.",
             inputSchema: .object([
                 "type": .string("object"),
                 "properties": .object([
@@ -366,7 +364,7 @@ public enum ChatToolCatalog {
                 "properties": .object([
                     "artistId": .object([
                         "type": .string("integer"),
-                        "description": .string("Lidarr artist id. Resolve via lidarr_get_artists."),
+                        "description": .string("Lidarr artist id, copied from an `artistId=` field in lidarr_get_artists output. Never a guess — a wrong id silently returns somebody else's albums."),
                     ]),
                     "albumType": .object([
                         "type": .string("string"),
@@ -447,13 +445,22 @@ public enum ChatToolCatalog {
     private static let tmdbSharedTools: [MCPTool] = [
         MCPTool(
             name: "tmdb_search_person",
-            description: "FIRST CHOICE for any question that mentions an actor, director, writer, or other person — including 'films/shows with X', 'what did X make', 'X's best movies'. Resolves a name to a TMDB personId. ALWAYS use this before tmdb_person_movie_credits or tmdb_person_tv_credits; never try to guess the personId. NEVER use radarr_get_movies or sonarr_get_series for person queries — those library tools don't carry cast/crew metadata and will return nothing.",
+            description: "THE tool for people in FILM and TV — actors, directors, writers. One call does the lot: it resolves a name to a TMDB personId and, with `credits` set, returns that person's filmography in the same response. Hold a personId already (ambiguous earlier search, or a name from a cast list)? Pass `personId` + `credits` instead of `query`. NOT for MUSIC: a musician or band is Lidarr's world — use lidarr_get_artists / lidarr_search, which is where albums live; this tool only knows their acting roles, if any. NEVER use radarr_get_movies or sonarr_get_series for person queries — those library tools carry no cast/crew metadata. Never guess a personId.",
             inputSchema: .object([
                 "type": .string("object"),
                 "properties": .object([
                     "query": .object([
                         "type": .string("string"),
                         "description": .string("Person's name, e.g. 'Adam Sandler' or 'Greta Gerwig'"),
+                    ]),
+                    "personId": .object([
+                        "type": .string("integer"),
+                        "description": .string("Skip the name search — you already hold a TMDB personId (from an earlier ambiguous search, or from a cast list). Requires `credits`. `query` is ignored."),
+                    ]),
+                    "credits": .object([
+                        "type": .string("string"),
+                        "enum": .array([.string("movies"), .string("series")]),
+                        "description": .string("Set when the question is about what the person made: 'movies' or 'series' returns their filmography directly. One kind per call — ask twice for both. Omit when you only need to identify the person. If the name doesn't resolve to one obvious person you get the candidate list instead — then call again with `personId` + `credits` for whichever one the user meant."),
                     ]),
                 ]),
                 "required": .array([.string("query")]),
@@ -464,20 +471,6 @@ public enum ChatToolCatalog {
     // MARK: - TMDB movies (gated on tmdbEnabled && Radarr configured)
 
     private static let tmdbMovieTools: [MCPTool] = [
-        MCPTool(
-            name: "tmdb_person_movie_credits",
-            description: "List movies a person appears in (or directed/wrote), sorted by popularity. Use after tmdb_search_person. Results are pre-cross-referenced with the Radarr library — entries already owned are marked [OWNED] in the text and surface as 'In library' cards in the UI, so do NOT re-check with radarr_get_movies. tmdbId is included for the rest, so taps add to Radarr.",
-            inputSchema: .object([
-                "type": .string("object"),
-                "properties": .object([
-                    "personId": .object([
-                        "type": .string("integer"),
-                        "description": .string("TMDB person id from tmdb_search_person"),
-                    ]),
-                ]),
-                "required": .array([.string("personId")]),
-            ])
-        ),
         MCPTool(
             name: "tmdb_discover_movies",
             description: "Discover movies by genre and/or year range — the WORLD, not the user's shelf. Use this for 'suggest a horror for tonight', 'films from the 90s', 'best sci-fi from the last 5 years'. `radarr_get_movies` takes the same genre / startYear / endYear arguments and answers the same question about the library they already own; reach for that one when the ask is 'what do I have'. Results are marked OWNED (and WATCHED where known) and include tmdbId so taps add to Radarr. Sorted by popularity by default.",
@@ -508,20 +501,6 @@ public enum ChatToolCatalog {
     // MARK: - TMDB series (gated on tmdbEnabled && Sonarr configured)
 
     private static let tmdbSeriesTools: [MCPTool] = [
-        MCPTool(
-            name: "tmdb_person_tv_credits",
-            description: "List TV series a person appears in (or created), sorted by popularity. Use after tmdb_search_person. Surfaces as tappable cards — user opens each in SearchAddPanel to add. Sonarr indexes by TVDB id but accepts a TMDB id lookup so the card flow works for TMDB-sourced results.",
-            inputSchema: .object([
-                "type": .string("object"),
-                "properties": .object([
-                    "personId": .object([
-                        "type": .string("integer"),
-                        "description": .string("TMDB person id from tmdb_search_person"),
-                    ]),
-                ]),
-                "required": .array([.string("personId")]),
-            ])
-        ),
         MCPTool(
             name: "tmdb_discover_series",
             description: "Discover TV series by genre and/or year range — the WORLD, not the user's shelf. Use this for 'suggest a sci-fi series from the 2010s' or 'best comedy shows of the last 3 years'. `sonarr_get_series` takes the same genre / startYear / endYear arguments for the library they already own. Rows the user already owns are marked OWNED — matched on title + year, since TMDB tv ids are not TVDB ids, so a remake sharing a title could in principle be mismarked; `check_titles` is the exact answer when it matters. Sorted by popularity by default.",
@@ -568,7 +547,7 @@ public enum ChatToolCatalog {
 
             This is the tool for named titles; `radarr_get_movies` / `sonarr_get_series` are for exploring the shelf by filter when you have no titles yet, and `sonarr_get_series` is still the place to get a `seriesId` with per-season detail.
 
-            Do NOT re-check results that already arrived marked: `tmdb_person_movie_credits`, `tmdb_discover_movies` and `suggest_titles` cross-reference the library themselves and print [OWNED] / [WATCHED]. Use this for titles that came out of your own head, and whenever an exact answer matters for series — the TMDB series tools match ownership on title + year rather than on ids.
+            Do NOT re-check results that already arrived marked: `tmdb_search_person` (with credits), `tmdb_discover_movies` and `suggest_titles` cross-reference the library themselves and print [OWNED] / [WATCHED]. Use this for titles that came out of your own head, and whenever an exact answer matters for series — the TMDB series tools match ownership on title + year rather than on ids.
 
             Titles may be plain strings ("Dune 2021") or {title, year} objects; a year disambiguates remakes. Matching tolerates accents, leading articles and typos. Movies and series both — the tool works out which is which. Max 50 per call.
             """,
@@ -794,7 +773,7 @@ public enum ChatToolCatalog {
             description: """
             Fetch full details for ONE movie (Radarr) or series (Sonarr) already in the library: overview/synopsis, year, runtime, genres, rating, status — and OPTIONALLY the cast.
 
-            USE THIS to answer "tell me about X", "what's the plot of X", "who's in X?", "give me the cast of X". For the plot alone, leave `include_cast` off. Set `include_cast: true` ONLY when the user actually asks about actors/cast (it costs an extra TMDB call and tokens). Cast comes from TMDB, so it needs a TMDB key configured — without one the tool says so.
+            USE THIS to answer "tell me about X", "what's the plot of X", "who's in X?", "give me the cast of X". For the plot alone, leave `include_cast` off. Set `include_cast: true` whenever the user asks who is in a title ("kto wystąpił w X", "who starred in X", "cast of X") — the cast comes back as a strip of tappable headshots in the UI, and each name carries its personId so you can link it or pull that person's filmography without another name lookup. Leave it off otherwise; it costs an extra call and tokens. Movie cast comes from Radarr itself; SERIES cast comes from TMDB and needs a TMDB key — without one the tool says so.
 
             Resolve `id` first: `seriesId` from `sonarr_get_series`, `movieId` from `radarr_get_movies` — or either from `check_titles`, which returns them for a whole list at once. Output is plain text (no cards).
             """,

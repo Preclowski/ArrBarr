@@ -9,7 +9,12 @@ import Foundation
 private final class LocalStubProtocol: URLProtocol, @unchecked Sendable {
     nonisolated(unsafe) static var handlers: [String: (Int, Data)] = [:]
 
-    override class func canInit(with request: URLRequest) -> Bool { true }
+    // Scoped to this suite's hosts. Answering every request — suites run in
+    // parallel — serves other suites their neighbour's fixture, and the victim
+    // sees impossible values (zero requests for a call it definitely made).
+    override class func canInit(with request: URLRequest) -> Bool {
+        request.url?.host?.hasSuffix(".local") ?? false
+    }
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
 
     override func startLoading() {
@@ -143,8 +148,6 @@ struct LocalToolBackendTests {
         #expect(names.contains("tmdb_search_person"))
         #expect(names.contains("tmdb_discover_movies"))
         #expect(names.contains("tmdb_discover_series"))
-        #expect(names.contains("tmdb_person_movie_credits"))
-        #expect(names.contains("tmdb_person_tv_credits"))
     }
 
     @Test("listTools omits TMDB tools when key empty")

@@ -23,50 +23,72 @@ extension LocalToolBackend {
             guard sonarr.isConfigured else { return ToolCallOutput(text: "Sonarr is not configured.") }
             let d = try await SonarrClient(config: sonarr).fetchSeriesDetails(id: id)
             var text = Self.formatSeriesDetails(d)
-            if includeCast { text += await seriesCastSection(tmdbId: d.tmdbId) }
-            return ToolCallOutput(text: text)
+            guard includeCast else { return ToolCallOutput(text: text) }
+            let cast = await seriesCast(tmdbId: d.tmdbId)
+            text += cast.text
+            return ToolCallOutput(text: text, rich: Self.castRich(cast.members))
         case "radarr":
             guard radarr.isConfigured else { return ToolCallOutput(text: "Radarr is not configured.") }
             let d = try await RadarrClient(config: radarr).fetchMovieDetails(id: id)
             var text = Self.formatMovieDetails(d)
-            if includeCast { text += await movieCastSection(movieId: id) }
-            return ToolCallOutput(text: text)
+            guard includeCast else { return ToolCallOutput(text: text) }
+            let cast = await movieCast(movieId: id)
+            text += cast.text
+            return ToolCallOutput(text: text, rich: Self.castRich(cast.members))
         default:
             return ToolCallOutput(text: "Specify service: 'sonarr' or 'radarr'.")
         }
     }
 
+    /// The cast section in both shapes: prose for the model, `CastMember`s for
+    /// the head strip. Same list, so what the user sees and what the assistant
+    /// talks about can't drift apart.
+    private typealias CastSection = (text: String, members: [CastMember])
+
+    /// Only strips with at least one tappable head are worth rendering — a row
+    /// of grey silhouettes that go nowhere is worse than the prose alone.
+    private static func castRich(_ members: [CastMember]) -> ChatRichContent? {
+        let usable = members.filter { $0.tmdbPersonId != nil }
+        return usable.isEmpty ? nil : .cast(usable)
+    }
+
     /// Movie cast from Radarr's `/credit` — no TMDB key needed.
-    private func movieCastSection(movieId: Int) async -> String {
+    private func movieCast(movieId: Int) async -> CastSection {
         let credits = (try? await RadarrClient(config: radarr).fetchCredits(movieId: movieId)) ?? []
-        let cast = credits
-            .filter { ($0.type ?? "").lowercased() == "cast" }
-            .sorted { ($0.order ?? .max) < ($1.order ?? .max) }
-        guard !cast.isEmpty else { return "\n\nCast: (Radarr returned none)." }
-        let lines = cast.prefix(15).map { c -> String in
-            let name = c.personName ?? "(unknown)"
-            if let role = c.character, !role.isEmpty { return "• \(name) — \(role)" }
-            return "• \(name)"
-        }
-        return "\n\nCast:\n" + lines.joined(separator: "\n")
+        // `CastMember.from` owns the cast/crew filter and the billing-order
+        // sort, and is what the detail surfaces render, so chat and detail
+        // agree on who the top of the cast is.
+        let members = CastMember.from(radarrCredits: credits)
+        guard !members.isEmpty else { return ("\n\nCast: (Radarr returned none).", []) }
+        return (Self.castText(members), members)
     }
 
     /// Series cast from TMDB — Sonarr has no `/credit` endpoint, so this is
     /// the only source. Self-describing failure strings for the model.
-    private func seriesCastSection(tmdbId: Int?) async -> String {
+    private func seriesCast(tmdbId: Int?) async -> CastSection {
         guard !tmdbApiKey.isEmpty else {
-            return "\n\nCast: unavailable — series cast needs a TMDB key (Sonarr has no cast API). Configure it in Settings."
+            return ("\n\nCast: unavailable — series cast needs a TMDB key (Sonarr has no cast API). Configure it in Settings.", [])
         }
         guard let tmdbId, tmdbId > 0 else {
-            return "\n\nCast: unavailable — TMDB id not found for this series."
+            return ("\n\nCast: unavailable — TMDB id not found for this series.", [])
         }
         guard let credits = try? await TMDBClient(apiKey: tmdbApiKey).tvCredits(tvId: tmdbId),
               !credits.cast.isEmpty else {
-            return "\n\nCast: (TMDB returned none)."
+            return ("\n\nCast: (TMDB returned none).", [])
         }
-        let lines = credits.cast.prefix(15).map { person -> String in
-            if let role = person.character, !role.isEmpty { return "• \(person.name) — \(role)" }
-            return "• \(person.name)"
+        let members = CastMember.from(tmdbCast: credits.cast)
+        return (Self.castText(members), members)
+    }
+
+    /// "• Keanu Reeves — Neo" ×15. The personId rides along so the model can
+    /// link a name it mentions (see the linking rules in the system prompt) or
+    /// pull that person's filmography without a second name lookup.
+    private static func castText(_ members: [CastMember]) -> String {
+        let lines = members.prefix(15).map { m -> String in
+            var line = "• \(m.name)"
+            if let role = m.role, !role.isEmpty { line += " — \(role)" }
+            if let id = m.tmdbPersonId { line += " (personId: \(id))" }
+            return line
         }
         return "\n\nCast:\n" + lines.joined(separator: "\n")
     }

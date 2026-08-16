@@ -49,8 +49,6 @@ public enum MCPToolWhitelist {
         "whisparr_get_movies",
         // TMDB — pure metadata API calls, no arr state involved
         "tmdb_search_person",
-        "tmdb_person_movie_credits",
-        "tmdb_person_tv_credits",
         "tmdb_discover_movies",
         "tmdb_discover_series",
         // Cross-cutting: suggestions, calendar, diagnostics, queue

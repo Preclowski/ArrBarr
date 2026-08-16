@@ -140,19 +140,27 @@ extension LocalToolBackend {
                                          title: { $0.title ?? "" }, year: { $0.year }) {
                 owned += 1
                 let id = hit.id.map { "movieId=\($0)" } ?? "movieId=?"
+                // Internal id AND external ref: the first is for the arr tools,
+                // the second is the only thing a chat link can be built from.
+                let ref = hit.tmdbId.map { ", tmdb:\($0)" } ?? ""
                 let file = (hit.hasFile ?? false) ? "downloaded" : "not downloaded"
                 let watch = watchMark(isWatched(hit.mediaServerKeys))
-                lines.append("• \(label) — in library as \(hit.title ?? label)\(hit.year.map { " (\($0))" } ?? ""), \(id), \(file)\(watch)")
+                lines.append("• \(label) — in library as \(hit.title ?? label)\(hit.year.map { " (\($0))" } ?? ""), \(id)\(ref), \(file)\(watch)")
             } else if let hit = TitleMatch.best(query: item.title, year: item.year,
                                                 candidates: series,
                                                 title: { $0.title ?? "" }, year: { $0.year }) {
                 owned += 1
                 let id = hit.id.map { "seriesId=\($0)" } ?? "seriesId=?"
+                let ref = hit.tvdbId.map { ", tvdb:\($0)" } ?? ""
                 let seasons = Self.seasonsSummary(for: hit, filter: nil)
                 let watch = watchMark(isWatched(hit.mediaServerKeys))
-                lines.append("• \(label) — in library as \(hit.title ?? label), \(id)\(seasons)\(watch)")
+                lines.append("• \(label) — in library as \(hit.title ?? label), \(id)\(ref)\(seasons)\(watch)")
             } else {
-                lines.append("• \(label) — NOT in library")
+                // No id of any kind for a title we don't own — check_titles
+                // matches against the library, it does not look anything up.
+                // Say so, because "no id" is precisely when the model is
+                // tempted to make one up for a link.
+                lines.append("• \(label) — NOT in library (no id — do not link this title)")
             }
         }
 

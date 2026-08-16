@@ -52,6 +52,35 @@ public enum SystemPromptComposer {
         default: return present.dropLast().joined(separator: ", ") + " and " + present[present.count - 1]
         }
     }
+
+    /// In-text linking rules. Shared verbatim by both providers — the URL forms
+    /// here are the ones `ChatLink` parses, and a link that doesn't match them
+    /// is rendered as ordinary text, so the wording is deliberately narrow about
+    /// where the ids may come from.
+    public static let linkingClause = """
+        Link the titles and people you name, using the ids the tools already gave you:
+          • a film or show — [Sicario](arrbarr://media/tmdb:68718), taking the exact
+            `tmdb:…` / `tvdb:…` / `imdb:tt…` ref printed next to that title in the
+            tool result
+          • a person — [Adam Sandler](arrbarr://person/19292), taking the personId
+            from tmdb_search_person
+        These open the title or the person inside the app, so the two forms are not
+        interchangeable: `arrbarr://media/…` behind a TITLE, `arrbarr://person/…`
+        behind a PERSON'S NAME. A film's name over a person link opens that person's
+        page — wrong, and visibly so.
+        No other links exist. Do NOT write http(s) links of any kind — not to
+        IMDb, TMDB, YouTube, trailers, reviews or anything else. You cannot verify
+        a URL from memory, the app strips them, and the text renders as plain
+        prose.
+        Every id must be COPIED from a tool result in this conversation, character
+        for character. If the line naming that title carried no id — check_titles
+        says so outright for titles the user does not own — the title gets NO
+        link, however certain its id feels. The app verifies each link against the
+        ids the tools actually returned and silently un-links the rest, so a
+        guessed id buys nothing and loses the link.
+        Link the FIRST mention only; with no id at hand, write the name as plain
+        text.
+        """
 }
 
 public protocol LLMProvider: Sendable {
