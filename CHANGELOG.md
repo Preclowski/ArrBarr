@@ -9,6 +9,48 @@ Releases before 0.10.0 are described on the
 
 ## [Unreleased]
 
+## [2.0.0-rc3] — 2026-08-17
+
+Release candidate. Not published to the Homebrew tap — download the DMG from
+the release page.
+
+### Added
+
+- Library filter searches every name a title has: accents folded ("leon" finds
+  "Léon"), plus original-language and translated titles from the arr.
+- Library sorts by release date and by date added; Lidarr gains the rating sort.
+- Country of production in the detail metadata row (needs a TMDB key).
+- Episode rows show a tooltip whether or not they are downloading — synopsis,
+  air date, and the on-disk file's quality, size and formats.
+- Trailers on every media surface.
+- Chat links open the app, verified against what the tools actually returned.
+- Cast faces and poster sleeves in chat answers; a copy button on messages.
+
+### Changed
+
+- Detail heroes say what is on disk (Downloaded / 142/150 / Missing) instead of
+  tagging the title "library".
+- `list_download_queue` covers every configured arr, not just Sonarr and Radarr.
+- Library rows: status chip on the trailing edge, file size in its place,
+  quality profile as a chip.
+- Library filter field takes focus on appear, like Queue and Chat.
+- Arr and rating brand marks in the library's picker and sort menus.
+- Search results show a person's full name rather than a footnote.
+- Album detail drops the title the header already carries.
+
+### Fixed
+
+- Series are resolved to TMDB by id, never by title — a same-named show could
+  be mistaken for one you own.
+- Chat messages containing two `||` runs no longer render as an empty bubble.
+- The existing file is shown under multiple active downloads, not only under
+  one.
+- Add posts the TMDB id rather than the row's identity.
+- Tool results are no longer fed back to the model as a user turn.
+- Date parsing and formatting are cached instead of rebuilt per call inside
+  view bodies.
+- Quality-profile lookups read through the shared cache.
+
 ## [2.0.0-rc2] — 2026-08-15
 
 Release candidate. Not published to the Homebrew tap — download the DMG from
