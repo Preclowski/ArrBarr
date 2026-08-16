@@ -30,6 +30,9 @@ public enum WidgetDataStore {
     /// to the group and every refresh logged a permission failure — the fallback
     /// was unreachable and macOS kept no offline snapshot at all.
     private static func snapshotCandidates() -> [URL] {
+        #if DEBUG
+        if let dir = testSnapshotDirectory() { return [dir.appendingPathComponent(snapshotFile)] }
+        #endif
         let fm = FileManager.default
         var urls: [URL] = []
         if let group = fm.containerURL(forSecurityApplicationGroupIdentifier: appGroupSuiteName) {
@@ -54,11 +57,83 @@ public enum WidgetDataStore {
         let preferred = writableSnapshotURL
         snapshotLock.unlock()
         let candidates = snapshotCandidates()
-        guard let preferred else { return candidates }
+        // The remembered location only counts while it is still one of the
+        // candidates. Prepending it unconditionally let it outlive the list it
+        // came from — which is how a write could land somewhere the current
+        // candidates don't even mention (a test redirected to a temp directory
+        // still wrote to the previously-remembered path).
+        guard let preferred, candidates.contains(preferred) else { return candidates }
         return [preferred] + candidates.filter { $0 != preferred }
     }
 
     private static let snapshotLog = Logger(subsystem: AppLog.subsystem, category: "Snapshot")
+
+    #if DEBUG
+    /// Where the snapshot goes while a test bundle is loaded.
+    ///
+    /// Without this the suite writes into the user's *real* App Group
+    /// container and `~/Library/Application Support` — running the tests left
+    /// files in both. It also drags a system daemon into every run: the group
+    /// container is resolved through containermanagerd, and a run of this
+    /// suite once sat blocked on that path for 15+ minutes with the whole
+    /// process idle. Tests have no business touching either location, so in a
+    /// test process they don't.
+    ///
+    /// Set explicitly by a test that wants to inspect the file; otherwise a
+    /// per-process temp directory, chosen once.
+    nonisolated(unsafe) static var snapshotDirectoryOverrideForTesting: URL?
+    private nonisolated(unsafe) static var cachedTestDirectory: URL?
+
+    /// Four markers because no single one covers both runners. Under Xcode's
+    /// XCTest host the class and the env vars are there; under SwiftPM the
+    /// process is `swiftpm-testing-helper`, which loads swift-testing (no
+    /// XCTest), sets no test env var, and does not even list the `.xctest`
+    /// bundle in `allBundles` — only its argv names it. The first three checks
+    /// were all present and all silently false here, so the suite kept writing
+    /// into the real container.
+    private static func isRunningUnderTests() -> Bool {
+        if NSClassFromString("XCTestCase") != nil { return true }
+        let env = ProcessInfo.processInfo.environment
+        if env["XCTestConfigurationFilePath"] != nil || env["XCTestBundlePath"] != nil { return true }
+        if Bundle.allBundles.contains(where: { $0.bundlePath.hasSuffix(".xctest") }) { return true }
+        return ProcessInfo.processInfo.arguments.contains { $0.contains(".xctest") }
+    }
+
+    private static func testSnapshotDirectory() -> URL? {
+        if let explicit = snapshotDirectoryOverrideForTesting { return explicit }
+        snapshotLock.lock()
+        defer { snapshotLock.unlock() }
+        if let cached = cachedTestDirectory { return cached }
+        guard Self.isRunningUnderTests() else { return nil }
+        let dir = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("ArrBarrTestSnapshots-\(ProcessInfo.processInfo.processIdentifier)")
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        cachedTestDirectory = dir
+        return dir
+    }
+    #endif
+
+    /// Snapshot writes run here, never on the caller's thread.
+    ///
+    /// `saveUpcoming` is called from `QueueViewModel.commitUpcoming` on the
+    /// main actor, and a file write is not the bounded operation it looks
+    /// like: the preferred destination is an App Group container, whose
+    /// resolution goes through a system daemon that can stall. When it did,
+    /// the main thread sat in `Data.write` at 0% CPU indefinitely — in a test
+    /// run that's a hung suite, in the app it's a frozen UI. Serial, so
+    /// snapshots still land in the order they were produced.
+    private static let snapshotQueue = DispatchQueue(
+        label: "pl.incred.ArrBarr.upcoming-snapshot", qos: .utility)
+
+    #if DEBUG
+    /// Parks the snapshot queue until the semaphore is signalled, so a test can
+    /// hold the write hostage and prove the caller still returns. Without this
+    /// the "doesn't block" test is vacuous — a *failing* write returns fast
+    /// too, so it would pass against the very code that could hang.
+    static func blockSnapshotQueueForTesting(until signal: DispatchSemaphore) {
+        snapshotQueue.async { signal.wait() }
+    }
+    #endif
 
     /// Persist the last-known "Upcoming" calendar so it shows immediately on
     /// cold start — even when the arrs are unreachable (away from the home LAN).
@@ -67,8 +142,20 @@ public enum WidgetDataStore {
     ///
     /// An atomic file rather than `UserDefaults`, which buffers writes and may
     /// not flush before a hard kill — and this app does get hard-killed.
+    ///
+    /// The encode happens here, on the caller, so the snapshot matches the
+    /// array as it was at this moment; the *write* is handed to
+    /// `snapshotQueue` and never blocks the refresh. The narrow cost is a
+    /// hard kill in the moment between the two losing one snapshot — this is
+    /// a cache that every refresh rewrites, which is a far better trade than
+    /// a UI that can freeze on a stalled container.
     public static func saveUpcoming(_ items: [UpcomingItem]) {
         guard let data = try? JSONEncoder().encode(items) else { return }
+        snapshotQueue.async { writeSnapshot(data) }
+    }
+
+    /// Blocking half of `saveUpcoming`, off the caller's thread.
+    private static func writeSnapshot(_ data: Data) {
         var lastError: Error?
         for url in orderedSnapshotCandidates() {
             do {
