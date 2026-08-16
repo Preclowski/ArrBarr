@@ -66,12 +66,23 @@ public enum ChatLinkRouter {
             let client = SearchClient(config: config, source: source)
             guard let result = try? await client.lookup(input: .ref(ref)).first else { continue }
             let owned = await libraryId(for: ref, source: source, config: config)
+            // `.notice`, not `.info`: this line exists to be read back AFTER a
+            // user reports "that link opened the wrong film", and `log show`
+            // doesn't return info-level entries on this machine. Says which ref
+            // was asked for and what it actually resolved to, which is the whole
+            // question in a wrong-link report.
+            log.notice("""
+                chat link \(incoming.urlString, privacy: .public) → \
+                \(source.rawValue, privacy: .public) "\(result.title, privacy: .public)" \
+                (\(result.year.map(String.init) ?? "—", privacy: .public))
+                """)
             DetailRequest.tap(result.withInLibraryArrId(owned ?? result.inLibraryArrId))
             return
         }
         // Nothing resolved: the id was wrong, or the arr that owns this kind of
         // title isn't configured. Fall back to the search bar with the ref
         // pre-typed — the user sees what was asked for rather than a dead tap.
+        log.notice("chat link \(incoming.urlString, privacy: .public) resolved to nothing — falling back to search")
         NotificationCenter.default.post(
             name: .arrBarrSearchQuery, object: nil, userInfo: ["query": ref.lookupTerm]
         )
