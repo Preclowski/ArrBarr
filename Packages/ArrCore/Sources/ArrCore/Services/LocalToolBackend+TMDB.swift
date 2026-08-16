@@ -57,7 +57,7 @@ extension LocalToolBackend {
         // Same popularity-desc ranking rationale as the movie path — see
         // tmdbPersonMovieCredits for why voteAverage is the wrong key here.
         let ranked = PersonCreditMerge.byPopularity(credits)
-        let results = TMDBSearchMapping.series(ranked.prefix(25))
+        let results = await tagOwnedSeriesByTitle(TMDBSearchMapping.series(ranked.prefix(25)))
         guard !results.isEmpty else {
             return ToolCallOutput(text: "TMDB returned no TV credits for personId \(personId).")
         }
@@ -116,7 +116,7 @@ extension LocalToolBackend {
         let shows = try await client.discoverTV(
             genreIds: genreIds, startYear: startYear, endYear: endYear, sortBy: resolvedSort
         )
-        let results = TMDBSearchMapping.series(shows.prefix(25))
+        let results = await tagOwnedSeriesByTitle(TMDBSearchMapping.series(shows.prefix(25)))
         guard !results.isEmpty else {
             return ToolCallOutput(text: "TMDB returned no series matching that filter.")
         }
@@ -148,6 +148,28 @@ extension LocalToolBackend {
         await ArrLibraryMaps.sonarrByTVDBId(config: sonarr)
     }
 
+    /// Mark TMDB-sourced series the user already owns.
+    ///
+    /// The id route is closed — TMDB tv ids are not TVDB ids, which is why
+    /// these rows arrived untagged while the movie ones didn't — so this joins
+    /// on normalized title + year against the Sonarr library instead. That is
+    /// approximate where an id would be exact: a remake sharing its original's
+    /// title and landing within a year of it can be mistaken for it. The trade
+    /// is worth it (an untagged row makes the model re-ask about every single
+    /// series), but it is the reason `check_titles` still exists as the precise
+    /// answer.
+    func tagOwnedSeriesByTitle(_ results: [SearchResult]) async -> [SearchResult] {
+        let library = await LibraryIndex.shared.series(config: sonarr)
+        guard !library.isEmpty else { return results }
+        return results.map { result in
+            guard let hit = TitleMatch.best(query: result.title, year: result.year,
+                                            candidates: library,
+                                            title: { $0.title ?? "" }, year: { $0.year }),
+                  let arrId = hit.id else { return result }
+            return result.withInLibraryArrId(arrId)
+        }
+    }
+
     static func formatTMDBSummary(_ results: [SearchResult], kind: String, origin: String) -> String {
         let ownedCount = results.filter { $0.inLibraryArrId != nil }.count
         var out = "TMDB returned \(results.count) \(kind) result\(results.count == 1 ? "" : "s") (\(origin))."
@@ -158,7 +180,11 @@ extension LocalToolBackend {
         for r in results.prefix(15) {
             let year = r.year.map { " (\($0))" } ?? ""
             let rating = r.rating.map { String(format: " ★%.1f", $0) } ?? ""
-            let owned = r.inLibraryArrId != nil ? " [OWNED]" : ""
+            // WATCHED only ever appears on a positive: the index knows nothing
+            // about titles the user doesn't own, and an absent marker must not
+            // be read as "not seen".
+            let watched = MediaServerIndex.shared.isWatched(r.mediaServerKeys) ? " [WATCHED]" : ""
+            let owned = r.inLibraryArrId != nil ? " [OWNED]\(watched)" : ""
             // MediaRef url form ("tmdb:12345") matches what the user
             // can type into the search bar verbatim, and what the
             // deep-link layer expects — one canonical string scheme

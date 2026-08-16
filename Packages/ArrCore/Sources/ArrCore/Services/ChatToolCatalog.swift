@@ -139,6 +139,7 @@ public enum ChatToolCatalog {
             .init(name: "tmdb_person_tv_credits", summary: "Shows a person worked on", services: [.sonarr]),
             .init(name: "tmdb_discover_series", summary: "Discover series by genre / year", services: [.sonarr]),
             .init(name: "suggest_titles", summary: "Curated title suggestions", services: [.sonarr, .radarr]),
+            .init(name: "check_titles", summary: "Check titles against your library", services: [.sonarr, .radarr]),
             .init(name: "discover_in_quiz", summary: "Open the swipe-to-pick quiz", services: [.sonarr, .radarr]),
             .init(name: "get_calendar", summary: "Upcoming releases across services", services: [.sonarr, .radarr, .lidarr, .whisparr]),
             .init(name: "health", summary: "Check service & download-client health",
@@ -178,13 +179,37 @@ public enum ChatToolCatalog {
         ),
         MCPTool(
             name: "sonarr_get_series",
-            description: "List TV series in the Sonarr library by TITLE — also returns each series' `seriesId` plus per-season monitor state and have/total episode counts (`S1 ✓ 10/10, S2 ✗ 0/10`). USE this to answer 'do I have season N monitored?', 'which seasons of X am I tracking?', 'find seriesId for X'. The seriesId returned here is what `sonarr_monitor_season` and `sonarr_search_episodes` expect. With `seasonNumber` argument the output zooms in on one season so you don't pay for the whole list. DO NOT use this for person / genre queries — that's tmdb_*. DO NOT use this for service health — that's `arr_health`.",
+            description: """
+            The user's OWN series library — each row carries `seriesId`, genres, rating, per-season monitor state with have/total episode counts (`S1 ✓ 10/10, S2 ✗ 0/10`) and, with a media server connected, whether it was watched. Same genre / startYear / endYear arguments as `tmdb_discover_series`, pointed at their shelf.
+
+            USE for 'do I have season N monitored?', 'which seasons of X am I tracking?', 'find seriesId for X', 'what unwatched shows do I have'. The seriesId here is what `sonarr_monitor_season` and `sonarr_search_episodes` expect. `seasonNumber` zooms the strip to one season.
+
+            NOT for titles you can already name — that is `check_titles`, one call for a whole list. Use this one to explore the shelf by filter, or when you need a `seriesId` or the season strip for a show the user just named. A call with no arguments returns a random sample, labelled as such: flavour, not reconnaissance.
+
+            Title matching tolerates accents, articles and typos. Person queries are tmdb_*; service health is `health`.
+            """,
             inputSchema: .object([
                 "type": .string("object"),
                 "properties": .object([
                     "query": .object([
                         "type": .string("string"),
-                        "description": .string("Optional title substring (case-insensitive). Omit to list all series — produces a large dump, prefer a query."),
+                        "description": .string("Optional title. Accent-, article- and typo-tolerant."),
+                    ]),
+                    "genre": .object([
+                        "type": .string("string"),
+                        "description": .string("Optional genre name, same vocabulary as tmdb_discover_series (drama, comedy, crime, sci-fi & fantasy, …)."),
+                    ]),
+                    "startYear": .object([
+                        "type": .string("integer"),
+                        "description": .string("Inclusive lower bound on first-air year."),
+                    ]),
+                    "endYear": .object([
+                        "type": .string("integer"),
+                        "description": .string("Inclusive upper bound on first-air year."),
+                    ]),
+                    "unwatched": .object([
+                        "type": .string("boolean"),
+                        "description": .string("Only series the media server says are unwatched. Needs a connected media server; ignored (and said so) without one."),
                     ]),
                     "seasonNumber": .object([
                         "type": .string("integer"),
@@ -252,13 +277,37 @@ public enum ChatToolCatalog {
         ),
         MCPTool(
             name: "radarr_get_movies",
-            description: "List movies currently in the Radarr library by TITLE. Use ONLY when the user names a specific movie title. DO NOT use this to find movies by actor, director, genre, or year — the library record has no cast / crew / genre metadata, so a query like 'Adam Sandler' returns nothing useful. For those queries use tmdb_search_person + tmdb_person_movie_credits (or tmdb_discover_movies) — those tools already cross-reference results with the library and mark which are owned. For 'is Radarr healthy / what's the state of my arrs' use `arr_health` instead.",
+            description: """
+            The user's OWN movie library. Same lens as `tmdb_discover_movies` (identical genre / startYear / endYear arguments) pointed at their shelf instead of at the world — use it whenever the question is "what do I have", "what can I watch tonight", "what unwatched sci-fi is on my shelf".
+
+            Every row carries genres, rating, whether the file is downloaded and (with a media server connected) whether it was watched — so YOU apply the taste judgement. "Romantic but not a drama" is your call from the rows, not a filter: half the great romances are tagged Drama.
+
+            NOT for titles you can already name — that is `check_titles`, which answers a whole list in one call. Use this one when you do NOT have the titles yet and are exploring the shelf by filter. A call with no arguments returns a random sample, labelled as such: it is flavour, not reconnaissance, and it proves nothing about whether any particular film is owned. If your next move would be `check_titles`, skip this call entirely and go straight there.
+
+            Title matching tolerates accents, articles and typos. For cast / crew queries use tmdb_search_person + tmdb_person_movie_credits (the library has no crew data). For service health use `health`.
+            """,
             inputSchema: .object([
                 "type": .string("object"),
                 "properties": .object([
                     "query": .object([
                         "type": .string("string"),
-                        "description": .string("Optional title substring (case-insensitive). Omit to list all movies — produces a large dump, prefer a query."),
+                        "description": .string("Optional title. Accent-, article- and typo-tolerant."),
+                    ]),
+                    "genre": .object([
+                        "type": .string("string"),
+                        "description": .string("Optional genre name, same vocabulary as tmdb_discover_movies (action, comedy, romance, horror, science fiction, …)."),
+                    ]),
+                    "startYear": .object([
+                        "type": .string("integer"),
+                        "description": .string("Inclusive lower bound on release year (1990 for '90s films')."),
+                    ]),
+                    "endYear": .object([
+                        "type": .string("integer"),
+                        "description": .string("Inclusive upper bound on release year (1999 for '90s films')."),
+                    ]),
+                    "unwatched": .object([
+                        "type": .string("boolean"),
+                        "description": .string("Only titles the media server says are unwatched. Needs a connected media server; ignored (and said so) without one."),
                     ]),
                 ]),
             ])
@@ -431,7 +480,7 @@ public enum ChatToolCatalog {
         ),
         MCPTool(
             name: "tmdb_discover_movies",
-            description: "Discover movies by genre and/or year range. Use this for 'suggest a horror for tonight', 'films from the 90s', 'best sci-fi from the last 5 years'. Sorted by popularity by default. Results include tmdbId so taps add to Radarr.",
+            description: "Discover movies by genre and/or year range — the WORLD, not the user's shelf. Use this for 'suggest a horror for tonight', 'films from the 90s', 'best sci-fi from the last 5 years'. `radarr_get_movies` takes the same genre / startYear / endYear arguments and answers the same question about the library they already own; reach for that one when the ask is 'what do I have'. Results are marked OWNED (and WATCHED where known) and include tmdbId so taps add to Radarr. Sorted by popularity by default.",
             inputSchema: .object([
                 "type": .string("object"),
                 "properties": .object([
@@ -475,7 +524,7 @@ public enum ChatToolCatalog {
         ),
         MCPTool(
             name: "tmdb_discover_series",
-            description: "Discover TV series by genre and/or year range. Use this for 'suggest a sci-fi series from the 2010s' or 'best comedy shows of the last 3 years'. Sorted by popularity by default.",
+            description: "Discover TV series by genre and/or year range — the WORLD, not the user's shelf. Use this for 'suggest a sci-fi series from the 2010s' or 'best comedy shows of the last 3 years'. `sonarr_get_series` takes the same genre / startYear / endYear arguments for the library they already own. Rows the user already owns are marked OWNED — matched on title + year, since TMDB tv ids are not TVDB ids, so a remake sharing a title could in principle be mismarked; `check_titles` is the exact answer when it matters. Sorted by popularity by default.",
             inputSchema: .object([
                 "type": .string("object"),
                 "properties": .object([
@@ -511,6 +560,31 @@ public enum ChatToolCatalog {
 
     private static let suggestTools: [MCPTool] = [
         MCPTool(
+            name: "check_titles",
+            description: """
+            Ask the library about titles you already have in hand: which ones the user owns, whether the file is there, and (with a media server connected) whether they have watched it.
+
+            USE THIS whenever you have named titles and the answer depends on the user's shelf — "have I seen any of these", "which of Villeneuve's films do I have", "is X already downloaded", or before recommending anything from your own knowledge so you don't offer what they own and watched last month. ONE call for the whole list: twenty titles in one call, never twenty separate lookups, and never a browse of the library first — a sample of the shelf cannot tell you about a title that isn't in the sample.
+
+            This is the tool for named titles; `radarr_get_movies` / `sonarr_get_series` are for exploring the shelf by filter when you have no titles yet, and `sonarr_get_series` is still the place to get a `seriesId` with per-season detail.
+
+            Do NOT re-check results that already arrived marked: `tmdb_person_movie_credits`, `tmdb_discover_movies` and `suggest_titles` cross-reference the library themselves and print [OWNED] / [WATCHED]. Use this for titles that came out of your own head, and whenever an exact answer matters for series — the TMDB series tools match ownership on title + year rather than on ids.
+
+            Titles may be plain strings ("Dune 2021") or {title, year} objects; a year disambiguates remakes. Matching tolerates accents, leading articles and typos. Movies and series both — the tool works out which is which. Max 50 per call.
+            """,
+            inputSchema: .object([
+                "type": .string("object"),
+                "properties": .object([
+                    "titles": .object([
+                        "type": .string("array"),
+                        "description": .string("Titles to check, e.g. [\"Chungking Express 1994\", {\"title\": \"Severance\"}]."),
+                        "items": .object(["type": .string("string")]),
+                    ]),
+                ]),
+                "required": .array([.string("titles")]),
+            ])
+        ),
+        MCPTool(
             name: "suggest_titles",
             description: """
             Present a curated list of titles you (the model) recommend from your own knowledge, rendered as interactive cards with posters / ratings / in-library state.
@@ -519,7 +593,7 @@ public enum ChatToolCatalog {
 
             DO NOT use `tmdb_discover_*` for taste queries — those are for genre/year filters ("popular 90s horror", "highly-rated documentaries 2023") where the user picks the dimension and you do not need to curate.
 
-            Pass 5–12 picks. Include `year` whenever you're confident — it disambiguates remakes and same-titled works. All picks must share one `kind` per call (all series, or all movies). The tool will resolve each through Sonarr/Radarr; any pick that can't be found is silently dropped from the cards (and reported back to you) so the user only sees real, addable items.
+            Pass 5–12 picks for a normal ask, up to 40 when you are hunting for what they DON'T have (a deep library owns most of any canonical list). Set `exclude_owned: true` for that hunt and the owned ones are dropped here — you get only the gaps, in one call. Include `year` whenever you're confident — it disambiguates remakes and same-titled works. All picks must share one `kind` per call (all series, or all movies). The tool will resolve each through Sonarr/Radarr; any pick that can't be found is silently dropped from the cards (and reported back to you) so the user only sees real, addable items.
 
             After the call, briefly explain WHY this set (one or two sentences max) — the cards speak for themselves visually.
             """,
@@ -548,6 +622,10 @@ public enum ChatToolCatalog {
                             "required": .array([.string("title")]),
                         ]),
                     ]),
+                    "exclude_owned": .object([
+                        "type": .string("boolean"),
+                        "description": .string("Drop picks the user already owns instead of marking them. Use when the ask is for things they DON'T have; the reply reports how many were dropped."),
+                    ]),
                 ]),
                 "required": .array([.string("kind"), .string("items")]),
             ])
@@ -561,13 +639,15 @@ public enum ChatToolCatalog {
 
             Pass `mood` as a short user-facing label describing the set ("cozy 90s comedy", "feel-good documentaries"). This shows as the breadcrumb chip in the overlay and the resume card in chat.
 
-            Pass `items` as 10–25 picks — err toward the higher end so the user has a satisfying deck to swipe through. Include `year` whenever you can — disambiguates remakes. All picks share one `kind`.
+            Aim for a deck of 10–25 cards — enough to be worth swiping. That is the deck SIZE, not the list length: titles the user already owns are dropped here before the deck is built (with library_mode "new"), so send enough to survive that. A small library: 20 picks is 20 cards. A large one: send 40–60, because most of the canon will be dropped. Up to 60 are accepted. Include `year` whenever you can — it disambiguates remakes. All picks share one `kind`.
 
-            CALL THIS TOOL EXACTLY ONCE PER REQUEST. If the user's ask spans both movies and shows (or is vague about kind), pick the single most relevant `kind` for their request (default to "movie" when ambiguous) and fill the deck with that — do NOT call the tool twice in the same turn for different kinds, as that opens two separate quiz sessions and confuses the user.
+            ONE DECK PER REQUEST. If the user's ask spans both movies and shows (or is vague about kind), pick the single most relevant `kind` (default to "movie" when ambiguous) and fill the deck with that — do NOT call the tool twice in the same turn for different kinds, as that opens two separate quiz sessions and confuses the user. A second call after the tool told you every pick was already owned is not a second deck: that is the same deck, corrected — but correct it with a checked list, not another guess.
 
             Pass `append: true` when the user asks for MORE picks continuing the current vibe — that extends the active deck instead of starting over.
 
             Set `library_mode` from the user's intent: "new" (default) excludes titles already in their library; "library" fills the deck from titles they own — use it when they want to rediscover their collection.
+
+            Do NOT pre-check with `check_titles`: this tool already drops owned titles for you (library_mode "new"), so checking first is the same work twice. Just reach past the obvious — a 3000-film collection has Inception and The Empire Strikes Back — and send enough that plenty survives.
 
             When the user asks for MORE picks following an active session, pass `anchor_tmdb_ids` containing the TMDB IDs of titles they kept — the backend will fetch TMDB's similar-to graph for those anchors and merge it with your curated picks for stronger relevance.
 
@@ -672,9 +752,9 @@ public enum ChatToolCatalog {
             description: """
             What the user has recently FINISHED watching on their media server (Plex / Jellyfin / Emby), newest first. Returns title, year and when it was watched; episodes are reported as their series.
 
-            USE THIS for "what have I watched lately", "did I already see X", "recommend something based on what I watch", "what did I finish this week". It is the only source of watch state — the arrs know what was downloaded, never what was played.
+            USE THIS for the recent stream itself — "what have I watched lately", "what did I finish this week", "recommend something based on what I've been watching". The arrs know what was downloaded, never what was played.
 
-            DO NOT use this to list the library (that's `radarr_get_movies` / `sonarr_get_series`) or to see what is playing right now (that's `media_server_now_playing`).
+            DO NOT use this to answer "have I seen X" for a NAMED title: this is only the most recent plays, so a film watched last year isn't in it and you would wrongly conclude they haven't seen it. That question is `check_titles`, which reads watch state for the whole library. Nor is this a library listing (`radarr_get_movies` / `sonarr_get_series`) or what is on screen right now (`media_server_now_playing`).
             """,
             inputSchema: .object([
                 "type": .string("object"),
@@ -716,7 +796,7 @@ public enum ChatToolCatalog {
 
             USE THIS to answer "tell me about X", "what's the plot of X", "who's in X?", "give me the cast of X". For the plot alone, leave `include_cast` off. Set `include_cast: true` ONLY when the user actually asks about actors/cast (it costs an extra TMDB call and tokens). Cast comes from TMDB, so it needs a TMDB key configured — without one the tool says so.
 
-            Resolve `id` first: `seriesId` from `sonarr_get_series`, `movieId` from `radarr_get_movies`. Output is plain text (no cards).
+            Resolve `id` first: `seriesId` from `sonarr_get_series`, `movieId` from `radarr_get_movies` — or either from `check_titles`, which returns them for a whole list at once. Output is plain text (no cards).
             """,
             inputSchema: .object([
                 "type": .string("object"),

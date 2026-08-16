@@ -30,6 +30,11 @@ public struct RadarrMovieDetail: Decodable {
     var monitored: Bool? = nil
     /// Assigned quality profile — resolved to a name for the hero's chip.
     var qualityProfileId: Int? = nil
+    /// YouTube video id of the movie's trailer, straight from Radarr — no
+    /// TMDB key needed for the movie path. Radarr sends `""` (not null) when
+    /// it has none, so callers must treat empty as absent. `var … = nil` for
+    /// the same Decodable reason as `tmdbId`.
+    var youTubeTrailerId: String? = nil
 }
 
 public struct RadarrDetailRatings: Decodable {
@@ -173,7 +178,9 @@ public struct LidarrArtistDetail: Decodable {
     let foreignArtistId: String?
     let statistics: LidarrLibraryStatistics?
     let ratings: LidarrDetailRatings?
-    let monitored: Bool?
+    /// `var` so the artist surface can flip it optimistically (and the demo
+    /// fixture layer can overwrite it) — same as the movie/series details.
+    public var monitored: Bool?
 }
 
 public struct LidarrTrackDetail: Decodable, Identifiable, Hashable {

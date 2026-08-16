@@ -179,6 +179,24 @@ public extension Notification.Name {
     /// non-empty String. PopoverContentView listens and opens the Discover
     /// overlay in quiz mode with the given mood pre-loaded.
     static let arrBarrOpenDiscoverQuiz = Notification.Name("ArrBarr.OpenDiscoverQuiz")
+
+    /// Posted after a title is successfully added to an arr.
+    /// `userInfo["foreignId"]` is the arr's foreign key (tmdb/tvdb/mbid) as a
+    /// String. The Quiz listens so a card the user just added stops being
+    /// offered.
+    static let arrBarrDidAddToLibrary = Notification.Name("ArrBarr.DidAddToLibrary")
+
+}
+
+public enum LibraryAddCompletion {
+    public static func post(foreignId: String) {
+        guard !foreignId.isEmpty else { return }
+        NotificationCenter.default.post(
+            name: .arrBarrDidAddToLibrary,
+            object: nil,
+            userInfo: ["foreignId": foreignId]
+        )
+    }
 }
 
 public enum SearchAddRequest {

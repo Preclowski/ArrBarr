@@ -229,6 +229,45 @@ public enum TMDBGenres {
 
 // MARK: - Client
 //
+/// One entry of TMDB's `/videos` — in practice always a YouTube clip; TMDB
+/// hosts no video of its own, it only points at one.
+public struct TMDBVideo: Decodable, Sendable, Equatable {
+    public let key: String
+    public let site: String?
+    public let type: String?
+    public let official: Bool?
+    public let name: String?
+
+    public init(key: String, site: String?, type: String?, official: Bool?, name: String? = nil) {
+        self.key = key
+        self.site = site
+        self.type = type
+        self.official = official
+        self.name = name
+    }
+
+    /// The one clip worth opening, or nil. Ranked rather than filtered: a
+    /// title with only an unofficial teaser should still get a play button —
+    /// showing SOMETHING beats a chip that vanishes for half the library.
+    /// YouTube-only because that's the only site we can hand to the OS.
+    public static func bestTrailerKey(_ videos: [TMDBVideo]) -> String? {
+        let youTube = videos.filter { ($0.site ?? "YouTube") == "YouTube" && !$0.key.isEmpty }
+        func rank(_ v: TMDBVideo) -> Int {
+            let official = v.official ?? false
+            switch (v.type, official) {
+            case ("Trailer", true):  return 0
+            case ("Trailer", false): return 1
+            case ("Teaser", true):   return 2
+            case ("Teaser", false):  return 3
+            default:                 return 4
+            }
+        }
+        // `min(by:)` keeps TMDB's own order inside a rank — its first entry is
+        // the one the site itself features.
+        return youTube.min { rank($0) < rank($1) }?.key
+    }
+}
+
 // Plain struct over URLSession — TMDB endpoints are stateless and don't
 // need per-instance caching. Sendable so it can be passed across actors.
 
@@ -389,6 +428,20 @@ public struct TMDBClient: Sendable {
             path: "/tv/\(seriesId)/similar",
             query: [URLQueryItem(name: "page", value: String(page))]
         )
+        return env.results
+    }
+
+    // MARK: - Trailers
+
+    public func movieVideos(movieId: Int) async throws -> [TMDBVideo] {
+        struct Envelope: Decodable { let results: [TMDBVideo] }
+        let env: Envelope = try await get(path: "/movie/\(movieId)/videos", query: [])
+        return env.results
+    }
+
+    public func tvVideos(tvId: Int) async throws -> [TMDBVideo] {
+        struct Envelope: Decodable { let results: [TMDBVideo] }
+        let env: Envelope = try await get(path: "/tv/\(tvId)/videos", query: [])
         return env.results
     }
 

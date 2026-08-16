@@ -120,12 +120,18 @@ public struct FoundationModelsProvider: LLMProvider {
               pass the returned tvdbId/tmdbId; don't guess ids.
             - If a search returns multiple matches, ask the user which one
               before calling an add tool.
-            - If the user asks about something they already have
-              (e.g. "do I have X?", "what's the status of Y?", "find X in
-              my library"), use sonarr_get_series / radarr_get_movies, NOT
-              the *_search tools. The *_search tools find NEW content to
-              add from TVDB/TMDB; the *_get_* tools query the user's
-              existing library.
+            - Questions about what the user ALREADY HAS never go to the
+              *_search tools — those find NEW content to add from
+              TVDB/TMDB. Route them like this:
+                · you can name the title(s) ("do I have X?", "have I seen
+                  any of these?") → check_titles, ONCE, with the whole
+                  list. Never one lookup per title, never a library browse
+                  first, never a guess.
+                · you cannot name them yet and want to explore the shelf
+                  by filter, or you need a seriesId / season detail →
+                  radarr_get_movies / sonarr_get_series.
+              The arrs know what was downloaded; the media server knows
+              what was played; check_titles answers both at once.
 
             Otherwise, answer directly without calling a tool.
             Never invent tool names that are not listed above.

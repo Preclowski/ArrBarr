@@ -151,4 +151,44 @@ struct DiscoverViewModelTests {
         #expect(vm.sourceErrors[.tmdb] != nil)
         #expect(vm.sourceErrors[.tmdb]?.contains("boom") ?? false)
     }
+
+    // MARK: - Top-up rounds
+
+    @Test("shownDedupKeys covers seeded, consumed and extended cards, and resets on seed")
+    func shownKeysCoverTheWholeSession() async {
+        let vm = freshVM()
+        vm.seed(items: [makeItem(1, .llm), makeItem(2, .llm)], mood: "cosy")
+        vm.skip()   // tmdb:1 leaves the deck but stays "shown"
+        vm.extend(items: [makeItem(3, .llm)])
+        #expect(vm.shownDedupKeys == ["tmdb:1", "tmdb:2", "tmdb:3"])
+
+        vm.seed(items: [makeItem(9, .llm)], mood: "loud")
+        #expect(vm.shownDedupKeys == ["tmdb:9"])
+    }
+
+    @Test("An all-duplicate top-up round adds nothing and leaves the deck empty")
+    func duplicateTopUpRoundAddsNothing() async {
+        // The failure the user hit: the agent's appended round comes back with
+        // titles the deck has already shown, `extend` drops every one of them,
+        // and the surface has no way to tell that apart from "there is nothing
+        // left" — so it says "No more cards" while a retry still finds picks.
+        let vm = freshVM()
+        vm.seed(items: [makeItem(1, .llm)], mood: "cosy")
+        vm.skip()
+        #expect(vm.current == nil)
+
+        let before = vm.sessionTotal
+        vm.extend(items: [makeItem(1, .llm)])
+        #expect(vm.current == nil)
+        #expect(vm.sessionTotal == before, "a duplicate round must not inflate the total")
+    }
+
+    @Test("Append rounds are filtered against the live deck before they reach it")
+    func appendRoundsAreFilteredAgainstTheDeck() {
+        let shown: Set<String> = ["tmdb:1", "tmdb:2"]
+        let round = [makeItem(1, .llm), makeItem(3, .llm), makeItem(2, .llm)]
+        let split = LocalToolBackend.splitAlreadyShown(round, shown: shown)
+        #expect(split.fresh.map(\.dedupKey) == ["tmdb:3"])
+        #expect(split.dropped.map(\.dedupKey) == ["tmdb:1", "tmdb:2"])
+    }
 }

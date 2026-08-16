@@ -55,6 +55,7 @@ public enum MCPToolWhitelist {
         "tmdb_discover_series",
         // Cross-cutting: suggestions, calendar, diagnostics, queue
         "suggest_titles",
+        "check_titles",
         "discover_in_quiz",
         "get_calendar",
         "health",

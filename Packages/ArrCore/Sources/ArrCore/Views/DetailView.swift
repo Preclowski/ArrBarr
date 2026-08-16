@@ -159,6 +159,14 @@ public struct DetailView: View {
     /// overlay on top of the detail surface so it dismisses without
     /// leaving the popover.
     @State private var enlargedPoster: URL?
+    /// YouTube video id of this title's trailer, resolved once the detail
+    /// payload lands. Nil = no chip (no trailer, or no TMDB key for the
+    /// series path).
+    @State private var trailerKey: String?
+    /// The clip currently on screen, presented as a full-surface overlay (like
+    /// the poster lightbox). Separate from `trailerKey` so the badge can open
+    /// and close it without re-resolving.
+    @State private var presentedTrailer: String?
     /// Season drill-down — set when the user taps a season row. Pushes
     /// `SeasonDetailView` (its episodes + that season's search buttons).
     @State private var seasonDrill: SeasonDrill?
@@ -232,16 +240,17 @@ public struct DetailView: View {
         }
     }
 
-    /// Leads the header action cluster on both platforms: `[bookmark]
-    /// [safari] [trash]` — state toggle first, then the leave-the-app link,
-    /// then the destructive one where users already found it.
-    @ViewBuilder
-    private var monitorToggle: some View {
-        if let state = monitorState {
-            MonitorToggleButton(isMonitored: state.isMonitored, entity: state.entity) { monitored in
+    /// Lives on the poster's top-right corner rather than in the header action
+    /// cluster: the bookmark is a property OF this title, not a chrome action
+    /// like Safari or trash, so it sits on the artwork it describes.
+    /// `MonitorPosterToggle` carries its own contrast for light + dark posters.
+    private var monitorPosterToggle: AnyView? {
+        guard let state = monitorState else { return nil }
+        return AnyView(
+            MonitorPosterToggle(isMonitored: state.isMonitored, entity: state.entity) { monitored in
                 await setTopLevelMonitored(monitored)
             }
-        }
+        )
     }
 
     /// Push the person view for a tapped cast head (both providers stamp the
@@ -362,7 +371,9 @@ public struct DetailView: View {
             apiKey: item.posterRequiresAuth ? arrAPIKey(for: item, in: configStore) : nil,
             aspectRatio: item.source == .lidarr ? 1.0 : 2.0 / 3.0
         )
+        .trailerOverlay(key: $presentedTrailer)
         .task(id: item.id) { await load() }
+        .task(id: trailerLookupToken) { await resolveTrailer() }
         .task(id: searchWatchToken) { await watchSearchState() }
         // When the row leaves the arr queue (import finished / removed) while
         // the detail is open, the queue view stops backing it — refetch so the
@@ -397,7 +408,8 @@ public struct DetailView: View {
         #if os(iOS)
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
-                // Cluster order: edit, search, monitor, safari, trash.
+                // Cluster order: edit, search, safari, trash. (Monitor moved
+                // out to the poster's top-right corner — see `headerCard`.)
                 if let target = editTarget {
                     Button { editRequest = target } label: {
                         Image(systemName: "pencil")
@@ -405,7 +417,6 @@ public struct DetailView: View {
                     .help(Text("detail.edit.button", bundle: .module))
                 }
                 headerSearchMenu
-                monitorToggle
                 if let url = arrWebURL(for: item, in: configStore) {
                     Button { PlatformURLOpener.open(url) } label: {
                         Image(systemName: "safari")
@@ -571,7 +582,8 @@ public struct DetailView: View {
                 .foregroundStyle(.primary)
                 .lineLimit(1)
             Spacer(minLength: 0)
-            // Cluster order: edit, search, monitor, safari, (trash on iOS).
+            // Cluster order: edit, search, safari, (trash on iOS). Monitor
+            // moved out to the poster's top-right corner — see `headerCard`.
             if let target = editTarget {
                 Button { editRequest = target } label: {
                     Image(systemName: "pencil")
@@ -582,7 +594,6 @@ public struct DetailView: View {
                 .help(Text("detail.edit.button", bundle: .module))
             }
             headerSearchMenu
-            monitorToggle
             if let url = arrWebURL(for: item, in: configStore) {
                 Button { PlatformURLOpener.open(url) } label: {
                     Image(systemName: "safari")
@@ -923,6 +934,7 @@ public struct DetailView: View {
                     onPauseItem: { q in Task { await viewModel.pause(q); await viewModel.refresh() } },
                     onResumeItem: { q in Task { await viewModel.resume(q); await viewModel.refresh() } },
                     onDeleteItem: { q in Task { await viewModel.delete(q) } },
+                    posterCornerAction: monitorPosterToggle,
                     onOpenArtist: { artist in
                         artistDrill = DetailRequest.syntheticArtistItem(
                             artistId: artist.id,
@@ -963,16 +975,73 @@ public struct DetailView: View {
         })
     }
 
+    // MARK: - Trailer
+
+    /// Re-resolves when the item changes AND when the detail payload lands —
+    /// the ids the lookup needs (Radarr's trailer id, the series' tmdb/tvdb
+    /// ids) only exist after `load()`, so keying on `item.id` alone would
+    /// always look up nothing.
+    private var trailerLookupToken: String {
+        switch item.source {
+        case .radarr, .whisparr:
+            return "movie:\(item.id):\(radarrDetail?.youTubeTrailerId ?? "-"):\(radarrDetail?.tmdbId ?? 0)"
+        case .sonarr:
+            return "series:\(item.id):\(sonarrDetail?.tmdbId ?? 0):\(sonarrDetail?.tvdbId ?? 0)"
+        case .lidarr:
+            return "none:\(item.id)"
+        }
+    }
+
+    private func resolveTrailer() async {
+        // A new title must not keep the previous one's clip on screen.
+        presentedTrailer = nil
+        trailerKey = nil
+        switch item.source {
+        case .radarr, .whisparr:
+            trailerKey = await TrailerProvider.movieTrailerKey(
+                radarrTrailerId: radarrDetail?.youTubeTrailerId,
+                tmdbId: radarrDetail?.tmdbId,
+                configStore: configStore
+            )
+        case .sonarr:
+            trailerKey = await TrailerProvider.seriesTrailerKey(
+                tmdbId: sonarrDetail?.tmdbId,
+                tvdbId: sonarrDetail?.tvdbId,
+                configStore: configStore
+            )
+        case .lidarr:
+            break
+        }
+    }
+
+    /// The badge in the poster's corner — only once a clip is actually known,
+    /// so it never sits there dead.
+    private var trailerBadge: AnyView? {
+        guard trailerKey != nil else { return nil }
+        return AnyView(
+            TrailerPosterBadge(isPlaying: presentedTrailer != nil) {
+                withAnimation(.smooth(duration: 0.22)) {
+                    presentedTrailer = presentedTrailer == nil ? trailerKey : nil
+                }
+            }
+        )
+    }
+
     private func movieRatingChipsFor(_ detail: RadarrMovieDetail?) -> [RatingChip] {
         guard let r = detail?.ratings else { return [] }
         // Radarr's detail payload carries no imdbId, so the IMDb pill links
         // to the site's search; TMDB gets a direct record link via tmdbId.
         let title = detail?.title ?? splitTitleAndYear(item.title).title
         return [
-            r.imdb?.value.flatMap { RatingChip.imdb($0, linkTitle: title) },
-            r.tmdb?.value.flatMap { RatingChip.tmdb($0, linkTitle: title, tmdbId: detail?.tmdbId) },
-            r.rottenTomatoes?.value.flatMap { RatingChip.rottenTomatoes($0, linkTitle: title) },
-            r.metacritic?.value.flatMap { RatingChip.metacritic($0, linkTitle: title) },
+            r.imdb?.value.flatMap { RatingChip.imdb($0, linkTitle: title, votes: r.imdb?.votes) },
+            r.tmdb?.value.flatMap { RatingChip.tmdb($0, linkTitle: title, tmdbId: detail?.tmdbId,
+                                                    votes: r.tmdb?.votes) },
+            r.rottenTomatoes?.value.flatMap {
+                RatingChip.rottenTomatoes($0, linkTitle: title, votes: r.rottenTomatoes?.votes)
+            },
+            r.metacritic?.value.flatMap {
+                RatingChip.metacritic($0, linkTitle: title, votes: r.metacritic?.votes)
+            },
         ].compactMap { $0 }
     }
 
@@ -981,7 +1050,7 @@ public struct DetailView: View {
         // Sonarr's rating is TVDB-sourced — link to the TVDB series page
         // (the detail payload has no tvdbId here, so it goes via search).
         let title = detail?.title ?? splitTitleAndYear(item.title).title
-        return [RatingChip.tvdb(v, linkTitle: title)].compactMap { $0 }
+        return [RatingChip.tvdb(v, linkTitle: title, votes: r.votes)].compactMap { $0 }
     }
 
     // MARK: - Shared header card
@@ -1004,6 +1073,31 @@ public struct DetailView: View {
         posterAspect: CGFloat,
         metadataLoading: Bool = false,
         titleBadge: AnyView? = nil
+    ) -> some View {
+        heroCard(
+            title: title, year: year, runtime: runtime, genres: genres,
+            certification: certification, ratings: ratings, overview: overview,
+            existingTrailer: existingTrailer, posterUrl: posterUrl,
+            fallbackSymbol: fallbackSymbol, posterAspect: posterAspect,
+            metadataLoading: metadataLoading, titleBadge: titleBadge
+        )
+    }
+
+    @ViewBuilder
+    private func heroCard(
+        title: String,
+        year: Int?,
+        runtime: Int?,
+        genres: [String],
+        certification: String?,
+        ratings: [RatingChip],
+        overview: String?,
+        existingTrailer: AnyView?,
+        posterUrl: URL?,
+        fallbackSymbol: String,
+        posterAspect: CGFloat,
+        metadataLoading: Bool,
+        titleBadge: AnyView?
     ) -> some View {
         MediaHeaderCard(
             title: title,
@@ -1029,6 +1123,8 @@ public struct DetailView: View {
                     enlargedPoster = url ?? item.posterURL
                 }
             },
+            posterBadge: trailerBadge,
+            posterCornerAction: monitorPosterToggle,
             // Title + year live in the nav-bar title now; hero hides
             // its in-card title to avoid duplication.
             showTitle: false,

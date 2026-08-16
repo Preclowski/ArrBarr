@@ -23,6 +23,11 @@ struct LidarrDetailPanel: View {
     var onPauseItem: ((QueueItem) -> Void)? = nil
     var onResumeItem: ((QueueItem) -> Void)? = nil
     var onDeleteItem: ((QueueItem) -> Void)? = nil
+    /// The album's monitor bookmark, pinned to the poster's top-right corner.
+    /// This surface draws its OWN hero (square art, artist subtitle) instead
+    /// of `MediaHeaderCard`, so the host hands the toggle in rather than
+    /// setting `posterCornerAction` on the shared card.
+    var posterCornerAction: AnyView? = nil
     /// Tap on the artist line under the album title — pushes the artist
     /// view (album list). nil leaves the line as plain text.
     var onOpenArtist: ((LidarrArtist) -> Void)? = nil
@@ -119,25 +124,20 @@ struct LidarrDetailPanel: View {
         let posterUrl = arrPosterURL(images: album?.images, for: item, in: configStore)
             ?? arrPosterURL(images: album?.artist?.images, for: item, in: configStore)
         let resolvedURL = posterUrl ?? item.posterURL
-        let poster = RemotePoster(
-            url: resolvedURL,
-            apiKey: item.posterRequiresAuth ? configStore.lidarr.apiKey : nil,
-            size: CGSize(width: 110, height: 110),
-            cornerRadius: Tokens.Radius.card,
-            fallbackSymbol: "music.note"
-        )
         return HStack(alignment: .top, spacing: 12) {
-            // Tap the poster to raise the lightbox — same affordance
-            // movie / series detail views ship. `lidarrHeaderCard`
-            // used to render a bare `RemotePoster`, so clicking it
-            // did nothing on this surface alone.
-            Button {
-                withAnimation(.smooth(duration: 0.22)) {
-                    enlargedPoster = resolvedURL ?? item.posterURL
+            // Same hero component the movie / series / episode surfaces use —
+            // square art here (album covers are 1:1), but the tap affordance
+            // and the bookmark corner come from one place.
+            DetailHeroPoster(
+                url: resolvedURL,
+                apiKey: item.posterRequiresAuth ? configStore.lidarr.apiKey : nil,
+                size: CGSize(width: 110, height: 110),
+                fallbackSymbol: "music.note",
+                cornerAction: posterCornerAction,
+                onTap: { url in
+                    withAnimation(.smooth(duration: 0.22)) { enlargedPoster = url }
                 }
-            } label: { poster }
-                .buttonStyle(.plain)
-                .help(Text("detail.showPoster.button", bundle: .module))
+            )
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 5) {
                     Text(album?.title ?? item.title)
@@ -201,7 +201,8 @@ struct LidarrDetailPanel: View {
                 if !lidarrGenres.isEmpty {
                     GenreChips(genres: lidarrGenres)
                 }
-                if let v = album?.ratings?.value, let chip = RatingChip.plain(v) {
+                if let v = album?.ratings?.value,
+                   let chip = RatingChip.plain(v, votes: album?.ratings?.votes) {
                     HStack(spacing: 6) {
                         RatingPill(chip: chip)
                     }

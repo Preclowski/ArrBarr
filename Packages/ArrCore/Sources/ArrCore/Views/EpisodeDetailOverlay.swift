@@ -79,10 +79,13 @@ public struct EpisodeDetailOverlay: View {
     /// the live episode array. nil renders the bookmark as inert state.
     var onToggleMonitored: ((Bool) async -> Void)? = nil
 
+    /// Pinned to the hero poster's top-right corner, matching `DetailView` /
+    /// `SeasonDetailView` — the bookmark is state about the episode, not a
+    /// header action.
     @ViewBuilder
-    private var monitorToggle: some View {
+    private var monitorPosterToggle: some View {
         if let monitored {
-            MonitorToggleButton(isMonitored: monitored, entity: .episode, onToggle: onToggleMonitored)
+            MonitorPosterToggle(isMonitored: monitored, entity: .episode, onToggle: onToggleMonitored)
         }
     }
 
@@ -197,7 +200,6 @@ public struct EpisodeDetailOverlay: View {
                     .lineLimit(1)
                 Spacer(minLength: 0)
                 headerSearchMenu
-                monitorToggle
                 if let url = warningActionURL {
                     Button { PlatformURLOpener.open(url) } label: {
                         Image(systemName: "safari")
@@ -271,7 +273,6 @@ public struct EpisodeDetailOverlay: View {
                 // header above, and adding them here too would double them up.
                 #if os(iOS)
                 headerSearchMenu
-                monitorToggle
                 #endif
                 // Detached window surfaces Safari in the self-drawn header above
                 // (the toolbar bar doesn't render in the hand-built NSWindow).
@@ -421,33 +422,25 @@ public struct EpisodeDetailOverlay: View {
     private var content: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top, spacing: 12) {
-                // Poster + blur container match MediaHeaderCard's
-                // chrome (110×165, 6pt corner, blur wrap) so episode
-                // detail looks like every other detail surface in the
+                // Shared hero component (110×165, 6pt corner, blur wrap) so
+                // episode detail looks like every other detail surface in the
                 // app instead of a custom one-off card.
-                let poster = PosterBlurContainer(blurred: false, cornerRadius: Tokens.Radius.card) {
-                    RemotePoster(
-                        url: posterURL,
-                        apiKey: posterRequiresAuth ? apiKey : nil,
-                        size: CGSize(width: 110, height: 165),
-                        cornerRadius: Tokens.Radius.card,
-                        fallbackSymbol: "tv"
-                    )
-                }
+                //
                 // Self-contained lightbox: this overlay is a NavigationStack
                 // push, so a host-owned lightbox (DetailView's) renders
                 // BELOW it and never shows. Tapping raises our own
                 // `enlargedPoster` overlay instead — works in both the
                 // from-queue (EpisodeQuickDetail) and from-series flows.
-                Button {
-                    withAnimation(.smooth(duration: 0.22)) { enlargedPoster = posterURL }
-                } label: { poster }
-                    .buttonStyle(.plain)
-                    .disabled(posterURL == nil)
-                    .help(Text("detail.showPoster.button", bundle: .module))
-                    // RemotePoster hides itself from VoiceOver, so the button
-                    // wrapping it has no label at all without this.
-                    .accessibilityLabel(Text("detail.showPoster.button", bundle: .module))
+                DetailHeroPoster(
+                    url: posterURL,
+                    apiKey: posterRequiresAuth ? apiKey : nil,
+                    size: CGSize(width: 110, height: 165),
+                    fallbackSymbol: "tv",
+                    cornerAction: AnyView(monitorPosterToggle),
+                    onTap: { url in
+                        withAnimation(.smooth(duration: 0.22)) { enlargedPoster = url }
+                    }
+                )
                 VStack(alignment: .leading, spacing: 6) {
                     // Library chip up top (title-level fact) — moved here
                     // from beside the existing-file banner, matching the

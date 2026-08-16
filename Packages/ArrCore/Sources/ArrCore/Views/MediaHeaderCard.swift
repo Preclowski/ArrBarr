@@ -8,6 +8,8 @@ import SwiftUI
 // language can evolve without thumbing through a 1700-line file.
 
 public struct RatingChip {
+    /// Short on-pill text ("RT", "MC") — only rendered when the source has
+    /// no brand mark. See `siteName` for the spelled-out name.
     let label: String
     let value: String
     let color: Color
@@ -17,13 +19,23 @@ public struct RatingChip {
     /// Asset name of the service's brand icon (in `ServiceIcons.xcassets`) —
     /// shown in place of the text `label` when present.
     let iconName: String?
+    /// How many people voted for `value`. Hover-only detail — an 8.6 off
+    /// twelve votes and one off two million read identically on the pill,
+    /// so the count rides in the tooltip rather than widening the chip.
+    let votes: Int?
+    /// The source spelled out for the tooltip ("Rotten Tomatoes") — a brand
+    /// name, never localized. Nil for the sourceless `plain` pill.
+    let siteName: String?
 
-    public init(label: String, value: String, color: Color, url: URL? = nil, iconName: String? = nil) {
+    public init(label: String, value: String, color: Color, url: URL? = nil,
+                iconName: String? = nil, votes: Int? = nil, siteName: String? = nil) {
         self.label = label
         self.value = value
         self.color = color
         self.url = url
         self.iconName = iconName
+        self.votes = votes
+        self.siteName = siteName
     }
 }
 
@@ -39,45 +51,52 @@ public struct RatingChip {
 /// Every factory returns `nil` for a zero/absent score — 0.0 is "not rated
 /// yet", not a rating, and hiding it HERE means no surface can disagree.
 public extension RatingChip {
-    static func imdb(_ value: Double, linkTitle: String? = nil, imdbId: String? = nil) -> RatingChip? {
+    static func imdb(_ value: Double, linkTitle: String? = nil, imdbId: String? = nil,
+                     votes: Int? = nil) -> RatingChip? {
         guard value > 0 else { return nil }
         return RatingChip(label: "IMDb", value: String(format: "%.1f", value), color: .yellow,
                           url: linkTitle.flatMap { RatingSiteLink.imdb(id: imdbId, title: $0) },
-                          iconName: "rating-imdb")
+                          iconName: "rating-imdb", votes: votes, siteName: "IMDb")
     }
 
-    static func tmdb(_ value: Double, linkTitle: String? = nil, tmdbId: Int? = nil) -> RatingChip? {
+    static func tmdb(_ value: Double, linkTitle: String? = nil, tmdbId: Int? = nil,
+                     votes: Int? = nil) -> RatingChip? {
         guard value > 0 else { return nil }
         return RatingChip(label: "TMDB", value: String(format: "%.1f", value), color: .teal,
                           url: linkTitle.flatMap { RatingSiteLink.tmdbMovie(id: tmdbId, title: $0) },
-                          iconName: "rating-tmdb")
+                          iconName: "rating-tmdb", votes: votes, siteName: "TMDB")
     }
 
-    static func tvdb(_ value: Double, linkTitle: String? = nil, tvdbId: Int? = nil) -> RatingChip? {
+    static func tvdb(_ value: Double, linkTitle: String? = nil, tvdbId: Int? = nil,
+                     votes: Int? = nil) -> RatingChip? {
         guard value > 0 else { return nil }
         return RatingChip(label: "TVDB", value: String(format: "%.1f", value), color: .blue,
                           url: linkTitle.flatMap { RatingSiteLink.tvdbSeries(id: tvdbId, title: $0) },
-                          iconName: "rating-tvdb")
+                          iconName: "rating-tvdb", votes: votes, siteName: "TVDB")
     }
 
-    static func rottenTomatoes(_ value: Double, linkTitle: String? = nil) -> RatingChip? {
+    static func rottenTomatoes(_ value: Double, linkTitle: String? = nil,
+                               votes: Int? = nil) -> RatingChip? {
         guard value > 0 else { return nil }
         return RatingChip(label: "RT", value: "\(Int(value))%", color: .red,
                           url: linkTitle.flatMap { RatingSiteLink.rottenTomatoes(title: $0) },
-                          iconName: "rating-rt")
+                          iconName: "rating-rt", votes: votes, siteName: "Rotten Tomatoes")
     }
 
-    static func metacritic(_ value: Double, linkTitle: String? = nil) -> RatingChip? {
+    static func metacritic(_ value: Double, linkTitle: String? = nil,
+                           votes: Int? = nil) -> RatingChip? {
         guard value > 0 else { return nil }
         return RatingChip(label: "MC", value: "\(Int(value))", color: .green,
-                          url: linkTitle.flatMap { RatingSiteLink.metacritic(title: $0) })
+                          url: linkTitle.flatMap { RatingSiteLink.metacritic(title: $0) },
+                          votes: votes, siteName: "Metacritic")
     }
 
     /// Sourceless score (Lidarr artists/albums, Sonarr seasons) — a plain
     /// yellow "Rating" pill with no brand mark or link.
-    static func plain(_ value: Double) -> RatingChip? {
+    static func plain(_ value: Double, votes: Int? = nil) -> RatingChip? {
         guard value > 0 else { return nil }
-        return RatingChip(label: "Rating", value: String(format: "%.1f", value), color: .yellow)
+        return RatingChip(label: "Rating", value: String(format: "%.1f", value), color: .yellow,
+                          votes: votes)
     }
 }
 
@@ -143,6 +162,14 @@ public struct MediaHeaderCard: View {
     /// wrapped in a button that fires this closure with its URL,
     /// letting the host raise a lightbox.
     var onPosterTap: ((URL?) -> Void)?
+    /// Pinned to the poster's bottom-right corner, over the artwork — the
+    /// trailer badge's home. On the poster rather than in a row of its own so
+    /// the affordance sits on the thing it plays.
+    var posterBadge: AnyView?
+    /// Pinned to the poster's TOP-right corner, over the artwork — the
+    /// monitored bookmark's home on the detail surfaces. Opposite corner from
+    /// `posterBadge` so the two never collide.
+    var posterCornerAction: AnyView?
     /// Hides the title + year line. DetailView sets this when the
     /// NavigationStack toolbar carries `Title (Year)` so the hero card
     /// doesn't duplicate it. Tooltips / popovers keep the in-card title
@@ -173,6 +200,8 @@ public struct MediaHeaderCard: View {
         trailing: AnyView? = nil,
         titleBadge: AnyView? = nil,
         onPosterTap: ((URL?) -> Void)? = nil,
+        posterBadge: AnyView? = nil,
+        posterCornerAction: AnyView? = nil,
         showTitle: Bool = true,
         metadataLoading: Bool = false
     ) {
@@ -194,6 +223,8 @@ public struct MediaHeaderCard: View {
         self.trailing = trailing
         self.titleBadge = titleBadge
         self.onPosterTap = onPosterTap
+        self.posterBadge = posterBadge
+        self.posterCornerAction = posterCornerAction
         self.showTitle = showTitle
         self.metadataLoading = metadataLoading
     }
@@ -281,25 +312,17 @@ public struct MediaHeaderCard: View {
             || (certification.map { !$0.isEmpty } ?? false)
     }
 
-    @ViewBuilder
     private func posterView(width: CGFloat, height: CGFloat) -> some View {
-        let poster = PosterBlurContainer(blurred: blurred, cornerRadius: Tokens.Radius.card) {
-            RemotePoster(
-                url: posterURL,
-                apiKey: posterRequiresAuth ? apiKey : nil,
-                size: CGSize(width: width, height: height),
-                cornerRadius: Tokens.Radius.card,
-                fallbackSymbol: fallbackSymbol
-            )
-        }
-        if let onPosterTap {
-            Button { onPosterTap(posterURL) } label: { poster }
-                .buttonStyle(.plain)
-                .help(Text("detail.showPoster.button", bundle: .module))
-                .accessibilityLabel(Text("detail.showPoster.button", bundle: .module))
-        } else {
-            poster
-        }
+        DetailHeroPoster(
+            url: posterURL,
+            apiKey: posterRequiresAuth ? apiKey : nil,
+            size: CGSize(width: width, height: height),
+            fallbackSymbol: fallbackSymbol,
+            blurred: blurred,
+            cornerAction: posterCornerAction,
+            badge: posterBadge,
+            onTap: onPosterTap
+        )
     }
 
     /// Metadata row under the genres: runtime · network · certification
@@ -551,24 +574,10 @@ public struct PosterLightbox: View {
             // (tap anywhere, Esc) are invisible ones you have to already know.
             // Hence a real button, which also carries the Esc shortcut that the
             // zero-sized placeholder used to hold.
-            Button(action: onDismiss) {
-                Image(systemName: "xmark")
-                    .scaledFont(size: 12, weight: .semibold)
-                    .frame(width: 28, height: 28)
-                    .contentShape(Circle())
-            }
-            .buttonStyle(.plain)
-            .glassPill()
-            #if os(macOS)
-            .keyboardShortcut(.cancelAction)
-            #endif
-            .help(Text("detail.closePoster.button", bundle: .module))
-            .accessibilityLabel(Text("detail.closePoster.button", bundle: .module))
-            // Poster art is unpredictable — a light sky behind the glass pill
-            // would swallow it — so lean on the same shadow the pill loses when
-            // the artwork goes full-bleed.
-            .shadow(color: .black.opacity(0.45), radius: 8, y: 2)
-            .padding(12)
+            // Shared with the trailer overlay — see `LightboxCloseButton`,
+            // which also carries the shadow the glass pill needs over
+            // unpredictable artwork, and the Esc shortcut.
+            LightboxCloseButton(labelKey: "detail.closePoster.button", action: onDismiss)
             #if os(macOS)
             // Fades on the same timer as the zoom slider. Deliberately still
             // hit-testable while invisible: clicking where it sits dismisses
@@ -693,21 +702,42 @@ public struct PosterLightbox: View {
 /// Coloured capsule for a rating value (IMDb, RT, MC, …).
 struct RatingPill: View {
     let chip: RatingChip
+    /// Drives both the vote-count wording and its digit grouping, and tracks
+    /// a live in-app language switch (see `AppLocalized`).
+    @Environment(\.locale) private var locale
+
     public var body: some View {
         if let url = chip.url {
             Button { PlatformURLOpener.open(url) } label: {
                 pill.contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .help(Text(verbatim: url.host() ?? url.absoluteString))
+            .help(Text(verbatim: helpText))
             #if os(macOS)
             .onHover { hovering in
                 if hovering { NSCursor.pointingHand.push() } else { NSCursor.pop() }
             }
             #endif
+        } else if !helpText.isEmpty {
+            pill.help(Text(verbatim: helpText))
         } else {
             pill
         }
+    }
+
+    /// "1 234 567 votes" — nil when the source shipped no count (or zero,
+    /// which *arr sends for unrated titles).
+    private var votesLine: String? {
+        guard let votes = chip.votes, votes > 0 else { return nil }
+        return String(format: AppLocalized.string("rating.votes.format", locale: locale),
+                      votes.formatted(.number.locale(locale)))
+    }
+
+    /// Source name, then the vote count under it. The name — not the link's
+    /// host — because the brand mark on the pill is the thing being spelled
+    /// out; where a click lands is obvious from it.
+    private var helpText: String {
+        [chip.siteName, votesLine].compactMap { $0 }.joined(separator: "\n")
     }
 
     private var pill: some View {

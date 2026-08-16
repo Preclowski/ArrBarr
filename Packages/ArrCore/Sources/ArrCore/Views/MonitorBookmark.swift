@@ -9,8 +9,8 @@ import SwiftUI
 //
 // Two components, one visual vocabulary:
 //   • `MonitorBookmark`     — inert glyph for list rows (state only).
-//   • `MonitorToggleButton` — header / toolbar action with a 22pt hit
-//                             area, matching `IconButton`'s chrome.
+//   • `MonitorPosterToggle` — the interactive one, on the detail hero's
+//                             poster corner (see `DetailHeroPoster`).
 //
 // Deliberately NOT wired to any search: flipping the bookmark flips the
 // flag and nothing else. (The chat / MCP tool path always searches after
@@ -68,21 +68,22 @@ public struct MonitorBookmark: View {
     }
 }
 
-/// Interactive variant for the detail headers (macOS self-drawn bar) and
-/// the iOS `.toolbar` cluster. Chrome is copied from `IconButton` so the
-/// bookmark sits flush next to Safari / trash instead of reading as a
-/// foreign control.
+/// Detail-header variant: the same toggle pinned to the poster's top-right
+/// corner, over the artwork, so the monitored flag sits on the thing it
+/// describes instead of in a row of chrome.
 ///
-/// `onToggle == nil` renders the glyph read-only — that's how the entities
-/// whose client API doesn't exist yet ship without a dead button.
-public struct MonitorToggleButton: View {
+/// Artwork is arbitrary — a black poster and a white one both happen — so the
+/// glyph can't rely on the material underneath. No plate behind it (a chip in
+/// the corner reads as chrome bolted onto the art); contrast comes from the
+/// mark itself: white body, with a tight black halo plus a softer spread under
+/// it. The halo is what draws it on a white poster, the white body is what
+/// draws it on a black one. Same trick as `TrailerPosterBadge`, which is bare
+/// on the artwork for the same reason.
+public struct MonitorPosterToggle: View {
     let isMonitored: Bool
     let entity: MonitorEntity
     let onToggle: ((Bool) async -> Void)?
 
-    /// While a flip is in flight the glyph has ALREADY moved (optimistic
-    /// update upstream), so a spinner here would contradict what the user
-    /// is looking at. Dim + disable instead.
     @State private var inFlight = false
 
     public init(isMonitored: Bool, entity: MonitorEntity, onToggle: ((Bool) async -> Void)? = nil) {
@@ -91,51 +92,62 @@ public struct MonitorToggleButton: View {
         self.onToggle = onToggle
     }
 
-    private var helpKey: String { isMonitored ? entity.disableKey : entity.enableKey }
-
-    public var body: some View {
-        if let onToggle {
-            Button {
-                guard !inFlight else { return }
-                Task {
-                    inFlight = true
-                    await onToggle(!isMonitored)
-                    inFlight = false
-                }
-            } label: {
-                glyph
-                    .frame(width: 22, height: 22)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .disabled(inFlight)
-            .opacity(inFlight ? 0.5 : 1)
-            .help(Text(LocalizedStringKey(helpKey), bundle: .module))
-            .accessibilityLabel(Text(LocalizedStringKey(helpKey), bundle: .module))
-            // State *and* verb: VoiceOver reads "Monitored, Stop monitoring
-            // this season, button" — one pass, no ambiguity about which way
-            // the toggle is pointing.
-            .accessibilityValue(
-                Text(LocalizedStringKey(isMonitored ? "common.monitored.button" : "common.notMonitored.label"),
-                     bundle: .module)
-            )
-        } else {
-            glyph
-                .frame(width: 22, height: 22)
-                .help(Text(LocalizedStringKey(isMonitored ? "common.monitored.button" : "common.notMonitored.label"),
-                           bundle: .module))
-                .accessibilityLabel(
-                    Text(LocalizedStringKey(isMonitored ? "common.monitored.button" : "common.notMonitored.label"),
-                         bundle: .module)
-                )
+    private var helpKey: String {
+        guard onToggle != nil else {
+            return isMonitored ? "common.monitored.button" : "common.notMonitored.label"
         }
+        return isMonitored ? entity.disableKey : entity.enableKey
     }
 
-    /// Header-sized glyph. Matches `IconButton`'s 13pt / `.medium` so the
-    /// bookmark and the Safari glyph beside it are optically the same size.
-    private var glyph: some View {
+    public var body: some View {
+        Group {
+            if let onToggle {
+                Button {
+                    guard !inFlight else { return }
+                    Task {
+                        inFlight = true
+                        await onToggle(!isMonitored)
+                        inFlight = false
+                    }
+                } label: { plate }
+                .buttonStyle(.plain)
+                .disabled(inFlight)
+                .opacity(inFlight ? 0.5 : 1)
+                #if os(macOS)
+                .onHover { hovering in
+                    if hovering { NSCursor.pointingHand.push() } else { NSCursor.pop() }
+                }
+                #endif
+            } else {
+                plate
+            }
+        }
+        .padding(6)
+        .help(Text(LocalizedStringKey(helpKey), bundle: .module))
+        .accessibilityLabel(Text(LocalizedStringKey(helpKey), bundle: .module))
+        .accessibilityValue(
+            Text(LocalizedStringKey(isMonitored ? "common.monitored.button" : "common.notMonitored.label"),
+                 bundle: .module)
+        )
+    }
+
+    private var plate: some View {
         Image(systemName: isMonitored ? "bookmark.fill" : "bookmark")
-            .scaledFont(size: 13, weight: .medium)
-            .foregroundStyle(Color.primary.opacity(isMonitored ? 0.72 : 0.45))
+            .scaledFont(size: 14, weight: .semibold)
+            .foregroundStyle(.white)
+            // Two passes: the tight one is the outline that keeps the glyph
+            // off a white poster, the soft one lifts it off a busy one.
+            .shadow(color: .black.opacity(0.75), radius: 1)
+            .shadow(color: .black.opacity(0.45), radius: 3, y: 1)
+            // Unmonitored sits back a touch — still legible, clearly the
+            // "off" state next to the solid filled glyph.
+            .opacity(isMonitored ? 1 : 0.85)
+            // Trailing-aligned inside the hit area: a bookmark is far narrower
+            // than the 22pt square, so centering it left the mark ~6pt shy of
+            // the trailer badge's right edge below. The glyph now sits flush
+            // against the padding, matching that badge's 6pt inset; the hit
+            // area still extends left of it.
+            .frame(width: 22, height: 22, alignment: .trailing)
+            .contentShape(Rectangle())
     }
 }

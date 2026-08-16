@@ -15,12 +15,14 @@ enum DemoMonitorState {
     private static var seasons: [String: Bool] = [:]   // "seriesId-seasonNumber"
     private static var episodes: [Int: Bool] = [:]
     private static var albums: [Int: Bool] = [:]
+    private static var artists: [Int: Bool] = [:]
 
     // MARK: - Writes (the clients' demo branches)
 
     static func setMovie(_ id: Int, monitored: Bool) { movies[id] = monitored }
     static func setSeries(_ id: Int, monitored: Bool) { series[id] = monitored }
     static func setAlbum(_ id: Int, monitored: Bool) { albums[id] = monitored }
+    static func setArtist(_ id: Int, monitored: Bool) { artists[id] = monitored }
     static func setEpisodes(_ ids: [Int], monitored: Bool) {
         for id in ids { episodes[id] = monitored }
     }
@@ -69,6 +71,12 @@ enum DemoMonitorState {
         return copy
     }
 
+    static func apply(artist detail: LidarrArtistDetail?) -> LidarrArtistDetail? {
+        guard var copy = detail, let m = artists[copy.id] else { return detail }
+        copy.monitored = m
+        return copy
+    }
+
     /// See `DemoQueueState.reset` — leaving demo wipes the demo profile, and
     /// these flips have to go with it.
     static func reset() {
@@ -77,5 +85,6 @@ enum DemoMonitorState {
         seasons.removeAll()
         episodes.removeAll()
         albums.removeAll()
+        artists.removeAll()
     }
 }

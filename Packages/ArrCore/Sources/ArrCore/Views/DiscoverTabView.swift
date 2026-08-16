@@ -26,6 +26,30 @@ public struct DiscoverTabView: View {
     /// Escape hatch for a round that never resolves. Held so a new request
     /// can cancel the previous one's timer instead of racing it.
     @State private var moreTimeout: Task<Void, Never>?
+    /// True once we've automatically re-asked for a round that came back
+    /// without growing the deck. Cleared the moment cards actually land, so
+    /// each dry tail gets exactly one silent retry and never a loop.
+    @State private var emptyRoundRetried = false
+    /// Trailer for the card on top of the deck, resolved as it comes up so the
+    /// button only appears when there's something to play.
+    @State private var trailerKey: String?
+    /// Card id `trailerKey` belongs to. While it lags behind the top card the
+    /// button is still on screen (see `resolveTrailer`) but inert — it would
+    /// otherwise play the PREVIOUS card's clip.
+    @State private var trailerKeyCardId: String?
+    /// The clip on screen. Same full-surface presentation every other trailer
+    /// surface uses, so the Quiz keeps no player layout of its own.
+    @State private var presentedTrailer: String?
+    /// Keyboard focus for the deck. Arrow keys only reach `onKeyPress` while
+    /// something is focused, and the deck is the only thing on screen worth
+    /// focusing — the tab content behind it is parked and disabled while the
+    /// overlay is up, so there is nothing to fight with over the keys.
+    @FocusState private var deckFocused: Bool
+    /// A verdict is playing out. The skip animation runs for 550 ms before the
+    /// card is actually dropped, and a second verdict inside that window would
+    /// advance the deck twice while the user saw one card leave — trivially
+    /// easy to do by holding the arrow key down.
+    @State private var verdictInFlight = false
 
     public init(viewModel: DiscoverViewModel,
                 llmAvailable: Bool,
@@ -50,7 +74,44 @@ public struct DiscoverTabView: View {
     /// Full-bleed poster deck. The card fills the whole popover; the back
     /// button + mood chip float over the top edge, and the two round verdict
     /// buttons (✕ dislike, + add) float over the bottom edge.
+    ///
+    /// Split into three stages — chrome, keyboard, deck lifecycle — because as
+    /// one chain it is more than the type-checker will take in reasonable time.
     private var swipeSurface: some View {
+        deckWithKeyboard
+            // Top up the deck while the user is still swiping rather than
+            // after they've hit the wall. The refill is a chat round-trip
+            // (see `requestMore`), so waiting for the empty state meant
+            // staring at a button and a spinner for several seconds; starting
+            // it on the second-to-last card usually means the cards are just
+            // there. The empty state keeps its button as the fallback for when
+            // the round-trip is slow or never lands.
+            .onChange(of: viewModel.queue.count) { _, remaining in
+                guard remaining <= 1 else { return }
+                prefetchMoreIfNeeded()
+            }
+            // Items landed — the round is over, whatever the timer thinks.
+            .onChange(of: viewModel.sessionTotal) { _, _ in
+                finishRequestingMore()
+                emptyRoundRetried = false
+            }
+            // The agent stopped working. Either it produced picks (handled
+            // above) or it answered without calling the tool — either way
+            // there is nothing left to wait for, so stop claiming there is.
+            .onChange(of: moreInFlight) { wasInFlight, nowInFlight in
+                guard wasInFlight, !nowInFlight else { return }
+                finishRequestingMore()
+                // If we skipped a top-up because the agent was mid-turn, this
+                // is the moment to take it. Can't loop: `prefetchedAtTotal`
+                // only re-arms once items actually land.
+                if viewModel.queue.count <= 1 { prefetchMoreIfNeeded() }
+                retryEmptyRoundIfNeeded()
+            }
+            .onDisappear { moreTimeout?.cancel() }
+    }
+
+    /// The deck plus its chrome: scrim, back button, verdict buttons, trailer.
+    private var decoratedDeck: some View {
         swipeBackground
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .overlay(alignment: .top) {
@@ -66,33 +127,30 @@ public struct DiscoverTabView: View {
                     actionButtons
                 }
             }
-            // Top up the deck while the user is still swiping rather than
-            // after they've hit the wall. The refill is a chat round-trip
-            // (see `requestMore`), so waiting for the empty state meant
-            // staring at a button and a spinner for several seconds; starting
-            // it on the second-to-last card usually means the cards are just
-            // there. The empty state keeps its button as the fallback for when
-            // the round-trip is slow or never lands.
-            .onChange(of: viewModel.queue.count) { _, remaining in
-                guard remaining <= 1 else { return }
-                prefetchMoreIfNeeded()
+            .trailerOverlay(key: $presentedTrailer)
+            .task(id: viewModel.current?.id) { await resolveTrailer(for: viewModel.current) }
+    }
+
+    /// Keyboard verdicts, mapped onto the swipe they mirror: ← throws the card
+    /// left exactly like the ✕ button, → opens the add card like a right swipe.
+    /// Only the top card is ever addressed, so there is no selection to move
+    /// and nothing else to bind.
+    private var deckWithKeyboard: some View {
+        decoratedDeck
+            .focusable(viewModel.current != nil)
+            .focusEffectDisabled()
+            .focused($deckFocused)
+            .onKeyPress(.leftArrow) { keyVerdict(skip: true) }
+            .onKeyPress(.rightArrow) { keyVerdict(skip: false) }
+            .onAppear { deckFocused = true }
+            // Focus comes back with the deck: after a card is added the panel
+            // closes onto a new top card, and after the trailer is dismissed the
+            // deck is live again — in both cases the keys should just work
+            // without the user clicking the poster first.
+            .onChange(of: viewModel.current?.id) { _, _ in deckFocused = true }
+            .onChange(of: presentedTrailer) { _, presented in
+                if presented == nil { deckFocused = true }
             }
-            // Items landed — the round is over, whatever the timer thinks.
-            .onChange(of: viewModel.sessionTotal) { _, _ in
-                finishRequestingMore()
-            }
-            // The agent stopped working. Either it produced picks (handled
-            // above) or it answered without calling the tool — either way
-            // there is nothing left to wait for, so stop claiming there is.
-            .onChange(of: moreInFlight) { wasInFlight, nowInFlight in
-                guard wasInFlight, !nowInFlight else { return }
-                finishRequestingMore()
-                // If we skipped a top-up because the agent was mid-turn, this
-                // is the moment to take it. Can't loop: `prefetchedAtTotal`
-                // only re-arms once items actually land.
-                if viewModel.queue.count <= 1 { prefetchMoreIfNeeded() }
-            }
-            .onDisappear { moreTimeout?.cancel() }
     }
 
     /// Fires one background top-up per deck-tail. Deliberately reuses
@@ -113,6 +171,22 @@ public struct DiscoverTabView: View {
         // `onChange(of: moreInFlight)` retries the moment the agent frees up.
         guard !moreInFlight else { return }
         prefetchedAtTotal = viewModel.sessionTotal
+        requestMore()
+    }
+
+    /// A top-up turn that ends without the deck growing is NOT the same thing
+    /// as an exhausted deck — the round can come back as titles the deck
+    /// already showed (dropped on arrival), or as prose with no tool call at
+    /// all. Both used to dump the user straight on "No more cards" even though
+    /// tapping the button by hand right after found picks. So take that retry
+    /// automatically, exactly once per dry tail, and only then call it done.
+    private func retryEmptyRoundIfNeeded() {
+        guard llmAvailable,
+              viewModel.current == nil,
+              viewModel.queue.isEmpty,
+              viewModel.hasSessionEngagement,
+              !emptyRoundRetried else { return }
+        emptyRoundRetried = true
         requestMore()
     }
 
@@ -213,6 +287,25 @@ public struct DiscoverTabView: View {
                 accessibilityKey: "Skip",
                 action: handleSkip
             )
+            // Middle slot — trailer. Rendered only once a clip is known: a
+            // permanently dead button between the two verdicts would be worse
+            // than the pair sliding apart when one turns up.
+            if trailerKey != nil {
+                GlassCircleButton(
+                    assetName: "brand-youtube",
+                    // Smaller than the two verdicts on purpose: skip and add
+                    // are the decision, the trailer only helps you make it.
+                    diameter: Layout.buttonDiameter * 0.72,
+                    accessibilityKey: "discover.trailer.button",
+                    action: {
+                        // Ignore taps aimed at a clip we haven't resolved for
+                        // THIS card yet.
+                        guard trailerKeyCardId == viewModel.current?.id else { return }
+                        withAnimation(.smooth(duration: 0.2)) { presentedTrailer = trailerKey }
+                    }
+                )
+                .transition(.scale.combined(with: .opacity))
+            }
             GlassCircleButton(
                 systemName: "plus",
                 tint: .accentColor,
@@ -222,6 +315,40 @@ public struct DiscoverTabView: View {
             )
         }
         .padding(.bottom, Layout.buttonBottomPadding)
+    }
+
+    /// Resolves the top card's trailer. `foreignId` is the arr's own foreign
+    /// key — a TMDB movie id on movie cards, a TVDB series id on show cards
+    /// (Sonarr lookup is what builds them) — so each kind takes its own route.
+    private func resolveTrailer(for item: DiscoverItem?) async {
+        // The button deliberately STAYS while the next card resolves. Clearing
+        // it here made it vanish and reappear between every two cards that both
+        // have trailers — a blink, and a row of buttons resizing around it.
+        withAnimation(.smooth(duration: 0.2)) {
+            // The overlay is a different matter: a new card must never keep the
+            // previous title's clip playing.
+            presentedTrailer = nil
+        }
+        guard let item, let foreignId = Int(item.result.foreignId), foreignId > 0 else {
+            withAnimation(.smooth(duration: 0.2)) { trailerKey = nil }
+            trailerKeyCardId = nil
+            return
+        }
+        let found: String?
+        switch item.kind {
+        case .movie:
+            found = await TrailerProvider.movieTrailerKey(
+                radarrTrailerId: nil, tmdbId: foreignId, configStore: ConfigStore.shared
+            )
+        case .show:
+            found = await TrailerProvider.seriesTrailerKey(
+                tmdbId: nil, tvdbId: foreignId, configStore: ConfigStore.shared
+            )
+        }
+        // The deck may have moved on while TMDB was answering.
+        guard viewModel.current?.id == item.id else { return }
+        trailerKeyCardId = found == nil ? nil : item.id
+        withAnimation(.smooth(duration: 0.2)) { trailerKey = found }
     }
 
     private var rightDragProgress: CGFloat { max(0, min(1, dragOffset.width / 90)) }
@@ -299,10 +426,21 @@ public struct DiscoverTabView: View {
         openCard(for: item)
     }
 
+    /// One arrow press. Ignored — rather than queued — while a card is already
+    /// flying off or the trailer is up: a held-down arrow should not burn
+    /// through the deck faster than the user can see it.
+    private func keyVerdict(skip: Bool) -> KeyPress.Result {
+        guard viewModel.current != nil, presentedTrailer == nil, !verdictInFlight else { return .ignored }
+        if skip { handleSkip() } else { handleAdd() }
+        return .handled
+    }
+
     /// Left verdict: skip to the next card. Fly the current card off to the
     /// left, THEN drop it and advance — the peek card scales up to fill
     /// instead of the next card sliding in.
     private func handleSkip() {
+        guard !verdictInFlight else { return }
+        verdictInFlight = true
         let flyDistance: CGFloat = 1000
         withAnimation(.easeOut(duration: 0.55)) {
             dragOffset = CGSize(width: -flyDistance, height: 0)
@@ -312,6 +450,7 @@ public struct DiscoverTabView: View {
             viewModel.skip()
             dragOffset = .zero
             isDragging = false
+            verdictInFlight = false
         }
     }
 
@@ -536,8 +675,12 @@ private struct DiscoverCardStackItem<G: Gesture>: View {
 /// + white sheen + bright rim + shadow), shaped as a circle. Used for the
 /// swipe verdict buttons and the floating back button.
 private struct GlassCircleButton: View {
-    let systemName: String
-    let tint: Color
+    /// SF Symbol name. Ignored when `assetName` is set.
+    var systemName: String = ""
+    /// Brand mark from `ServiceIcons.xcassets`, drawn in its own colours
+    /// instead of tinted — a YouTube glyph in monochrome is not the mark.
+    var assetName: String?
+    var tint: Color = .primary
     var diameter: CGFloat = Layout.buttonDiameter
     /// Transient scale added while a drag heads toward this button.
     var extraScale: CGFloat = 0
@@ -548,9 +691,7 @@ private struct GlassCircleButton: View {
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: systemName)
-                .font(.system(size: diameter * 0.40, weight: .bold))
-                .foregroundStyle(tint)
+            glyph
                 .frame(width: diameter, height: diameter)
                 .background(glassCircle)
                 .overlay(Circle().strokeBorder(Color.white.opacity(0.42), lineWidth: 0.75))
@@ -569,6 +710,20 @@ private struct GlassCircleButton: View {
             if h { NSCursor.pointingHand.push() } else { NSCursor.pop() }
         }
         #endif
+    }
+
+    @ViewBuilder
+    private var glyph: some View {
+        if let assetName {
+            Image(assetName, bundle: .module)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: diameter * 0.46)
+        } else {
+            Image(systemName: systemName)
+                .font(.system(size: diameter * 0.40, weight: .bold))
+                .foregroundStyle(tint)
+        }
     }
 
     private var glassCircle: some View {

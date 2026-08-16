@@ -41,10 +41,14 @@ extension LocalToolBackend {
         guard !items.isEmpty else {
             return ToolCallOutput(text: "suggest_titles needs a non-empty 'items' array of {title, year?} picks.")
         }
-        // Hard cap so the tool stays responsive even if the model goes
-        // overboard ("here's 50 picks"). 15 is plenty for a single round
-        // of suggestions and matches the *_search top-N convention.
-        let capped = Array(items.prefix(15))
+        // 15 used to be the cap, which was fine until libraries got deep: a
+        // curated 3000-film shelf owns most of any canonical fifteen, so the
+        // model had to guess again and again to accumulate a handful of unowned
+        // picks. Resolving 40 in parallel is cheap; another round is not.
+        let capped = Array(items.prefix(40))
+        // Ownership is a fact, not a judgement, so it is safe to drop here —
+        // unlike genre or mood, which stay with the model.
+        let excludeOwned = Self.optionalBoolArg(args, key: "exclude_owned") ?? false
 
         let source: QueueItem.Source = (kind == "series") ? .sonarr : .radarr
         let config = (kind == "series") ? sonarr : radarr
@@ -102,15 +106,20 @@ extension LocalToolBackend {
         // Tag any resolved card that maps to an arr library record. .id
         // is tvdbId for series / tmdbId for movies — matches the library
         // map's keys exactly.
-        let results = resolved.map { entry -> SearchResult in
+        let tagged = resolved.map { entry -> SearchResult in
             guard let arrId = libraryMap[entry.result.id] else { return entry.result }
             return entry.result.withInLibraryArrId(arrId)
         }
-        let text = Self.formatSuggestionsCondensed(
+        let results = excludeOwned ? tagged.filter { $0.inLibraryArrId == nil } : tagged
+        let droppedAsOwned = tagged.count - results.count
+        var text = Self.formatSuggestionsCondensed(
             resolved: results,
             missing: missing.map { $0.label },
             kind: kind
         )
+        if droppedAsOwned > 0 {
+            text += "\n\(droppedAsOwned) pick\(droppedAsOwned == 1 ? " was" : "s were") dropped as already in the library."
+        }
         let rich: ChatRichContent = (kind == "series") ? .searchSeriesResults(results) : .searchMovieResults(results)
         return ToolCallOutput(text: text, rich: rich)
     }
@@ -538,7 +547,11 @@ extension LocalToolBackend {
         if !resolved.isEmpty {
             let lines = resolved.map { r -> String in
                 let yearPart = r.year.map { " (\($0))" } ?? ""
-                let state = (r.inLibraryArrId != nil) ? " [in library]" : ""
+                // Watch state rides along with ownership — the media server
+                // only knows titles that are on the shelf, so an unowned pick
+                // never carries a marker either way.
+                let watched = MediaServerIndex.shared.isWatched(r.mediaServerKeys) ? ", watched" : ""
+                let state = (r.inLibraryArrId != nil) ? " [in library\(watched)]" : ""
                 return "• \(r.title)\(yearPart)\(state)"
             }
             out.append("Surfaced \(resolved.count) \(kind) card\(resolved.count == 1 ? "" : "s") in the chat:")
@@ -593,34 +606,6 @@ extension LocalToolBackend {
         return nil
     }
 
-    /// `sonarr_get_series` lists library series, optionally filtered by
-    /// title query, and (optionally) zooms into a specific season's
-    /// monitor + missing state. Adding the `seasonNumber` filter lets
-    /// the LLM answer "do I have S3 of X monitored?" in one round-trip
-    /// without paying for the per-series detail tool.
-    func listSeries(_ args: JSONValue) async throws -> ToolCallOutput {
-        let seasonFilter = Self.optionalIntArg(args, key: "seasonNumber")
-        return try await runLibraryList(
-            args: args, source: .sonarr, config: sonarr,
-            itemNounSingular: "series", itemNounPlural: "series",
-            fetch: { try await SonarrClient(config: self.sonarr).fetchAllSeries() },
-            filterMatch: { rec, q in (rec.title ?? "").lowercased().contains(q) },
-            line: { r in
-                let title = r.title ?? "(untitled)"
-                let yearPart = r.year.map { " (\($0))" } ?? ""
-                let idParts: [String] = [
-                    r.id.map { "seriesId=\($0)" },
-                    r.tvdbId.map { "tvdbId=\($0)" },
-                ].compactMap { $0 }
-                let idPart = idParts.isEmpty ? "" : " · " + idParts.joined(separator: ", ")
-                let statusPart = r.status.map { " · \($0)" } ?? ""
-                let seasonsPart = Self.seasonsSummary(for: r, filter: seasonFilter)
-                return "• \(title)\(yearPart)\(idPart)\(statusPart)\(seasonsPart)"
-            },
-            rich: { .librarySeries($0) }
-        )
-    }
-
     /// Render the per-season slice for `sonarr_get_series` output. With
     /// no filter it shows a condensed strip ("S1 ✓ 10/10, S2 ✓ 8/10, S3
     /// ✗ 0/0 upcoming") capped to keep tokens sane. With a filter it
@@ -646,27 +631,6 @@ extension LocalToolBackend {
         let have = s.statistics?.episodeFileCount ?? 0
         let total = s.statistics?.totalEpisodeCount ?? s.statistics?.episodeCount ?? 0
         return "S\(s.seasonNumber) \(mon) \(have)/\(total)"
-    }
-
-    func listMovies(_ args: JSONValue) async throws -> ToolCallOutput {
-        try await runLibraryList(
-            args: args, source: .radarr, config: radarr,
-            itemNounSingular: "movie", itemNounPlural: "movies",
-            fetch: { try await RadarrClient(config: self.radarr).fetchAllMovies() },
-            filterMatch: { rec, q in (rec.title ?? "").lowercased().contains(q) },
-            line: { r in
-                let title = r.title ?? "(untitled)"
-                let yearPart = r.year.map { " (\($0))" } ?? ""
-                let idParts: [String] = [
-                    r.id.map { "movieId=\($0)" },     // internal id — for get_title_details / radarr_search_movie
-                    r.tmdbId.map { "tmdbId=\($0)" },
-                ].compactMap { $0 }
-                let idPart = idParts.isEmpty ? "" : " · " + idParts.joined(separator: ", ")
-                let fileMark = (r.hasFile ?? false) ? " · downloaded" : " · missing"
-                return "• \(title)\(yearPart)\(idPart)\(fileMark)"
-            },
-            rich: { .libraryMovies($0) }
-        )
     }
 
     /// Unified calendar across every configured arr (or one, via the

@@ -26,7 +26,11 @@ extension LocalToolBackend {
         guard !items.isEmpty else {
             return ToolCallOutput(text: "ERROR: 'items' must be a non-empty array of {title, year?}.")
         }
-        let capped = Array(items.prefix(25))
+        // Over-sending is the point: owned picks are dropped below (library_mode
+        // "new"), so a big library eats most of a canonical list. Resolving 60
+        // titles is 60 parallel lookups — far cheaper than the round trip it
+        // takes to notice the deck came back empty and guess again.
+        let capped = Array(items.prefix(60))
         let libraryMode: String = {
             if case .object(let dict) = arguments,
                case .string(let v) = dict["library_mode"] {
@@ -144,7 +148,7 @@ extension LocalToolBackend {
 
         if filtered.isEmpty {
             if !resolved.isEmpty && libraryMode == "new" {
-                return ToolCallOutput(text: "All resolved picks were already in the user's library. Suggest different titles, or pass library_mode: 'library' if they want to rediscover what they own.")
+                return ToolCallOutput(text: "All \(resolved.count) picks are already in the user's library — a library this size owns the obvious choices. Do NOT retry by guessing another batch: call check_titles with 25-40 candidates (deeper cuts, not the canon) in ONE call, then seed the quiz with only the ones it reports as NOT in library. Or pass library_mode: 'library' if they want to rediscover what they own.")
             }
             return ToolCallOutput(text: "Couldn't resolve any of those picks through \(kind == "movie" ? "Radarr" : "Sonarr") lookup. Try other titles or check the service config.")
         }
@@ -175,7 +179,26 @@ extension LocalToolBackend {
         let extraSimilars = similarItems.filter { !curatedKeys.contains($0.dedupKey) }
         let combined = filtered + extraSimilars
 
-        let payload = combined
+        // Top-up rounds are deduped HERE, against the live deck, rather than
+        // silently inside `DiscoverViewModel.extend`. A round the deck would
+        // drop wholesale used to post anyway: the overlay saw no new cards,
+        // stopped waiting and said "No more cards" — while the very same
+        // request, fired again by hand, came back with fresh picks. Handing
+        // the repeats back as the tool result keeps the model in its own loop
+        // and lets it try different titles inside the same turn.
+        let payload: [DiscoverItem]
+        if append {
+            let shown = await MainActor.run { DiscoverViewModel.shared.shownDedupKeys }
+            let split = Self.splitAlreadyShown(combined, shown: shown)
+            if split.fresh.isEmpty {
+                let repeats = split.dropped.prefix(10).map(titleYearLabel).joined(separator: ", ")
+                return ToolCallOutput(text: "All \(split.dropped.count) picks are already in this quiz session (\(repeats)). Widen the net before retrying — different decade, adjacent genre, or less canonical titles — and send the next round with append: true.")
+            }
+            payload = split.fresh
+        } else {
+            payload = combined
+        }
+
         await MainActor.run {
             NotificationCenter.default.post(
                 name: .arrBarrOpenDiscoverQuiz,
@@ -187,9 +210,27 @@ extension LocalToolBackend {
                 ]
             )
         }
-        let frontPosters = combined.prefix(3).compactMap { $0.result.posterURL }
-        let summary = "Opened Discover quiz with \(payload.count) picks for: \(label) (\(filtered.count) curated + \(extraSimilars.count) similar)"
+        let frontPosters = payload.prefix(3).compactMap { $0.result.posterURL }
+        let curatedCount = payload.filter { curatedKeys.contains($0.dedupKey) }.count
+        let summary = "Opened Discover quiz with \(payload.count) picks for: \(label) (\(curatedCount) curated + \(payload.count - curatedCount) similar)"
         return ToolCallOutput(text: summary, rich: .discoverSession(mood: label, posterURLs: Array(frontPosters)))
+    }
+
+    /// Splits an appended round into what the deck hasn't shown yet and what
+    /// it would drop. Pure so the dedup rule is testable without arr lookups.
+    static func splitAlreadyShown(_ items: [DiscoverItem],
+                                  shown: Set<String>) -> (fresh: [DiscoverItem], dropped: [DiscoverItem]) {
+        var fresh: [DiscoverItem] = []
+        var dropped: [DiscoverItem] = []
+        for item in items {
+            if shown.contains(item.dedupKey) { dropped.append(item) } else { fresh.append(item) }
+        }
+        return (fresh, dropped)
+    }
+
+    private func titleYearLabel(_ item: DiscoverItem) -> String {
+        guard let year = item.result.year else { return item.result.title }
+        return "\(item.result.title) (\(year))"
     }
 
     /// Fan out TMDB Similar fetches for each anchor in parallel, resolve

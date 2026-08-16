@@ -274,7 +274,11 @@ public actor LidarrClient: ArrAPIClient {
     func fetchArtistDetails(id: Int) async throws -> LidarrArtistDetail {
         if DemoMode.isActive {
             try? await Task.sleep(nanoseconds: 250_000_000)
-            if let demo = DemoMocks.lidarrArtistDetail(id: id) { return demo }
+            // Read the fixture back through the flip layer, so a bookmark
+            // toggled in demo survives the refetch that follows it.
+            if let demo = await DemoMonitorState.apply(artist: DemoMocks.lidarrArtistDetail(id: id)) {
+                return demo
+            }
             throw HTTPError.decoding(NSError(domain: "demo", code: 404))
         }
         guard config.isConfigured else { throw HTTPError.notConfigured }
@@ -335,6 +339,28 @@ public actor LidarrClient: ArrAPIClient {
         }
         json["monitored"] = monitored
         let putURL = try http.url(base: config.baseURL, path: "/api/v1/album/\(albumId)")
+        let body = try JSONSerialization.data(withJSONObject: json)
+        _ = try await http.put(putURL, headers: apiHeaders.merging(["Content-Type": "application/json"]) { $1 }, body: body)
+    }
+
+    /// Flip monitoring on an ARTIST. Same read-mutate-put shape as
+    /// `setAlbumMonitored` — Lidarr's PUT `/artist/{id}` wants the whole
+    /// record back, so we forward the raw object with one field toggled.
+    func setArtistMonitored(artistId: Int, monitored: Bool) async throws {
+        if DemoMode.isActive {
+            try? await Task.sleep(nanoseconds: 400_000_000)
+            await DemoMonitorState.setArtist(artistId, monitored: monitored)
+            return
+        }
+        guard config.isConfigured else { throw HTTPError.notConfigured }
+        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
+        let getURL = try http.url(base: config.baseURL, path: "/api/v1/artist/\(artistId)")
+        let getData = try await http.get(getURL, headers: apiHeaders)
+        guard var json = try JSONSerialization.jsonObject(with: getData) as? [String: Any] else {
+            throw HTTPError.decoding(NSError(domain: "ArrBarr.Lidarr.setArtistMonitored", code: 0))
+        }
+        json["monitored"] = monitored
+        let putURL = try http.url(base: config.baseURL, path: "/api/v1/artist/\(artistId)")
         let body = try JSONSerialization.data(withJSONObject: json)
         _ = try await http.put(putURL, headers: apiHeaders.merging(["Content-Type": "application/json"]) { $1 }, body: body)
     }

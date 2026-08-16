@@ -17,6 +17,12 @@ public struct SearchAddPanel: View {
         self.onBack = onBack
     }
 
+    /// Trailer for the title being added. Nil = no clip (or no TMDB key for
+    /// the series route), and then no badge on the poster.
+    @State private var trailerKey: String?
+    /// The clip on screen, presented as a full-surface overlay.
+    @State private var presentedTrailer: String?
+
     // Radarr state
     @State private var selectedProfileId: Int?
     @State private var selectedRootFolder: String?
@@ -167,7 +173,18 @@ public struct SearchAddPanel: View {
             selectedRootFolder = viewModel.rootFolders.first?.path
             selectedMetadataProfileId = viewModel.metadataProfiles.first?.id
         }
-        .task(id: result.id) { await loadCast() }
+        .task(id: result.id) {
+            // `addError` lives on the shared SearchViewModel, so a failed add
+            // ("this movie has already been added") stuck around and rendered
+            // under the form of the *next* title the user opened. Clear it
+            // whenever a panel comes up for a title.
+            viewModel.addError = nil
+            await loadCast()
+        }
+        .task(id: result.id) { await resolveTrailer() }
+        // Deciding whether to ADD is when a trailer is worth most, so the panel
+        // presents it exactly like the detail view does.
+        .trailerOverlay(key: $presentedTrailer)
     }
 
     /// TMDB-sourced chat results carry only voteAverage + title + year + genres.
@@ -199,6 +216,36 @@ public struct SearchAddPanel: View {
         .padding(.horizontal, 12)
         .padding(.top, 10)
         .padding(.bottom, 8)
+    }
+
+    private var trailerBadge: AnyView? {
+        guard trailerKey != nil else { return nil }
+        return AnyView(
+            TrailerPosterBadge(isPlaying: presentedTrailer != nil) {
+                withAnimation(.smooth(duration: 0.22)) {
+                    presentedTrailer = presentedTrailer == nil ? trailerKey : nil
+                }
+            }
+        )
+    }
+
+    /// `mediaRef` already knows which foreign key this result carries, so the
+    /// movie/series split needs no second source check.
+    private func resolveTrailer() async {
+        presentedTrailer = nil
+        trailerKey = nil
+        switch result.mediaRef {
+        case .tmdb(let id):
+            trailerKey = await TrailerProvider.movieTrailerKey(
+                radarrTrailerId: nil, tmdbId: id, configStore: configStore
+            )
+        case .tvdb(let id):
+            trailerKey = await TrailerProvider.seriesTrailerKey(
+                tmdbId: nil, tvdbId: id, configStore: configStore
+            )
+        case .musicBrainz, .imdb:
+            break
+        }
     }
 
     /// Toolbar title — "The Boys (2019)" / "Inception (2010)". Falls
@@ -235,6 +282,7 @@ public struct SearchAddPanel: View {
                         enlargedPoster = url ?? result.posterURL
                     }
                 },
+                posterBadge: trailerBadge,
                 // Title + year live in the nav-bar title now; hero
                 // hides its in-card title to avoid duplication —
                 // matches DetailView's pattern.
@@ -492,7 +540,12 @@ public struct SearchAddPanel: View {
                     // before reaching this UI. Log and bail.
                     viewModel.addError = "Unsupported reference type — IMDB IDs must be resolved before adding."
                 }
-                if viewModel.addError == nil { onBack() }
+                if viewModel.addError == nil {
+                    // Surfaces to any deck showing this title — the Quiz drops
+                    // the card instead of offering something already added.
+                    LibraryAddCompletion.post(foreignId: result.foreignId)
+                    onBack()
+                }
             }
         } label: {
             Group {

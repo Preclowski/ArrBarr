@@ -36,6 +36,31 @@ struct LidarrArtistView: View {
         return MediaEditRequest(source: .lidarr, entityId: artistId)
     }
 
+    /// Artist bookmark, on the poster corner like every other detail surface.
+    /// `nil` monitored (older Lidarr that doesn't report it, or the fetch
+    /// still in flight) renders nothing rather than asserting a state.
+    @ViewBuilder
+    private var monitorPosterToggle: some View {
+        if let monitored = artist?.monitored {
+            MonitorPosterToggle(isMonitored: monitored, entity: .artist) { m in
+                await setArtistMonitored(m)
+            }
+        }
+    }
+
+    /// Optimistic flip, then the PUT; a failure refetches so the bookmark
+    /// snaps back to the server's truth. Mirrors `DetailView`.
+    private func setArtistMonitored(_ monitored: Bool) async {
+        guard let artistId = item.entityId else { return }
+        artist?.monitored = monitored
+        do {
+            try await LidarrClient(config: configStore.lidarr)
+                .setArtistMonitored(artistId: artistId, monitored: monitored)
+        } catch {
+            await load()
+        }
+    }
+
     var body: some View {
         ZStack {
             mainContent
@@ -165,21 +190,16 @@ struct LidarrArtistView: View {
         let posterUrl = arrPosterURL(images: artist?.images, for: item, in: configStore)
         let resolvedURL = posterUrl ?? item.posterURL
         return HStack(alignment: .top, spacing: 12) {
-            Button {
-                withAnimation(.smooth(duration: 0.22)) {
-                    enlargedPoster = resolvedURL
+            DetailHeroPoster(
+                url: resolvedURL,
+                apiKey: item.posterRequiresAuth ? configStore.lidarr.apiKey : nil,
+                size: CGSize(width: 110, height: 110),
+                fallbackSymbol: "music.mic",
+                cornerAction: AnyView(monitorPosterToggle),
+                onTap: { url in
+                    withAnimation(.smooth(duration: 0.22)) { enlargedPoster = url }
                 }
-            } label: {
-                RemotePoster(
-                    url: resolvedURL,
-                    apiKey: item.posterRequiresAuth ? configStore.lidarr.apiKey : nil,
-                    size: CGSize(width: 110, height: 110),
-                    cornerRadius: Tokens.Radius.card,
-                    fallbackSymbol: "music.mic"
-                )
-            }
-            .buttonStyle(.plain)
-            .help(Text("detail.showPoster.button", bundle: .module))
+            )
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(artist?.artistName ?? item.title)
@@ -203,7 +223,8 @@ struct LidarrArtistView: View {
                 if let genres = artist?.genres, !genres.isEmpty {
                     GenreChips(genres: genres)
                 }
-                if let v = artist?.ratings?.value, let chip = RatingChip.plain(v) {
+                if let v = artist?.ratings?.value,
+                   let chip = RatingChip.plain(v, votes: artist?.ratings?.votes) {
                     HStack(spacing: 6) {
                         RatingPill(chip: chip)
                     }

@@ -66,15 +66,17 @@ struct SeasonDetailView: View {
         sonarrDetail?.seasons?.first { $0.seasonNumber == drill.seasonNumber }?.monitored
     }
 
-    @ViewBuilder
-    private var monitorToggle: some View {
-        if let seasonMonitored {
-            MonitorToggleButton(
+    /// On the poster's top-right corner, matching `DetailView` — the bookmark
+    /// is state about the season, not header chrome.
+    private var monitorPosterToggle: AnyView? {
+        guard let seasonMonitored else { return nil }
+        return AnyView(
+            MonitorPosterToggle(
                 isMonitored: seasonMonitored,
                 entity: .season,
                 onToggle: onSetSeasonMonitored.map { toggle in { m in await toggle(m) } }
             )
-        }
+        )
     }
 
     var body: some View {
@@ -93,7 +95,6 @@ struct SeasonDetailView: View {
                     .truncationMode(.middle)
                 Spacer(minLength: 0)
                 headerSearchMenu
-                monitorToggle
             }
             .padding(.horizontal, 12)
             .padding(.top, 10)
@@ -166,13 +167,11 @@ struct SeasonDetailView: View {
         }
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
-        // This screen had no toolbar at all — the season monitor toggle is its
-        // first trailing action. `.primaryAction` matches the placement the
-        // sibling detail screens already use.
+        // `.primaryAction` matches the placement the sibling detail screens
+        // already use. (The monitor toggle lives on the poster corner.)
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
                 headerSearchMenu
-                monitorToggle
             }
         }
         #else
@@ -210,7 +209,7 @@ struct SeasonDetailView: View {
 
     private var ratings: [RatingChip] {
         guard let v = sonarrDetail?.ratings?.value else { return [] }
-        return [RatingChip.plain(v)].compactMap { $0 }
+        return [RatingChip.plain(v, votes: sonarrDetail?.ratings?.votes)].compactMap { $0 }
     }
 
     /// Same hero card as the series view — poster + overview + metadata. Title is
@@ -236,6 +235,7 @@ struct SeasonDetailView: View {
             onPosterTap: { url in
                 withAnimation(.smooth(duration: 0.22)) { enlargedPoster = url ?? seriesPosterURL }
             },
+            posterCornerAction: monitorPosterToggle,
             showTitle: false
         )
     }

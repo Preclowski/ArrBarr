@@ -21,6 +21,10 @@ public final class DiscoverViewModel {
         }
     }
     public private(set) var current: DiscoverItem?
+    /// Held for the view model's lifetime — the observer must outlive every
+    /// deck the user opens, and the view model itself lives as long as the
+    /// Quiz does, so there is nothing to unregister early.
+    private var addObserver: (any NSObjectProtocol)?
     public private(set) var queue: [DiscoverItem] = []
     public var filter = DiscoverFilter()
     public var moodText: String = ""
@@ -98,6 +102,25 @@ public final class DiscoverViewModel {
             .flatMap { DiscoverMediaSelection(rawValue: $0) }
         self.mediaSelection = stored ?? .movie
         self.hasPickedKind = defaults.bool(forKey: Self.hasPickedKindKey)
+        // Observed HERE rather than in the view: the deck is hidden while the
+        // add panel is up, so a view-level listener would be torn down exactly
+        // when the "added" signal arrives.
+        addObserver = NotificationCenter.default.addObserver(
+            forName: .arrBarrDidAddToLibrary, object: nil, queue: .main
+        ) { [weak self] note in
+            guard let foreignId = note.userInfo?["foreignId"] as? String else { return }
+            Task { @MainActor in self?.didAddToLibrary(foreignId: foreignId) }
+        }
+    }
+
+    /// The user finished adding the card they were on — drop it and move to the
+    /// next. Not `skip()`: this title was a *pick* (already recorded by
+    /// `markPicked`), and recording it as skipped too would poison the signal
+    /// the top-up round feeds on.
+    public func didAddToLibrary(foreignId: String) {
+        guard let item = current, item.result.foreignId == foreignId else { return }
+        current = nil
+        advanceIfNeeded()
     }
 
     public func configure(tmdb: TMDBSource?, library: LibrarySource?, llm: LLMSource?) {
@@ -153,6 +176,13 @@ public final class DiscoverViewModel {
         sessionTotal += added
         advanceIfNeeded()
     }
+
+    /// Every card this session has already put in front of the user — still
+    /// in the deck, current, or long since swiped. The `discover_in_quiz`
+    /// tool reads this before an appended round lands so a top-up can't come
+    /// back full of titles `extend` would silently drop (which reads to the
+    /// user as "no more cards" while a manual retry still finds picks).
+    public var shownDedupKeys: Set<String> { seenKeys }
 
     /// Skip the current card (>>) — records it as skipped for the
     /// engagement signal and advances to the next. This is the only action

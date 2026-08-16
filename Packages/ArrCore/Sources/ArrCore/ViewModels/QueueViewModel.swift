@@ -367,7 +367,14 @@ public final class QueueViewModel {
             switch event {
             case .queueStatus(let source, let status):
                 await self.noteQueueStatus(status, for: source)
-            case .queueChanged(let source), .fileImported(let source):
+            case .queueChanged(let source):
+                await self.scheduleRealtimeRefresh(source: source)
+            case .fileImported(let source):
+                // An import changes what the user OWNS, which is the one thing
+                // the library snapshot must not be stale about: "did that
+                // finish?" is asked seconds after it lands, long before any
+                // TTL would expire.
+                LibraryIndex.shared.invalidateSoon(source)
                 await self.scheduleRealtimeRefresh(source: source)
             case .other(_, let name, _):
                 // Servarr broadcasts health changes on the same socket

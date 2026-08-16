@@ -156,6 +156,7 @@ public actor LocalToolBackend: ToolBackend {
         case "tmdb_discover_movies":        return try await tmdbDiscoverMovies(arguments)
         case "tmdb_discover_series":        return try await tmdbDiscoverSeries(arguments)
         case "suggest_titles":              return try await suggestTitles(arguments)
+        case "check_titles":                return try await checkTitles(arguments)
         case "discover_in_quiz":            return try await discoverInQuiz(arguments)
         case "health":                      return try await healthCheck()
         case "get_title_details":           return try await getTitleDetails(arguments)

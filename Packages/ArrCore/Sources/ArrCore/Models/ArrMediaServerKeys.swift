@@ -43,6 +43,21 @@ public extension SonarrLibraryRecord {
     }
 }
 
+public extension SearchResult {
+    /// A lookup result's ids, in the form the media-server index is keyed by.
+    /// Radarr results carry a TMDB id in `.id`, Sonarr results a TVDB id —
+    /// except TMDB-sourced series rows, which carry `0` (see
+    /// `TMDBSearchMapping.series`) and therefore can't be matched at all.
+    var mediaServerKeys: [MediaServerExternalKey] {
+        guard id != 0 else { return [] }
+        switch source {
+        case .radarr, .whisparr: return [.tmdb(id)]
+        case .sonarr:            return [.tvdb(id)]
+        case .lidarr:            return []
+        }
+    }
+}
+
 public extension RadarrCalendarRecord {
     var mediaServerKeys: [MediaServerExternalKey] {
         tmdbId.map { [.tmdb($0)] } ?? []

@@ -28,6 +28,114 @@ public struct PosterBlurContainer<Content: View>: View {
     }
 }
 
+/// The hero artwork every detail surface draws: blur container, tap-to-enlarge,
+/// and the two corner slots that live ON the poster — the monitor bookmark
+/// (top-right) and the trailer badge (bottom-right).
+///
+/// One component because the corner geometry has to be decided ONCE. Four
+/// surfaces hand-rolled this stack — `MediaHeaderCard`, `EpisodeDetailOverlay`,
+/// `LidarrDetailPanel` (square album art) and `LidarrArtistView` — and the two
+/// Lidarr ones can't just adopt `MediaHeaderCard`: their right columns are
+/// genuinely different (artist chevron subtitle, album statistics). So the
+/// POSTER is what gets shared, not the whole card.
+public struct DetailHeroPoster: View {
+    let url: URL?
+    var apiKey: String?
+    var size: CGSize
+    var fallbackSymbol: String
+    var blurred: Bool
+    /// Top-right, over the artwork — the monitored bookmark's home.
+    var cornerAction: AnyView?
+    /// Bottom-right, over the artwork — the trailer badge's home.
+    var badge: AnyView?
+    /// Raises the host's lightbox. `nil` renders the poster inert; a nil `url`
+    /// disables the button, since there's nothing to enlarge.
+    var onTap: ((URL?) -> Void)?
+
+    /// Pointer is over the artwork. Drives the enlarge hint — the poster was a
+    /// click target with nothing to say so; a tooltip only pays out after the
+    /// user has already hovered long enough to wonder.
+    @State private var hovering = false
+
+    public init(
+        url: URL?,
+        apiKey: String? = nil,
+        size: CGSize,
+        fallbackSymbol: String = "film",
+        blurred: Bool = false,
+        cornerAction: AnyView? = nil,
+        badge: AnyView? = nil,
+        onTap: ((URL?) -> Void)? = nil
+    ) {
+        self.url = url
+        self.apiKey = apiKey
+        self.size = size
+        self.fallbackSymbol = fallbackSymbol
+        self.blurred = blurred
+        self.cornerAction = cornerAction
+        self.badge = badge
+        self.onTap = onTap
+    }
+
+    public var body: some View {
+        artwork
+            .overlay(alignment: .bottomTrailing) { badge }
+            .overlay(alignment: .topTrailing) { cornerAction }
+    }
+
+    @ViewBuilder
+    private var artwork: some View {
+        let poster = PosterBlurContainer(blurred: blurred, cornerRadius: Tokens.Radius.card) {
+            RemotePoster(
+                url: url,
+                apiKey: apiKey,
+                size: size,
+                cornerRadius: Tokens.Radius.card,
+                fallbackSymbol: fallbackSymbol
+            )
+        }
+        if let onTap {
+            Button { onTap(url) } label: {
+                poster.overlay { enlargeHint }
+            }
+                .buttonStyle(.plain)
+                .disabled(url == nil)
+                .help(Text("detail.showPoster.button", bundle: .module))
+                // RemotePoster hides itself from VoiceOver, so the button
+                // wrapping it has no label at all without this.
+                .accessibilityLabel(Text("detail.showPoster.button", bundle: .module))
+                #if os(macOS)
+                .onHover { hovering = $0 }
+                .animation(.easeOut(duration: 0.12), value: hovering)
+                #endif
+        } else {
+            poster
+        }
+    }
+
+    /// Hover-only "this opens bigger" hint: a magnifier centred on the artwork,
+    /// over a light scrim that keeps it legible on a bright poster without
+    /// hiding what's underneath. Decoration for the pointer — hidden from
+    /// VoiceOver, which already gets the button's label, and absent on touch,
+    /// where there is no hover and a permanent badge would just cover art.
+    @ViewBuilder
+    private var enlargeHint: some View {
+        if hovering, url != nil {
+            ZStack {
+                RoundedRectangle(cornerRadius: Tokens.Radius.card, style: .continuous)
+                    .fill(Color.black.opacity(0.28))
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: min(size.width, size.height) * 0.22, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .shadow(color: .black.opacity(0.5), radius: 4, y: 1)
+            }
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+            .transition(.opacity)
+        }
+    }
+}
+
 public struct RemotePoster: View {
     let url: URL?
     let apiKey: String?
