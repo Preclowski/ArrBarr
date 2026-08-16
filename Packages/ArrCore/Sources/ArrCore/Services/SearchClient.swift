@@ -284,8 +284,14 @@ public actor SearchClient {
         guard config.isConfigured else { throw HTTPError.notConfigured }
         guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
         let url = try http.url(base: config.baseURL, path: "\(apiBase)/movie")
+        // `externalId`, not `id` — `id` is the row's identity string, and this
+        // dictionary is `[String: Any]`, so putting the wrong one here compiles
+        // happily and fails at the far end of the wire: Radarr answered
+        // "The JSON value could not be converted to System.Int32. Path:
+        // $.tmdbId". An untyped body is exactly where a rename stops being
+        // compiler-checked, which is why `addMovieSendsNumericTMDBId` exists.
         let body: [String: Any] = [
-            "tmdbId": result.id,
+            "tmdbId": result.externalId,
             "title": result.title,
             "qualityProfileId": qualityProfileId,
             "rootFolderPath": rootFolderPath,
