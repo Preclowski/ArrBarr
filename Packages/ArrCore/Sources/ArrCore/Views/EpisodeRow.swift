@@ -18,6 +18,12 @@ struct EpisodeRow: View {
     /// episode detail surface. `nil` keeps the row passive (the
     /// legacy behaviour) for callers that don't want this drill-down.
     var onTap: ((SonarrEpisodeDetail) -> Void)? = nil
+    /// The series' artwork, for the hover tooltip's poster slot. Episodes
+    /// have no art of their own; the season surface already holds the
+    /// series', so it passes it down rather than refetching.
+    var posterURL: URL? = nil
+    var posterRequiresAuth: Bool = false
+    var posterAPIKey: String? = nil
 
     /// The row's representative download — first of `queueItems`. All the
     /// single-item visuals (tint, progress fill) render off this one; the
@@ -25,10 +31,16 @@ struct EpisodeRow: View {
     private var queueItem: QueueItem? { queueItems.first }
 
     @EnvironmentObject private var configStore: ConfigStore
-    /// Long-hover tooltip (same 600 ms gate as the queue rows). Only rows
-    /// with an active download get one — it carries the episode's upgrade
-    /// diff, which is the one thing the row itself can't show. Rows without
-    /// a download have nothing the row text doesn't already say.
+    /// Long-hover tooltip (same 600 ms gate as the queue rows). Two subjects,
+    /// picked by what the row is doing: a downloading row shows
+    /// `QueueItemTooltip` — the grab, with its upgrade diff — and every other
+    /// row shows the EPISODE (synopsis, air date, and the on-disk file's
+    /// quality / size / formats).
+    ///
+    /// The second one used to not exist, on the grounds that a row without a
+    /// download says everything already. It doesn't: the row has exactly one
+    /// trailing slot, so a file's score evicts its air date, and the synopsis
+    /// has never been anywhere on it.
     @Environment(\.suppressRowTooltip) private var suppressRowTooltip
     @State private var isHovering = false
     @State private var showTooltip = false
@@ -41,12 +53,17 @@ struct EpisodeRow: View {
                episode.seasonNumber ?? 0,
                episode.episodeNumber ?? 0)
     }
+    /// Parsed once per row rather than per read: `hasAired` is consulted from
+    /// both `episodeTitleStyle` and `stateIndicator`, and the trailing gutter
+    /// wants the same date again — three parses per row, on every layout pass
+    /// of a list that re-renders on every queue tick.
+    private var airDate: Date? { episode.airDateUtc.flatMap(parseArrDate) }
     /// Air date treated as past → episode has actually aired. nil airDate
     /// (extremely rare — usually a Sonarr metadata gap) is treated as
     /// "aired" so we don't accidentally hide search affordances for shows
     /// that didn't publish a date.
-    private var hasAired: Bool {
-        guard let air = episode.airDateUtc.flatMap(parseArrDate) else { return true }
+    private func hasAired(_ air: Date?) -> Bool {
+        guard let air else { return true }
         return air <= Date()
     }
     /// `nil` reads as monitored — an older Sonarr that doesn't report the
@@ -61,14 +78,17 @@ struct EpisodeRow: View {
     ///   - missing-aired     → `.primary.opacity(0.75)` (subtle dim, "not here yet")
     ///   - not-aired         → `.tertiary`             (most dim, scheduled future)
     ///   - active download   → `status.tint`           (status colour for live state)
-    private var episodeTitleStyle: AnyShapeStyle {
-        if !hasAired { return AnyShapeStyle(HierarchicalShapeStyle.tertiary) }
+    private func episodeTitleStyle(aired: Bool) -> AnyShapeStyle {
+        if !aired { return AnyShapeStyle(HierarchicalShapeStyle.tertiary) }
         if let q = queueItem { return AnyShapeStyle(q.status.tint) }
         if episode.hasFile == true { return AnyShapeStyle(Color.primary) }
         return AnyShapeStyle(Color.primary.opacity(0.75))
     }
 
     public var body: some View {
+        // The row's one date parse — every branch below reads these two.
+        let air = airDate
+        let aired = hasAired(air)
         Button {
             onTap?(episode)
         } label: {
@@ -90,7 +110,7 @@ struct EpisodeRow: View {
                     .foregroundStyle(.secondary)
                 Text(episode.title ?? "—")
                     .scaledFont(size: 11)
-                    .foregroundStyle(episodeTitleStyle)
+                    .foregroundStyle(episodeTitleStyle(aired: aired))
                     .lineLimit(1)
                 // Drill-in affordance — same `LinkChevron` every other tappable
                 // row uses (static dark, brightens on row hover via `.linkRowHover`).
@@ -135,7 +155,7 @@ struct EpisodeRow: View {
                     // knows). Falls back to the date below when the file
                     // didn't carry a score.
                     ScoreLabel(score: score, size: 10)
-                } else if let air = episode.airDateUtc.flatMap(parseArrDate) {
+                } else if let air {
                     Text(Self.formatter.string(from: air))
                         .scaledFont(size: 10)
                         .foregroundStyle(.tertiary)
@@ -145,7 +165,7 @@ struct EpisodeRow: View {
                 // as another branch inside `episodeTitleStyle` — a monitored
                 // episode renders byte-for-byte as before.
                 .opacity(isMonitored ? 1 : 0.55)
-                stateIndicator
+                stateIndicator(aired: aired)
                     .frame(width: 14, height: 14, alignment: .center)
             }
             .padding(.horizontal, 6)
@@ -188,7 +208,7 @@ struct EpisodeRow: View {
         .onHover { hovering in
             isHovering = hovering
             hoverTask?.cancel()
-            if hovering && !suppressRowTooltip && queueItem != nil {
+            if hovering && !suppressRowTooltip && hasTooltip {
                 hoverTask = Task { @MainActor [self] in
                     try? await Task.sleep(nanoseconds: 600_000_000)
                     if !Task.isCancelled && self.isHovering { showTooltip = true }
@@ -204,6 +224,8 @@ struct EpisodeRow: View {
                     apiKey: q.posterRequiresAuth ? configStore.sonarr.apiKey : nil,
                     locale: configStore.currentLocale
                 )
+            } else {
+                episodeTooltip
             }
         }
         #endif
@@ -212,8 +234,76 @@ struct EpisodeRow: View {
         .linkRowHover()
     }
 
+    // MARK: - Episode tooltip (rows with no active download)
+
+    /// Suppressed only when there would be nothing but the title in it — an
+    /// unaired episode Sonarr hasn't written a synopsis for yet.
+    private var hasTooltip: Bool {
+        queueItem != nil
+            || episodeFile != nil
+            || airDate != nil
+            || !(episode.overview ?? "").isEmpty
+    }
+
+    /// What the row's single trailing slot can't fit. Same chrome as every
+    /// other media tooltip, and the same state chip the detail heroes and the
+    /// Library tab use, so "Downloaded" means one thing app-wide.
+    private var episodeTooltip: some View {
+        MediaTooltipChrome(
+            title: episode.title ?? episodeCode,
+            subtitle: tooltipSubtitle,
+            posterURL: posterURL,
+            posterRequiresAuth: posterRequiresAuth,
+            apiKey: posterAPIKey,
+            fallbackSymbol: "tv",
+            statusChip: AnyView(
+                MediaStateChip(state: episodeFileState, locale: configStore.currentLocale)
+            )
+        ) {
+            let lines = tooltipInfoLines
+            if !lines.isEmpty { TooltipInfoGrid(lines: lines) }
+            TooltipOverview(text: episode.overview)
+            if let formats = episodeFile?.customFormats?.map(\.name), !formats.isEmpty {
+                CustomFormatChips(formats: formats, score: episodeFile?.customFormatScore ?? 0)
+            }
+            TooltipFileName(name: episodeFile?.relativePath)
+        }
+    }
+
+    /// `S02E04 · 12 March 2024` — the code the row already shows, plus the air
+    /// date, which the row drops whenever a score takes the trailing slot.
+    private var tooltipSubtitle: String {
+        [episodeCode, airDate.map { Self.formatter.string(from: $0) }]
+            .compactMap { $0 }
+            .joined(separator: " · ")
+    }
+
+    private var episodeFileState: LibraryEntry.FileState {
+        if episode.hasFile == true { return .complete }
+        if !isMonitored { return .unmonitored }
+        // Nothing to grab yet is not the same as nothing grabbed.
+        return hasAired(airDate) ? .missing : .notAvailable
+    }
+
+    private var tooltipInfoLines: [TooltipInfoLine] {
+        var lines: [TooltipInfoLine] = []
+        if let quality = episodeFile?.quality?.name, !quality.isEmpty {
+            lines.append(TooltipInfoLine(labelKey: "Quality", value: quality))
+        }
+        if let size = episodeFile?.size, size > 0 {
+            lines.append(TooltipInfoLine(
+                labelKey: "Size",
+                value: ByteCountFormatter.string(fromByteCount: size, countStyle: .file)
+            ))
+        }
+        if let runtime = episode.runtime, runtime > 0 {
+            lines.append(TooltipInfoLine(labelKey: "Runtime", value: "\(runtime) min"))
+        }
+        return lines
+    }
+
     @ViewBuilder
-    private var stateIndicator: some View {
+    private func stateIndicator(aired: Bool) -> some View {
         // One 14pt slot, and unmonitored WINS it over not-aired: "hasn't
         // aired" is already said twice on the row (tertiary title + the
         // future date in the trailing gutter), while "unmonitored" is said
@@ -226,8 +316,8 @@ struct EpisodeRow: View {
         // carries the per-season "X/Y" count.)
         if !isMonitored {
             MonitorBookmark(isMonitored: false, size: 10)
-                .help(Text(LocalizedStringKey(unmonitoredHelpKey), bundle: .module))
-        } else if !hasAired {
+                .help(Text(LocalizedStringKey(unmonitoredHelpKey(aired: aired)), bundle: .module))
+        } else if !aired {
             Image(systemName: "calendar")
                 .scaledFont(size: 10)
                 .foregroundStyle(.tertiary)
@@ -235,8 +325,8 @@ struct EpisodeRow: View {
         }
     }
 
-    private var unmonitoredHelpKey: String {
-        hasAired ? "common.notMonitored.label" : "detail.notMonitoredNotAired.label"
+    private func unmonitoredHelpKey(aired: Bool) -> String {
+        aired ? "common.notMonitored.label" : "detail.notMonitoredNotAired.label"
     }
 
     private static let formatter: DateFormatter = {

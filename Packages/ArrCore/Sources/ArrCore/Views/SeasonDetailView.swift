@@ -121,6 +121,12 @@ struct SeasonDetailView: View {
                                     onTap: { episode in
                                         withAnimation(.smooth(duration: 0.22)) { selectedEpisode = episode }
                                     },
+                                    // Episodes have no art of their own; the
+                                    // hover tooltip borrows the series poster
+                                    // this surface already holds.
+                                    posterURL: seriesPosterURL,
+                                    posterRequiresAuth: seriesPosterRequiresAuth,
+                                    posterAPIKey: seriesPosterAPIKey,
                                 )
                             }
                         }
