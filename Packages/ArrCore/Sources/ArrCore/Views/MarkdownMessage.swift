@@ -1,6 +1,21 @@
 import SwiftUI
 import Markdown
 
+/// Ids the tools returned in this conversation, handed down to every message so
+/// the Markdown renderer can tell a real link from an invented one.
+private struct ChatKnownLinkKeysKey: EnvironmentKey {
+    /// Empty means "nothing to verify against" — outside the chat (previews,
+    /// isolated renders) links behave as written rather than all vanishing.
+    static let defaultValue: Set<String>? = nil
+}
+
+public extension EnvironmentValues {
+    var chatKnownLinkKeys: Set<String>? {
+        get { self[ChatKnownLinkKeysKey.self] }
+        set { self[ChatKnownLinkKeysKey.self] = newValue }
+    }
+}
+
 // Renders assistant chat messages from Markdown using the official swift-markdown
 // parser (cmark-gfm). Handles paragraphs, headings, bold/italic/strikethrough/
 // inline-code, links, bullet/numbered lists, code blocks, block quotes and GFM
@@ -10,6 +25,10 @@ struct MarkdownMessage: View {
     let text: String
     var baseSize: CGFloat = 13
     @Environment(\.fontScale) private var scale
+    /// Ids the tools returned in this conversation. A link to anything else is
+    /// the model's invention and renders as plain text — see
+    /// `ChatLinkVerification`.
+    @Environment(\.chatKnownLinkKeys) private var knownLinkKeys
 
     private var px: CGFloat { baseSize * scale }
 
@@ -22,9 +41,19 @@ struct MarkdownMessage: View {
 
     var body: some View {
         let doc = Document(parsing: source)
-        VStack(alignment: .leading, spacing: 6) {
-            ForEach(Array(doc.blockChildren.enumerated()), id: \.offset) { _, block in
-                blockView(block)
+        Group {
+            // Prose-only messages render as ONE Text so a drag selects the whole
+            // answer (see `flattened`). Everything else keeps the stacked path.
+            if !hasSpoilers, let flat = flattened(doc) {
+                Text(flat)
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(Array(doc.blockChildren.enumerated()), id: \.offset) { _, block in
+                        blockView(block)
+                    }
+                }
             }
         }
         // Tap to reveal/hide spoilers — only when the message has any, so normal
@@ -32,6 +61,72 @@ struct MarkdownMessage: View {
         .modifier(SpoilerRevealTap(active: hasSpoilers) {
             withAnimation(.easeInOut(duration: 0.25)) { spoilersRevealed.toggle() }
         })
+    }
+
+    // MARK: - Whole-message selection
+
+    /// SwiftUI selection never crosses a `Text` boundary: a message built as a
+    /// stack of per-block views can only be selected one paragraph / one bullet
+    /// at a time. So when a message is *only* prose — headings, paragraphs,
+    /// simple lists — flatten it into a single AttributedString and let one drag
+    /// take the lot. Returns nil for anything that genuinely needs its own view
+    /// (code blocks, tables, block quotes, rules, nested lists), which keeps the
+    /// stacked renderer for those instead of degrading them.
+    ///
+    /// The only thing lost is the bullets' hanging indent — a wrapped bullet
+    /// wraps to the margin rather than under its own text — because a plain
+    /// `Text` has no way to express one.
+    private func flattened(_ doc: Document) -> AttributedString? {
+        var out = AttributedString()
+        for (idx, block) in doc.blockChildren.enumerated() {
+            guard let piece = flattenBlock(block) else { return nil }
+            if idx > 0 { out += gap(6) }
+            out += piece
+        }
+        return out.characters.isEmpty ? nil : out
+    }
+
+    private func flattenBlock(_ markup: BlockMarkup) -> AttributedString? {
+        switch markup {
+        case let h as Heading:
+            let bump: CGFloat = h.level == 1 ? 3 : (h.level == 2 ? 1.5 : 0)
+            return inline(h, size: baseSize + bump, bold: true)
+        case let p as Paragraph:
+            return inline(p, size: baseSize)
+        case let list as UnorderedList:
+            return flattenList(Array(list.listItems), ordered: false)
+        case let list as OrderedList:
+            return flattenList(Array(list.listItems), ordered: true)
+        default:
+            return nil
+        }
+    }
+
+    private func flattenList(_ items: [ListItem], ordered: Bool) -> AttributedString? {
+        var out = AttributedString()
+        for (idx, item) in items.enumerated() {
+            let blocks = Array(item.blockChildren)
+            // Nested lists / code inside a bullet need real views — bail out and
+            // let the whole message use the stacked path.
+            guard blocks.allSatisfy({ $0 is Paragraph }) else { return nil }
+            if idx > 0 { out += AttributedString("\n") }
+            var marker = styled(ordered ? "\(idx + 1).  " : "•  ", size: baseSize, bold: false, italic: false)
+            marker.foregroundColor = .secondary
+            out += marker
+            for (i, block) in blocks.enumerated() {
+                if i > 0 { out += AttributedString("\n") }
+                out += inline(block, size: baseSize)
+            }
+        }
+        return out
+    }
+
+    /// Vertical breathing room between blocks: an empty line whose own font size
+    /// *is* the gap, which is the only spacing control a single `Text` has.
+    private func gap(_ points: CGFloat) -> AttributedString {
+        var a = AttributedString("\n\n")
+        a.font = .system(size: points * scale)
+        return a
     }
 
     // MARK: - Block rendering
@@ -192,8 +287,20 @@ struct MarkdownMessage: View {
             return inner
         case let link as Markdown.Link:
             var inner = concat(link, size: size, bold: bold, italic: italic)
-            if let dest = link.destination, let url = URL(string: dest) {
-                inner.link = url
+            // ONLY in-app links survive. A model asked for a markdown link will
+            // happily invent a plausible URL from memory — that is how a chat
+            // about your Radarr library produced a link to a rickroll — and we
+            // have no way to tell an invented URL from a real one. An external
+            // destination is therefore dropped and the text stays text: the app
+            // never hands the user off to a web page it can't vouch for.
+            if let dest = link.destination, let url = URL(string: dest),
+               url.scheme == ChatLink.scheme, linkIsTrustworthy(url) {
+                // `arrbarr://person/19292` carries no name, but the link's own
+                // text is the name — stamp it in so `PersonView` can title
+                // itself the moment it's pushed, instead of sitting blank until
+                // TMDB answers. The tap handler only ever sees the URL, which is
+                // why this has to happen at render time.
+                inner.link = Self.namingPersonLinks(url, label: link.plainText)
                 inner.foregroundColor = .accentColor
             }
             return inner
@@ -204,6 +311,28 @@ struct MarkdownMessage: View {
         default:
             return concat(markup, size: size, bold: bold, italic: italic)
         }
+    }
+
+    /// Whether this in-app link points at an id some tool in this conversation
+    /// actually returned. The model invents ids when it has none — a "gaps in
+    /// your collection" answer names films that `check_titles` never printed an
+    /// id for — and an invented id opens a real, wrong film. Unverified links
+    /// render as ordinary text.
+    private func linkIsTrustworthy(_ url: URL) -> Bool {
+        guard let knownLinkKeys else { return true }
+        guard let link = ChatLink(url: url) else { return false }
+        return ChatLinkVerification.isVerified(link, against: knownLinkKeys)
+    }
+
+    /// Adds `?name=<link text>` to a person link that doesn't already carry one.
+    /// Everything else — media links, http links, malformed URLs — passes
+    /// through untouched.
+    static func namingPersonLinks(_ url: URL, label: String) -> URL {
+        let trimmed = label.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty,
+              case .person(let id, let existing)? = ChatLink(url: url), existing.isEmpty,
+              let named = ChatLink.person(id: id, name: trimmed).url else { return url }
+        return named
     }
 
     private func concat(_ markup: Markup, size: CGFloat, bold: Bool, italic: Bool) -> AttributedString {
