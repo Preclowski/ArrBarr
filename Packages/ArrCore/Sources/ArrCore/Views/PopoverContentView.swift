@@ -48,6 +48,10 @@ public struct PopoverContentView: View {
     @State private var chatHolder = ChatViewModelHolder()
     @State private var searchResult: SearchResult?
     @State private var detailItem: QueueItem?
+    /// Person pushed from chat — a card in a tool result, or an
+    /// `arrbarr://person/…` link in an assistant reply. Detail surfaces own
+    /// their own person destination; chat has none, so the root hosts this one.
+    @State private var personRef: PersonRef?
     /// Pending confirmation payload — set by `.onReceive` listening
     /// for `arrBarrConfirmRequest`. Rendered as a panel-wide overlay
     /// at the end of body.
@@ -306,6 +310,13 @@ public struct PopoverContentView: View {
                 historySource = nil
                 withAnimation(.smooth(duration: 0.22)) { detailItem = item }
             }
+            .onReceive(NotificationCenter.default.publisher(for: .arrBarrOpenPerson)) { note in
+                guard let ref = note.userInfo?["ref"] as? PersonRef else { return }
+                searchResult = nil
+                historySource = nil
+                detailItem = nil
+                personRef = ref
+            }
             .onReceive(NotificationCenter.default.publisher(for: .arrBarrOpenSearchAdd)) { note in
                 // Chat tap-to-add — show the SearchAddPanel overlay
                 // pre-loaded with the result. `searchAddFromChat` lets
@@ -483,6 +494,7 @@ public struct PopoverContentView: View {
             }
 
         }
+        .personDestination($personRef)
         .navigationDestination(item: $detailItem) { item in
             // Sonarr queue rows that target a specific episode skip the
             // Series view and land the user on the episode directly.

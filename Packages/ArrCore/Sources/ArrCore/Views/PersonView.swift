@@ -82,7 +82,7 @@ public struct PersonView: View {
             HStack(spacing: 6) {
                 FloatingBackButton(action: onBack)
                     .keyboardShortcut(.cancelAction)
-                Text(ref.name)
+                Text(displayName)
                     .scaledFont(size: 15, weight: .semibold)
                     .lineLimit(1)
                 Spacer(minLength: 0)
@@ -138,7 +138,7 @@ public struct PersonView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .posterLightbox(url: $enlargedPoster, apiKey: nil, aspectRatio: 1)
-        .conditionalNavTitle(ref.name, apply: !isDetachedWindow)
+        .conditionalNavTitle(displayName, apply: !isDetachedWindow)
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #else
@@ -182,7 +182,7 @@ public struct PersonView: View {
                 .disabled(photoURL == nil)
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(ref.name)
+                    Text(displayName)
                         .scaledFont(size: 17, weight: .semibold)
                         .lineLimit(2)
                     if let sub = ageBirthplace {
@@ -214,6 +214,15 @@ public struct PersonView: View {
         }
         .padding(.top, 2)
     }
+
+    /// TMDB's name once it's loaded, the caller's only until then.
+    ///
+    /// `ref.name` is a *label*, and not always a trustworthy one: a chat link
+    /// carries whatever text the model wrote next to the id, so a mislinked
+    /// title ("Detroit Rock City" pointing at Jason Biggs' personId) used to
+    /// headline this whole page. The id is the truth; the label is a
+    /// placeholder that gets corrected the moment details arrive.
+    private var displayName: String { details?.name ?? ref.name }
 
     private var photoURL: URL? {
         details?.profileURL ?? TMDBClient.imageURL(path: ref.profilePath, size: "w185")

@@ -361,6 +361,9 @@ private struct UpcomingTab: View {
 private struct ChatTab: View {
     @EnvironmentObject var configStore: ConfigStore
     @State private var chatHolder = ChatViewModelHolder()
+    /// Person cards and `arrbarr://person/…` links in replies push from here, so
+    /// back returns to the conversation.
+    @State private var personRef: PersonRef?
 
     var body: some View {
         Group {
@@ -369,6 +372,11 @@ private struct ChatTab: View {
             } else {
                 ChatView(viewModel: chatHolder.vm)
             }
+        }
+        .personDestination($personRef)
+        .onReceive(NotificationCenter.default.publisher(for: .arrBarrOpenPerson)) { note in
+            guard let ref = note.userInfo?["ref"] as? PersonRef else { return }
+            personRef = ref
         }
         .navigationBarTitleDisplayMode(.inline)
         .onAppear { chatHolder.reconfigure(store: configStore) }

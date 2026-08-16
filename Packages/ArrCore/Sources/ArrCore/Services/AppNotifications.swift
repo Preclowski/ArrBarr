@@ -180,6 +180,15 @@ public extension Notification.Name {
     /// overlay in quiz mode with the given mood pre-loaded.
     static let arrBarrOpenDiscoverQuiz = Notification.Name("ArrBarr.OpenDiscoverQuiz")
 
+    /// Posted when a person card in chat — or an `arrbarr://person/…` link in an
+    /// assistant reply — is tapped. `userInfo["ref"]` is a `PersonRef`; the
+    /// popover and the iOS roots listen and push `PersonView`.
+    ///
+    /// Detail surfaces push people through their OWN `@State PersonRef?` so back
+    /// returns to the originating detail; this notification exists for chat,
+    /// which has no such local destination of its own.
+    static let arrBarrOpenPerson = Notification.Name("ArrBarr.OpenPerson")
+
     /// Posted after a title is successfully added to an arr.
     /// `userInfo["foreignId"]` is the arr's foreign key (tmdb/tvdb/mbid) as a
     /// String. The Quiz listens so a card the user just added stops being
@@ -195,6 +204,16 @@ public enum LibraryAddCompletion {
             name: .arrBarrDidAddToLibrary,
             object: nil,
             userInfo: ["foreignId": foreignId]
+        )
+    }
+}
+
+public enum PersonRequest {
+    public static func post(_ ref: PersonRef) {
+        NotificationCenter.default.post(
+            name: .arrBarrOpenPerson,
+            object: nil,
+            userInfo: ["ref": ref]
         )
     }
 }

@@ -25,6 +25,47 @@ public struct RichToolResultView: View {
     }
 
     public var body: some View {
+        // Two payloads are vertical stacks rather than a bare rail: people (one
+        // card per candidate) and a filmography (the person, then their titles).
+        // Everything else is the carousel as it was.
+        switch content {
+        case .people(let people):
+            VStack(alignment: .leading, spacing: 4) {
+                ForEach(people) { ChatPersonCardView(person: $0) }
+            }
+        case .cast(let members):
+            // The detail surfaces' own cast strip, tap wired to the chat's
+            // person route. Its "Cast (N)" header stays — the enclosing tool
+            // header only says which tool ran, not what the heads are.
+            CastRow(cast: members, onTapPerson: { member in
+                if let ref = PersonRef(castMember: member) { PersonRequest.post(ref) }
+            })
+        case .albums(let artist, _):
+            VStack(alignment: .leading, spacing: 4) {
+                // Whose albums these are. The tool header names the TOOL, and a
+                // rail of covers with no artist above it is a guessing game when
+                // the answer covers two artists.
+                if let artist, !artist.isEmpty {
+                    Text(verbatim: artist)
+                        .scaledFont(size: 12, weight: .semibold)
+                        .foregroundStyle(.secondary)
+                }
+                carousel(for: content)
+            }
+        case .personCredits(let person, let results):
+            VStack(alignment: .leading, spacing: 6) {
+                ChatPersonCardView(person: person)
+                carousel(for: results.first?.source == .sonarr
+                         ? .searchSeriesResults(results)
+                         : .searchMovieResults(results))
+            }
+        default:
+            carousel(for: content)
+        }
+    }
+
+    @ViewBuilder
+    private func carousel(for content: ChatRichContent) -> some View {
         ScrollView(.horizontal, showsIndicators: false) {
             // Eager HStack (not Lazy): with `.fixedSize(vertical:)` on the
             // ScrollView, a LazyHStack only measures the first rendered card, so
@@ -167,6 +208,20 @@ public struct RichToolResultView: View {
                             visibleCount = min(visibleCount + Self.pageSize, items.count)
                         }
                     }
+                case .albums(_, let albums):
+                    let visible = Array(albums.prefix(visibleCount))
+                    ForEach(visible) { album in
+                        AlbumCard(album: album, baseURL: lidarr.baseURL, apiKey: lidarr.apiKey)
+                    }
+                    if visible.count < albums.count {
+                        LoadMoreSentinel {
+                            visibleCount = min(visibleCount + Self.pageSize, albums.count)
+                        }
+                    }
+                case .people, .personCredits, .cast:
+                    // Handled a level up as a vertical stack — `carousel(for:)`
+                    // is only ever called with the rail-shaped payloads.
+                    EmptyView()
                 case .discoverSession(let mood, let posterURLs):
                     // Stacked-poster resume widget — tap reopens the
                     // Quiz overlay (live `sessionMatched` count shows
@@ -175,7 +230,10 @@ public struct RichToolResultView: View {
                 }
             }
             .padding(.vertical, 4)
-            .padding(.horizontal, 2)
+            // No horizontal inset: the rail shares its leading edge with the
+            // section header, the person card and the cast strip. Two points of
+            // "just a little breathing room" here read as a misalignment,
+            // because the neighbouring cards start at zero.
         }
         .fixedSize(horizontal: false, vertical: true)
         .onChange(of: content) { _, _ in visibleCount = Self.pageSize }
@@ -192,7 +250,17 @@ private struct LoadMoreSentinel: View {
     var body: some View {
         ProgressView()
             .controlSize(.small)
-            .frame(width: 100, height: 180, alignment: .center)
+            // Flexible height, never a fixed one: the eager `HStack(alignment:
+            // .top)` sizes to its tallest child, so a hard 180pt sentinel *defined*
+            // the row height. Harmless next to ~180pt poster cards, but a calendar
+            // row's cards are ~76pt — the leftover ~100pt showed up as a dead gap
+            // under the carousel. Stretching instead means the sentinel takes the
+            // row's natural height rather than dictating it.
+            // Leading, not the default centre: a card whose title wraps
+            // narrower than 100pt would otherwise float its poster to the
+            // right of the column and break the rail's left edge.
+            .frame(width: 100, alignment: .leading)
+            .frame(maxHeight: .infinity, alignment: .center)
             .task { onAppear() }
     }
 }
@@ -252,7 +320,7 @@ private struct SearchResultCard: View {
                 }
             }
         }
-        .frame(width: 100)
+        .frame(width: 100, alignment: .leading)
     }
 
     /// Owned results route to DetailView; missing ones go through the add
@@ -263,6 +331,77 @@ private struct SearchResultCard: View {
     /// the `+` search flow — SearchAddPanel is the single source of truth.
     private func handleTap() {
         DetailRequest.tap(result)
+    }
+}
+
+// MARK: - Album card
+
+/// One album in the chat rail. Square art (a sleeve is not a poster), title,
+/// year · type, and the two states that matter for a music library: whether
+/// every track is on disk, and whether Lidarr is watching for the rest.
+/// Tapping opens the album-shaped `DetailView` — the same surface the artist
+/// view's album rows push.
+private struct AlbumCard: View {
+    let album: ChatAlbum
+    let baseURL: String
+    let apiKey: String
+
+    private var coverURL: URL? { album.images.posterURL(baseURL: baseURL, coverTypes: ["cover", "poster", "disc"]).0 }
+
+    var body: some View {
+        Button {
+            DetailRequest.post(
+                DetailRequest.syntheticItem(
+                    source: .lidarr,
+                    entityId: album.id,
+                    title: album.title,
+                    posterURL: coverURL
+                )
+            )
+        } label: {
+            VStack(alignment: .leading, spacing: 4) {
+                ZStack(alignment: .bottomTrailing) {
+                    RemotePoster(
+                        url: coverURL,
+                        apiKey: apiKey,
+                        size: CGSize(width: 90, height: 90),
+                        cornerRadius: Tokens.Radius.card,
+                        fallbackSymbol: "music.note"
+                    )
+                    if album.isComplete {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
+                            .background(Circle().fill(Color.black.opacity(0.5)).padding(-2))
+                            .padding(6)
+                    }
+                }
+                Text(album.title)
+                    .scaledFont(size: 12, weight: .semibold)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+                HStack(spacing: 6) {
+                    if let year = album.year {
+                        Text(String(year))
+                            .scaledFont(size: 11)
+                            .foregroundStyle(.secondary)
+                    }
+                    // Track progress only where it says something the check
+                    // doesn't: a partially-grabbed album.
+                    if !album.isComplete, let progress = album.trackProgress {
+                        Text(verbatim: progress)
+                            .scaledFont(size: 10)
+                            .foregroundStyle(.secondary)
+                    }
+                    if !album.monitored {
+                        Image(systemName: "bell.slash")
+                            .scaledFont(size: 9)
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+            }
+            .frame(width: 100, alignment: .leading)
+        }
+        .buttonStyle(.plain)
     }
 }
 
@@ -340,7 +479,7 @@ private struct LibraryRecordCard: View {
                     .foregroundStyle(.secondary)
             }
         }
-        .frame(width: 100)
+        .frame(width: 100, alignment: .leading)
     }
 }
 
