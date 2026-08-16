@@ -2,6 +2,7 @@ import WidgetKit
 import SwiftUI
 import AppIntents
 import ArrCore
+import os
 
 // MARK: - Bundle entry point
 
@@ -89,6 +90,13 @@ struct LibraryStatusEntry: TimelineEntry {
 /// Shared timeline-entry builder for both widgets. Fetches only the requested
 /// sources; `featured` is carried through for the small widget's hero pick.
 enum LibraryWidgetData {
+    /// The extension is a separate process the user never sees running: a
+    /// timeline that comes back empty renders as "no data" with no error, no
+    /// UI to inspect and no way to attach a debugger after the fact. The log is
+    /// the only instrument it has, so both providers say what they asked for
+    /// and what came back.
+    static let log = Logger(category: "Widget")
+
     static func entry(sources: Set<LibrarySummary.Source>,
                       featured: LibrarySummary.Source?) async -> LibraryStatusEntry {
         // Demo mode: the app mirrors the flag into the group suite, so the
@@ -110,6 +118,13 @@ enum LibraryWidgetData {
         let anyConfigured = [radarr, sonarr, lidarr, whisparr].contains { $0.isVisible }
         let summaries = await LibrarySummaryService().summaries(
             radarr: radarr, sonarr: sonarr, lidarr: lidarr, whisparr: whisparr)
+        // Configured-but-empty is the interesting shape: it means the fetch
+        // reached nothing, which on a widget looks the same as "not set up".
+        if anyConfigured && summaries.isEmpty {
+            log.notice("library timeline: \(sources.count, privacy: .public) source(s) configured, none answered")
+        } else {
+            log.debug("library timeline: \(summaries.count, privacy: .public) of \(sources.count, privacy: .public) source(s) answered")
+        }
         return LibraryStatusEntry(date: Date(), summaries: summaries, anyConfigured: anyConfigured, featured: featured)
     }
 
@@ -503,6 +518,11 @@ struct UpNextProvider: AppIntentTimelineProvider {
         let r = cfg(.radarr), s = cfg(.sonarr), l = cfg(.lidarr), w = cfg(.whisparr)
         let anyConfigured = [r, s, l, w].contains { $0.isVisible }
         let items = await UpcomingService().upcoming(radarr: r, sonarr: s, lidarr: l, whisparr: w)
+        if anyConfigured && items.isEmpty {
+            LibraryWidgetData.log.notice("up-next timeline: \(enabled.count, privacy: .public) source(s) configured, nothing upcoming returned")
+        } else {
+            LibraryWidgetData.log.debug("up-next timeline: \(items.count, privacy: .public) item(s)")
+        }
         return UpcomingEntry(date: Date(), items: items, anyConfigured: anyConfigured)
     }
 }

@@ -3,7 +3,7 @@ import os
 
 /// Shares the drop flow's category so one predicate covers the whole
 /// "why isn't my arr in the list" path.
-private let arrClientLog = Logger(subsystem: "pl.incred.ArrBarr", category: "DownloadDrop")
+private let arrClientLog = Logger(category: "DownloadDrop")
 
 /// `/downloadclient` as the arrs return it. Only the handful of members that
 /// decide where a dropped file goes are modelled; the rest of the payload

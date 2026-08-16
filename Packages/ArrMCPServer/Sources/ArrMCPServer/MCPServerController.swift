@@ -136,7 +136,7 @@ public actor MCPServerController {
             SessionValidator(),
         ]
         if config.requireAuth {
-            validators.insert(StaticBearerValidator(token: config.token), at: 1)
+            validators.insert(StaticBearerValidator(token: config.token, logger: logger), at: 1)
         }
         let pipeline = StandardValidationPipeline(validators: validators)
 

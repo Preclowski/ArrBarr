@@ -387,8 +387,7 @@ struct LidarrArtistView: View {
 
     private func albumYear(_ album: LidarrAlbumListRecord) -> String? {
         guard let dateStr = album.releaseDate, let date = parseArrDate(dateStr) else { return nil }
-        let f = DateFormatter(); f.dateFormat = "yyyy"
-        return f.string(from: date)
+        return CachedDateFormatters.format("yyyy").string(from: date)
     }
 
     /// Lidarr's web UI keys artists by `foreignArtistId` — only known after

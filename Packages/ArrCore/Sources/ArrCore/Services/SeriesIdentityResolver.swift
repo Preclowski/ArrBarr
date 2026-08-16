@@ -43,7 +43,7 @@ enum SeriesIdentityResolver {
     /// "Is this the same show?" is not answerable by looking at a poster —
     /// artwork differs between TMDB and TVDB for the *same* series — so the
     /// answer has to come from the ids, and this is where they are known.
-    private static let log = Logger(subsystem: AppLog.subsystem, category: "SeriesIdentity")
+    private static let log = Logger(category: "SeriesIdentity")
 
     /// Per-server memory of whether Sonarr understood `term=tmdb:N`. Keyed by
     /// the config fingerprint so switching servers re-probes. `false` skips
@@ -139,20 +139,25 @@ enum SeriesIdentityResolver {
 
         // 3. TMDB's own cross-reference, then an exact lookup.
         guard let tvdb = await externalTVDBId(tmdbTVId: tmdbTVId, tmdbKey: tmdbKey) else {
-            log.error("tmdb tv \(tmdbTVId, privacy: .public): unresolved — no tvdb id, nothing substituted")
+            // TMDB simply has no TVDB cross-reference for this show. A gap in
+            // someone else's data, not a failure of ours — `.notice`, so the
+            // error level keeps meaning "something broke".
+            log.notice("tmdb tv \(tmdbTVId, privacy: .public): unresolved — no tvdb id, nothing substituted")
             return nil
         }
         let record = await lookupTVDB(tvdb, client: client)
         if let record {
             logResolution(tmdbTVId, record, via: "tmdb external_ids")
         } else {
-            log.error("tmdb tv \(tmdbTVId, privacy: .public) → tvdb \(tvdb, privacy: .public): sonarr returned no matching record")
+            log.notice("tmdb tv \(tmdbTVId, privacy: .public) → tvdb \(tvdb, privacy: .public): sonarr returned no matching record")
         }
         return record
     }
 
     /// One line per resolution, naming both ids, the route and what came back
-    /// — enough to settle "same show or not?" from the log alone.
+    /// — enough to settle "same show or not?" from the log alone. The ids do
+    /// that work, so the title can stay `.private` (it is the user's library)
+    /// without costing the line its point.
     ///
     /// `.notice`, not `.info`: macOS keeps info-level messages in memory only,
     /// so they are gone by the time anyone runs `log show` and the evidence
@@ -161,7 +166,7 @@ enum SeriesIdentityResolver {
     private static func logResolution(_ tmdbTVId: Int, _ record: SearchResult, via route: String) {
         log.notice("""
             tmdb tv \(tmdbTVId, privacy: .public) → tvdb \(record.externalId, privacy: .public) \
-            "\(record.title, privacy: .public)" (\(record.year ?? 0, privacy: .public)) via \(route, privacy: .public)
+            "\(record.title, privacy: .private)" (\(record.year ?? 0, privacy: .public)) via \(route, privacy: .public)
             """)
     }
 

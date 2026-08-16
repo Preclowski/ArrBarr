@@ -25,7 +25,7 @@ import os
 /// keeps working exactly as before; those views simply also answer drags now.
 @MainActor
 final class StatusItemDropTarget {
-    private let log = Logger(subsystem: "pl.incred.ArrBarr", category: "DownloadDrop")
+    private let log = Logger(category: "DownloadDrop")
     /// The outermost view we last attached to. Weak *and* re-checked, because
     /// SwiftUI rebuilds the status item's view tree — the label re-renders
     /// whenever the active-download count changes — and rebuilt views carry no
@@ -60,7 +60,10 @@ final class StatusItemDropTarget {
         if let root = targets.first, let window = root.window {
             let centre = NSPoint(x: window.frame.width / 2, y: window.frame.height / 2)
             let hit = root.hitTest(centre)
-            log.notice(
+            // Which AppKit view actually sits under the cursor, and whether it
+            // ended up carrying our types. Install-time detail that repeats on
+            // every rebuild of the status item — `.debug`.
+            log.debug(
                 "hit-test at icon centre: \(hit.map { String(describing: type(of: $0)) } ?? "nil", privacy: .public) types=\(hit?.registeredDraggedTypes.map(\.rawValue).joined(separator: ",") ?? "-", privacy: .public)"
             )
         }
@@ -107,7 +110,7 @@ final class StatusItemDropTarget {
 /// clobber AppKit behaviour: none of these views implement any of them.
 @MainActor
 private enum StatusItemDropBridge {
-    private static let bridgeLog = Logger(subsystem: "pl.incred.ArrBarr", category: "DownloadDrop")
+    private static let bridgeLog = Logger(category: "DownloadDrop")
     /// Which classes already carry our methods. Main-actor isolated — every
     /// caller is the install path, which is main-actor by construction.
     private static var patchedClasses = Set<ObjectIdentifier>()
@@ -171,7 +174,9 @@ private enum StatusItemDropBridge {
             ("prepareForDragOperation", class_addMethod(cls, #selector(NSView.prepareForDragOperation(_:)), imp_implementationWithBlock(prepare), "B@:@")),
             ("performDragOperation", class_addMethod(cls, #selector(NSView.performDragOperation(_:)), imp_implementationWithBlock(perform), "B@:@")),
         ]
-        bridgeLog.notice(
+        // One line per swizzled AppKit class, every launch. Only interesting
+        // while chasing a drop that doesn't register — `.debug`.
+        bridgeLog.debug(
             "\(NSStringFromClass(cls), privacy: .public): \(added.map { "\($0.0)=\($0.1)" }.joined(separator: " "), privacy: .public)"
         )
     }

@@ -559,9 +559,6 @@ private struct CalendarRowView: View {
     }
 
     private static func dateLabel(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .none
-        return formatter.string(from: date)
+        CachedDateFormatters.styles(date: .medium, time: .none).string(from: date)
     }
 }

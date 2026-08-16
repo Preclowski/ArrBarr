@@ -19,6 +19,7 @@ import os
 // fell back are then filled in by `fillMissingThumbnails` and re-indexed (see
 // `PosterStore` for why that round trip is the only option).
 public enum SpotlightIndexer {
+    private static let log = Logger(category: "Spotlight")
     private static let domainRadarr = "arrbarr.radarr"
     private static let domainSonarr = "arrbarr.sonarr"
 
@@ -187,7 +188,7 @@ public enum SpotlightIndexer {
         lastReindex = nil
         // Destructive and user-triggered — leave a trace, otherwise "my posters
         // vanished" is impossible to tell apart from a failed prefetch.
-        Logger(category: "Spotlight").notice("cleared Spotlight index + prefetched posters")
+        log.notice("cleared Spotlight index + prefetched posters")
     }
 
     /// The item's page in the arr's web UI — the opt-out route for a Spotlight
@@ -372,7 +373,9 @@ public enum SpotlightIndexer {
         // The index has its own copy now — drop ours so a long fill doesn't
         // accumulate every poster it has ever fetched in memory.
         for item in refreshed { item.attributeSet.thumbnailData = nil }
-        Logger(category: "Spotlight").notice(
+        // A prefetch pass runs repeatedly until the budget stops finding work,
+        // so this is per-batch progress, not an event — `.debug`.
+        log.debug(
             "attached \(refreshed.count, privacy: .public) posters, \(downloadedBytes / 1024, privacy: .public) kB fetched (\(jobs.count - refreshed.count, privacy: .public) missing)"
         )
         return jobs.count == prefetchBudget
@@ -422,7 +425,7 @@ public enum SpotlightIndexer {
         UserDefaults.standard.set(stamp, forKey: fingerprintKey(domain))
         // Rare by design — its absence on a later pass is the fingerprint
         // doing its job.
-        Logger(category: "Spotlight").notice(
+        log.notice(
             "reindexed \(records.count, privacy: .public) rows in \(domain, privacy: .public)"
         )
         return pending

@@ -11,7 +11,7 @@ import os
 /// "owned → detail, missing → add panel" decision for every other surface too.
 @MainActor
 public enum ChatLinkRouter {
-    private static let log = Logger(subsystem: AppLog.subsystem, category: "ChatLink")
+    private static let log = Logger(category: "ChatLink")
 
     public static func open(_ link: ChatLink) {
         switch link {
@@ -43,7 +43,11 @@ public enum ChatLinkRouter {
             guard let tvdbId = await SeriesIdentityResolver.tvdbId(
                 tmdbTVId: tmdbTVId, sonarrConfig: sonarr, tmdbKey: tmdbKey)
             else {
-                log.error("chat link: no tvdb id for tmdb tv \(tmdbTVId, privacy: .public)")
+                // Not an error: TMDB knows series the TVDB mapping doesn't
+                // cover, and refusing to navigate is the designed outcome.
+                // `.notice` because a dead-looking link is exactly what gets
+                // reported hours later.
+                log.notice("chat link: no tvdb id for tmdb tv \(tmdbTVId, privacy: .public) — not navigating")
                 return
             }
             ref = .tvdb(tvdbId)
@@ -71,9 +75,14 @@ public enum ChatLinkRouter {
             // doesn't return info-level entries on this machine. Says which ref
             // was asked for and what it actually resolved to, which is the whole
             // question in a wrong-link report.
+            //
+            // The ids and the arr stay public — they are what makes the line
+            // diagnostic. The resolved title is the user's, so it is `.private`;
+            // `tmdb:1234 → radarr <private> (1999)` still answers "did it
+            // resolve, and to which id".
             log.notice("""
                 chat link \(incoming.urlString, privacy: .public) → \
-                \(source.rawValue, privacy: .public) "\(result.title, privacy: .public)" \
+                \(source.rawValue, privacy: .public) "\(result.title, privacy: .private)" \
                 (\(result.year.map(String.init) ?? "—", privacy: .public))
                 """)
             DetailRequest.tap(result.withInLibraryArrId(owned ?? result.inLibraryArrId))

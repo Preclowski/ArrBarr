@@ -66,7 +66,7 @@ public enum WidgetDataStore {
         return [preferred] + candidates.filter { $0 != preferred }
     }
 
-    private static let snapshotLog = Logger(subsystem: AppLog.subsystem, category: "Snapshot")
+    private static let snapshotLog = Logger(category: "Snapshot")
 
     #if DEBUG
     /// Where the snapshot goes while a test bundle is loaded.

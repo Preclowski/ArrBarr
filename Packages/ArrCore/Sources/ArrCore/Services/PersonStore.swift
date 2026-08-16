@@ -20,7 +20,11 @@ public final class PersonStore {
         var movies: [Int: [SearchResult]] = [:]
         var series: [Int: [SearchResult]] = [:]
     }
-    private let log = Logger(subsystem: AppLog.subsystem, category: "SeriesIdentity")
+    /// Deliberately `SeriesIdentity` rather than a category of this type's own:
+    /// the filmography line below answers the same "which show did that map
+    /// to?" question as `SeriesIdentityResolver`, and one predicate should
+    /// return both halves. Same reasoning as `ArrAPIClient` sharing `QueueFetch`.
+    private let log = Logger(category: "SeriesIdentity")
     private var cache = Cache()
     private var lru: [Int] = []
     private let capacity = 30
@@ -101,7 +105,7 @@ public final class PersonStore {
             // level is memory-only, so it can't be read back after the fact.
             for row in rows where row.inLibraryArrId != nil {
                 log.notice("""
-                    filmography: "\(row.title, privacy: .public)" (\(row.year ?? 0, privacy: .public)) \
+                    filmography: "\(row.title, privacy: .private)" (\(row.year ?? 0, privacy: .public)) \
                     tmdb tv \(row.tmdbTVId ?? 0, privacy: .public) → sonarr series \
                     \(row.inLibraryArrId ?? 0, privacy: .public)
                     """)

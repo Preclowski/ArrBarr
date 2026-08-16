@@ -365,6 +365,16 @@ public actor PosterStore {
     }
 
     private func download(_ url: URL, apiKey: String?) async -> Data? {
+        // Poster fetches are the app's other fan-out, and they share the same
+        // six-connections-per-host pool as the queue's side-loads. Whether a
+        // slow refresh is the arr being slow or the poster loader hogging the
+        // pool is visible in Instruments when both are signposted, and not
+        // otherwise. The tier names the interval so over-fetching a large tier
+        // for a small row shows up as a wide band.
+        let signpost = AppSignpost.posters
+        let state = signpost.beginInterval("poster download")
+        defer { signpost.endInterval("poster download", state) }
+
         var request = URLRequest(url: url)
         if let apiKey, !apiKey.isEmpty {
             request.setValue(apiKey, forHTTPHeaderField: "X-Api-Key")
@@ -378,7 +388,13 @@ public actor PosterStore {
         do {
             let (data, response) = try await session.data(for: request)
             if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
-                logger.debug("poster \(http.statusCode, privacy: .public) for \(url.absoluteString, privacy: .public)")
+                // Scheme/host/path, never the query — the same redaction the
+                // realtime and queue paths apply. A poster URL reaches a host
+                // the user runs, and a Plex transcode URL carries the original
+                // item path (and any legacy `apikey=`) in its query string.
+                logger.debug(
+                    "poster \(http.statusCode, privacy: .public) for \(url.loggableDescription, privacy: .private)"
+                )
                 return nil
             }
             return data
@@ -530,7 +546,10 @@ public actor PosterStore {
                 }
             }
             if removed > 0 {
-                logger.notice("purged \(removed, privacy: .public) \(tier.rawValue, privacy: .public) posters")
+                // Housekeeping that runs on every launch. `.debug` so it stays
+                // out of the persistent store, where the migrations below and
+                // the queue/tool trail have to survive.
+                logger.debug("purged \(removed, privacy: .public) \(tier.rawValue, privacy: .public) posters")
             }
         }
     }

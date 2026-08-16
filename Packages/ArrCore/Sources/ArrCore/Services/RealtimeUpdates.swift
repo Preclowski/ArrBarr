@@ -473,7 +473,7 @@ actor SignalRConnection {
         // Scheme/host/path only — never the query. The preserved user query
         // can carry a legacy `?apikey=`, and `.public` on the full URL would
         // write that key into the unified log. Same redaction as the WS log.
-        realtimeLog.debug("[\(self.source.rawValue, privacy: .public)] negotiate POST \(components.scheme ?? "?", privacy: .public)://\(components.host ?? "?", privacy: .public)\(components.path, privacy: .public)")
+        realtimeLog.debug("[\(self.source.rawValue, privacy: .public)] negotiate POST \(url.loggableDescription, privacy: .private)")
         let (data, response) = try await session.data(for: req)
         let status = (response as? HTTPURLResponse)?.statusCode ?? -1
         guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
@@ -511,8 +511,10 @@ actor SignalRConnection {
         components.queryItems = items
         guard let url = components.url else { throw URLError(.badURL) }
 
-        // Log the host/scheme/path but not the query — it carries the API key.
-        realtimeLog.debug("[\(self.source.rawValue, privacy: .public)] WS connect \(components.scheme ?? "?", privacy: .public)://\(components.host ?? "?", privacy: .public)\(components.path, privacy: .public)")
+        // `loggableDescription` drops the query, which here carries both the
+        // negotiate token and the API key. The host is still the user's own
+        // machine, so it stays `.private` on top of that.
+        realtimeLog.debug("[\(self.source.rawValue, privacy: .public)] WS connect \(url.loggableDescription, privacy: .private)")
         let task = session.webSocketTask(with: url)
         task.resume()
         return task
@@ -660,7 +662,9 @@ actor SignalRConnection {
         case .events(let events):
             receivedFrameThisCycle = true
             for event in events {
-                realtimeLog.debug("[\(self.source.rawValue, privacy: .public)] event \(String(describing: event), privacy: .public)")
+                // The event body names what the user is downloading, so it is
+                // theirs, not ours: `.private`, readable in Debug.
+                realtimeLog.debug("[\(self.source.rawValue, privacy: .public)] event \(String(describing: event), privacy: .private)")
                 await onEvent(event)
             }
         }

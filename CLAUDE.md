@@ -110,6 +110,18 @@ fastest via SwiftPM:
   tool catalog used by *both* the in-app chat and the MCP server
   (`ToolCatalogBridge`). Chat runs through `ChatProvider` — `.foundationModels`
   (Apple Intelligence) or `.openai` (OpenAI-compatible API).
+- **Logging**: always `Logger(category: "…")` (the `AppLog` extension) — never
+  spell out the subsystem, never build a logger per call (`static let`). Levels:
+  `.debug` for repeating background work (fetches, purges, reconnects, index
+  refreshes), `.notice` for one-shot events with a user-visible consequence
+  (a tool the AI ran, a drop, server lifecycle) because `.info`/`.debug` are
+  *not* persisted for `log show`, `.error` for failures the user may feel,
+  `.fault` only when OUR invariant broke. Counts/ids/enum cases are `.public`;
+  titles, people and anything carrying the user's infrastructure are `.private`
+  (`sudo log config --subsystem pl.incred.ArrBarr --mode private_data:on` to
+  read those while developing). Never log a URL whole — `url.loggableDescription`
+  drops the query, where every API key lives. Timings go to `AppSignpost`
+  (`OSSignposter`), not to log lines.
 - **Realtime**: `RealtimeUpdates` consumes Servarr SignalR/WebSocket. Servarr
   nests `action` inside `arguments[0].body` — parse that envelope, and force a
   reconnect on system wake (`queueVM.systemDidWake()`).

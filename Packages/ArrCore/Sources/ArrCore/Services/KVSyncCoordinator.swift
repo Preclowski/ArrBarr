@@ -39,6 +39,12 @@ public final class KVSyncCoordinator: ObservableObject {
     /// sign-in/out without a real iCloud account.
     private let identityCheck: @Sendable () -> Bool
 
+    /// "It didn't sync to my other Mac" is unanswerable from the UI, which
+    /// shows a timestamp and nothing about what moved or why it stopped. Keys
+    /// are logged by name — they are our own allowlisted setting names
+    /// (`SyncedKeys`), never values, so nothing here is the user's data.
+    private static let log = Logger(category: "KVSync")
+
     /// Lifetime-long observer of iCloud sign-in/out, kept OUT of `observers`
     /// (which `start()`/`stop()` manage) so `accountAvailable` stays current
     /// regardless of `isRunning`. Removed only in `deinit`.
@@ -75,9 +81,14 @@ public final class KVSyncCoordinator: ObservableObject {
                 ?? Array(SyncedKeys.all)
             MainActor.assumeIsolated {
                 guard let self else { return }
-                self.lastError = (reason == NSUbiquitousKeyValueStoreQuotaViolationChange)
-                    ? String(localized: "settings.icloudStorageIsFull.tooltip", bundle: .module)
-                    : nil
+                if reason == NSUbiquitousKeyValueStoreQuotaViolationChange {
+                    // The only failure iCloud reports to us at all, and it
+                    // stops sync dead until the user frees space.
+                    Self.log.error("inbound change rejected: iCloud KVS quota exceeded")
+                    self.lastError = String(localized: "settings.icloudStorageIsFull.tooltip", bundle: .module)
+                } else {
+                    self.lastError = nil
+                }
                 self.applyFromKV(keys: changed)
             }
         }
@@ -96,6 +107,9 @@ public final class KVSyncCoordinator: ObservableObject {
         kv.synchronize()
         isRunning = true
         lastError = nil
+        Self.log.notice(
+            "iCloud sync started (account \(self.accountAvailable ? "available" : "unavailable", privacy: .public), \(SyncedKeys.all.count, privacy: .public) keys mirrored)"
+        )
     }
 
     /// Stop observing and mirroring. Existing KVS/Keychain data is left intact.
@@ -104,6 +118,7 @@ public final class KVSyncCoordinator: ObservableObject {
         observers.forEach { NotificationCenter.default.removeObserver($0) }
         observers.removeAll()
         isRunning = false
+        Self.log.notice("iCloud sync stopped")
     }
 
     private func refreshAccountAvailability() {
@@ -151,10 +166,17 @@ public final class KVSyncCoordinator: ObservableObject {
     /// then trigger one reload. Outbound observation is suppressed meanwhile.
     public func applyFromKV(keys: [String]) {
         isApplyingRemote = true
+        var applied: [String] = []
         for key in keys where SyncedKeys.isSynced(key) {
             if let value = kv.object(forKey: key) {
                 defaults.set(value, forKey: key)
+                applied.append(key)
             }
+        }
+        // Names only, never values — and `.debug`, because an active sync
+        // fires this on every remote edit.
+        if !applied.isEmpty {
+            Self.log.debug("applied \(applied.count, privacy: .public) inbound keys: \(applied.joined(separator: ", "), privacy: .public)")
         }
         reload()
         // Reset on a later main-queue tick so the asynchronous outbound

@@ -4,7 +4,7 @@ import os
 /// Why an arr didn't show up in the add window is invisible from the UI — the
 /// arr is simply absent, whether it wasn't configured, wasn't reachable, or had
 /// no matching client. This log is the only way to tell those apart.
-private let dropLog = Logger(subsystem: "pl.incred.ArrBarr", category: "DownloadDrop")
+private let dropLog = Logger(category: "DownloadDrop")
 
 /// Turns a dropped file or magnet link into an actual download.
 ///

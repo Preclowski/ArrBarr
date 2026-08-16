@@ -231,9 +231,8 @@ public struct HistoryRowView: View {
     }
 
     private var relativeDate: String {
-        let f = RelativeDateTimeFormatter()
-        f.unitsStyle = .abbreviated
-        return f.localizedString(for: item.date, relativeTo: Date())
+        CachedDateFormatters.relative(.abbreviated)
+            .localizedString(for: item.date, relativeTo: Date())
     }
 
     private var tooltip: String {

@@ -146,9 +146,12 @@ public final class MediaServerIndex: @unchecked Sendable {
             lastRefresh = Date()
             lock.unlock()
 
-            logger.info("Media server index refreshed: \(entries.count, privacy: .public) titles, \(history.count, privacy: .public) recent plays")
+            // Polled refresh — `.debug`, same as every other repeating pass.
+            logger.debug("Media server index refreshed: \(entries.count, privacy: .public) titles, \(history.count, privacy: .public) recent plays")
         } catch {
-            logger.error("Media server index refresh failed: \(error.localizedDescription, privacy: .public)")
+            logger.error(
+                "Media server index refresh failed: \(error.localizedDescription, privacy: .public) | \(String(reflecting: error), privacy: .private)"
+            )
         }
     }
 

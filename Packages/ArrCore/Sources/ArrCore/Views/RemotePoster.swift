@@ -246,6 +246,8 @@ public struct RemotePoster: View {
     }
 
     #if DEBUG
+    private static let log = Logger(category: "RemotePoster")
+
     /// Tier is a hand-made choice per call site, so make a wrong one visible
     /// instead of silently blurry (too small) or silently expensive (too big).
     private func warnOnTierMismatch(_ image: PlatformImage) {
@@ -259,11 +261,11 @@ public struct RemotePoster: View {
         let needed = max(size.width, size.height) * scale
         let have = max(image.size.width, image.size.height)
         if have < needed / 1.25 {
-            Logger(category: "RemotePoster").notice(
+            Self.log.notice(
                 "under-sampled: \(tier.rawValue, privacy: .public) gives \(Int(have), privacy: .public)px for \(Int(needed), privacy: .public)px"
             )
         } else if have > needed * 2.5 {
-            Logger(category: "RemotePoster").notice(
+            Self.log.notice(
                 "over-sampled: \(tier.rawValue, privacy: .public) gives \(Int(have), privacy: .public)px for \(Int(needed), privacy: .public)px"
             )
         }

@@ -1,5 +1,6 @@
 import CryptoKit
 import Foundation
+import Logging
 import MCP
 
 /// Rejects requests lacking a matching `Authorization: Bearer <token>` header.
@@ -8,6 +9,8 @@ import MCP
 /// validation pipeline.
 struct StaticBearerValidator: HTTPRequestValidator {
     let token: String
+    /// Defaulted so the tests can build a validator without wiring logging.
+    var logger = Logger(label: "arrbarr.mcp.auth")
 
     func validate(_ request: HTTPRequest, context: HTTPValidationContext) -> HTTPResponse? {
         // An empty configured token means auth is enabled but not set up yet —
@@ -16,6 +19,14 @@ struct StaticBearerValidator: HTTPRequestValidator {
               let auth = request.header(HTTPHeaderName.authorization),
               auth.hasPrefix("Bearer "),
               Self.constantTimeEquals(String(auth.dropFirst("Bearer ".count)), token) else {
+            // A rejected request on a listening socket is the one thing here
+            // worth reading back later — it separates "my client is
+            // misconfigured" from "something else is knocking". Which of the
+            // three ways it failed is said plainly; the presented token is
+            // never logged, not even a prefix of it.
+            let reason = token.isEmpty ? "no token configured"
+                : (request.header(HTTPHeaderName.authorization) == nil ? "no Authorization header" : "token mismatch")
+            logger.notice("MCP request rejected: 401", metadata: ["reason": .string(reason)])
             return .error(statusCode: 401, .invalidRequest("Unauthorized"),
                           extraHeaders: [HTTPHeaderName.wwwAuthenticate: "Bearer"])
         }

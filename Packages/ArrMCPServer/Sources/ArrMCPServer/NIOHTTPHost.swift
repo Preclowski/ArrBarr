@@ -105,7 +105,10 @@ actor NIOHTTPHost {
             let channel = try await bootstrap.bind(host: configuration.host, port: configuration.port).get()
             self.channel = channel
             cleanupTask = Task { [weak self] in await self?.sessionCleanupLoop() }
-            logger.info("MCP HTTP host bound", metadata: [
+            // Lifecycle, so `.notice` — swift-log `.info` maps to os `.info`,
+            // which is never persisted, and "was the server even listening?"
+            // is a question asked after the fact.
+            logger.notice("MCP HTTP host bound", metadata: [
                 "host": "\(configuration.host)", "port": "\(configuration.port)",
                 "endpoint": "\(configuration.endpoint)"])
         } catch {
@@ -131,7 +134,7 @@ actor NIOHTTPHost {
         // `System.coreCount` detached OS threads for the life of the process.
         try? await group?.shutdownGracefully()
         group = nil
-        if wasBound { logger.info("MCP HTTP host stopped") }
+        if wasBound { logger.notice("MCP HTTP host stopped") }
     }
 
     // MARK: - Routing
@@ -216,7 +219,8 @@ actor NIOHTTPHost {
     private func closeSession(_ sessionID: String) async {
         guard let session = sessions.removeValue(forKey: sessionID) else { return }
         await session.transport.disconnect()
-        logger.info("Closed session", metadata: ["sessionID": "\(sessionID)"])
+        // Per-connection churn, not lifecycle — `.debug`.
+        logger.debug("Closed session", metadata: ["sessionID": "\(sessionID)"])
     }
 
     private func closeAllSessions() async {
@@ -231,7 +235,7 @@ actor NIOHTTPHost {
                 now.timeIntervalSince($0.value.lastAccessedAt) > configuration.sessionTimeout
             }
             for (sessionID, _) in expired {
-                logger.info("Session expired", metadata: ["sessionID": "\(sessionID)"])
+                logger.debug("Session expired", metadata: ["sessionID": "\(sessionID)"])
                 await closeSession(sessionID)
             }
         }

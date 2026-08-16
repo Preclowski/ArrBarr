@@ -220,7 +220,8 @@ public actor TitleMetadataStore {
         let reclaimed = before - entries.count
         guard reclaimed > 0 else { return }
         dirty = true
-        logger.notice("purged \(reclaimed, privacy: .public) title metadata entries")
+        // Launch-time housekeeping, same as `PosterStore.purge()` — `.debug`.
+        logger.debug("purged \(reclaimed, privacy: .public) title metadata entries")
         scheduleFlushIfNeeded()
     }
 

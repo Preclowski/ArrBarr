@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import os
 
 @MainActor
 @Observable
@@ -17,6 +18,12 @@ public final class ChatViewModel {
     /// tool is pending. Resume value is `JSONValue?`: confirmed args
     /// to proceed, or nil = cancel.
     private var pendingResume: CheckedContinuation<JSONValue?, Never>?
+
+    /// Never logs a prompt, a reply or a tool argument — all three are the
+    /// user's own words. What it records is that a turn happened, which
+    /// provider handled it (an on-device model and a third-party API are very
+    /// different answers to "where did my question go"), and how it ended.
+    private static let log = Logger(category: "Chat")
 
     public var providerIsAvailable: Bool { provider.isAvailable }
 
@@ -86,12 +93,16 @@ public final class ChatViewModel {
     private func runLoop(prompt: String) async {
         isThinking = true
         defer { isThinking = false }
+        Self.log.notice(
+            "turn started via \(String(describing: type(of: self.provider)), privacy: .public), \(self.tools.count, privacy: .public) tools offered"
+        )
         do {
             var nextPrompt: String? = prompt
             // Hard cap on rounds to keep a misbehaving model from spinning forever.
             var roundsLeft = 6
             while let p = nextPrompt, roundsLeft > 0 {
                 roundsLeft -= 1
+                Self.log.debug("round \(6 - roundsLeft, privacy: .public)/6")
                 let response = try await provider.respond(prompt: p, tools: tools, history: messages)
 
                 // --- Pre-executed path (e.g. FoundationModelsProvider) ---
@@ -210,10 +221,19 @@ public final class ChatViewModel {
                 nextPrompt = ranAnyTool ? "" : nil
             }
             if roundsLeft == 0 {
+                Self.log.notice("turn hit the 6-round tool-call cap and stopped")
                 lastError = "Reached the maximum number of tool-call rounds."
                 messages.append(ChatMessage(role: .assistant, content: "Sorry — I got stuck in a loop and stopped."))
             }
         } catch {
+            // The user sees `error.localizedDescription` in a bubble and
+            // nothing else. Keep that half public (it is a provider's own
+            // sanitized message) and put the type/underlying detail behind
+            // `.private` — an API error can quote the request that carried the
+            // user's prompt.
+            Self.log.error(
+                "turn failed: \(error.localizedDescription, privacy: .public) | \(String(reflecting: error), privacy: .private)"
+            )
             lastError = error.localizedDescription
             messages.append(ChatMessage(role: .assistant, content: "Sorry — \(error.localizedDescription)"))
         }

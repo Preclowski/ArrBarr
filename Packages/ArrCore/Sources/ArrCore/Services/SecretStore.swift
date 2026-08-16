@@ -150,8 +150,19 @@ public struct KeychainSecretStore: SecretStore {
         q[kSecReturnData as String] = true
         q[kSecMatchLimit as String] = kSecMatchLimitOne
         var item: CFTypeRef?
-        guard SecItemCopyMatching(q as CFDictionary, &item) == errSecSuccess,
-              let data = item as? Data else { return nil }
+        let status = SecItemCopyMatching(q as CFDictionary, &item)
+        guard status == errSecSuccess, let data = item as? Data else {
+            // `errSecItemNotFound` is the ordinary "nothing configured yet"
+            // answer and stays silent. Anything else — a missing entitlement, a
+            // locked Keychain, an interaction-required item — surfaces to the
+            // user as "Sonarr says unauthorized" with no hint of the real
+            // cause, so it says so here. The account name is ours
+            // ("sonarr.apiKey"), never the secret.
+            if status != errSecItemNotFound {
+                Self.logger.error("Keychain read failed for \(key.account, privacy: .public): \(status)")
+            }
+            return nil
+        }
         return String(data: data, encoding: .utf8)
     }
 
@@ -166,7 +177,13 @@ public struct KeychainSecretStore: SecretStore {
     }
 
     public func delete(_ key: SecretKey) {
-        SecItemDelete(Self.matchQuery(for: key) as CFDictionary)
+        let status = SecItemDelete(Self.matchQuery(for: key) as CFDictionary)
+        // Deleting something that isn't there is the normal path (`set` calls
+        // this first, every time). A real failure is not: it leaves the old
+        // secret behind, and `set` would then be adding a duplicate.
+        if status != errSecSuccess && status != errSecItemNotFound {
+            Self.logger.error("Keychain delete failed for \(key.account, privacy: .public): \(status)")
+        }
     }
 }
 

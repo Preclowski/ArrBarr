@@ -34,7 +34,12 @@ struct MCPCallRouter {
                     content: [.text(text: "Tool '\(name)' is disabled.", annotations: nil, _meta: nil)],
                     isError: true)
             }
-            logger.info("tools/call", metadata: ["tool": .string(name)])
+            // Arrival only. The call's outcome — ran / declined / refused /
+            // failed — is logged once for every caller by
+            // `LocalToolBackend.callTool`, so duplicating it here would double
+            // every line in the audit trail. This one just says the request
+            // came in over MCP rather than from the in-app chat.
+            logger.debug("tools/call", metadata: ["tool": .string(name)])
 
             // Destructive tools (indexer search / monitor → start downloads,
             // library mutations) require interactive, per-call confirmation via

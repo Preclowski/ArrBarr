@@ -71,6 +71,15 @@ public final class QueueAggregator: QueueDataProviding {
     }
 
     func fetch() async -> AggregateResult {
+        // The app's heaviest recurring operation: four arrs in parallel, each
+        // possibly side-loading per-episode metadata, then a download-client
+        // round for live progress. Its cost is a wall-clock question ("why does
+        // the popover take two seconds to catch up") that no log line answers —
+        // an interval does, and Instruments can then show which arr is the tail.
+        let signpost = AppSignpost.queue
+        let state = signpost.beginInterval("queue refresh")
+        defer { signpost.endInterval("queue refresh", state) }
+
         let radarrClient = self.radarrClient(for: configStore.radarr)
         let sonarrClient = self.sonarrClient(for: configStore.sonarr)
         let lidarrClient = self.lidarrClient(for: configStore.lidarr)

@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 // MARK: - Destructive-tool confirmation
 
@@ -52,6 +53,17 @@ public actor LocalToolBackend: ToolBackend {
     /// The one media server, when connected. Drives the `media_server_*` tools
     /// and nothing else — no other tool consults it.
     let mediaServer: MediaServerConfig
+
+    /// Every tool call the app runs passes through here, whoever asked — chat,
+    /// MCP, App Intents — so this is where the audit trail belongs. The MCP
+    /// server logs its own `tools/call` on the way in, which covers only one of
+    /// the three callers; this covers all of them and, unlike that one, sees
+    /// how the call ended.
+    ///
+    /// Tool *arguments* are never logged: they carry the user's search terms
+    /// and, through them, the shape of their library. The name plus the outcome
+    /// is what a support question actually needs.
+    private static let log = Logger(category: "Tools")
 
     public init(sonarr: ServiceConfig, radarr: ServiceConfig, lidarr: ServiceConfig = .empty,
                 whisparr: ServiceConfig = .empty, aiKnowsAboutWhisparr: Bool = false,
@@ -110,6 +122,11 @@ public actor LocalToolBackend: ToolBackend {
         // reject it plainly instead of raising a confirmation for a tool that
         // doesn't exist. Still fail-closed — nothing executes either way.
         guard ChatToolCatalog.allToolNames.contains(name) else {
+            // The catalog is ours and the caller picked from it, so a name
+            // outside it means a model hallucinated one — expected — or the
+            // catalog and this file disagree. Only the second is our bug, and
+            // `run`'s backstop is where that one surfaces as a fault.
+            Self.log.notice("tool \(name, privacy: .public): not in the catalog, refused")
             throw LocalToolError.unknownTool(name)
         }
         // Read-only tools run straight through — that is the whole point of
@@ -117,18 +134,44 @@ public actor LocalToolBackend: ToolBackend {
         // The guards above run first so we never prompt for a tool that is
         // switched off and would only return a canned "not configured" line.
         guard MCPToolWhitelist.isDestructive(name) else {
-            return try await run(name: name, arguments: arguments)
+            Self.log.debug("tool \(name, privacy: .public): running (read-only)")
+            return try await runLogging(name: name, arguments: arguments)
         }
         guard let confirm = ToolConfirmationContext.handler else {
+            Self.log.notice("tool \(name, privacy: .public): destructive, nobody to confirm with — not run")
             throw LocalToolError.confirmationUnavailable(name)
         }
         switch await confirm(ToolCall(name: name, arguments: arguments)) {
         case .approved(let approvedArguments):
-            return try await run(name: name, arguments: approvedArguments)
+            // The one line worth keeping: a state-changing call the user
+            // approved. `.notice` so "what did the AI actually do to my
+            // library an hour ago" survives in `log show`.
+            Self.log.notice("tool \(name, privacy: .public): confirmed, running (destructive)")
+            return try await runLogging(name: name, arguments: approvedArguments)
         case .declined:
+            Self.log.notice("tool \(name, privacy: .public): declined by the user")
             throw LocalToolError.confirmationDeclined(name)
         case .unavailable:
+            Self.log.notice("tool \(name, privacy: .public): destructive, confirmation unavailable — not run")
             throw LocalToolError.confirmationUnavailable(name)
+        }
+    }
+
+    /// `run`, plus the failure half of the audit trail.
+    ///
+    /// A tool that throws surfaces to the caller as prose in the chat bubble
+    /// ("(tool error: …)") and nowhere else, so without this the interesting
+    /// half — which arr, what kind of failure — has no route out of the app.
+    /// The error is `.private`: a `URLError` carries the failing URL, and for
+    /// SABnzbd that URL carries `apikey=` (same reasoning as `QueueAggregator`).
+    private func runLogging(name: String, arguments: JSONValue) async throws -> ToolCallOutput {
+        do {
+            return try await run(name: name, arguments: arguments)
+        } catch {
+            Self.log.error(
+                "tool \(name, privacy: .public) failed: \(error.localizedDescription, privacy: .public) | \(String(reflecting: error), privacy: .private)"
+            )
+            throw error
         }
     }
 
@@ -174,7 +217,10 @@ public actor LocalToolBackend: ToolBackend {
         default:
             // `callTool` already rejected anything outside the directory, so
             // reaching here means the directory lists a tool this switch never
-            // implemented. Same error, deliberate backstop.
+            // implemented. Same error, deliberate backstop — and a `.fault`,
+            // because unlike an invented tool name this one is our bug: the
+            // catalog advertised something the app cannot do.
+            Self.log.fault("tool \(name, privacy: .public) is in the catalog but has no implementation")
             throw LocalToolError.unknownTool(name)
         }
     }

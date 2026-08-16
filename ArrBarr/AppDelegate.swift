@@ -6,6 +6,7 @@ import CoreSpotlight
 import ArrCore
 import ArrMCPServer
 import Logging
+import os
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -41,6 +42,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private static let bootstrapLogging: Void = {
         LoggingSystem.bootstrap { OSLogForwardingHandler(label: $0) }
     }()
+
+    /// App-lifecycle events. The process is a menu-bar accessory that is
+    /// launched at login, lives for days and is never watched while it starts,
+    /// so "did it come up, in which mode, and what did the OS hand it later" is
+    /// only answerable from the log.
+    private static let log = Logger(category: "Lifecycle")
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         registerNotificationCategories()
@@ -142,8 +149,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             object: nil,
             queue: .main
         ) { [weak self] _ in
+            Self.log.notice("system woke — forcing realtime reconnect")
             Task { @MainActor in self?.queueVM.systemDidWake() }
         }
+
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
+        let mode = configStore.detachedWindow ? "window" : "menu bar"
+        Self.log.notice(
+            "launched \(version, privacy: .public) in \(mode, privacy: .public) mode\(DemoMode.isActive ? " (demo)" : "", privacy: .public)"
+        )
     }
 
     // MARK: - Notification categories
@@ -280,6 +294,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Falls through to the browser when the preference is off, and also
         // when the identifier is unparseable (nothing to navigate to in-app).
         guard configStore.spotlightOpensInApp, let ref = SpotlightIndexer.parse(id) else {
+            // Two different reasons land here — the preference is off, or the
+            // identifier didn't parse (a stale index entry from an older id
+            // format). They look identical to the user: the browser opens, or
+            // nothing does.
+            Self.log.notice(
+                "spotlight hit → browser (opensInApp=\(self.configStore.spotlightOpensInApp, privacy: .public), parsed=\(SpotlightIndexer.parse(id) != nil, privacy: .public))"
+            )
             Task { @MainActor in
                 if let url = await SpotlightIndexer.browserURL(forIdentifier: id, configStore: configStore) {
                     NSWorkspace.shared.open(url)
@@ -287,6 +308,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
             return true
         }
+        Self.log.notice(
+            "spotlight hit → \(ref.source.rawValue, privacy: .public) \(ref.id, privacy: .public) in app"
+        )
         openSpotlightDetail(source: ref.source, entityId: ref.id)
         return true
     }
@@ -970,7 +994,19 @@ extension AppDelegate: @preconcurrency UNUserNotificationCenterDelegate {
             if findItem(source: source, arrQueueId: arrQueueId) == nil {
                 await queueVM.refresh()
             }
-            guard let item = findItem(source: source, arrQueueId: arrQueueId) else { return }
+            guard let item = findItem(source: source, arrQueueId: arrQueueId) else {
+                // The row is gone — imported, or removed on the server since the
+                // notification fired. The button just does nothing, which reads
+                // as a bug from the outside.
+                Self.log.notice(
+                    "notification action for \(source.rawValue, privacy: .public) queue item \(arrQueueId, privacy: .public): no longer in the queue, ignored"
+                )
+                return
+            }
+            // A pause/resume/delete that never touched the app's UI.
+            Self.log.notice(
+                "notification action ran on \(source.rawValue, privacy: .public) queue item \(arrQueueId, privacy: .public)"
+            )
             run(queueVM, item)
         }
     }
