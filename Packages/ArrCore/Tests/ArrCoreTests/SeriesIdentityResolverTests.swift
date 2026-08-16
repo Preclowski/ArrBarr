@@ -22,8 +22,10 @@ private struct Fixtures {
     static let realShow = #"""
     [{"id": 0, "tvdbId": 75299, "tmdbId": 1234, "title": "The Closer", "year": 2005,
       "overview": "The one they meant.", "runtime": 45, "network": "TNT",
-      "ratings": {"value": 7.9, "votes": 1200}, "images": [], "genres": ["Drama"],
-      "statistics": {"seasonCount": 7}, "status": "ended"}]
+      "ratings": {"value": 7.9, "votes": 1200},
+      "images": [{"coverType": "poster", "url": null,
+                  "remoteUrl": "https://artworks.thetvdb.com/tvdb-poster.jpg"}],
+      "genres": ["Drama"], "statistics": {"seasonCount": 7}, "status": "ended"}]
     """#
 
     /// What an older Sonarr answers when it does not understand `tmdb:N` and
@@ -271,6 +273,33 @@ struct SeriesIdentityResolverTests {
         }
     }
 
+    /// The half of the symptom that survived the identity fix: the panel used
+    /// to adopt the arr record's artwork, so opening a TMDB series swapped a
+    /// TMDB poster for TVDB's. Same show, different catalogue — and from the
+    /// outside identical to the bug where it really was a different show.
+    @Test("Enrichment upgrades the metadata but keeps the poster you tapped")
+    func enrichKeepsTheRowsArtwork() async throws {
+        try await withStub {
+            let vm = SearchViewModel()
+            vm.setup(radarrConfig: .empty, sonarrConfig: config(port: 8011),
+                     tmdbApiKey: "k")
+            defer { vm.reset() }
+
+            let lean = TMDBSearchMapping.series([tvSummary()]).first!
+            let tmdbPoster = lean.posterURL
+            #expect(tmdbPoster != nil)
+
+            let enriched = await vm.enrich(lean)
+
+            // Identity and metadata come from Sonarr…
+            #expect(enriched?.id == Fixtures.tvdbId)
+            #expect(enriched?.runtime == 45)
+            #expect(enriched?.network == "TNT")
+            // …the image the user is looking at does not change under them.
+            #expect(enriched?.posterURL == tmdbPoster)
+        }
+    }
+
     @Test("An unresolved row is never enriched into some other show")
     func enrichReturnsNilRatherThanGuessing() async throws {
         try await withStub {
@@ -311,7 +340,8 @@ struct SeriesIdentityResolverTests {
     private func tvSummary() -> TMDBTVSummary {
         try! JSONDecoder().decode(TMDBTVSummary.self, from: Data(#"""
         {"id": 1234, "name": "The Closer", "first_air_date": "2005-06-13",
-         "vote_average": 7.9, "genre_ids": [18], "overview": "…"}
+         "vote_average": 7.9, "genre_ids": [18], "overview": "…",
+         "poster_path": "/tmdb-poster.jpg"}
         """#.utf8))
     }
 }
