@@ -68,11 +68,13 @@ public enum MediaRef: Hashable, Sendable {
         switch self {
         case .tmdb(let id):        return "tmdb:\(id)"
         case .tvdb(let id):        return "tvdb:\(id)"
-        // Sonarr's SkyHook understands this on newer versions and treats it
-        // as literal search text on older ones, so nothing may trust the
-        // answer without checking the record's own tmdbId — which is
-        // `SeriesIdentityResolver`'s job. `compatibleSources` is empty, so no
-        // plain `.ref(_:)` lookup ever reaches an arr with this term.
+        // SONARR ONLY. Sonarr's SkyHook understands this on newer versions
+        // and treats it as literal search text on older ones, so nothing may
+        // trust the answer without checking the record's own tmdbId — which is
+        // `SeriesIdentityResolver`'s job, and the one caller of this term.
+        // `compatibleSources` is empty, so no plain `.ref(_:)` lookup can
+        // reach an arr with it; were a source ever added there, it must be
+        // `.sonarr` — the identical string means a MOVIE to Radarr.
         case .tmdbTV(let id):      return "tmdb:\(id)"
         case .musicBrainz(let id): return id
         case .imdb(let id):        return "imdb:\(id)"

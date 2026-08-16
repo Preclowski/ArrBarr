@@ -124,7 +124,7 @@ enum SeriesIdentityResolver {
         //    understands the prefix, and if the answer proves it did.
         let fingerprint = sonarrConfig.identityFingerprint
         if acceptsTMDBTerm[fingerprint] != false {
-            let candidates = (try? await client.lookup(query: "tmdb:\(tmdbTVId)")) ?? []
+            let candidates = (try? await client.lookup(query: MediaRef.tmdbTV(tmdbTVId).lookupTerm)) ?? []
             if let hit = candidates.first(where: { $0.tmdbTVId == tmdbTVId && $0.id > 0 }) {
                 acceptsTMDBTerm[fingerprint] = true
                 logResolution(tmdbTVId, hit, via: "sonarr tmdb: term")
@@ -153,8 +153,13 @@ enum SeriesIdentityResolver {
 
     /// One line per resolution, naming both ids, the route and what came back
     /// — enough to settle "same show or not?" from the log alone.
+    ///
+    /// `.notice`, not `.info`: macOS keeps info-level messages in memory only,
+    /// so they are gone by the time anyone runs `log show` and the evidence
+    /// exists only if someone happened to be streaming at that second. A
+    /// diagnostic you cannot read afterwards is not a diagnostic.
     private static func logResolution(_ tmdbTVId: Int, _ record: SearchResult, via route: String) {
-        log.info("""
+        log.notice("""
             tmdb tv \(tmdbTVId, privacy: .public) → tvdb \(record.id, privacy: .public) \
             "\(record.title, privacy: .public)" (\(record.year ?? 0, privacy: .public)) via \(route, privacy: .public)
             """)

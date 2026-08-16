@@ -97,8 +97,10 @@ public final class PersonStore {
             // recorded here instead. Same question as everywhere else in this
             // flow: which show, by id, not by how the poster looks. Only the
             // owned ones (a handful per person), never the whole filmography.
+            // `.notice` for the same reason as `SeriesIdentityResolver`: info
+            // level is memory-only, so it can't be read back after the fact.
             for row in rows where row.inLibraryArrId != nil {
-                log.info("""
+                log.notice("""
                     filmography: "\(row.title, privacy: .public)" (\(row.year ?? 0, privacy: .public)) \
                     tmdb tv \(row.tmdbTVId ?? 0, privacy: .public) → sonarr series \
                     \(row.inLibraryArrId ?? 0, privacy: .public)
