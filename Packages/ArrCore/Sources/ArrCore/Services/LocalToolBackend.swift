@@ -368,7 +368,22 @@ public actor LocalToolBackend: ToolBackend {
         query: String,
         kind: String
     ) -> String {
-        guard !results.isEmpty else { return "No results found." }
+        guard !results.isEmpty else {
+            // A bare "No results found." reads as an invitation to rephrase
+            // and retry — models will happily do that five times in a row.
+            // One miss IS the answer; say so, and name the two ways a miss
+            // is usually a routing mistake instead.
+            var out = "No \(kind) results for \"\(query)\". One miss is the answer — do NOT retry this tool with rephrasings of the same title."
+            switch kind {
+            case "series":
+                out += " If this could be a FILM, try radarr_search ONCE — anime features (Ghibli, Satoshi Kon) are movies, not series. And if the user asked ABOUT the title (plot, trivia, 'tell me about X'), no search tool is needed at all: answer from your own knowledge."
+            case "movie":
+                out += " If this could be a SERIES, try sonarr_search ONCE. And if the user asked ABOUT the title (plot, trivia, 'tell me about X'), no search tool is needed at all: answer from your own knowledge."
+            default:
+                break
+            }
+            return out
+        }
         let top = results.prefix(15)
         let lines = top.map { r -> String in
             let yearPart = r.year.map { " (\($0))" } ?? ""

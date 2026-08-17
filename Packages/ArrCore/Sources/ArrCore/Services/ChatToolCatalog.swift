@@ -164,7 +164,7 @@ public enum ChatToolCatalog {
     private static let sonarrTools: [MCPTool] = [
         MCPTool(
             name: "sonarr_search",
-            description: "Search Sonarr's metadata source (TVDB) for a TV series. Results surface in the chat as tappable cards — the user opens each one and confirms profile / folder / quality in the SearchAddPanel to actually add it. You do NOT add anything yourself; there is no `sonarr_add_*` tool. Briefly explain WHY this set after the call.",
+            description: "Search Sonarr's metadata source (TVDB) for a TV series to ADD. Results surface in the chat as tappable cards — the user opens each one and confirms profile / folder / quality in the SearchAddPanel to actually add it. You do NOT add anything yourself; there is no `sonarr_add_*` tool. Briefly explain WHY this set after the call. NOT for questions ABOUT a title ('tell me about X', plot, trivia) — answer those from your own knowledge; reach for check_titles/get_title_details only when their library state matters. SERIES only: anime feature films (Ghibli, Satoshi Kon) are movies → radarr_search. One empty result is the answer — never retry with a rephrasing.",
             inputSchema: .object([
                 "type": .string("object"),
                 "properties": .object([
@@ -274,7 +274,7 @@ public enum ChatToolCatalog {
     private static let radarrTools: [MCPTool] = [
         MCPTool(
             name: "radarr_search",
-            description: "Search Radarr's metadata source (TMDB) for a movie. Results surface in the chat as tappable cards — the user opens each one and confirms profile / folder / quality in the SearchAddPanel to actually add it. You do NOT add anything yourself; there is no `radarr_add_*` tool. Briefly explain WHY this set after the call.",
+            description: "Search Radarr's metadata source (TMDB) for a movie to ADD. Results surface in the chat as tappable cards — the user opens each one and confirms profile / folder / quality in the SearchAddPanel to actually add it. You do NOT add anything yourself; there is no `radarr_add_*` tool. Briefly explain WHY this set after the call. NOT for questions ABOUT a title ('tell me about X', plot, trivia) — answer those from your own knowledge; reach for check_titles/get_title_details only when their library state matters. One empty result is the answer — never retry with a rephrasing.",
             inputSchema: .object([
                 "type": .string("object"),
                 "properties": .object([
