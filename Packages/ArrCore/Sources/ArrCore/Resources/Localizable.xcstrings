@@ -40746,37 +40746,37 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Reset skip cooldowns"
+            "value": "Bring skipped titles back"
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wyzeruj karencje pominięć"
+            "value": "Przywróć pominięte tytuły"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Überspringen-Sperren zurücksetzen"
+            "value": "Übersprungene Titel zurückholen"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Restablecer los descartes"
+            "value": "Recuperar los títulos descartados"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Réinitialiser les rejets"
+            "value": "Faire revenir les titres passés"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Skip-cooldowns resetten"
+            "value": "Overgeslagen titels terughalen"
           }
         }
       }

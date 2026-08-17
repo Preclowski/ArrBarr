@@ -322,14 +322,14 @@ public struct DiscoverTabView: View {
     /// the card flying LEFT), + = add to collection (accent). Each lifts as
     /// the drag heads its way; colours mirror the swipe tint.
     private var actionButtons: some View {
-        // The three VERDICT buttons stay centered as their own cluster; the
-        // rewind sits off to the leading edge, outside the cluster — it
-        // corrects a decision rather than making one, and folding it into
-        // the centered row made every undo shove the main actions sideways.
+        // Center: ONLY the two verdicts, a stable pair that never moves.
+        // Edges carry the helpers — rewind on the left (corrects a decision),
+        // trailer on the right (informs one) — so neither's appearance ever
+        // shoves the main pair sideways.
         ZStack {
             centeredVerdictButtons
-            if viewModel.canUndoSkip {
-                HStack {
+            HStack {
+                if viewModel.canUndoSkip {
                     GlassCircleButton(
                         systemName: "arrow.uturn.backward",
                         tint: .secondary,
@@ -338,10 +338,29 @@ public struct DiscoverTabView: View {
                         action: handleUndo
                     )
                     .transition(.opacity.combined(with: .scale(scale: 0.8)))
-                    Spacer()
                 }
-                .padding(.leading, 20)
+                Spacer()
+                // Rendered only once a clip is known: a permanently dead
+                // button would be worse than one that arrives when ready.
+                if trailerKey != nil {
+                    GlassCircleButton(
+                        assetName: "brand-youtube",
+                        // Smaller than the two verdicts on purpose: skip and
+                        // add are the decision, the trailer only helps you
+                        // make it.
+                        diameter: Layout.buttonDiameter * 0.72,
+                        accessibilityKey: "discover.trailer.button",
+                        action: {
+                            // Ignore taps aimed at a clip we haven't resolved
+                            // for THIS card yet.
+                            guard trailerKeyCardId == viewModel.current?.id else { return }
+                            withAnimation(.smooth(duration: 0.2)) { presentedTrailer = trailerKey }
+                        }
+                    )
+                    .transition(.scale.combined(with: .opacity))
+                }
             }
+            .padding(.horizontal, 20)
         }
         .padding(.bottom, Layout.buttonBottomPadding)
     }
@@ -355,25 +374,6 @@ public struct DiscoverTabView: View {
                 accessibilityKey: "Skip",
                 action: handleSkip
             )
-            // Middle slot — trailer. Rendered only once a clip is known: a
-            // permanently dead button between the two verdicts would be worse
-            // than the pair sliding apart when one turns up.
-            if trailerKey != nil {
-                GlassCircleButton(
-                    assetName: "brand-youtube",
-                    // Smaller than the two verdicts on purpose: skip and add
-                    // are the decision, the trailer only helps you make it.
-                    diameter: Layout.buttonDiameter * 0.72,
-                    accessibilityKey: "discover.trailer.button",
-                    action: {
-                        // Ignore taps aimed at a clip we haven't resolved for
-                        // THIS card yet.
-                        guard trailerKeyCardId == viewModel.current?.id else { return }
-                        withAnimation(.smooth(duration: 0.2)) { presentedTrailer = trailerKey }
-                    }
-                )
-                .transition(.scale.combined(with: .opacity))
-            }
             GlassCircleButton(
                 systemName: "plus",
                 tint: .accentColor,

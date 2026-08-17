@@ -90,16 +90,20 @@ public struct QuizSettingsPane: View {
     @ViewBuilder
     private var signalsSection: some View {
         Section {
-            let signals = Array(SwipeSignalStore.shared.all.prefix(20))
+            let all = SwipeSignalStore.shared.all
+            let signals = Array(all.prefix(20))
             if signals.isEmpty {
                 Text("settings.taste.signals.empty", bundle: .module)
                     .scaledFont(size: 12)
                     .foregroundStyle(.secondary)
             } else {
+                // Totals up front — the list below caps at 20, and without
+                // this line the cap reads as "that's all there is".
+                summaryRow(all)
                 ForEach(signals, id: \.key) { signal in
                     signalRow(signal)
                 }
-                let skips = SwipeSignalStore.shared.all.filter { $0.kind == .skipped }.count
+                let skips = all.filter { $0.kind == .skipped }.count
                 if skips > 0 {
                     Button(role: .destructive) {
                         SwipeSignalStore.shared.resetSkips()
@@ -116,16 +120,33 @@ public struct QuizSettingsPane: View {
         .id(signalsTick)
     }
 
+    /// One capsule per kind with its total, in the same colours as the row
+    /// badges — the vocabulary stays identical between summary and rows.
+    private func summaryRow(_ all: [SwipeSignal]) -> some View {
+        let kept = all.filter { $0.kind == .kept }.count
+        let skipped = all.filter { $0.kind == .skipped }.count
+        let veto = all.filter { $0.kind == .veto }.count
+        return HStack(spacing: 6) {
+            if kept > 0 { countBadge(count: kept, kind: .kept) }
+            if skipped > 0 { countBadge(count: skipped, kind: .skipped) }
+            if veto > 0 { countBadge(count: veto, kind: .veto) }
+            Spacer()
+        }
+    }
+
+    private func countBadge(count: Int, kind: SwipeSignal.Kind) -> some View {
+        HStack(spacing: 4) {
+            Text(verbatim: "\(count)")
+                .scaledFont(size: 10, weight: .semibold)
+            kindBadge(kind)
+        }
+    }
+
     private func signalRow(_ signal: SwipeSignal) -> some View {
         HStack(spacing: 8) {
-            VStack(alignment: .leading, spacing: 1) {
-                Text(signal.title)
-                    .scaledFont(size: 12)
-                    .lineLimit(1)
-                Text(signal.date, style: .date)
-                    .scaledFont(size: 10)
-                    .foregroundStyle(.secondary)
-            }
+            Text(signal.title)
+                .scaledFont(size: 12)
+                .lineLimit(1)
             Spacer()
             kindBadge(signal.kind)
             Button {
