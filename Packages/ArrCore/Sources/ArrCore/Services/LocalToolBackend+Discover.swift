@@ -27,8 +27,8 @@ extension LocalToolBackend {
             return ToolCallOutput(text: "ERROR: 'items' must be a non-empty array of {title, year?}.")
         }
         // Over-sending is the point: owned picks are dropped below (library_mode
-        // "new"), so a big library eats most of a canonical list. Resolving 60
-        // titles is 60 parallel lookups — far cheaper than the round trip it
+        // "new"), so a big library eats most of a canonical list. The lookups
+        // fan out through ParallelResolve — far cheaper than the round trip it
         // takes to notice the deck came back empty and guess again.
         let capped = Array(items.prefix(60))
         let libraryMode: String = {
@@ -68,16 +68,20 @@ extension LocalToolBackend {
 
         let radarrClient = RadarrClient(config: radarr)
         let sonarrClient = SonarrClient(config: sonarr)
-        var resolved: [DiscoverItem] = []
-        for pick in capped {
+        let libraryMap = await libraryMapFetch
+        let radarrConfigured = radarr.isConfigured
+        let sonarrConfigured = sonarr.isConfigured
+        let radarrBase = radarr.baseURL
+        let sonarrBase = sonarr.baseURL
+        let resolved: [DiscoverItem] = await ParallelResolve.orderedMap(capped, width: 8) { pick -> DiscoverItem? in
             let term = pick.year.map { "\(pick.title) \($0)" } ?? pick.title
             switch kind {
             case "movie":
-                guard radarr.isConfigured else { continue }
+                guard radarrConfigured else { return nil }
                 let hits = (try? await radarrClient.lookupMovies(term: term)) ?? []
-                guard let first = hits.first else { continue }
+                guard let first = hits.first else { return nil }
                 let tmdbId = first.tmdbId ?? 0
-                let poster = (first.images ?? []).posterURL(baseURL: radarr.baseURL).0
+                let poster = (first.images ?? []).posterURL(baseURL: radarrBase).0
                 let resultBase = SearchResult(
                     externalId: tmdbId, foreignId: tmdbId == 0 ? "" : String(tmdbId),
                     title: first.title, subtitle: nil,
@@ -93,22 +97,20 @@ extension LocalToolBackend {
                     source: .radarr,
                     inLibraryArrId: nil
                 )
-                let libraryMap = await libraryMapFetch
                 if let arrId = libraryMap[tmdbId] {
                     let owned = resultBase.withInLibraryArrId(arrId)
-                    resolved.append(DiscoverItem(result: owned,
-                                                 action: .openDetail(source: .radarr, arrId: arrId),
-                                                 originLabel: .library, kind: .movie))
-                } else {
-                    resolved.append(DiscoverItem(result: resultBase, action: .addToRadarr,
-                                                 originLabel: .llm, kind: .movie))
+                    return DiscoverItem(result: owned,
+                                        action: .openDetail(source: .radarr, arrId: arrId),
+                                        originLabel: .library, kind: .movie)
                 }
+                return DiscoverItem(result: resultBase, action: .addToRadarr,
+                                    originLabel: .llm, kind: .movie)
             case "series":
-                guard sonarr.isConfigured else { continue }
+                guard sonarrConfigured else { return nil }
                 let hits = (try? await sonarrClient.lookupSeries(term: term)) ?? []
-                guard let first = hits.first else { continue }
+                guard let first = hits.first else { return nil }
                 let tvdbId = first.tvdbId ?? 0
-                let poster = (first.images ?? []).posterURL(baseURL: sonarr.baseURL).0
+                let poster = (first.images ?? []).posterURL(baseURL: sonarrBase).0
                 let resultBase = SearchResult(
                     externalId: tvdbId, foreignId: tvdbId == 0 ? "" : String(tvdbId),
                     title: first.title, subtitle: nil,
@@ -120,21 +122,20 @@ extension LocalToolBackend {
                     certification: nil,
                     posterURL: poster,
                     source: .sonarr,
-                    inLibraryArrId: nil
+                    inLibraryArrId: nil,
+                    tmdbTVId: first.tmdbId
                 )
-                let libraryMap = await libraryMapFetch
                 if let arrId = libraryMap[tvdbId] {
                     let owned = resultBase.withInLibraryArrId(arrId)
-                    resolved.append(DiscoverItem(result: owned,
-                                                 action: .openDetail(source: .sonarr, arrId: arrId),
-                                                 originLabel: .library, kind: .show))
-                } else {
-                    resolved.append(DiscoverItem(result: resultBase, action: .addToSonarr,
-                                                 originLabel: .llm, kind: .show))
+                    return DiscoverItem(result: owned,
+                                        action: .openDetail(source: .sonarr, arrId: arrId),
+                                        originLabel: .library, kind: .show)
                 }
-            default: break
+                return DiscoverItem(result: resultBase, action: .addToSonarr,
+                                    originLabel: .llm, kind: .show)
+            default: return nil
             }
-        }
+        }.compactMap { $0 }
 
         let filtered: [DiscoverItem]
         switch libraryMode {
@@ -258,10 +259,9 @@ extension LocalToolBackend {
                     do {
                         if kind == "movie" {
                             let summaries = try await tmdb.similarMovies(movieId: anchorId)
-                            var out: [DiscoverItem] = []
-                            for s in summaries.prefix(5) {
+                            let out: [DiscoverItem] = await ParallelResolve.orderedMap(Array(summaries.prefix(5)), width: 5) { s -> DiscoverItem? in
                                 let term = s.year.map { "\(s.title) \($0)" } ?? s.title
-                                guard let first = (try? await radarrClient.lookupMovies(term: term))?.first else { continue }
+                                guard let first = (try? await radarrClient.lookupMovies(term: term))?.first else { return nil }
                                 let tmdbId = first.tmdbId ?? 0
                                 let poster: URL? = (first.images ?? []).posterURL(baseURL: radarrClient.config.baseURL).0
                                 let result = SearchResult(
@@ -279,16 +279,15 @@ extension LocalToolBackend {
                                     source: .radarr,
                                     inLibraryArrId: nil
                                 )
-                                out.append(DiscoverItem(result: result, action: .addToRadarr,
-                                                        originLabel: .llm, kind: .movie))
-                            }
+                                return DiscoverItem(result: result, action: .addToRadarr,
+                                                    originLabel: .llm, kind: .movie)
+                            }.compactMap { $0 }
                             return (idx, out)
                         } else {
                             let summaries = try await tmdb.similarTV(seriesId: anchorId)
-                            var out: [DiscoverItem] = []
-                            for s in summaries.prefix(5) {
+                            let out: [DiscoverItem] = await ParallelResolve.orderedMap(Array(summaries.prefix(5)), width: 5) { s -> DiscoverItem? in
                                 let term = s.year.map { "\(s.name) \($0)" } ?? s.name
-                                guard let first = (try? await sonarrClient.lookupSeries(term: term))?.first else { continue }
+                                guard let first = (try? await sonarrClient.lookupSeries(term: term))?.first else { return nil }
                                 let tvdbId = first.tvdbId ?? 0
                                 let poster: URL? = (first.images ?? []).posterURL(baseURL: sonarrClient.config.baseURL).0
                                 let result = SearchResult(
@@ -304,9 +303,9 @@ extension LocalToolBackend {
                                     source: .sonarr,
                                     inLibraryArrId: nil
                                 )
-                                out.append(DiscoverItem(result: result, action: .addToSonarr,
-                                                        originLabel: .llm, kind: .show))
-                            }
+                                return DiscoverItem(result: result, action: .addToSonarr,
+                                                    originLabel: .llm, kind: .show)
+                            }.compactMap { $0 }
                             return (idx, out)
                         }
                     } catch {
