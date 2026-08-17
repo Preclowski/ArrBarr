@@ -698,7 +698,7 @@ public enum ChatToolCatalog {
                     ]),
                     "anchor_tmdb_ids": .object([
                         "type": .string("array"),
-                        "description": .string("TMDB IDs of titles the user has kept (right-swiped) in the current session. When provided, the backend fetches TMDB's similar-to graph for each anchor and merges those results with your curated picks. Pass this from the 'More picks' prompt context where the user's kept titles + their TMDB IDs are listed. Cap at 5 anchor IDs."),
+                        "description": .string("TMDB IDs of titles the user has kept (right-swiped) in the current session. When provided, the backend walks TMDB's recommendations graph for each anchor and merges those results with your curated picks. These MUST be TMDB ids — for series that is the tmdbTVId reported in tool output, NEVER a tvdbId. Pass this from the 'More picks' prompt context where the user's kept titles + their TMDB IDs are listed. Cap at 5 anchor IDs."),
                         "items": .object([
                             "type": .string("integer"),
                         ]),

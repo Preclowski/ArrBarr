@@ -258,7 +258,7 @@ extension LocalToolBackend {
                 group.addTask { [tmdb, radarrClient, sonarrClient] in
                     do {
                         if kind == "movie" {
-                            let summaries = try await tmdb.similarMovies(movieId: anchorId)
+                            let summaries = try await tmdb.recommendedMovies(movieId: anchorId)
                             let out: [DiscoverItem] = await ParallelResolve.orderedMap(Array(summaries.prefix(5)), width: 5) { s -> DiscoverItem? in
                                 let term = s.year.map { "\(s.title) \($0)" } ?? s.title
                                 guard let first = (try? await radarrClient.lookupMovies(term: term))?.first else { return nil }
@@ -284,7 +284,7 @@ extension LocalToolBackend {
                             }.compactMap { $0 }
                             return (idx, out)
                         } else {
-                            let summaries = try await tmdb.similarTV(seriesId: anchorId)
+                            let summaries = try await tmdb.recommendedTV(seriesId: anchorId)
                             let out: [DiscoverItem] = await ParallelResolve.orderedMap(Array(summaries.prefix(5)), width: 5) { s -> DiscoverItem? in
                                 let term = s.year.map { "\(s.name) \($0)" } ?? s.name
                                 guard let first = (try? await sonarrClient.lookupSeries(term: term))?.first else { return nil }
@@ -301,7 +301,8 @@ extension LocalToolBackend {
                                     certification: nil,
                                     posterURL: poster,
                                     source: .sonarr,
-                                    inLibraryArrId: nil
+                                    inLibraryArrId: nil,
+                                    tmdbTVId: s.id
                                 )
                                 return DiscoverItem(result: result, action: .addToSonarr,
                                                     originLabel: .llm, kind: .show)

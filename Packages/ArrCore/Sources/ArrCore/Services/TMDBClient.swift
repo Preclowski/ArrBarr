@@ -450,6 +450,27 @@ public struct TMDBClient: Sendable {
         return env.results
     }
 
+    /// `/recommendations` over `/similar` for anchor walks: similar is keyword
+    /// matching on metadata, recommendations is co-engagement — noticeably
+    /// better picks for "more like what the user kept".
+    public func recommendedMovies(movieId: Int, page: Int = 1) async throws -> [TMDBMovieSummary] {
+        struct Envelope: Decodable { let results: [TMDBMovieSummary] }
+        let env: Envelope = try await get(
+            path: "/movie/\(movieId)/recommendations",
+            query: [URLQueryItem(name: "page", value: String(page))]
+        )
+        return env.results
+    }
+
+    public func recommendedTV(seriesId: Int, page: Int = 1) async throws -> [TMDBTVSummary] {
+        struct Envelope: Decodable { let results: [TMDBTVSummary] }
+        let env: Envelope = try await get(
+            path: "/tv/\(seriesId)/recommendations",
+            query: [URLQueryItem(name: "page", value: String(page))]
+        )
+        return env.results
+    }
+
     // MARK: - Trailers
 
     public func movieVideos(movieId: Int) async throws -> [TMDBVideo] {
