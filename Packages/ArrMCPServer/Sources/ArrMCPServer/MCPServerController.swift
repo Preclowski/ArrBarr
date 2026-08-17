@@ -110,7 +110,10 @@ public actor MCPServerController {
         let backend = LocalToolBackend(
             sonarr: i.sonarr, radarr: i.radarr, lidarr: i.lidarr, whisparr: i.whisparr,
             aiKnowsAboutWhisparr: i.aiKnowsAboutWhisparr, tmdbApiKey: i.tmdbApiKey,
-            downloadClients: i.downloadClients, mediaServer: i.mediaServer)
+            downloadClients: i.downloadClients, mediaServer: i.mediaServer,
+            // Remote MCP clients have no popover: UI-driving tools must
+            // answer in text, not open windows on the Mac's menu bar.
+            headlessSurface: true)
         let tmdbEnabled = !i.tmdbApiKey.isEmpty
         let catalog = ChatToolCatalog.tools(
             includeSonarr: i.sonarr.isConfigured, includeRadarr: i.radarr.isConfigured,

@@ -65,10 +65,17 @@ public actor LocalToolBackend: ToolBackend {
     /// is what a support question actually needs.
     private static let log = Logger(category: "Tools")
 
+    /// True when this backend serves a caller with no ArrBarr UI in front of
+    /// it (the MCP server): tools that would otherwise drive the app's own
+    /// surfaces (opening the quiz overlay) return their data as text instead
+    /// of popping windows the remote client cannot see.
+    let headlessSurface: Bool
+
     public init(sonarr: ServiceConfig, radarr: ServiceConfig, lidarr: ServiceConfig = .empty,
                 whisparr: ServiceConfig = .empty, aiKnowsAboutWhisparr: Bool = false,
                 tmdbApiKey: String = "", downloadClients: DownloadClientConfigs = .init(),
-                mediaServer: MediaServerConfig = .empty) {
+                mediaServer: MediaServerConfig = .empty, headlessSurface: Bool = false) {
+        self.headlessSurface = headlessSurface
         self.sonarr = sonarr
         self.radarr = radarr
         self.lidarr = lidarr

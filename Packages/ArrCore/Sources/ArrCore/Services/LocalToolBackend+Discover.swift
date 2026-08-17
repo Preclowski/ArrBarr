@@ -304,6 +304,25 @@ extension LocalToolBackend {
             payload = combined
         }
 
+        // A remote MCP client has no popover — posting the notification would
+        // open the quiz on the Mac's menu bar, invisible to whoever asked.
+        // Hand back the resolved list as text instead; the capability stays,
+        // only the surface changes.
+        if headlessSurface {
+            let lines = payload.map { item -> String in
+                var parts = [item.result.year.map { "\(item.result.title) (\($0))" } ?? item.result.title]
+                if item.result.inLibraryArrId != nil { parts.append("[in library]") }
+                if let reason = item.reason { parts.append("— \(reason)") }
+                return "• " + parts.joined(separator: " ")
+            }
+            var text = "Resolved \(payload.count) picks for \"\(label)\" (no quiz UI on this surface — presenting the list instead):\n"
+            text += lines.joined(separator: "\n")
+            if suppressedCount > 0 {
+                text += "\n\(suppressedCount) more dropped — recently skipped by the user or marked not interested."
+            }
+            return ToolCallOutput(text: text)
+        }
+
         await MainActor.run {
             NotificationCenter.default.post(
                 name: .arrBarrOpenDiscoverQuiz,
