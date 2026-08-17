@@ -649,7 +649,7 @@ public enum ChatToolCatalog {
 
             Aim for a deck of 10–25 cards — enough to be worth swiping. That is the deck SIZE, not the list length: titles the user already owns are dropped here before the deck is built (with library_mode "new"), so send enough to survive that. A small library: 20 picks is 20 cards. A large one: send 40–60, because most of the canon will be dropped. Up to 60 are accepted. Include `year` whenever you can — it disambiguates remakes. All picks share one `kind`.
 
-            ONE DECK PER REQUEST. If the user's ask spans both movies and shows (or is vague about kind), pick the single most relevant `kind` (default to "movie" when ambiguous) and fill the deck with that — do NOT call the tool twice in the same turn for different kinds, as that opens two separate quiz sessions and confuses the user. A second call after the tool told you every pick was already owned is not a second deck: that is the same deck, corrected — but correct it with a checked list, not another guess.
+            ONE DECK PER REQUEST — never call this tool twice in one turn. Once a call reports "Opened Discover quiz", that deck IS the answer: a small deck (picks dropped as owned or recently skipped) is still the deck, and rebuilding it opens duplicate sessions and reads as a loop. The single exception: when the tool says EVERY pick was already owned, you get one corrective call seeded from a check_titles-verified list — one, never a third.
 
             Pass `append: true` when the user asks for MORE picks continuing the current vibe — that extends the active deck instead of starting over.
 

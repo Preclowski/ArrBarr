@@ -83,7 +83,7 @@ extension LocalToolBackend {
                             LibraryStats.shared.seriesCount.map { "\($0) series" }]
                     .compactMap { $0 }.joined(separator: ", ")
                 let sizeNote = size.isEmpty ? "" : " (the library holds \(size))"
-                return ToolCallOutput(text: "All \(resolved.count) picks are already in the user's library\(sizeNote) — a library this size owns the obvious choices. Do NOT retry by guessing another batch: call check_titles with 25-40 candidates (deeper cuts, not the canon) in ONE call, then seed the quiz with only the ones it reports as NOT in library. Or pass library_mode: 'library' if they want to rediscover what they own.")
+                return ToolCallOutput(text: "All \(resolved.count) picks are already in the user's library\(sizeNote) — a library this size owns the obvious choices. You get AT MOST ONE corrective call: run check_titles with 25-40 candidates (deeper cuts, not the canon) in ONE call, then seed the quiz once with only the ones it reports as NOT in library. If that deck comes back small, it stays small — never a third attempt. Or pass library_mode: 'library' if they want to rediscover what they own.")
             }
             return ToolCallOutput(text: "Couldn't resolve any of those picks through \(kind == "movie" ? "Radarr" : "Sonarr") lookup. Try other titles or check the service config.")
         }
@@ -285,7 +285,7 @@ extension LocalToolBackend {
         let combined = merged.filter { !suppressedKeys.contains($0.dedupKey) }
         let suppressedCount = merged.count - combined.count
         if combined.isEmpty {
-            return ToolCallOutput(text: "All \(merged.count) picks are on the user's skip cooldown or not-interested list — they swiped these away recently. Pick different titles (different decade, adjacent genre) rather than resending the same set.")
+            return ToolCallOutput(text: "All \(merged.count) picks are on the user's skip cooldown or not-interested list — they swiped these away recently. STOP: do NOT call discover_in_quiz again this turn. Tell the user their recent skips filtered everything out; they can ask for a different vibe, or bring skipped titles back in Settings → Quiz.")
         }
 
         // Top-up rounds are deduped HERE, against the live deck, rather than
@@ -342,8 +342,9 @@ extension LocalToolBackend {
         let curatedCount = payload.filter { curatedKeys.contains($0.dedupKey) }.count
         var summary = "Opened Discover quiz with \(payload.count) picks for: \(label) (\(curatedCount) curated + \(payload.count - curatedCount) similar)"
         if suppressedCount > 0 {
-            summary += ". \(suppressedCount) pick\(suppressedCount == 1 ? "" : "s") dropped — recently skipped by the user or marked not interested."
+            summary += ". \(suppressedCount) pick\(suppressedCount == 1 ? "" : "s") dropped because the user recently skipped them — the smaller deck is CORRECT, do not top it up."
         }
+        summary += " THIS IS THE DECK — the session is open and the user is swiping. Do NOT call discover_in_quiz again this turn, even if the deck is small; the user will ask when they want more."
         return ToolCallOutput(text: summary, rich: .discoverSession(mood: label, posterURLs: Array(frontPosters)))
     }
 
