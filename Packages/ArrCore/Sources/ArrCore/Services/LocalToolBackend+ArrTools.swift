@@ -110,8 +110,28 @@ extension LocalToolBackend {
             guard let arrId = libraryMap[entry.result.externalId] else { return entry.result }
             return entry.result.withInLibraryArrId(arrId)
         }
-        let results = excludeOwned ? tagged.filter { $0.inLibraryArrId == nil } : tagged
-        let droppedAsOwned = tagged.count - results.count
+        let afterOwned = excludeOwned ? tagged.filter { $0.inLibraryArrId == nil } : tagged
+        let droppedAsOwned = tagged.count - afterOwned.count
+
+        // Cross-call memory: without it, a big library turns every retry into
+        // the same lone survivor — each guessed batch overlaps the canon, the
+        // canon is owned, and the one unowned pick resurfaces call after call
+        // (five rounds of The Power of the Dog, verbatim user report). Repeats
+        // are cut from the cards and reported, and the model is told to stop.
+        let results = afterOwned.filter { !surfacedSuggestionIds.contains($0.id) }
+        let repeatCount = afterOwned.count - results.count
+        for r in results { surfacedSuggestionIds.insert(r.id) }
+
+        if results.isEmpty {
+            if repeatCount > 0 {
+                return ToolCallOutput(text: "Every surviving pick in this call was ALREADY surfaced as a card earlier in this conversation (\(repeatCount) repeat\(repeatCount == 1 ? "" : "s"))\(droppedAsOwned > 0 ? ", and \(droppedAsOwned) more are in the library" : ""). STOP calling suggest_titles for this ask — the user can see those cards. Summarize what is on screen or ask them a question instead.")
+            }
+            if droppedAsOwned > 0 {
+                return ToolCallOutput(text: "All \(droppedAsOwned) resolved picks are already in the user's library. Do NOT immediately guess another batch — the canon is owned. Go for genuinely deeper cuts in ONE more call at most, or first run check_titles on a 25-40 candidate list and suggest only what it reports as missing.")
+            }
+            return ToolCallOutput(text: "None of those picks resolved through \(source.displayName) lookup. Do NOT retry the same titles with rephrasings; check spelling/years or pick different titles.")
+        }
+
         var text = Self.formatSuggestionsCondensed(
             resolved: results,
             missing: missing.map { $0.label },
@@ -120,6 +140,10 @@ extension LocalToolBackend {
         if droppedAsOwned > 0 {
             text += "\n\(droppedAsOwned) pick\(droppedAsOwned == 1 ? " was" : "s were") dropped as already in the library."
         }
+        if repeatCount > 0 {
+            text += "\n\(repeatCount) repeat\(repeatCount == 1 ? "" : "s") of cards already shown earlier were dropped."
+        }
+        text += "\nPresent these to the user now. Do NOT call suggest_titles again for the same ask — if they want more, they will say so."
         let rich: ChatRichContent = (kind == "series") ? .searchSeriesResults(results) : .searchMovieResults(results)
         return ToolCallOutput(text: text, rich: rich)
     }

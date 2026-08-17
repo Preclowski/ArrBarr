@@ -65,6 +65,11 @@ public actor LocalToolBackend: ToolBackend {
     /// is what a support question actually needs.
     private static let log = Logger(category: "Tools")
 
+    /// Cards already surfaced by suggest_titles in this conversation, by
+    /// SearchResult identity. Cuts cross-call repeats — the loop where every
+    /// retry resurfaces the same lone unowned survivor.
+    var surfacedSuggestionIds: Set<String> = []
+
     /// True when this backend serves a caller with no ArrBarr UI in front of
     /// it (the MCP server): tools that would otherwise drive the app's own
     /// surfaces (opening the quiz overlay) return their data as text instead
