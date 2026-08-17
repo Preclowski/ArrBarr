@@ -472,7 +472,13 @@ public struct PopoverContentView: View {
             // region — neither opacity nor hit-testing touches the cursor, so
             // an invisible field kept handing the I-beam to whatever was drawn
             // over it, which is exactly where SearchAddPanel puts its Add CTAs.
-            .opacity(tabContentParked ? 0 : 1)
+            // 0.001, not 0: at exactly zero AppKit drops the selectable-text
+            // layers inside chat bubbles (`.textSelection(.enabled)` Text is
+            // AppKit-backed), and on unpark they skip their redraw — message
+            // content came back INVISIBLE until a click on the bubble forced a
+            // hit-test refresh. A hair above zero the layers stay alive, and
+            // the difference from 0 is imperceptible under an opaque overlay.
+            .opacity(tabContentParked ? 0.001 : 1)
             .allowsHitTesting(!tabContentParked)
             .disabled(tabContentParked)
             .accessibilityHidden(tabContentParked)
