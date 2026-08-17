@@ -96,6 +96,16 @@ public struct PopoverContentView: View {
     private var whisparrConfigured: Bool { configStore.whisparr.isVisible }
     private var anyArrConfigured: Bool { sonarrConfigured || radarrConfigured || lidarrConfigured || whisparrConfigured }
 
+    /// Opacity for parked (kept-mounted but hidden) layers. Deliberately a
+    /// hair above zero, and yes, deliberately a workaround: at exactly 0
+    /// AppKit drops the selectable-text layers inside chat bubbles and they
+    /// skip their redraw on unpark — message content came back invisible
+    /// until a click forced a hit-test refresh. The kosher fix is opaque
+    /// backgrounds on the overlay surfaces (then parking needs no opacity at
+    /// all); that is a visual-design pass across popover / detached window /
+    /// iOS, parked until one is due. Until then this constant IS the policy.
+    static let parkedOpacity: Double = 0.001
+
     /// An overlay is up, so the tab content behind it is parked — see the four
     /// modifiers at the call site.
     private var tabContentParked: Bool {
@@ -472,13 +482,8 @@ public struct PopoverContentView: View {
             // region — neither opacity nor hit-testing touches the cursor, so
             // an invisible field kept handing the I-beam to whatever was drawn
             // over it, which is exactly where SearchAddPanel puts its Add CTAs.
-            // 0.001, not 0: at exactly zero AppKit drops the selectable-text
-            // layers inside chat bubbles (`.textSelection(.enabled)` Text is
-            // AppKit-backed), and on unpark they skip their redraw — message
-            // content came back INVISIBLE until a click on the bubble forced a
-            // hit-test refresh. A hair above zero the layers stay alive, and
-            // the difference from 0 is imperceptible under an opaque overlay.
-            .opacity(tabContentParked ? 0.001 : 1)
+            // See `parkedOpacity` for why this is not exactly zero.
+            .opacity(tabContentParked ? Self.parkedOpacity : 1)
             .allowsHitTesting(!tabContentParked)
             .disabled(tabContentParked)
             .accessibilityHidden(tabContentParked)
@@ -505,7 +510,7 @@ public struct PopoverContentView: View {
                 // own. Same four as above: Discover doesn't own a TextField
                 // today, so nothing leaks *yet*, but a half-parked layer is
                 // how this bug arrived in the first place.
-                .opacity(discoverParked ? 0 : 1)
+                .opacity(discoverParked ? Self.parkedOpacity : 1)
                 .allowsHitTesting(!discoverParked)
                 .disabled(discoverParked)
                 .accessibilityHidden(discoverParked)
