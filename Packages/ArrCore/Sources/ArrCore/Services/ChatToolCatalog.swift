@@ -694,7 +694,7 @@ public enum ChatToolCatalog {
                                 ]),
                                 "reason": .object([
                                     "type": .string("string"),
-                                    "description": .string("Optional one-line, user-facing reason this pick fits, in the USER'S language ('Bo zatrzymałeś Sicario', 'Klimat jak w Blade Runnerze'). Shown on the card. Keep under ~8 words."),
+                                    "description": .string("RARELY. Only when a pick has a genuinely PERSONAL hook — it connects to something the user kept, watched or asked for ('Bo zatrzymałeś Sicario'). NEVER a description of the title itself ('mroczny thriller sci-fi' is banned — the card already shows genre and overview). At most 3-4 items per call get one; writing a reason for every pick doubles your response time and reads as noise. In the USER'S language, under ~8 words."),
                                 ]),
                             ]),
                             "required": .array([.string("title")]),
