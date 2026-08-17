@@ -10443,47 +10443,47 @@
       },
       "comment": "Button in common"
     },
-    "queue.filterQueue.button": {
+    "search.global.prompt": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Filter queue"
+            "value": "Search everywhere"
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Filtruj kolejkę"
+            "value": "Szukaj wszędzie"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Queue filtern"
+            "value": "Überall suchen"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Filtrar cola"
+            "value": "Buscar en todo"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Filtrer la file d'attente"
+            "value": "Rechercher partout"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wachtrij filteren"
+            "value": "Overal zoeken"
           }
         }
       },
-      "comment": "Button in queue"
+      "comment": "Prompt of the shared search capsule (Queue + Library tabs)"
     },
     "common.filter2.button": {
       "extractionState": "manual",
@@ -37055,46 +37055,47 @@
         }
       }
     },
-    "library.filter.prompt": {
+    "library.moreResults.header": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Filter library"
+            "value": "More results"
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Filtruj bibliotekę"
+            "value": "Więcej wyników"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bibliothek filtern"
+            "value": "Weitere Ergebnisse"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Filtrar biblioteca"
+            "value": "Más resultados"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Filtrer la bibliothèque"
+            "value": "Plus de résultats"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bibliotheek filteren"
+            "value": "Meer resultaten"
           }
         }
-      }
+      },
+      "comment": "Header of the Library tab's arr-lookup section under the grid"
     },
     "library.sort.help": {
       "extractionState": "manual",

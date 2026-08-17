@@ -2,11 +2,18 @@ import SwiftUI
 
 /// Library tab — a browsable cover grid of everything already on the arrs.
 /// Top strip: arr picker (menu-chip) + status filter chips + sort menu.
-/// Bottom: the same floating filter capsule the Queue tab uses, but purely
-/// local (substring match over the cached library — no remote search).
+/// Bottom: the same floating capsule the Queue tab uses, with the same
+/// meaning — search everywhere. Typing filters the cover grid locally and
+/// instantly (substring match over the cached library), and the same arr
+/// lookups the global search fires render underneath as a lookup section:
+/// add-new hits plus anything owned beyond what the grid already shows.
 struct LibraryTabContent: View {
     var viewModel: LibraryViewModel
     @EnvironmentObject var configStore: ConfigStore
+    /// Tapping an add-new lookup row routes here — `PopoverContentView`
+    /// presents the shared `SearchAddPanel` overlay for it, same as the
+    /// queue surface's rows.
+    @Binding var searchResult: SearchResult?
 
     /// Which arr's library is on screen. Defaults to the first configured
     /// arr on appear; not persisted (the popover session is short-lived,
@@ -17,6 +24,13 @@ struct LibraryTabContent: View {
     @State private var sort: SortMode = .title
     @State private var filterText = ""
     @FocusState private var filterFocused: Bool
+    /// This surface's own arr-lookup state — deliberately NOT the shared
+    /// global `SearchViewModel`: the queue's field mirrors its text into
+    /// that instance, and two owners of one query fight across tab
+    /// switches. Same per-surface pattern iOS's `QueueTab` uses. Set up
+    /// without a TMDB key, so the people/"Starring X" machinery stays off
+    /// here — the full search on the Queue tab keeps it.
+    @State private var searchVM = SearchViewModel()
     /// Grid (covers) vs list (compact rows). Persisted — a layout preference,
     /// not per-session state like the filters above.
     @AppStorage("libraryViewMode") private var viewModeRaw = ViewMode.grid.rawValue
@@ -123,8 +137,12 @@ struct LibraryTabContent: View {
         allEntries.count { matches($0, filter: filter) }
     }
 
+    private var trimmedFilter: String {
+        filterText.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     private var visibleEntries: [LibraryEntry] {
-        let query = filterText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let query = trimmedFilter
         var out = allEntries.filter { matches($0, filter: statusFilter) }
         if !query.isEmpty {
             // Searches the entry's whole alias set, not its visible title:
@@ -157,6 +175,26 @@ struct LibraryTabContent: View {
         return out
     }
 
+    /// The arr-lookup rows under the grid, relevance-sorted. Deduplicated
+    /// against the local alias matches for the browsed arr — computed over
+    /// `allEntries` and NOT `visibleEntries`, because the grid answers for
+    /// an owned title even while a status chip happens to hide it. Cross-arr
+    /// on purpose (the capsule means "search everywhere"): a series typed
+    /// into the Radarr-scoped grid still surfaces, wearing its own arr's
+    /// row identity.
+    private var remoteResults: [SearchResult] {
+        guard !trimmedFilter.isEmpty else { return [] }
+        let all = searchVM.radarrResults + searchVM.sonarrResults
+            + searchVM.lidarrResults + searchVM.whisparrResults
+        let localIds = Set(
+            TitleMatch.indexedFilter(allEntries, query: trimmedFilter, index: \.searchIndex)
+                .map(\.arrId)
+        )
+        let kept = SearchResultDedup.removingGridDuplicates(
+            results: all, gridSource: source, gridArrIds: localIds)
+        return SearchRelevance.sortedByRelevance(kept, input: searchVM.parsedInput)
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             topStrip
@@ -166,6 +204,12 @@ struct LibraryTabContent: View {
                     .padding(.horizontal, 10)
                     .padding(.bottom, 10)
             }
+        }
+        .onChange(of: filterText) { _, new in
+            // Mirror the typed query into this surface's SearchViewModel —
+            // same trigger the queue tab wires from its bar.
+            searchVM.query = new
+            searchVM.onQueryChange()
         }
         .onAppear {
             // The default `.radarr` may not be configured — snap to the first
@@ -177,6 +221,12 @@ struct LibraryTabContent: View {
                     source = first
                 }
             }
+            searchVM.setup(
+                radarrConfig: configStore.radarr,
+                sonarrConfig: configStore.sonarr,
+                lidarrConfig: configStore.lidarr,
+                whisparrConfig: configStore.whisparr
+            )
             Task { await load() }
         }
         .onChange(of: source) { _, _ in
@@ -403,26 +453,34 @@ struct LibraryTabContent: View {
                 }
                 .modifier(GlassButtonStyle())
             }
-        } else if entries.isEmpty {
+        } else if entries.isEmpty, trimmedFilter.isEmpty {
+            // Only with the field empty — with a query live the scroll
+            // surface stays up so the lookup section can answer for titles
+            // the grid doesn't hold.
             emptyState(symbol: "books.vertical", textKey: "library.empty.title") { EmptyView() }
         } else {
             ScrollView {
-                Group {
-                    if viewMode == .grid {
-                        LazyVGrid(columns: gridColumns, spacing: 12) {
-                            ForEach(entries) { entry in
-                                LibraryTile(entry: entry, apiKey: apiKey(for: entry))
+                VStack(alignment: .leading, spacing: 0) {
+                    if !entries.isEmpty {
+                        if viewMode == .grid {
+                            LazyVGrid(columns: gridColumns, spacing: 12) {
+                                ForEach(entries) { entry in
+                                    LibraryTile(entry: entry, apiKey: apiKey(for: entry))
+                                }
                             }
-                        }
-                        .padding(.horizontal, 12)
-                        .padding(.top, 2)
-                    } else {
-                        LazyVStack(spacing: 0) {
-                            ForEach(entries) { entry in
-                                LibraryListRow(entry: entry, apiKey: apiKey(for: entry))
+                            .padding(.horizontal, 12)
+                            .padding(.top, 2)
+                        } else {
+                            LazyVStack(spacing: 0) {
+                                ForEach(entries) { entry in
+                                    LibraryListRow(entry: entry, apiKey: apiKey(for: entry))
+                                }
                             }
+                            .padding(.top, 2)
                         }
-                        .padding(.top, 2)
+                    }
+                    if !trimmedFilter.isEmpty {
+                        lookupSection(hasLocalRows: !entries.isEmpty)
                     }
                 }
                 // Keep the last row clear of the floating filter bar.
@@ -430,6 +488,87 @@ struct LibraryTabContent: View {
             }
             .scrollBounceBehavior(.basedOnSize)
             .frame(maxHeight: .infinity)
+        }
+    }
+
+    /// The arr-lookup rows under the grid — the part that makes this capsule
+    /// mean the same thing as the queue's: search everywhere. In-library rows
+    /// drill into the detail overlay; add-new rows open the shared
+    /// SearchAddPanel. The "More results" header only earns its place when
+    /// grid rows sit above it — with no local matches these rows ARE the
+    /// result list, and "more" than nothing reads wrong.
+    @ViewBuilder
+    private func lookupSection(hasLocalRows: Bool) -> some View {
+        let remote = remoteResults
+        // Same reload policy as QueueSearchResultsView: a refinement keeps
+        // the previous rows up while the new lookups run — faded, with the
+        // spinner floating over their top edge, so typing never flickers
+        // list ↔ spinner and a re-search still reads as "being replaced".
+        let reloading = searchVM.isSearching && !remote.isEmpty
+        if !remote.isEmpty {
+            VStack(alignment: .leading, spacing: 2) {
+                if hasLocalRows {
+                    DetailSectionHeader("library.moreResults.header")
+                        .padding(.horizontal, 12)
+                        .padding(.top, 12)
+                }
+                ForEach(remote) { r in
+                    SearchResultRow(result: r) {
+                        if r.inLibraryArrId != nil {
+                            DetailRequest.tap(r)
+                        } else {
+                            searchResult = r
+                        }
+                    }
+                }
+            }
+            .opacity(reloading ? 0.3 : 1)
+            .overlay(alignment: .top) {
+                if reloading {
+                    ProgressView()
+                        .controlSize(.small)
+                        .padding(.top, 14)
+                }
+            }
+            .animation(.easeInOut(duration: 0.15), value: reloading)
+        } else if searchVM.isSearching {
+            // First lookups for this query still in flight. With grid rows
+            // above, the capsule's own spinner already carries the signal
+            // and this stays quiet.
+            if !hasLocalRows {
+                ProgressView()
+                    .controlSize(.small)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+            }
+        } else if !hasLocalRows {
+            // Settled with nothing anywhere — same anatomy as the queue
+            // surface's empty search, and same rule: a failed lookup says
+            // so instead of pretending there are no hits.
+            VStack(spacing: 8) {
+                Image(systemName: searchVM.errorMessage == nil
+                      ? "magnifyingglass" : "exclamationmark.triangle")
+                    .scaledFont(size: 22)
+                    .foregroundStyle(.tertiary)
+                if let error = searchVM.errorMessage {
+                    Text("search.error.title", bundle: .module)
+                        .scaledFont(size: 13, weight: .semibold)
+                    Text(error)
+                        .scaledFont(size: 11)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                } else {
+                    Text("search.noResults.title", bundle: .module)
+                        .scaledFont(size: 13, weight: .semibold)
+                    Text("search.noResults.message", bundle: .module)
+                        .scaledFont(size: 11)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 24)
+            .padding(.vertical, 28)
         }
     }
 
@@ -462,15 +601,29 @@ struct LibraryTabContent: View {
     // MARK: - Bottom filter bar
 
     /// Same floating-capsule chrome as the Queue tab's bar, minus the scope
-    /// menu — this field only narrows the cover grid, it never fires a
-    /// remote search.
+    /// menu (the arr picker up top scopes the GRID; the lookups deliberately
+    /// search every configured arr). Same meaning as the queue's bar too —
+    /// grid narrowing is just the local tier of the one search.
     private var filterBar: some View {
         HStack(spacing: 8) {
-            Image(systemName: "magnifyingglass")
-                .scaledFont(size: 15, weight: .medium)
-                .foregroundStyle(.tertiary)
+            // Fixed-size ZStack slot, same as the queue bar: swapping the
+            // leading icon via if/else shifts the TextField by ~1pt because
+            // ProgressView and the SF magnifyingglass don't render at
+            // identical intrinsic widths.
+            let showSpinner = searchVM.isSearching && !trimmedFilter.isEmpty
+            ZStack {
+                Image(systemName: "magnifyingglass")
+                    .scaledFont(size: 15, weight: .medium)
+                    .foregroundStyle(.tertiary)
+                    .opacity(showSpinner ? 0 : 1)
+                ProgressView()
+                    .controlSize(.small)
+                    .opacity(showSpinner ? 1 : 0)
+            }
+            .frame(width: 15, height: 15)
+            .animation(.easeInOut(duration: 0.12), value: showSpinner)
             TextField("", text: $filterText, prompt:
-                Text("library.filter.prompt", bundle: .module)
+                Text("search.global.prompt", bundle: .module)
             )
             .scaledFont(size: 14)
             .textFieldStyle(.plain)

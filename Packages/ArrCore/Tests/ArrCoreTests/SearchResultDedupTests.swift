@@ -4,13 +4,14 @@ import Foundation
 
 @Suite("SearchResultDedup")
 struct SearchResultDedupTests {
-    private func result(id: Int, foreignId: String = "foreign", title: String = "title", inLibraryArrId: Int?) -> SearchResult {
+    private func result(id: Int, foreignId: String = "foreign", title: String = "title",
+                        source: QueueItem.Source = .radarr, inLibraryArrId: Int?) -> SearchResult {
         SearchResult(
             externalId: id, foreignId: foreignId, title: title, subtitle: nil,
             year: nil, rating: nil, imdb: nil, rottenTomatoes: nil,
             metacritic: nil, overview: nil, runtime: nil,
             genres: [], network: nil, certification: nil,
-            posterURL: nil, source: .radarr,
+            posterURL: nil, source: source,
             inLibraryArrId: inLibraryArrId
         )
     }
@@ -82,5 +83,58 @@ struct SearchResultDedupTests {
         let queue: [QueueRowEntry] = [.single(queueItem(entityId: 2))]
         let out = SearchResultDedup.removingQueueDuplicates(libraryResults: lib, queueRows: queue)
         #expect(out.map(\.externalId) == [1, 3])
+    }
+
+    // MARK: - Library-grid dedup (Library tab's lookup section)
+
+    @Test("Same-arr in-library result the grid already matched is removed")
+    func gridDropsLocallyMatchedOwnedResult() {
+        let results = [
+            result(id: 1, source: .radarr, inLibraryArrId: 42),
+            result(id: 2, source: .radarr, inLibraryArrId: nil),
+        ]
+        let out = SearchResultDedup.removingGridDuplicates(
+            results: results, gridSource: .radarr, gridArrIds: [42])
+        #expect(out.map(\.externalId) == [2])
+    }
+
+    @Test("Same-arr in-library result the local alias match missed is kept")
+    func gridKeepsAliasMissedOwnedResult() {
+        let results = [result(id: 1, source: .radarr, inLibraryArrId: 42)]
+        let out = SearchResultDedup.removingGridDuplicates(
+            results: results, gridSource: .radarr, gridArrIds: [7])
+        #expect(out.map(\.externalId) == [1])
+    }
+
+    @Test("In-library result owned by a different arr is kept even on id collision")
+    func gridKeepsOtherArrOwnedResult() {
+        let results = [result(id: 1, source: .sonarr, inLibraryArrId: 42)]
+        let out = SearchResultDedup.removingGridDuplicates(
+            results: results, gridSource: .radarr, gridArrIds: [42])
+        #expect(out.map(\.externalId) == [1])
+    }
+
+    @Test("Add-new results are never removed")
+    func gridKeepsAddNewResults() {
+        let results = [
+            result(id: 1, source: .radarr, inLibraryArrId: nil),
+            result(id: 2, source: .sonarr, inLibraryArrId: nil),
+        ]
+        let out = SearchResultDedup.removingGridDuplicates(
+            results: results, gridSource: .radarr, gridArrIds: [1, 2])
+        #expect(out.map(\.externalId) == [1, 2])
+    }
+
+    @Test("Grid dedup preserves order of survivors")
+    func gridPreservesOrder() {
+        let results = [
+            result(id: 1, source: .radarr, inLibraryArrId: nil),
+            result(id: 2, source: .radarr, inLibraryArrId: 5),
+            result(id: 3, source: .sonarr, inLibraryArrId: 6),
+            result(id: 4, source: .radarr, inLibraryArrId: nil),
+        ]
+        let out = SearchResultDedup.removingGridDuplicates(
+            results: results, gridSource: .radarr, gridArrIds: [5])
+        #expect(out.map(\.externalId) == [1, 3, 4])
     }
 }

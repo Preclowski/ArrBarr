@@ -461,7 +461,10 @@ public struct PopoverContentView: View {
                                 selecting: $queueSelecting
                             )
                         case .library:
-                            LibraryTabContent(viewModel: libraryViewModel)
+                            LibraryTabContent(
+                                viewModel: libraryViewModel,
+                                searchResult: $searchResult
+                            )
                         case .upcoming: UpcomingTabContent(viewModel: viewModel)
                         case .chat:
                             ChatTabContent(chatHolder: chatHolder)

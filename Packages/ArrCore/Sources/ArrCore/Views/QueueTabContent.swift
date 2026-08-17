@@ -209,7 +209,7 @@ struct QueueTabContent: View {
             .frame(width: 15, height: 15)
             .animation(.easeInOut(duration: 0.12), value: showSpinner)
             TextField("", text: $queueFilter, prompt:
-                Text("queue.filterQueue.button", bundle: .module)
+                Text("search.global.prompt", bundle: .module)
             )
             .scaledFont(size: 14)
             .textFieldStyle(.plain)

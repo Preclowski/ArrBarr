@@ -28,4 +28,25 @@ public enum SearchResultDedup {
             return !queueEntityIds.contains(id)
         }
     }
+
+    /// De-duplication between the Library tab's cover grid (local alias
+    /// matches for the browsed arr) and the arr-lookup rows appended under
+    /// it. A row the grid already shows must not repeat below it — but
+    /// ONLY that row drops. Add-new hits, titles owned by a *different*
+    /// arr, and owned titles the local alias match missed all stay:
+    /// hiding an owned title reads as "you don't own it", the one wrong
+    /// answer this app must never give.
+    ///
+    /// `gridArrIds` are arr-internal record ids, which only mean anything
+    /// within one arr — hence the `gridSource` gate before the id compare.
+    public static func removingGridDuplicates(
+        results: [SearchResult],
+        gridSource: QueueItem.Source,
+        gridArrIds: Set<Int>
+    ) -> [SearchResult] {
+        results.filter { result in
+            guard result.source == gridSource, let id = result.inLibraryArrId else { return true }
+            return !gridArrIds.contains(id)
+        }
+    }
 }
