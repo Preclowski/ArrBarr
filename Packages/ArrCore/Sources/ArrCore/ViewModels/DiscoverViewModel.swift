@@ -215,6 +215,19 @@ public final class DiscoverViewModel {
                                        kind: .kept)
     }
 
+    /// Explicit "not interested": the only PERMANENT negative — a plain skip
+    /// is just a cooldown. Still lands on the undo stack, so a slip of the
+    /// finger is reversible (undo withdraws the veto signal too).
+    public func veto() {
+        guard let item = current else { return }
+        sessionSkipped.append(item)
+        SwipeSignalStore.shared.record(key: item.dedupKey,
+                                       title: item.result.title,
+                                       kind: .veto)
+        current = nil
+        advanceIfNeeded()
+    }
+
     /// Undo the most recent skip: the last skipped card becomes current again
     /// and the one on screen slides back into the queue's front. Clicking
     /// repeatedly walks further back through this session's skips. Also

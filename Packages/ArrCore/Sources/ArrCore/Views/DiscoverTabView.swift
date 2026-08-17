@@ -127,8 +127,40 @@ public struct DiscoverTabView: View {
                     actionButtons
                 }
             }
+            // Right-click (macOS) / long-press (iOS) on the card: the explicit
+            // permanent "no". The ambient ✕ is only ever a cooldown; this is
+            // the one action that bans a title for good, so it hides behind a
+            // deliberate gesture instead of sharing the button row.
+            .contextMenu {
+                if viewModel.current != nil {
+                    Button(role: .destructive, action: handleVeto) {
+                        Label {
+                            Text("discover.veto.button", bundle: .module)
+                        } icon: {
+                            Image(systemName: "hand.thumbsdown")
+                        }
+                    }
+                }
+            }
             .trailerOverlay(key: $presentedTrailer)
             .task(id: viewModel.current?.id) { await resolveTrailer(for: viewModel.current) }
+    }
+
+    /// Veto: same fly-off as a skip — the card leaves the same way, only the
+    /// memory of it differs.
+    private func handleVeto() {
+        guard !verdictInFlight else { return }
+        verdictInFlight = true
+        withAnimation(.easeOut(duration: 0.55)) {
+            dragOffset = CGSize(width: -1000, height: 0)
+        }
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 550_000_000)
+            viewModel.veto()
+            dragOffset = .zero
+            isDragging = false
+            verdictInFlight = false
+        }
     }
 
     /// Keyboard verdicts, mapped onto the swipe they mirror: ← throws the card
