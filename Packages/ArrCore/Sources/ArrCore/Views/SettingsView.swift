@@ -249,6 +249,7 @@ public struct SettingsView: View {
     private var aiPane: some View {
         Form {
             aiSection
+            TasteProfileSection()
         }
         .formStyle(.grouped)
     }
@@ -823,7 +824,10 @@ public struct SettingsView: View {
     }
 
     private var iosAIForm: some View {
-        Form { aiSection }
+        Form {
+            aiSection
+            TasteProfileSection()
+        }
             .navigationTitle(Text("settings.assistant.button", bundle: .module))
             .navigationBarTitleDisplayMode(.inline)
     }

@@ -97,6 +97,30 @@ public enum ChatViewModelFactory {
         return vm
     }
 
+    /// A bare provider for one-off, tool-less jobs — taste-profile generation.
+    /// Same provider selection as the chat, minus tools and the demo shortcut,
+    /// so the paragraph is produced by whatever model the user already trusts.
+    public static func makeBareProvider(
+        chatProvider: ChatProvider,
+        openai: OpenAIConfig,
+        appLanguage: String = "system"
+    ) -> LLMProvider {
+        switch chatProvider {
+        case .foundationModels:
+            if #available(macOS 26.0, iOS 26.0, *) {
+                return FoundationModelsProvider(
+                    invokeTool: { _, _ in ToolCallOutput(text: "") },
+                    confirmDestructive: { _ in nil }
+                )
+            }
+            return UnavailableLLMProvider()
+        case .openai:
+            guard openai.isConfigured else { return UnavailableLLMProvider() }
+            return OpenAIProvider(config: openai,
+                                  replyLanguage: replyLanguageName(appLanguage: appLanguage))
+        }
+    }
+
     /// Maps the app's language setting to an English language name for the
     /// system prompt (e.g. "pl" → "Polish"). For "system", resolves the OS's
     /// current preferred language; falls back gracefully when unknown.
