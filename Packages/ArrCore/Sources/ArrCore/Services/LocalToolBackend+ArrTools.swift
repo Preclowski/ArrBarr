@@ -424,9 +424,28 @@ extension LocalToolBackend {
         guard radarr.isConfigured else {
             return ToolCallOutput(text: "Radarr is not configured.")
         }
+        // Validate against the library BEFORE posting: Radarr answers 200 to
+        // a MoviesSearch for an id it has never heard of, so an unvalidated
+        // call reports "Search queued" while doing nothing — which is exactly
+        // how "add Perfect Blue" ended as a confirmed no-op. The classic
+        // confusion is a tmdbId in the movieId slot; when that tmdbId maps to
+        // an OWNED movie we correct it silently, otherwise we say plainly
+        // that this tool cannot add.
+        let movies = await LibraryIndex.shared.movies(config: radarr)
+        let resolvedId: Int
+        let title: String
+        if let hit = movies.first(where: { $0.id == movieId }) {
+            resolvedId = movieId
+            title = hit.title ?? "movieId \(movieId)"
+        } else if let byTmdb = movies.first(where: { $0.tmdbId == movieId }), let realId = byTmdb.id {
+            resolvedId = realId
+            title = byTmdb.title ?? "movieId \(realId)"
+        } else {
+            return ToolCallOutput(text: "movieId \(movieId) is NOT in the Radarr library, so there is nothing to search for. This tool only re-runs the indexer search for movies the user ALREADY has. There is NO tool that adds a movie — adding happens when the USER taps a card from radarr_search and confirms in the add panel. If they asked to add this title, tell them to tap its card.")
+        }
         do {
-            try await RadarrClient(config: radarr).searchMovie(movieId: movieId)
-            return ToolCallOutput(text: "Search queued. Indexers will report back into the regular queue.")
+            try await RadarrClient(config: radarr).searchMovie(movieId: resolvedId)
+            return ToolCallOutput(text: "Search queued for \(title) (movieId \(resolvedId)). Indexers will report back into the regular queue.")
         } catch {
             return ToolCallOutput(text: "Couldn't queue search: \(error.localizedDescription)")
         }

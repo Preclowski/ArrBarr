@@ -337,7 +337,7 @@ public enum ChatToolCatalog {
         ),
         MCPTool(
             name: "radarr_search_movie",
-            description: "Force an indexer search for one movie. USE for 'this didn't download, try again', 'spróbuj ściągnąć ponownie', 'try to grab a better quality of X'. Monitoring isn't changed — if you also need to flip monitor on, just add the movie via the UI card flow first. Returns confirmation text; results land in the queue when indexers respond.",
+            description: "Force an indexer search for one movie the user ALREADY HAS in Radarr. USE for 'this didn't download, try again', 'spróbuj ściągnąć ponownie', 'try to grab a better quality of X'. NEVER the second step of adding a movie: adding finishes when the USER taps a card from radarr_search and confirms in the add panel — there is no tool for it, and calling this with a not-in-library id (or a tmdbId) does nothing. Returns confirmation text; results land in the queue when indexers respond.",
             inputSchema: .object([
                 "type": .string("object"),
                 "properties": .object([
