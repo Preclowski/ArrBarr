@@ -310,7 +310,22 @@ public struct PopoverContentView: View {
                 guard let item = note.userInfo?["item"] as? QueueItem else { return }
                 searchResult = nil
                 historySource = nil
-                withAnimation(.smooth(duration: 0.22)) { detailItem = item }
+                if detailItem == nil {
+                    withAnimation(.smooth(duration: 0.22)) { detailItem = item }
+                } else {
+                    // A detail is already pushed — and possibly a person view
+                    // above it, pushed from that detail's own cast strip
+                    // (detail → actor → tap a film in the filmography lands
+                    // here). Replacing the item in place swaps the stack's
+                    // middle entry and orphans that child destination: nothing
+                    // can pop it any more, and Back on the new detail goes
+                    // dead. Unwind the whole branch first, then push the
+                    // replacement on the next runloop pass.
+                    detailItem = nil
+                    Task { @MainActor in
+                        withAnimation(.smooth(duration: 0.22)) { detailItem = item }
+                    }
+                }
             }
             .onReceive(NotificationCenter.default.publisher(for: .arrBarrOpenPerson)) { note in
                 guard let ref = note.userInfo?["ref"] as? PersonRef else { return }

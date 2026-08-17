@@ -194,7 +194,8 @@ public final class DiscoverViewModel {
             // fact — without this the very next deck deals the same card.
             SwipeSignalStore.shared.record(key: item.dedupKey,
                                            title: item.result.title,
-                                           kind: .skipped)
+                                           kind: .skipped,
+                                           media: item.kind == .movie ? .movie : .show)
         }
         current = nil
         advanceIfNeeded()
@@ -212,7 +213,8 @@ public final class DiscoverViewModel {
         // so a kept title can't stay suppressed by last month's mood.
         SwipeSignalStore.shared.record(key: item.dedupKey,
                                        title: item.result.title,
-                                       kind: .kept)
+                                       kind: .kept,
+                                       media: item.kind == .movie ? .movie : .show)
     }
 
     /// Explicit "not interested": the only PERMANENT negative — a plain skip
@@ -223,7 +225,8 @@ public final class DiscoverViewModel {
         sessionSkipped.append(item)
         SwipeSignalStore.shared.record(key: item.dedupKey,
                                        title: item.result.title,
-                                       kind: .veto)
+                                       kind: .veto,
+                                       media: item.kind == .movie ? .movie : .show)
         current = nil
         advanceIfNeeded()
     }

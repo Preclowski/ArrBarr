@@ -100,8 +100,15 @@ public struct QuizSettingsPane: View {
                 // Totals up front — the list below caps at 20, and without
                 // this line the cap reads as "that's all there is".
                 summaryRow(all)
-                ForEach(signals, id: \.key) { signal in
-                    signalRow(signal)
+                ForEach(mediaGroups(signals), id: \.id) { group in
+                    Text(group.label, bundle: .module)
+                        .scaledFont(size: 10, weight: .semibold)
+                        .foregroundStyle(.secondary)
+                        .textCase(.uppercase)
+                        .padding(.top, 2)
+                    ForEach(group.rows, id: \.key) { signal in
+                        signalRow(signal)
+                    }
                 }
                 let skips = all.filter { $0.kind == .skipped }.count
                 if skips > 0 {
@@ -118,6 +125,23 @@ public struct QuizSettingsPane: View {
             Text("settings.taste.signals.title", bundle: .module)
         }
         .id(signalsTick)
+    }
+
+    /// Rows split per media type — movies, series, music — matching how the
+    /// arrs split the world. Entries persisted before the media field existed
+    /// land in a trailing "Other" bucket rather than being guessed.
+    private func mediaGroups(_ signals: [SwipeSignal])
+        -> [(id: String, label: LocalizedStringKey, rows: [SwipeSignal])] {
+        let buckets: [(String, LocalizedStringKey, (SwipeSignal) -> Bool)] = [
+            ("movies", "settings.quiz.media.movies", { $0.media == .movie }),
+            ("series", "settings.quiz.media.series", { $0.media == .show }),
+            ("music", "settings.quiz.media.music", { $0.media == .music }),
+            ("other", "settings.quiz.media.other", { $0.media == nil }),
+        ]
+        return buckets.compactMap { id, label, match in
+            let rows = signals.filter(match)
+            return rows.isEmpty ? nil : (id, label, rows)
+        }
     }
 
     /// One capsule per kind with its total, in the same colours as the row

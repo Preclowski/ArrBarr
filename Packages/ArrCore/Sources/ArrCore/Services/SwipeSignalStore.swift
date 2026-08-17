@@ -13,6 +13,12 @@ public struct SwipeSignal: Codable, Sendable, Equatable {
         /// the only one the user said out loud.
         case veto
     }
+    /// What the title IS — drives the per-type grouping in the settings
+    /// pane. Optional because entries persisted before the field existed
+    /// decode without it.
+    public enum Media: String, Codable, Sendable {
+        case movie, show, music
+    }
     public var key: String
     /// Human-readable label for the future signals UI; never matched on.
     public var title: String
@@ -21,6 +27,7 @@ public struct SwipeSignal: Codable, Sendable, Equatable {
     public var date: Date
     /// How many times this title was skipped, across sessions.
     public var count: Int
+    public var media: Media?
 }
 
 /// Persistent quiz-swipe memory. Before this, every `seed()` wiped the
@@ -61,7 +68,8 @@ public final class SwipeSignalStore {
 
     // MARK: - Recording
 
-    public func record(key: String, title: String, kind: SwipeSignal.Kind, now: Date = Date()) {
+    public func record(key: String, title: String, kind: SwipeSignal.Kind,
+                       media: SwipeSignal.Media? = nil, now: Date = Date()) {
         guard !key.isEmpty else { return }
         if let idx = signals.firstIndex(where: { $0.key == key }) {
             var signal = signals[idx]
@@ -81,11 +89,13 @@ public final class SwipeSignalStore {
                 signal.count = (kind == .skipped) ? signal.count + 1 : signal.count
             }
             signal.title = title
+            if let media { signal.media = media }
             signals.remove(at: idx)
             signals.append(signal)   // newest last → cap drops oldest first
         } else {
             signals.append(SwipeSignal(key: key, title: title, kind: kind,
-                                       date: now, count: kind == .skipped ? 1 : 0))
+                                       date: now, count: kind == .skipped ? 1 : 0,
+                                       media: media))
         }
         enforceCap()
         persist()
