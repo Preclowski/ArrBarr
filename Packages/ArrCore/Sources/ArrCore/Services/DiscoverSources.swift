@@ -145,14 +145,15 @@ public enum DiscoverSources {
             } catch {
                 return []
             }
-            var out: [DiscoverItem] = []
-            for s in parsed.suggestions {
+            // The lookups fan out (order-preserving, bounded) — done one by
+            // one this was the Discover tab's slowest step by far.
+            let out: [DiscoverItem] = await ParallelResolve.orderedMap(parsed.suggestions, width: 8) { s -> DiscoverItem? in
                 let resolvedKind: DiscoverItemKind = s.kind ?? (kindHint == .show ? .show : .movie)
                 let term = s.year.map { "\(s.title) \($0)" } ?? s.title
                 switch resolvedKind {
                 case .movie:
                     let hits = (try? await radarrLookup(term)) ?? []
-                    guard let first = hits.first else { continue }
+                    guard let first = hits.first else { return nil }
                     let tmdbId = first.tmdbId ?? 0
                     let poster: URL? = posterURL(from: first.images)
                     let result = SearchResult(
@@ -170,11 +171,11 @@ public enum DiscoverSources {
                         source: .radarr,
                         inLibraryArrId: nil
                     )
-                    out.append(DiscoverItem(result: result, action: .addToRadarr,
-                                            originLabel: .llm, kind: .movie))
+                    return DiscoverItem(result: result, action: .addToRadarr,
+                                        originLabel: .llm, kind: .movie)
                 case .show:
                     let hits = (try? await sonarrLookup(term)) ?? []
-                    guard let first = hits.first else { continue }
+                    guard let first = hits.first else { return nil }
                     let tvdbId = first.tvdbId ?? 0
                     let poster: URL? = posterURL(from: first.images)
                     let result = SearchResult(
@@ -188,12 +189,13 @@ public enum DiscoverSources {
                         certification: nil,
                         posterURL: poster,
                         source: .sonarr,
-                        inLibraryArrId: nil
+                        inLibraryArrId: nil,
+                        tmdbTVId: first.tmdbId
                     )
-                    out.append(DiscoverItem(result: result, action: .addToSonarr,
-                                            originLabel: .llm, kind: .show))
+                    return DiscoverItem(result: result, action: .addToSonarr,
+                                        originLabel: .llm, kind: .show)
                 }
-            }
+            }.compactMap { $0 }
             return out
         }
     }
