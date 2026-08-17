@@ -188,7 +188,14 @@ public final class DiscoverViewModel {
     /// engagement signal and advances to the next. This is the only action
     /// that advances the deck.
     public func skip() {
-        if let item = current { sessionSkipped.append(item) }
+        if let item = current {
+            sessionSkipped.append(item)
+            // Persist the verdict: a skip is a cooldown, not a session-local
+            // fact — without this the very next deck deals the same card.
+            SwipeSignalStore.shared.record(key: item.dedupKey,
+                                           title: item.result.title,
+                                           kind: .skipped)
+        }
         current = nil
         advanceIfNeeded()
     }
@@ -201,6 +208,11 @@ public final class DiscoverViewModel {
         guard let item = current,
               !sessionMatched.contains(where: { $0.dedupKey == item.dedupKey }) else { return }
         sessionMatched.append(item)
+        // Positive signal outlives the session — and clears any stale skip,
+        // so a kept title can't stay suppressed by last month's mood.
+        SwipeSignalStore.shared.record(key: item.dedupKey,
+                                       title: item.result.title,
+                                       kind: .kept)
     }
 
     /// True when the user has actually engaged with the deck this session.

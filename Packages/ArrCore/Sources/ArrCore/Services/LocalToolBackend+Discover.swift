@@ -272,7 +272,17 @@ extension LocalToolBackend {
         // Dedupe similar against curated by dedupKey so we don't double-show.
         let curatedKeys = Set(filtered.map(\.dedupKey))
         let extraSimilars = similarItems.filter { !curatedKeys.contains($0.dedupKey) }
-        let combined = filtered + extraSimilars
+        let merged = filtered + extraSimilars
+
+        // Persistent swipe memory: titles on an active skip cooldown (or
+        // vetoed) stay out of every new deck. Reported to the model so a
+        // heavily-suppressed round doesn't read as a resolution failure.
+        let suppressedKeys = await MainActor.run { SwipeSignalStore.shared.suppressedKeys() }
+        let combined = merged.filter { !suppressedKeys.contains($0.dedupKey) }
+        let suppressedCount = merged.count - combined.count
+        if combined.isEmpty {
+            return ToolCallOutput(text: "All \(merged.count) picks are on the user's skip cooldown or not-interested list — they swiped these away recently. Pick different titles (different decade, adjacent genre) rather than resending the same set.")
+        }
 
         // Top-up rounds are deduped HERE, against the live deck, rather than
         // silently inside `DiscoverViewModel.extend`. A round the deck would
@@ -307,7 +317,10 @@ extension LocalToolBackend {
         }
         let frontPosters = payload.prefix(3).compactMap { $0.result.posterURL }
         let curatedCount = payload.filter { curatedKeys.contains($0.dedupKey) }.count
-        let summary = "Opened Discover quiz with \(payload.count) picks for: \(label) (\(curatedCount) curated + \(payload.count - curatedCount) similar)"
+        var summary = "Opened Discover quiz with \(payload.count) picks for: \(label) (\(curatedCount) curated + \(payload.count - curatedCount) similar)"
+        if suppressedCount > 0 {
+            summary += ". \(suppressedCount) pick\(suppressedCount == 1 ? "" : "s") dropped — recently skipped by the user or marked not interested."
+        }
         return ToolCallOutput(text: summary, rich: .discoverSession(mood: label, posterURLs: Array(frontPosters)))
     }
 
