@@ -96,7 +96,7 @@ extension LocalToolBackend {
     /// the arr lookup (bounded fan-out), cross-referenced against the library
     /// map so owned picks open detail instead of the add flow.
     private func resolveCuratedPicks(
-        _ capped: [(title: String, year: Int?, tmdbId: Int?, reason: String?)], kind: String
+        _ capped: [(title: String, year: Int?, tmdbId: Int?)], kind: String
     ) async -> [DiscoverItem] {
         // Library map fetched in parallel with the per-pick lookups (mirrors
         // suggest_titles). Owned picks get inLibraryArrId set and
@@ -140,10 +140,10 @@ extension LocalToolBackend {
                     let owned = resultBase.withInLibraryArrId(arrId)
                     return DiscoverItem(result: owned,
                                         action: .openDetail(source: .radarr, arrId: arrId),
-                                        originLabel: .library, kind: .movie, reason: pick.reason)
+                                        originLabel: .library, kind: .movie)
                 }
                 return DiscoverItem(result: resultBase, action: .addToRadarr,
-                                    originLabel: .llm, kind: .movie, reason: pick.reason)
+                                    originLabel: .llm, kind: .movie)
             case "series":
                 guard sonarrConfigured else { return nil }
                 let hits = (try? await sonarrClient.lookupSeries(term: term)) ?? []
@@ -168,10 +168,10 @@ extension LocalToolBackend {
                     let owned = resultBase.withInLibraryArrId(arrId)
                     return DiscoverItem(result: owned,
                                         action: .openDetail(source: .sonarr, arrId: arrId),
-                                        originLabel: .library, kind: .show, reason: pick.reason)
+                                        originLabel: .library, kind: .show)
                 }
                 return DiscoverItem(result: resultBase, action: .addToSonarr,
-                                    originLabel: .llm, kind: .show, reason: pick.reason)
+                                    originLabel: .llm, kind: .show)
             default: return nil
             }
         }.compactMap { $0 }
@@ -259,6 +259,7 @@ extension LocalToolBackend {
             }
             return false
         }()
+        var thinRoundNote = ""
 
         // Fetch TMDB Similar results for any kept-item anchors in parallel,
         // then merge them with the agent's curated picks.
@@ -304,6 +305,11 @@ extension LocalToolBackend {
                 return ToolCallOutput(text: "All \(split.dropped.count) picks are already in this quiz session (\(repeats)). Widen the net before retrying — different decade, adjacent genre, or less canonical titles — and send the next round with append: true.")
             }
             payload = split.fresh
+            if payload.count < 6 {
+                // Not worth another model round for the missing few — post
+                // what landed, but teach the NEXT round to arrive ~10 strong.
+                thinRoundNote = " Only \(payload.count) fresh card\(payload.count == 1 ? "" : "s") landed this round — next append send a bigger, deeper batch (25-40 picks) so top-ups arrive ~10 at a time."
+            }
         } else {
             payload = combined
         }
@@ -344,7 +350,7 @@ extension LocalToolBackend {
         if suppressedCount > 0 {
             summary += ". \(suppressedCount) pick\(suppressedCount == 1 ? "" : "s") dropped because the user recently skipped them — the smaller deck is CORRECT, do not top it up."
         }
-        summary += " THIS IS THE DECK — the session is open and the user is swiping. Do NOT call discover_in_quiz again this turn, even if the deck is small; the user will ask when they want more."
+        summary += " THIS IS THE DECK — the session is open and the user is swiping. Do NOT call discover_in_quiz again this turn, even if the deck is small; the user will ask when they want more.\(thinRoundNote)"
         return ToolCallOutput(text: summary, rich: .discoverSession(mood: label, posterURLs: Array(frontPosters)))
     }
 

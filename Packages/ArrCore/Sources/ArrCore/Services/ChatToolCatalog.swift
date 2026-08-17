@@ -651,7 +651,7 @@ public enum ChatToolCatalog {
 
             ONE DECK PER REQUEST — never call this tool twice in one turn. Once a call reports "Opened Discover quiz", that deck IS the answer: a small deck (picks dropped as owned or recently skipped) is still the deck, and rebuilding it opens duplicate sessions and reads as a loop. The single exception: when the tool says EVERY pick was already owned, you get one corrective call seeded from a check_titles-verified list — one, never a third.
 
-            Pass `append: true` when the user asks for MORE picks continuing the current vibe — that extends the active deck instead of starting over.
+            Pass `append: true` when the user asks for MORE picks continuing the current vibe — that extends the active deck instead of starting over. Size appended rounds so ~10-15 FRESH cards actually land after owned/shown/skipped filtering: send 25-40 picks per round, never a handful — a round that lands 2 cards just makes the user watch loading again two swipes later.
 
             Set `library_mode` from the user's intent: "new" (default) excludes titles already in their library; "library" fills the deck from titles they own — use it when they want to rediscover their collection. With library_mode "library" you may OMIT `items` entirely and pass `genre` / `startYear` / `endYear` instead: the deck is then drawn straight from their library snapshot (instant, watched titles excluded, top-rated pool with a random draw) — prefer that over inventing a list of titles they own.
 
@@ -692,10 +692,7 @@ public enum ChatToolCatalog {
                                     "type": .string("integer"),
                                     "description": .string("Optional TMDB id when you already hold one. Resolves exactly and skips the title search. Never guess it."),
                                 ]),
-                                "reason": .object([
-                                    "type": .string("string"),
-                                    "description": .string("RARELY. Only when a pick has a genuinely PERSONAL hook — it connects to something the user kept, watched or asked for ('Bo zatrzymałeś Sicario'). NEVER a description of the title itself ('mroczny thriller sci-fi' is banned — the card already shows genre and overview). At most 3-4 items per call get one; writing a reason for every pick doubles your response time and reads as noise. In the USER'S language, under ~8 words."),
-                                ]),
+
                             ]),
                             "required": .array([.string("title")]),
                         ]),

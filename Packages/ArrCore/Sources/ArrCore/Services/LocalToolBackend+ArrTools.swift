@@ -583,8 +583,11 @@ extension LocalToolBackend {
 
     /// Pull `items: [{title, year?, tmdbId?}]` out of the JSON-RPC arguments.
     /// Permissive — drops malformed entries silently so a model that
-    /// fumbles one item doesn't kill the whole call.
-    static func suggestItems(_ value: JSONValue) -> [(title: String, year: Int?, tmdbId: Int?, reason: String?)] {
+    /// fumbles one item doesn't kill the whole call. No `reason` field:
+    /// model-authored reasons came back as plot blurbs on every card and
+    /// visibly slowed generation, so card reasons are computed-only now
+    /// (anchors, library decks).
+    static func suggestItems(_ value: JSONValue) -> [(title: String, year: Int?, tmdbId: Int?)] {
         guard case .object(let dict) = value, case .array(let arr) = dict["items"] else { return [] }
         func intValue(_ raw: JSONValue?) -> Int? {
             switch raw {
@@ -593,15 +596,11 @@ extension LocalToolBackend {
             default: return nil
             }
         }
-        return arr.compactMap { entry -> (String, Int?, Int?, String?)? in
+        return arr.compactMap { entry -> (String, Int?, Int?)? in
             guard case .object(let obj) = entry,
                   case .string(let title) = obj["title"],
                   !title.isEmpty else { return nil }
-            let reason: String? = {
-                if case .string(let r) = obj["reason"], !r.isEmpty { return r }
-                return nil
-            }()
-            return (title, intValue(obj["year"]), intValue(obj["tmdbId"]), reason)
+            return (title, intValue(obj["year"]), intValue(obj["tmdbId"]))
         }
     }
 
