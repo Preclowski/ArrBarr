@@ -79,7 +79,11 @@ extension LocalToolBackend {
 
         if filtered.isEmpty {
             if !resolved.isEmpty && libraryMode == "new" {
-                return ToolCallOutput(text: "All \(resolved.count) picks are already in the user's library — a library this size owns the obvious choices. Do NOT retry by guessing another batch: call check_titles with 25-40 candidates (deeper cuts, not the canon) in ONE call, then seed the quiz with only the ones it reports as NOT in library. Or pass library_mode: 'library' if they want to rediscover what they own.")
+                let size = [LibraryStats.shared.movieCount.map { "\($0) movies" },
+                            LibraryStats.shared.seriesCount.map { "\($0) series" }]
+                    .compactMap { $0 }.joined(separator: ", ")
+                let sizeNote = size.isEmpty ? "" : " (the library holds \(size))"
+                return ToolCallOutput(text: "All \(resolved.count) picks are already in the user's library\(sizeNote) — a library this size owns the obvious choices. Do NOT retry by guessing another batch: call check_titles with 25-40 candidates (deeper cuts, not the canon) in ONE call, then seed the quiz with only the ones it reports as NOT in library. Or pass library_mode: 'library' if they want to rediscover what they own.")
             }
             return ToolCallOutput(text: "Couldn't resolve any of those picks through \(kind == "movie" ? "Radarr" : "Sonarr") lookup. Try other titles or check the service config.")
         }

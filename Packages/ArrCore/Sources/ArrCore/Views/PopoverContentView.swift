@@ -470,6 +470,7 @@ public struct PopoverContentView: View {
                     // The top-up round IS a chat turn, so the agent's own
                     // thinking flag is what the deck should wait on.
                     moreInFlight: chatHolder.vm.isThinking,
+                    isObscured: discoverParked,
                     onClose: {
                         withAnimation(.smooth(duration: 0.22)) { showDiscoverOverlay = false }
                     },

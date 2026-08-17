@@ -31,6 +31,17 @@ public enum ChatViewModelFactory {
             mediaServer: mediaServer
         )
 
+        // Warm the library snapshot in the background: the first quiz /
+        // library call then hits a fresh cache instead of paying the heaviest
+        // fetch, and the system prompt's library-size line (LibraryStats) is
+        // populated before the first turn rather than after it.
+        if !DemoMode.isActive {
+            Task.detached(priority: .utility) {
+                if radarr.isConfigured { _ = await LibraryIndex.shared.movies(config: radarr) }
+                if sonarr.isConfigured { _ = await LibraryIndex.shared.series(config: sonarr) }
+            }
+        }
+
         let tmdbEnabled = !tmdbApiKey.isEmpty
         let llmTools = ChatToolCatalog.llmTools(
             includeSonarr: sonarr.isConfigured,

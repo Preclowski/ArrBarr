@@ -62,6 +62,7 @@ public actor LibraryIndex {
             return slot.records
         }
         movieSlot = Slot(records: records, fetchedAt: Date(), fingerprint: fingerprint)
+        LibraryStats.shared.setMovieCount(records.count)
         return records
     }
 
@@ -82,6 +83,7 @@ public actor LibraryIndex {
             return slot.records
         }
         seriesSlot = Slot(records: records, fetchedAt: Date(), fingerprint: fingerprint)
+        LibraryStats.shared.setSeriesCount(records.count)
         return records
     }
 

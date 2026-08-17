@@ -120,6 +120,7 @@ public struct OpenAIProvider: LLMProvider {
     static func buildRequestBody(model: String, prompt: String, tools: [LLMTool], history: [ChatMessage], replyLanguage: String = "English", tasteProfile: String? = nil) -> ChatCompletionsRequest {
         let arrs = SystemPromptComposer.arrsClause(tools: tools)
         let tasteClause = tasteProfile.map { "\n\($0)\n" } ?? ""
+        let libraryClause = tools.isEmpty ? "" : (LibraryStats.shared.promptBlock().map { "\n\($0)\n" } ?? "")
         let systemMessage = ChatCompletionsRequest.Message(
             role: "system",
             content: """
@@ -130,7 +131,7 @@ public struct OpenAIProvider: LLMProvider {
             Only use tools from the provided list.
             Division of labour: the taste is yours, the facts are the tools'. You decide WHAT to recommend; only the tools know what the user already owns (the arrs) and what they have already watched (the media server). So whenever you have named titles and the answer depends on their shelf — "something I don't have yet", "have I seen these", "what should I watch tonight" — call check_titles ONCE with the whole candidate list before you recommend, rather than guessing or firing a tool per title. A large library already owns the obvious classics: reach past the canon.
             Independent calls go out together, in the same turn. Browsing the shelf by filter and checking your own candidates answer different questions and neither needs the other's result — issuing them one after another costs the user an extra round for nothing.
-            \(tasteClause)
+            \(libraryClause)\(tasteClause)
             Replies render as GitHub-flavored Markdown, so format for clarity.
             You MAY use:
               • Markdown tables — ideal for comparing a few titles/specs

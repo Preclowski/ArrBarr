@@ -9,6 +9,11 @@ public struct DiscoverTabView: View {
     /// better than a fixed timer, which either cuts the wait short or leaves a
     /// spinner up long after the agent gave up.
     var moreInFlight: Bool = false
+    /// True while another overlay (DetailView / SearchAddPanel) is drawn on
+    /// top of the parked deck. Parking disables clicks, but keyboard focus is
+    /// its own channel — without this the arrow keys kept swiping cards
+    /// underneath the detail view.
+    var isObscured: Bool = false
     let onClose: () -> Void
     let onRequestMore: (_ mood: String, _ kept: [DiscoverItem], _ skipped: [DiscoverItem]) -> Void
 
@@ -55,12 +60,14 @@ public struct DiscoverTabView: View {
                 llmAvailable: Bool,
                 radarrAvailable: Bool,
                 moreInFlight: Bool = false,
+                isObscured: Bool = false,
                 onClose: @escaping () -> Void,
                 onRequestMore: @escaping (_ mood: String, _ kept: [DiscoverItem], _ skipped: [DiscoverItem]) -> Void = { _, _, _ in }) {
         self.viewModel = viewModel
         self.llmAvailable = llmAvailable
         self.radarrAvailable = radarrAvailable
         self.moreInFlight = moreInFlight
+        self.isObscured = isObscured
         self.onClose = onClose
         self.onRequestMore = onRequestMore
     }
@@ -169,12 +176,16 @@ public struct DiscoverTabView: View {
     /// and nothing else to bind.
     private var deckWithKeyboard: some View {
         decoratedDeck
-            .focusable(viewModel.current != nil)
+            .focusable(viewModel.current != nil && !isObscured)
             .focusEffectDisabled()
             .focused($deckFocused)
             .onKeyPress(.leftArrow) { keyVerdict(skip: true) }
             .onKeyPress(.rightArrow) { keyVerdict(skip: false) }
             .onAppear { deckFocused = true }
+            // Focus follows the obscuring overlay: released the moment a
+            // detail/add surface opens on top, restored when the deck is
+            // front again.
+            .onChange(of: isObscured) { _, obscured in deckFocused = !obscured }
             // Focus comes back with the deck: after a card is added the panel
             // closes onto a new top card, and after the trailer is dismissed the
             // deck is live again — in both cases the keys should just work
@@ -311,21 +322,32 @@ public struct DiscoverTabView: View {
     /// the card flying LEFT), + = add to collection (accent). Each lifts as
     /// the drag heads its way; colours mirror the swipe tint.
     private var actionButtons: some View {
-        HStack(spacing: 30) {
-            // Rewind: bring the last skipped card back (tap again to walk
-            // further back). Smaller than the verdicts — it corrects a
-            // decision rather than making one — and absent until there is
-            // something to undo, so the resting layout stays two buttons.
+        // The three VERDICT buttons stay centered as their own cluster; the
+        // rewind sits off to the leading edge, outside the cluster — it
+        // corrects a decision rather than making one, and folding it into
+        // the centered row made every undo shove the main actions sideways.
+        ZStack {
+            centeredVerdictButtons
             if viewModel.canUndoSkip {
-                GlassCircleButton(
-                    systemName: "arrow.uturn.backward",
-                    tint: .secondary,
-                    diameter: Layout.buttonDiameter * 0.72,
-                    accessibilityKey: "discover.undo.button",
-                    action: handleUndo
-                )
-                .transition(.opacity.combined(with: .scale(scale: 0.8)))
+                HStack {
+                    GlassCircleButton(
+                        systemName: "arrow.uturn.backward",
+                        tint: .secondary,
+                        diameter: Layout.buttonDiameter * 0.72,
+                        accessibilityKey: "discover.undo.button",
+                        action: handleUndo
+                    )
+                    .transition(.opacity.combined(with: .scale(scale: 0.8)))
+                    Spacer()
+                }
+                .padding(.leading, 20)
             }
+        }
+        .padding(.bottom, Layout.buttonBottomPadding)
+    }
+
+    private var centeredVerdictButtons: some View {
+        HStack(spacing: 30) {
             GlassCircleButton(
                 systemName: "xmark",
                 tint: .secondary,
@@ -360,7 +382,6 @@ public struct DiscoverTabView: View {
                 action: handleAdd
             )
         }
-        .padding(.bottom, Layout.buttonBottomPadding)
     }
 
     /// Resolves the top card's trailer. `foreignId` is the arr's own foreign
@@ -476,7 +497,8 @@ public struct DiscoverTabView: View {
     /// flying off or the trailer is up: a held-down arrow should not burn
     /// through the deck faster than the user can see it.
     private func keyVerdict(skip: Bool) -> KeyPress.Result {
-        guard viewModel.current != nil, presentedTrailer == nil, !verdictInFlight else { return .ignored }
+        guard viewModel.current != nil, presentedTrailer == nil, !verdictInFlight,
+              !isObscured else { return .ignored }
         if skip { handleSkip() } else { handleAdd() }
         return .handled
     }
