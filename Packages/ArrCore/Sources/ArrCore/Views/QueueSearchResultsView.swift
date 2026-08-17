@@ -32,10 +32,8 @@ struct QueueSearchResultsView: View {
         let combined = SearchRelevance.sortedByRelevance(library + newOnes, input: searchViewModel.parsedInput)
         // Refining a query ("matrix" → "matrix 2") keeps the previous rows up
         // while the new lookups run — deliberately, so typing doesn't flicker
-        // list ↔ spinner. But those rows still answer the *old* query, and a
-        // loader appended under them lands below the fold. Fade them and float
-        // a spinner over their top edge instead: no layout shift, and a
-        // re-search always reads as "these are being replaced".
+        // list ↔ spinner. See `lookupReloadDim` for what those stale rows
+        // wear meanwhile.
         let reloading = searchViewModel.isSearching && !combined.isEmpty
 
         VStack(alignment: .leading, spacing: 0) {
@@ -82,46 +80,13 @@ struct QueueSearchResultsView: View {
                     starringSection(starring)
                 }
             }
-            .opacity(reloading ? 0.3 : 1)
-            .overlay(alignment: .top) {
-                if reloading {
-                    ProgressView()
-                        .controlSize(.small)
-                        .padding(.top, 14)
-                }
-            }
-            .animation(.easeInOut(duration: 0.15), value: reloading)
+            .lookupReloadDim(reloading)
 
             // Settled empty search: every bucket came back empty and the
             // lookups are done. Without this the surface is just blank rows
             // of nothing, which reads as "still loading" or "broken".
-            // An error state is NOT an empty state — when a lookup failed
-            // the message says so instead of pretending there are no hits.
             if showsEmptyState {
-                VStack(spacing: 8) {
-                    Image(systemName: searchViewModel.errorMessage == nil
-                          ? "magnifyingglass" : "exclamationmark.triangle")
-                        .scaledFont(size: 22)
-                        .foregroundStyle(.tertiary)
-                    if let error = searchViewModel.errorMessage {
-                        Text("search.error.title", bundle: .module)
-                            .scaledFont(size: 13, weight: .semibold)
-                        Text(error)
-                            .scaledFont(size: 11)
-                            .foregroundStyle(.secondary)
-                            .multilineTextAlignment(.center)
-                    } else {
-                        Text("search.noResults.title", bundle: .module)
-                            .scaledFont(size: 13, weight: .semibold)
-                        Text("search.noResults.message", bundle: .module)
-                            .scaledFont(size: 11)
-                            .foregroundStyle(.secondary)
-                            .multilineTextAlignment(.center)
-                    }
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.horizontal, 24)
-                .padding(.vertical, 28)
+                SearchLookupEmptyState(errorMessage: searchViewModel.errorMessage)
             }
         }
     }

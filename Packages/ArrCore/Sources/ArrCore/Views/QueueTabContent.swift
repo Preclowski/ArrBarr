@@ -190,24 +190,7 @@ struct QueueTabContent: View {
         // the user gets no visible feedback unless we anchor the
         // spinner here.
         HStack(spacing: 8) {
-            // Fixed-size ZStack slot — swapping the leading icon via
-            // if/else used to shift the TextField by ~1pt because
-            // ProgressView and the SF magnifyingglass don't render
-            // at identical intrinsic widths. Both layers always
-            // exist; only opacity changes, so the layout doesn't
-            // twitch while typing.
-            let showSpinner = searchAvailable && searchViewModel.isSearching && isFiltering
-            ZStack {
-                Image(systemName: "magnifyingglass")
-                    .scaledFont(size: 15, weight: .medium)
-                    .foregroundStyle(.tertiary)
-                    .opacity(showSpinner ? 0 : 1)
-                ProgressView()
-                    .controlSize(.small)
-                    .opacity(showSpinner ? 1 : 0)
-            }
-            .frame(width: 15, height: 15)
-            .animation(.easeInOut(duration: 0.12), value: showSpinner)
+            SearchFieldLeadingIcon(spinning: searchAvailable && searchViewModel.isSearching && isFiltering)
             TextField("", text: $queueFilter, prompt:
                 Text("search.global.prompt", bundle: .module)
             )

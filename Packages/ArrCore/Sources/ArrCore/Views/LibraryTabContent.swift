@@ -500,10 +500,8 @@ struct LibraryTabContent: View {
     @ViewBuilder
     private func lookupSection(hasLocalRows: Bool) -> some View {
         let remote = remoteResults
-        // Same reload policy as QueueSearchResultsView: a refinement keeps
-        // the previous rows up while the new lookups run — faded, with the
-        // spinner floating over their top edge, so typing never flickers
-        // list ↔ spinner and a re-search still reads as "being replaced".
+        // Refinements keep the previous rows up while the new lookups run —
+        // see `lookupReloadDim` for the treatment they get meanwhile.
         let reloading = searchVM.isSearching && !remote.isEmpty
         if !remote.isEmpty {
             VStack(alignment: .leading, spacing: 2) {
@@ -522,15 +520,7 @@ struct LibraryTabContent: View {
                     }
                 }
             }
-            .opacity(reloading ? 0.3 : 1)
-            .overlay(alignment: .top) {
-                if reloading {
-                    ProgressView()
-                        .controlSize(.small)
-                        .padding(.top, 14)
-                }
-            }
-            .animation(.easeInOut(duration: 0.15), value: reloading)
+            .lookupReloadDim(reloading)
         } else if searchVM.isSearching {
             // First lookups for this query still in flight. With grid rows
             // above, the capsule's own spinner already carries the signal
@@ -542,33 +532,7 @@ struct LibraryTabContent: View {
                     .padding(.vertical, 16)
             }
         } else if !hasLocalRows {
-            // Settled with nothing anywhere — same anatomy as the queue
-            // surface's empty search, and same rule: a failed lookup says
-            // so instead of pretending there are no hits.
-            VStack(spacing: 8) {
-                Image(systemName: searchVM.errorMessage == nil
-                      ? "magnifyingglass" : "exclamationmark.triangle")
-                    .scaledFont(size: 22)
-                    .foregroundStyle(.tertiary)
-                if let error = searchVM.errorMessage {
-                    Text("search.error.title", bundle: .module)
-                        .scaledFont(size: 13, weight: .semibold)
-                    Text(error)
-                        .scaledFont(size: 11)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                } else {
-                    Text("search.noResults.title", bundle: .module)
-                        .scaledFont(size: 13, weight: .semibold)
-                    Text("search.noResults.message", bundle: .module)
-                        .scaledFont(size: 11)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                }
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.horizontal, 24)
-            .padding(.vertical, 28)
+            SearchLookupEmptyState(errorMessage: searchVM.errorMessage)
         }
     }
 
@@ -606,22 +570,7 @@ struct LibraryTabContent: View {
     /// grid narrowing is just the local tier of the one search.
     private var filterBar: some View {
         HStack(spacing: 8) {
-            // Fixed-size ZStack slot, same as the queue bar: swapping the
-            // leading icon via if/else shifts the TextField by ~1pt because
-            // ProgressView and the SF magnifyingglass don't render at
-            // identical intrinsic widths.
-            let showSpinner = searchVM.isSearching && !trimmedFilter.isEmpty
-            ZStack {
-                Image(systemName: "magnifyingglass")
-                    .scaledFont(size: 15, weight: .medium)
-                    .foregroundStyle(.tertiary)
-                    .opacity(showSpinner ? 0 : 1)
-                ProgressView()
-                    .controlSize(.small)
-                    .opacity(showSpinner ? 1 : 0)
-            }
-            .frame(width: 15, height: 15)
-            .animation(.easeInOut(duration: 0.12), value: showSpinner)
+            SearchFieldLeadingIcon(spinning: searchVM.isSearching && !trimmedFilter.isEmpty)
             TextField("", text: $filterText, prompt:
                 Text("search.global.prompt", bundle: .module)
             )
