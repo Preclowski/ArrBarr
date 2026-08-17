@@ -58,6 +58,7 @@ public struct SettingsView: View {
         case service(ServiceKind)
         case mediaServer
         case assistant
+        case quiz
         case mcp
         case icloud
         case siri
@@ -249,7 +250,6 @@ public struct SettingsView: View {
     private var aiPane: some View {
         Form {
             aiSection
-            TasteProfileSection()
         }
         .formStyle(.grouped)
     }
@@ -424,6 +424,8 @@ public struct SettingsView: View {
             .tag(SettingsSection.mediaServer)
         Label { Text("settings.assistant.button", bundle: .module) } icon: { Image(systemName: "sparkles") }
             .tag(SettingsSection.assistant)
+        Label { Text("settings.quiz.label", bundle: .module) } icon: { Image(systemName: "rectangle.stack") }
+            .tag(SettingsSection.quiz)
         Label { Text("settings.mcp.label", bundle: .module) } icon: { Image(systemName: "point.3.connected.trianglepath.dotted") }
             .tag(SettingsSection.mcp)
         if AppCapabilities.isAppStore {
@@ -461,6 +463,7 @@ public struct SettingsView: View {
         items += [
             .init(section: .mediaServer, title: String(localized: "settings.mediaServer.label", bundle: .module), kind: nil, systemImage: "play.tv"),
             .init(section: .assistant, title: String(localized: "settings.assistant.button", bundle: .module), kind: nil, systemImage: "sparkles"),
+            .init(section: .quiz, title: String(localized: "settings.quiz.label", bundle: .module), kind: nil, systemImage: "rectangle.stack"),
             .init(section: .mcp, title: String(localized: "settings.mcp.label", bundle: .module), kind: nil, systemImage: "point.3.connected.trianglepath.dotted"),
         ]
         if AppCapabilities.isAppStore {
@@ -535,6 +538,7 @@ public struct SettingsView: View {
         case .service(let kind): return Text(verbatim: kind.displayName)
         case .mediaServer: return Text("settings.mediaServer.label", bundle: .module)
         case .assistant: return Text("settings.assistant.button", bundle: .module)
+        case .quiz: return Text("settings.quiz.label", bundle: .module)
         case .mcp: return Text("settings.mcp.label", bundle: .module)
         case .icloud: return Text("settings.icloud.label", bundle: .module)
         case .siri: return Text("settings.siriShortcuts.button", bundle: .module)
@@ -552,6 +556,7 @@ public struct SettingsView: View {
         case .service(let kind): singleServicePane(for: kind)
         case .mediaServer: MediaServerSettingsPane()
         case .assistant: aiPane
+        case .quiz: QuizSettingsPane()
         case .mcp: MCPSettingsPane()
         case .icloud: ICloudSettingsView()
         case .siri: siriPane
@@ -719,6 +724,7 @@ public struct SettingsView: View {
             iosSettingsLink("Download clients", systemImage: "arrow.down.circle") { iosDownloadClientsForm }
             iosSettingsLink("settings.mediaServer.label", systemImage: "play.tv") { MediaServerSettingsPane() }
             iosSettingsLink("Assistant", systemImage: "sparkles") { iosAIForm }
+            iosSettingsLink("settings.quiz.label", systemImage: "rectangle.stack") { QuizSettingsPane() }
             if AppCapabilities.isAppStore {
                 iosSettingsLink("iCloud", systemImage: "icloud") { ICloudSettingsView() }
             }
@@ -824,10 +830,7 @@ public struct SettingsView: View {
     }
 
     private var iosAIForm: some View {
-        Form {
-            aiSection
-            TasteProfileSection()
-        }
+        Form { aiSection }
             .navigationTitle(Text("settings.assistant.button", bundle: .module))
             .navigationBarTitleDisplayMode(.inline)
     }

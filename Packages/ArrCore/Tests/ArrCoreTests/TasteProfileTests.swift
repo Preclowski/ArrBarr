@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import ArrCore
 
-@Suite("Taste profile store")
+@Suite("Standing preferences store")
 struct TasteProfileStoreTests {
 
     private func freshStore() -> TasteProfileStore {
@@ -12,53 +12,29 @@ struct TasteProfileStoreTests {
         return TasteProfileStore(defaults: defaults)
     }
 
-    @Test("promptBlock is nil when empty or disabled — an absent profile costs zero tokens")
+    @Test("promptBlock is nil when empty or disabled — an absent note costs zero tokens")
     func promptBlockGating() {
         let store = freshStore()
         #expect(store.promptBlock() == nil)
-        store.setParagraph("Leans toward slow-burn sci-fi.")
-        #expect(store.promptBlock()?.contains("slow-burn sci-fi") == true)
+        store.setUserNote("no musicals")
+        #expect(store.promptBlock()?.contains("no musicals") == true)
         store.setUseInChat(false)
         #expect(store.promptBlock() == nil)
     }
 
-    @Test("The user's own note rides along and survives without a paragraph")
-    func userNoteRides() {
+    @Test("Whitespace-only notes count as empty")
+    func whitespaceNote() {
         let store = freshStore()
-        store.setUserNote("no musicals")
-        #expect(store.promptBlock()?.contains("no musicals") == true)
-        store.setParagraph("Likes noir.")
-        let block = store.promptBlock()
-        #expect(block?.contains("Likes noir.") == true)
-        #expect(block?.contains("no musicals") == true)
+        store.setUserNote("   \n ")
+        #expect(store.promptBlock() == nil)
     }
 
-    @Test("Clearing the paragraph clears the timestamp too")
-    func clearingParagraph() {
-        let store = freshStore()
-        store.setParagraph("X")
-        #expect(store.updatedAt != nil)
-        store.setParagraph(nil)
-        #expect(store.updatedAt == nil)
-        #expect(store.paragraph == nil)
-    }
-}
-
-@Suite("Taste profile generation prompt")
-struct TasteProfilePromptTests {
-
-    @Test("The prompt carries every signal section it was given, and only those")
-    @MainActor
-    func promptSections() {
-        let prompt = TasteProfileGenerator.buildPrompt(
-            kept: ["Sicario (2015)"], skipped: ["La La Land (2016)"],
-            vetoed: [], watched: ["Severance (2022)"],
-            languageName: "Polish"
-        )
-        #expect(prompt.contains("Sicario"))
-        #expect(prompt.contains("La La Land"))
-        #expect(prompt.contains("Severance"))
-        #expect(!prompt.contains("REJECTED"), "an empty section must not appear")
-        #expect(prompt.contains("Polish"))
+    @Test("The note survives a store reload from the same defaults")
+    func persistsAcrossReload() {
+        let suite = "TasteProfileTests-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defaults.removePersistentDomain(forName: suite)
+        TasteProfileStore(defaults: defaults).setUserNote("subtitles fine")
+        #expect(TasteProfileStore(defaults: defaults).userNote == "subtitles fine")
     }
 }
