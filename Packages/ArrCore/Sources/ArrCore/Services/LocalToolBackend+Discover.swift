@@ -74,7 +74,7 @@ extension LocalToolBackend {
         let radarrBase = radarr.baseURL
         let sonarrBase = sonarr.baseURL
         let resolved: [DiscoverItem] = await ParallelResolve.orderedMap(capped, width: 8) { pick -> DiscoverItem? in
-            let term = pick.year.map { "\(pick.title) \($0)" } ?? pick.title
+            let term = Self.lookupTerm(title: pick.title, year: pick.year, tmdbId: pick.tmdbId)
             switch kind {
             case "movie":
                 guard radarrConfigured else { return nil }

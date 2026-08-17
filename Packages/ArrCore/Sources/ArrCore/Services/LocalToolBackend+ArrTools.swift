@@ -78,7 +78,7 @@ extension LocalToolBackend {
             for (idx, item) in capped.enumerated() {
                 group.addTask { [client] in
                     do {
-                        let query = item.year.map { "\(item.title) \($0)" } ?? item.title
+                        let query = Self.lookupTerm(title: item.title, year: item.year, tmdbId: item.tmdbId)
                         let hits = try await Self.searchWithYearAwareness(client: client, query: query)
                         // Year-tagged match wins; otherwise top hit; otherwise nil.
                         let match = item.year.flatMap { y in hits.first(where: { $0.year == y }) }
@@ -538,25 +538,32 @@ extension LocalToolBackend {
         }
     }
 
-    /// Pull `items: [{title, year?}]` out of the JSON-RPC arguments.
+    /// Pull `items: [{title, year?, tmdbId?}]` out of the JSON-RPC arguments.
     /// Permissive — drops malformed entries silently so a model that
     /// fumbles one item doesn't kill the whole call.
-    static func suggestItems(_ value: JSONValue) -> [(title: String, year: Int?)] {
+    static func suggestItems(_ value: JSONValue) -> [(title: String, year: Int?, tmdbId: Int?)] {
         guard case .object(let dict) = value, case .array(let arr) = dict["items"] else { return [] }
-        return arr.compactMap { entry -> (String, Int?)? in
+        func intValue(_ raw: JSONValue?) -> Int? {
+            switch raw {
+            case .number(let n): return Int(n)
+            case .string(let s): return Int(s)
+            default: return nil
+            }
+        }
+        return arr.compactMap { entry -> (String, Int?, Int?)? in
             guard case .object(let obj) = entry,
                   case .string(let title) = obj["title"],
                   !title.isEmpty else { return nil }
-            let year: Int? = {
-                guard let raw = obj["year"] else { return nil }
-                switch raw {
-                case .number(let n): return Int(n)
-                case .string(let s): return Int(s)
-                default: return nil
-                }
-            }()
-            return (title, year)
+            return (title, intValue(obj["year"]), intValue(obj["tmdbId"]))
         }
+    }
+
+    /// The lookup term for one pick: an exact `tmdb:` ref when the model
+    /// supplied the id (one exact hit, no wrong-remake risk — both arrs
+    /// resolve it), else title-plus-year prose.
+    static func lookupTerm(title: String, year: Int?, tmdbId: Int?) -> String {
+        if let tmdbId { return "tmdb:\(tmdbId)" }
+        return year.map { "\(title) \($0)" } ?? title
     }
 
     /// Condensed text for the model: surfaced picks + library state +

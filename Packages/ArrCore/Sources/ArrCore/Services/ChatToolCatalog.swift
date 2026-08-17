@@ -622,6 +622,10 @@ public enum ChatToolCatalog {
                                     "type": .string("integer"),
                                     "description": .string("Optional release year — disambiguates remakes (Dune 1984 vs 2021). Omit when unsure."),
                                 ]),
+                                "tmdbId": .object([
+                                    "type": .string("integer"),
+                                    "description": .string("Optional TMDB id when you already hold one (from tmdb_* tools or earlier output). Resolves exactly — no wrong-remake risk — and skips the title search. Never guess it."),
+                                ]),
                             ]),
                             "required": .array([.string("title")]),
                         ]),
@@ -683,6 +687,10 @@ public enum ChatToolCatalog {
                                 "year": .object([
                                     "type": .string("integer"),
                                     "description": .string("Optional release year — disambiguates remakes."),
+                                ]),
+                                "tmdbId": .object([
+                                    "type": .string("integer"),
+                                    "description": .string("Optional TMDB id when you already hold one. Resolves exactly and skips the title search. Never guess it."),
                                 ]),
                             ]),
                             "required": .array([.string("title")]),
