@@ -22,15 +22,6 @@ extension LocalToolBackend {
         guard kind == "movie" || kind == "series" else {
             return ToolCallOutput(text: "ERROR: 'kind' must be 'movie' or 'series'.")
         }
-        let items = Self.suggestItems(arguments)
-        guard !items.isEmpty else {
-            return ToolCallOutput(text: "ERROR: 'items' must be a non-empty array of {title, year?}.")
-        }
-        // Over-sending is the point: owned picks are dropped below (library_mode
-        // "new"), so a big library eats most of a canonical list. The lookups
-        // fan out through ParallelResolve — far cheaper than the round trip it
-        // takes to notice the deck came back empty and guess again.
-        let capped = Array(items.prefix(60))
         let libraryMode: String = {
             if case .object(let dict) = arguments,
                case .string(let v) = dict["library_mode"] {
@@ -42,6 +33,15 @@ extension LocalToolBackend {
             }
             return "new"
         }()
+        let items = Self.suggestItems(arguments)
+        guard !items.isEmpty || libraryMode == "library" else {
+            return ToolCallOutput(text: "ERROR: 'items' must be a non-empty array of {title, year?} (it is optional only with library_mode: 'library', where the deck fills from the library).")
+        }
+        // Over-sending is the point: owned picks are dropped below (library_mode
+        // "new"), so a big library eats most of a canonical list. The lookups
+        // fan out through ParallelResolve — far cheaper than the round trip it
+        // takes to notice the deck came back empty and guess again.
+        let capped = Array(items.prefix(60))
 
         let anchorIds: [Int] = {
             if case .object(let dict) = arguments,
@@ -54,10 +54,46 @@ extension LocalToolBackend {
             return []
         }()
 
-        // Resolve each pick through the appropriate arr lookup, mirroring
-        // what DiscoverSources.llm does per-item — same SearchResult /
-        // DiscoverItem shape so the overlay treats them identically.
-        //
+        // Two ways to a deck: an explicit pick list resolved through arr
+        // lookups, or — library_mode "library" with no items — straight out
+        // of the cached library snapshot, zero HTTP.
+        let resolved: [DiscoverItem]
+        if capped.isEmpty && libraryMode == "library" {
+            resolved = await libraryDeckItems(kind: kind, arguments: arguments)
+            if resolved.isEmpty {
+                return ToolCallOutput(text: "No library titles match that filter (or everything matching was already watched). Loosen the genre/year filter, or pass explicit items.")
+            }
+        } else {
+            resolved = await resolveCuratedPicks(capped, kind: kind)
+        }
+
+        let filtered: [DiscoverItem]
+        switch libraryMode {
+        case "library":
+            // Rediscovery mode — owned picks are the point; pass everything.
+            filtered = resolved
+        default:
+            // "new" (the default): strictly drop what the user already owns.
+            filtered = resolved.filter { $0.result.inLibraryArrId == nil }
+        }
+
+        if filtered.isEmpty {
+            if !resolved.isEmpty && libraryMode == "new" {
+                return ToolCallOutput(text: "All \(resolved.count) picks are already in the user's library — a library this size owns the obvious choices. Do NOT retry by guessing another batch: call check_titles with 25-40 candidates (deeper cuts, not the canon) in ONE call, then seed the quiz with only the ones it reports as NOT in library. Or pass library_mode: 'library' if they want to rediscover what they own.")
+            }
+            return ToolCallOutput(text: "Couldn't resolve any of those picks through \(kind == "movie" ? "Radarr" : "Sonarr") lookup. Try other titles or check the service config.")
+        }
+        return try await assembleDeck(arguments: arguments, label: label, kind: kind,
+                                      libraryMode: libraryMode, anchorIds: anchorIds,
+                                      resolved: resolved, filtered: filtered)
+    }
+
+    /// The curated path: each {title, year?, tmdbId?} pick resolves through
+    /// the arr lookup (bounded fan-out), cross-referenced against the library
+    /// map so owned picks open detail instead of the add flow.
+    private func resolveCuratedPicks(
+        _ capped: [(title: String, year: Int?, tmdbId: Int?)], kind: String
+    ) async -> [DiscoverItem] {
         // Library map fetched in parallel with the per-pick lookups (mirrors
         // suggest_titles). Owned picks get inLibraryArrId set and
         // originLabel=.library so the matched-list sections them under
@@ -65,7 +101,6 @@ extension LocalToolBackend {
         async let libraryMapFetch: [Int: Int] = (kind == "series")
             ? sonarrLibraryByTVDBId()
             : radarrLibraryByTMDBId()
-
         let radarrClient = RadarrClient(config: radarr)
         let sonarrClient = SonarrClient(config: sonarr)
         let libraryMap = await libraryMapFetch
@@ -73,7 +108,7 @@ extension LocalToolBackend {
         let sonarrConfigured = sonarr.isConfigured
         let radarrBase = radarr.baseURL
         let sonarrBase = sonarr.baseURL
-        let resolved: [DiscoverItem] = await ParallelResolve.orderedMap(capped, width: 8) { pick -> DiscoverItem? in
+        return await ParallelResolve.orderedMap(capped, width: 8) { pick -> DiscoverItem? in
             let term = Self.lookupTerm(title: pick.title, year: pick.year, tmdbId: pick.tmdbId)
             switch kind {
             case "movie":
@@ -136,24 +171,81 @@ extension LocalToolBackend {
             default: return nil
             }
         }.compactMap { $0 }
+    }
 
-        let filtered: [DiscoverItem]
-        switch libraryMode {
-        case "library":
-            // Rediscovery mode — owned picks are the point; pass everything.
-            filtered = resolved
-        default:
-            // "new" (the default): strictly drop what the user already owns.
-            filtered = resolved.filter { $0.result.inLibraryArrId == nil }
-        }
-
-        if filtered.isEmpty {
-            if !resolved.isEmpty && libraryMode == "new" {
-                return ToolCallOutput(text: "All \(resolved.count) picks are already in the user's library — a library this size owns the obvious choices. Do NOT retry by guessing another batch: call check_titles with 25-40 candidates (deeper cuts, not the canon) in ONE call, then seed the quiz with only the ones it reports as NOT in library. Or pass library_mode: 'library' if they want to rediscover what they own.")
+    /// Zero-HTTP deck: filter and rank the cached library snapshot, then draw
+    /// the deck from a top pool. The pool (3× the deck) is what makes repeat
+    /// sessions differ while quality holds — a straight top-20 would deal the
+    /// same cards every time, which is the discover-page-1 problem again.
+    /// Watched titles drop out (with a media server connected): the deck is
+    /// "what should I put on tonight", and a film finished last week is the
+    /// wrong answer to that question.
+    private func libraryDeckItems(kind: String, arguments: JSONValue) async -> [DiscoverItem] {
+        let query = LibraryQuery(
+            genre: Self.stringArg(arguments, key: "genre"),
+            startYear: Self.optionalIntArg(arguments, key: "startYear"),
+            endYear: Self.optionalIntArg(arguments, key: "endYear"),
+            unwatchedOnly: true,
+            sort: LibrarySort(field: .rating, ascending: false)
+        )
+        if kind == "movie" {
+            guard radarr.isConfigured else { return [] }
+            let all = await LibraryIndex.shared.movies(config: radarr)
+            let ranked = LibraryFilter.apply(all, query: query) { isWatched($0.mediaServerKeys) }
+            return Self.poolThenDraw(ranked, pool: 60, deck: 20).compactMap { rec -> DiscoverItem? in
+                guard let arrId = rec.id, let title = rec.title else { return nil }
+                let poster = (rec.images ?? []).posterURL(baseURL: radarr.baseURL).0
+                let result = SearchResult(
+                    externalId: rec.tmdbId ?? 0, foreignId: rec.tmdbId.map(String.init) ?? "",
+                    title: title, subtitle: nil,
+                    year: rec.year,
+                    rating: rec.ratings?.tmdb?.value,
+                    imdb: rec.ratings?.imdb?.value,
+                    rottenTomatoes: rec.ratings?.rottenTomatoes?.value,
+                    metacritic: rec.ratings?.metacritic?.value,
+                    overview: rec.overview, runtime: rec.runtime,
+                    genres: rec.genres ?? [], network: rec.studio,
+                    certification: rec.certification,
+                    posterURL: poster, source: .radarr, inLibraryArrId: arrId
+                )
+                return DiscoverItem(result: result,
+                                    action: .openDetail(source: .radarr, arrId: arrId),
+                                    originLabel: .library, kind: .movie)
             }
-            return ToolCallOutput(text: "Couldn't resolve any of those picks through \(kind == "movie" ? "Radarr" : "Sonarr") lookup. Try other titles or check the service config.")
         }
+        guard sonarr.isConfigured else { return [] }
+        let all = await LibraryIndex.shared.series(config: sonarr)
+        let ranked = LibraryFilter.apply(all, query: query) { isWatched($0.mediaServerKeys) }
+        return Self.poolThenDraw(ranked, pool: 60, deck: 20).compactMap { rec -> DiscoverItem? in
+            guard let arrId = rec.id, let title = rec.title else { return nil }
+            let poster = (rec.images ?? []).posterURL(baseURL: sonarr.baseURL).0
+            let result = SearchResult(
+                externalId: rec.tvdbId ?? 0, foreignId: rec.tvdbId.map(String.init) ?? "",
+                title: title, subtitle: nil,
+                year: rec.year,
+                rating: rec.ratings?.value,
+                imdb: nil, rottenTomatoes: nil, metacritic: nil,
+                overview: rec.overview, runtime: nil,
+                genres: rec.genres ?? [], network: nil, certification: nil,
+                posterURL: poster, source: .sonarr, inLibraryArrId: arrId,
+                tmdbTVId: rec.tmdbId
+            )
+            return DiscoverItem(result: result,
+                                action: .openDetail(source: .sonarr, arrId: arrId),
+                                originLabel: .library, kind: .show)
+        }
+    }
 
+    /// Top-`pool` by the caller's ranking, then a random `deck`-sized draw
+    /// from it. Pure so the variety rule is testable.
+    static func poolThenDraw<T>(_ ranked: [T], pool: Int, deck: Int) -> [T] {
+        Array(ranked.prefix(pool).shuffled().prefix(deck))
+    }
+
+    private func assembleDeck(arguments: JSONValue, label: String, kind: String,
+                              libraryMode: String, anchorIds: [Int],
+                              resolved: [DiscoverItem],
+                              filtered: [DiscoverItem]) async throws -> ToolCallOutput {
         let append: Bool = {
             if case .object(let dict) = arguments,
                case .bool(let v) = dict["append"] {

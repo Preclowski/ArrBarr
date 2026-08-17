@@ -653,7 +653,7 @@ public enum ChatToolCatalog {
 
             Pass `append: true` when the user asks for MORE picks continuing the current vibe — that extends the active deck instead of starting over.
 
-            Set `library_mode` from the user's intent: "new" (default) excludes titles already in their library; "library" fills the deck from titles they own — use it when they want to rediscover their collection.
+            Set `library_mode` from the user's intent: "new" (default) excludes titles already in their library; "library" fills the deck from titles they own — use it when they want to rediscover their collection. With library_mode "library" you may OMIT `items` entirely and pass `genre` / `startYear` / `endYear` instead: the deck is then drawn straight from their library snapshot (instant, watched titles excluded, top-rated pool with a random draw) — prefer that over inventing a list of titles they own.
 
             Do NOT pre-check with `check_titles`: this tool already drops owned titles for you (library_mode "new"), so checking first is the same work twice. Just reach past the obvious — a 3000-film collection has Inception and The Empire Strikes Back — and send enough that plenty survives.
 
@@ -704,6 +704,18 @@ public enum ChatToolCatalog {
                         "type": .string("string"),
                         "description": .string("'new' (default) = only titles NOT in the user's library — something to discover. 'library' = titles they already own — rediscovering their collection. Decide from the user's intent."),
                     ]),
+                    "genre": .object([
+                        "type": .string("string"),
+                        "description": .string("library_mode 'library' only: genre filter for the library-drawn deck (same vocabulary as radarr_get_movies / sonarr_get_series)."),
+                    ]),
+                    "startYear": .object([
+                        "type": .string("integer"),
+                        "description": .string("library_mode 'library' only: inclusive lower bound on year for the library-drawn deck."),
+                    ]),
+                    "endYear": .object([
+                        "type": .string("integer"),
+                        "description": .string("library_mode 'library' only: inclusive upper bound on year for the library-drawn deck."),
+                    ]),
                     "anchor_tmdb_ids": .object([
                         "type": .string("array"),
                         "description": .string("TMDB IDs of titles the user has kept (right-swiped) in the current session. When provided, the backend walks TMDB's recommendations graph for each anchor and merges those results with your curated picks. These MUST be TMDB ids — for series that is the tmdbTVId reported in tool output, NEVER a tvdbId. Pass this from the 'More picks' prompt context where the user's kept titles + their TMDB IDs are listed. Cap at 5 anchor IDs."),
@@ -712,7 +724,7 @@ public enum ChatToolCatalog {
                         ]),
                     ]),
                 ]),
-                "required": .array([.string("mood"), .string("kind"), .string("items")]),
+                "required": .array([.string("mood"), .string("kind")]),
             ])
         ),
     ]
