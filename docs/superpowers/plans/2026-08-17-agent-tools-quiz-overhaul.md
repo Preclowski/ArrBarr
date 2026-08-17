@@ -102,9 +102,18 @@ not permanent; `/recommendations` over `/similar` for anchors.
 
 - [x] Commit: `feat(quiz): swipes persist — skips cool down instead of vanishing`
 
-## Phase 3 — taste profile & panels (follow-up plan)
+## Phase 3 — taste profile & panels
 
-Deliberately split out; each needs its own UI design pass:
-- Taste-profile generation (FoundationModelsProvider, on-device) + Settings pane (profile paragraph, signals list, watch-history aggregates + search/exclude).
-- Chat→quiz handoff card (no popover hijack) + MCP surface-appropriate output.
-- Cold-start starter deck; session length cap; catalog token-cost measurement and system-prompt consolidation.
+Done (2026-08-17, second session):
+- [x] Quiz rewind button: undo skips one at a time (deck + end-of-deck states); undo withdraws the persisted skip signal.
+- [x] Explicit veto ("Not interested — never show again") behind right-click / long-press on the card; reversible via undo.
+- [x] `TasteProfileStore` (lock-guarded, UserDefaults) + `TasteProfileGenerator` (runs on the user's chat provider; Apple Intelligence stays on-device) + `TasteProfileSection` in the Assistant settings pane (paragraph, user note, use-in-chat toggle, recent signals with per-row removal, reset skip cooldowns). Injected into both providers' system prompts at request time; tool-less calls never see it.
+- [x] MCP headless surface: `discover_in_quiz` returns the resolved list as text for external MCP clients instead of opening UI on the Mac.
+- [x] Catalog token cost measured: ~24.3k chars of descriptions+schemas across 28 tools ≈ 6.7k tokens per request (matches the architect's 6–10k estimate).
+
+Still open (each needs its own design decision):
+- Chat→quiz handoff as an inline "Start swiping" card instead of auto-opening the overlay (UX recommendation; changes existing behavior — user call).
+- Cold-start starter deck (curated ~20 diverse well-known titles as calibration).
+- Session length target (15–20 cards) as an explicit rule rather than an emergent one.
+- Catalog consolidation: move the routing prose duplicated across four tool descriptions into the providers' system prompts (measurement above justifies it).
+- Watch-history aggregates + search/exclude pane; iCloud KV sync of the swipe log.
