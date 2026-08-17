@@ -38,6 +38,10 @@ public struct DiscoverItem: Identifiable, Equatable, Sendable {
     public let originLabel: Origin
     /// Whether this card represents a movie or a TV show.
     public let kind: DiscoverItemKind
+    /// One short, user-facing line saying WHY this card is in the deck
+    /// ("Because you kept Sicario", "Top-rated on your shelf"). Rendered on
+    /// the card when present; absence needs no explanation, so nil is fine.
+    public let reason: String?
 
     public enum Origin: String, Sendable {
         case tmdb, library, llm
@@ -58,11 +62,13 @@ public struct DiscoverItem: Identifiable, Equatable, Sendable {
     }
 
     public init(result: SearchResult, action: DiscoverAction,
-                originLabel: Origin = .tmdb, kind: DiscoverItemKind = .movie) {
+                originLabel: Origin = .tmdb, kind: DiscoverItemKind = .movie,
+                reason: String? = nil) {
         self.result = result
         self.action = action
         self.originLabel = originLabel
         self.kind = kind
+        self.reason = reason
     }
 }
 

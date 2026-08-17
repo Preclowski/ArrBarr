@@ -692,6 +692,10 @@ public enum ChatToolCatalog {
                                     "type": .string("integer"),
                                     "description": .string("Optional TMDB id when you already hold one. Resolves exactly and skips the title search. Never guess it."),
                                 ]),
+                                "reason": .object([
+                                    "type": .string("string"),
+                                    "description": .string("Optional one-line, user-facing reason this pick fits, in the USER'S language ('Bo zatrzymałeś Sicario', 'Klimat jak w Blade Runnerze'). Shown on the card. Keep under ~8 words."),
+                                ]),
                             ]),
                             "required": .array([.string("title")]),
                         ]),

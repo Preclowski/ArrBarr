@@ -92,7 +92,7 @@ extension LocalToolBackend {
     /// the arr lookup (bounded fan-out), cross-referenced against the library
     /// map so owned picks open detail instead of the add flow.
     private func resolveCuratedPicks(
-        _ capped: [(title: String, year: Int?, tmdbId: Int?)], kind: String
+        _ capped: [(title: String, year: Int?, tmdbId: Int?, reason: String?)], kind: String
     ) async -> [DiscoverItem] {
         // Library map fetched in parallel with the per-pick lookups (mirrors
         // suggest_titles). Owned picks get inLibraryArrId set and
@@ -136,10 +136,10 @@ extension LocalToolBackend {
                     let owned = resultBase.withInLibraryArrId(arrId)
                     return DiscoverItem(result: owned,
                                         action: .openDetail(source: .radarr, arrId: arrId),
-                                        originLabel: .library, kind: .movie)
+                                        originLabel: .library, kind: .movie, reason: pick.reason)
                 }
                 return DiscoverItem(result: resultBase, action: .addToRadarr,
-                                    originLabel: .llm, kind: .movie)
+                                    originLabel: .llm, kind: .movie, reason: pick.reason)
             case "series":
                 guard sonarrConfigured else { return nil }
                 let hits = (try? await sonarrClient.lookupSeries(term: term)) ?? []
@@ -164,10 +164,10 @@ extension LocalToolBackend {
                     let owned = resultBase.withInLibraryArrId(arrId)
                     return DiscoverItem(result: owned,
                                         action: .openDetail(source: .sonarr, arrId: arrId),
-                                        originLabel: .library, kind: .show)
+                                        originLabel: .library, kind: .show, reason: pick.reason)
                 }
                 return DiscoverItem(result: resultBase, action: .addToSonarr,
-                                    originLabel: .llm, kind: .show)
+                                    originLabel: .llm, kind: .show, reason: pick.reason)
             default: return nil
             }
         }.compactMap { $0 }
@@ -210,7 +210,8 @@ extension LocalToolBackend {
                 )
                 return DiscoverItem(result: result,
                                     action: .openDetail(source: .radarr, arrId: arrId),
-                                    originLabel: .library, kind: .movie)
+                                    originLabel: .library, kind: .movie,
+                                    reason: String(localized: "Top-rated on your shelf", bundle: .module))
             }
         }
         guard sonarr.isConfigured else { return [] }
@@ -232,7 +233,8 @@ extension LocalToolBackend {
             )
             return DiscoverItem(result: result,
                                 action: .openDetail(source: .sonarr, arrId: arrId),
-                                originLabel: .library, kind: .show)
+                                originLabel: .library, kind: .show,
+                                reason: String(localized: "Top-rated on your shelf", bundle: .module))
         }
     }
 
@@ -372,7 +374,8 @@ extension LocalToolBackend {
                                     inLibraryArrId: nil
                                 )
                                 return DiscoverItem(result: result, action: .addToRadarr,
-                                                    originLabel: .llm, kind: .movie)
+                                                    originLabel: .llm, kind: .movie,
+                                                    reason: String(localized: "Similar to what you kept", bundle: .module))
                             }.compactMap { $0 }
                             return (idx, out)
                         } else {
@@ -397,7 +400,8 @@ extension LocalToolBackend {
                                     tmdbTVId: s.id
                                 )
                                 return DiscoverItem(result: result, action: .addToSonarr,
-                                                    originLabel: .llm, kind: .show)
+                                                    originLabel: .llm, kind: .show,
+                                                    reason: String(localized: "Similar to what you kept", bundle: .module))
                             }.compactMap { $0 }
                             return (idx, out)
                         }

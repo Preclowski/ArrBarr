@@ -128,6 +128,20 @@ public struct DiscoverCardView: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, 1)
             }
+            // Why-this-card line: makes the pick legible ("Because you kept
+            // Sicario") and turns a miss from "the app is dumb" into "ah,
+            // that's why — no thanks". Absent when no source gave a reason.
+            if let reason = item.reason, !reason.isEmpty {
+                HStack(spacing: 4) {
+                    Image(systemName: "sparkles")
+                        .scaledFont(size: 9, weight: .semibold)
+                    Text(reason)
+                        .scaledFont(size: 11, weight: .medium)
+                        .lineLimit(1)
+                }
+                .foregroundStyle(Color.accentColor)
+                .padding(.top, 1)
+            }
             moreButton
         }
     }

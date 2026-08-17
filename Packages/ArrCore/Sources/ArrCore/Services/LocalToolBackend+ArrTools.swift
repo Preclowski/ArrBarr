@@ -541,7 +541,7 @@ extension LocalToolBackend {
     /// Pull `items: [{title, year?, tmdbId?}]` out of the JSON-RPC arguments.
     /// Permissive — drops malformed entries silently so a model that
     /// fumbles one item doesn't kill the whole call.
-    static func suggestItems(_ value: JSONValue) -> [(title: String, year: Int?, tmdbId: Int?)] {
+    static func suggestItems(_ value: JSONValue) -> [(title: String, year: Int?, tmdbId: Int?, reason: String?)] {
         guard case .object(let dict) = value, case .array(let arr) = dict["items"] else { return [] }
         func intValue(_ raw: JSONValue?) -> Int? {
             switch raw {
@@ -550,11 +550,15 @@ extension LocalToolBackend {
             default: return nil
             }
         }
-        return arr.compactMap { entry -> (String, Int?, Int?)? in
+        return arr.compactMap { entry -> (String, Int?, Int?, String?)? in
             guard case .object(let obj) = entry,
                   case .string(let title) = obj["title"],
                   !title.isEmpty else { return nil }
-            return (title, intValue(obj["year"]), intValue(obj["tmdbId"]))
+            let reason: String? = {
+                if case .string(let r) = obj["reason"], !r.isEmpty { return r }
+                return nil
+            }()
+            return (title, intValue(obj["year"]), intValue(obj["tmdbId"]), reason)
         }
     }
 
