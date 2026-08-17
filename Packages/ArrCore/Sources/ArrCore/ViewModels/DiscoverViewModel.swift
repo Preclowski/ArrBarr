@@ -215,6 +215,23 @@ public final class DiscoverViewModel {
                                        kind: .kept)
     }
 
+    /// Undo the most recent skip: the last skipped card becomes current again
+    /// and the one on screen slides back into the queue's front. Clicking
+    /// repeatedly walks further back through this session's skips. Also
+    /// withdraws the persisted skip signal — an undone skip was a mis-swipe,
+    /// not a verdict, and must not cool the title down for two weeks.
+    public func undoSkip() {
+        guard let last = sessionSkipped.popLast() else { return }
+        SwipeSignalStore.shared.remove(key: last.dedupKey)
+        if let onScreen = current {
+            queue.insert(onScreen, at: 0)
+        }
+        current = last
+    }
+
+    /// Whether there is a skip to undo — drives the deck's back button.
+    public var canUndoSkip: Bool { !sessionSkipped.isEmpty }
+
     /// True when the user has actually engaged with the deck this session.
     /// Used by the overlay to decide whether to surface "more picks like
     /// these" — without engagement the button has no signal to feed back.

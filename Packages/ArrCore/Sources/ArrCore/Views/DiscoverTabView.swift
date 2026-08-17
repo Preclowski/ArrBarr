@@ -280,6 +280,20 @@ public struct DiscoverTabView: View {
     /// the drag heads its way; colours mirror the swipe tint.
     private var actionButtons: some View {
         HStack(spacing: 30) {
+            // Rewind: bring the last skipped card back (tap again to walk
+            // further back). Smaller than the verdicts — it corrects a
+            // decision rather than making one — and absent until there is
+            // something to undo, so the resting layout stays two buttons.
+            if viewModel.canUndoSkip {
+                GlassCircleButton(
+                    systemName: "arrow.uturn.backward",
+                    tint: .secondary,
+                    diameter: Layout.buttonDiameter * 0.72,
+                    accessibilityKey: "discover.undo.button",
+                    action: handleUndo
+                )
+                .transition(.opacity.combined(with: .scale(scale: 0.8)))
+            }
             GlassCircleButton(
                 systemName: "xmark",
                 tint: .secondary,
@@ -435,6 +449,17 @@ public struct DiscoverTabView: View {
         return .handled
     }
 
+    /// Rewind one skip. No fly-off choreography — the correction should feel
+    /// like stepping back, not like a fourth swipe direction.
+    private func handleUndo() {
+        guard !verdictInFlight else { return }
+        withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
+            viewModel.undoSkip()
+        }
+        dragOffset = .zero
+        isDragging = false
+    }
+
     /// Left verdict: skip to the next card. Fly the current card off to the
     /// left, THEN drop it and advance — the peek card scales up to fill
     /// instead of the next card sliding in.
@@ -513,6 +538,26 @@ public struct DiscoverTabView: View {
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 24)
+                // End of the deck is exactly where a mis-swipe hurts most —
+                // the card is gone and nothing follows it. Offer the rewind
+                // here too, not just under a live card.
+                if viewModel.canUndoSkip {
+                    Button {
+                        withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
+                            viewModel.undoSkip()
+                        }
+                    } label: {
+                        Label {
+                            Text("discover.undo.button", bundle: .module)
+                        } icon: {
+                            Image(systemName: "arrow.uturn.backward")
+                        }
+                        .scaledFont(size: 12, weight: .medium)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(Color.accentColor)
+                    .padding(.top, 2)
+                }
                 // Needs the agent to fetch a fresh appended round (see
                 // PopoverContentView.requestMoreQuizPicks), so only offer it when an
                 // LLM is actually available — otherwise the tap goes nowhere.
