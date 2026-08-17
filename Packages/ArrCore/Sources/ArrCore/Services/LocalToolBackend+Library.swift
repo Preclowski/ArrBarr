@@ -20,15 +20,26 @@ extension LocalToolBackend {
 
     // MARK: - Shared parsing
 
-    static func libraryQuery(_ args: JSONValue) -> LibraryQuery {
-        LibraryQuery(
+    /// `invalidSort` carries the raw string when `sortBy` was present but not
+    /// in the vocabulary — the tool reports it rather than silently returning
+    /// a differently-ordered answer than the model asked for.
+    static func libraryQuery(_ args: JSONValue) -> (query: LibraryQuery, invalidSort: String?) {
+        let rawSort = stringArg(args, key: "sortBy")
+        let sort = rawSort.isEmpty ? nil : LibrarySort.parse(rawSort)
+        let limit = optionalIntArg(args, key: "limit").map { max(1, $0) }
+        let query = LibraryQuery(
             title: stringArg(args, key: "query"),
             genre: stringArg(args, key: "genre"),
             startYear: optionalIntArg(args, key: "startYear"),
             endYear: optionalIntArg(args, key: "endYear"),
-            unwatchedOnly: optionalBoolArg(args, key: "unwatched") ?? false
+            unwatchedOnly: optionalBoolArg(args, key: "unwatched") ?? false,
+            sort: sort,
+            limit: limit
         )
+        return (query, (!rawSort.isEmpty && sort == nil) ? rawSort : nil)
     }
+
+    static let sortVocabulary = "rating, year, added, title, random — optionally suffixed .asc/.desc (e.g. 'rating' = rating.desc, 'year.asc')"
 
     /// Watch state is only knowable with a media server connected. Everywhere
     /// below, "no server" means the marker is simply absent — never a printed
@@ -45,13 +56,19 @@ extension LocalToolBackend {
         guard radarr.isConfigured else {
             return ToolCallOutput(text: "Radarr is not configured.")
         }
-        let query = Self.libraryQuery(args)
+        let (query, invalidSort) = Self.libraryQuery(args)
+        if let invalidSort {
+            return ToolCallOutput(text: "Unknown sortBy '\(invalidSort)'. Valid values: \(Self.sortVocabulary).")
+        }
         let all = await LibraryIndex.shared.movies(config: radarr)
         let matched = LibraryFilter.apply(all, query: query) { isWatched($0.mediaServerKeys) }
+        if Self.optionalBoolArg(args, key: "count_only") == true {
+            return ToolCallOutput(text: "\(matched.count) of \(all.count) movies match \(Self.describe(query)).")
+        }
 
         let shown = query.isUnfiltered
             ? LibraryFilter.sample(matched, count: Self.librarySampleSize)
-            : Array(matched.prefix(Self.libraryRowCap))
+            : Array(matched.prefix(min(query.limit ?? Self.libraryRowCap, Self.libraryRowCap)))
 
         let text = libraryText(
             serviceName: "Radarr", noun: "movie", nounPlural: "movies",
@@ -79,14 +96,20 @@ extension LocalToolBackend {
         guard sonarr.isConfigured else {
             return ToolCallOutput(text: "Sonarr is not configured.")
         }
-        let query = Self.libraryQuery(args)
+        let (query, invalidSort) = Self.libraryQuery(args)
+        if let invalidSort {
+            return ToolCallOutput(text: "Unknown sortBy '\(invalidSort)'. Valid values: \(Self.sortVocabulary).")
+        }
         let seasonFilter = Self.optionalIntArg(args, key: "seasonNumber")
         let all = await LibraryIndex.shared.series(config: sonarr)
         let matched = LibraryFilter.apply(all, query: query) { isWatched($0.mediaServerKeys) }
+        if Self.optionalBoolArg(args, key: "count_only") == true {
+            return ToolCallOutput(text: "\(matched.count) of \(all.count) series match \(Self.describe(query)).")
+        }
 
         let shown = query.isUnfiltered
             ? LibraryFilter.sample(matched, count: Self.librarySampleSize)
-            : Array(matched.prefix(Self.libraryRowCap))
+            : Array(matched.prefix(min(query.limit ?? Self.libraryRowCap, Self.libraryRowCap)))
 
         let text = libraryText(
             serviceName: "Sonarr", noun: "series", nounPlural: "series",
@@ -286,6 +309,12 @@ extension LocalToolBackend {
         case (nil, nil):        break
         }
         if query.unwatchedOnly { parts.append("unwatched") }
-        return parts.isEmpty ? "the whole library" : parts.joined(separator: " · ")
+        var out = parts.isEmpty ? "the whole library" : parts.joined(separator: " · ")
+        if let sort = query.sort {
+            out += ", sorted by \(sort.field.rawValue) \(sort.field == .random ? "" : (sort.ascending ? "asc" : "desc"))"
+                .trimmingCharacters(in: .whitespaces)
+        }
+        if let limit = query.limit { out += ", first \(limit)" }
+        return out
     }
 }

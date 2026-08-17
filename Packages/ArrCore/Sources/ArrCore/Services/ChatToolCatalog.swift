@@ -214,6 +214,18 @@ public enum ChatToolCatalog {
                         "type": .string("integer"),
                         "description": .string("Optional. When set, the per-season strip is filtered to just this season (e.g. 3 → 'S3 ✓ 5/10'). Lets you answer 'is S3 of X monitored?' in one call."),
                     ]),
+                    "sortBy": .object([
+                        "type": .string("string"),
+                        "description": .string("Deterministic ordering: rating, year, added, title, random — optionally .asc/.desc ('rating' = rating.desc). USE WITH limit for 'top N' questions, e.g. sortBy 'rating' + limit 10."),
+                    ]),
+                    "limit": .object([
+                        "type": .string("integer"),
+                        "description": .string("Max rows to return (cap 100). Pair with sortBy — 'top 10' means limit 10, not reading 100 rows and ranking them yourself."),
+                    ]),
+                    "count_only": .object([
+                        "type": .string("boolean"),
+                        "description": .string("Return only the matched/total counts, no rows. Cheap way to size a filter before asking for rows."),
+                    ]),
                 ]),
             ])
         ),
@@ -307,6 +319,18 @@ public enum ChatToolCatalog {
                     "unwatched": .object([
                         "type": .string("boolean"),
                         "description": .string("Only titles the media server says are unwatched. Needs a connected media server; ignored (and said so) without one."),
+                    ]),
+                    "sortBy": .object([
+                        "type": .string("string"),
+                        "description": .string("Deterministic ordering: rating, year, added, title, random — optionally .asc/.desc ('rating' = rating.desc). USE WITH limit for 'top N' questions: sortBy 'rating' + limit 10 answers 'my 10 best unwatched films' exactly, in one call."),
+                    ]),
+                    "limit": .object([
+                        "type": .string("integer"),
+                        "description": .string("Max rows to return (cap 100). Pair with sortBy — 'top 10' means limit 10, not reading 100 rows and ranking them yourself."),
+                    ]),
+                    "count_only": .object([
+                        "type": .string("boolean"),
+                        "description": .string("Return only the matched/total counts, no rows. Cheap way to size a filter before asking for rows."),
                     ]),
                 ]),
             ])

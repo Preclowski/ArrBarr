@@ -179,6 +179,45 @@ struct LibraryFilterTests {
         #expect(nearest.first?.filterTitle == "Interstellar")
     }
 
+    @Test("sortBy strings parse to field plus direction, with sane defaults")
+    func sortParsing() {
+        #expect(LibrarySort.parse("rating") == LibrarySort(field: .rating, ascending: false))
+        #expect(LibrarySort.parse("rating.asc") == LibrarySort(field: .rating, ascending: true))
+        #expect(LibrarySort.parse("year") == LibrarySort(field: .year, ascending: false))
+        #expect(LibrarySort.parse("year.asc") == LibrarySort(field: .year, ascending: true))
+        #expect(LibrarySort.parse("title") == LibrarySort(field: .title, ascending: true))
+        #expect(LibrarySort.parse("added") == LibrarySort(field: .added, ascending: false))
+        #expect(LibrarySort.parse("RANDOM") == LibrarySort(field: .random, ascending: false))
+        #expect(LibrarySort.parse("popularity") == nil)
+    }
+
+    @Test("Explicit sort orders deterministically; unrated titles rank as average")
+    func explicitSortOrders() {
+        let library = [
+            movie("Meh", 2001, ["Drama"], rating: 5.0),
+            movie("Unknown", 2003, ["Drama"], rating: nil),
+            movie("Great", 1999, ["Drama"], rating: 8.6),
+        ]
+        let byRating = LibraryFilter.apply(
+            library, query: LibraryQuery(sort: LibrarySort(field: .rating, ascending: false))
+        ) { _ in false }
+        #expect(byRating.map(\.filterTitle) == ["Great", "Unknown", "Meh"])
+        let byYearAsc = LibraryFilter.apply(
+            library, query: LibraryQuery(sort: LibrarySort(field: .year, ascending: true))
+        ) { _ in false }
+        #expect(byYearAsc.map(\.filterTitle) == ["Great", "Meh", "Unknown"])
+        let byTitle = LibraryFilter.apply(
+            library, query: LibraryQuery(sort: LibrarySort(field: .title, ascending: true))
+        ) { _ in false }
+        #expect(byTitle.map(\.filterTitle) == ["Great", "Meh", "Unknown"])
+    }
+
+    @Test("A sort or limit makes the call filtered — top-N must never be a random sample")
+    func sortOrLimitMeansFiltered() {
+        #expect(!LibraryQuery(sort: LibrarySort(field: .rating, ascending: false)).isUnfiltered)
+        #expect(!LibraryQuery(limit: 10).isUnfiltered)
+    }
+
     @Test("An unfiltered call samples the library instead of taking the first N")
     func unfilteredCallSamples() {
         let library = (1...500).map { movie("Film \($0)", 2000, ["Drama"], rating: Double($0 % 10)) }

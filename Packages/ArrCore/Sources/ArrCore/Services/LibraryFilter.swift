@@ -15,22 +15,65 @@ public struct LibraryQuery: Sendable, Equatable {
     public var startYear: Int?
     public var endYear: Int?
     public var unwatchedOnly: Bool
+    /// Explicit ordering. nil keeps the historical behavior (title-match order,
+    /// else rating-desc as a readability default).
+    public var sort: LibrarySort?
+    /// Row cap requested by the caller. The tool still applies its own hard
+    /// cap on top; this exists so "top 10" returns 10 rows, not 100.
+    public var limit: Int?
 
     public init(title: String = "", genre: String = "",
                 startYear: Int? = nil, endYear: Int? = nil,
-                unwatchedOnly: Bool = false) {
+                unwatchedOnly: Bool = false,
+                sort: LibrarySort? = nil, limit: Int? = nil) {
         self.title = title
         self.genre = genre
         self.startYear = startYear
         self.endYear = endYear
         self.unwatchedOnly = unwatchedOnly
+        self.sort = sort
+        self.limit = limit
     }
 
     /// True when the caller asked for the whole library. Those calls get a
     /// sample rather than the first N — twenty alphabetical titles out of three
-    /// thousand look like an answer and are noise.
+    /// thousand look like an answer and are noise. A sort or a limit makes the
+    /// call a ranking question, which must stay deterministic: "top 10 by
+    /// rating" answered with a random draw is a wrong answer, not flavour.
     public var isUnfiltered: Bool {
-        title.isEmpty && genre.isEmpty && startYear == nil && endYear == nil && !unwatchedOnly
+        title.isEmpty && genre.isEmpty && startYear == nil && endYear == nil
+            && !unwatchedOnly && sort == nil && limit == nil
+    }
+}
+
+/// One sort key for the library list tools. Wire form is `field` or
+/// `field.asc` / `field.desc` ("rating", "year.asc", …) — dotted like TMDB's
+/// sort keys, so the model carries one convention across tools.
+public struct LibrarySort: Sendable, Equatable {
+    public enum Field: String, Sendable {
+        case rating, year, added, title, random
+    }
+    public var field: Field
+    public var ascending: Bool
+
+    public init(field: Field, ascending: Bool) {
+        self.field = field
+        self.ascending = ascending
+    }
+
+    /// nil for unknown fields — the tool reports the vocabulary instead of
+    /// silently ignoring a typo'd sort.
+    public static func parse(_ raw: String) -> LibrarySort? {
+        let parts = raw.lowercased().split(separator: ".", maxSplits: 1).map(String.init)
+        guard let first = parts.first, let field = Field(rawValue: first) else { return nil }
+        let defaultAscending = (field == .title)
+        let ascending: Bool
+        switch parts.count > 1 ? parts[1] : "" {
+        case "asc": ascending = true
+        case "desc": ascending = false
+        default: ascending = defaultAscending
+        }
+        return LibrarySort(field: field, ascending: ascending)
     }
 }
 
@@ -40,6 +83,9 @@ public protocol LibraryFilterable {
     var filterYear: Int? { get }
     var filterGenres: [String] { get }
     var filterRating: Double? { get }
+    /// ISO-8601 date the arr added the record, as shipped on the wire.
+    /// Lexicographic order IS chronological order for these strings.
+    var filterAdded: String? { get }
 }
 
 extension RadarrLibraryRecord: LibraryFilterable {
@@ -47,6 +93,7 @@ extension RadarrLibraryRecord: LibraryFilterable {
     public var filterYear: Int? { year }
     public var filterGenres: [String] { genres ?? [] }
     public var filterRating: Double? { ratings?.tmdb?.value ?? ratings?.imdb?.value }
+    public var filterAdded: String? { added }
 }
 
 extension SonarrLibraryRecord: LibraryFilterable {
@@ -54,6 +101,7 @@ extension SonarrLibraryRecord: LibraryFilterable {
     public var filterYear: Int? { year }
     public var filterGenres: [String] { genres ?? [] }
     public var filterRating: Double? { ratings?.value }
+    public var filterAdded: String? { added }
 }
 
 public enum LibraryFilter {
@@ -83,17 +131,58 @@ public enum LibraryFilter {
         if query.unwatchedOnly {
             out = out.filter { !isWatched($0) }
         }
-        // Title last: it re-orders by match quality, and the facet filters
-        // above only ever remove, so running it last keeps that order intact.
+        // Title next: it re-orders by match quality, and the facet filters
+        // above only ever remove, so running it after keeps that order intact.
         if !query.title.isEmpty {
-            return TitleMatch.matches(query: query.title, candidates: out, title: \.filterTitle)
+            out = TitleMatch.matches(query: query.title, candidates: out, title: \.filterTitle)
         }
-        // No title to rank by, so rank by what the caller is actually asking
+        // An explicit sort always wins — it is the caller's question ("top 10
+        // by rating" has one correct order).
+        if let sort = query.sort {
+            return sorted(out, by: sort)
+        }
+        if !query.title.isEmpty { return out }
+        // No title and no sort: rank by what the caller is actually asking
         // for: "unwatched sci-fi I own" wants the good ones first, and the arr's
         // own alphabetical order buries them under whatever starts with A.
         // Unrated titles sort as average rather than last — an arr that never
         // fetched a rating is not evidence the film is bad.
         return out.sorted { ($0.filterRating ?? 6.0) > ($1.filterRating ?? 6.0) }
+    }
+
+    /// Deterministic ordering for one sort key (except `.random`, whose whole
+    /// point is a fresh draw). Ties break on title so equal-rated rows don't
+    /// flap between calls.
+    static func sorted<T: LibraryFilterable>(_ records: [T], by sort: LibrarySort) -> [T] {
+        func tie(_ a: T, _ b: T) -> Bool { a.filterTitle < b.filterTitle }
+        switch sort.field {
+        case .random:
+            return records.shuffled()
+        case .title:
+            return records.sorted {
+                sort.ascending ? $0.filterTitle < $1.filterTitle : $0.filterTitle > $1.filterTitle
+            }
+        case .rating:
+            return records.sorted {
+                let l = $0.filterRating ?? 6.0, r = $1.filterRating ?? 6.0
+                if l != r { return sort.ascending ? l < r : l > r }
+                return tie($0, $1)
+            }
+        case .year:
+            return records.sorted {
+                let l = $0.filterYear ?? 0, r = $1.filterYear ?? 0
+                if l != r { return sort.ascending ? l < r : l > r }
+                return tie($0, $1)
+            }
+        case .added:
+            // ISO-8601 strings order lexicographically; missing dates sort as
+            // oldest either way.
+            return records.sorted {
+                let l = $0.filterAdded ?? "", r = $1.filterAdded ?? ""
+                if l != r { return sort.ascending ? l < r : l > r }
+                return tie($0, $1)
+            }
+        }
     }
 
     /// A spread across the library for unfiltered calls. Uniformly random, and
