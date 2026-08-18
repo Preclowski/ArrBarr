@@ -176,10 +176,10 @@ public struct DetailView: View {
     /// payload lands. Nil = no chip (no trailer, or no TMDB key for the
     /// series path).
     @State private var trailerKey: String?
-    /// The clip currently on screen, presented as a full-surface overlay (like
-    /// the poster lightbox). Separate from `trailerKey` so the badge can open
-    /// and close it without re-resolving.
-    @State private var presentedTrailer: String?
+    /// The clip currently on screen. Presentation lives in the shared
+    /// `TrailerSession` (rendered by the surface root), so the clip survives
+    /// the popover being closed and reopened mid-play.
+    @ObservedObject private var trailerSession = TrailerSession.shared
     /// Season drill-down — set when the user taps a season row. Pushes
     /// `SeasonDetailView` (its episodes + that season's search buttons).
     @State private var seasonDrill: SeasonDrill?
@@ -384,7 +384,6 @@ public struct DetailView: View {
             apiKey: item.posterRequiresAuth ? arrAPIKey(for: item, in: configStore) : nil,
             aspectRatio: item.source == .lidarr ? 1.0 : 2.0 / 3.0
         )
-        .trailerOverlay(key: $presentedTrailer)
         .task(id: item.id) { await load() }
         .task(id: trailerLookupToken) { await resolveTrailer() }
         .task(id: searchWatchToken) { await watchSearchState() }
@@ -1042,8 +1041,10 @@ public struct DetailView: View {
     }
 
     private func resolveTrailer() async {
-        // A new title must not keep the previous one's clip on screen.
-        presentedTrailer = nil
+        // A new title must not keep the previous one's clip on screen — but
+        // only OUR clip: on a fresh mount `trailerKey` is nil and a session
+        // restored across a popover reopen must be left alone.
+        if let old = trailerKey, trailerSession.key == old { trailerSession.dismiss() }
         trailerKey = nil
         switch item.source {
         case .radarr, .whisparr:
@@ -1066,11 +1067,11 @@ public struct DetailView: View {
     /// The badge in the poster's corner — only once a clip is actually known,
     /// so it never sits there dead.
     private var trailerBadge: AnyView? {
-        guard trailerKey != nil else { return nil }
+        guard let trailerKey else { return nil }
         return AnyView(
-            TrailerPosterBadge(isPlaying: presentedTrailer != nil) {
+            TrailerPosterBadge(isPlaying: trailerSession.key == trailerKey) {
                 withAnimation(.smooth(duration: 0.22)) {
-                    presentedTrailer = presentedTrailer == nil ? trailerKey : nil
+                    trailerSession.toggle(trailerKey)
                 }
             }
         )

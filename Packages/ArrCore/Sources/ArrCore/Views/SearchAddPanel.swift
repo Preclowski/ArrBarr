@@ -30,8 +30,9 @@ public struct SearchAddPanel: View {
     /// Trailer for the title being added. Nil = no clip (or no TMDB key for
     /// the series route), and then no badge on the poster.
     @State private var trailerKey: String?
-    /// The clip on screen, presented as a full-surface overlay.
-    @State private var presentedTrailer: String?
+    /// The clip on screen — shared session, rendered by the surface root so it
+    /// survives popover close/reopen (see `TrailerSession`).
+    @ObservedObject private var trailerSession = TrailerSession.shared
 
     // Radarr state
     @State private var selectedProfileId: Int?
@@ -191,10 +192,10 @@ public struct SearchAddPanel: View {
             viewModel.addError = nil
             await loadCast()
         }
-        .task(id: identityKey) { await resolveTrailer() }
         // Deciding whether to ADD is when a trailer is worth most, so the panel
-        // presents it exactly like the detail view does.
-        .trailerOverlay(key: $presentedTrailer)
+        // offers it exactly like the detail view does (the overlay itself is
+        // rendered by the surface root, off the shared session).
+        .task(id: identityKey) { await resolveTrailer() }
     }
 
     /// TMDB-sourced chat results carry only voteAverage + title + year + genres.
@@ -229,11 +230,11 @@ public struct SearchAddPanel: View {
     }
 
     private var trailerBadge: AnyView? {
-        guard trailerKey != nil else { return nil }
+        guard let trailerKey else { return nil }
         return AnyView(
-            TrailerPosterBadge(isPlaying: presentedTrailer != nil) {
+            TrailerPosterBadge(isPlaying: trailerSession.key == trailerKey) {
                 withAnimation(.smooth(duration: 0.22)) {
-                    presentedTrailer = presentedTrailer == nil ? trailerKey : nil
+                    trailerSession.toggle(trailerKey)
                 }
             }
         )
@@ -242,7 +243,9 @@ public struct SearchAddPanel: View {
     /// `mediaRef` already knows which foreign key this result carries, so the
     /// movie/series split needs no second source check.
     private func resolveTrailer() async {
-        presentedTrailer = nil
+        // Dismiss only OUR previous clip — a fresh mount (trailerKey nil) must
+        // not kill a session restored across a popover reopen.
+        if let old = trailerKey, trailerSession.key == old { trailerSession.dismiss() }
         trailerKey = nil
         switch result.mediaRef {
         case .tmdb(let id):

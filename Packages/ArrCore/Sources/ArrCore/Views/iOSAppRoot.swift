@@ -18,6 +18,9 @@ public struct iOSAppRoot: View {
     @State private var viewModel: QueueViewModel
     @ObservedObject private var configStore: ConfigStore
     @ObservedObject private var storeManager = StoreManager.shared
+    /// The one live trailer — surfaces (DetailView / SearchAddPanel / Quiz)
+    /// start it, this root renders it. See `TrailerSession`.
+    @ObservedObject private var trailerSession = TrailerSession.shared
     @Environment(\.scenePhase) private var scenePhase
 
     public init(viewModel: QueueViewModel? = nil, configStore: ConfigStore? = nil) {
@@ -59,6 +62,14 @@ public struct iOSAppRoot: View {
                 .tabItem { Label { Text("common.settings.button", bundle: .module) } icon: { Image(systemName: "gearshape") } }
         }
         .environmentObject(configStore)
+        // The one trailer overlay for the whole app — full-screen, over the
+        // TabView, driven by the shared session (surfaces only start clips).
+        .trailerOverlay(key: Binding(
+            get: { trailerSession.key },
+            set: { newValue in
+                if let newValue { trailerSession.present(newValue) } else { trailerSession.dismiss() }
+            }
+        ))
         .fullScreenCover(isPresented: Binding(
             get: { storeManager.gatedFeature != nil },
             set: { if !$0 { storeManager.dismissPaywall() } }

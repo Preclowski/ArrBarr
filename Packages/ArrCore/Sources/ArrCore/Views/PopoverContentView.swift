@@ -89,6 +89,9 @@ public struct PopoverContentView: View {
     /// posted by the `discover_in_quiz` chat tool.
     @State private var discoverViewModel = DiscoverViewModel.shared
     @State private var showDiscoverOverlay = false
+    /// The one live trailer — outlives this view (the popover rebuilds its
+    /// content per open), so a playing clip is re-presented on reopen.
+    @ObservedObject private var trailerSession = TrailerSession.shared
 
     private var sonarrConfigured: Bool { configStore.sonarr.isVisible }
     private var radarrConfigured: Bool { configStore.radarr.isVisible }
@@ -381,6 +384,19 @@ public struct PopoverContentView: View {
                     pendingConfirm = payload
                 }
             }
+            // The one trailer overlay for the whole surface, driven by the
+            // shared session. Rendered up here — not inside DetailView /
+            // SearchAddPanel / the Quiz, which merely start it — so a clip
+            // started anywhere survives the popover being closed and reopened
+            // (the popover rebuilds this whole tree per open; the session and
+            // its web view live above it). Below the confirm overlay: a
+            // pending confirmation outranks entertainment.
+            .trailerOverlay(key: Binding(
+                get: { trailerSession.key },
+                set: { newValue in
+                    if let newValue { trailerSession.present(newValue) } else { trailerSession.dismiss() }
+                }
+            ))
             .overlay {
                 if let pending = pendingConfirm {
                     ModalConfirmOverlay(
@@ -637,7 +653,7 @@ public struct PopoverContentView: View {
         // A row of floating glass capsules, all the SAME height: the tab cluster
         // (Queue / Upcoming / Chat / Add) sets the height via its natural size;
         // the optional windowed-mode close island (far left), the optional
-        // offline chip, and the accessory island (detach toggle + kebab) match it
+        // offline chip, and the accessory island (kebab, + × when detached) match it
         // through `pillHeight`. The cluster pill stretches to fill all space
         // between, so long labels (Polish "Nadchodzące") aren't squeezed and the
         // chrome spans the whole row.
@@ -658,13 +674,11 @@ public struct PopoverContentView: View {
                     .glassyFloatingBar()
                     .transition(.opacity.combined(with: .scale(scale: 0.9)))
             }
-            // One island: the detach/attach toggle sits left of the kebab,
-            // both inside a single glass capsule (like the tab cluster nests
-            // its buttons in one capsule).
+            // One island: the kebab (and, in detached mode, the window's ×)
+            // inside a single glass capsule (like the tab cluster nests its
+            // buttons in one capsule). The detach/attach toggle lives INSIDE
+            // the kebab menu — see `moreMenu` for why it has no own glyph.
             HStack(spacing: 0) {
-                #if os(macOS)
-                detachToggleButton
-                #endif
                 moreMenu
                 #if os(macOS)
                 // Detached window's close affordance: last item of the right
@@ -723,6 +737,15 @@ public struct PopoverContentView: View {
     /// shortcut is discoverable without a menu (the numbering is the same one
     /// the hidden ⌘1…⌘9 buttons register — both read `visibleTabs`).
     /// `nil` on iOS / when the tab is past the ninth (no shortcut to show).
+    /// Cross-platform read of the ⌘ monitor (iOS has none, so never held).
+    private var commandHeld: Bool {
+        #if os(macOS)
+        commandKey.isHeld
+        #else
+        false
+        #endif
+    }
+
     private func commandHint(for tab: Tab) -> String? {
         #if os(macOS)
         guard commandKey.isHeld, let index = visibleTabs.firstIndex(of: tab), index < 9 else { return nil }
@@ -787,11 +810,30 @@ public struct PopoverContentView: View {
                         // default insertion transition inside the animated
                         // HStack relayout and reads as "the label slides in
                         // from the left" instead of a crossfade-in-place.
-                        if selectedTab == tab {
+                        //
+                        // While ⌘ is held the ACTIVE tab collapses to its
+                        // glyph too — every pill reads as icon + ⌘number, and
+                        // the hint isn't glued to a word.
+                        if selectedTab == tab && !commandHeld {
+                            // No `fixedSize` here: the label must stay
+                            // COMPRESSIBLE. With the detached window's extra ×
+                            // in the right island, the Polish "Nadchodzące"
+                            // pill pushed the bar's minimum width past the
+                            // fixed 400pt panel — the whole tab VStack then
+                            // sized to the bar and sat centered, bleeding
+                            // ~9pt past both window edges (rows AND the
+                            // capsule bar hugged the frame). Scale-then-
+                            // truncate absorbs the squeeze inside the pill.
                             Text(LocalizedStringKey(tab.rawValue), bundle: .module)
                                 .scaledFont(size: 12, weight: .semibold)
                                 .foregroundStyle(.primary)
-                                .fixedSize(horizontal: true, vertical: false)
+                                .lineLimit(1)
+                                // 0.75, not a taller floor: the detached
+                                // Polish "Nadchodzące" squeeze needs ~20pt
+                                // back, and a floor that saves less than the
+                                // deficit makes SwiftUI give up and truncate
+                                // ("Nadchodzą…") instead of scaling at all.
+                                .minimumScaleFactor(0.75)
                                 .transition(.opacity)
                         } else {
                             Image(systemName: tab.symbol)
@@ -806,8 +848,27 @@ public struct PopoverContentView: View {
                                 .scaledFont(size: 9, weight: .semibold)
                                 .foregroundStyle(.secondary)
                         }
+                        // ⌘-number sits in the layout, a small step to the
+                        // right of the glyph. It USED to be a trailing
+                        // overlay so it couldn't resize a tab mid-spring —
+                        // but while ⌘ is held every pill now reshapes anyway
+                        // (the active label collapses to its glyph above),
+                        // and the animated `tabFrames` glide absorbs the
+                        // width change the same way it absorbs the icon⇄text
+                        // swap.
+                        if let hint = commandHint(for: tab) {
+                            Text(hint)
+                                .scaledFont(size: 9, weight: .semibold)
+                                .monospacedDigit()
+                                .foregroundStyle(.secondary)
+                                .padding(.leading, 4)
+                                .transition(.opacity)
+                                .accessibilityHidden(true)
+                        }
                     }
-                    .fixedSize(horizontal: true, vertical: false)
+                    // No `fixedSize` on the cluster either — same overflow as
+                    // the label above: an incompressible pill row wider than
+                    // the panel widens the whole surface instead of squeezing.
                     // Horizontal/vertical padding sets the breathing room INSIDE
                     // the selection pill. The tab cluster's resulting natural
                     // height (~32 at default scale) is the canonical bar height;
@@ -815,21 +876,6 @@ public struct PopoverContentView: View {
                     // via `pillHeight` (they don't shrink the tabs).
                     .padding(.horizontal, 18)
                     .padding(.vertical, 9)
-                    // ⌘-number sits *beside* the label, parked in the pill's own
-                    // 18pt trailing padding — an overlay, so it never enters the
-                    // layout and can't resize a tab (which would jolt the
-                    // selection indicator mid-spring, see the stabiliser above).
-                    .overlay(alignment: .trailing) {
-                        if let hint = commandHint(for: tab) {
-                            Text(hint)
-                                .scaledFont(size: 9, weight: .semibold)
-                                .monospacedDigit()
-                                .foregroundStyle(.secondary)
-                                .padding(.trailing, 3)
-                                .transition(.opacity)
-                                .accessibilityHidden(true)
-                        }
-                    }
                     .contentShape(Rectangle())
                     .background(
                         GeometryReader { proxy in
@@ -953,8 +999,25 @@ public struct PopoverContentView: View {
                 .keyboardShortcut(",", modifiers: .command)
             #if os(macOS)
             Button { onShowAbout() } label: { Text("settings.aboutArrbarr.button", bundle: .module) }
-            // The detach/re-attach toggle now lives in the header island next to
-            // the kebab (see detachToggleButton), so it's dropped from here.
+            // Detach into a window / re-attach to the menu bar. Lives here in
+            // the overflow menu (not as its own island glyph): a dedicated
+            // icon paid ~32pt of tab-bar width for a once-in-a-while action —
+            // width the fixed 400pt bar doesn't have in detached mode, where
+            // the × joins the island and the Polish "Nadchodzące" pill made
+            // the bar overflow the window. Pure data toggle on the shared
+            // ConfigStore; AppDelegate observes `$detachedWindow` and
+            // opens/closes the window.
+            Button {
+                let wasInPopover = !isDetachedWindow
+                configStore.detachedWindow.toggle()
+                // Detaching from the menu-bar panel: dismiss the popover so it
+                // doesn't hang around behind the freshly-opened window.
+                // (Re-attaching from the window is handled by AppDelegate
+                // closing the NSWindow.)
+                if wasInPopover { dismiss() }
+            } label: {
+                Text(isDetachedWindow ? "common.reattachToMenuBar.button" : "common.detachIntoAWindow.button", bundle: .module)
+            }
             #endif
             Divider()
             Button { onQuit() } label: { Text("common.quitArrbarr.button", bundle: .module) }
@@ -970,33 +1033,6 @@ public struct PopoverContentView: View {
         .contentShape(Capsule())
         .help(Text("common.moreOptions.button", bundle: .module))
     }
-
-    #if os(macOS)
-    /// Detach the popover into a free-floating window — or, when already
-    /// detached, re-attach it to the menu bar. Pure data toggle on the shared
-    /// ConfigStore; AppDelegate observes `$detachedWindow` and opens/closes the
-    /// window. Glyph + tooltip flip on `isDetachedWindow`. Bare (no glass) — the
-    /// wrapping island capsule supplies the chrome.
-    private var detachToggleButton: some View {
-        Button {
-            let wasInPopover = !isDetachedWindow
-            configStore.detachedWindow.toggle()
-            // Detaching from the menu-bar panel: dismiss the popover so it doesn't
-            // hang around behind the freshly-opened window. (Re-attaching from the
-            // window is handled by AppDelegate closing the NSWindow.)
-            if wasInPopover { dismiss() }
-        } label: {
-            Image(systemName: isDetachedWindow ? "menubar.arrow.up.rectangle" : "macwindow.on.rectangle")
-                .scaledFont(size: 12, weight: .semibold)
-                .foregroundStyle(.secondary)
-                .frame(width: Self.pillHeight, height: Self.pillHeight)
-                .contentShape(Capsule())
-        }
-        .buttonStyle(.plain)
-        .help(Text(isDetachedWindow ? "common.reattachToMenuBar.button" : "common.detachIntoAWindow.button", bundle: .module))
-        .accessibilityLabel(Text(isDetachedWindow ? "common.reattachToMenuBar.button" : "common.detachIntoAWindow.button", bundle: .module))
-    }
-    #endif
 
 }
 

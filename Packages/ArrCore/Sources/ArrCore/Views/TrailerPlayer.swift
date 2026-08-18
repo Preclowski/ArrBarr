@@ -1,6 +1,58 @@
 import SwiftUI
 import WebKit
 
+// MARK: - Session
+
+/// The one live trailer, owned ABOVE the view tree.
+///
+/// The menu-bar popover rebuilds its entire content view on every open, so any
+/// trailer state kept in a surface's `@State` dies with the popover — the clip
+/// kept playing (WebKit holds the page until it is blanked) while the UI that
+/// could show or stop it was gone. Holding the key AND the web view here lets
+/// the root overlay re-present the same, still-playing player when the popover
+/// comes back, and gives closing it a single owner.
+///
+/// One session, not one per surface: the overlay is full-surface, so two
+/// concurrent clips can't exist anyway.
+@MainActor
+public final class TrailerSession: ObservableObject {
+    public static let shared = TrailerSession()
+
+    /// YouTube id of the clip on screen (or playing behind a closed popover).
+    /// Nil = no trailer up.
+    @Published public private(set) var key: String?
+
+    /// The live player, kept so a popover close/reopen re-parents the SAME
+    /// web view instead of reloading the clip from zero.
+    var webView: WKWebView?
+    /// Which clip `webView` has loaded — lives here (not on a coordinator)
+    /// because coordinators die with the popover's view tree.
+    var loadedKey: String?
+
+    public func present(_ key: String) { self.key = key }
+
+    /// The badge's toggle: play, or stop if this clip is already up.
+    public func toggle(_ key: String?) {
+        guard let key else { return }
+        if self.key == key { dismiss() } else { present(key) }
+    }
+
+    /// Stops playback for real: releasing the web view is NOT enough — WebKit
+    /// keeps the media playing until the page goes, so blank it.
+    public func dismiss() {
+        key = nil
+        loadedKey = nil
+        webView?.loadHTMLString("<html><body></body></html>", baseURL: nil)
+        webView = nil
+    }
+
+    /// True while `view` must be kept alive and audible even though its host
+    /// tree is being dismantled (popover closed or rebuilt mid-clip).
+    func keepsAlive(_ view: WKWebView) -> Bool {
+        key != nil && webView === view
+    }
+}
+
 // MARK: - Web view
 //
 // YouTube's embed is the only legal way to play these clips — pulling the
@@ -128,27 +180,51 @@ private struct TrailerWebView: NSViewRepresentable {
     let key: String
 
     func makeNSView(context: Context) -> WKWebView {
+        let session = TrailerSession.shared
+        let coordinator = context.coordinator
+        if let existing = session.webView as? TrailerBackingWebView {
+            // The still-playing player from a torn-down popover tree — hand it
+            // to this tree's coordinator without touching the page, so the
+            // clip carries on exactly where it was. Remove-then-add because
+            // the dead tree's handler may still be registered, and `add` with
+            // a duplicate name raises.
+            existing.configuration.userContentController
+                .removeScriptMessageHandler(forName: trailerFullscreenMessage)
+            existing.configuration.userContentController
+                .add(coordinator, name: trailerFullscreenMessage)
+            coordinator.webView = existing
+            existing.onWindowChange = { [weak coordinator] window in
+                coordinator?.webViewMoved(to: window)
+            }
+            if session.loadedKey != key { load(into: existing) }
+            return existing
+        }
         let config = trailerWebConfiguration()
-        config.userContentController.add(context.coordinator, name: trailerFullscreenMessage)
+        config.userContentController.add(coordinator, name: trailerFullscreenMessage)
         let view = TrailerBackingWebView(frame: .zero, configuration: config)
         view.setValue(false, forKey: "drawsBackground")
-        let coordinator = context.coordinator
         coordinator.webView = view
         view.onWindowChange = { [weak coordinator] window in
             coordinator?.webViewMoved(to: window)
         }
-        load(into: view, coordinator: coordinator)
+        session.webView = view
+        load(into: view)
         return view
     }
 
     func updateNSView(_ view: WKWebView, context: Context) {
         // Reload only when the clip changes: updateNSView fires on every parent
         // redraw, and reloading would restart playback each time.
-        guard context.coordinator.loadedKey != key else { return }
-        load(into: view, coordinator: context.coordinator)
+        guard TrailerSession.shared.loadedKey != key else { return }
+        load(into: view)
     }
 
     static func dismantleNSView(_ view: WKWebView, coordinator: Coordinator) {
+        // The popover (or its content tree) died mid-clip while the session
+        // still owns the player: leave the page — and its message handler,
+        // which the next tree's coordinator takes over — alone, so the clip
+        // survives to be re-presented on reopen.
+        if TrailerSession.shared.keepsAlive(view) { return }
         view.configuration.userContentController
             .removeScriptMessageHandler(forName: trailerFullscreenMessage)
         coordinator.hostTornDown()
@@ -171,7 +247,6 @@ private struct TrailerWebView: NSViewRepresentable {
     /// not the hiding. `viewDidMoveToWindow` is the signal that actually
     /// fires.)
     final class Coordinator: NSObject, WKScriptMessageHandler {
-        var loadedKey: String?
         weak var webView: WKWebView?
         /// The window the player lives in normally — the popover, or the
         /// detached window. Captured the first time we are placed.
@@ -273,8 +348,8 @@ private struct TrailerWebView: NSViewRepresentable {
         }
     }
 
-    private func load(into view: WKWebView, coordinator: Coordinator) {
-        coordinator.loadedKey = key
+    private func load(into view: WKWebView) {
+        TrailerSession.shared.loadedKey = key
         view.loadHTMLString(trailerEmbedHTML(key: key, autoplay: true),
                             baseURL: URL(string: trailerEmbedOrigin))
     }
@@ -285,30 +360,40 @@ private struct TrailerWebView: UIViewRepresentable {
     let key: String
 
     func makeUIView(context: Context) -> WKWebView {
+        let session = TrailerSession.shared
+        if let existing = session.webView {
+            // Same as macOS: a surviving player from a torn-down tree keeps
+            // its page (and playback position) across the re-parent.
+            if session.loadedKey != key { load(into: existing) }
+            return existing
+        }
         let view = WKWebView(frame: .zero, configuration: trailerWebConfiguration())
         view.isOpaque = false
         view.backgroundColor = .clear
         view.scrollView.isScrollEnabled = false
-        load(into: view, coordinator: context.coordinator)
+        session.webView = view
+        load(into: view)
         return view
     }
 
     func updateUIView(_ view: WKWebView, context: Context) {
-        guard context.coordinator.loadedKey != key else { return }
-        load(into: view, coordinator: context.coordinator)
+        guard TrailerSession.shared.loadedKey != key else { return }
+        load(into: view)
+    }
+
+    static func dismantleUIView(_ view: WKWebView, coordinator: Coordinator) {
+        // See the macOS note: releasing the view leaves the clip playing —
+        // blank it, unless the session still owns it (tree rebuilt mid-clip).
+        if TrailerSession.shared.keepsAlive(view) { return }
+        view.loadHTMLString("<html><body></body></html>", baseURL: nil)
     }
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
-    static func dismantleUIView(_ view: WKWebView, coordinator: Coordinator) {
-        // See the macOS note: releasing the view leaves the clip playing.
-        view.loadHTMLString("<html><body></body></html>", baseURL: nil)
-    }
+    final class Coordinator {}
 
-    final class Coordinator { var loadedKey: String? }
-
-    private func load(into view: WKWebView, coordinator: Coordinator) {
-        coordinator.loadedKey = key
+    private func load(into view: WKWebView) {
+        TrailerSession.shared.loadedKey = key
         view.loadHTMLString(trailerEmbedHTML(key: key, autoplay: true),
                             baseURL: URL(string: trailerEmbedOrigin))
     }

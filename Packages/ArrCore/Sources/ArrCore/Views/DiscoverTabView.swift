@@ -42,9 +42,10 @@ public struct DiscoverTabView: View {
     /// button is still on screen (see `resolveTrailer`) but inert — it would
     /// otherwise play the PREVIOUS card's clip.
     @State private var trailerKeyCardId: String?
-    /// The clip on screen. Same full-surface presentation every other trailer
-    /// surface uses, so the Quiz keeps no player layout of its own.
-    @State private var presentedTrailer: String?
+    /// The clip on screen. Same shared-session presentation every other trailer
+    /// surface uses (rendered by the surface root), so the Quiz keeps no
+    /// player layout of its own.
+    @ObservedObject private var trailerSession = TrailerSession.shared
     /// Keyboard focus for the deck. Arrow keys only reach `onKeyPress` while
     /// something is focused, and the deck is the only thing on screen worth
     /// focusing — the tab content behind it is parked and disabled while the
@@ -149,7 +150,6 @@ public struct DiscoverTabView: View {
                     }
                 }
             }
-            .trailerOverlay(key: $presentedTrailer)
             .task(id: viewModel.current?.id) { await resolveTrailer(for: viewModel.current) }
     }
 
@@ -191,7 +191,7 @@ public struct DiscoverTabView: View {
             // deck is live again — in both cases the keys should just work
             // without the user clicking the poster first.
             .onChange(of: viewModel.current?.id) { _, _ in deckFocused = true }
-            .onChange(of: presentedTrailer) { _, presented in
+            .onChange(of: trailerSession.key) { _, presented in
                 if presented == nil { deckFocused = true }
             }
     }
@@ -353,8 +353,9 @@ public struct DiscoverTabView: View {
                         action: {
                             // Ignore taps aimed at a clip we haven't resolved
                             // for THIS card yet.
-                            guard trailerKeyCardId == viewModel.current?.id else { return }
-                            withAnimation(.smooth(duration: 0.2)) { presentedTrailer = trailerKey }
+                            guard trailerKeyCardId == viewModel.current?.id,
+                                  let trailerKey else { return }
+                            withAnimation(.smooth(duration: 0.2)) { trailerSession.present(trailerKey) }
                         }
                     )
                     .transition(.scale.combined(with: .opacity))
@@ -393,8 +394,9 @@ public struct DiscoverTabView: View {
         // have trailers — a blink, and a row of buttons resizing around it.
         withAnimation(.smooth(duration: 0.2)) {
             // The overlay is a different matter: a new card must never keep the
-            // previous title's clip playing.
-            presentedTrailer = nil
+            // previous title's clip playing. Only OUR clip, though — a session
+            // restored across a popover reopen belongs to whoever started it.
+            if let old = trailerKey, trailerSession.key == old { trailerSession.dismiss() }
         }
         guard let item, let foreignId = Int(item.result.foreignId), foreignId > 0 else {
             withAnimation(.smooth(duration: 0.2)) { trailerKey = nil }
@@ -497,7 +499,7 @@ public struct DiscoverTabView: View {
     /// flying off or the trailer is up: a held-down arrow should not burn
     /// through the deck faster than the user can see it.
     private func keyVerdict(skip: Bool) -> KeyPress.Result {
-        guard viewModel.current != nil, presentedTrailer == nil, !verdictInFlight,
+        guard viewModel.current != nil, trailerSession.key == nil, !verdictInFlight,
               !isObscured else { return .ignored }
         if skip { handleSkip() } else { handleAdd() }
         return .handled
