@@ -56,6 +56,38 @@ struct LibraryTabContent: View {
     private enum SortMode: CaseIterable {
         case title, releaseDate, dateAdded, size, imdb, tmdb, rating
 
+        /// Key for the view model's per-axis sorted cache — see
+        /// `LibraryViewModel.sorted(_:cacheKey:using:)`. Must stay 1:1 with
+        /// `areInIncreasingOrder` ("title" is also the model's pre-warm key).
+        var cacheKey: String { String(describing: self) }
+
+        /// The axis' comparator, handed to the view model's memoized sort.
+        /// Sorting used to happen inline in `visibleEntries` on every body
+        /// pass — ~20ms+ for a ~3k library on the localized title axis.
+        var areInIncreasingOrder: (LibraryEntry, LibraryEntry) -> Bool {
+            switch self {
+            case .title:
+                return LibraryViewModel.titleAscending
+            case .releaseDate:
+                // Newest first; undated entries sink to the end. Title breaks
+                // ties ascending — hence the flipped operands on the second
+                // element.
+                return { ($0.releaseSortKey, $1.title) > ($1.releaseSortKey, $0.title) }
+            case .dateAdded:
+                // Most recently added first — "what did I just add" is the
+                // whole point of this axis.
+                return { ($0.dateAdded ?? .distantPast, $1.title) > ($1.dateAdded ?? .distantPast, $0.title) }
+            case .size:
+                return { $0.sizeOnDisk > $1.sizeOnDisk }
+            case .imdb:
+                return { ($0.ratingImdb ?? -1) > ($1.ratingImdb ?? -1) }
+            case .tmdb:
+                return { ($0.ratingTmdb ?? -1) > ($1.ratingTmdb ?? -1) }
+            case .rating:
+                return { ($0.ratingArr ?? -1) > ($1.ratingArr ?? -1) }
+            }
+        }
+
         /// Brand names (IMDb/TMDB) render verbatim; the rest localize.
         var label: Text {
             switch self {
@@ -143,7 +175,12 @@ struct LibraryTabContent: View {
 
     private var visibleEntries: [LibraryEntry] {
         let query = trimmedFilter
-        var out = allEntries.filter { matches($0, filter: statusFilter) }
+        // Sort FIRST, through the view model's memoized per-axis cache —
+        // filtering a pre-sorted list preserves order, and the filters are
+        // the cheap half (sub-ms even at ~3k entries; the localized title
+        // sort was the ~20ms-per-body-pass hitch felt on tab entry).
+        var out = viewModel.sorted(source, cacheKey: sort.cacheKey, using: sort.areInIncreasingOrder)
+        out = out.filter { matches($0, filter: statusFilter) }
         if !query.isEmpty {
             // Searches the entry's whole alias set, not its visible title:
             // accents folded ("leon" → "Léon"), and every translated name the
@@ -151,26 +188,6 @@ struct LibraryTabContent: View {
             // which reads as "you don't own it" — the one wrong answer this
             // app must never give.
             out = TitleMatch.indexedFilter(out, query: query, index: \.searchIndex)
-        }
-        switch sort {
-        case .title:
-            out.sort { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
-        case .releaseDate:
-            // Newest first; undated entries sink to the end. Title breaks ties
-            // ascending — hence the flipped operands on the second element.
-            out.sort { ($0.releaseSortKey, $1.title) > ($1.releaseSortKey, $0.title) }
-        case .dateAdded:
-            // Most recently added first — "what did I just add" is the whole
-            // point of this axis.
-            out.sort { ($0.dateAdded ?? .distantPast, $1.title) > ($1.dateAdded ?? .distantPast, $0.title) }
-        case .size:
-            out.sort { $0.sizeOnDisk > $1.sizeOnDisk }
-        case .imdb:
-            out.sort { ($0.ratingImdb ?? -1) > ($1.ratingImdb ?? -1) }
-        case .tmdb:
-            out.sort { ($0.ratingTmdb ?? -1) > ($1.ratingTmdb ?? -1) }
-        case .rating:
-            out.sort { ($0.ratingArr ?? -1) > ($1.ratingArr ?? -1) }
         }
         return out
     }

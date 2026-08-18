@@ -102,6 +102,17 @@ public final class LibraryViewModel {
 
     @ObservationIgnored private static let log = Logger(category: "Library")
 
+    /// Sorted views of `entries`, memoized per (source, sort axis). The
+    /// Library tab used to sort inside `body` — a localized title sort over
+    /// ~3k entries costs ~20ms+ per body pass, and body runs several times
+    /// just entering the tab, which read as a hitch on every visit. Cached
+    /// here (not in the view) because the tab view is torn down on every
+    /// tab switch; cleared whenever a source refetches.
+    /// `@ObservationIgnored`: `sorted(_:cacheKey:using:)` fills this from
+    /// inside `body`, and an observed mutation there would invalidate the
+    /// very body that is running.
+    @ObservationIgnored private var sortCache: [QueueItem.Source: [String: [LibraryEntry]]] = [:]
+
     private var fetchedAt: [QueueItem.Source: Date] = [:]
     /// Refetch cadence while the user keeps coming back to the tab. Long on
     /// purpose: libraries change on add/import, not every minute, and the
@@ -109,6 +120,27 @@ public final class LibraryViewModel {
     private let ttl: TimeInterval = 300
 
     public init() {}
+
+    /// `entries[source]` sorted by the given axis, memoized until the next
+    /// refetch. `cacheKey` identifies the axis (the comparator itself can't
+    /// be compared); callers must keep key ↔ comparator consistent.
+    public func sorted(
+        _ source: QueueItem.Source,
+        cacheKey: String,
+        using comparator: (LibraryEntry, LibraryEntry) -> Bool
+    ) -> [LibraryEntry] {
+        if let hit = sortCache[source]?[cacheKey] { return hit }
+        let out = (entries[source] ?? []).sorted(by: comparator)
+        sortCache[source, default: [:]][cacheKey] = out
+        return out
+    }
+
+    /// The default (title) axis' comparator — lives on the model so the
+    /// post-fetch pre-warm and the view's `.title` sort are one definition
+    /// under one cache key.
+    public nonisolated static func titleAscending(_ a: LibraryEntry, _ b: LibraryEntry) -> Bool {
+        a.title.localizedCaseInsensitiveCompare(b.title) == .orderedAscending
+    }
 
     /// Load `source`'s library if it isn't cached fresh. `force` bypasses the
     /// TTL (used by ⌘R / explicit refresh).
@@ -149,6 +181,10 @@ public final class LibraryViewModel {
                 fresh = Self.unify(try await WhisparrClient(config: config).fetchAllMovies(), baseURL: config.baseURL, profiles: profiles)
             }
             entries[source] = fresh
+            sortCache[source] = nil
+            // Pre-warm the default axis so the first Library visit after a
+            // fetch renders without paying the sort inside body.
+            _ = sorted(source, cacheKey: "title", using: Self.titleAscending)
             fetchedAt[source] = Date()
             Self.logAliasCoverage(fresh, source: source)
         } catch {
