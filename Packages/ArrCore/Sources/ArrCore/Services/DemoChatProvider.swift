@@ -44,6 +44,14 @@ public struct DemoChatProvider: LLMProvider {
             return (history.filter { $0.role == .assistant }.count % 2 == 0) ? .movie : .series
         }()
 
+        // The quiz CTA (and any prompt that says quiz/swipe) must open the
+        // real swipe deck, exactly like the live provider routing through
+        // `discover_in_quiz` — answering with a suggestion list here read
+        // as "demo has no quiz".
+        if Self.containsAny(lowered, words: ["quiz", "swipe"]) {
+            return await Self.quizResponse(kind: kind)
+        }
+
         // Deterministic selection from the canned pool — same prompt
         // always yields the same picks, but different prompts shuffle
         // the order so the demo doesn't feel static across turns.
@@ -91,6 +99,58 @@ public struct DemoChatProvider: LLMProvider {
         return String(format: template, count)
     }
 
+    // MARK: - Quiz deck
+
+    /// Opens the Discover deck with the whole demo pool, mirroring
+    /// `LocalToolBackend.assembleDeck`: post `.arrBarrOpenDiscoverQuiz`,
+    /// answer with the `.discoverSession` resume card.
+    private static func quizResponse(kind: SuggestionKind) async -> LLMResponse {
+        let pool = (kind == .series) ? seriesPool : moviePool
+        let items = pool.map { result in
+            DiscoverItem(
+                result: result,
+                action: (kind == .series) ? .addToSonarr : .addToRadarr,
+                originLabel: .llm,
+                kind: (kind == .series) ? .show : .movie,
+                reason: quizReasonKeys[result.title].map {
+                    NSLocalizedString($0, bundle: .module, comment: "")
+                }
+            )
+        }
+        let mood = NSLocalizedString(
+            kind == .series ? "demo.quizMood.series" : "demo.quizMood.movies",
+            bundle: .module, comment: "")
+        await MainActor.run {
+            NotificationCenter.default.post(
+                name: .arrBarrOpenDiscoverQuiz,
+                object: nil,
+                userInfo: ["mood": mood, "items": items, "append": false]
+            )
+        }
+        let text = NSLocalizedString("demo.quizOpened", bundle: .module, comment: "")
+        let posters = items.prefix(3).compactMap { $0.result.posterURL }
+        return LLMResponse(
+            text: text,
+            toolCalls: [ToolCall(id: nil, name: "discover_in_quiz", arguments: .object([
+                "mood": .string(mood),
+                "kind": .string(kind == .series ? "series" : "movie"),
+            ]))],
+            toolResults: [ToolCallOutput(text: text, rich: .discoverSession(mood: mood, posterURLs: Array(posters)))]
+        )
+    }
+
+    /// "Why this card" hooks, keyed by pool title — localized at use.
+    private static let quizReasonKeys: [String: String] = [
+        "Big Buck Bunny": "demo.quizReason.bigbuckbunny",
+        "Sintel": "demo.quizReason.sintel",
+        "Tears of Steel": "demo.quizReason.tearsofsteel",
+        "Elephants Dream": "demo.quizReason.elephantsdream",
+        "Spring": "demo.quizReason.spring",
+        "Cosmos Laundromat": "demo.quizReason.cosmoslaundromat",
+        "Pioneer One": "demo.quizReason.pioneerone",
+        "Caminandes": "demo.quizReason.caminandes",
+    ]
+
     // MARK: - Canned content
 
     /// Deterministically pick 4 items from the canned pool. We hash the
@@ -105,192 +165,51 @@ public struct DemoChatProvider: LLMProvider {
         return (0..<count).map { i in pool[(offset + i) % pool.count] }
     }
 
-    private static func poster(_ text: String, bg: String) -> URL? {
-        let label = text
-            .addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)?
-            .replacingOccurrences(of: "&", with: "%26") ?? text
-        return URL(string: "https://placehold.co/200x300/\(bg)/ffffff/png?text=\(label)&font=lato")
-    }
-
+    // Suggestion cards reuse the demo universe's real artwork — the same
+    // Wikipedia / Cover Art Archive sources the queue and library fixtures
+    // use — so chat and quiz shots render actual covers without a TMDB key
+    // (flat placeholder tiles read as broken in marketing screenshots).
+    // Queue titles (Big Buck Bunny, Sintel, Tears of Steel) join the
+    // discovery-only Blender shorts; the series pool is the demo search
+    // pool verbatim.
     private static let moviePool: [SearchResult] = [
         SearchResult(
-            externalId: 335984, foreignId: "335984",
-            title: "Blade Runner 2049", subtitle: nil, year: 2017,
-            rating: 8.0, imdb: 8.0, rottenTomatoes: 88, metacritic: 81,
-            overview: "Thirty years after the events of the first film, a new blade runner unearths a long-buried secret that has the potential to plunge what's left of society into chaos.",
-            runtime: 164,
-            genres: ["Sci-Fi", "Drama", "Mystery"],
-            network: "Warner Bros.", certification: "R",
-            posterURL: poster("Blade Runner 2049", bg: "1c3859"),
+            externalId: 10001, foreignId: "10001",
+            title: "Big Buck Bunny", subtitle: nil, year: 2008,
+            rating: 7.0, imdb: 6.4, rottenTomatoes: 81, metacritic: nil,
+            overview: "A giant rabbit with a heart bigger than himself takes gentle, elaborate revenge on three bullying rodents. Blender's second open movie, and still its most famous.",
+            runtime: 10,
+            genres: ["Animation", "Comedy", "Short"],
+            network: "Blender Foundation", certification: "G",
+            posterURL: DemoMocks.poster(label: "Big Buck Bunny", seed: "bigbuckbunny"),
             source: .radarr, inLibraryArrId: nil
         ),
         SearchResult(
-            externalId: 693134, foreignId: "693134",
-            title: "Dune: Part Two", subtitle: nil, year: 2024,
-            rating: 8.4, imdb: 8.5, rottenTomatoes: 92, metacritic: 79,
-            overview: "Paul Atreides unites with the Fremen and begins a spiritual and martial journey to become Muad'Dib, while seeking revenge against the conspirators who destroyed his family.",
-            runtime: 166,
-            genres: ["Sci-Fi", "Adventure"],
-            network: "Legendary", certification: "PG-13",
-            posterURL: poster("Dune Part Two", bg: "4a2c1d"),
+            externalId: 10002, foreignId: "10002",
+            title: "Sintel", subtitle: nil, year: 2010,
+            rating: 7.6, imdb: 7.4, rottenTomatoes: nil, metacritic: nil,
+            overview: "A lonely girl crosses mountains and ruins searching for the dragon she once nursed back to health. Blender's third open movie — the sad one.",
+            runtime: 15,
+            genres: ["Animation", "Fantasy", "Short"],
+            network: "Blender Foundation", certification: "PG",
+            posterURL: DemoMocks.poster(label: "Sintel", seed: "sintel"),
             source: .radarr, inLibraryArrId: nil
         ),
         SearchResult(
-            externalId: 666277, foreignId: "666277",
-            title: "Past Lives", subtitle: nil, year: 2023,
-            rating: 7.9, imdb: 7.8, rottenTomatoes: 96, metacritic: 94,
-            overview: "Nora and Hae Sung, two deeply connected childhood friends, are wrest apart after Nora's family emigrates from South Korea. Two decades later, they are reunited for one fateful week.",
-            runtime: 105,
-            genres: ["Romance", "Drama"],
-            network: "A24", certification: "PG-13",
-            posterURL: poster("Past Lives", bg: "5c1f1f"),
+            externalId: 10010, foreignId: "10010",
+            title: "Tears of Steel", subtitle: nil, year: 2012,
+            rating: 6.9, imdb: 6.7, rottenTomatoes: nil, metacritic: nil,
+            overview: "A small group of warriors and scientists gather at the foot of an Amsterdam landmark to make a desperate stand against a robot uprising. Blender's first live-action VFX open movie.",
+            runtime: 12,
+            genres: ["Action", "Sci-Fi", "Short"],
+            network: "Blender Foundation", certification: "PG",
+            posterURL: DemoMocks.poster(label: "Tears of Steel", seed: "tearsofsteel"),
             source: .radarr, inLibraryArrId: nil
         ),
-        SearchResult(
-            externalId: 545611, foreignId: "545611",
-            title: "Everything Everywhere All at Once", subtitle: nil, year: 2022,
-            rating: 8.0, imdb: 7.8, rottenTomatoes: 94, metacritic: 81,
-            overview: "An aging Chinese immigrant is swept up in an insane adventure, where she alone can save the world by exploring other universes connecting with the lives she could have led.",
-            runtime: 139,
-            genres: ["Action", "Adventure", "Sci-Fi"],
-            network: "A24", certification: "R",
-            posterURL: poster("Everything Everywhere", bg: "3b1d52"),
-            source: .radarr, inLibraryArrId: nil
-        ),
-        SearchResult(
-            externalId: 76600, foreignId: "76600",
-            title: "Avatar: The Way of Water", subtitle: nil, year: 2022,
-            rating: 7.6, imdb: 7.6, rottenTomatoes: 76, metacritic: 67,
-            overview: "Set more than a decade after the events of the first film, learn the story of the Sully family, the trouble that follows them, the lengths they go to keep each other safe, and the tragedies they endure.",
-            runtime: 192,
-            genres: ["Sci-Fi", "Adventure"],
-            network: "20th Century Studios", certification: "PG-13",
-            posterURL: poster("Avatar Way of Water", bg: "1f4a52"),
-            source: .radarr, inLibraryArrId: nil
-        ),
-        SearchResult(
-            externalId: 502356, foreignId: "502356",
-            title: "The Super Mario Bros. Movie", subtitle: nil, year: 2023,
-            rating: 7.0, imdb: 7.0, rottenTomatoes: 59, metacritic: 46,
-            overview: "While working underground to fix a water main, Brooklyn plumbers — and brothers — Mario and Luigi are transported down a mysterious pipe and wander into a magical new world.",
-            runtime: 92,
-            genres: ["Animation", "Family", "Adventure"],
-            network: "Illumination", certification: "PG",
-            posterURL: poster("Super Mario Bros", bg: "5c1f1f"),
-            source: .radarr, inLibraryArrId: nil
-        ),
-        SearchResult(
-            externalId: 872585, foreignId: "872585",
-            title: "Oppenheimer", subtitle: nil, year: 2023,
-            rating: 8.1, imdb: 8.3, rottenTomatoes: 93, metacritic: 90,
-            overview: "The story of J. Robert Oppenheimer's role in the development of the atomic bomb during World War II.",
-            runtime: 180,
-            genres: ["Drama", "History", "Biography"],
-            network: "Universal", certification: "R",
-            posterURL: poster("Oppenheimer", bg: "3a3a1f"),
-            source: .radarr, inLibraryArrId: nil
-        ),
-        SearchResult(
-            externalId: 346698, foreignId: "346698",
-            title: "Barbie", subtitle: nil, year: 2023,
-            rating: 7.1, imdb: 6.8, rottenTomatoes: 88, metacritic: 80,
-            overview: "Barbie suffers a crisis that leads her to question her world and her existence.",
-            runtime: 114,
-            genres: ["Comedy", "Adventure", "Fantasy"],
-            network: "Warner Bros.", certification: "PG-13",
-            posterURL: poster("Barbie", bg: "4a1f4a"),
-            source: .radarr, inLibraryArrId: nil
-        ),
-    ]
+    ] + DemoMocks.radarrSearchPool.filter {
+        // only the discovery entries with real artwork seeds
+        ["Elephants Dream", "Spring", "Cosmos Laundromat"].contains($0.title)
+    }
 
-    private static let seriesPool: [SearchResult] = [
-        SearchResult(
-            externalId: 369802, foreignId: "369802",
-            title: "Severance", subtitle: "2 seasons", year: 2022,
-            rating: 8.7, imdb: nil, rottenTomatoes: nil, metacritic: nil,
-            overview: "Mark leads a team of office workers whose memories have been surgically divided between their work and personal lives. When a mysterious colleague appears outside of work, it begins a journey to discover the truth.",
-            runtime: 55,
-            genres: ["Sci-Fi", "Thriller", "Drama"],
-            network: "Apple TV+", certification: nil,
-            posterURL: poster("Severance", bg: "1c3859"),
-            source: .sonarr, inLibraryArrId: nil
-        ),
-        SearchResult(
-            externalId: 388477, foreignId: "388477",
-            title: "The Bear", subtitle: "3 seasons", year: 2022,
-            rating: 8.6, imdb: nil, rottenTomatoes: nil, metacritic: nil,
-            overview: "A young chef from the fine dining world returns to Chicago to run his deceased brother's Italian beef sandwich shop.",
-            runtime: 30,
-            genres: ["Comedy", "Drama"],
-            network: "FX", certification: nil,
-            posterURL: poster("The Bear", bg: "5c1f1f"),
-            source: .sonarr, inLibraryArrId: nil
-        ),
-        SearchResult(
-            externalId: 386818, foreignId: "386818",
-            title: "Andor", subtitle: "1 season", year: 2022,
-            rating: 8.4, imdb: nil, rottenTomatoes: nil, metacritic: nil,
-            overview: "In an era filled with danger, deception and intrigue, Cassian Andor embarks on the path that is destined to turn him into a rebel hero.",
-            runtime: 45,
-            genres: ["Sci-Fi", "Drama", "Action"],
-            network: "Disney+", certification: nil,
-            posterURL: poster("Andor", bg: "1d4a3a"),
-            source: .sonarr, inLibraryArrId: nil
-        ),
-        SearchResult(
-            externalId: 408463, foreignId: "408463",
-            title: "Shogun", subtitle: "1 season", year: 2024,
-            rating: 8.8, imdb: nil, rottenTomatoes: nil, metacritic: nil,
-            overview: "In Japan in the year 1600, at the dawn of a century-defining civil war, Lord Yoshii Toranaga is fighting for his life as his enemies on the Council of Regents unite against him.",
-            runtime: 60,
-            genres: ["Drama", "History"],
-            network: "FX", certification: nil,
-            posterURL: poster("Shogun", bg: "4a2c1d"),
-            source: .sonarr, inLibraryArrId: nil
-        ),
-        SearchResult(
-            externalId: 392276, foreignId: "392276",
-            title: "House of the Dragon", subtitle: "2 seasons", year: 2022,
-            rating: 8.4, imdb: nil, rottenTomatoes: nil, metacritic: nil,
-            overview: "The Targaryen dynasty is at the absolute apex of its power, with more than 15 dragons under their yoke. Most empires crumble from such heights. In the case of the Targaryens, their slow fall begins almost 193 years before the events of Game of Thrones.",
-            runtime: 60,
-            genres: ["Drama", "Fantasy", "Action"],
-            network: "HBO", certification: nil,
-            posterURL: poster("House of the Dragon", bg: "3b1d52"),
-            source: .sonarr, inLibraryArrId: nil
-        ),
-        SearchResult(
-            externalId: 392256, foreignId: "392256",
-            title: "Fallout", subtitle: "1 season", year: 2024,
-            rating: 8.4, imdb: nil, rottenTomatoes: nil, metacritic: nil,
-            overview: "In a future, post-apocalyptic Los Angeles brought about by nuclear decimation, citizens must live in underground bunkers to protect themselves from radiation, mutants and bandits.",
-            runtime: 60,
-            genres: ["Sci-Fi", "Drama", "Adventure"],
-            network: "Prime Video", certification: nil,
-            posterURL: poster("Fallout", bg: "3a3a1f"),
-            source: .sonarr, inLibraryArrId: nil
-        ),
-        SearchResult(
-            externalId: 396583, foreignId: "396583",
-            title: "The Last of Us", subtitle: "1 season", year: 2023,
-            rating: 8.7, imdb: nil, rottenTomatoes: nil, metacritic: nil,
-            overview: "Twenty years after modern civilization has been destroyed, Joel, a hardened survivor, is hired to smuggle Ellie, a 14-year-old girl, out of an oppressive quarantine zone.",
-            runtime: 60,
-            genres: ["Drama", "Sci-Fi", "Horror"],
-            network: "HBO", certification: nil,
-            posterURL: poster("The Last of Us", bg: "1d4a3a"),
-            source: .sonarr, inLibraryArrId: nil
-        ),
-        SearchResult(
-            externalId: 359774, foreignId: "359774",
-            title: "Slow Horses", subtitle: "4 seasons", year: 2022,
-            rating: 8.3, imdb: nil, rottenTomatoes: nil, metacritic: nil,
-            overview: "Follow a team of British intelligence agents who serve as a dumping ground department of MI5 due to their career-ending mistakes.",
-            runtime: 50,
-            genres: ["Drama", "Thriller", "Spy"],
-            network: "Apple TV+", certification: nil,
-            posterURL: poster("Slow Horses", bg: "1f4a52"),
-            source: .sonarr, inLibraryArrId: nil
-        ),
-    ]
+    private static let seriesPool: [SearchResult] = DemoMocks.sonarrSearchPool
 }

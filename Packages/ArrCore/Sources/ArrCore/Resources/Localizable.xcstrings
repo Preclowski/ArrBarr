@@ -42320,6 +42320,468 @@
         }
       },
       "comment": "Widget gallery description"
+    },
+    "demo.quizMood.movies": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Popular movies"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Popularne filmy"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beliebte Filme"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Películas populares"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Films populaires"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Populaire films"
+          }
+        }
+      },
+      "comment": "Demo quiz deck header (mood label)"
+    },
+    "demo.quizMood.series": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Popular series"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Popularne seriale"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beliebte Serien"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Series populares"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Séries populaires"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Populaire series"
+          }
+        }
+      },
+      "comment": "Demo quiz deck header (mood label)"
+    },
+    "demo.quizOpened": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opened the quiz — swipe away."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quiz otwarty — przesuwaj śmiało."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quiz geöffnet — wisch los."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quiz abierto — desliza."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quiz ouvert — balayez."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quiz geopend — swipe maar."
+          }
+        }
+      },
+      "comment": "Demo chat reply after opening the quiz deck"
+    },
+    "demo.quizReason.bigbuckbunny": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The one Blender classic you're still missing"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klasyk Blendera, którego wciąż Ci brakuje"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der eine Blender-Klassiker, der dir noch fehlt"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El clásico de Blender que aún te falta"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le classique Blender qui te manque encore"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "De ene Blender-klassieker die je nog mist"
+          }
+        }
+      },
+      "comment": "Demo quiz card reason"
+    },
+    "demo.quizReason.sintel": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Because Tears of Steel stayed in your library"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bo Tears of Steel zostało w Twojej bibliotece"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weil Tears of Steel in deiner Bibliothek geblieben ist"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Porque Tears of Steel se quedó en tu biblioteca"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Parce que Tears of Steel est resté dans ta bibliothèque"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Omdat Tears of Steel in je bibliotheek bleef"
+          }
+        }
+      },
+      "comment": "Demo quiz card reason"
+    },
+    "demo.quizReason.tearsofsteel": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sci-fi short, like half your queue"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Krótki sci-fi — jak pół Twojej kolejki"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kurzes Sci-Fi — wie die halbe Queue"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Corto de ciencia ficción, como media cola"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Court métrage SF — comme la moitié de ta file"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Korte sci-fi, net als je halve wachtrij"
+          }
+        }
+      },
+      "comment": "Demo quiz card reason"
+    },
+    "demo.quizReason.elephantsdream": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Where the whole open-movie thing started"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Od tego zaczęło się całe open movie"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hier fing die ganze Open-Movie-Sache an"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Donde empezó todo lo del open movie"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Là où tout l'open movie a commencé"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Waar het hele open-moviegebeuren begon"
+          }
+        }
+      },
+      "comment": "Demo quiz card reason"
+    },
+    "demo.quizReason.spring": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Painterly — a break from your robot uprisings"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Malarskie — odpoczynek od powstań robotów"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Malerisch — Pause von deinen Roboteraufständen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pictórico — un descanso de tus robots"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pictural — une pause loin de tes robots"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schilderachtig — even pauze van je robotopstanden"
+          }
+        }
+      },
+      "comment": "Demo quiz card reason"
+    },
+    "demo.quizReason.cosmoslaundromat": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A suicidal sheep and a salesman — trust it"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Owca w kryzysie i akwizytor — zaufaj"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein lebensmüdes Schaf und ein Verkäufer — vertrau uns"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Una oveja en crisis y un vendedor — confía"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un mouton en crise et un vendeur — fais confiance"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Een schaap in crisis en een verkoper — vertrouw ons"
+          }
+        }
+      },
+      "comment": "Demo quiz card reason"
+    },
+    "demo.quizReason.pioneerone": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Crowdfunded before that was a word"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Crowdfunding, zanim to było modne"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Crowdfunded, bevor es das Wort gab"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Financiada por los fans antes de que existiera la palabra"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Financée par les fans avant que le mot existe"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gecrowdfund voordat dat een woord was"
+          }
+        }
+      },
+      "comment": "Demo quiz card reason"
+    },
+    "demo.quizReason.caminandes": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Silent slapstick — five minutes, zero risk"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Niemy slapstick — pięć minut, zero ryzyka"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stummer Slapstick — fünf Minuten, null Risiko"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Slapstick mudo — cinco minutos, cero riesgo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Slapstick muet — cinq minutes, zéro risque"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stomme slapstick — vijf minuten, nul risico"
+          }
+        }
+      },
+      "comment": "Demo quiz card reason"
     }
   }
 }
