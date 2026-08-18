@@ -26,6 +26,9 @@
 		WDGBF001WDGBF001WDGBF01A /* ArrBarrWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = WDGFR010WDGFR010WDGFR01A /* ArrBarrWidgets.swift */; };
 		WDGBF002WDGBF002WDGBF02A /* ArrCore in Frameworks */ = {isa = PBXBuildFile; productRef = WDGPD020WDGPD020WDGPD02A /* ArrCore */; };
 		WDGBF003WDGBF003WDGBF03A /* ArrBarrWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = WDGFR013WDGFR013WDGFR13A /* ArrBarrWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		LOCBF001LOCBF001LOCBF01A /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = LOCFR001LOCFR001LOCFR01A /* Localizable.xcstrings */; };
+		LOCBF002LOCBF002LOCBF02A /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = LOCFR001LOCFR001LOCFR01A /* Localizable.xcstrings */; };
+		LOCBF003LOCBF003LOCBF03A /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = LOCFR001LOCFR001LOCFR01A /* Localizable.xcstrings */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -66,6 +69,7 @@
 		IOS00012IOS00012IOS0012A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		IOS00013IOS00013IOS0013A /* ArrBarr.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ArrBarr.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		SKB00010SKB00010SKB0010A /* StoreKitBackend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreKitBackend.swift; sourceTree = "<group>"; };
+		LOCFR001LOCFR001LOCFR01A /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		SKB00040SKB00040SKB0040A /* ArrBarr.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = ArrBarr.storekit; sourceTree = "<group>"; };
 		WDGFR010WDGFR010WDGFR01A /* ArrBarrWidgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArrBarrWidgets.swift; sourceTree = "<group>"; };
 		WDGFR011WDGFR011WDGFR11A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -157,6 +161,7 @@
 			isa = PBXGroup;
 			children = (
 				SKB00010SKB00010SKB0010A /* StoreKitBackend.swift */,
+				LOCFR001LOCFR001LOCFR01A /* Localizable.xcstrings */,
 			);
 			path = Shared;
 			sourceTree = "<group>";
@@ -267,6 +272,7 @@
 				de,
 				es,
 				fr,
+				nl,
 				pl,
 			);
 			mainGroup = 8D95F3DF077BDAFDE37609C5;
@@ -295,6 +301,7 @@
 				953E24EE53AE7971D31F0FA0 /* Assets.xcassets in Resources */,
 				7A1D7C162F00000100000005 /* AppIcon.icon in Resources */,
 				PRV0B001PRV0B001PRV0B01A /* PrivacyInfo.xcprivacy in Resources */,
+				LOCBF001LOCBF001LOCBF01A /* Localizable.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -305,6 +312,7 @@
 				IOS00002IOS00002IOS0002A /* Assets.xcassets in Resources */,
 				IOS00099IOS00099IOS0099A /* AppIcon.icon in Resources */,
 				PRV0B002PRV0B002PRV0B02A /* PrivacyInfo.xcprivacy in Resources */,
+				LOCBF002LOCBF002LOCBF02A /* Localizable.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -313,6 +321,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				PRV0B003PRV0B003PRV0B03A /* PrivacyInfo.xcprivacy in Resources */,
+				LOCBF003LOCBF003LOCBF03A /* Localizable.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -30,11 +30,11 @@ enum FeaturedService: String, AppEnum {
 
     static let typeDisplayRepresentation = TypeDisplayRepresentation(name: "Featured service")
     static let caseDisplayRepresentations: [FeaturedService: DisplayRepresentation] = [
-        .automatic: "Automatic",
-        .radarr: "Movies (Radarr)",
-        .sonarr: "TV (Sonarr)",
-        .lidarr: "Music (Lidarr)",
-        .whisparr: "Adult (Whisparr)",
+        .automatic: DisplayRepresentation(title: "Automatic"),
+        .radarr: DisplayRepresentation(title: "Movies (Radarr)"),
+        .sonarr: DisplayRepresentation(title: "TV (Sonarr)"),
+        .lidarr: DisplayRepresentation(title: "Music (Lidarr)"),
+        .whisparr: DisplayRepresentation(title: "Adult (Whisparr)"),
     ]
 
     var source: LibrarySummary.Source? {
@@ -203,10 +203,10 @@ private extension LibrarySummary.Source {
 
     var label: String {
         switch self {
-        case .radarr: return "Movies"
-        case .sonarr: return "Series"
-        case .lidarr: return "Artists"
-        case .whisparr: return "Scenes"
+        case .radarr: return String(localized: "Movies", bundle: .arrCore)
+        case .sonarr: return String(localized: "Series", bundle: .arrCore)
+        case .lidarr: return String(localized: "Artists", bundle: .arrCore)
+        case .whisparr: return String(localized: "Scenes", bundle: .arrCore)
         }
     }
 
@@ -288,7 +288,7 @@ struct LibraryStatusView: View {
             Image(systemName: "externaldrive.badge.questionmark")
                 .font(.title2)
                 .foregroundStyle(.secondary)
-            Text("Set up a server in ArrBarr")
+            Text("Set up a server in ArrBarr", bundle: .arrCore)
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -336,7 +336,7 @@ struct LibraryStatusView: View {
             HStack(spacing: 6) {
                 Image(systemName: "books.vertical.fill")
                     .font(.caption)
-                Text("Library")
+                Text("Library", bundle: .arrCore)
                     .font(.subheadline.weight(.semibold))
                 Spacer()
                 Text(byteString(entry.summaries.reduce(0) { $0 + $1.totalBytes }))
@@ -421,8 +421,8 @@ struct LibraryServiceWidget: Widget {
             LibraryStatusView(entry: entry)
                 .widgetURL(URL(string: "arrbarr://library"))
         }
-        .configurationDisplayName("Library Service")
-        .description("One service at a glance.")
+        .configurationDisplayName(Text("Library Service", bundle: .arrCore))
+        .description(Text("One service at a glance.", bundle: .arrCore))
         .supportedFamilies([.systemSmall])
     }
 }
@@ -440,8 +440,8 @@ struct LibraryStatusGridWidget: Widget {
             LibraryStatusView(entry: entry)
                 .widgetURL(URL(string: "arrbarr://library"))
         }
-        .configurationDisplayName("Library Status")
-        .description("Your library across services.")
+        .configurationDisplayName(Text("Library Status", bundle: .arrCore))
+        .description(Text("Your library across services.", bundle: .arrCore))
         .supportedFamilies([.systemMedium])
     }
 }
@@ -566,10 +566,10 @@ struct UpNextView: View {
         }
     }
 
-    private func message(_ text: String, icon: String) -> some View {
+    private func message(_ text: LocalizedStringKey, icon: String) -> some View {
         VStack(spacing: 8) {
             Image(systemName: icon).font(.title2).foregroundStyle(.secondary)
-            Text(text).font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center)
+            Text(text, bundle: .arrCore).font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -617,7 +617,7 @@ struct UpNextView: View {
     private var header: some View {
         HStack(spacing: 6) {
             Image(systemName: "calendar")
-            Text("Up Next").font(.caption.weight(.semibold))
+            Text("Up Next", bundle: .arrCore).font(.caption.weight(.semibold))
             Spacer()
         }
         .font(.caption)
@@ -659,8 +659,8 @@ struct UpNextWidget: Widget {
             UpNextView(entry: entry)
                 .widgetURL(URL(string: "arrbarr://library"))
         }
-        .configurationDisplayName("Up Next")
-        .description("Your next releases and episodes.")
+        .configurationDisplayName(Text("Up Next", bundle: .arrCore))
+        .description(Text("Your next releases and episodes.", bundle: .arrCore))
         .supportedFamilies([.systemSmall, .systemMedium])
     }
 }

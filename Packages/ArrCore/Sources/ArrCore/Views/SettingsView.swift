@@ -718,18 +718,18 @@ public struct SettingsView: View {
     /// Form so each concern lives on its own screen.
     private var iOSCombinedForm: some View {
         List {
-            iosSettingsLink("General", systemImage: "gearshape") { iosGeneralForm }
+            iosSettingsLink("settings.general.button", systemImage: "gearshape") { iosGeneralForm }
             iosSettingsLink("settings.status.button", systemImage: "waveform.path.ecg") { ServerStatusView() }
             iosSettingsLink("Media managers", systemImage: "server.rack") { iosMediaManagersForm }
             iosSettingsLink("Download clients", systemImage: "arrow.down.circle") { iosDownloadClientsForm }
             iosSettingsLink("settings.mediaServer.label", systemImage: "play.tv") { MediaServerSettingsPane() }
-            iosSettingsLink("Assistant", systemImage: "sparkles") { iosAIForm }
+            iosSettingsLink("settings.assistant.button", systemImage: "sparkles") { iosAIForm }
             iosSettingsLink("settings.quiz.label", systemImage: "rectangle.stack") { QuizSettingsPane() }
             if AppCapabilities.isAppStore {
                 iosSettingsLink("iCloud", systemImage: "icloud") { ICloudSettingsView() }
             }
-            iosSettingsLink("Siri & Shortcuts", systemImage: "mic.fill") { iosSiriForm }
-            iosSettingsLink("About", systemImage: "info.circle") { iosAboutForm }
+            iosSettingsLink("settings.siriShortcuts.button", systemImage: "mic.fill") { iosSiriForm }
+            iosSettingsLink("settings.about.button", systemImage: "info.circle") { iosAboutForm }
         }
     }
 

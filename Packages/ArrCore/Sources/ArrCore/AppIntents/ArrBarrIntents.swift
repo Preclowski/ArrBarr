@@ -35,20 +35,28 @@ enum ArrIntentSupport {
     static func queueSummary() async -> String {
         guard case .downloadQueue(let items)? = await call("list_download_queue")?.rich,
               !items.isEmpty else {
-            return "Nothing is downloading right now."
+            return String(localized: "Nothing is downloading right now.", bundle: .module)
         }
-        let top = items.prefix(3).map { "\($0.title) at \(Int(($0.progress * 100).rounded()))%" }
-        var s = items.count == 1 ? "1 download. " : "\(items.count) downloads. "
+        let top = items.prefix(3).map {
+            String.localizedStringWithFormat(
+                NSLocalizedString("intents.itemAtPercent", bundle: .module, comment: ""),
+                $0.title, Int(($0.progress * 100).rounded()))
+        }
+        var s = String.localizedStringWithFormat(
+            NSLocalizedString("unit.downloads", bundle: .module, comment: ""), items.count) + ". "
         s += top.joined(separator: ", ")
         let extra = items.count - min(items.count, 3)
-        if extra > 0 { s += ", and \(extra) more" }
+        if extra > 0 {
+            s += ", " + String.localizedStringWithFormat(
+                NSLocalizedString("intents.andMore", bundle: .module, comment: ""), extra)
+        }
         return s + "."
     }
 
     /// e.g. "Coming up: Severance S2E3 tomorrow, Dune in 3 days."
     static func upcomingSummary() async -> String {
         guard case .calendar(let items)? = await call("get_calendar")?.rich else {
-            return "Nothing is coming up soon."
+            return String(localized: "Nothing is coming up soon.", bundle: .module)
         }
         // Only FUTURE releases — the feed can include past-dated entries
         // (e.g. a monitored movie's old cinema date), which produced the
@@ -58,7 +66,9 @@ enum ArrIntentSupport {
         let future = items
             .filter { $0.airDate >= startOfToday }
             .sorted { $0.airDate < $1.airDate }
-        guard !future.isEmpty else { return "Nothing is coming up soon." }
+        guard !future.isEmpty else {
+            return String(localized: "Nothing is coming up soon.", bundle: .module)
+        }
 
         let fmt = RelativeDateTimeFormatter()
         fmt.unitsStyle = .full
@@ -67,9 +77,14 @@ enum ArrIntentSupport {
             let sub = it.subtitle.map { " \($0)" } ?? ""
             return "\(it.title)\(sub) \(when)"
         }
-        var s = "Coming up: " + top.joined(separator: ", ")
+        var s = String.localizedStringWithFormat(
+            NSLocalizedString("intents.comingUp", bundle: .module, comment: ""),
+            top.joined(separator: ", "))
         let extra = future.count - min(future.count, 3)
-        if extra > 0 { s += ", and \(extra) more" }
+        if extra > 0 {
+            s += ", " + String.localizedStringWithFormat(
+                NSLocalizedString("intents.andMore", bundle: .module, comment: ""), extra)
+        }
         return s + "."
     }
 
@@ -98,12 +113,14 @@ enum ArrIntentSupport {
     /// headers so Siri gets a clean summary.
     static func healthSummary() async -> String {
         let text = await call("health")?.text ?? ""
-        guard !text.isEmpty else { return "No services are configured." }
+        guard !text.isEmpty else { return String(localized: "No services are configured.", bundle: .module) }
         let lines = text
             .split(separator: "\n")
             .map { $0.trimmingCharacters(in: .whitespaces) }
             .filter { !$0.hasPrefix("•") && !$0.hasSuffix(":") && !$0.isEmpty }
-        return lines.isEmpty ? "Everything looks healthy." : lines.joined(separator: ". ")
+        return lines.isEmpty
+            ? String(localized: "Everything looks healthy.", bundle: .module)
+            : lines.joined(separator: ". ")
     }
 }
 
@@ -154,7 +171,10 @@ public struct PauseAllDownloadsIntent: AppIntent {
             items.filter { $0.status == .downloading && ArrIntentSupport.canControl($0, cs) }
         }
         for item in targets { await QueueViewModel.shared.pause(item) }
-        let msg = targets.isEmpty ? "Nothing to pause." : "Paused \(targets.count) download\(targets.count == 1 ? "" : "s")."
+        let msg = targets.isEmpty
+            ? String(localized: "Nothing to pause.", bundle: .module)
+            : String.localizedStringWithFormat(
+                NSLocalizedString("intents.pausedCount", bundle: .module, comment: ""), targets.count)
         return .result(dialog: IntentDialog(stringLiteral: msg))
     }
 }
@@ -172,7 +192,10 @@ public struct ResumeAllDownloadsIntent: AppIntent {
             items.filter { $0.status == .paused && ArrIntentSupport.canControl($0, cs) }
         }
         for item in targets { await QueueViewModel.shared.resume(item) }
-        let msg = targets.isEmpty ? "Nothing to resume." : "Resumed \(targets.count) download\(targets.count == 1 ? "" : "s")."
+        let msg = targets.isEmpty
+            ? String(localized: "Nothing to resume.", bundle: .module)
+            : String.localizedStringWithFormat(
+                NSLocalizedString("intents.resumedCount", bundle: .module, comment: ""), targets.count)
         return .result(dialog: IntentDialog(stringLiteral: msg))
     }
 }
