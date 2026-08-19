@@ -4,8 +4,20 @@ import AppIntents
 import UserNotifications
 import WidgetKit
 
+/// The Info.plist has to advertise landscape for the system to ever rotate us,
+/// so the actual portrait lock lives here: every screen stays portrait, and a
+/// playing trailer is the single exception. `TrailerSession` flips the flag and
+/// asks for a re-read when a clip starts or stops.
+final class OrientationGate: NSObject, UIApplicationDelegate {
+    func application(_ application: UIApplication,
+                     supportedInterfaceOrientationsFor window: UIWindow?) -> UIInterfaceOrientationMask {
+        TrailerSession.allowsLandscape ? [.portrait, .landscapeLeft, .landscapeRight] : .portrait
+    }
+}
+
 @main
 struct ArrBarriOSApp: App {
+    @UIApplicationDelegateAdaptor(OrientationGate.self) private var orientationGate
     @Environment(\.scenePhase) private var scenePhase
 
     init() {

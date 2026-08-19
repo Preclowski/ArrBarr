@@ -29,7 +29,15 @@ public final class TrailerSession: ObservableObject {
     /// because coordinators die with the popover's view tree.
     var loadedKey: String?
 
-    public func present(_ key: String) { self.key = key }
+    public func present(_ key: String) {
+        self.key = key
+        Self.syncInterfaceOrientations()
+    }
+
+    /// The whole iPhone app is portrait-locked; a playing trailer is the one
+    /// exception, so `AppDelegate.supportedInterfaceOrientations` reads this and
+    /// the system re-evaluates when it flips.
+    public private(set) static var allowsLandscape = false
 
     /// The badge's toggle: play, or stop if this clip is already up.
     public func toggle(_ key: String?) {
@@ -44,6 +52,24 @@ public final class TrailerSession: ObservableObject {
         loadedKey = nil
         webView?.loadHTMLString("<html><body></body></html>", baseURL: nil)
         webView = nil
+        Self.syncInterfaceOrientations()
+    }
+
+    /// Re-derives `allowsLandscape` from whether a clip is up, then asks the
+    /// system to re-read it. Closing in landscape must also actively rotate the
+    /// window back — otherwise the portrait-only app is left lying on its side.
+    private static func syncInterfaceOrientations() {
+        #if os(iOS)
+        let playing = shared.key != nil
+        guard playing != allowsLandscape else { return }
+        allowsLandscape = playing
+        guard let scene = UIApplication.shared.connectedScenes
+            .compactMap({ $0 as? UIWindowScene }).first else { return }
+        scene.keyWindow?.rootViewController?.setNeedsUpdateOfSupportedInterfaceOrientations()
+        if !playing {
+            scene.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait))
+        }
+        #endif
     }
 
     /// True while `view` must be kept alive and audible even though its host
@@ -402,6 +428,33 @@ private struct TrailerWebView: UIViewRepresentable {
 
 // MARK: - Overlay presentation
 
+/// Portrait leaves a margin so the dimmed surface behind still reads as the
+/// page you came from. Turning the phone means "I want to watch this", so
+/// landscape drops the inset and the safe area and gives the clip the glass.
+private struct TrailerStageInsets: ViewModifier {
+    #if os(iOS)
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
+    #endif
+
+    func body(content: Content) -> some View {
+        // Deliberately branch on VALUES, never with `if`/`else`: a structural
+        // branch here gives the two layouts different identities, so rotating
+        // tore down `TrailerWebView` and rebuilt it — and the picture vanished
+        // mid-clip. One view, two sets of numbers, identity preserved.
+        content
+            .padding(.horizontal, isLandscape ? 0 : 12)
+            .ignoresSafeArea(edges: isLandscape ? .all : [])
+    }
+
+    private var isLandscape: Bool {
+        #if os(iOS)
+        verticalSizeClass == .compact
+        #else
+        false
+        #endif
+    }
+}
+
 extension View {
     /// Present the trailer over the WHOLE surface — dimmed backdrop, player
     /// centred — the way tapping the poster raises the lightbox. Under the
@@ -428,7 +481,7 @@ extension View {
                             withAnimation(.smooth(duration: 0.2)) { key.wrappedValue = nil }
                         }
                     TrailerPlayerCard(key: presented)
-                        .padding(.horizontal, 12)
+                        .modifier(TrailerStageInsets())
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                     LightboxCloseButton(labelKey: "detail.trailerClose.button") {
                         withAnimation(.smooth(duration: 0.2)) { key.wrappedValue = nil }
