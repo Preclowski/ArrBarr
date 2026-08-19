@@ -56,6 +56,14 @@ public struct DiscoverTabView: View {
     /// advance the deck twice while the user saw one card leave — trivially
     /// easy to do by holding the arrow key down.
     @State private var verdictInFlight = false
+    /// Artwork the incoming-backdrop layer is pinned to for the whole verdict.
+    /// It cannot be read live from `queue.first`: `viewModel` is `@Observable`
+    /// and `dragOffset` is `@State`, so the deck can advance a frame before the
+    /// offset resets. In that frame a live lookup already points at the card
+    /// AFTER the next one and paints it at full opacity — the one-frame flash.
+    /// Pinned, the layer still shows the card that just became current, which
+    /// is pixel-identical to the layer beneath it, so the seam is invisible.
+    @State private var pinnedIncomingBackdrop: URL?
 
     public init(viewModel: DiscoverViewModel,
                 llmAvailable: Bool,
@@ -115,6 +123,12 @@ public struct DiscoverTabView: View {
                 if viewModel.queue.count <= 1 { prefetchMoreIfNeeded() }
                 retryEmptyRoundIfNeeded()
             }
+            .onAppear { repinIncomingBackdrop() }
+            .onChange(of: viewModel.current?.dedupKey) { _, _ in repinIncomingBackdrop() }
+            .onChange(of: viewModel.queue.first?.dedupKey) { _, _ in repinIncomingBackdrop() }
+            .onChange(of: verdictInFlight) { _, inFlight in
+                if !inFlight { repinIncomingBackdrop() }
+            }
             .onDisappear { moreTimeout?.cancel() }
     }
 
@@ -122,6 +136,7 @@ public struct DiscoverTabView: View {
     private var decoratedDeck: some View {
         swipeBackground
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(blurredBackdrop)
             .overlay(alignment: .top) {
                 // The deck is a full-bleed poster with no top gradient of its
                 // own (only a bottom scrim, in DiscoverCardView), so the bare
@@ -280,6 +295,86 @@ public struct DiscoverTabView: View {
         .frame(height: 90)
         .frame(maxWidth: .infinity)
         .allowsHitTesting(false)
+    }
+
+    /// The current card's own artwork, blown up past the edges and blurred, so
+    /// the letterboxing a phone's aspect ratio leaves around a 2:3 poster reads
+    /// as part of the card instead of dead black.
+    ///
+    /// The `.id(url)` is what makes the cross-fade possible: without it every
+    /// card reuses ONE `RemotePoster`, so SwiftUI sees an image swap inside a
+    /// stable view — nothing to transition, and the backdrop cut hard. Keyed by
+    /// url the old layer is removed and the new one inserted, which `.opacity`
+    /// can actually blend. Black sits underneath so the outgoing layer fades to
+    /// the same ground the empty state uses.
+    private var blurredBackdrop: some View {
+        ZStack {
+            Color.black
+            if let url = viewModel.current?.result.posterURL {
+                // Deliberately NO `.id(url)`. Keying by url remounts the view,
+                // which resets `RemotePoster`'s `@State image` to nil and paints
+                // one frame of placeholder before the (cached) artwork lands —
+                // that was the flash at the end of every verdict. Reused, the
+                // poster keeps the previous image on screen until the new one
+                // is decoded, so the swap has no blank frame at all.
+                backdropLayer(url: url)
+            }
+            // The incoming card's scenery, revealed by the swipe itself rather
+            // than by a transition that fires later: at rest it is invisible,
+            // and it bleeds through in step with the finger.
+            if let next = pinnedIncomingBackdrop {
+                // Same reasoning as above: no `.id`, so this layer is reused
+                // across cards instead of remounting behind a zero opacity.
+                backdropLayer(url: next)
+                    .opacity(incomingBackdropOpacity)
+            }
+        }
+        .ignoresSafeArea()
+    }
+
+    /// How much of the next card's backdrop shows through, driven straight off
+    /// the drag. Deliberately NOT a `.transition` or an `.animation(value:)`:
+    /// both can only start once the deck has already advanced, which is 550 ms
+    /// after the verdict — the scenery then changed as an afterthought. Reading
+    /// `dragOffset` instead means the blend tracks the finger while dragging
+    /// and keeps going by itself during the fly-off, because the verdict
+    /// handlers animate that same offset out to the edge.
+    ///
+    /// 200 pt (not the 90 pt the card's own verdict tint uses) so a hesitant
+    /// drag only hints at the change; the fly-off carries the rest.
+    private var incomingBackdropOpacity: Double {
+        guard isDragging || verdictInFlight else { return 0 }
+        let travelled = -dragOffset.width
+        guard travelled > 0 else { return 0 }
+        return Double(min(1, travelled / 200))
+    }
+
+    /// Re-pin once the deck is settled — never mid-verdict, which is the whole
+    /// point of pinning.
+    private func repinIncomingBackdrop() {
+        guard !verdictInFlight, !isDragging else { return }
+        pinnedIncomingBackdrop = viewModel.queue.first?.result.posterURL
+    }
+
+    private func backdropLayer(url: URL) -> some View {
+        GeometryReader { proxy in
+            RemotePoster(
+                url: url,
+                apiKey: nil,
+                size: proxy.size,
+                cornerRadius: 0,
+                fallbackSymbol: "film",
+                fill: true,
+                showsLoadingIndicator: false
+            )
+            .frame(width: proxy.size.width, height: proxy.size.height)
+            // Scale first, then blur: blurring at frame size leaves a soft
+            // transparent rim where the filter samples past the edge.
+            .scaleEffect(1.35)
+            .blur(radius: 42, opaque: true)
+            .overlay(Color.black.opacity(0.45))
+            .clipped()
+        }
     }
 
     @ViewBuilder
@@ -725,7 +820,14 @@ public struct DiscoverTabView: View {
 
 private enum Layout {
     static let buttonDiameter: CGFloat = 62
+    /// 24 was tuned for a 400×600 popover, which has no home indicator. On a
+    /// phone that puts the verdict buttons inside the system's swipe-up strip,
+    /// so touches near their bottom edge get eaten.
+    #if os(iOS)
+    static let buttonBottomPadding: CGFloat = 44
+    #else
     static let buttonBottomPadding: CGFloat = 24
+    #endif
     /// Space the card reserves at its bottom so the metadata clears the
     /// floating action buttons.
     static let cardBottomInset: CGFloat = buttonDiameter + buttonBottomPadding + 20
