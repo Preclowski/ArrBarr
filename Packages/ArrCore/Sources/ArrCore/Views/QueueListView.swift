@@ -177,11 +177,19 @@ struct QueueListView: View {
         #if os(iOS)
         .listSectionSpacing(.compact)
         #endif
-        // Multi-select action bar pinned under the host toolbar (top), shown
-        // only while selecting. Entry is the tab "⋯" menu (host owns `selecting`).
+        // Multi-select action bar, shown only while selecting. Entry is the
+        // "⋯" menu either way (host owns `selecting`). macOS pins it under the
+        // popover's toolbar; iOS puts it at the bottom, just above the tab bar,
+        // where the platform keeps editing actions.
+        #if os(iOS)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if selecting { selectionActionBar }
+        }
+        #else
         .safeAreaInset(edge: .top, spacing: 0) {
             if selecting { selectionActionBar }
         }
+        #endif
         // Drop the selection set whenever selecting mode ends (menu toggle,
         // Cancel, or the queue emptying out from under us).
         .onChange(of: selecting) { _, on in

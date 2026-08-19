@@ -22,6 +22,36 @@ public struct iOSAppRoot: View {
     /// start it, this root renders it. See `TrailerSession`.
     @ObservedObject private var trailerSession = TrailerSession.shared
     @Environment(\.scenePhase) private var scenePhase
+    /// Shared by the Queue and Library surfaces.
+    @State private var searchVM = SearchViewModel()
+    /// The quiz deck is raised by a notification from ANY tab (chat's CTA, the
+    /// resume card), so its state and its chat bridge live above the TabView —
+    /// the same place `PopoverContentView` keeps them on macOS.
+    @State private var chatHolder = ChatViewModelHolder()
+    @State private var discoverViewModel = DiscoverViewModel.shared
+    @State private var showDiscoverOverlay = false
+    @State private var quizAddResult: SearchResult?
+
+    /// Scope-bar options: `all` always, each arr when configured, `people`
+    /// with a TMDB key. Whisparr folded into the arr set when present.
+    private var iosSearchScopes: [SearchScope] {
+        var out: [SearchScope] = [.all]
+        if configStore.radarr.isVisible { out.append(.movie) }
+        if configStore.sonarr.isVisible { out.append(.series) }
+        if configStore.lidarr.isVisible { out.append(.album) }
+        if !configStore.tmdbApiKey.isEmpty || DemoMode.isActive { out.append(.people) }
+        if configStore.whisparr.isVisible { out.append(.whisparr) }
+        return out
+    }
+
+    /// "More picks like these" is a chat turn — the mood and the already-shown
+    /// titles are in the conversation, so the model has the context without us
+    /// stuffing them into the visible message.
+    private func requestMoreQuizPicks() {
+        guard configStore.aiConfigured, !chatHolder.vm.isThinking else { return }
+        let prompt = AppLocalized.string("discover.moreLikeThese.chatPrompt", locale: configStore.currentLocale)
+        Task { await chatHolder.vm.send(prompt) }
+    }
 
     public init(viewModel: QueueViewModel? = nil, configStore: ConfigStore? = nil) {
         let vm = viewModel ?? QueueViewModel()
@@ -32,24 +62,34 @@ public struct iOSAppRoot: View {
 
     public var body: some View {
         TabView {
-            NavigationStack { QueueTab(viewModel: viewModel) }
-                .tabItem { Label { Text("paywall.queue.button", bundle: .module) } icon: { Image(systemName: "arrow.down.circle") } }
+            Tab {
+                NavigationStack { QueueTab(viewModel: viewModel, searchVM: searchVM) }
+            } label: {
+                Label { Text("paywall.queue.button", bundle: .module) } icon: { Image(systemName: "arrow.down.circle") }
+            }
 
-            NavigationStack { UpcomingTab(viewModel: viewModel) }
-                .tabItem { Label { Text("queue.upcoming.button", bundle: .module) } icon: { Image(systemName: "calendar") } }
+            Tab {
+                NavigationStack { LibraryTab(searchVM: searchVM) }
+            } label: {
+                Label { Text("Library", bundle: .module) } icon: { Image(systemName: "books.vertical") }
+            }
 
-            NavigationStack { HistoryTab(viewModel: viewModel) }
-                .tabItem { Label { Text("discover.history.button", bundle: .module) } icon: { Image(systemName: "clock.arrow.circlepath") } }
+            Tab {
+                NavigationStack { UpcomingTab(viewModel: viewModel) }
+            } label: {
+                Label { Text("queue.upcoming.button", bundle: .module) } icon: { Image(systemName: "calendar") }
+            }
 
             if configStore.aiConfigured {
-                NavigationStack {
-                    if storeManager.isPro {
-                        ChatTab()
-                    } else {
-                        ChatLockedPlaceholder { storeManager.gate(.chat) }
+                Tab {
+                    NavigationStack {
+                        if storeManager.isPro {
+                            ChatTab(chatHolder: chatHolder)
+                        } else {
+                            ChatLockedPlaceholder { storeManager.gate(.chat) }
+                        }
                     }
-                }
-                .tabItem {
+                } label: {
                     Label {
                         Text("paywall.chat.button", bundle: .module)
                     } icon: {
@@ -58,14 +98,88 @@ public struct iOSAppRoot: View {
                 }
             }
 
-            NavigationStack { SettingsTab(viewModel: viewModel) }
-                .tabItem { Label { Text("common.settings.button", bundle: .module) } icon: { Image(systemName: "gearshape") } }
+            Tab {
+                NavigationStack { SettingsTab(viewModel: viewModel) }
+            } label: {
+                Label { Text("common.settings.button", bundle: .module) } icon: { Image(systemName: "gearshape") }
+            }
         }
         .environmentObject(configStore)
-        // The one trailer overlay for the whole app — full-screen, over the
-        // TabView, driven by the shared session (surfaces only start clips).
+        // Root-owned so the quiz's chat bridge works even before the Chat tab
+        // has ever been shown.
+        .onAppear { chatHolder.reconfigure(store: configStore) }
+        .onChange(of: ChatViewModelHolder.signature(store: configStore)) { _, _ in
+            chatHolder.reconfigure(store: configStore)
+        }
+        // Posted by the `discover_in_quiz` chat tool and by the resume card.
+        // userInfo carries the mood label, pre-resolved items and an optional
+        // `append` flag that extends a live deck instead of replacing it.
+        .onReceive(NotificationCenter.default.publisher(for: .arrBarrOpenDiscoverQuiz)) { note in
+            guard let mood = note.userInfo?["mood"] as? String,
+                  let items = note.userInfo?["items"] as? [DiscoverItem] else { return }
+            let append = (note.userInfo?["append"] as? Bool) ?? false
+            let hasActiveSession = !discoverViewModel.sessionMatched.isEmpty
+                || !discoverViewModel.sessionSkipped.isEmpty
+                || discoverViewModel.current != nil
+                || !discoverViewModel.queue.isEmpty
+            if append && hasActiveSession {
+                discoverViewModel.extend(items: items)
+            } else {
+                discoverViewModel.seed(items: items, mood: mood)
+            }
+            showDiscoverOverlay = true
+        }
+        // Swiping a not-in-library pick right asks for the add panel. macOS
+        // hosts it in the popover; without this the whole "add" half of the
+        // quiz — and chat's "add this missing title" cards — did nothing here.
+        .onReceive(NotificationCenter.default.publisher(for: .arrBarrOpenSearchAdd)) { note in
+            guard let result = note.userInfo?["result"] as? SearchResult else { return }
+            quizAddResult = result
+        }
+        .fullScreenCover(isPresented: $showDiscoverOverlay) {
+            DiscoverTabView(
+                viewModel: discoverViewModel,
+                llmAvailable: configStore.aiConfigured,
+                radarrAvailable: configStore.radarr.isVisible,
+                // The top-up round IS a chat turn, so the agent's own thinking
+                // flag is what the deck should wait on.
+                moreInFlight: chatHolder.vm.isThinking,
+                isObscured: quizAddResult != nil,
+                onClose: { showDiscoverOverlay = false },
+                onRequestMore: { _, _, _ in requestMoreQuizPicks() }
+            )
+            .environmentObject(configStore)
+            .sheet(item: $quizAddResult) { result in
+                NavigationStack {
+                    SearchAddPanel(result: result, viewModel: searchVM) {
+                        quizAddResult = nil
+                    }
+                }
+                // A sheet nested inside a fullScreenCover starts a fresh
+                // presentation context and does NOT inherit the cover's
+                // environment: without this `SearchAddPanel.loadCast` traps on
+                // a missing ConfigStore the moment a right-swipe opens it.
+                .environmentObject(configStore)
+            }
+            // The root's overlay renders *under* this cover — a fullScreenCover
+            // is its own presentation context — so the deck needs its own copy
+            // or the trailer button opens nothing. Same shared session, so only
+            // one clip can ever be playing.
+            .trailerOverlay(key: Binding(
+                get: { trailerSession.key },
+                set: { newValue in
+                    if let newValue { trailerSession.present(newValue) } else { trailerSession.dismiss() }
+                }
+            ))
+        }
+        // The trailer overlay for the tab tree. The quiz cover carries its own
+        // (a fullScreenCover is a separate presentation context), and the two
+        // must never be live at once: both would build a `TrailerWebView` for
+        // the same key, and since the session hands out ONE WKWebView the second
+        // steals it from the first — which is what blanked the picture on
+        // rotation. While the deck is up, the deck's copy owns the clip.
         .trailerOverlay(key: Binding(
-            get: { trailerSession.key },
+            get: { showDiscoverOverlay ? nil : trailerSession.key },
             set: { newValue in
                 if let newValue { trailerSession.present(newValue) } else { trailerSession.dismiss() }
             }
@@ -139,14 +253,15 @@ private struct ChatLockedPlaceholder: View {
 
 private struct QueueTab: View {
     var viewModel: QueueViewModel
+    @Bindable var searchVM: SearchViewModel
     @EnvironmentObject var configStore: ConfigStore
     @State private var detailItem: QueueItem?
-    @State private var searchVM = SearchViewModel()
     @State private var searchResult: SearchResult?
     @State private var personRef: PersonRef?
-    /// Queue multi-select mode (iOS owns it locally — no "⋯" menu here yet, so
-    /// it can't be entered on iOS for now; macOS drives it from PopoverContentView).
     @State private var selecting = false
+    /// History is reached from the queue's per-arr section header, the way the
+    /// macOS popover does it — it no longer owns a tab of its own.
+    @State private var historySource: QueueItem.Source?
 
     private var isSearching: Bool { !searchVM.query.trimmingCharacters(in: .whitespaces).isEmpty }
 
@@ -165,17 +280,21 @@ private struct QueueTab: View {
     var body: some View {
         Group {
             if let result = searchResult {
-                // A result was tapped — show the add/configure panel, same
-                // flow the floating "+" sheet used to drive.
                 SearchAddPanel(result: result, viewModel: searchVM) {
                     searchResult = nil
                 }
             } else {
                 ZStack {
-                    queueList
-                    // Typing the top search bar shows the same unified surface
-                    // as macOS: live queue rows that still match the filter on
-                    // top, arr library / add-new hits below.
+                    QueueListView(
+                        viewModel: viewModel,
+                        scope: nil,
+                        onShowDetail: { detailItem = $0 },
+                        onNeedsYouTap: { needs in openNeedsYouQueue(needs) },
+                        onShowHistory: { historySource = $0 },
+                        selecting: $selecting
+                    )
+                    // Typing shows the same unified surface as macOS: live queue
+                    // rows that still match on top, arr library / add-new below.
                     if isSearching {
                         ScrollView {
                             QueueSearchResultsView(
@@ -187,10 +306,6 @@ private struct QueueTab: View {
                                 onSelectPerson: { personRef = $0 }
                             )
                             .padding(.vertical, 8)
-                            // Only until the first rows land — once they do,
-                            // this spinner is below the fold and a re-search
-                            // looks like nothing happened. QueueSearchResultsView
-                            // takes over the loading state from there.
                             if searchVM.isSearching, !searchVM.hasResults {
                                 ProgressView()
                                     .controlSize(.small)
@@ -214,14 +329,17 @@ private struct QueueTab: View {
                     OfflineIndicator(viewModel: viewModel)
                 }
             }
+            ToolbarItem(placement: .topBarTrailing) { selectButton }
         }
-        // Search-to-add now lives in a persistent top search bar instead of
-        // a floating "+" button.
         .searchable(
             text: $searchVM.query,
-            placement: .navigationBarDrawer(displayMode: .always),
+            placement: .toolbar,
             prompt: Text("search.searchMoviesAndTv.label", bundle: .module)
         )
+        // iOS 26 collapses the field into a toolbar magnifier that expands on
+        // tap — the standard shape, and it puts search on the same row as "⋯"
+        // instead of a permanent drawer stealing a row from the list.
+        .modifier(MinimizedSearchToolbar())
         .autocorrectionDisabled(true)
         // Native scope bar under the search field — the iOS idiom for the
         // macOS scope chip. Options gate which backends fire.
@@ -230,29 +348,10 @@ private struct QueueTab: View {
                 Text(LocalizedStringKey(s.labelKey), bundle: .module).tag(s)
             }
         }
-        // Fire the arr lookups when the query changes — same trigger macOS
-        // wires from its filter bar.
         .onChange(of: searchVM.query) { _, new in
             if new.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 searchVM.scope = .all
             }
-            searchVM.onQueryChange()
-        }
-        .personDestination($personRef)
-        .navigationDestination(item: $detailItem) { item in
-            DetailView(item: item, onBack: { detailItem = nil }, viewModel: viewModel)
-        }
-        // In-library search hits route through DetailRequest — listen for it
-        // here so they push the detail (Upcoming tab does the same).
-        .onReceive(NotificationCenter.default.publisher(for: .arrBarrOpenDetail)) { note in
-            guard let item = note.userInfo?["item"] as? QueueItem else { return }
-            detailItem = item
-        }
-        // Search-to-add App Intent → run the search here.
-        .onReceive(NotificationCenter.default.publisher(for: .arrBarrSearchQuery)) { note in
-            guard let q = note.userInfo?["query"] as? String else { return }
-            searchResult = nil
-            searchVM.query = q
             searchVM.onQueryChange()
         }
         .onAppear {
@@ -264,15 +363,86 @@ private struct QueueTab: View {
                 tmdbApiKey: configStore.tmdbApiKey
             )
         }
+        // Search-to-add App Intent → run the search here.
+        .onReceive(NotificationCenter.default.publisher(for: .arrBarrSearchQuery)) { note in
+            guard let q = note.userInfo?["query"] as? String else { return }
+            searchResult = nil
+            searchVM.query = q
+            searchVM.onQueryChange()
+        }
+        .personDestination($personRef)
+        .navigationDestination(item: $detailItem) { item in
+            DetailView(item: item, onBack: { detailItem = nil }, viewModel: viewModel)
+        }
+        .navigationDestination(item: $historySource) { source in
+            HistoryTab(viewModel: viewModel, initialSource: source)
+        }
+        // In-library search hits route through DetailRequest — listen for it
+        // here so they push the detail (Upcoming tab does the same).
+        .onReceive(NotificationCenter.default.publisher(for: .arrBarrOpenDetail)) { note in
+            guard let item = note.userInfo?["item"] as? QueueItem else { return }
+            detailItem = item
+        }
     }
 
-    private var queueList: some View {
-        QueueListView(
-            viewModel: viewModel,
-            scope: nil,
-            onShowDetail: { detailItem = $0 },
-            selecting: $selecting
-        )
+    /// Multi-select entry, beside the collapsed search button. A menu holding a
+    /// single item is a pointless extra tap — the icon IS the action, the way
+    /// Photos and Files put "Select" straight in the bar.
+    private var selectButton: some View {
+        Button {
+            selecting = true
+        } label: {
+            Label { Text("queue.select.button", bundle: .module) } icon: { Image(systemName: "checklist") }
+        }
+        .disabled(selecting)
+        .accessibilityLabel(Text("queue.select.button", bundle: .module))
+    }
+
+    /// Arr-level "Needs you" rows have no queue detail to push — open that arr's
+    /// own queue page instead, the same handler the macOS popover wires.
+    private func openNeedsYouQueue(_ needs: NeedsYouItem) {
+        guard let source = needs.source else { return }
+        let cfg = configStore.config(for: source.serviceKind)
+        guard let url = ArrActivityURLBuilder.queueURL(forBase: cfg.baseURL),
+              let scheme = url.scheme?.lowercased(),
+              scheme == "http" || scheme == "https"
+        else { return }
+        PlatformURLOpener.open(url)
+    }
+}
+
+/// `searchToolbarBehavior` is iOS 26; below that the field stays a drawer.
+struct MinimizedSearchToolbar: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content.searchToolbarBehavior(.minimize)
+        } else {
+            content
+        }
+    }
+}
+
+// MARK: - Library tab
+
+/// Same surface macOS shows in its `.library` tab. `LibraryTabContent` owns its
+/// own arr-lookup state; this wrapper only supplies the add-panel slot the
+/// popover fills from `PopoverContentView`.
+private struct LibraryTab: View {
+    var searchVM: SearchViewModel
+    @State private var libraryViewModel = LibraryViewModel()
+    @State private var searchResult: SearchResult?
+
+    var body: some View {
+        Group {
+            if let result = searchResult {
+                SearchAddPanel(result: result, viewModel: searchVM) {
+                    searchResult = nil
+                }
+            } else {
+                LibraryTabContent(viewModel: libraryViewModel, searchResult: $searchResult)
+            }
+        }
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 
@@ -371,7 +541,9 @@ private struct UpcomingTab: View {
 
 private struct ChatTab: View {
     @EnvironmentObject var configStore: ConfigStore
-    @State private var chatHolder = ChatViewModelHolder()
+    /// Owned by the root: the quiz overlay's "more picks" round-trip is a chat
+    /// turn, and it can be raised from any tab.
+    var chatHolder: ChatViewModelHolder
     /// Person cards and `arrbarr://person/…` links in replies push from here, so
     /// back returns to the conversation.
     @State private var personRef: PersonRef?
@@ -390,10 +562,6 @@ private struct ChatTab: View {
             personRef = ref
         }
         .navigationBarTitleDisplayMode(.inline)
-        .onAppear { chatHolder.reconfigure(store: configStore) }
-        .onChange(of: ChatViewModelHolder.signature(store: configStore)) { _, _ in
-            chatHolder.reconfigure(store: configStore)
-        }
     }
 }
 
@@ -431,10 +599,15 @@ private struct SettingsTab: View {
 
 // MARK: - History tab
 
+/// Pushed from a queue section header (the macOS route), pre-scoped to that
+/// arr. The source picker stays: unlike macOS, iOS can widen to "All" and
+/// filter by event type from here.
 private struct HistoryTab: View {
     var viewModel: QueueViewModel
+    var initialSource: QueueItem.Source?
     @EnvironmentObject var configStore: ConfigStore
     @State private var selected: QueueItem.Source?
+    @State private var didSeedSource = false
     /// Event-type filter (nil = all). Types are unified across arrs
     /// (HistoryItem.EventType.parse maps both Sonarr + Radarr the same way),
     /// so one filter list works for every service.
@@ -466,6 +639,11 @@ private struct HistoryTab: View {
                     onClose: {}
                 )
             }
+        }
+        .onAppear {
+            guard !didSeedSource else { return }
+            didSeedSource = true
+            selected = initialSource
         }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

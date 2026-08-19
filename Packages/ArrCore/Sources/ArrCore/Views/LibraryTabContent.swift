@@ -213,15 +213,7 @@ struct LibraryTabContent: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            topStrip
-            ZStack(alignment: .bottom) {
-                gridOrState
-                filterBar
-                    .padding(.horizontal, 10)
-                    .padding(.bottom, 10)
-            }
-        }
+        surface
         .onChange(of: filterText) { _, new in
             // Mirror the typed query into this surface's SearchViewModel —
             // same trigger the queue tab wires from its bar.
@@ -585,6 +577,36 @@ struct LibraryTabContent: View {
     /// menu (the arr picker up top scopes the GRID; the lookups deliberately
     /// search every configured arr). Same meaning as the queue's bar too —
     /// grid narrowing is just the local tier of the one search.
+    /// macOS keeps the floating bottom filter bar (the popover has no navigation
+    /// bar to hang a field on). iOS uses the system search field instead, so the
+    /// Library reads like the Queue tab and like every other iOS app.
+    @ViewBuilder
+    private var surface: some View {
+        #if os(iOS)
+        VStack(spacing: 0) {
+            topStrip
+            gridOrState
+        }
+        .searchable(
+            text: $filterText,
+            placement: .toolbar,
+            prompt: Text("search.global.prompt", bundle: .module)
+        )
+        .modifier(MinimizedSearchToolbar())
+        .autocorrectionDisabled(true)
+        #else
+        VStack(spacing: 0) {
+            topStrip
+            ZStack(alignment: .bottom) {
+                gridOrState
+                filterBar
+                    .padding(.horizontal, 10)
+                    .padding(.bottom, 10)
+            }
+        }
+        #endif
+    }
+
     private var filterBar: some View {
         HStack(spacing: 8) {
             SearchFieldLeadingIcon(spinning: searchVM.isSearching && !trimmedFilter.isEmpty)
