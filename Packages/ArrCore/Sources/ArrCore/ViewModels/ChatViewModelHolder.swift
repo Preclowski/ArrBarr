@@ -76,6 +76,17 @@ public final class ChatViewModelHolder {
             store.mediaServer.token, "\(store.mediaServer.enabled)",
             store.chatProvider.rawValue,
             store.openai.baseURL, store.openai.apiKey, store.openai.model,
+            // Both are branch inputs of `ChatViewModelFactory.make`: demo swaps in
+            // DemoChatProvider, `aiEnabled` decides the chat exists at all. Without
+            // them, toggling demo while running rebuilds only if the two profiles
+            // happen to disagree on some field above — and two empty profiles don't,
+            // so the chat keeps its pre-demo (usually unavailable) provider.
+            // `DemoMode.isActive` lives in UserDefaults.standard, which SwiftUI can't
+            // observe: this is only re-read when ConfigStore publishes something. Safe
+            // because both toggles go through `useDemoStore` → `applyValues`, which
+            // always publishes — a caller that flips the flag alone would not rebuild.
+            "\(DemoMode.isActive)",
+            "\(store.aiEnabled)",
             // appLanguage is intentionally NOT part of the signature: changing
             // the app language already requires a restart to take effect, and
             // on restart the VM is rebuilt fresh with the new value anyway.
