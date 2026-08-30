@@ -74,6 +74,10 @@ public struct ArrCredit: Decodable, Equatable, Sendable {
     let order: Int?
     /// "cast" or "crew".
     let type: String?
+    /// Crew credits only — the department ("Directing", "Writing", …).
+    let department: String?
+    /// Crew credits only — the job ("Director", "Screenplay", …).
+    let job: String?
     let images: [Image]?
 
     public struct Image: Decodable, Equatable, Sendable {

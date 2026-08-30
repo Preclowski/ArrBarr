@@ -6,6 +6,20 @@ import Foundation
 // is much richer (production_companies, runtime, original_language, …) but
 // pulling everything makes the codable surface fragile when TMDB tweaks schema.
 
+/// TMDB's fixed English department/job tokens. They arrive verbatim on every
+/// payload regardless of the request language, so matching them is string
+/// matching against constants — never against a localized label.
+public enum TMDBDepartment {
+    public static let acting = "Acting"
+    public static let directing = "Directing"
+    /// The crew `job` (not department) that means "this person directed it".
+    /// The Directing department is much wider than this — assistant directors,
+    /// script supervisors and the rest live there too — so the strip matches
+    /// jobs, not the department.
+    public static let directorJob = "Director"
+    public static let coDirectorJob = "Co-Director"
+}
+
 public struct TMDBPerson: Decodable, Sendable, Equatable, Identifiable {
     public let id: Int
     public let name: String
@@ -22,6 +36,11 @@ public struct TMDBPerson: Decodable, Sendable, Equatable, Identifiable {
     }
 
     public var profileURL: URL? { TMDBClient.imageURL(path: profilePath, size: "w185") }
+
+    /// Whether TMDB files this person under directing. Directors are a
+    /// first-class person type in the app — they rank alongside actors and get
+    /// their own "Directed by" wording — so the check has one home.
+    public var isDirector: Bool { knownForDepartment == TMDBDepartment.directing }
 }
 
 /// `/person/{id}` — the biography-bearing detail record. Only the fields the
@@ -163,6 +182,14 @@ public struct TMDBCreditPerson: Decodable, Sendable, Equatable, Identifiable {
     public var posterURL: URL? {
         TMDBClient.imageURL(path: profilePath, size: "w185")
     }
+}
+
+/// `/tv/{id}` → `created_by`. A series has no single director (episodes each
+/// have their own), so the creator is the credit that plays the director's
+/// role for a show. The entries carry the same id/name/profile fields as a
+/// credit person, so they decode into the same type.
+public struct TMDBTVCreatedByResponse: Decodable, Sendable {
+    public let created_by: [TMDBCreditPerson]?
 }
 
 public struct TMDBDiscoverMovieResponse: Decodable, Sendable {
@@ -316,6 +343,13 @@ public struct TMDBClient: Sendable {
             query: []
         )
         return resp
+    }
+
+    /// Series creators (`/tv/{id}` → `created_by`) — the show-level answer to
+    /// "who is behind this", since per-episode directors don't generalize.
+    public func tvCreators(tvId: Int) async throws -> [TMDBCreditPerson] {
+        let resp: TMDBTVCreatedByResponse = try await get(path: "/tv/\(tvId)", query: [])
+        return resp.created_by ?? []
     }
 
     /// Resolve a Sonarr `tvdbId` to TMDB's own series id via `/find` (external

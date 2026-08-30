@@ -7,7 +7,8 @@ import Foundation
 ///
 /// Score = how much of the query the name covers (order-free, punctuation
 /// folded — reusing `SearchRelevance.normalize`) weighted by the person's TMDB
-/// popularity, with a nudge for actors over crew.
+/// popularity, with a nudge for the people a media library is actually browsed
+/// by — actors AND directors, weighted the same.
 enum PersonRelevance {
     static func score(person: TMDBPerson, normalizedQuery q: String) -> Double {
         let name = SearchRelevance.normalize(person.name)
@@ -22,7 +23,10 @@ enum PersonRelevance {
 
         var s = coverage * 100 + log(1 + (person.popularity ?? 0))
         if name == q { s += 50 }                                  // exact full-name match
-        if person.knownForDepartment == "Acting" { s += 5 }
+        // Actor and director rank equally: "villeneuve" should reach Denis
+        // Villeneuve as directly as "hanks" reaches Tom Hanks. Only the rest of
+        // the crew (sound, camera, production) stays a rung down.
+        if person.knownForDepartment == TMDBDepartment.acting || person.isDirector { s += 5 }
         return s
     }
 
@@ -71,5 +75,13 @@ enum PersonRelevance {
             remaining.remove(at: hit)
         }
         return true
+    }
+}
+
+public extension TMDBPerson {
+    /// Catalog key for the "these titles are theirs" caption under a search
+    /// result set — "Starring X" reads wrong for someone who directed them.
+    var filmographyCaptionKey: String {
+        isDirector ? "search.directedBy" : "search.starring"
     }
 }

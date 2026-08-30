@@ -221,4 +221,67 @@ extension CastMember {
                        imageURL: p.posterURL, tmdbPersonId: p.id)
         }
     }
+
+    /// Radarr `/credit` → the directing crew. Radarr mirrors TMDB's crew rows,
+    /// so the same department/job tokens apply. A co-directed film lists both,
+    /// in Radarr's order; the same person credited twice (director + writer)
+    /// appears once.
+    static func directors(radarrCredits credits: [ArrCredit]) -> [CastMember] {
+        dedupe(credits
+            .filter { ($0.type ?? "").lowercased() == "crew" && isDirecting(department: $0.department, job: $0.job) }
+            .compactMap { c in
+                guard let name = c.personName, !name.isEmpty else { return nil }
+                return CastMember(
+                    id: "dir-\(c.personTmdbId ?? 0)-\(name)",
+                    name: name,
+                    role: jobLabel(c.job),
+                    imageURL: c.headshotURL,
+                    tmdbPersonId: c.personTmdbId
+                )
+            })
+    }
+
+    /// TMDB movie crew → the directing credits.
+    static func directors(tmdbCrew crew: [TMDBCreditPerson]) -> [CastMember] {
+        dedupe(crew
+            .filter { isDirecting(department: $0.department, job: $0.job) }
+            .map { p in
+                CastMember(id: "dir-tmdb-\(p.id)", name: p.name, role: jobLabel(p.job),
+                           imageURL: p.posterURL, tmdbPersonId: p.id)
+            })
+    }
+
+    /// TMDB `created_by` → the series' creators. They carry no job field —
+    /// being listed IS the credit — so the tile shows the bare name under the
+    /// "Created by" header.
+    static func from(tmdbCreators creators: [TMDBCreditPerson]) -> [CastMember] {
+        dedupe(creators.map { p in
+            CastMember(id: "creator-tmdb-\(p.id)", name: p.name, role: nil,
+                       imageURL: p.posterURL, tmdbPersonId: p.id)
+        })
+    }
+
+    /// A crew row counts as directing when TMDB's fixed job token says so —
+    /// the department alone would also drag in assistant directors, script
+    /// supervisors and the rest of the Directing department.
+    private static func isDirecting(department: String?, job: String?) -> Bool {
+        guard department == nil || department == TMDBDepartment.directing else { return false }
+        return job == TMDBDepartment.directorJob || job == TMDBDepartment.coDirectorJob
+    }
+
+    /// The plain "Director" job is what the section header already says, so it
+    /// stays off the tile; anything else (a co-director variant) is worth
+    /// showing. TMDB job tokens are fixed English and not in the catalog.
+    private static func jobLabel(_ job: String?) -> String? {
+        guard let job, !job.isEmpty, job != TMDBDepartment.directorJob else { return nil }
+        return job
+    }
+
+    /// One tile per person — a director credited twice on the same title
+    /// (Radarr repeats the row per job variant) would otherwise duplicate the
+    /// head and break ForEach identity.
+    private static func dedupe(_ members: [CastMember]) -> [CastMember] {
+        var seen = Set<String>()
+        return members.filter { seen.insert($0.tmdbPersonId.map(String.init) ?? $0.name).inserted }
+    }
 }

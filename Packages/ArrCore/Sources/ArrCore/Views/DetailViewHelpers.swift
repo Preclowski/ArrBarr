@@ -45,6 +45,106 @@ func arrPosterURL(images: [ArrImage]?, for item: QueueItem,
                              mediaServerKeys: mediaServerKeys).0
 }
 
+// MARK: - Modal form primitives
+
+/// One switch row in a modal card (edit / delete) — the same chrome the
+/// pickers beside it use, so a card of mixed controls reads as one form.
+struct ModalFormToggle: View {
+    let label: LocalizedStringKey
+    @Binding var isOn: Bool
+
+    var body: some View {
+        HStack {
+            Text(label, bundle: .module)
+                .scaledFont(size: 11)
+                .foregroundStyle(.secondary)
+            Spacer()
+            // `.labelsHidden()` strips the switch from the accessibility
+            // tree too — restore a name so it doesn't announce as an
+            // anonymous "off" (same fix as MCPSettingsPane's tool rows).
+            Toggle("", isOn: $isOn)
+                .labelsHidden()
+                .toggleStyle(.switch)
+                .controlSize(.mini)
+                .accessibilityLabel(Text(label, bundle: .module))
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: Tokens.Radius.card))
+    }
+}
+
+// MARK: - Row search context menu
+
+/// Right-click (macOS) / long-press (iOS) twin of `HeaderSearchMenu`: the same
+/// Automatic / Manual choice, on the row that owns it, so a season or episode
+/// can be searched without first drilling into its screen for the header glyph.
+///
+/// The sweep choreography lives here rather than in each row — the row only
+/// owns the two flags so it can put the spinner / checkmark wherever its own
+/// layout has room.
+struct RowSearchContextMenu: ViewModifier {
+    @Binding var inFlight: Bool
+    @Binding var didQueue: Bool
+    let onAutomatic: () async -> Void
+    let onManual: () -> Void
+
+    func body(content: Content) -> some View {
+        content.contextMenu {
+            Button {
+                guard !inFlight else { return }
+                Task {
+                    inFlight = true
+                    await onAutomatic()
+                    inFlight = false
+                    didQueue = true
+                    try? await Task.sleep(nanoseconds: 1_600_000_000)
+                    didQueue = false
+                }
+            } label: {
+                Label { Text("Automatic search", bundle: .module) } icon: { Image(systemName: "bolt.fill") }
+            }
+            .disabled(inFlight)
+            Button(action: onManual) {
+                Label { Text("Manual search", bundle: .module) } icon: { Image(systemName: "list.bullet") }
+            }
+        }
+    }
+}
+
+/// `RowSearchContextMenu` for rows whose host may or may not own a search path
+/// — with either closure missing there is no menu at all, rather than one with
+/// a dead item in it.
+struct OptionalRowSearchMenu: ViewModifier {
+    @Binding var inFlight: Bool
+    @Binding var didQueue: Bool
+    let onAutomatic: (() async -> Void)?
+    let onManual: (() -> Void)?
+
+    func body(content: Content) -> some View {
+        if let onAutomatic, let onManual {
+            content.rowSearchContextMenu(inFlight: $inFlight, didQueue: $didQueue,
+                                         onAutomatic: onAutomatic, onManual: onManual)
+        } else {
+            content
+        }
+    }
+}
+
+extension View {
+    /// Attaches the Automatic / Manual search menu to a list row. Both flags are
+    /// the row's own state; it renders them (spinner, then a brief checkmark).
+    func rowSearchContextMenu(
+        inFlight: Binding<Bool>,
+        didQueue: Binding<Bool>,
+        onAutomatic: @escaping () async -> Void,
+        onManual: @escaping () -> Void
+    ) -> some View {
+        modifier(RowSearchContextMenu(inFlight: inFlight, didQueue: didQueue,
+                                      onAutomatic: onAutomatic, onManual: onManual))
+    }
+}
+
 // MARK: - Header search menu
 
 /// Toolbar/header search control: a bare magnifier glyph (sized to sit in

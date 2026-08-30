@@ -542,6 +542,10 @@ extension DemoMocks {
 
     static var radarrCredits: [Int: [ArrCredit]] {
         [
+            202: [ // Sintel — directed by Colin Levy, who has a demo person page
+                crewCredit("Colin Levy", "Directing", "Director", nil,
+                           tmdbId: DemoPerson.colinLevy.rawValue),
+            ],
             203: [ // Tears of Steel — live-action / VFX hybrid (TMDB 133701)
                 castCredit("Derek de Lint",      "Old Thom",  0, "/8fRRmh8EYZBlUtu1Wlop0j22QcP.jpg",
                            tmdbId: DemoPerson.derekDeLint.rawValue),
@@ -563,7 +567,21 @@ extension DemoMocks {
         return ArrCredit(
             personName: name, personTmdbId: tmdbId,
             character: character, order: order,
-            type: "cast", images: images
+            type: "cast", department: nil, job: nil, images: images
+        )
+    }
+
+    /// Crew credit (the "Directed by" strip's demo source). Radarr ships crew
+    /// rows in the same `/credit` payload as cast, tagged by department + job.
+    static func crewCredit(_ name: String, _ department: String, _ job: String, _ profilePath: String?,
+                           tmdbId: Int? = nil) -> ArrCredit {
+        let images = profilePath.map {
+            [ArrCredit.Image(coverType: "headshot", url: nil, remoteUrl: tmdbProfileURL($0))]
+        }
+        return ArrCredit(
+            personName: name, personTmdbId: tmdbId,
+            character: nil, order: nil,
+            type: "crew", department: department, job: job, images: images
         )
     }
 
@@ -601,6 +619,20 @@ extension DemoMocks {
     /// stands in for the TMDB lookup the live app would do).
     public static func sonarrSeriesCast(seriesId: Int) -> [CastMember] {
         sonarrCast[seriesId] ?? []
+    }
+
+    /// Series creators — demo's stand-in for TMDB `created_by`, the credit the
+    /// "Created by" strip shows in place of a movie's director.
+    public static func sonarrSeriesCreators(seriesId: Int) -> [CastMember] {
+        sonarrCreators[seriesId] ?? []
+    }
+
+    static var sonarrCreators: [Int: [CastMember]] {
+        [
+            101: [ // Pioneer One — Josh Bernhard wrote and created it
+                seriesCast("po-creator-0", "Josh Bernhard", "", nil),
+            ],
+        ]
     }
 
     static var sonarrCast: [Int: [CastMember]] {

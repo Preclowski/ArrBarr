@@ -184,6 +184,17 @@ public struct MediaHeaderCard: View {
     /// instead of sitting empty until the detail fetch lands. Defaults off,
     /// so callers that always pass complete data are unaffected.
     var metadataLoading: Bool = false
+    /// The directing credit for the hero's "Directed by" line — a movie's
+    /// director(s), a series' creator(s). A line rather than a headshot strip:
+    /// this is a fact about the title, so it belongs with the other facts
+    /// beside the poster, not in a second row of faces under the cast.
+    var directedBy: [CastMember] = []
+    /// Wording for that line — "Directed by" for a film, "Created by" for a
+    /// series (which has no single director).
+    var directedByKey: LocalizedStringKey = "detail.directedBy.label"
+    /// Tapping a credited name opens their page (filmography). nil = the names
+    /// render as plain text.
+    var onTapPerson: ((CastMember) -> Void)?
 
     /// Drives the country names' language. Read from the environment (not
     /// `Locale.current`) so a live language switch re-renders the row.
@@ -212,7 +223,10 @@ public struct MediaHeaderCard: View {
         posterBadge: AnyView? = nil,
         posterCornerAction: AnyView? = nil,
         showTitle: Bool = true,
-        metadataLoading: Bool = false
+        metadataLoading: Bool = false,
+        directedBy: [CastMember] = [],
+        directedByKey: LocalizedStringKey = "detail.directedBy.label",
+        onTapPerson: ((CastMember) -> Void)? = nil
     ) {
         self.title = title
         self.subtitle = subtitle
@@ -237,6 +251,9 @@ public struct MediaHeaderCard: View {
         self.posterCornerAction = posterCornerAction
         self.showTitle = showTitle
         self.metadataLoading = metadataLoading
+        self.directedBy = directedBy
+        self.directedByKey = directedByKey
+        self.onTapPerson = onTapPerson
     }
 
     public var body: some View {
@@ -290,6 +307,12 @@ public struct MediaHeaderCard: View {
                         }
                     }
                 }
+                // Row 3 — the directing credit, under the ratings and above
+                // the synopsis: it reads as a byline for the description that
+                // follows.
+                if !directedBy.isEmpty {
+                    directedByLine
+                }
                 // Synopsis sits beside the poster (tooltip layout) so the
                 // description starts next to the artwork; a long one wraps
                 // down below the poster on its own.
@@ -334,6 +357,56 @@ public struct MediaHeaderCard: View {
             badge: posterBadge,
             onTap: onPosterTap
         )
+    }
+
+    /// "Directed by Denis Villeneuve" — the label plus one tappable name per
+    /// credited director. Two names is the practical ceiling in this column
+    /// (the Wachowskis, the Coens); a bigger directing committee is a series
+    /// anyway, and those show creators instead.
+    @ViewBuilder
+    private var directedByLine: some View {
+        HStack(spacing: 4) {
+            Text(directedByKey, bundle: .module)
+                .foregroundStyle(.secondary)
+            ForEach(Array(directedBy.prefix(2).enumerated()), id: \.element.id) { idx, person in
+                if idx > 0 {
+                    Text(verbatim: "&").foregroundStyle(.secondary)
+                }
+                creditName(person)
+            }
+            Spacer(minLength: 0)
+        }
+        .scaledFont(size: 11)
+    }
+
+    /// One credited name. Tappable (→ their filmography) when the host wired a
+    /// handler and the credit carries a TMDB id; plain text otherwise — an
+    /// id-less credit has no page to open.
+    @ViewBuilder
+    private func creditName(_ person: CastMember) -> some View {
+        if let onTapPerson, person.tmdbPersonId != nil {
+            Button { onTapPerson(person) } label: {
+                HStack(spacing: 2) {
+                    Text(verbatim: person.name)
+                        .fontWeight(.semibold)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                    LinkChevron(size: 8)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            #if os(macOS)
+            .onHover { hovering in
+                if hovering { NSCursor.pointingHand.push() } else { NSCursor.pop() }
+            }
+            #endif
+        } else {
+            Text(verbatim: person.name)
+                .fontWeight(.semibold)
+                .lineLimit(1)
+                .truncationMode(.tail)
+        }
     }
 
     /// Metadata row under the genres: runtime · network · certification ·
