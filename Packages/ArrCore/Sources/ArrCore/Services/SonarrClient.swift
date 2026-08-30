@@ -84,7 +84,82 @@ public actor SonarrClient: ArrAPIClient {
             }
         }
         let meta = await metaMap
-        return page.records.map { Self.unify($0, baseURL: baseURL, fileMap: fileMap, meta: meta) }
+        // Season packs get the media server's *season* artwork where it has
+        // any — the pack is one season, so the series poster is the vaguer
+        // answer. Loaded before the mapping pass so the row is right on its
+        // first appearance rather than flipping poster a poll later; it is one
+        // request per series per session, and a no-op afterwards.
+        let packSeasons = Self.seasonPackSeasons(page.records)
+        await Self.loadSeasonArtwork(for: page.records, packSeasons: packSeasons, meta: meta)
+        return page.records.map { r in
+            Self.unify(r, baseURL: baseURL, fileMap: fileMap, meta: meta,
+                       seasonPoster: Self.seasonPackPoster(r, packSeasons: packSeasons, meta: meta))
+        }
+    }
+
+    // MARK: - Season-pack artwork
+
+    /// `downloadId` → season, for the rows that form a season pack: several
+    /// queue entries sharing one physical download, all in the same season.
+    ///
+    /// A one-row download is not a pack (it is indistinguishable from a single
+    /// episode), and a download spanning two seasons has no one season poster
+    /// to show — both are left out and keep the series artwork.
+    static func seasonPackSeasons(_ records: [SonarrQueueRecord]) -> [String: Int] {
+        var seasonsByDownload: [String: Set<Int>] = [:]
+        var rowsByDownload: [String: Int] = [:]
+        for r in records {
+            guard let downloadId = r.downloadId, !downloadId.isEmpty,
+                  let season = r.episode?.seasonNumber ?? r.seasonNumber else { continue }
+            seasonsByDownload[downloadId, default: []].insert(season)
+            rowsByDownload[downloadId, default: 0] += 1
+        }
+        var out: [String: Int] = [:]
+        for (downloadId, seasons) in seasonsByDownload {
+            guard seasons.count == 1, (rowsByDownload[downloadId] ?? 0) > 1,
+                  let season = seasons.first else { continue }
+            out[downloadId] = season
+        }
+        return out
+    }
+
+    /// The provider ids this row's series can be matched on a media server by.
+    /// The store first — `includeSeries` is off, so the embedded series is nil
+    /// on every real queue payload and only tests / older Sonarrs supply it.
+    private static func seriesKeys(
+        _ r: SonarrQueueRecord, meta: [Int: TitleMetadataStore.Metadata]
+    ) -> [MediaServerExternalKey] {
+        if let raw = (r.seriesId ?? r.series?.id).flatMap({ meta[$0] })?.mediaServerKeys, !raw.isEmpty {
+            return raw.compactMap(MediaServerExternalKey.init(rawKey:))
+        }
+        return r.series?.mediaServerKeys ?? []
+    }
+
+    /// Warm the season-poster cache for every series with a pack in the queue.
+    /// Sequential: this is at most a handful of series, and the media server is
+    /// the same box the user is streaming from.
+    private static func loadSeasonArtwork(
+        for records: [SonarrQueueRecord], packSeasons: [String: Int],
+        meta: [Int: TitleMetadataStore.Metadata]
+    ) async {
+        var seen = Set<Int>()
+        for r in records {
+            guard let downloadId = r.downloadId, packSeasons[downloadId] != nil,
+                  let seriesId = r.seriesId ?? r.series?.id, seen.insert(seriesId).inserted else { continue }
+            let keys = seriesKeys(r, meta: meta)
+            guard !keys.isEmpty else { continue }
+            await MediaServerIndex.shared.loadSeasonPosters(for: keys)
+        }
+    }
+
+    /// This pack row's season artwork, or nil to keep whatever poster the
+    /// series resolved to.
+    private static func seasonPackPoster(
+        _ r: SonarrQueueRecord, packSeasons: [String: Int],
+        meta: [Int: TitleMetadataStore.Metadata]
+    ) -> URL? {
+        guard let downloadId = r.downloadId, let season = packSeasons[downloadId] else { return nil }
+        return MediaServerIndex.shared.seasonPosterURL(for: seriesKeys(r, meta: meta), season: season)
     }
 
     /// Public wrapper for the cached `fetchEpisodeFiles` — returns the
@@ -530,7 +605,10 @@ public actor SonarrClient: ArrAPIClient {
         _ r: SonarrQueueRecord,
         baseURL: String,
         fileMap: [Int: SonarrEpisodeFile],
-        meta: [Int: TitleMetadataStore.Metadata] = [:]
+        meta: [Int: TitleMetadataStore.Metadata] = [:],
+        /// The media server's artwork for this row's season, when it is part of
+        /// a season pack and the server has one — see `seasonPackPoster`.
+        seasonPoster: URL? = nil
     ) -> QueueItem {
         let total = clampedBytes(r.size)
         let left = clampedBytes(r.sizeleft)
@@ -583,6 +661,13 @@ public actor SonarrClient: ArrAPIClient {
             (poster, posterAuth) = (r.series?.images ?? []).posterURL(
                 baseURL: baseURL, mediaServerKeys: r.series?.mediaServerKeys ?? []
             )
+        }
+        if let seasonPoster {
+            // Wins over both the cached and the freshly resolved series art.
+            // A media-server poster authenticates by header, never with the
+            // arr's key — same rule as `applyingMediaServerArtwork`.
+            poster = seasonPoster
+            posterAuth = false
         }
 
         let existingFile = (r.episode?.episodeFileId).flatMap { id in id > 0 ? fileMap[id] : nil }

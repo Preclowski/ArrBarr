@@ -12,6 +12,17 @@ struct SeasonRow: View {
     /// (episodes not loaded yet, or a pack member without an episode number).
     var queueItems: [QueueItem] = []
     var onTap: () -> Void = {}
+    /// Flip this season's monitored flag. `nil` keeps the leading bookmark an
+    /// inert state glyph (what every caller got before it was wired up).
+    var onSetMonitored: ((Bool) async -> Void)? = nil
+    /// Right-click / long-press search on the row itself. Both nil (a caller
+    /// that doesn't own a search path) leaves the row without a menu.
+    var onAutomaticSearch: (() async -> Void)? = nil
+    var onManualSearch: (() -> Void)? = nil
+
+    /// The row's own sweep state, driven by `rowSearchContextMenu`.
+    @State private var autoSearching = false
+    @State private var autoDidSearch = false
 
     private var stats: SonarrSeasonStats? { season.statistics }
     private var have: Int { stats?.episodeFileCount ?? 0 }
@@ -43,12 +54,24 @@ struct SeasonRow: View {
                 // Leading state column, same place arr puts it. The trailing
                 // edge is already spoken for (have/total + chevron), and a
                 // fixed width keeps every "Season NN" aligned down the list
-                // regardless of which glyph the row is showing.
-                MonitorBookmark(isMonitored: isMonitored, size: 10)
-                    .frame(width: 11, alignment: .leading)
+                // regardless of which glyph the row is showing. The bookmark
+                // itself is an overlay (see below) — this only reserves its
+                // column so the toggle's hit area can't shift the row.
+                Color.clear
+                    .frame(width: 11, height: 12)
                 Text(String(format: "Season %02d", season.seasonNumber))
                     .scaledFont(size: 12, weight: .medium)
                 Spacer(minLength: 8)
+                // Automatic search fired from the row's context menu: the menu
+                // closes on the click, so without this the row says nothing
+                // happened. Same spinner → checkmark sweep as the header glyph.
+                if autoSearching {
+                    ProgressView().controlSize(.small)
+                } else if autoDidSearch {
+                    Image(systemName: "checkmark")
+                        .scaledFont(size: 10, weight: .semibold)
+                        .foregroundStyle(.secondary)
+                }
                 // Same Upgrade / New vocabulary the episode rows use, and the
                 // same place: trailing edge, ahead of the row's number.
                 if anyDownloading {
@@ -75,11 +98,21 @@ struct SeasonRow: View {
             .opacity(isMonitored ? 1 : 0.55)
             .contentShape(Rectangle())
         }
+        // Outside the row Button, not inside its label: a Button nested in a
+        // Button's label doesn't reliably win the tap, and the row's job is to
+        // push the season — flipping the flag must not do both.
+        .overlay(alignment: .leading) {
+            MonitorRowToggle(isMonitored: isMonitored, entity: .season, onToggle: onSetMonitored)
+                .padding(.leading, 10)
+        }
         .accessibilityValue(
             isMonitored ? Text(verbatim: "")
                         : Text("common.notMonitored.label", bundle: .module)
         )
         .buttonStyle(.plain)
+        .modifier(OptionalRowSearchMenu(
+            inFlight: $autoSearching, didQueue: $autoDidSearch,
+            onAutomatic: onAutomaticSearch, onManual: onManualSearch))
         .linkRowHover()
     }
 }

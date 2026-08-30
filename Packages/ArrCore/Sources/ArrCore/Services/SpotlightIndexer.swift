@@ -235,7 +235,14 @@ public enum SpotlightIndexer {
             seed[TitleMetadataStore.Key(source: .radarr, baseURL: config.baseURL, kind: .movie, id: id)] =
                 TitleMetadataStore.Metadata(
                     title: title, year: rec.year, slug: rec.titleSlug,
-                    posterURL: poster, posterRequiresAuth: needsAuth
+                    posterURL: poster, posterRequiresAuth: needsAuth,
+                    // Carried even though Spotlight itself never reads them:
+                    // this seed OVERWRITES whatever the queue path wrote, and
+                    // dropping the ids here left every record in the store
+                    // unmatchable — queue rows on the arr's artwork while
+                    // detail views, which resolve live, showed the media
+                    // server's. See `Metadata.mediaServerKeys`.
+                    mediaServerKeys: rec.mediaServerKeys.map(\.rawKey)
                 )
         }
         await seedMetadata(seed)
@@ -268,7 +275,9 @@ public enum SpotlightIndexer {
             seed[TitleMetadataStore.Key(source: .sonarr, baseURL: config.baseURL, kind: .series, id: id)] =
                 TitleMetadataStore.Metadata(
                     title: title, year: rec.year, slug: rec.titleSlug,
-                    posterURL: poster, posterRequiresAuth: needsAuth
+                    posterURL: poster, posterRequiresAuth: needsAuth,
+                    // Same reason as the Radarr seed above.
+                    mediaServerKeys: rec.mediaServerKeys.map(\.rawKey)
                 )
         }
         await seedMetadata(seed)

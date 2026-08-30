@@ -31,6 +31,14 @@ public final class MediaServerIndex: @unchecked Sendable {
     private let lock = NSLock()
     private var byKey: [MediaServerExternalKey: MediaServerEntry] = [:]
     private var watchHistory: [MediaServerWatch] = []
+    /// Season posters per series item id, fetched lazily when a season screen
+    /// opens rather than during the library sweep — one extra request per
+    /// series the user actually looks at, instead of one per series on the
+    /// server. `[:]` for a series means "asked, the server has none".
+    private var seasonPostersByItem: [String: [Int: URL]] = [:]
+    /// Item ids with a season-poster fetch in flight, so a season screen that
+    /// is opened, popped and reopened doesn't issue the request twice.
+    private var seasonFetchesInFlight: Set<String> = []
     private var lastRefresh: Date?
     private var isRefreshing = false
     /// Config the current snapshot was built from. A change to the server,
@@ -65,6 +73,15 @@ public final class MediaServerIndex: @unchecked Sendable {
             if let hit = byKey[key] { return hit }
         }
         return nil
+    }
+
+    /// The media server's poster for one season of a title, or nil when it has
+    /// none (or hasn't been asked yet — call `loadSeasonPosters` first).
+    public func seasonPosterURL(for keys: [MediaServerExternalKey], season: Int) -> URL? {
+        guard let itemId = entry(for: keys)?.itemId else { return nil }
+        lock.lock()
+        defer { lock.unlock() }
+        return seasonPostersByItem[itemId]?[season]
     }
 
     /// Recently watched titles, newest first. Used as the Quiz's taste signal.
@@ -155,6 +172,44 @@ public final class MediaServerIndex: @unchecked Sendable {
         }
     }
 
+    /// Fetch this series' season artwork, once. A miss, a failure or a server
+    /// that doesn't know the title all leave the cache empty and every reader
+    /// falls back to the arr's poster — same contract as the rest of this type.
+    /// Runs against the config the current snapshot was built from — the one
+    /// that produced the item id being asked about. Nothing to load before the
+    /// first refresh, which is also when `entry(for:)` has no answer anyway.
+    public func loadSeasonPosters(for keys: [MediaServerExternalKey]) async {
+        guard let itemId = entry(for: keys)?.itemId else { return }
+        lock.lock()
+        let config = snapshotConfig
+        lock.unlock()
+        guard let config, config.isConfigured else { return }
+
+        lock.lock()
+        let known = seasonPostersByItem[itemId] != nil || seasonFetchesInFlight.contains(itemId)
+        if !known { seasonFetchesInFlight.insert(itemId) }
+        lock.unlock()
+        guard !known else { return }
+
+        defer {
+            lock.lock()
+            seasonFetchesInFlight.remove(itemId)
+            lock.unlock()
+        }
+        guard let client = MediaServerClientFactory.make(config: config) else { return }
+        do {
+            let posters = try await client.seasonPosters(seriesItemId: itemId)
+            lock.lock()
+            seasonPostersByItem[itemId] = posters
+            lock.unlock()
+            logger.debug("Season posters for item \(itemId, privacy: .public): \(posters.count, privacy: .public)")
+        } catch {
+            logger.error(
+                "Season poster fetch failed: \(error.localizedDescription, privacy: .public) | \(String(reflecting: error), privacy: .private)"
+            )
+        }
+    }
+
     /// Drop the snapshot. Used when the user disables the integration so the
     /// change is visible immediately instead of at the next poll.
     public func clear() {
@@ -166,6 +221,7 @@ public final class MediaServerIndex: @unchecked Sendable {
     /// Caller must hold `lock`.
     private func reset() {
         byKey.removeAll()
+        seasonPostersByItem.removeAll()
         watchHistory.removeAll()
         snapshotConfig = nil
         lastRefresh = nil

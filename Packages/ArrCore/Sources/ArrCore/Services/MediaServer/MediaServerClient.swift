@@ -1,6 +1,6 @@
 import Foundation
 
-/// What ArrBarr asks of a media server. Six calls, all of them either reads or
+/// What ArrBarr asks of a media server. Seven calls, all of them either reads or
 /// maintenance the user explicitly pressed — nothing here writes library
 /// content, and there is no delete path on purpose.
 public protocol MediaServerClient: Sendable {
@@ -24,6 +24,11 @@ public protocol MediaServerClient: Sendable {
     func nowPlaying() async throws -> [MediaServerSession]
 
     func recentlyWatched(limit: Int) async throws -> [MediaServerWatch]
+
+    /// Season number → season poster, for one series item on the server.
+    /// Seasons the server has no artwork of its own for are simply absent —
+    /// the caller falls back to the series poster.
+    func seasonPosters(seriesItemId: String) async throws -> [Int: URL]
 }
 
 public enum MediaServerClientFactory {

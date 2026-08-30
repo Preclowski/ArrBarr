@@ -54,6 +54,25 @@ struct SeasonDetailView: View {
     @State private var manualSearchTarget: SeasonReleaseSearch?
     @State private var autoSearching = false
     @State private var autoDidSearch = false
+    /// The connected media server's artwork for *this season*, once fetched.
+    /// nil keeps the series poster, which is what every surface showed before.
+    @State private var mediaServerSeasonPoster: URL?
+
+    /// Season art when the media server has it, series art otherwise. Every
+    /// poster on this screen goes through here so the header, the lightbox and
+    /// the episode rows can't disagree about which image the season has.
+    private var posterURL: URL? { mediaServerSeasonPoster ?? seriesPosterURL }
+
+    /// A media-server poster is fetched with the server's own header (see
+    /// `MediaServerPosterAccess`), never the arr's key — so both arr
+    /// credentials drop away as soon as the override wins.
+    private var posterRequiresAuth: Bool {
+        mediaServerSeasonPoster == nil && seriesPosterRequiresAuth
+    }
+
+    private var posterAPIKey: String? {
+        mediaServerSeasonPoster == nil ? seriesPosterAPIKey : nil
+    }
 
     private var navTitle: String {
         String(format: String(localized: "detail.seasonLld.label", bundle: .module), drill.seasonNumber)
@@ -122,11 +141,19 @@ struct SeasonDetailView: View {
                                         withAnimation(.smooth(duration: 0.22)) { selectedEpisode = episode }
                                     },
                                     // Episodes have no art of their own; the
-                                    // hover tooltip borrows the series poster
-                                    // this surface already holds.
-                                    posterURL: seriesPosterURL,
-                                    posterRequiresAuth: seriesPosterRequiresAuth,
-                                    posterAPIKey: seriesPosterAPIKey,
+                                    // hover tooltip borrows this season's
+                                    // poster (series art when there is none).
+                                    posterURL: posterURL,
+                                    posterRequiresAuth: posterRequiresAuth,
+                                    posterAPIKey: posterAPIKey,
+                                    onToggleMonitored: onSetEpisodeMonitored.map { toggle in
+                                        { m in await toggle(ep.id, m) }
+                                    },
+                                    onAutomaticSearch: { await searchEpisode(ep) },
+                                    onManualSearch: {
+                                        manualSearchTarget = SeasonReleaseSearch(target: .episode(
+                                            episodeId: ep.id, title: episodeSearchTitle(ep)))
+                                    }
                                 )
                             }
                         }
@@ -141,15 +168,24 @@ struct SeasonDetailView: View {
             // header cluster now.
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .posterLightbox(url: $enlargedPoster, apiKey: seriesPosterAPIKey, aspectRatio: 2.0 / 3.0)
+        .posterLightbox(url: $enlargedPoster, apiKey: posterAPIKey, aspectRatio: 2.0 / 3.0)
+        // Lazily — one request per series the user actually opens a season of,
+        // and the index caches the answer for the rest of the session.
+        .task(id: drill.seriesId) {
+            let keys = sonarrDetail?.mediaServerKeys ?? []
+            guard !keys.isEmpty else { return }
+            await MediaServerIndex.shared.loadSeasonPosters(for: keys)
+            mediaServerSeasonPoster = MediaServerIndex.shared.seasonPosterURL(
+                for: keys, season: drill.seasonNumber)
+        }
         .conditionalNavTitle("\(drill.seriesTitle) · \(navTitle)", apply: !isDetachedWindow)
         .navigationDestination(item: $selectedEpisode) { ep in
             EpisodeDetailOverlay(
                 episode: ep,
                 seriesTitle: drill.seriesTitle,
-                posterURL: seriesPosterURL,
-                posterRequiresAuth: seriesPosterRequiresAuth,
-                apiKey: seriesPosterAPIKey,
+                posterURL: posterURL,
+                posterRequiresAuth: posterRequiresAuth,
+                apiKey: posterAPIKey,
                 episodeFile: ep.episodeFileId.flatMap { fileByEpisodeFileId[$0] },
                 queueItems: queueByEpisodeId[ep.id] ?? [],
                 onClose: { selectedEpisode = nil },
@@ -200,6 +236,20 @@ struct SeasonDetailView: View {
         )
     }
 
+    /// `Series · S02E04` — what the release list titles an episode search with,
+    /// matching the episode screen's own nav title.
+    private func episodeSearchTitle(_ ep: SonarrEpisodeDetail) -> String {
+        let code = String(format: "S%02dE%02d", drill.seasonNumber, ep.episodeNumber ?? 0)
+        return "\(drill.seriesTitle) · \(code)"
+    }
+
+    /// One episode's automatic search, fired from its row's context menu. The
+    /// row owns the spinner; failures are silent for the same reason the
+    /// header's sweep is — the arr queues the search, it doesn't report on it.
+    private func searchEpisode(_ ep: SonarrEpisodeDetail) async {
+        try? await SonarrClient(config: configStore.sonarr).searchEpisodes(episodeIds: [ep.id])
+    }
+
     private func startAutomaticSearch() {
         guard !autoSearching else { return }
         Task {
@@ -230,16 +280,16 @@ struct SeasonDetailView: View {
             genres: sonarrDetail?.genres ?? [],
             ratings: ratings,
             overview: sonarrDetail?.overview,
-            posterURL: seriesPosterURL,
-            posterRequiresAuth: seriesPosterRequiresAuth,
-            apiKey: seriesPosterAPIKey,
+            posterURL: posterURL,
+            posterRequiresAuth: posterRequiresAuth,
+            apiKey: posterAPIKey,
             fallbackSymbol: "tv",
             posterAspect: 2.0 / 3.0,
             blurred: false,
             trailing: nil,
             titleBadge: nil,
             onPosterTap: { url in
-                withAnimation(.smooth(duration: 0.22)) { enlargedPoster = url ?? seriesPosterURL }
+                withAnimation(.smooth(duration: 0.22)) { enlargedPoster = url ?? posterURL }
             },
             posterCornerAction: monitorPosterToggle,
             showTitle: false

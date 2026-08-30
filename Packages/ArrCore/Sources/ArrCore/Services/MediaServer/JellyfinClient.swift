@@ -43,13 +43,15 @@ struct JellyfinClient: MediaServerClient {
         let SeriesName: String?
         /// The wire key is `Type`, which Swift reserves — hence the rename.
         let itemType: String?
+        /// Season number on a season row (0 is Specials).
+        let IndexNumber: Int?
         let ProductionYear: Int?
         let ProviderIds: [String: String]?
         let ImageTags: [String: String]?
         let UserData: UserData?
 
         enum CodingKeys: String, CodingKey {
-            case Id, Name, SeriesName, ProductionYear, ProviderIds, ImageTags, UserData
+            case Id, Name, SeriesName, IndexNumber, ProductionYear, ProviderIds, ImageTags, UserData
             case itemType = "Type"
         }
 
@@ -210,6 +212,34 @@ struct JellyfinClient: MediaServerClient {
                 watchedAt: item.UserData?.LastPlayedDate.flatMap(Self.parseDate)
             )
         }
+    }
+
+    func seasonPosters(seriesItemId: String) async throws -> [Int: URL] {
+        guard config.isConfigured else { throw MediaServerError.notConfigured }
+        let page = try await get(
+            "/Shows/\(seriesItemId)/Seasons",
+            query: [
+                URLQueryItem(name: "EnableImages", value: "true"),
+                URLQueryItem(name: "ImageTypeLimit", value: "1"),
+                URLQueryItem(name: "EnableImageTypes", value: "Primary"),
+            ],
+            as: ItemsPage.self
+        )
+        var out: [Int: URL] = [:]
+        for season in page.Items ?? [] {
+            // A season with no `Primary` tag of its own inherits the series
+            // artwork on the server — skip it so the caller's fallback shows
+            // the arr's poster instead of a second copy of the same image.
+            guard let number = season.IndexNumber, let id = season.Id,
+                  let tag = season.ImageTags?["Primary"],
+                  let url = try? http.url(
+                    base: normalizedBaseURL,
+                    path: "/Items/\(id)/Images/Primary",
+                    query: [URLQueryItem(name: "tag", value: tag)]
+                  ) else { continue }
+            out[number] = url
+        }
+        return out
     }
 
     // MARK: - Mapping

@@ -151,3 +151,79 @@ public struct MonitorPosterToggle: View {
             .contentShape(Rectangle())
     }
 }
+
+/// Row variant of the toggle: the same bookmark a dense list row already shows,
+/// but a real button when the row's owner hands down a flip. `nil` keeps the
+/// glyph inert, so a caller without a callback renders exactly what
+/// `MonitorBookmark` used to.
+///
+/// The hit area is wider and taller than the 10pt glyph — a bookmark that size
+/// is unhittable on a phone — which is why rows place this as an `.overlay`
+/// rather than inline: the padding can't push the row's own layout around, and
+/// the tap lands here instead of on the row's drill-in button underneath.
+/// Leading-aligned inside that area so the glyph still sits exactly where the
+/// row's state column starts.
+public struct MonitorRowToggle: View {
+    let isMonitored: Bool
+    let entity: MonitorEntity
+    var size: CGFloat
+    let onToggle: ((Bool) async -> Void)?
+
+    @State private var inFlight = false
+
+    public init(isMonitored: Bool, entity: MonitorEntity, size: CGFloat = 10,
+                onToggle: ((Bool) async -> Void)? = nil) {
+        self.isMonitored = isMonitored
+        self.entity = entity
+        self.size = size
+        self.onToggle = onToggle
+    }
+
+    private var helpKey: String {
+        guard onToggle != nil else {
+            return isMonitored ? "common.monitored.button" : "common.notMonitored.label"
+        }
+        return isMonitored ? entity.disableKey : entity.enableKey
+    }
+
+    public var body: some View {
+        Group {
+            if let onToggle {
+                Button {
+                    guard !inFlight else { return }
+                    Task {
+                        inFlight = true
+                        await onToggle(!isMonitored)
+                        inFlight = false
+                    }
+                } label: { glyph }
+                .buttonStyle(.plain)
+                .disabled(inFlight)
+                .opacity(inFlight ? 0.5 : 1)
+                #if os(macOS)
+                .onHover { hovering in
+                    if hovering { NSCursor.pointingHand.push() } else { NSCursor.pop() }
+                }
+                #endif
+                .help(Text(LocalizedStringKey(helpKey), bundle: .module))
+                .accessibilityLabel(Text(LocalizedStringKey(helpKey), bundle: .module))
+                .accessibilityValue(
+                    Text(LocalizedStringKey(isMonitored ? "common.monitored.button"
+                                                        : "common.notMonitored.label"),
+                         bundle: .module)
+                )
+            } else {
+                glyph
+                    // The row already speaks its monitored state as its own
+                    // accessibility value — an inert glyph adds nothing.
+                    .accessibilityHidden(true)
+            }
+        }
+    }
+
+    private var glyph: some View {
+        MonitorBookmark(isMonitored: isMonitored, size: size)
+            .frame(width: 16, height: 20, alignment: .leading)
+            .contentShape(Rectangle())
+    }
+}

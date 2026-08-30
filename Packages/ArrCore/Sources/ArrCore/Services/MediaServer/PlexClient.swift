@@ -44,6 +44,14 @@ struct PlexClient: MediaServerClient {
         let Metadata: [Item]?
     }
 
+    /// A show's children. Plex's JSON projection lists seasons under
+    /// `Metadata`, the XML one under `Directory` — decode both rather than
+    /// betting on which shape a given server version hands back.
+    private struct Children: Decodable {
+        let Metadata: [Item]?
+        let Directory: [Item]?
+    }
+
     private struct Guid: Decodable {
         let id: String?
     }
@@ -51,6 +59,8 @@ struct PlexClient: MediaServerClient {
     private struct Item: Decodable {
         let ratingKey: String?
         let type: String?
+        /// Season number on a season row (0 is Specials).
+        let index: Int?
         let title: String?
         let grandparentTitle: String?
         let year: Int?
@@ -187,6 +197,20 @@ struct PlexClient: MediaServerClient {
                 watchedAt: item.viewedAt.map { Date(timeIntervalSince1970: TimeInterval($0)) }
             )
         }
+    }
+
+    func seasonPosters(seriesItemId: String) async throws -> [Int: URL] {
+        guard config.isConfigured else { throw MediaServerError.notConfigured }
+        let children = try await get("/library/metadata/\(seriesItemId)/children", as: Children.self)
+        var out: [Int: URL] = [:]
+        for season in (children.Metadata ?? []) + (children.Directory ?? []) {
+            guard let number = season.index, let thumb = season.thumb,
+                  let url = try? http.url(base: normalizedBaseURL, path: thumb) else { continue }
+            // First writer wins, same as the library index: the JSON and XML
+            // shapes can both be populated on some versions.
+            if out[number] == nil { out[number] = url }
+        }
+        return out
     }
 
     // MARK: - Mapping

@@ -106,7 +106,10 @@ public actor WhisparrClient: ArrAPIClient {
             let (poster, auth) = (detail.images ?? []).posterURL(baseURL: baseURL)
             return TitleMetadataStore.Metadata(
                 title: detail.title, year: detail.year, slug: detail.titleSlug,
-                posterURL: poster, posterRequiresAuth: auth
+                posterURL: poster, posterRequiresAuth: auth,
+                // Empty rather than nil — see `LidarrClient`. Whisparr titles
+                // are not the kind of thing the media-server index holds.
+                mediaServerKeys: []
             )
         }
     }

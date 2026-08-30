@@ -121,6 +121,15 @@ public struct HTTPClient {
     /// aggregator awaits all four arrs together) for a minute-plus.
     public static let requestTimeout: TimeInterval = 15
 
+    /// Timeout for an *interactive* indexer search (`/release`) and for the
+    /// grab that follows it. Those two are the only arr calls whose latency is
+    /// somebody else's: the arr fans the query out to every indexer and answers
+    /// when the slowest one does, so 30-90s is ordinary and the refresh-safe
+    /// 15s budget above turns a search that Sonarr's own UI completes into a
+    /// timeout. Still bounded — an indexer that never answers must not hang the
+    /// screen forever.
+    public static let interactiveSearchTimeout: TimeInterval = 120
+
     /// Switches off the process-wide on-disk HTTP cache. Runs once, the first
     /// time anything builds an `HTTPClient` — i.e. before this app's first
     /// request, in every target, with nothing to remember to wire up.
@@ -192,11 +201,13 @@ public struct HTTPClient {
         return url
     }
 
-    func get(_ url: URL, headers: [String: String] = [:]) async throws -> Data {
+    /// `timeout` overrides this client's default for one request — see
+    /// `interactiveSearchTimeout` for the only caller that needs it.
+    func get(_ url: URL, headers: [String: String] = [:], timeout: TimeInterval? = nil) async throws -> Data {
         var req = URLRequest(url: url)
         req.httpMethod = "GET"
         for (k, v) in headers { req.setValue(v, forHTTPHeaderField: k) }
-        return try await perform(req)
+        return try await perform(req, timeout: timeout)
     }
 
     func post(_ url: URL, headers: [String: String] = [:], formBody: [String: String]? = nil) async throws -> Data {
@@ -210,12 +221,13 @@ public struct HTTPClient {
         return try await perform(req)
     }
 
-    func post(_ url: URL, headers: [String: String] = [:], body: Data) async throws -> Data {
+    func post(_ url: URL, headers: [String: String] = [:], body: Data,
+              timeout: TimeInterval? = nil) async throws -> Data {
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         for (k, v) in headers { req.setValue(v, forHTTPHeaderField: k) }
         req.httpBody = body
-        return try await perform(req)
+        return try await perform(req, timeout: timeout)
     }
 
     func delete(_ url: URL, headers: [String: String] = [:]) async throws -> Data {
@@ -233,11 +245,11 @@ public struct HTTPClient {
         return try await perform(req)
     }
 
-    private func perform(_ req: URLRequest) async throws -> Data {
+    private func perform(_ req: URLRequest, timeout override: TimeInterval? = nil) async throws -> Data {
         var req = req
         // Bound every request so a hung/restarting arr can't stall a refresh
         // for URLSession's 60s default. See `timeout` / `requestTimeout`.
-        req.timeoutInterval = timeout
+        req.timeoutInterval = override ?? timeout
         // Never store, never re-serve. Everything this client fetches is live
         // state (queue rows, progress, health), so a cache entry is at best
         // dead weight and at worst a stale row. Pairs with `diskCacheDisabled`:

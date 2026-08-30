@@ -24,6 +24,13 @@ struct EpisodeRow: View {
     var posterURL: URL? = nil
     var posterRequiresAuth: Bool = false
     var posterAPIKey: String? = nil
+    /// Flip this episode's monitored flag. `nil` keeps the leading bookmark an
+    /// inert state glyph.
+    var onToggleMonitored: ((Bool) async -> Void)? = nil
+    /// Right-click / long-press search on the row itself — the same Automatic /
+    /// Manual choice the episode's own header carries. Both nil → no menu.
+    var onAutomaticSearch: (() async -> Void)? = nil
+    var onManualSearch: (() -> Void)? = nil
 
     /// The row's representative download — first of `queueItems`. All the
     /// single-item visuals (tint, progress fill) render off this one; the
@@ -45,6 +52,10 @@ struct EpisodeRow: View {
     @State private var isHovering = false
     @State private var showTooltip = false
     @State private var hoverTask: Task<Void, Never>?
+    /// Sweep state for a search fired from the row's context menu, rendered in
+    /// the trailing state slot (the menu is gone by the time it runs).
+    @State private var autoSearching = false
+    @State private var autoDidSearch = false
 
     /// `S02E04`-style episode identifier rendered on the trailing
     /// edge. Same format the tooltip header uses.
@@ -93,6 +104,12 @@ struct EpisodeRow: View {
             onTap?(episode)
         } label: {
             HStack(spacing: 6) {
+                // Leading state column — same place, same glyph as the season
+                // rows one screen up, so "monitored" is read (and flipped) in
+                // one spot per screen. The bookmark itself is an overlay (see
+                // below); this reserves its column.
+                Color.clear
+                    .frame(width: 11, height: 12)
                 // Everything except the state glyph dims together when the
                 // episode is unmonitored — same wash the season row uses.
                 // Dimming only the title left the `S02E04` code reading
@@ -173,6 +190,16 @@ struct EpisodeRow: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .modifier(OptionalRowSearchMenu(
+            inFlight: $autoSearching, didQueue: $autoDidSearch,
+            onAutomatic: onAutomaticSearch, onManual: onManualSearch))
+        // Outside the row Button, not inside its label — a Button nested in a
+        // Button's label doesn't reliably win the tap, and the row itself opens
+        // the episode.
+        .overlay(alignment: .leading) {
+            MonitorRowToggle(isMonitored: isMonitored, entity: .episode, onToggle: onToggleMonitored)
+                .padding(.leading, 6)
+        }
         // The dim + glyph are visual-only; VoiceOver gets the state as the
         // row's value so it reads "S02E04, Title, Not monitored, button".
         .accessibilityValue(
@@ -304,29 +331,29 @@ struct EpisodeRow: View {
 
     @ViewBuilder
     private func stateIndicator(aired: Bool) -> some View {
-        // One 14pt slot, and unmonitored WINS it over not-aired: "hasn't
-        // aired" is already said twice on the row (tertiary title + the
-        // future date in the trailing gutter), while "unmonitored" is said
-        // nowhere else. The tooltip carries both states when they coincide.
+        // A row-fired automatic search owns the slot while it runs — it is the
+        // only transient thing on the row, and it outranks a date the user can
+        // read again a second later.
         //
-        // A monitored, aired episode still renders nothing — the default
-        // state costs no pixels, which is the whole point of showing only
-        // the exception. ("Missing" gets no bare circle either: the dimmed
-        // title already says "not in your library", and the season row
-        // carries the per-season "X/Y" count.)
-        if !isMonitored {
-            MonitorBookmark(isMonitored: false, size: 10)
-                .help(Text(LocalizedStringKey(unmonitoredHelpKey(aired: aired)), bundle: .module))
+        // Otherwise: just the not-aired calendar now. The monitored bookmark moved to
+        // the row's leading column, where the season rows keep theirs and
+        // where it can be a toggle instead of a 14pt read-only glyph. The two
+        // states no longer compete for one slot, so an unmonitored future
+        // episode says both. ("Missing" still gets no glyph: the dimmed title
+        // already says "not in your library", and the season row carries the
+        // per-season "X/Y" count.)
+        if autoSearching {
+            ProgressView().controlSize(.small)
+        } else if autoDidSearch {
+            Image(systemName: "checkmark")
+                .scaledFont(size: 10, weight: .semibold)
+                .foregroundStyle(.secondary)
         } else if !aired {
             Image(systemName: "calendar")
                 .scaledFont(size: 10)
                 .foregroundStyle(.tertiary)
                 .help(Text("detail.notAiredYet.button", bundle: .module))
         }
-    }
-
-    private func unmonitoredHelpKey(aired: Bool) -> String {
-        aired ? "common.notMonitored.label" : "detail.notMonitoredNotAired.label"
     }
 
     private static let formatter: DateFormatter = {

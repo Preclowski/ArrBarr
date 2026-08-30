@@ -138,7 +138,11 @@ public actor LidarrClient: ArrAPIClient {
             secondary: album.artist?.artistName,
             slug: album.foreignAlbumId,
             posterURL: poster,
-            posterRequiresAuth: auth
+            posterRequiresAuth: auth,
+            // Empty, not nil: albums are never on a media server, and nil is
+            // reserved for "written before ids were recorded", which the
+            // resolver refetches.
+            mediaServerKeys: []
         )
     }
 
