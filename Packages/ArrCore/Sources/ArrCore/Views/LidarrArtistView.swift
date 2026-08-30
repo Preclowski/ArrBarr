@@ -28,12 +28,29 @@ struct LidarrArtistView: View {
     @State private var collapsedTypes: Set<String> = []
     /// Header pencil → edit panel push (profiles / root folder).
     @State private var editRequest: MediaEditRequest?
+    /// The other half of the pencil's menu — remove the artist from Lidarr.
+    @State private var deleteRequest: MediaDeleteRequest?
 
     /// What the header pencil edits — the artist record (Lidarr's profile-
     /// carrying entity).
     private var editTarget: MediaEditRequest? {
         guard let artistId = item.entityId else { return nil }
         return MediaEditRequest(source: .lidarr, entityId: artistId)
+    }
+
+    /// The same artist record, addressed for removal.
+    private var deleteTarget: MediaDeleteRequest? {
+        guard let artistId = item.entityId else { return nil }
+        return MediaDeleteRequest(source: .lidarr, entityId: artistId,
+                                  title: artist?.artistName ?? item.title)
+    }
+
+    /// The artist is gone from Lidarr: close the modal, drop its queue rows and
+    /// leave a surface that now describes nothing.
+    private func handleDeleted() {
+        deleteRequest = nil
+        Task { await viewModel.refresh() }
+        onBack()
     }
 
     /// Artist bookmark, on the poster corner like every other detail surface.
@@ -73,13 +90,23 @@ struct LidarrArtistView: View {
                 MediaEditModalOverlay(request: req, onDismiss: { editRequest = nil })
                     .zIndex(6)
             }
+            if let req = deleteRequest {
+                MediaDeleteModalOverlay(request: req,
+                                        onDismiss: { deleteRequest = nil },
+                                        onDeleted: handleDeleted)
+                    .zIndex(7)
+            }
             #endif
         }
         #if os(iOS)
         .sheet(item: $editRequest) { req in
+            // Detents live inside the panel — see MediaEditPanel.
             MediaEditPanel(request: req, onBack: { editRequest = nil })
-                .presentationDetents([.medium])
-                .presentationDragIndicator(.visible)
+        }
+        .sheet(item: $deleteRequest) { req in
+            MediaDeletePanel(request: req,
+                             onCancel: { deleteRequest = nil },
+                             onDeleted: handleDeleted)
         }
         #endif
     }
@@ -97,13 +124,26 @@ struct LidarrArtistView: View {
                     .lineLimit(1)
                 Spacer(minLength: 0)
                 if let target = editTarget {
-                    Button { editRequest = target } label: {
+                    // Menu, not a direct push — same two actions, same reason
+                    // as DetailView's header.
+                    Menu {
+                        Button { editRequest = target } label: {
+                            Label { Text("detail.edit.button", bundle: .module) } icon: { Image(systemName: "pencil") }
+                        }
+                        Button(role: .destructive) { deleteRequest = deleteTarget } label: {
+                            Label { Text("detail.delete.button", bundle: .module) } icon: { Image(systemName: "trash") }
+                        }
+                    } label: {
                         Image(systemName: "pencil")
                             .scaledFont(size: 14, weight: .medium)
                             .foregroundStyle(.secondary)
+                            .frame(width: 22, height: 22)
+                            .contentShape(Rectangle())
                     }
+                    .menuStyle(.button)
                     .buttonStyle(.plain)
-                    .help(Text("detail.edit.button", bundle: .module))
+                    .menuIndicator(.hidden)
+                    .help(Text("detail.editOrDelete.tooltip", bundle: .module))
                 }
                 if let url = artistWebURL {
                     Button { PlatformURLOpener.open(url) } label: {
@@ -158,10 +198,19 @@ struct LidarrArtistView: View {
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
                 if let target = editTarget {
-                    Button { editRequest = target } label: {
+                    Menu {
+                        Button { editRequest = target } label: {
+                            Label { Text("detail.edit.button", bundle: .module) } icon: { Image(systemName: "pencil") }
+                        }
+                        Section {
+                            Button(role: .destructive) { deleteRequest = deleteTarget } label: {
+                                Label { Text("detail.delete.button", bundle: .module) } icon: { Image(systemName: "trash") }
+                            }
+                        }
+                    } label: {
                         Image(systemName: "pencil")
                     }
-                    .help(Text("detail.edit.button", bundle: .module))
+                    .accessibilityLabel(Text("detail.editOrDelete.tooltip", bundle: .module))
                 }
                 if let url = artistWebURL {
                     Button { PlatformURLOpener.open(url) } label: {

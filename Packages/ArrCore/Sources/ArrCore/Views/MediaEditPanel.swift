@@ -52,7 +52,170 @@ struct MediaEditPanel: View {
     /// with `moveFiles=true`, see `updateLibraryRecord`).
     @State private var originalRootFolder: String?
 
+    #if os(iOS)
+    /// One Form row at the user's text size — the sheet is sized from this, so
+    /// Dynamic Type grows the sheet instead of scrolling inside a half screen.
+    @ScaledMetric(relativeTo: .body) private var formRowHeight: CGFloat = 44
+    #endif
+
     var body: some View {
+        // Presentation forks, logic does not: `load`, `save` and every piece of
+        // @State below are shared. macOS keeps the compact card that matches
+        // SearchAddPanel's footer inside its overlay; iOS gets a real Form,
+        // because the card's 11pt rows and mini switches are desktop controls
+        // and a `.medium` detent left them floating in half a screen of air.
+        #if os(iOS)
+        iosForm
+            .task(id: request.id) { await load() }
+        #else
+        macCard
+            .task(id: request.id) { await load() }
+        #endif
+    }
+
+    #if os(iOS)
+    private var iosForm: some View {
+        NavigationStack {
+            Group {
+                if loading {
+                    ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if let err = loadError {
+                    LoadErrorLine(message: err).padding()
+                } else {
+                    Form {
+                        Section { iosFields }
+                        if movesFiles {
+                            Section {
+                                Label { Text("edit.moveNote.label", bundle: .module) }
+                                icon: { Image(systemName: "exclamationmark.triangle.fill") }
+                                    .foregroundStyle(.orange)
+                                    .font(.footnote)
+                            }
+                        }
+                        if let err = saveError {
+                            Section { Text(err).foregroundStyle(.red).font(.footnote) }
+                        }
+                    }
+                }
+            }
+            .navigationTitle(Text("detail.edit.button", bundle: .module))
+            .navigationBarTitleDisplayMode(.inline)
+            // Sized to what is actually in it. `.medium` is a fixed half screen
+            // whatever the content, which left a three-row form floating in a
+            // pane twice its height; Sonarr's five rows needed the drag anyway.
+            // `.large` stays available for big text and long root-folder lists.
+            .presentationDetents([.height(fittedSheetHeight), .large])
+            .presentationDragIndicator(.visible)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button(action: onBack) { Text("common.cancel.button", bundle: .module) }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        Task { await save() }
+                    } label: {
+                        if saving {
+                            ProgressView()
+                        } else {
+                            HStack(spacing: 4) {
+                                if !storeManager.isPro { Image(systemName: "lock.fill") }
+                                // "Save changes" crowds the title out of an
+                                // iOS bar; the title already says Edit.
+                                Text("common.save.button", bundle: .module)
+                            }
+                        }
+                    }
+                    .fontWeight(.semibold)
+                    .disabled(saving || loading)
+                }
+            }
+        }
+    }
+
+    /// Rows currently on screen, so the sheet can be exactly as tall as the
+    /// form rather than a fixed fraction of the display.
+    private var fieldRowCount: Int {
+        var rows = 2  // quality profile + root folder, every source
+        switch request.source {
+        case .radarr, .whisparr: rows += 1                       // availability
+        case .sonarr: rows += 3                                  // type, monitor, season folder
+        case .lidarr: rows += metadataProfiles.isEmpty ? 1 : 2   // (metadata) + monitor
+        }
+        return rows
+    }
+
+    private var fittedSheetHeight: CGFloat {
+        // Nav bar + the grouped section's own top/bottom insets + grabber.
+        let chrome: CGFloat = 132
+        guard !loading, loadError == nil else { return 180 }
+        let extras = (movesFiles ? formRowHeight : 0) + (saveError == nil ? 0 : formRowHeight)
+        return CGFloat(fieldRowCount) * formRowHeight + chrome + extras
+    }
+
+    /// The same choices the macOS card offers, as system rows.
+    @ViewBuilder
+    private var iosFields: some View {
+        Picker(selection: Binding(
+            get: { selectedProfileId ?? qualityProfiles.first?.id ?? 0 },
+            set: { selectedProfileId = $0 }
+        )) {
+            ForEach(qualityProfiles, id: \.id) { Text(verbatim: $0.name).tag($0.id) }
+        } label: {
+            Text("search.qualityProfile.button", bundle: .module)
+        }
+
+        switch request.source {
+        case .radarr, .whisparr:
+            Picker(selection: $availability) {
+                ForEach(RadarrMinimumAvailability.allCases, id: \.self) { Text(verbatim: $0.displayName).tag($0) }
+            } label: {
+                Text("edit.availability.button", bundle: .module)
+            }
+        case .sonarr:
+            Picker(selection: $seriesType) {
+                ForEach(SonarrSeriesType.allCases, id: \.self) { Text(verbatim: $0.displayName).tag($0) }
+            } label: {
+                Text("search.seriesType.button", bundle: .module)
+            }
+            Picker(selection: $monitorNewItems) {
+                Text("search.all.button", bundle: .module).tag("all")
+                Text("search.none.button", bundle: .module).tag("none")
+            } label: {
+                Text("edit.monitorNewSeasons.button", bundle: .module)
+            }
+            Toggle(isOn: $seasonFolder) { Text("edit.seasonFolder.button", bundle: .module) }
+        case .lidarr:
+            if !metadataProfiles.isEmpty {
+                Picker(selection: Binding(
+                    get: { selectedMetadataProfileId ?? metadataProfiles.first?.id ?? 0 },
+                    set: { selectedMetadataProfileId = $0 }
+                )) {
+                    ForEach(metadataProfiles, id: \.id) { Text(verbatim: $0.name).tag($0.id) }
+                } label: {
+                    Text("search.metadataProfile.button", bundle: .module)
+                }
+            }
+            Picker(selection: $monitorNewItems) {
+                Text("search.all.button", bundle: .module).tag("all")
+                Text("edit.newItems.button", bundle: .module).tag("new")
+                Text("search.none.button", bundle: .module).tag("none")
+            } label: {
+                Text("edit.monitorNewAlbums.button", bundle: .module)
+            }
+        }
+
+        Picker(selection: Binding(
+            get: { selectedRootFolder ?? rootFolders.first?.path ?? "" },
+            set: { selectedRootFolder = $0 }
+        )) {
+            ForEach(rootFolders, id: \.path) { Text(verbatim: $0.path).tag($0.path) }
+        } label: {
+            Text("search.rootFolder.button", bundle: .module)
+        }
+    }
+    #endif
+
+    private var macCard: some View {
         // Same skeleton as SearchAddPanel's sticky footer — spacing 6, form
         // rows, then the glass CTA — so add and edit read as one form
         // language. Only the slim title/dismiss row on top is extra: a modal
@@ -103,7 +266,6 @@ struct MediaEditPanel: View {
         }
         .padding(.top, 10)
         .padding(.bottom, 10)
-        .task(id: request.id) { await load() }
     }
 
     // MARK: - Form
@@ -359,23 +521,7 @@ struct MediaEditPanel: View {
     }
 
     private func formToggle(_ label: LocalizedStringKey, isOn: Binding<Bool>) -> some View {
-        HStack {
-            Text(label, bundle: .module)
-                .scaledFont(size: 11)
-                .foregroundStyle(.secondary)
-            Spacer()
-            // `.labelsHidden()` strips the switch from the accessibility
-            // tree too — restore a name so it doesn't announce as an
-            // anonymous "off" (same fix as MCPSettingsPane's tool rows).
-            Toggle("", isOn: isOn)
-                .labelsHidden()
-                .toggleStyle(.switch)
-                .controlSize(.mini)
-                .accessibilityLabel(Text(label, bundle: .module))
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: Tokens.Radius.card))
+        ModalFormToggle(label: label, isOn: isOn)
     }
 }
 

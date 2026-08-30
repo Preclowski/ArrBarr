@@ -152,6 +152,9 @@ public struct DetailView: View {
     /// series from TMDB (Sonarr has no cast endpoint) and only when a TMDB
     /// key is set. Empty = unavailable; the row just doesn't render.
     @State private var cast: [CastMember] = []
+    /// Directing credits — a movie's director(s), a series' creator(s). Same
+    /// source and same tap target as the cast strip; rendered above it.
+    @State private var directors: [CastMember] = []
     /// Country of production (ISO 3166-1) for the hero's metadata row. TMDB-only
     /// — neither arr carries it — so empty whenever no key is set; the segment
     /// just doesn't render.
@@ -187,6 +190,8 @@ public struct DetailView: View {
     @State private var manualSearchTarget: ManualSearchTarget?
     /// Header pencil → edit panel push (profile / availability / root folder).
     @State private var editRequest: MediaEditRequest?
+    /// The other half of the pencil's menu — remove this record from the arr.
+    @State private var deleteRequest: MediaDeleteRequest?
     /// Automatic-search in flight / just-queued feedback for the bottom CTA.
     @State private var autoSearching = false
     @State private var autoDidSearch = false
@@ -299,6 +304,34 @@ public struct DetailView: View {
         }
     }
 
+    /// `Series · Season 02` — the title the release list shows for a season
+    /// search started from a row, matching the season screen's own header.
+    private func seasonSearchTitle(_ seasonNumber: Int) -> String {
+        let season = String(format: String(localized: "detail.seasonLld.label", bundle: .module), seasonNumber)
+        return "\(sonarrDetail?.title ?? splitTitleAndYear(item.title).title) · \(season)"
+    }
+
+    /// Flip ONE season's monitored flag. Optimistic write into the season array
+    /// this view hands down (so the bookmark moves under the finger), then the
+    /// Sonarr call, then a refetch either way: success cascades the flag to
+    /// every episode server-side, failure snaps the optimistic flip back.
+    ///
+    /// Shared by the season list's row bookmarks and the pushed season screen —
+    /// both flip the same flag, so they must flip it the same way.
+    private func setSeasonMonitored(seasonNumber: Int, monitored: Bool) async {
+        guard let seriesId = item.entityId else { return }
+        if var seasons = sonarrDetail?.seasons,
+           let idx = seasons.firstIndex(where: { $0.seasonNumber == seasonNumber }) {
+            seasons[idx].monitored = monitored
+            sonarrDetail?.seasons = seasons
+        }
+        do {
+            try await SonarrClient(config: configStore.sonarr).setSeasonMonitored(
+                seriesId: seriesId, seasonNumber: seasonNumber, monitored: monitored)
+        } catch {}
+        await load(showSpinner: false)
+    }
+
     public var body: some View {
         // Lidarr ARTIST items (search tap on an in-library artist, post-add
         // navigation, chat library card) get the artist surface — this view's
@@ -374,6 +407,12 @@ public struct DetailView: View {
                 MediaEditModalOverlay(request: req, onDismiss: { editRequest = nil })
                     .zIndex(6)
             }
+            if let req = deleteRequest {
+                MediaDeleteModalOverlay(request: req,
+                                        onDismiss: { deleteRequest = nil },
+                                        onDeleted: handleDeleted)
+                    .zIndex(7)
+            }
             #endif
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -419,31 +458,7 @@ public struct DetailView: View {
         // has no NSToolbar for `.toolbar` actions; the detached window self-draws).
         #if os(iOS)
         .toolbar {
-            ToolbarItemGroup(placement: .primaryAction) {
-                // Cluster order: edit, search, safari, trash. (Monitor moved
-                // out to the poster's top-right corner — see `headerCard`.)
-                if let target = editTarget {
-                    Button { editRequest = target } label: {
-                        Image(systemName: "pencil")
-                    }
-                    .help(Text("detail.edit.button", bundle: .module))
-                }
-                headerSearchMenu
-                if let url = arrWebURL(for: item, in: configStore) {
-                    Button { PlatformURLOpener.open(url) } label: {
-                        Image(systemName: "safari")
-                    }
-                    .help(Text("detail.openInBrowser.button", bundle: .module))
-                }
-                // Delete to the RIGHT of Safari; macOS surfaces it by the CTA.
-                if hasActiveDownloads && canControl {
-                    Button { PanelActivation.bringForward(); ctaPendingDelete = true } label: {
-                        Image(systemName: "xmark")
-                    }
-                    .tint(.red)
-                    .help(Text("queue.cancelDownload.button", bundle: .module))
-                }
-            }
+            ToolbarItem(placement: .primaryAction) { headerActionsMenu }
         }
         #endif
         // Toolbar title carries the *item* identity — title + year —
@@ -491,19 +506,7 @@ public struct DetailView: View {
                 onBack: { seasonDrill = nil },
                 viewModel: viewModel,
                 onSetSeasonMonitored: { monitored in
-                    // Optimistic flip in the season array this view hands down.
-                    if var seasons = sonarrDetail?.seasons,
-                       let idx = seasons.firstIndex(where: { $0.seasonNumber == drill.seasonNumber }) {
-                        seasons[idx].monitored = monitored
-                        sonarrDetail?.seasons = seasons
-                    }
-                    do {
-                        try await SonarrClient(config: configStore.sonarr).setSeasonMonitored(
-                            seriesId: drill.seriesId, seasonNumber: drill.seasonNumber, monitored: monitored)
-                    } catch {}
-                    // Refetch either way: success cascades every episode's flag
-                    // server-side; failure snaps the optimistic flip back.
-                    await load(showSpinner: false)
+                    await setSeasonMonitored(seasonNumber: drill.seasonNumber, monitored: monitored)
                 },
                 onSetEpisodeMonitored: { episodeId, monitored in
                     if let idx = sonarrEpisodes.firstIndex(where: { $0.id == episodeId }) {
@@ -522,9 +525,14 @@ public struct DetailView: View {
         // overlay approximates on macOS.
         #if os(iOS)
         .sheet(item: $editRequest) { req in
+            // Detents live inside the panel: only it knows how many rows this
+            // source puts on screen.
             MediaEditPanel(request: req, onBack: { editRequest = nil })
-                .presentationDetents([.medium])
-                .presentationDragIndicator(.visible)
+        }
+        .sheet(item: $deleteRequest) { req in
+            MediaDeletePanel(request: req,
+                             onCancel: { deleteRequest = nil },
+                             onDeleted: handleDeleted)
         }
         #endif
         // Manual-search ("Download") drill-down — releases for this movie/album.
@@ -597,13 +605,28 @@ public struct DetailView: View {
             // Cluster order: edit, search, safari, (trash on iOS). Monitor
             // moved out to the poster's top-right corner — see `headerCard`.
             if let target = editTarget {
-                Button { editRequest = target } label: {
+                // The pencil opens a menu now, not the edit card directly: edit
+                // and delete are the two things you do to a library record, and
+                // a second glyph for a destructive action in a four-glyph
+                // cluster is how you get it clicked by accident.
+                Menu {
+                    Button { editRequest = target } label: {
+                        Label { Text("detail.edit.button", bundle: .module) } icon: { Image(systemName: "pencil") }
+                    }
+                    Button(role: .destructive) { deleteRequest = deleteTarget } label: {
+                        Label { Text("detail.delete.button", bundle: .module) } icon: { Image(systemName: "trash") }
+                    }
+                } label: {
                     Image(systemName: "pencil")
                         .scaledFont(size: 14, weight: .medium)
                         .foregroundStyle(.secondary)
+                        .frame(width: 22, height: 22)
+                        .contentShape(Rectangle())
                 }
+                .menuStyle(.button)
                 .buttonStyle(.plain)
-                .help(Text("detail.edit.button", bundle: .module))
+                .menuIndicator(.hidden)
+                .help(Text("detail.editOrDelete.tooltip", bundle: .module))
             }
             headerSearchMenu
             if let url = arrWebURL(for: item, in: configStore) {
@@ -631,6 +654,72 @@ public struct DetailView: View {
         guard item.source != .lidarr, let entityId = item.entityId else { return nil }
         return MediaEditRequest(source: item.source, entityId: entityId)
     }
+
+    /// Same record the pencil edits, addressed for removal. Lidarr is excluded
+    /// for the same reason: this surface's Lidarr entity is an ALBUM, and the
+    /// deletable library record is its artist — that lives in `LidarrArtistView`.
+    private var deleteTarget: MediaDeleteRequest? {
+        guard item.source != .lidarr, let entityId = item.entityId else { return nil }
+        return MediaDeleteRequest(source: item.source, entityId: entityId, title: navTitleString)
+    }
+
+    /// The record is gone from the arr: close the modal, drop its queue rows,
+    /// and leave the detail — it describes something that no longer exists.
+    private func handleDeleted() {
+        deleteRequest = nil
+        Task { await viewModel.refresh() }
+        onBack()
+    }
+
+    #if os(iOS)
+    /// Every header action behind one "..." — four glyphs in a row were eating
+    /// most of the bar, which is why the title had almost no width and truncated
+    /// on anything longer than a short name. Search is flattened in rather than
+    /// nested as a submenu: two items do not earn a second level.
+    private var headerActionsMenu: some View {
+        Menu {
+            if let target = editTarget {
+                Button { editRequest = target } label: {
+                    Label { Text("detail.edit.button", bundle: .module) } icon: { Image(systemName: "pencil") }
+                }
+            }
+            if manualTarget != nil {
+                Section {
+                    Button { startAutomaticSearch() } label: {
+                        Label { Text("Automatic search", bundle: .module) } icon: { Image(systemName: "bolt.fill") }
+                    }
+                    .disabled(autoSearching || searchRunning)
+                    Button { manualSearchTarget = manualTarget } label: {
+                        Label { Text("Manual search", bundle: .module) } icon: { Image(systemName: "list.bullet") }
+                    }
+                    .disabled(autoSearching || searchRunning)
+                }
+            }
+            if let url = arrWebURL(for: item, in: configStore) {
+                Button { PlatformURLOpener.open(url) } label: {
+                    Label { Text("detail.openInBrowser.button", bundle: .module) } icon: { Image(systemName: "safari") }
+                }
+            }
+            // Own section, last: destructive items don't sit next to "open in
+            // browser" where a mis-tap costs a library record.
+            if let target = deleteTarget {
+                Section {
+                    Button(role: .destructive) { deleteRequest = target } label: {
+                        Label { Text("detail.delete.button", bundle: .module) } icon: { Image(systemName: "trash") }
+                    }
+                }
+            }
+        } label: {
+            // A running search still has to be visible without opening the menu.
+            if autoSearching || searchRunning {
+                ProgressView().controlSize(.small)
+            } else {
+                Image(systemName: "ellipsis")
+            }
+        }
+        .accessibilityLabel(Text("common.moreActions.button", bundle: .module))
+    }
+    #endif
 
     /// The Search choice, relocated from the bottom CTA strip into the header
     /// action cluster (leads it: search, bookmark, safari, trash).
@@ -778,17 +867,48 @@ public struct DetailView: View {
         if hasDownloadControls, canPauseResume {
             HStack(spacing: 8) {
                 pauseResumeProminent
-                #if os(macOS)
-                // macOS: destructive Cancel anchors the trailing edge, away
-                // from the primary verb. iOS keeps delete in the nav toolbar.
+                // Destructive Cancel anchors the trailing edge, away from the
+                // primary verb — small and icon-only so it can't be mistaken
+                // for the thing you actually came to press. Both platforms:
+                // burying it in the "..." menu on iOS made the one-download
+                // case need two taps for an action that is right there.
                 cancelGlassCompact
-                #endif
             }
             // Inline-confirm attached to body instead of here so the
             // overlay fires regardless of whether the bottom CTA strip
             // is visible — toolbar trash button uses the same
             // `ctaPendingDelete` state.
         }
+    }
+
+    private enum CancelCTAMetrics {
+        #if os(iOS)
+        static let vPadding: CGFloat = 13
+        static let glyph: CGFloat = 14
+        #else
+        static let vPadding: CGFloat = 7
+        static let glyph: CGFloat = 13
+        #endif
+    }
+
+    /// Compact icon-only cancel: red glyph on a glass square, the same height
+    /// as the prominent CTA beside it but no wider than it needs to be —
+    /// cancelling is the rare action, so it doesn't get a text slot.
+    private var cancelGlassCompact: some View {
+        Button {
+            PanelActivation.bringForward(); ctaPendingDelete = true
+        } label: {
+            Image(systemName: "xmark")
+                .scaledFont(size: CancelCTAMetrics.glyph, weight: .bold)
+                .frame(width: 26)
+                // Must match `PauseResumeButton`'s own padding, or the two
+                // buttons sitting side by side come out different heights.
+                .padding(.vertical, CancelCTAMetrics.vPadding)
+        }
+        .modifier(GlassProminentButtonStyle())
+        .tint(.red)
+        .help(Text("queue.cancelDownload.button", bundle: .module))
+        .accessibilityLabel(Text("queue.cancelDownload.button", bundle: .module))
     }
 
     // MARK: - CTA strip sub-views
@@ -823,27 +943,6 @@ public struct DetailView: View {
             await viewModel.refresh()
         }
     }
-
-    #if os(macOS)
-    /// Compact icon-only trash: red glyph on a neutral gray glass square, the
-    /// same height as the prominent CTAs beside it but no wider than it needs
-    /// to be — cancelling is the rare action, so it doesn't get a text slot.
-    @ViewBuilder
-    private var cancelGlassCompact: some View {
-        Button {
-            PanelActivation.bringForward(); ctaPendingDelete = true
-        } label: {
-            Image(systemName: "xmark")
-                .scaledFont(size: 13, weight: .bold)
-                .frame(width: 26)
-                .padding(.vertical, 7)
-        }
-        .modifier(GlassProminentButtonStyle())
-        .tint(.red)
-        .help(Text("queue.cancelDownload.button", bundle: .module))
-        .accessibilityLabel(Text("queue.cancelDownload.button", bundle: .module))
-    }
-    #endif
 
     // MARK: - Content switch
 
@@ -910,7 +1009,10 @@ public struct DetailView: View {
                     posterAspect: 2.0/3.0,
                     metadataLoading: loading,
                     // Any episode file on disk makes the series library-owned.
-                    titleBadge: seriesTitleBadge
+                    titleBadge: seriesTitleBadge,
+                    // A series has no single director — TMDB's `created_by` is
+                    // the credit that answers the same question.
+                    directedByKey: "detail.createdBy.label"
                 )
                 SonarrDetailPanel(
                     item: item,
@@ -928,6 +1030,19 @@ public struct DetailView: View {
                             seriesTitle: sonarrDetail?.title ?? titleFallback.title,
                             seriesYear: sonarrDetail?.year ?? titleFallback.year
                         )
+                    },
+                    onSetSeasonMonitored: { season, monitored in
+                        await setSeasonMonitored(seasonNumber: season.seasonNumber, monitored: monitored)
+                    },
+                    onAutomaticSeasonSearch: { season in
+                        try? await SonarrClient(config: configStore.sonarr).searchSeason(
+                            seriesId: item.entityId ?? 0, seasonNumber: season.seasonNumber)
+                    },
+                    onManualSeasonSearch: { season in
+                        manualSearchTarget = .season(
+                            seriesId: item.entityId ?? 0,
+                            seasonNumber: season.seasonNumber,
+                            title: seasonSearchTitle(season.seasonNumber))
                     }
                 )
             case .lidarr:
@@ -1122,14 +1237,18 @@ public struct DetailView: View {
         fallbackSymbol: String,
         posterAspect: CGFloat,
         metadataLoading: Bool = false,
-        titleBadge: AnyView? = nil
+        titleBadge: AnyView? = nil,
+        /// "Directed by" for a movie, "Created by" for a series — the hero's
+        /// credit line reads differently for each.
+        directedByKey: LocalizedStringKey = "detail.directedBy.label"
     ) -> some View {
         heroCard(
             title: title, year: year, runtime: runtime, genres: genres,
             certification: certification, ratings: ratings, overview: overview,
             existingTrailer: existingTrailer, posterUrl: posterUrl,
             fallbackSymbol: fallbackSymbol, posterAspect: posterAspect,
-            metadataLoading: metadataLoading, titleBadge: titleBadge
+            metadataLoading: metadataLoading, titleBadge: titleBadge,
+            directedByKey: directedByKey
         )
     }
 
@@ -1147,7 +1266,8 @@ public struct DetailView: View {
         fallbackSymbol: String,
         posterAspect: CGFloat,
         metadataLoading: Bool,
-        titleBadge: AnyView?
+        titleBadge: AnyView?,
+        directedByKey: LocalizedStringKey = "detail.directedBy.label"
     ) -> some View {
         MediaHeaderCard(
             title: title,
@@ -1181,7 +1301,11 @@ public struct DetailView: View {
             // Title + year live in the nav-bar title now; hero hides
             // its in-card title to avoid duplication.
             showTitle: false,
-            metadataLoading: metadataLoading
+            metadataLoading: metadataLoading,
+            // Straight off the view's state, like `countries` above.
+            directedBy: directors,
+            directedByKey: directedByKey,
+            onTapPerson: openPerson
         )
     }
 
@@ -1220,8 +1344,10 @@ public struct DetailView: View {
                     id: radarrDetail?.qualityProfileId, config: configStore.radarr, source: .radarr)
                 async let movieCountries = CountryProvider.movieCountries(
                     tmdbId: radarrDetail?.tmdbId, demoMovieId: entityId, configStore: configStore)
-                cast = await CastProvider.movieCast(
+                let movieCredits = await CastProvider.movieCredits(
                     radarrMovieId: entityId, tmdbId: radarrDetail?.tmdbId, configStore: configStore)
+                cast = movieCredits.cast
+                directors = movieCredits.directors
                 countries = await movieCountries
             case .sonarr:
                 let client = SonarrClient(config: configStore.sonarr)
@@ -1245,9 +1371,11 @@ public struct DetailView: View {
                 async let seriesCountries = CountryProvider.seriesCountries(
                     tmdbId: sonarrDetail?.tmdbId, tvdbId: sonarrDetail?.tvdbId,
                     demoSeriesId: entityId, configStore: configStore)
-                cast = await CastProvider.seriesCast(
+                let seriesCredits = await CastProvider.seriesCredits(
                     tmdbId: sonarrDetail?.tmdbId, tvdbId: sonarrDetail?.tvdbId,
                     demoSeriesId: entityId, configStore: configStore)
+                cast = seriesCredits.cast
+                directors = seriesCredits.directors
                 countries = await seriesCountries
             case .lidarr:
                 let client = LidarrClient(config: configStore.lidarr)

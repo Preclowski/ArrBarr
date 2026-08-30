@@ -18,6 +18,13 @@ struct SonarrDetailPanel<Header: View>: View {
     @Binding var sonarrDetail: SonarrSeriesDetail?
     /// Tap handler for a season row — DetailView pushes `SeasonDetailView`.
     let onTapSeason: (SonarrSeasonInfo) -> Void
+    /// Flip one season's monitored flag straight from its row. The host owns
+    /// the write (optimistic flip + Sonarr call + refetch).
+    var onSetSeasonMonitored: ((SonarrSeasonInfo, Bool) async -> Void)? = nil
+    /// Row context-menu search for one season. Both nil → the rows carry no
+    /// menu (the host owns both the arr call and the release-list push).
+    var onAutomaticSeasonSearch: ((SonarrSeasonInfo) async -> Void)? = nil
+    var onManualSeasonSearch: ((SonarrSeasonInfo) -> Void)? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -52,7 +59,16 @@ struct SonarrDetailPanel<Header: View>: View {
                                     queueItems: siblings.filter {
                                         $0.arrQueueId != 0 && $0.seasonNumber == season.seasonNumber
                                     },
-                                    onTap: { onTapSeason(season) }
+                                    onTap: { onTapSeason(season) },
+                                    onSetMonitored: onSetSeasonMonitored.map { set in
+                                        { monitored in await set(season, monitored) }
+                                    },
+                                    onAutomaticSearch: onAutomaticSeasonSearch.map { search in
+                                        { await search(season) }
+                                    },
+                                    onManualSearch: onManualSeasonSearch.map { search in
+                                        { search(season) }
+                                    }
                                 )
                             }
                         }

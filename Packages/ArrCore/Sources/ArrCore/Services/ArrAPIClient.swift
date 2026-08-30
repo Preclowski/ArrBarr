@@ -78,7 +78,12 @@ extension ArrAPIClient {
         // server connection, not of whenever the entry happened to be cached.
         // Baking it in on write is what left queue rows on the arr's poster
         // while detail views — which resolve live — showed the server's.
-        let missing = ids.filter { byId[$0] == nil }
+        // A record with `mediaServerKeys == nil` predates the ids being
+        // recorded (or was written by a seeder that dropped them) and can never
+        // be matched against the media server — it is stale, not a hit, so it
+        // is refetched once. Every writer stores `[]` for titles that genuinely
+        // have no ids, so this cannot loop.
+        let missing = ids.filter { byId[$0]?.mediaServerKeys == nil }
         guard !missing.isEmpty else { return byId }
 
         var fresh: [TitleMetadataStore.Key: TitleMetadataStore.Metadata] = [:]
@@ -116,12 +121,14 @@ extension ArrAPIClient {
         )
     }
 
-    /// GET <apiBase><path> and decode the JSON body as T.
-    func get<T: Decodable & Sendable>(_ path: String, query: [URLQueryItem] = []) async throws -> T {
+    /// GET <apiBase><path> and decode the JSON body as T. `timeout` overrides
+    /// the client's default for this one call (see `fetchReleases`).
+    func get<T: Decodable & Sendable>(_ path: String, query: [URLQueryItem] = [],
+                                      timeout: TimeInterval? = nil) async throws -> T {
         guard config.isConfigured else { throw HTTPError.notConfigured }
         guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
         let url = try http.url(base: config.baseURL, path: "\(apiBase)\(path)", query: query)
-        let data = try await http.get(url, headers: apiHeaders)
+        let data = try await http.get(url, headers: apiHeaders, timeout: timeout)
         return try JSONDecoder().decode(T.self, from: data)
     }
 
@@ -141,7 +148,7 @@ extension ArrAPIClient {
 
     /// POST a JSON body to <apiBase><path>. Returns the raw response data.
     @discardableResult
-    func post(_ path: String, body: [String: Any]) async throws -> Data {
+    func post(_ path: String, body: [String: Any], timeout: TimeInterval? = nil) async throws -> Data {
         guard config.isConfigured else { throw HTTPError.notConfigured }
         guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
         let url = try http.url(base: config.baseURL, path: "\(apiBase)\(path)")
@@ -149,7 +156,8 @@ extension ArrAPIClient {
         return try await http.post(
             url,
             headers: apiHeaders.merging(["Content-Type": "application/json"]) { $1 },
-            body: data
+            body: data,
+            timeout: timeout
         )
     }
 
@@ -254,14 +262,45 @@ extension ArrAPIClient {
             try? await Task.sleep(nanoseconds: 900_000_000)
             return DemoMocks.releases(query: query, source: demoSource)
         }
-        return try await get("/release", query: query)
+        // The arr answers only once its slowest indexer does — minutes, not the
+        // seconds a queue refresh is budgeted for. Sonarr's own UI waits; so do
+        // we, or every search of a well-stocked series reads as a timeout while
+        // the identical search in Sonarr succeeds.
+        return try await get("/release", query: query, timeout: HTTPClient.interactiveSearchTimeout)
+    }
+
+    /// Remove a record from the arr's library (`DELETE /movie|series|artist/{id}`).
+    /// `deleteFiles` deletes what is on disk with it; `addImportExclusion` stops
+    /// an import list from silently putting it back.
+    ///
+    /// Both spellings of the exclusion flag go out because the arrs disagree on
+    /// it — Radarr (and its Whisparr fork) bind `addImportExclusion`, Sonarr and
+    /// Lidarr bind `addImportListExclusion`. They all run ASP.NET, which ignores
+    /// a query parameter its action doesn't declare, so sending both is exactly
+    /// as correct as a per-fork lookup table and doesn't rot when a fork renames
+    /// its own.
+    func deleteLibraryRecord(path: String, deleteFiles: Bool, addImportExclusion: Bool) async throws {
+        if DemoMode.isActive {
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            return
+        }
+        let files = deleteFiles ? "true" : "false"
+        let exclusion = addImportExclusion ? "true" : "false"
+        try await delete(path, query: [
+            URLQueryItem(name: "deleteFiles", value: files),
+            URLQueryItem(name: "addImportExclusion", value: exclusion),
+            URLQueryItem(name: "addImportListExclusion", value: exclusion),
+        ])
     }
 
     /// Grab a release returned by `fetchReleases` — hands it to the arr's
     /// download client. arr identifies the release by guid + indexerId.
     func grabRelease(guid: String, indexerId: Int) async throws {
         if DemoMode.isActive { try? await Task.sleep(nanoseconds: 500_000_000); return }
-        _ = try await post("/release", body: ["guid": guid, "indexerId": indexerId])
+        // Same budget as the search: the arr fetches the .nzb/.torrent from the
+        // indexer and hands it to the download client before it answers.
+        _ = try await post("/release", body: ["guid": guid, "indexerId": indexerId],
+                           timeout: HTTPClient.interactiveSearchTimeout)
     }
 
     /// Which arr this client is, for fixture lookup. `serviceName` is the only
