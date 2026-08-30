@@ -9,6 +9,50 @@ Releases before 0.10.0 are described on the
 
 ## [Unreleased]
 
+## [2.1.0] — 2026-08-30
+
+### Added
+
+- Directing credits on the detail hero — "Directed by" for a film, "Created by"
+  for a series, each name tappable through to its filmography.
+- Delete a title from the arr, with the two choices the arrs offer: take the
+  files on disk with it, and add an import-list exclusion.
+- Monitor a season or an episode straight from its row's bookmark.
+- Automatic / Manual search from a season or episode row, by right-click or
+  long-press.
+- Season packs wear the media server's season poster when it has one.
+- Library joins the iPhone tab bar, with the system search field.
+- Multi-select on iPhone; search collapses into a toolbar button and gives the
+  list its row back.
+- One set of search scopes, shared by the queue and the library.
+- Trailers fill the screen when the phone is turned, and play in demo mode.
+- Quiz cards sit on a blurred backdrop of their own artwork that tracks the
+  swipe.
+- TMDB's mark and attribution notice in Settings and About.
+
+### Changed
+
+- Detail header actions fold into one "..." menu — four glyphs left the title
+  almost no width.
+- Library chrome, edit-mode buttons and sheets are sized for touch and grow
+  with Dynamic Type.
+- History leaves the iPhone tab bar for the per-arr section header, as on
+  macOS; its event-type filter comes along.
+- Interactive indexer searches get a 120s budget instead of the refresh-safe
+  15s that timed out searches Sonarr's own UI completes.
+- The iPhone minimum is iOS 18.
+
+### Fixed
+
+- qBittorrent no longer reports a torrent it already has as a broken file —
+  the drop is matched by info-hash.
+- Queue rows and detail views agree on artwork again: the Spotlight seed keeps
+  the media-server keys it was dropping.
+- Toggling demo mode rebuilds the chat view model instead of leaving the old
+  one wired up.
+- The demo's quiz CTA opens the real deck, and its suggestions carry real
+  artwork.
+
 ## [2.0.0-rc3] — 2026-08-17
 
 Release candidate. Not published to the Homebrew tap — download the DMG from
