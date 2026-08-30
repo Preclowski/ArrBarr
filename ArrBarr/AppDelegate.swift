@@ -563,6 +563,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             .font: NSFont.systemFont(ofSize: 10),
             .link: URL(string: "https://dashboardicons.com")!,
         ]))
+        // TMDB's API terms require this disclaimer wherever their data is
+        // surfaced. Verbatim and untranslated: it is a licence notice, not
+        // UI copy.
+        appendPlain("\n")
+        result.append(NSAttributedString(string: "TMDB", attributes: [
+            .font: NSFont.systemFont(ofSize: 10),
+            .link: URL(string: "https://www.themoviedb.org")!,
+        ]))
+        appendPlain("\nThis product uses TMDB and the TMDB APIs but is not\n"
+                    + "endorsed, certified, or otherwise approved by TMDB.", size: 9)
 
         // Centre everything so the credits read as a tidy block under the
         // auto-rendered icon / name / version.

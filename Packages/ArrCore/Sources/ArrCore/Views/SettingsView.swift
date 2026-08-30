@@ -696,6 +696,28 @@ public struct SettingsView: View {
             } header: { Text("settings.acknowledgements.button", bundle: .module) } footer: {
                 Text("settings.serviceIconsByDashboard.tooltip", bundle: .module)
             }
+            // Own section: TMDB's terms require the mark AND this disclaimer,
+            // and the disclaimer has to sit under THEIR row — sharing the
+            // acknowledgements footer put the icon credit under it instead.
+            // Verbatim on purpose: a licence notice, not UI copy.
+            Section {
+                Link(destination: URL(string: "https://www.themoviedb.org")!) {
+                    Label {
+                        Text(verbatim: "TMDB")
+                    } icon: {
+                        // `rating-tmdb`, not `brand-tmdb`: the latter is a
+                        // template asset and gets tinted, and TMDB's mark has
+                        // to appear in its own colours.
+                        Image("rating-tmdb", bundle: .module)
+                            .renderingMode(.original)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 16, height: 16)
+                    }
+                }
+            } footer: {
+                Text(verbatim: "This product uses TMDB and the TMDB APIs but is not endorsed, certified, or otherwise approved by TMDB.")
+            }
         }
         .formStyle(.grouped)
     }
@@ -904,6 +926,28 @@ public struct SettingsView: View {
                 }
             } header: { Text("settings.acknowledgements.button", bundle: .module) } footer: {
                 Text("settings.serviceIconsByDashboard.tooltip", bundle: .module)
+            }
+            // Own section: TMDB's terms require the mark AND this disclaimer,
+            // and the disclaimer has to sit under THEIR row — sharing the
+            // acknowledgements footer put the icon credit under it instead.
+            // Verbatim on purpose: a licence notice, not UI copy.
+            Section {
+                Link(destination: URL(string: "https://www.themoviedb.org")!) {
+                    Label {
+                        Text(verbatim: "TMDB")
+                    } icon: {
+                        // `rating-tmdb`, not `brand-tmdb`: the latter is a
+                        // template asset and gets tinted, and TMDB's mark has
+                        // to appear in its own colours.
+                        Image("rating-tmdb", bundle: .module)
+                            .renderingMode(.original)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 16, height: 16)
+                    }
+                }
+            } footer: {
+                Text(verbatim: "This product uses TMDB and the TMDB APIs but is not endorsed, certified, or otherwise approved by TMDB.")
             }
         }
         .navigationTitle(Text("settings.about.button", bundle: .module))

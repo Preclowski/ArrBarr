@@ -3,8 +3,9 @@
 **Your whole \*arr stack, one glance away — right from the menu bar.**
 
 A native macOS menu-bar app (plus an iOS companion and widgets) for Radarr,
-Sonarr, Lidarr and Whisparr. Watch your queues, see what's coming up, and pause,
-resume or delete downloads — without opening a single browser tab.
+Sonarr, Lidarr and Whisparr. Watch your queues, browse your whole library, see
+what's coming up, and pause, resume or delete downloads — without opening a
+single browser tab.
 
 [![Build & Release](https://github.com/Preclowski/ArrBarr/actions/workflows/release.yml/badge.svg)](https://github.com/Preclowski/ArrBarr/actions/workflows/release.yml)
 ![macOS 14+](https://img.shields.io/badge/macOS-14%2B-blue)
@@ -36,13 +37,21 @@ and open source**, with every feature unlocked.
 ## Features
 
 - **Live queue at a glance** — every arr in one view, with posters, progress
-  bars, quality chips and scores. Season packs collapse into a single row.
+  bars, quality chips and scores. Season packs collapse into a single row, and a
+  title's parallel downloads fold into one collapsible group with
+  pause/resume/delete-all.
 - **Drive your downloads** — pause, resume, delete or start-now, right from the
   popover. Routed through the arr, so it works with *any* download client.
 - **Upcoming calendar** — movies, episodes and album releases grouped by date,
   so you always know what's landing this week.
+- **Library** — a browsable cover grid of everything on your arrs, with status
+  filters, sorts and a search that matches accented, original-language and
+  translated titles alike.
 - **Search & add** — look a title up across every arr at once, pick quality
-  profile and root folder, and add it.
+  profile and root folder, and add it. Trailers on every media surface.
+- **Media server aware** *(optional)* — connect Plex, Jellyfin or Emby: artwork
+  comes from your server when it has the title, and your watch history feeds
+  the Quiz.
 - **Grab notifications & history** — native alerts when a release is grabbed,
   plus the last 50 events per arr (grabbed / imported / failed / deleted).
 - **Rich hover cards** — quality, size, score, custom formats, indexer and
@@ -51,7 +60,9 @@ and open source**, with every feature unlocked.
 - **AI chat** *(optional)* — run your stack in plain language: *"what's stuck in
   the queue?"*, *"add the new season of X"*, *"what's out this week?"*
 - **Quiz** *(optional)* — swipe-to-discover new titles, cross-referenced against
-  your library so you're never shown things you already own.
+  your library so you're never shown things you already own. Swipes persist,
+  every card says why it was picked, and your standing taste preferences are
+  yours to edit.
 - **Live & resilient** — real-time updates over each arr's SignalR feed, a
   forced reconnect when your Mac wakes, and a quiet offline chip (not a wall of
   errors) when you're away from the LAN.
@@ -60,6 +71,7 @@ and open source**, with every feature unlocked.
 ## Works with your stack
 
 - **Media managers** — Radarr · Sonarr · Lidarr · Whisparr
+- **Media servers** — Plex · Jellyfin · Emby
 - **Usenet** — SABnzbd · NZBGet
 - **Torrent** — qBittorrent · Transmission · rTorrent · Deluge
 - **AI chat** — Apple Intelligence · any OpenAI-compatible API (OpenRouter, Ollama, local models)
@@ -139,8 +151,10 @@ All optional, all off until you flip them on.
   hardware) or any **OpenAI-compatible API** — OpenRouter, Ollama, a local
   server, whatever you point it at. Destructive actions are always confirmed
   first.
-- **Quiz** pulls TMDB suggestions and filters out anything already in your
-  library. (TMDB and the OpenAI path each need your own key.)
+- **Quiz** pulls TMDB suggestions, filters out anything already in your library,
+  and learns from your swipes — skips cool down instead of vanishing, and the
+  taste preferences it builds are visible and editable. (TMDB and the OpenAI
+  path each need your own key.)
 - **MCP server** — ArrBarr embeds a [Model Context
   Protocol](https://modelcontextprotocol.io) server, so **ChatGPT, Claude or any
   other MCP client** can drive your stack with the same arr tool catalog the
