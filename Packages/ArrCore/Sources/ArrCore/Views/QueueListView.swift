@@ -182,9 +182,11 @@ struct QueueListView: View {
         // popover's toolbar; iOS puts it at the bottom, just above the tab bar,
         // where the platform keeps editing actions.
         #if os(iOS)
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            if selecting { selectionActionBar }
-        }
+        // iOS puts edit-mode actions in the system chrome: count as the title,
+        // Select all / Done in the navigation bar, actions in the bottom bar.
+        // The floating pill is a macOS answer to a popover that has neither.
+        .navigationTitle(selecting ? selectionCountLabel : "")
+        .toolbar { if selecting { selectionToolbar } }
         #else
         .safeAreaInset(edge: .top, spacing: 0) {
             if selecting { selectionActionBar }
@@ -215,6 +217,55 @@ struct QueueListView: View {
     /// `.selectionModeBar()` pill so it's obvious at a glance that the queue is
     /// in multi-select mode — the earlier translucent glass melted into the
     /// popover's dark vibrancy.
+    #if os(iOS)
+    /// Edit-mode chrome. Labelled buttons, not bare glyphs: three greyed-out
+    /// symbols with nothing selected gave no way to learn what they do.
+    @ToolbarContentBuilder
+    private var selectionToolbar: some ToolbarContent {
+        ToolbarItem(placement: .topBarLeading) {
+            Button {
+                if allSelected { selected.removeAll() } else { selectAll() }
+            } label: {
+                Text(allSelected ? "queue.deselectAll.button" : "queue.selectAll.button", bundle: .module)
+            }
+        }
+        ToolbarItem(placement: .topBarTrailing) {
+            Button { exitSelection() } label: {
+                Text("common.done.button", bundle: .module).fontWeight(.semibold)
+            }
+        }
+        ToolbarItemGroup(placement: .bottomBar) {
+            Button { bulk { await viewModel.resume($0) } } label: {
+                Text("queue.resume.button", bundle: .module)
+            }
+            .disabled(selected.isEmpty)
+            Spacer()
+            Button { bulk { await viewModel.pause($0) } } label: {
+                Text("queue.pause.button", bundle: .module)
+            }
+            .disabled(selected.isEmpty)
+            Spacer()
+            Button(role: .destructive) {
+                let items = selectedItems(); exitSelection()
+                Task { await viewModel.deleteAll(items) }
+            } label: {
+                Text("queue.delete.button", bundle: .module)
+            }
+            .disabled(selected.isEmpty)
+            .tint(.red)
+        }
+    }
+
+    private var allSelected: Bool {
+        let ids = orderedSelectableEntries.map(\.id)
+        return !ids.isEmpty && selected.count == ids.count
+    }
+
+    private func selectAll() {
+        selected = Set(orderedSelectableEntries.map(\.id))
+    }
+    #endif
+
     private var selectionActionBar: some View {
         HStack(spacing: 14) {
             Button { exitSelection() } label: {

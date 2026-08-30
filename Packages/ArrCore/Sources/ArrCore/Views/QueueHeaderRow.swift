@@ -17,6 +17,25 @@ enum QueueHeaderMetrics {
 /// icon footprint, text size, horizontal padding and height across all three.
 /// Each host emits this as its own List row and its items as SIBLING rows, so
 /// collapse animates as native row insert/remove.
+/// Header type sizes. macOS keeps the compact popover values; iOS uses a real
+/// section-header scale — 12pt secondary text reads as a caption on a phone,
+/// not as the heading of everything under it.
+private enum QueueHeaderType {
+    #if os(iOS)
+    static let title: CGFloat = 17
+    static let count: CGFloat = 15
+    static let chevron: CGFloat = 13
+    static let vPad: CGFloat = 6
+    static let titleStyle: HierarchicalShapeStyle = .primary
+    #else
+    static let title: CGFloat = 12
+    static let count: CGFloat = 11
+    static let chevron: CGFloat = 9
+    static let vPad: CGFloat = 0
+    static let titleStyle: HierarchicalShapeStyle = .secondary
+    #endif
+}
+
 struct QueueHeaderRow<Trailing: View>: View {
     let icon: AnyView
     let title: String
@@ -31,7 +50,7 @@ struct QueueHeaderRow<Trailing: View>: View {
     var body: some View {
         HStack(spacing: 6) {
             Image(systemName: "chevron.right")
-                .scaledFont(size: 9, weight: .semibold)
+                .scaledFont(size: QueueHeaderType.chevron, weight: .semibold)
                 .foregroundStyle(.tertiary)
                 .rotationEffect(.degrees(collapsed ? 0 : 90))
                 .frame(width: QueueHeaderMetrics.chevronWidth)
@@ -41,17 +60,18 @@ struct QueueHeaderRow<Trailing: View>: View {
             icon
                 .frame(width: QueueHeaderMetrics.iconWidth, alignment: .center)
             Text(verbatim: title)
-                .scaledFont(size: 12, weight: .semibold)
-                .foregroundStyle(.secondary)
+                .scaledFont(size: QueueHeaderType.title, weight: .semibold)
+                .foregroundStyle(QueueHeaderType.titleStyle)
             if let count {
                 Text(verbatim: "\(count)")
-                    .scaledFont(size: 11)
+                    .scaledFont(size: QueueHeaderType.count)
                     .foregroundStyle(.tertiary)
             }
             Spacer(minLength: 4)
             trailing()
         }
         .padding(.horizontal, Tokens.Spacing.queueRowH)
+        .padding(.vertical, QueueHeaderType.vPad)
         .textCase(nil)
         .contentShape(Rectangle())
         .onTapGesture(perform: onToggle)

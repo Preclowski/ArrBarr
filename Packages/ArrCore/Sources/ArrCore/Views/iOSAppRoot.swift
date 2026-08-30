@@ -31,18 +31,19 @@ public struct iOSAppRoot: View {
     @State private var discoverViewModel = DiscoverViewModel.shared
     @State private var showDiscoverOverlay = false
     @State private var quizAddResult: SearchResult?
+    /// Which tab is on screen. `.arrBarrOpenDetail` is posted by surfaces that
+    /// live in several stacks at once (library tiles, chat cards, Spotlight), and
+    /// every stack that listens would push its own copy — leaving a stale detail
+    /// waiting behind the tabs the user never looked at. Listeners check this.
+    @State private var selectedTab: RootTab = .queue
+    /// Whether the queue's search field is open. Owned here so leaving the tab
+    /// can close it — but only when it is empty: a field showing results is
+    /// state the user built, and dropping it on a tab switch loses their query.
+    @State private var searchPresented = false
 
-    /// Scope-bar options: `all` always, each arr when configured, `people`
-    /// with a TMDB key. Whisparr folded into the arr set when present.
-    private var iosSearchScopes: [SearchScope] {
-        var out: [SearchScope] = [.all]
-        if configStore.radarr.isVisible { out.append(.movie) }
-        if configStore.sonarr.isVisible { out.append(.series) }
-        if configStore.lidarr.isVisible { out.append(.album) }
-        if !configStore.tmdbApiKey.isEmpty || DemoMode.isActive { out.append(.people) }
-        if configStore.whisparr.isVisible { out.append(.whisparr) }
-        return out
-    }
+    enum RootTab: Hashable { case queue, library, upcoming, chat, settings }
+
+    private var iosSearchScopes: [SearchScope] { SearchScope.available(for: configStore) }
 
     /// "More picks like these" is a chat turn — the mood and the already-shown
     /// titles are in the conversation, so the model has the context without us
@@ -61,27 +62,27 @@ public struct iOSAppRoot: View {
     }
 
     public var body: some View {
-        TabView {
-            Tab {
-                NavigationStack { QueueTab(viewModel: viewModel, searchVM: searchVM) }
+        TabView(selection: $selectedTab) {
+            Tab(value: RootTab.queue) {
+                NavigationStack { QueueTab(viewModel: viewModel, searchVM: searchVM, isActive: selectedTab == .queue, searchPresented: $searchPresented) }
             } label: {
                 Label { Text("paywall.queue.button", bundle: .module) } icon: { Image(systemName: "arrow.down.circle") }
             }
 
-            Tab {
-                NavigationStack { LibraryTab(searchVM: searchVM) }
+            Tab(value: RootTab.library) {
+                NavigationStack { LibraryTab(searchVM: searchVM, viewModel: viewModel, isActive: selectedTab == .library) }
             } label: {
                 Label { Text("Library", bundle: .module) } icon: { Image(systemName: "books.vertical") }
             }
 
-            Tab {
-                NavigationStack { UpcomingTab(viewModel: viewModel) }
+            Tab(value: RootTab.upcoming) {
+                NavigationStack { UpcomingTab(viewModel: viewModel, isActive: selectedTab == .upcoming) }
             } label: {
                 Label { Text("queue.upcoming.button", bundle: .module) } icon: { Image(systemName: "calendar") }
             }
 
             if configStore.aiConfigured {
-                Tab {
+                Tab(value: RootTab.chat) {
                     NavigationStack {
                         if storeManager.isPro {
                             ChatTab(chatHolder: chatHolder)
@@ -98,7 +99,7 @@ public struct iOSAppRoot: View {
                 }
             }
 
-            Tab {
+            Tab(value: RootTab.settings) {
                 NavigationStack { SettingsTab(viewModel: viewModel) }
             } label: {
                 Label { Text("common.settings.button", bundle: .module) } icon: { Image(systemName: "gearshape") }
@@ -110,6 +111,13 @@ public struct iOSAppRoot: View {
         .onAppear { chatHolder.reconfigure(store: configStore) }
         .onChange(of: ChatViewModelHolder.signature(store: configStore)) { _, _ in
             chatHolder.reconfigure(store: configStore)
+        }
+        // An empty search field left open behind a tab switch is just chrome
+        // taking a row; one with a query is a result set worth returning to.
+        .onChange(of: selectedTab) { _, _ in
+            if searchVM.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                searchPresented = false
+            }
         }
         // Posted by the `discover_in_quiz` chat tool and by the resume card.
         // userInfo carries the mood label, pre-resolved items and an optional
@@ -254,6 +262,8 @@ private struct ChatLockedPlaceholder: View {
 private struct QueueTab: View {
     var viewModel: QueueViewModel
     @Bindable var searchVM: SearchViewModel
+    var isActive: Bool
+    @Binding var searchPresented: Bool
     @EnvironmentObject var configStore: ConfigStore
     @State private var detailItem: QueueItem?
     @State private var searchResult: SearchResult?
@@ -265,57 +275,12 @@ private struct QueueTab: View {
 
     private var isSearching: Bool { !searchVM.query.trimmingCharacters(in: .whitespaces).isEmpty }
 
-    /// Scope-bar options: `all` always, each arr when configured, `people`
-    /// with a TMDB key. Whisparr folded into the arr set when present.
-    private var iosSearchScopes: [SearchScope] {
-        var out: [SearchScope] = [.all]
-        if configStore.radarr.isVisible { out.append(.movie) }
-        if configStore.sonarr.isVisible { out.append(.series) }
-        if configStore.lidarr.isVisible { out.append(.album) }
-        if !configStore.tmdbApiKey.isEmpty || DemoMode.isActive { out.append(.people) }
-        if configStore.whisparr.isVisible { out.append(.whisparr) }
-        return out
-    }
+    private var iosSearchScopes: [SearchScope] { SearchScope.available(for: configStore) }
 
     var body: some View {
-        Group {
-            if let result = searchResult {
-                SearchAddPanel(result: result, viewModel: searchVM) {
-                    searchResult = nil
-                }
-            } else {
-                ZStack {
-                    QueueListView(
-                        viewModel: viewModel,
-                        scope: nil,
-                        onShowDetail: { detailItem = $0 },
-                        onNeedsYouTap: { needs in openNeedsYouQueue(needs) },
-                        onShowHistory: { historySource = $0 },
-                        selecting: $selecting
-                    )
-                    // Typing shows the same unified surface as macOS: live queue
-                    // rows that still match on top, arr library / add-new below.
-                    if isSearching {
-                        ScrollView {
-                            QueueSearchResultsView(
-                                viewModel: viewModel,
-                                searchViewModel: searchVM,
-                                scope: nil,
-                                onSelectQueueItem: { detailItem = $0 },
-                                onSelectAddResult: { searchResult = $0 },
-                                onSelectPerson: { personRef = $0 }
-                            )
-                            .padding(.vertical, 8)
-                            if searchVM.isSearching, !searchVM.hasResults {
-                                ProgressView()
-                                    .controlSize(.small)
-                                    .padding(.vertical, 16)
-                            }
-                        }
-                        .background(Color(.systemBackground))
-                    }
-                }
-            }
+        VStack(spacing: 0) {
+            SearchScopeBar(searchVM: searchVM, scopes: iosSearchScopes)
+            queueContent
         }
         .refreshable { await viewModel.refresh() }
         // No nav-bar title — it only duplicated the tab-bar label below.
@@ -329,25 +294,21 @@ private struct QueueTab: View {
                     OfflineIndicator(viewModel: viewModel)
                 }
             }
-            ToolbarItem(placement: .topBarTrailing) { selectButton }
-        }
-        .searchable(
-            text: $searchVM.query,
-            placement: .toolbar,
-            prompt: Text("search.searchMoviesAndTv.label", bundle: .module)
-        )
-        // iOS 26 collapses the field into a toolbar magnifier that expands on
-        // tap — the standard shape, and it puts search on the same row as "⋯"
-        // instead of a permanent drawer stealing a row from the list.
-        .modifier(MinimizedSearchToolbar())
-        .autocorrectionDisabled(true)
-        // Native scope bar under the search field — the iOS idiom for the
-        // macOS scope chip. Options gate which backends fire.
-        .searchScopes($searchVM.scope) {
-            ForEach(iosSearchScopes) { s in
-                Text(LocalizedStringKey(s.labelKey), bundle: .module).tag(s)
+            // Edit mode owns the bar: QueueListView puts Select all / Done
+            // there, so our own actions step aside rather than crowd them.
+            if !selecting {
+                ToolbarItem(placement: .topBarTrailing) { selectButton }
             }
         }
+        // Files and Mail both drop the tab bar while editing — it is the only
+        // way the bottom action bar has anywhere to draw, and it stops the tab
+        // bar offering navigation away from a half-made selection.
+        .toolbar(selecting ? .hidden : .visible, for: .tabBar)
+        // Search steps aside entirely in edit mode: its magnifier otherwise
+        // competes with "Done" for the trailing slot and wins, leaving no way
+        // out of the mode. Mail and Files drop their search bar there too.
+        .modifier(QueueSearchField(searchVM: searchVM, scopes: iosSearchScopes,
+                                   enabled: !selecting, isPresented: $searchPresented))
         .onChange(of: searchVM.query) { _, new in
             if new.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 searchVM.scope = .all
@@ -380,8 +341,49 @@ private struct QueueTab: View {
         // In-library search hits route through DetailRequest — listen for it
         // here so they push the detail (Upcoming tab does the same).
         .onReceive(NotificationCenter.default.publisher(for: .arrBarrOpenDetail)) { note in
-            guard let item = note.userInfo?["item"] as? QueueItem else { return }
+            guard isActive, let item = note.userInfo?["item"] as? QueueItem else { return }
             detailItem = item
+        }
+    }
+
+    @ViewBuilder
+    private var queueContent: some View {
+        if let result = searchResult {
+            SearchAddPanel(result: result, viewModel: searchVM) {
+                searchResult = nil
+            }
+        } else {
+            ZStack {
+                QueueListView(
+                    viewModel: viewModel,
+                    scope: nil,
+                    onShowDetail: { detailItem = $0 },
+                    onNeedsYouTap: { needs in openNeedsYouQueue(needs) },
+                    onShowHistory: { historySource = $0 },
+                    selecting: $selecting
+                )
+                // Typing shows the same unified surface as macOS: live queue
+                // rows that still match on top, arr library / add-new below.
+                if isSearching {
+                    ScrollView {
+                        QueueSearchResultsView(
+                            viewModel: viewModel,
+                            searchViewModel: searchVM,
+                            scope: nil,
+                            onSelectQueueItem: { detailItem = $0 },
+                            onSelectAddResult: { searchResult = $0 },
+                            onSelectPerson: { personRef = $0 }
+                        )
+                        .padding(.vertical, 8)
+                        if searchVM.isSearching, !searchVM.hasResults {
+                            ProgressView()
+                                .controlSize(.small)
+                                .padding(.vertical, 16)
+                        }
+                    }
+                    .background(Color(.systemBackground))
+                }
+            }
         }
     }
 
@@ -411,6 +413,61 @@ private struct QueueTab: View {
     }
 }
 
+/// The scope bar, hand-rolled. `.searchScopes` cannot do what we need here:
+/// with `.toolbar` placement `.automatic` withholds the bar until the first
+/// keystroke, and `.onSearchPresentation` — which reads like the fix — drops it
+/// altogether. Scopes say WHERE the search will look, so they have to be on
+/// screen while the field is still empty and the user is deciding.
+struct SearchScopeBar: View {
+    @Bindable var searchVM: SearchViewModel
+    let scopes: [SearchScope]
+    @Environment(\.isSearching) private var isSearching
+
+    var body: some View {
+        if isSearching, scopes.count > 1 {
+            Picker("", selection: $searchVM.scope) {
+                ForEach(scopes) { s in
+                    Text(LocalizedStringKey(s.labelKey), bundle: .module).tag(s)
+                }
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .padding(.horizontal, 12)
+            .padding(.bottom, 8)
+        }
+    }
+}
+
+/// The queue's search field, withdrawn while multi-select owns the bar.
+private struct QueueSearchField: ViewModifier {
+    @Bindable var searchVM: SearchViewModel
+    let scopes: [SearchScope]
+    let enabled: Bool
+    @Binding var isPresented: Bool
+
+    func body(content: Content) -> some View {
+        if enabled {
+            content
+                .searchable(
+                    text: $searchVM.query,
+                    isPresented: $isPresented,
+                    placement: .toolbar,
+                    prompt: Text("search.searchMoviesAndTv.label", bundle: .module)
+                )
+                // iOS 26 collapses the field into a toolbar magnifier that
+                // expands on tap, so search shares a row with the other actions
+                // instead of a permanent drawer stealing one from the list.
+                .modifier(MinimizedSearchToolbar())
+                .autocorrectionDisabled(true)
+                // Native scope bar under the field — the iOS idiom for the
+                // macOS scope chip. Options gate which backends fire.
+
+        } else {
+            content
+        }
+    }
+}
+
 /// `searchToolbarBehavior` is iOS 26; below that the field stays a drawer.
 struct MinimizedSearchToolbar: ViewModifier {
     func body(content: Content) -> some View {
@@ -429,8 +486,11 @@ struct MinimizedSearchToolbar: ViewModifier {
 /// popover fills from `PopoverContentView`.
 private struct LibraryTab: View {
     var searchVM: SearchViewModel
+    var viewModel: QueueViewModel
+    var isActive: Bool
     @State private var libraryViewModel = LibraryViewModel()
     @State private var searchResult: SearchResult?
+    @State private var detailItem: QueueItem?
 
     var body: some View {
         Group {
@@ -439,10 +499,22 @@ private struct LibraryTab: View {
                     searchResult = nil
                 }
             } else {
-                LibraryTabContent(viewModel: libraryViewModel, searchResult: $searchResult)
+                LibraryTabContent(viewModel: libraryViewModel,
+                                  searchResult: $searchResult,
+                                  isActive: isActive)
             }
         }
         .navigationBarTitleDisplayMode(.inline)
+        .navigationDestination(item: $detailItem) { item in
+            DetailView(item: item, onBack: { detailItem = nil }, viewModel: viewModel)
+        }
+        // Library tiles open through `DetailRequest.post`, same as queue rows.
+        // Without this the tap posted into a tab that wasn't listening and
+        // nothing happened.
+        .onReceive(NotificationCenter.default.publisher(for: .arrBarrOpenDetail)) { note in
+            guard isActive, let item = note.userInfo?["item"] as? QueueItem else { return }
+            detailItem = item
+        }
     }
 }
 
@@ -450,6 +522,7 @@ private struct LibraryTab: View {
 
 private struct UpcomingTab: View {
     var viewModel: QueueViewModel
+    var isActive: Bool
     @EnvironmentObject var configStore: ConfigStore
     @State private var detailItem: QueueItem?
 
@@ -487,7 +560,7 @@ private struct UpcomingTab: View {
         // notification — wire it to push DetailView, same pattern as
         // MainWindowView on macOS.
         .onReceive(NotificationCenter.default.publisher(for: .arrBarrOpenDetail)) { note in
-            guard let item = note.userInfo?["item"] as? QueueItem else { return }
+            guard isActive, let item = note.userInfo?["item"] as? QueueItem else { return }
             detailItem = item
         }
     }

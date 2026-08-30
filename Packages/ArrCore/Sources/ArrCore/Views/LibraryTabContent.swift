@@ -7,6 +7,47 @@ import SwiftUI
 /// instantly (substring match over the cached library), and the same arr
 /// lookups the global search fires render underneath as a lookup section:
 /// add-new hits plus anything owned beyond what the grid already shows.
+/// The library's chrome was sized for a 400pt popover and a mouse. On touch the
+/// same numbers give 20pt hit areas — half Apple's 44pt minimum — so every
+/// value the strip uses is forked rather than sprinkled with `#if` at each call.
+private enum LibraryChrome {
+    #if os(iOS)
+    static let label: CGFloat = 13
+    static let chevron: CGFloat = 10
+    static let chipHPad: CGFloat = 12
+    static let chipVPad: CGFloat = 8
+    static let glyph: CGFloat = 15
+    static let tapTarget: CGFloat = 44
+    static let brandIcon: CGFloat = 13
+    #else
+    static let label: CGFloat = 11
+    static let chevron: CGFloat = 8
+    static let chipHPad: CGFloat = 8
+    static let chipVPad: CGFloat = 3
+    static let glyph: CGFloat = 11
+    static let tapTarget: CGFloat = 20
+    static let brandIcon: CGFloat = 10
+    #endif
+}
+
+#if os(iOS)
+/// Shows its content only when search is NOT open. `isSearching` is only
+/// readable from inside the searchable content, hence the wrapper.
+private struct LibraryFilterStrip<Content: View>: View {
+    @Environment(\.isSearching) private var isSearching
+    @ViewBuilder var content: () -> Content
+
+    var body: some View {
+        if !isSearching { content() }
+    }
+}
+#else
+private struct LibraryFilterStrip<Content: View>: View {
+    @ViewBuilder var content: () -> Content
+    var body: some View { content() }
+}
+#endif
+
 struct LibraryTabContent: View {
     var viewModel: LibraryViewModel
     @EnvironmentObject var configStore: ConfigStore
@@ -14,6 +55,10 @@ struct LibraryTabContent: View {
     /// presents the shared `SearchAddPanel` overlay for it, same as the
     /// queue surface's rows.
     @Binding var searchResult: SearchResult?
+    /// True while this is the tab on screen. Leaving it closes an EMPTY search
+    /// field; one holding a query is kept, so coming back shows the results
+    /// again instead of a blank list. macOS always passes the default.
+    var isActive: Bool = true
 
     /// Which arr's library is on screen. Defaults to the first configured
     /// arr on appear; not persisted (the popover session is short-lived,
@@ -31,6 +76,7 @@ struct LibraryTabContent: View {
     /// without a TMDB key, so the people/"Starring X" machinery stays off
     /// here — the full search on the Queue tab keeps it.
     @State private var searchVM = SearchViewModel()
+    @State private var searchPresented = false
     /// Grid (covers) vs list (compact rows). Persisted — a layout preference,
     /// not per-session state like the filters above.
     @AppStorage("libraryViewMode") private var viewModeRaw = ViewMode.grid.rawValue
@@ -214,6 +260,11 @@ struct LibraryTabContent: View {
 
     var body: some View {
         surface
+        .onChange(of: isActive) { _, nowActive in
+            if !nowActive, filterText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                searchPresented = false
+            }
+        }
         .onChange(of: filterText) { _, new in
             // Mirror the typed query into this surface's SearchViewModel —
             // same trigger the queue tab wires from its bar.
@@ -234,7 +285,8 @@ struct LibraryTabContent: View {
                 radarrConfig: configStore.radarr,
                 sonarrConfig: configStore.sonarr,
                 lidarrConfig: configStore.lidarr,
-                whisparrConfig: configStore.whisparr
+                whisparrConfig: configStore.whisparr,
+                tmdbApiKey: configStore.tmdbApiKey
             )
             Task { await load() }
         }
@@ -314,15 +366,15 @@ struct LibraryTabContent: View {
             HStack(spacing: 4) {
                 // Trigger chip is an ordinary view, so the shared `ServiceIcon`
                 // works here — only the menu ROWS need the pre-sized variant.
-                ServiceIcon(source: source, size: 10)
+                ServiceIcon(source: source, size: LibraryChrome.brandIcon)
                 Text(verbatim: source.displayName)
-                    .scaledFont(size: 11, weight: .semibold)
+                    .scaledFont(size: LibraryChrome.label, weight: .semibold)
                 Image(systemName: "chevron.down")
-                    .scaledFont(size: 8, weight: .semibold)
+                    .scaledFont(size: LibraryChrome.chevron, weight: .semibold)
                     .foregroundStyle(.secondary)
             }
-            .padding(.horizontal, 7)
-            .padding(.vertical, 3)
+            .padding(.horizontal, LibraryChrome.chipHPad)
+            .padding(.vertical, LibraryChrome.chipVPad)
             .background(
                 RoundedRectangle(cornerRadius: 6)
                     .strokeBorder(Color.primary.opacity(0.30), lineWidth: 0.75)
@@ -344,11 +396,11 @@ struct LibraryTabContent: View {
         } label: {
             HStack(spacing: 3) {
                 Text(LocalizedStringKey(filter.labelKey), bundle: .module)
-                    .scaledFont(size: 10, weight: selected ? .semibold : .medium)
+                    .scaledFont(size: LibraryChrome.label, weight: selected ? .semibold : .medium)
                     .lineLimit(1)
                 if count > 0 {
                     Text(verbatim: "\(count)")
-                        .scaledFont(size: 10, weight: .regular)
+                        .scaledFont(size: LibraryChrome.label, weight: .regular)
                         .monospacedDigit()
                         .opacity(0.65)
                 }
@@ -358,8 +410,8 @@ struct LibraryTabContent: View {
             // pill uses (see TabPillBackground) — an inverted fill washed out
             // under the popover's vibrancy and left the label unreadable.
             .foregroundStyle(selected ? AnyShapeStyle(.primary) : AnyShapeStyle(.secondary))
-            .padding(.horizontal, 8)
-            .padding(.vertical, 3)
+            .padding(.horizontal, LibraryChrome.chipHPad)
+            .padding(.vertical, LibraryChrome.chipVPad)
             .background {
                 if selected {
                     Capsule().fill(Color.primary.opacity(0.14))
@@ -381,9 +433,9 @@ struct LibraryTabContent: View {
             }
         } label: {
             Image(systemName: viewMode == .grid ? "list.bullet" : "square.grid.2x2")
-                .scaledFont(size: 11, weight: .medium)
+                .scaledFont(size: LibraryChrome.glyph, weight: .medium)
                 .foregroundStyle(.secondary)
-                .frame(width: 20, height: 20)
+                .frame(width: LibraryChrome.tapTarget, height: LibraryChrome.tapTarget)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -423,9 +475,9 @@ struct LibraryTabContent: View {
             }
         } label: {
             Image(systemName: "arrow.up.arrow.down")
-                .scaledFont(size: 11, weight: .medium)
+                .scaledFont(size: LibraryChrome.glyph, weight: .medium)
                 .foregroundStyle(.secondary)
-                .frame(width: 20, height: 20)
+                .frame(width: LibraryChrome.tapTarget, height: LibraryChrome.tapTarget)
                 .contentShape(Rectangle())
         }
         .menuStyle(.borderlessButton)
@@ -584,11 +636,20 @@ struct LibraryTabContent: View {
     private var surface: some View {
         #if os(iOS)
         VStack(spacing: 0) {
-            topStrip
+            // Browsing filters and search scopes are different jobs, so they
+            // never share a row: the arr picker + status chips + sort belong to
+            // the grid, the scope bar belongs to the query. But the scope bar
+            // itself is the QUEUE'S — one search, one set of scopes, wherever
+            // it is opened from. Only the ordering of results differs here,
+            // where locally-owned titles are already deduped and ranked against
+            // the grid (see `lookupResults`).
+            LibraryFilterStrip { topStrip }
+            SearchScopeBar(searchVM: searchVM, scopes: SearchScope.available(for: configStore))
             gridOrState
         }
         .searchable(
             text: $filterText,
+            isPresented: $searchPresented,
             placement: .toolbar,
             prompt: Text("search.global.prompt", bundle: .module)
         )
@@ -742,7 +803,13 @@ private struct LibraryTile: View {
                     RemotePoster(
                         url: entry.posterURL,
                         apiKey: apiKey,
-                        tier: .card,
+                        // `.icon`, not `.card`: the grid is 104–160 pt wide, so
+                        // 288 px covers it at @2x, and the icon copy is already
+                        // on disk for every indexed title. Asking for `.card`
+                        // pulled a 780 px poster per tile — one 180 kB file for
+                        // a tile that displays ~200 px, and on a 3000-title
+                        // library that alone was 400 MB of cache.
+                        tier: .icon,
                         cornerRadius: Tokens.Radius.card,
                         fallbackSymbol: entry.source.symbol,
                         fill: true

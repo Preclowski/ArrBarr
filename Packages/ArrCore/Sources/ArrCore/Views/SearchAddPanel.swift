@@ -65,6 +65,9 @@ public struct SearchAddPanel: View {
     /// add panel matches the in-library DetailView (which also shows a CastRow).
     /// Movies/series only; empty until loaded (and stays empty without a TMDB key).
     @State private var cast: [CastMember] = []
+    /// Directing credits from the same fetch — a movie's director(s), a
+    /// series' creator(s). Rendered above the cast strip.
+    @State private var directors: [CastMember] = []
     /// True while the TMDB credits fetch is in flight — drives the cast
     /// skeleton so the hero doesn't jump when the strip pops in.
     @State private var castLoading = false
@@ -308,7 +311,12 @@ public struct SearchAddPanel: View {
                 // Title + year live in the nav-bar title now; hero
                 // hides its in-card title to avoid duplication —
                 // matches DetailView's pattern.
-                showTitle: false
+                showTitle: false,
+                directedBy: directors,
+                directedByKey: result.source == .sonarr ? "detail.createdBy.label" : "detail.directedBy.label",
+                onTapPerson: { member in
+                    if let ref = PersonRef(castMember: member) { personRef = ref }
+                }
             )
             // Overview lives inside the header card's right column now.
             // Cast strip with a skeleton while the TMDB fetch is in flight —
@@ -336,12 +344,16 @@ public struct SearchAddPanel: View {
         defer { castLoading = false }
         switch result.source {
         case .radarr, .whisparr:
-            cast = await CastProvider.movieCast(
+            let credits = await CastProvider.movieCredits(
                 radarrMovieId: nil, tmdbId: result.externalId, configStore: configStore)
+            cast = credits.cast
+            directors = credits.directors
         case .sonarr:
-            cast = await CastProvider.seriesCast(
+            let credits = await CastProvider.seriesCredits(
                 tmdbId: result.tmdbTVId, tvdbId: result.externalId, demoSeriesId: nil,
                 configStore: configStore)
+            cast = credits.cast
+            directors = credits.directors
         case .lidarr:
             break  // no TMDB cast for music
         }

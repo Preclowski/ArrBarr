@@ -141,7 +141,8 @@ struct QueueSearchResultsView: View {
                             fallbackSymbol: "person.fill"
                         )
                         Text(String.localizedStringWithFormat(
-                            NSLocalizedString("search.starring", bundle: .module, comment: ""), section.person.name))
+                            NSLocalizedString(section.person.filmographyCaptionKey, bundle: .module, comment: ""),
+                            section.person.name))
                             .scaledFont(size: 11, weight: .semibold)
                             .foregroundStyle(.secondary)
                         LinkChevron(size: 9)

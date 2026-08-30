@@ -149,9 +149,10 @@ private func trailerEmbedHTML(key: String, autoplay: Bool) -> String {
         // still accepted and free to send.
         "modestbranding=1",
         "origin=\(trailerEmbedOrigin)",
-        // Makes the player post its state (including error codes) to the
-        // parent frame — the only way to see WHY a clip refuses to play.
-        "enablejsapi=1",
+        // No `enablejsapi=1`. It was here to read player state, but nothing
+        // ever listened for those messages, and switching it on is what turns
+        // a plain embed into a YouTube API Services client — with the privacy
+        // policy obligations that carries. A dead diagnostic is not worth it.
     ].joined(separator: "&")
     return """
     <!doctype html>

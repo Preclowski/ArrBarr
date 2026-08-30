@@ -34,6 +34,21 @@ public enum SearchScope: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
+    /// The scopes worth offering for a given configuration: `all` always, an
+    /// arr when it is set up, `people` when TMDB can answer. Shared so every
+    /// search surface offers the SAME set — the queue and the library run one
+    /// search, and a scope bar that differs between them is a different search.
+    @MainActor
+    public static func available(for store: ConfigStore) -> [SearchScope] {
+        var out: [SearchScope] = [.all]
+        if store.radarr.isVisible { out.append(.movie) }
+        if store.sonarr.isVisible { out.append(.series) }
+        if store.lidarr.isVisible { out.append(.album) }
+        if !store.tmdbApiKey.isEmpty || DemoMode.isActive { out.append(.people) }
+        if store.whisparr.isVisible { out.append(.whisparr) }
+        return out
+    }
+
     /// Whether this scope lets a given arr source fire. `people` allows none —
     /// it's TMDB-only.
     public func allows(_ source: QueueItem.Source) -> Bool {
