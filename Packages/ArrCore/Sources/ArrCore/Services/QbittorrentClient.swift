@@ -95,10 +95,14 @@ public actor QbittorrentClient: DownloadProgressSource, DownloadAddSource {
     /// Hand qBittorrent a new torrent — file bytes or a magnet link — under the
     /// arr's category, which is what lets that arr import it later.
     ///
-    /// `/torrents/add` is multipart-only (it rejects a urlencoded body), and it
-    /// answers 200 with the literal body "Fails." when it refuses the payload —
-    /// a malformed .torrent, or a magnet it can't parse — so the body has to be
-    /// checked, not just the status.
+    /// `/torrents/add` is multipart-only (it rejects a urlencoded body), and its
+    /// answer changed across versions: through 5.1 a refusal arrives as HTTP 200
+    /// with the literal body "Fails." (so the body has to be checked, not just
+    /// the status), while 5.2 answers success with a JSON summary whose field
+    /// *names* contain "fail" (`failure_count`) — the failure check must match
+    /// the legacy body exactly, never a substring. 5.2 also stopped hiding a
+    /// duplicate behind "Fails.": it's an HTTP 409 now, worth its own message
+    /// because the torrent being there already is not really a failure.
     ///
     /// `paused` is sent under both spellings on purpose: qBittorrent 5.x renamed
     /// the parameter to `stopped` and ignores unknown fields, so sending both
@@ -119,12 +123,28 @@ public actor QbittorrentClient: DownloadProgressSource, DownloadAddSource {
         }
 
         let sent = file
-        let data = try await authenticated {
-            let url = try http.url(base: config.baseURL, path: "/api/v2/torrents/add")
-            return try await http.postMultipart(url, headers: authHeaders(), fields: fields, file: sent)
+        let data: Data
+        do {
+            data = try await authenticated {
+                let url = try http.url(base: config.baseURL, path: "/api/v2/torrents/add")
+                return try await http.postMultipart(url, headers: authHeaders(), fields: fields, file: sent)
+            }
+        } catch HTTPError.status(409, _) {
+            throw QbittorrentError.actionFailed(
+                String(localized: "qBittorrent already has this torrent.", bundle: .module)
+            )
         }
         let body = (String(data: data, encoding: .utf8) ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        if body.localizedCaseInsensitiveContains("fail") {
+        if body.caseInsensitiveCompare("Fails.") == .orderedSame {
+            // Pre-5.2 answers a duplicate with this same "Fails." as a broken
+            // file. Ask the client whether it already holds the hash before
+            // calling it a rejection — a probe that itself fails proves
+            // nothing, so only a positive answer changes the message.
+            if let hash = drop.torrentInfoHash, (try? await contains(hash: hash)) == true {
+                throw QbittorrentError.actionFailed(
+                    String(localized: "qBittorrent already has this torrent.", bundle: .module)
+                )
+            }
             throw QbittorrentError.actionFailed(
                 String(localized: "qBittorrent rejected the file.", bundle: .module)
             )

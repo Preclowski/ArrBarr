@@ -77,6 +77,20 @@ private let torrentDrop = DownloadDrop(
     displayName: "Show.S01E01.torrent"
 )
 
+/// A minimal but structurally valid single-file torrent, for the tests that
+/// need a derivable info-hash (`torrentDrop` above is deliberately truncated).
+private let validTorrentDrop = DownloadDrop(
+    content: .file(
+        Data("d8:announce13:http://tr/ann4:infod6:lengthi1e4:name1:a12:piece lengthi16384e6:pieces20:aaaaaaaaaaaaaaaaaaaaee".utf8),
+        filename: "Show.S01E01.torrent"
+    ),
+    kind: .torrent,
+    displayName: "Show.S01E01.torrent"
+)
+
+/// SHA-1 of `validTorrentDrop`'s info dictionary, independently computed.
+private let validTorrentInfoHash = "4de9b0e9855b349178fb7a42f37dc0f2fac3018d"
+
 private let nzbDrop = DownloadDrop(
     content: .file(Data("<nzb/>".utf8), filename: "Show.S01E01.nzb"),
     kind: .usenet,
@@ -309,6 +323,111 @@ struct DownloadDropSuite {
             await #expect(throws: QbittorrentError.self) {
                 try await client.add(torrentDrop, category: nil, paused: false)
             }
+        }
+
+        @Test("qBittorrent 5.2's JSON success body is a success despite the word \"failure_count\"")
+        func jsonSuccessBodyIsNotAFailure() async throws {
+            // 5.2 replaced "Ok." with a JSON summary. Its field NAME contains
+            // "fail", which the old substring check read as a rejection — the
+            // torrent was added, ArrBarr reported an error, and the retry then
+            // died on the new 409-for-duplicates.
+            DropMockURLProtocol.handler = { request in
+                if request.url?.path.contains("auth/login") == true { return reply(request, "Ok.") }
+                return reply(request, #"{"success_count":1,"failure_count":0,"pending_count":0,"added_torrent_ids":["abc"]}"#)
+            }
+            let client = QbittorrentClient(config: config(), session: dropSession())
+            try await client.add(torrentDrop, category: nil, paused: false)
+        }
+
+        @Test("A 409 reads as \"already added\", not a bare HTTP status")
+        func duplicateConflictSurfacesClearly() async throws {
+            DropMockURLProtocol.handler = { request in
+                if request.url?.path.contains("auth/login") == true { return reply(request, "Ok.") }
+                return reply(request, "", statusCode: 409)
+            }
+            let client = QbittorrentClient(config: config(), session: dropSession())
+            await #expect(throws: QbittorrentError.self) {
+                try await client.add(torrentDrop, category: nil, paused: false)
+            }
+        }
+
+        /// Pre-5.2 qBittorrent answers a duplicate with the same 200 "Fails." as
+        /// a genuinely broken file. These pin the fallback probe that tells the
+        /// two apart by asking the client whether it already holds the hash.
+        @Test("On \"Fails.\", a torrent the client already holds reads as \"already added\"")
+        func legacyDuplicateProbedByHash() async throws {
+            DropMockURLProtocol.handler = { request in
+                let path = request.url?.path ?? ""
+                if path.contains("auth/login") { return reply(request, "Ok.") }
+                if path.contains("torrents/info") {
+                    return reply(request, #"[{"hash":"\#(validTorrentInfoHash)","name":"a","state":"uploading","progress":1.0,"dlspeed":0,"eta":0,"size":1}]"#)
+                }
+                return reply(request, "Fails.")
+            }
+            let client = QbittorrentClient(config: config(), session: dropSession())
+            do {
+                try await client.add(validTorrentDrop, category: nil, paused: false)
+                Issue.record("expected a duplicate error")
+            } catch let QbittorrentError.actionFailed(message) {
+                #expect(message.contains("already has this torrent"))
+            }
+        }
+
+        @Test("On \"Fails.\" with the torrent absent, the rejection message stands")
+        func legacyRejectionStillSurfaces() async throws {
+            DropMockURLProtocol.handler = { request in
+                let path = request.url?.path ?? ""
+                if path.contains("auth/login") { return reply(request, "Ok.") }
+                if path.contains("torrents/info") { return reply(request, "[]") }
+                return reply(request, "Fails.")
+            }
+            let client = QbittorrentClient(config: config(), session: dropSession())
+            do {
+                try await client.add(validTorrentDrop, category: nil, paused: false)
+                Issue.record("expected a rejection error")
+            } catch let QbittorrentError.actionFailed(message) {
+                #expect(message.contains("rejected the file"))
+            }
+        }
+    }
+
+    @Suite("Torrent info-hash")
+    struct TorrentInfoHashTests {
+        @Test("The v1 info-hash of a .torrent file is the SHA-1 of its info dictionary")
+        func fileInfoHash() {
+            #expect(validTorrentDrop.torrentInfoHash == validTorrentInfoHash)
+        }
+
+        @Test("Malformed bencode yields no hash rather than a wrong one")
+        func malformedFileHasNoHash() {
+            #expect(torrentDrop.torrentInfoHash == nil)
+        }
+
+        @Test("A hex btih magnet parses, lowercased")
+        func magnetHexHash() {
+            let drop = DownloadDrop(
+                content: .magnet("magnet:?xt=urn:btih:0123456789ABCDEF0123456789ABCDEF01234567&dn=x"),
+                kind: .torrent, displayName: "x"
+            )
+            #expect(drop.torrentInfoHash == "0123456789abcdef0123456789abcdef01234567")
+        }
+
+        @Test("A base32 btih magnet decodes to the same hex")
+        func magnetBase32Hash() {
+            let drop = DownloadDrop(
+                content: .magnet("magnet:?xt=urn:btih:AERUKZ4JVPG66AJDIVTYTK6N54ASGRLH"),
+                kind: .torrent, displayName: "x"
+            )
+            #expect(drop.torrentInfoHash == "0123456789abcdef0123456789abcdef01234567")
+        }
+
+        @Test("A magnet without a btih carries no hash")
+        func magnetWithoutHash() {
+            let drop = DownloadDrop(
+                content: .magnet("magnet:?dn=just-a-name"),
+                kind: .torrent, displayName: "x"
+            )
+            #expect(drop.torrentInfoHash == nil)
         }
     }
 
