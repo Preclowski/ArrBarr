@@ -10,14 +10,24 @@ private final class LibraryIndexStubState: @unchecked Sendable {
     private let lock = NSLock()
     private var _movieHits = 0
     private var _failing = false
+    private var _delay: TimeInterval = 0
 
     var movieHits: Int { lock.lock(); defer { lock.unlock() }; return _movieHits }
     var failing: Bool {
         get { lock.lock(); defer { lock.unlock() }; return _failing }
         set { lock.lock(); defer { lock.unlock() }; _failing = newValue }
     }
+    /// Held before responding so a second caller really does arrive while the
+    /// first fetch is still in flight — without it the race never happens.
+    var delay: TimeInterval {
+        get { lock.lock(); defer { lock.unlock() }; return _delay }
+        set { lock.lock(); defer { lock.unlock() }; _delay = newValue }
+    }
     func countMovie() { lock.lock(); defer { lock.unlock() }; _movieHits += 1 }
-    func reset() { lock.lock(); defer { lock.unlock() }; _movieHits = 0; _failing = false }
+    func reset() {
+        lock.lock(); defer { lock.unlock() }
+        _movieHits = 0; _failing = false; _delay = 0
+    }
 }
 
 private final class LibraryIndexStub: URLProtocol, @unchecked Sendable {
@@ -32,6 +42,9 @@ private final class LibraryIndexStub: URLProtocol, @unchecked Sendable {
     override func startLoading() {
         let url = request.url ?? URL(string: "about:blank")!
         if url.path.contains("/movie") { Self.state.countMovie() }
+        // `startLoading` runs off the main thread, so blocking here is fine.
+        let delay = Self.state.delay
+        if delay > 0 { Thread.sleep(forTimeInterval: delay) }
         if Self.state.failing {
             let response = HTTPURLResponse(url: url, statusCode: 500,
                                            httpVersion: "HTTP/1.1", headerFields: [:])!
@@ -118,6 +131,31 @@ struct LibraryIndexTests {
         #expect(await index.version(for: .radarr) == afterInvalidate)
         #expect(afterInvalidate == afterFirst + 1)
         #expect(await index.fetchFailed(.radarr))
+    }
+
+    @Test("Two concurrent cold reads are one fetch and one version bump")
+    func concurrentColdReadsCommitOnce() async throws {
+        LibraryIndexStub.state.reset()
+        LibraryIndexStub.state.delay = 0.2
+        URLProtocol.registerClass(LibraryIndexStub.self)
+        defer {
+            URLProtocol.unregisterClass(LibraryIndexStub.self)
+            LibraryIndexStub.state.delay = 0
+        }
+
+        let index = LibraryIndex()
+        let cfg = config(port: 17104)
+
+        // The second caller joins the in-flight fetch. One fetch is one commit:
+        // the version must not move without the records moving with it.
+        async let first = index.movies(config: cfg)
+        async let second = index.movies(config: cfg)
+        let (a, b) = await (first, second)
+
+        #expect(a.count == 1)
+        #expect(b.count == 1)
+        #expect(LibraryIndexStub.state.movieHits == 1)
+        #expect(await index.version(for: .radarr) == 1)
     }
 
     @Test("All four sources have a version and all four invalidate")

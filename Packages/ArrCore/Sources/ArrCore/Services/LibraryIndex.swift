@@ -151,6 +151,13 @@ public actor LibraryIndex {
         _ slot: inout Slot<Record>?,
         _ fingerprint: String
     ) -> [Record] {
+        // Callers that joined an in-flight fetch reach here too. One fetch is
+        // one commit: whoever resumes first writes the slot and bumps, and the
+        // rest see a fresh slot and reuse it, so the version never moves
+        // without the records moving with it.
+        if let slot, slot.fingerprint == fingerprint, Self.isFresh(slot.fetchedAt) {
+            return slot.records
+        }
         guard let records else {
             failedSources.insert(source)
             if let slot, slot.fingerprint == fingerprint { return slot.records }
