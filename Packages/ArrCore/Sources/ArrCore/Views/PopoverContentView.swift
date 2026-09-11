@@ -121,9 +121,7 @@ public struct PopoverContentView: View {
         searchResult != nil || detailItem != nil
     }
 
-    private var isFiltering: Bool {
-        !queueFilter.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-    }
+    private var isFiltering: Bool { searchViewModel.isActive }
 
     /// Put the caret in the tab's text field so the panel is typeable the
     /// instant it opens.
@@ -230,6 +228,8 @@ public struct PopoverContentView: View {
                     whisparrConfig: configStore.whisparr,
                     tmdbApiKey: configStore.tmdbApiKey
                 )
+                // Library-only search reads the Library tab's own cache.
+                searchViewModel.library = libraryViewModel
                 chatHolder.reconfigure(store: configStore)
                 // The panel is on screen (menu-bar popover opened, or the
                 // detached window is visible) — poll at the fast foreground
@@ -317,7 +317,7 @@ public struct PopoverContentView: View {
             .onReceive(NotificationCenter.default.publisher(for: .arrBarrSearchQuery)) { note in
                 guard let q = note.userInfo?["query"] as? String else { return }
                 selectedTab = .queue
-                queueFilter = q
+                searchViewModel.query = q
             }
             .onReceive(NotificationCenter.default.publisher(for: .arrBarrOpenDetail)) { note in
                 guard let item = note.userInfo?["item"] as? QueueItem else { return }
@@ -468,9 +468,7 @@ public struct PopoverContentView: View {
                             QueueTabContent(
                                 viewModel: viewModel,
                                 searchViewModel: searchViewModel,
-                                queueFilter: $queueFilter,
-                                queueScope: $queueScope,
-                                queueFilterFocused: $queueFilterFocused,
+                                searchFieldFocused: $queueFilterFocused,
                                 detailItem: $detailItem,
                                 historySource: $historySource,
                                 searchResult: $searchResult,
@@ -664,16 +662,8 @@ public struct PopoverContentView: View {
             tabPills
                 .frame(maxWidth: .infinity)
                 .glassyFloatingBar()
-            // Quiet "you've left the LAN" chip — only present while the whole
-            // stack is unreachable, slotted between the tabs and the kebab so
-            // it reads as ambient status, not an alert.
-            if viewModel.isFullyOffline {
-                OfflineIndicator(viewModel: viewModel)
-                    .padding(.horizontal, 12)
-                    .frame(height: Self.pillHeight)
-                    .glassyFloatingBar()
-                    .transition(.opacity.combined(with: .scale(scale: 0.9)))
-            }
+            // No offline chip here: the queue itself already says the stack
+            // is unreachable, and a third capsule in the bar only crowded it.
             // One island: the kebab (and, in detached mode, the window's ×)
             // inside a single glass capsule (like the tab cluster nests its
             // buttons in one capsule). The detach/attach toggle lives INSIDE
@@ -697,7 +687,6 @@ public struct PopoverContentView: View {
         .padding(.horizontal, 12)
         .padding(.top, 10)
         .padding(.bottom, 8)
-        .animation(.easeInOut(duration: 0.2), value: viewModel.isFullyOffline)
     }
 
     #if os(macOS)
@@ -775,10 +764,9 @@ public struct PopoverContentView: View {
                     // home" affordance that doesn't need its own
                     // chrome (Spotify / Apple Music tab-bar idiom).
                     if tab == .queue && selectedTab == .queue {
-                        if isFiltering || queueScope != nil {
+                        if isFiltering {
                             withAnimation(.easeOut(duration: 0.18)) {
-                                queueFilter = ""
-                                queueScope = nil
+                                searchViewModel.query = ""
                             }
                         }
                     }
@@ -875,7 +863,9 @@ public struct PopoverContentView: View {
                     // the accessory / close / offline islands grow to match it
                     // via `pillHeight` (they don't shrink the tabs).
                     .padding(.horizontal, 18)
-                    .padding(.vertical, 9)
+                    // Fixed, not padding-derived: the accessory island uses the
+                    // same constant, so the two capsules can't drift apart.
+                    .frame(height: Self.pillHeight)
                     .contentShape(Rectangle())
                     .background(
                         GeometryReader { proxy in
@@ -967,11 +957,8 @@ public struct PopoverContentView: View {
                       width: max(0, rightEdge - leftEdge), height: height)
     }
 
-    /// Height of the accessory / close / offline islands — set to MATCH the tab
-    /// cluster's natural height (its per-tab `.padding(.vertical, 9)` + 12pt font
-    /// lands around 32pt), so every capsule in the toolbar is the same height
-    /// (the tabs keep their natural size; these grow up to them). Keep in sync if
-    /// the tab vertical padding / font ever moves.
+    /// The one toolbar height: every tab and the accessory island's glyph
+    /// buttons (kebab, detached ×) are framed to it, so all capsules match.
     private static let pillHeight: CGFloat = 32
 
     /// Overflow menu — capsule of equal width and height = a perfect
