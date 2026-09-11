@@ -37,10 +37,15 @@ public actor LibraryIndex {
     private var whisparrSlot: Slot<WhisparrLibraryRecord>?
     /// One in-flight fetch per source. Without it, three tools called in the
     /// same turn each start their own fetch of a cold cache.
-    private var movieFetch: Task<[RadarrLibraryRecord]?, Never>?
-    private var seriesFetch: Task<[SonarrLibraryRecord]?, Never>?
-    private var artistFetch: Task<[LidarrLibraryRecord]?, Never>?
-    private var whisparrFetch: Task<[WhisparrLibraryRecord]?, Never>?
+    ///
+    /// The fingerprint rides along because joining is only safe for the SAME
+    /// config: a caller whose server changed mid-fetch would otherwise adopt
+    /// the old server's records and `commit` them under the new fingerprint,
+    /// where they'd read as fresh for a whole `ttl`.
+    private var movieFetch: (fingerprint: String, task: Task<[RadarrLibraryRecord]?, Never>)?
+    private var seriesFetch: (fingerprint: String, task: Task<[SonarrLibraryRecord]?, Never>)?
+    private var artistFetch: (fingerprint: String, task: Task<[LidarrLibraryRecord]?, Never>)?
+    private var whisparrFetch: (fingerprint: String, task: Task<[WhisparrLibraryRecord]?, Never>)?
 
     /// Monotonic per-source counter, bumped on every fresh commit and every
     /// invalidate. `LibraryViewModel` unifies against it: same version means
@@ -71,14 +76,16 @@ public actor LibraryIndex {
         if let slot = movieSlot, slot.fingerprint == fingerprint, Self.isFresh(slot.fetchedAt) {
             return slot.records
         }
-        if let inFlight = movieFetch { return commit(await inFlight.value, .radarr, &movieSlot, fingerprint) }
+        if let inFlight = movieFetch, inFlight.fingerprint == fingerprint {
+            return commit(await inFlight.task.value, for: .radarr, into: &movieSlot, fingerprint: fingerprint)
+        }
         let task = Task<[RadarrLibraryRecord]?, Never> {
             try? await RadarrClient(config: config).fetchAllMovies()
         }
-        movieFetch = task
+        movieFetch = (fingerprint, task)
         let records = await task.value
-        movieFetch = nil
-        let out = commit(records, .radarr, &movieSlot, fingerprint)
+        if movieFetch?.fingerprint == fingerprint { movieFetch = nil }
+        let out = commit(records, for: .radarr, into: &movieSlot, fingerprint: fingerprint)
         LibraryStats.shared.setMovieCount(out.count)
         return out
     }
@@ -89,14 +96,16 @@ public actor LibraryIndex {
         if let slot = seriesSlot, slot.fingerprint == fingerprint, Self.isFresh(slot.fetchedAt) {
             return slot.records
         }
-        if let inFlight = seriesFetch { return commit(await inFlight.value, .sonarr, &seriesSlot, fingerprint) }
+        if let inFlight = seriesFetch, inFlight.fingerprint == fingerprint {
+            return commit(await inFlight.task.value, for: .sonarr, into: &seriesSlot, fingerprint: fingerprint)
+        }
         let task = Task<[SonarrLibraryRecord]?, Never> {
             try? await SonarrClient(config: config).fetchAllSeries()
         }
-        seriesFetch = task
+        seriesFetch = (fingerprint, task)
         let records = await task.value
-        seriesFetch = nil
-        let out = commit(records, .sonarr, &seriesSlot, fingerprint)
+        if seriesFetch?.fingerprint == fingerprint { seriesFetch = nil }
+        let out = commit(records, for: .sonarr, into: &seriesSlot, fingerprint: fingerprint)
         LibraryStats.shared.setSeriesCount(out.count)
         return out
     }
@@ -110,14 +119,16 @@ public actor LibraryIndex {
         if let slot = artistSlot, slot.fingerprint == fingerprint, Self.isFresh(slot.fetchedAt) {
             return slot.records
         }
-        if let inFlight = artistFetch { return commit(await inFlight.value, .lidarr, &artistSlot, fingerprint) }
+        if let inFlight = artistFetch, inFlight.fingerprint == fingerprint {
+            return commit(await inFlight.task.value, for: .lidarr, into: &artistSlot, fingerprint: fingerprint)
+        }
         let task = Task<[LidarrLibraryRecord]?, Never> {
             try? await LidarrClient(config: config).fetchAllArtists()
         }
-        artistFetch = task
+        artistFetch = (fingerprint, task)
         let records = await task.value
-        artistFetch = nil
-        return commit(records, .lidarr, &artistSlot, fingerprint)
+        if artistFetch?.fingerprint == fingerprint { artistFetch = nil }
+        return commit(records, for: .lidarr, into: &artistSlot, fingerprint: fingerprint)
     }
 
     /// Whisparr scenes/movies — same rules again.
@@ -127,14 +138,16 @@ public actor LibraryIndex {
         if let slot = whisparrSlot, slot.fingerprint == fingerprint, Self.isFresh(slot.fetchedAt) {
             return slot.records
         }
-        if let inFlight = whisparrFetch { return commit(await inFlight.value, .whisparr, &whisparrSlot, fingerprint) }
+        if let inFlight = whisparrFetch, inFlight.fingerprint == fingerprint {
+            return commit(await inFlight.task.value, for: .whisparr, into: &whisparrSlot, fingerprint: fingerprint)
+        }
         let task = Task<[WhisparrLibraryRecord]?, Never> {
             try? await WhisparrClient(config: config).fetchAllMovies()
         }
-        whisparrFetch = task
+        whisparrFetch = (fingerprint, task)
         let records = await task.value
-        whisparrFetch = nil
-        return commit(records, .whisparr, &whisparrSlot, fingerprint)
+        if whisparrFetch?.fingerprint == fingerprint { whisparrFetch = nil }
+        return commit(records, for: .whisparr, into: &whisparrSlot, fingerprint: fingerprint)
     }
 
     /// One commit rule for all four sources.
@@ -147,9 +160,9 @@ public actor LibraryIndex {
     /// an answer, not a failure.
     private func commit<Record: Sendable>(
         _ records: [Record]?,
-        _ source: QueueItem.Source,
-        _ slot: inout Slot<Record>?,
-        _ fingerprint: String
+        for source: QueueItem.Source,
+        into slot: inout Slot<Record>?,
+        fingerprint: String
     ) -> [Record] {
         // Callers that joined an in-flight fetch reach here too. One fetch is
         // one commit: whoever resumes first writes the slot and bumps, and the
