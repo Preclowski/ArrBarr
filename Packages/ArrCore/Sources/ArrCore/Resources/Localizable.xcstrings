@@ -23543,48 +23543,6 @@
         }
       }
     },
-    "library.moreResults.header": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "More results"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Więcej wyników"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Weitere Ergebnisse"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Más resultados"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Plus de résultats"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Meer resultaten"
-          }
-        }
-      },
-      "comment": "Header of the Library tab's arr-lookup section under the grid"
-    },
     "library.release.announced": {
       "extractionState": "manual",
       "localizations": {
@@ -29598,7 +29556,7 @@
       },
       "comment": "Button in queue"
     },
-    "queue.searching.button": {
+    "search.searching.header": {
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -32726,48 +32684,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Alle %lld ontbrekende zoeken"
-          }
-        }
-      },
-      "comment": "Label in search"
-    },
-    "search.searchMoviesAndTv.label": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Search movies and TV series"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Szukaj filmów i seriali"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Filme und TV-Serien suchen"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Buscar películas y series de TV"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Rechercher films et séries TV"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Films en tv-series zoeken"
           }
         }
       },
@@ -43400,6 +43316,48 @@
         }
       },
       "comment": "Button in upcoming"
+    },
+    "search.libraryOnly.toggle": {
+      "comment": "Search toggle: limit results to titles already in the user's library",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In library"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "W bibliotece"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In der Bibliothek"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En la biblioteca"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dans la bibliothèque"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In bibliotheek"
+          }
+        }
+      }
     }
   }
 }
