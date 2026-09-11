@@ -156,6 +156,28 @@ public final class SearchViewModel {
         }
     }
 
+    /// `setup` from the app's configuration — the one reading of what the
+    /// search clients are built from, so macOS and iOS cannot drift.
+    func setup(store: ConfigStore) {
+        setup(radarrConfig: store.radarr, sonarrConfig: store.sonarr,
+              lidarrConfig: store.lidarr, whisparrConfig: store.whisparr,
+              tmdbApiKey: store.tmdbApiKey)
+    }
+
+    /// Identity of everything `setup` reads. The hosts observe this and re-run
+    /// `setup` when it moves: the clients are built once from the config, so
+    /// without it a server edited in Settings leaves every search talking to
+    /// the old one for the rest of the session.
+    static func configSignature(store: ConfigStore) -> String {
+        [
+            store.radarr.baseURL, store.radarr.apiKey, "\(store.radarr.enabled)",
+            store.sonarr.baseURL, store.sonarr.apiKey, "\(store.sonarr.enabled)",
+            store.lidarr.baseURL, store.lidarr.apiKey, "\(store.lidarr.enabled)",
+            store.whisparr.baseURL, store.whisparr.apiKey, "\(store.whisparr.enabled)",
+            store.tmdbApiKey,
+        ].joined(separator: "|")
+    }
+
     func onQueryChange() {
         queryChangePasses += 1
         searchTask?.cancel()

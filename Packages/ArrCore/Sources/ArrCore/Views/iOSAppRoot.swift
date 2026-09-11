@@ -114,9 +114,19 @@ public struct iOSAppRoot: View {
         .environmentObject(configStore)
         // Root-owned so the quiz's chat bridge works even before the Chat tab
         // has ever been shown.
-        .onAppear { chatHolder.reconfigure(store: configStore) }
+        .onAppear {
+            chatHolder.reconfigure(store: configStore)
+            searchVM.setup(store: configStore)
+        }
         .onChange(of: ChatViewModelHolder.signature(store: configStore)) { _, _ in
             chatHolder.reconfigure(store: configStore)
+        }
+        // Root-owned as well, and re-run on a config edit: the search clients
+        // are built once from the config, and the Queue tab's `onAppear` fires
+        // only the first time that tab is built — a server changed in Settings
+        // afterwards left every search talking to the old one.
+        .onChange(of: SearchViewModel.configSignature(store: configStore)) { _, _ in
+            searchVM.setup(store: configStore)
         }
         // An empty search field left open behind a tab switch is just chrome
         // taking a row; one with a query is a result set worth returning to.
@@ -324,15 +334,6 @@ private struct QueueTab: View {
         // out of the mode. Mail and Files drop their search bar there too.
         .modifier(SearchField(searchVM: searchVM, enabled: !selecting,
                               isPresented: $searchPresented))
-        .onAppear {
-            searchVM.setup(
-                radarrConfig: configStore.radarr,
-                sonarrConfig: configStore.sonarr,
-                lidarrConfig: configStore.lidarr,
-                whisparrConfig: configStore.whisparr,
-                tmdbApiKey: configStore.tmdbApiKey
-            )
-        }
         // Search-to-add App Intent → run the search here.
         .onReceive(NotificationCenter.default.publisher(for: .arrBarrSearchQuery)) { note in
             guard let q = note.userInfo?["query"] as? String else { return }
