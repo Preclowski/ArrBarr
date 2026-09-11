@@ -19,6 +19,9 @@ public struct LibraryEntry: Identifiable, Equatable, Sendable {
     public let source: QueueItem.Source
     /// Arr-internal record id (movie/series/artist) — what DetailView refetches by.
     public let arrId: Int
+    /// The title's foreign id — tmdbId (Radarr/Whisparr) or tvdbId (Sonarr),
+    /// the key `SearchResult.externalId` carries. Nil for Lidarr artists.
+    public var externalId: Int? = nil
     public let title: String
     public let year: Int?
     public let posterURL: URL?
@@ -88,11 +91,12 @@ public struct LibraryEntry: Identifiable, Equatable, Sendable {
     }
 }
 
-/// Fetches + caches each arr's full library for the Library tab. The whole
-/// library comes down in one `/api/v3/<entity>` call (a few MB of JSON for a
-/// few thousand titles), so results are kept per source and only refetched
-/// when stale — switching tabs or sources inside the TTL renders instantly
-/// from cache.
+/// Projects each arr's full library into the Library tab's grid entries. The
+/// records themselves come from `LibraryIndex` — the one cache the whole app
+/// shares — and the whole library arrives in a single `/api/v3/<entity>` call
+/// (a few MB of JSON for a few thousand titles), so the unify runs only when
+/// the index's version for a source moves. Switching tabs or sources renders
+/// instantly from the already-unified entries.
 @MainActor
 @Observable
 public final class LibraryViewModel {
@@ -113,11 +117,12 @@ public final class LibraryViewModel {
     /// very body that is running.
     @ObservationIgnored private var sortCache: [QueueItem.Source: [String: [LibraryEntry]]] = [:]
 
-    private var fetchedAt: [QueueItem.Source: Date] = [:]
-    /// Refetch cadence while the user keeps coming back to the tab. Long on
-    /// purpose: libraries change on add/import, not every minute, and the
-    /// fetch is the single heaviest arr call the app makes.
-    private let ttl: TimeInterval = 300
+    /// The `LibraryIndex` version each source's `entries` were unified from.
+    /// The grid is a PROJECTION of the index, not a second cache: it re-unifies
+    /// when — and only when — the index says its records changed. The old
+    /// 5-minute TTL of its own is what made an add read "not owned" in the grid
+    /// for minutes after the index already knew better.
+    private var indexVersions: [QueueItem.Source: Int] = [:]
 
     public init() {}
 
@@ -142,13 +147,13 @@ public final class LibraryViewModel {
         a.title.localizedCaseInsensitiveCompare(b.title) == .orderedAscending
     }
 
-    /// Load `source`'s library if it isn't cached fresh. `force` bypasses the
-    /// TTL (used by ⌘R / explicit refresh).
+    /// Project `source`'s library into grid entries if the index moved under
+    /// us (or we have nothing yet). `force` expires the index first, so ⌘R is
+    /// a real refetch and not a re-unify of the same records.
     public func loadIfNeeded(source: QueueItem.Source, config: ServiceConfig, force: Bool = false) async {
-        if !force,
-           let stamp = fetchedAt[source],
-           Date().timeIntervalSince(stamp) < ttl,
-           entries[source] != nil {
+        if force { await LibraryIndex.shared.invalidate(source) }
+        let indexVersion = await LibraryIndex.shared.version(for: source)
+        if !force, entries[source] != nil, indexVersions[source] == indexVersion {
             return
         }
         guard !loading.contains(source) else { return }
@@ -156,48 +161,51 @@ public final class LibraryViewModel {
         loadFailed.remove(source)
         defer { loading.remove(source) }
 
-        do {
-            // Profile names resolve qualityProfileId → "HD-1080p" for rows
-            // without a file (and for Sonarr/Lidarr, which have no single
-            // file). One cheap call, fetched alongside the library. Failure
-            // degrades to no quality caption, not a failed load.
-            let profiles = await SearchClient.profileNameMap(config: config, source: source)
-            let fresh: [LibraryEntry]
-            switch source {
-            case .radarr:
-                let client = RadarrClient(config: config)
-                let movies = try await client.fetchAllMovies()
-                // Alternate titles are what let the filter find a film by its
-                // Polish or German name. Best-effort and awaited after the
-                // library itself, so a slow or absent `/alttitle` costs reach,
-                // never the load.
-                let alts = await client.alternateTitleMap(for: movies)
-                fresh = Self.unify(movies, baseURL: config.baseURL, profiles: profiles, alternateTitles: alts)
-            case .sonarr:
-                fresh = Self.unify(try await SonarrClient(config: config).fetchAllSeries(), baseURL: config.baseURL, profiles: profiles)
-            case .lidarr:
-                fresh = Self.unify(try await LidarrClient(config: config).fetchAllArtists(), baseURL: config.baseURL, profiles: profiles)
-            case .whisparr:
-                fresh = Self.unify(try await WhisparrClient(config: config).fetchAllMovies(), baseURL: config.baseURL, profiles: profiles)
-            }
-            entries[source] = fresh
-            sortCache[source] = nil
-            // Pre-warm the default axis so the first Library visit after a
-            // fetch renders without paying the sort inside body.
-            _ = sorted(source, cacheKey: "title", using: Self.titleAscending)
-            fetchedAt[source] = Date()
-            Self.logAliasCoverage(fresh, source: source)
-        } catch {
-            // Keep any stale cache on screen; the flag only surfaces an error
-            // state when there's nothing at all to show. That quietness is
-            // right for the UI and wrong for diagnosis — the reason the load
-            // failed exists nowhere else, so it goes to the log. Detail stays
-            // `.private`: a URLError carries the failing URL.
-            Self.log.error(
-                "\(source.rawValue, privacy: .public) library load failed: \(error.userFacingMessage, privacy: .public) | \(String(reflecting: error), privacy: .private)"
-            )
-            loadFailed.insert(source)
+        // Profile names resolve qualityProfileId → "HD-1080p" for rows without
+        // a file (and for Sonarr/Lidarr, which have no single file). One cheap
+        // call. Failure degrades to no quality caption, not a failed load.
+        let profiles = await SearchClient.profileNameMap(config: config, source: source)
+        let fresh: [LibraryEntry]
+        switch source {
+        case .radarr:
+            let movies = await LibraryIndex.shared.movies(config: config)
+            // Alternate titles are what let the filter find a film by its
+            // Polish or German name. Best-effort, and only paid when the movie
+            // list actually changed — reaching this line at all means the
+            // index version moved.
+            let alts = await RadarrClient(config: config).alternateTitleMap(for: movies)
+            fresh = Self.unify(movies, baseURL: config.baseURL, profiles: profiles, alternateTitles: alts)
+        case .sonarr:
+            fresh = Self.unify(await LibraryIndex.shared.series(config: config),
+                               baseURL: config.baseURL, profiles: profiles)
+        case .lidarr:
+            fresh = Self.unify(await LibraryIndex.shared.artists(config: config),
+                               baseURL: config.baseURL, profiles: profiles)
+        case .whisparr:
+            fresh = Self.unify(await LibraryIndex.shared.whisparrMovies(config: config),
+                               baseURL: config.baseURL, profiles: profiles)
         }
+
+        // The index swallows the error and hands back a stale snapshot (or
+        // nothing). Keep any stale cache on screen; the flag only surfaces an
+        // error state when there is nothing at all to show. That quietness is
+        // right for the UI and wrong for diagnosis, so the failure is said out
+        // loud in the log.
+        if await LibraryIndex.shared.fetchFailed(source) {
+            Self.log.error("\(source.rawValue, privacy: .public) library load failed — index reports an unreachable arr")
+            if entries[source] == nil {
+                loadFailed.insert(source)
+                return
+            }
+        }
+
+        entries[source] = fresh
+        sortCache[source] = nil
+        // Pre-warm the default axis so the first Library visit after a fetch
+        // renders without paying the sort inside body.
+        _ = sorted(source, cacheKey: "title", using: Self.titleAscending)
+        indexVersions[source] = await LibraryIndex.shared.version(for: source)
+        Self.logAliasCoverage(fresh, source: source)
     }
 
     // MARK: - Diagnostics
@@ -225,13 +233,6 @@ public final class LibraryViewModel {
 
     // MARK: - Unify
 
-    private static func state(monitored: Bool?, complete: Bool, partial: Bool, available: Bool = true) -> LibraryEntry.FileState {
-        guard monitored ?? false else { return .unmonitored }
-        if complete { return .complete }
-        if partial { return .partial }
-        return available ? .missing : .notAvailable
-    }
-
     private static func unify(_ records: [RadarrLibraryRecord], baseURL: String, profiles: [Int: String],
                               alternateTitles: [Int: [String]] = [:]) -> [LibraryEntry] {
         records.compactMap { r in
@@ -240,9 +241,9 @@ public final class LibraryViewModel {
                 baseURL: baseURL, mediaServerKeys: r.mediaServerKeys
             )
             return LibraryEntry(
-                id: "radarr-\(id)", source: .radarr, arrId: id, title: title,
+                id: "radarr-\(id)", source: .radarr, arrId: id, externalId: r.tmdbId, title: title,
                 year: r.year, posterURL: poster, posterRequiresAuth: auth,
-                state: state(monitored: r.monitored, complete: r.hasFile ?? false, partial: false,
+                state: .movie(monitored: r.monitored, hasFile: r.hasFile ?? false,
                              available: r.isAvailable ?? true),
                 sizeOnDisk: r.sizeOnDisk ?? 0, fileCount: nil, totalCount: nil,
                 fileQuality: r.movieFile?.qualityName,
@@ -272,14 +273,12 @@ public final class LibraryViewModel {
             let (poster, auth) = (r.images ?? []).posterURL(
                 baseURL: baseURL, mediaServerKeys: r.mediaServerKeys
             )
-            let files = r.statistics?.episodeFileCount ?? 0
-            let total = r.statistics?.episodeCount ?? 0
+            let counts = r.episodeFileCounts
             return LibraryEntry(
-                id: "sonarr-\(id)", source: .sonarr, arrId: id, title: title,
+                id: "sonarr-\(id)", source: .sonarr, arrId: id, externalId: r.tvdbId, title: title,
                 year: r.year, posterURL: poster, posterRequiresAuth: auth,
-                state: state(monitored: r.monitored, complete: total > 0 && files >= total, partial: files > 0,
-                             available: total > 0),
-                sizeOnDisk: r.statistics?.sizeOnDisk ?? 0, fileCount: files, totalCount: total,
+                state: .series(monitored: r.monitored, counts: counts),
+                sizeOnDisk: r.statistics?.sizeOnDisk ?? 0, fileCount: counts.have, totalCount: counts.total,
                 fileQuality: nil,
                 profileName: r.qualityProfileId.flatMap { profiles[$0] },
                 customFormats: [], customFormatScore: 0, fileName: nil,
@@ -304,7 +303,7 @@ public final class LibraryViewModel {
             return LibraryEntry(
                 id: "lidarr-\(id)", source: .lidarr, arrId: id, title: name,
                 year: nil, posterURL: poster, posterRequiresAuth: auth,
-                state: state(monitored: r.monitored, complete: total > 0 && files >= total, partial: files > 0),
+                state: .resolve(monitored: r.monitored, complete: total > 0 && files >= total, partial: files > 0),
                 sizeOnDisk: r.statistics?.sizeOnDisk ?? 0, fileCount: files, totalCount: total,
                 fileQuality: nil,
                 profileName: r.qualityProfileId.flatMap { profiles[$0] },
@@ -325,9 +324,9 @@ public final class LibraryViewModel {
             guard let id = r.id, let title = r.title else { return nil }
             let (poster, auth) = (r.images ?? []).posterURL(baseURL: baseURL)
             return LibraryEntry(
-                id: "whisparr-\(id)", source: .whisparr, arrId: id, title: title,
+                id: "whisparr-\(id)", source: .whisparr, arrId: id, externalId: r.tmdbId, title: title,
                 year: r.year, posterURL: poster, posterRequiresAuth: auth,
-                state: state(monitored: r.monitored, complete: r.hasFile ?? false, partial: false,
+                state: .movie(monitored: r.monitored, hasFile: r.hasFile ?? false,
                              available: r.isAvailable ?? true),
                 sizeOnDisk: r.sizeOnDisk ?? 0, fileCount: nil, totalCount: nil,
                 fileQuality: r.movieFile?.qualityName,
