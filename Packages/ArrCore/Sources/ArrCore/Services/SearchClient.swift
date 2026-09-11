@@ -135,55 +135,22 @@ public actor SearchClient {
 
     // MARK: - Library filter
 
-    /// Returns a map of `foreignId → arr internal id` for everything in
-    /// the user's library. Used to be `Set<Int>` (foreign-id only) when
-    /// search just hid library items; the new "Search" tab shows them
-    /// with an "In library" pill, so we also need the arr-side id to
-    /// deep-link into DetailView when tapped. The foreign-id key matches
-    /// what `SearchResult.id` carries for each source.
-    func fetchLibraryArrIdMap() async throws -> [Int: Int] {
+    /// `foreignId → LibraryOwnership` for everything in the user's library:
+    /// the arr record a row deep-links into, and whether it's downloaded (the
+    /// ownership chip). The key matches what `SearchResult.externalId`
+    /// carries for each source.
+    ///
+    /// All four sources read the shared `LibraryIndex` snapshot through
+    /// `ArrLibraryMaps` — the same maps chat, Quiz and filmography use — so a
+    /// search never pulls a whole library of its own.
+    func fetchLibraryOwnership() async throws -> [Int: LibraryOwnership] {
         if DemoMode.isActive { return [:] }
         guard config.isConfigured else { return [:] }
         switch source {
-        case .radarr:
-            let url = try http.url(base: config.baseURL, path: "\(apiBase)/movie")
-            let data = try await http.get(url, headers: headers)
-            let records = (try? JSONDecoder().decode([RadarrLibraryRecord].self, from: data)) ?? []
-            var map: [Int: Int] = [:]
-            for r in records { if let f = r.tmdbId, let a = r.id { map[f] = a } }
-            return map
-        case .sonarr:
-            let url = try http.url(base: config.baseURL, path: "\(apiBase)/series")
-            let data = try await http.get(url, headers: headers)
-            let records = (try? JSONDecoder().decode([SonarrLibraryRecord].self, from: data)) ?? []
-            var map: [Int: Int] = [:]
-            for r in records { if let f = r.tvdbId, let a = r.id { map[f] = a } }
-            return map
-        case .lidarr:
-            let url = try http.url(base: config.baseURL, path: "\(apiBase)/artist")
-            let data = try await http.get(url, headers: headers)
-            let records = (try? JSONDecoder().decode([LidarrLibraryRecord].self, from: data)) ?? []
-            var map: [Int: Int] = [:]
-            for r in records {
-                if let fid = r.foreignArtistId, let a = r.id {
-                    map[abs(fid.hashValue) & 0x7fffffff] = a
-                }
-            }
-            return map
-        case .whisparr:
-            let url = try http.url(base: config.baseURL, path: "\(apiBase)/movie")
-            let data = try await http.get(url, headers: headers)
-            let records = (try? JSONDecoder().decode([WhisparrLibraryRecord].self, from: data)) ?? []
-            var map: [Int: Int] = [:]
-            for rec in records {
-                let foreign: Int? = {
-                    if let tmdbId = rec.tmdbId, tmdbId != 0 { return tmdbId }
-                    if let fid = rec.foreignId { return abs(fid.hashValue) & 0x7fffffff }
-                    return nil
-                }()
-                if let f = foreign, let a = rec.id { map[f] = a }
-            }
-            return map
+        case .radarr:   return await ArrLibraryMaps.radarrByTMDBId(config: config)
+        case .sonarr:   return await ArrLibraryMaps.sonarrByTVDBId(config: config)
+        case .lidarr:   return await ArrLibraryMaps.lidarrByForeignArtistHash(config: config)
+        case .whisparr: return await ArrLibraryMaps.whisparrByForeignId(config: config)
         }
     }
 
@@ -532,7 +499,7 @@ public actor SearchClient {
             stableId = tmdb
             foreign = String(tmdb)
         } else if let fid = r.foreignId, !fid.isEmpty {
-            stableId = abs(fid.hashValue) & 0x7fffffff
+            stableId = ArrLibraryMaps.foreignHashKey(fid)
             foreign = fid
         } else {
             return nil
@@ -563,7 +530,7 @@ public actor SearchClient {
     internal static func unifyLidarrAlbum(_ r: LidarrAlbumLookupRecord, baseURL: String, sourceRank: Int = 0) -> SearchResult? {
         guard let foreign = r.foreignAlbumId, !foreign.isEmpty else { return nil }
         let (poster, _) = r.images?.posterURL(baseURL: baseURL, coverTypes: ["cover", "poster"]) ?? (nil, false)
-        let stableId = abs(foreign.hashValue) & 0x7fffffff
+        let stableId = ArrLibraryMaps.foreignHashKey(foreign)
         let year = r.releaseDate.flatMap { parseArrDate($0) }.map {
             Calendar.current.component(.year, from: $0)
         }
@@ -602,7 +569,7 @@ public actor SearchClient {
     internal static func unifyLidarr(_ r: LidarrLookupRecord, baseURL: String, sourceRank: Int = 0) -> SearchResult? {
         guard let foreign = r.foreignArtistId, !foreign.isEmpty else { return nil }
         let (poster, _) = r.images?.posterURL(baseURL: baseURL, coverTypes: ["poster", "cover"]) ?? (nil, false)
-        let stableId = abs(foreign.hashValue) & 0x7fffffff
+        let stableId = ArrLibraryMaps.foreignHashKey(foreign)
         return SearchResult(
             externalId: stableId,
             foreignId: foreign,
