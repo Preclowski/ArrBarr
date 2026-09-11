@@ -563,13 +563,8 @@ public final class SearchViewModel {
             // The POST returns the ALBUM record — deep-link straight into the
             // album detail (unlike the artist add, which lands on the artist).
             guard let arrId else { return }
-            DetailRequest.post(DetailRequest.syntheticItem(
-                source: .lidarr,
-                entityId: arrId,
-                title: result.title,
-                posterURL: result.posterURL,
-                posterRequiresAuth: false
-            ))
+            DetailRequest.open(source: .lidarr, arrId: arrId, title: result.title,
+                               posterURL: result.posterURL, isLidarrAlbum: true)
         } catch {
             addError = error.localizedDescription
         }
@@ -582,25 +577,8 @@ public final class SearchViewModel {
     /// add still succeeded, we just can't deep-link to it.
     private func navigateToAdded(_ result: SearchResult, source: QueueItem.Source, arrId: Int?) {
         guard let arrId else { return }
-        // Lidarr's POST /artist returns an ARTIST id — route to the artist
-        // view; the album-shaped DetailView would fetch /album/{artistId}
-        // and land on an unrelated album.
-        if source == .lidarr {
-            DetailRequest.post(DetailRequest.syntheticArtistItem(
-                artistId: arrId,
-                name: result.title,
-                posterURL: result.posterURL,
-                posterRequiresAuth: false
-            ))
-            return
-        }
-        DetailRequest.post(DetailRequest.syntheticItem(
-            source: source,
-            entityId: arrId,
-            title: result.title,
-            posterURL: result.posterURL,
-            posterRequiresAuth: false
-        ))
+        DetailRequest.open(source: source, arrId: arrId, title: result.title,
+                           posterURL: result.posterURL, posterRequiresAuth: false)
     }
 
     private func client(for source: QueueItem.Source) -> SearchClient? {

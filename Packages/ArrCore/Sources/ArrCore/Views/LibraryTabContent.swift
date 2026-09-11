@@ -760,25 +760,11 @@ private extension LibraryEntry {
         sizeOnDisk > 0 ? ByteCountFormatter.string(fromByteCount: sizeOnDisk, countStyle: .file) : nil
     }
 
-    /// Tap routes through DetailRequest so the arr's full record opens in the
-    /// same DetailView the queue rows use (Lidarr → the artist surface).
+    /// Tap routes through `DetailRequest.open` so the arr's full record opens
+    /// in the same DetailView the queue rows use (Lidarr → the artist surface).
     func openDetail() {
-        if source == .lidarr {
-            DetailRequest.post(DetailRequest.syntheticArtistItem(
-                artistId: arrId,
-                name: title,
-                posterURL: posterURL,
-                posterRequiresAuth: posterRequiresAuth
-            ))
-        } else {
-            DetailRequest.post(DetailRequest.syntheticItem(
-                source: source,
-                entityId: arrId,
-                title: title,
-                posterURL: posterURL,
-                posterRequiresAuth: posterRequiresAuth
-            ))
-        }
+        DetailRequest.open(source: source, arrId: arrId, title: title,
+                           posterURL: posterURL, posterRequiresAuth: posterRequiresAuth)
     }
 }
 
