@@ -60,18 +60,10 @@ public struct PopoverContentView: View {
     /// EpisodeQuickDetail. Registered as a sibling navigationDestination
     /// on the root NavigationStack so SwiftUI doesn't get confused
     /// about insertion order when the binding fires from a deeper view.
-    /// Queue tab filter — substring match against item titles. Mirrors
-    /// the search view's floating bar (same `.glassyFloatingBar()`
-    /// chrome). When non-empty, tonight/needsYou sections collapse out
-    /// (they're status-based, not search-targets) and every arr
-    /// section drops rows whose title doesn't contain the substring.
-    @State private var queueFilter: String = ""
-    @FocusState private var queueFilterFocused: Bool
-    /// Source scope for the queue filter / search bar. `nil` = all
-    /// arrs; setting a concrete source narrows both the queue filter
-    /// (rows from other arrs hidden) AND the search query (only that
-    /// arr is asked for library / add-new hits).
-    @State private var queueScope: QueueItem.Source? = nil
+    /// The macOS search capsule's focus, owned here because ⌘N, the Add intent
+    /// and the search intent all aim at it from outside any tab. Passed down to
+    /// whichever tab is rendering the capsule.
+    @FocusState private var searchFieldFocused: Bool
     /// Second-axis filter: which class of result to show. `.all`
     /// shows queue + library + new. `.inQueue` collapses to queue
     /// rows only (useful for "where's my Foo?" when the search would
@@ -121,24 +113,19 @@ public struct PopoverContentView: View {
         searchResult != nil || detailItem != nil
     }
 
-    private var isFiltering: Bool { searchViewModel.isActive }
-
-    /// Put the caret in the tab's text field so the panel is typeable the
-    /// instant it opens.
+    /// Put the caret in the search capsule so the panel is typeable the instant
+    /// it opens.
     ///
-    /// Queue only — its floating bar is the global search, and ⌘N plus the Add
-    /// intent aim at it from out here too. Upcoming has no field to focus, and
-    /// Chat and Library each focus their own on appear (the field lives inside
-    /// `ChatView` / `LibraryTabContent`, and it appears both on open and on tab
-    /// switch, so driving it from here would just be a second owner of the same
-    /// state).
+    /// Queue AND Library: they render the SAME capsule, bound to the same
+    /// query, so there is one field to focus and one owner of that focus.
+    /// Upcoming has no field; Chat focuses its own composer on appear.
     ///
     /// Hopped to the next main-actor turn rather than set inline: on the
     /// `onAppear` pass the field isn't in the responder chain yet, and an
     /// assignment made before it is there is silently dropped.
     private func focusInputForCurrentTab() {
-        guard selectedTab == .queue else { return }
-        Task { @MainActor in queueFilterFocused = true }
+        guard selectedTab == .queue || selectedTab == .library else { return }
+        Task { @MainActor in searchFieldFocused = true }
     }
 
     /// Queue rows that are for a specific Sonarr episode (season pack
@@ -280,7 +267,7 @@ public struct PopoverContentView: View {
                     withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
                         selectedTab = .queue
                     }
-                    queueFilterFocused = true
+                    searchFieldFocused = true
                 }
                 .keyboardShortcut("n", modifiers: .command)
                 .opacity(0)
@@ -310,13 +297,14 @@ public struct PopoverContentView: View {
                 withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
                     selectedTab = .queue
                 }
-                queueFilterFocused = true
+                searchFieldFocused = true
             }
             // Search-to-add App Intent. The menu-bar popover can't be opened
             // programmatically, so this stages the query for whenever it opens.
             .onReceive(NotificationCenter.default.publisher(for: .arrBarrSearchQuery)) { note in
                 guard let q = note.userInfo?["query"] as? String else { return }
                 selectedTab = .queue
+                // The `didSet` runs the search; there is nothing to mirror.
                 searchViewModel.query = q
             }
             .onReceive(NotificationCenter.default.publisher(for: .arrBarrOpenDetail)) { note in
@@ -454,12 +442,12 @@ public struct PopoverContentView: View {
                         onClose: { self.historySource = nil }
                     )
                 } else if anyArrConfigured {
-                    // Tab bar hides while a queue-filter / search
-                    // query is live — search becomes a full-size
-                    // surface (back chevron in the top strip is the
-                    // only nav affordance you need). Tabs reappear
-                    // the moment the query clears.
-                    if !(selectedTab == .queue && isFiltering) {
+                    // Tab bar hides while a query is live — search becomes a
+                    // full-size surface on BOTH tabs (the back chevron in the
+                    // top strip is the only nav affordance you need). Tabs
+                    // reappear the moment the query clears.
+                    if !(searchViewModel.isActive
+                         && (selectedTab == .queue || selectedTab == .library)) {
                         tabBar
                     }
                     Group {
@@ -468,7 +456,7 @@ public struct PopoverContentView: View {
                             QueueTabContent(
                                 viewModel: viewModel,
                                 searchViewModel: searchViewModel,
-                                searchFieldFocused: $queueFilterFocused,
+                                searchFieldFocused: $searchFieldFocused,
                                 detailItem: $detailItem,
                                 historySource: $historySource,
                                 searchResult: $searchResult,
@@ -759,15 +747,12 @@ public struct PopoverContentView: View {
                         storeManager.gate(.chat)
                         return
                     }
-                    // Re-tapping the active queue tab clears the
-                    // filter + scope — gives the user a "reset to
-                    // home" affordance that doesn't need its own
-                    // chrome (Spotify / Apple Music tab-bar idiom).
-                    if tab == .queue && selectedTab == .queue {
-                        if isFiltering {
-                            withAnimation(.easeOut(duration: 0.18)) {
-                                searchViewModel.query = ""
-                            }
+                    // Re-tapping the active tab clears a live query — a
+                    // "reset to home" affordance that needs no chrome of its
+                    // own (Spotify / Apple Music tab-bar idiom).
+                    if tab == selectedTab, searchViewModel.isActive {
+                        withAnimation(.easeOut(duration: 0.18)) {
+                            searchViewModel.query = ""
                         }
                     }
                     withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) { selectedTab = tab }
