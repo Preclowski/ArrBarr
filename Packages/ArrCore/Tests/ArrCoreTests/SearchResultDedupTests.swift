@@ -16,9 +16,9 @@ struct SearchResultDedupTests {
         )
     }
 
-    private func queueItem(entityId: Int?) -> QueueItem {
+    private func queueItem(entityId: Int?, source: QueueItem.Source = .radarr) -> QueueItem {
         QueueItem(
-            id: "q\(entityId ?? -1)", source: .radarr, arrQueueId: 1,
+            id: "q\(entityId ?? -1)", source: source, arrQueueId: 1,
             downloadId: nil, downloadProtocol: .unknown,
             downloadClient: nil, indexer: nil,
             title: "t", subtitle: nil,
@@ -33,108 +33,109 @@ struct SearchResultDedupTests {
         )
     }
 
-    @Test("Result whose inLibraryArrId matches a singleton queue entityId is removed")
+    private func libraryEntry(arrId: Int, source: QueueItem.Source = .radarr) -> LibraryEntry {
+        LibraryEntry(
+            id: "\(source.rawValue)-\(arrId)", source: source, arrId: arrId,
+            title: "t", year: nil, posterURL: nil, posterRequiresAuth: false,
+            state: .complete, sizeOnDisk: 0, fileCount: nil, totalCount: nil,
+            fileQuality: nil, profileName: nil, customFormats: [], customFormatScore: 0,
+            fileName: nil, genres: [], runtime: nil, certification: nil,
+            ratingImdb: nil, ratingTmdb: nil, ratingArr: nil,
+            releaseStatus: nil, searchIndex: TitleMatch.searchIndex(["t"])
+        )
+    }
+
+    // MARK: - Queue hits
+
+    @Test("An owned row the queue is already showing is removed")
     func removesMatchingSingleton() {
-        let lib = [result(id: 1, inLibraryArrId: 42), result(id: 2, inLibraryArrId: 99)]
-        let queue: [QueueRowEntry] = [.single(queueItem(entityId: 42))]
-        let out = SearchResultDedup.removingQueueDuplicates(libraryResults: lib, queueRows: queue)
+        let results = [result(id: 1, inLibraryArrId: 42), result(id: 2, inLibraryArrId: 99)]
+        let hits: [LocalHit] = [.queue(.single(queueItem(entityId: 42)))]
+        let out = SearchResultDedup.removingLocalDuplicates(results: results, localHits: hits)
         #expect(out.map(\.externalId) == [2])
     }
 
-    @Test("Result matching any member of a group is removed")
+    @Test("A group contributes every item it packs")
     func removesMatchingGroupMember() {
-        let lib = [result(id: 1, inLibraryArrId: 7)]
+        let results = [result(id: 1, inLibraryArrId: 7)]
         let group = QueueGroup(id: "g", items: [queueItem(entityId: 5), queueItem(entityId: 7)])
-        let queue: [QueueRowEntry] = [.group(group)]
-        let out = SearchResultDedup.removingQueueDuplicates(libraryResults: lib, queueRows: queue)
+        let hits: [LocalHit] = [.queue(.group(group))]
+        let out = SearchResultDedup.removingLocalDuplicates(results: results, localHits: hits)
         #expect(out.isEmpty)
-    }
-
-    @Test("Results with nil inLibraryArrId are never removed")
-    func keepsNilLibraryId() {
-        let lib = [result(id: 1, inLibraryArrId: nil)]
-        let queue: [QueueRowEntry] = [.single(queueItem(entityId: 42))]
-        let out = SearchResultDedup.removingQueueDuplicates(libraryResults: lib, queueRows: queue)
-        #expect(out.map(\.externalId) == [1])
     }
 
     @Test("Queue items with nil entityId never match")
     func nilEntityIdsDontMatch() {
-        let lib = [result(id: 1, inLibraryArrId: 42)]
-        let queue: [QueueRowEntry] = [.single(queueItem(entityId: nil))]
-        let out = SearchResultDedup.removingQueueDuplicates(libraryResults: lib, queueRows: queue)
+        let results = [result(id: 1, inLibraryArrId: 42)]
+        let hits: [LocalHit] = [.queue(.single(queueItem(entityId: nil)))]
+        let out = SearchResultDedup.removingLocalDuplicates(results: results, localHits: hits)
         #expect(out.map(\.externalId) == [1])
     }
 
-    @Test("Empty queue passes library through unchanged")
-    func emptyQueue() {
-        let lib = [result(id: 1, inLibraryArrId: 42), result(id: 2, inLibraryArrId: 99)]
-        let out = SearchResultDedup.removingQueueDuplicates(libraryResults: lib, queueRows: [])
-        #expect(out.map(\.externalId) == [1, 2])
-    }
+    // MARK: - Library hits
 
-    @Test("Preserves order of surviving results")
-    func preservesOrder() {
-        let lib = [
-            result(id: 1, inLibraryArrId: 1),
-            result(id: 2, inLibraryArrId: 2),
-            result(id: 3, inLibraryArrId: 3),
-        ]
-        let queue: [QueueRowEntry] = [.single(queueItem(entityId: 2))]
-        let out = SearchResultDedup.removingQueueDuplicates(libraryResults: lib, queueRows: queue)
-        #expect(out.map(\.externalId) == [1, 3])
-    }
-
-    // MARK: - Library-grid dedup (Library tab's lookup section)
-
-    @Test("Same-arr in-library result the grid already matched is removed")
-    func gridDropsLocallyMatchedOwnedResult() {
+    @Test("An owned row the browsed library already shows is removed")
+    func removesLocallyMatchedLibraryEntry() {
         let results = [
             result(id: 1, source: .radarr, inLibraryArrId: 42),
             result(id: 2, source: .radarr, inLibraryArrId: nil),
         ]
-        let out = SearchResultDedup.removingGridDuplicates(
-            results: results, gridSource: .radarr, gridArrIds: [42])
+        let hits: [LocalHit] = [.library(libraryEntry(arrId: 42))]
+        let out = SearchResultDedup.removingLocalDuplicates(results: results, localHits: hits)
         #expect(out.map(\.externalId) == [2])
     }
 
-    @Test("Same-arr in-library result the local alias match missed is kept")
-    func gridKeepsAliasMissedOwnedResult() {
+    @Test("An owned row the local match missed is kept")
+    func keepsAliasMissedOwnedResult() {
         let results = [result(id: 1, source: .radarr, inLibraryArrId: 42)]
-        let out = SearchResultDedup.removingGridDuplicates(
-            results: results, gridSource: .radarr, gridArrIds: [7])
+        let hits: [LocalHit] = [.library(libraryEntry(arrId: 7))]
+        let out = SearchResultDedup.removingLocalDuplicates(results: results, localHits: hits)
         #expect(out.map(\.externalId) == [1])
     }
 
-    @Test("In-library result owned by a different arr is kept even on id collision")
-    func gridKeepsOtherArrOwnedResult() {
+    // MARK: - Invariants
+
+    @Test("An id collision across arrs never drops a row")
+    func keepsOtherArrOwnedResult() {
         let results = [result(id: 1, source: .sonarr, inLibraryArrId: 42)]
-        let out = SearchResultDedup.removingGridDuplicates(
-            results: results, gridSource: .radarr, gridArrIds: [42])
+        let hits: [LocalHit] = [
+            .library(libraryEntry(arrId: 42, source: .radarr)),
+            .queue(.single(queueItem(entityId: 42, source: .radarr))),
+        ]
+        let out = SearchResultDedup.removingLocalDuplicates(results: results, localHits: hits)
         #expect(out.map(\.externalId) == [1])
     }
 
-    @Test("Add-new results are never removed")
-    func gridKeepsAddNewResults() {
+    @Test("Add-new rows are never removed")
+    func keepsAddNewResults() {
         let results = [
             result(id: 1, source: .radarr, inLibraryArrId: nil),
             result(id: 2, source: .sonarr, inLibraryArrId: nil),
         ]
-        let out = SearchResultDedup.removingGridDuplicates(
-            results: results, gridSource: .radarr, gridArrIds: [1, 2])
+        let hits: [LocalHit] = [
+            .library(libraryEntry(arrId: 1)),
+            .queue(.single(queueItem(entityId: 2))),
+        ]
+        let out = SearchResultDedup.removingLocalDuplicates(results: results, localHits: hits)
         #expect(out.map(\.externalId) == [1, 2])
     }
 
-    @Test("Grid dedup preserves order of survivors")
-    func gridPreservesOrder() {
+    @Test("No local hits passes everything through unchanged")
+    func emptyLocalHits() {
+        let results = [result(id: 1, inLibraryArrId: 42), result(id: 2, inLibraryArrId: 99)]
+        let out = SearchResultDedup.removingLocalDuplicates(results: results, localHits: [])
+        #expect(out.map(\.externalId) == [1, 2])
+    }
+
+    @Test("Preserves the order of survivors")
+    func preservesOrder() {
         let results = [
-            result(id: 1, source: .radarr, inLibraryArrId: nil),
-            result(id: 2, source: .radarr, inLibraryArrId: 5),
-            result(id: 3, source: .sonarr, inLibraryArrId: 6),
-            result(id: 4, source: .radarr, inLibraryArrId: nil),
+            result(id: 1, inLibraryArrId: 1),
+            result(id: 2, inLibraryArrId: 2),
+            result(id: 3, inLibraryArrId: 3),
         ]
-        let out = SearchResultDedup.removingGridDuplicates(
-            results: results, gridSource: .radarr, gridArrIds: [5])
-        #expect(out.map(\.externalId) == [1, 3, 4])
+        let hits: [LocalHit] = [.queue(.single(queueItem(entityId: 2)))]
+        let out = SearchResultDedup.removingLocalDuplicates(results: results, localHits: hits)
+        #expect(out.map(\.externalId) == [1, 3])
     }
 }

@@ -249,12 +249,10 @@ struct LibraryTabContent: View {
         guard !trimmedFilter.isEmpty else { return [] }
         let all = searchVM.radarrResults + searchVM.sonarrResults
             + searchVM.lidarrResults + searchVM.whisparrResults
-        let localIds = Set(
-            TitleMatch.indexedFilter(allEntries, query: trimmedFilter, index: \.searchIndex)
-                .map(\.arrId)
-        )
-        let kept = SearchResultDedup.removingGridDuplicates(
-            results: all, gridSource: source, gridArrIds: localIds)
+        let localHits = TitleMatch.indexedFilter(allEntries, query: trimmedFilter,
+                                                 index: \.searchIndex)
+            .map(LocalHit.library)
+        let kept = SearchResultDedup.removingLocalDuplicates(results: all, localHits: localHits)
         return SearchRelevance.sortedByRelevance(kept, input: searchVM.parsedInput)
     }
 

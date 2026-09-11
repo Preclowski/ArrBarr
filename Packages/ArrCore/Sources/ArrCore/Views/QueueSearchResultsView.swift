@@ -23,11 +23,10 @@ struct QueueSearchResultsView: View {
 
     var body: some View {
         let queueRows = scopedSources.flatMap { entries(for: $0) }
+        let localHits = queueRows.map(LocalHit.queue)
         let rawLibrary = scopedSources.flatMap { libraryResults(for: $0) }
-        let library = SearchResultDedup.removingQueueDuplicates(
-            libraryResults: rawLibrary,
-            queueRows: queueRows
-        )
+        let library = SearchResultDedup.removingLocalDuplicates(
+            results: rawLibrary, localHits: localHits)
         let newOnes = scopedSources.flatMap { newResults(for: $0) }
         let combined = SearchRelevance.sortedByRelevance(library + newOnes, input: searchViewModel.parsedInput)
         // Refining a query ("matrix" → "matrix 2") keeps the previous rows up
