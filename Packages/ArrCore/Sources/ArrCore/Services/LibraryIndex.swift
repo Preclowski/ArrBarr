@@ -1,7 +1,7 @@
 import Foundation
 
-/// One cached copy of the Sonarr / Radarr libraries, shared by every tool that
-/// needs to know what the user owns.
+/// One cached copy of the Radarr / Sonarr / Lidarr / Whisparr libraries,
+/// shared by every tool that needs to know what the user owns.
 ///
 /// Before this, each tool fetched the whole library itself: `radarr_get_movies`
 /// fetched it, and so did the ownership cross-reference behind `suggest_titles`,
@@ -33,12 +33,35 @@ public actor LibraryIndex {
 
     private var movieSlot: Slot<RadarrLibraryRecord>?
     private var seriesSlot: Slot<SonarrLibraryRecord>?
+    private var artistSlot: Slot<LidarrLibraryRecord>?
+    private var whisparrSlot: Slot<WhisparrLibraryRecord>?
     /// One in-flight fetch per source. Without it, three tools called in the
     /// same turn each start their own fetch of a cold cache.
-    private var movieFetch: Task<[RadarrLibraryRecord], Never>?
-    private var seriesFetch: Task<[SonarrLibraryRecord], Never>?
+    private var movieFetch: Task<[RadarrLibraryRecord]?, Never>?
+    private var seriesFetch: Task<[SonarrLibraryRecord]?, Never>?
+    private var artistFetch: Task<[LidarrLibraryRecord]?, Never>?
+    private var whisparrFetch: Task<[WhisparrLibraryRecord]?, Never>?
+
+    /// Monotonic per-source counter, bumped on every fresh commit and every
+    /// invalidate. `LibraryViewModel` unifies against it: same version means
+    /// the records behind it are the same objects, so re-unifying a 3000-title
+    /// library would be pure waste.
+    private var versions: [QueueItem.Source: Int] = [:]
+    /// True when the LAST fetch for a source threw. The reads return `[]` (or
+    /// a stale snapshot) either way, so this is the only thing that can tell
+    /// "the arr is unreachable" from "the library is genuinely empty" — the
+    /// Library tab's error state depends on the difference.
+    private var failedSources: Set<QueueItem.Source> = []
 
     init() {}
+
+    // MARK: - Versions
+
+    public func version(for source: QueueItem.Source) -> Int { versions[source] ?? 0 }
+
+    public func fetchFailed(_ source: QueueItem.Source) -> Bool {
+        failedSources.contains(source)
+    }
 
     // MARK: - Reads
 
@@ -48,22 +71,16 @@ public actor LibraryIndex {
         if let slot = movieSlot, slot.fingerprint == fingerprint, Self.isFresh(slot.fetchedAt) {
             return slot.records
         }
-        if let inFlight = movieFetch { return await inFlight.value }
-        let task = Task<[RadarrLibraryRecord], Never> {
-            (try? await RadarrClient(config: config).fetchAllMovies()) ?? []
+        if let inFlight = movieFetch { return commit(await inFlight.value, .radarr, &movieSlot, fingerprint) }
+        let task = Task<[RadarrLibraryRecord]?, Never> {
+            try? await RadarrClient(config: config).fetchAllMovies()
         }
         movieFetch = task
         let records = await task.value
         movieFetch = nil
-        // A failed fetch keeps whatever we had: a momentarily unreachable arr
-        // must not turn into "your library is empty", which reads as "you own
-        // nothing" everywhere downstream.
-        if records.isEmpty, let slot = movieSlot, slot.fingerprint == fingerprint {
-            return slot.records
-        }
-        movieSlot = Slot(records: records, fetchedAt: Date(), fingerprint: fingerprint)
-        LibraryStats.shared.setMovieCount(records.count)
-        return records
+        let out = commit(records, .radarr, &movieSlot, fingerprint)
+        LibraryStats.shared.setMovieCount(out.count)
+        return out
     }
 
     public func series(config: ServiceConfig) async -> [SonarrLibraryRecord] {
@@ -72,32 +89,97 @@ public actor LibraryIndex {
         if let slot = seriesSlot, slot.fingerprint == fingerprint, Self.isFresh(slot.fetchedAt) {
             return slot.records
         }
-        if let inFlight = seriesFetch { return await inFlight.value }
-        let task = Task<[SonarrLibraryRecord], Never> {
-            (try? await SonarrClient(config: config).fetchAllSeries()) ?? []
+        if let inFlight = seriesFetch { return commit(await inFlight.value, .sonarr, &seriesSlot, fingerprint) }
+        let task = Task<[SonarrLibraryRecord]?, Never> {
+            try? await SonarrClient(config: config).fetchAllSeries()
         }
         seriesFetch = task
         let records = await task.value
         seriesFetch = nil
-        if records.isEmpty, let slot = seriesSlot, slot.fingerprint == fingerprint {
+        let out = commit(records, .sonarr, &seriesSlot, fingerprint)
+        LibraryStats.shared.setSeriesCount(out.count)
+        return out
+    }
+
+    /// Lidarr artists. Same slot / in-flight / TTL / keep-stale-on-failure
+    /// rules as movies and series — the Library grid and search ownership now
+    /// read the artist list from here instead of fetching it twice.
+    public func artists(config: ServiceConfig) async -> [LidarrLibraryRecord] {
+        guard config.isConfigured else { return [] }
+        let fingerprint = config.identityFingerprint
+        if let slot = artistSlot, slot.fingerprint == fingerprint, Self.isFresh(slot.fetchedAt) {
             return slot.records
         }
-        seriesSlot = Slot(records: records, fetchedAt: Date(), fingerprint: fingerprint)
-        LibraryStats.shared.setSeriesCount(records.count)
+        if let inFlight = artistFetch { return commit(await inFlight.value, .lidarr, &artistSlot, fingerprint) }
+        let task = Task<[LidarrLibraryRecord]?, Never> {
+            try? await LidarrClient(config: config).fetchAllArtists()
+        }
+        artistFetch = task
+        let records = await task.value
+        artistFetch = nil
+        return commit(records, .lidarr, &artistSlot, fingerprint)
+    }
+
+    /// Whisparr scenes/movies — same rules again.
+    public func whisparrMovies(config: ServiceConfig) async -> [WhisparrLibraryRecord] {
+        guard config.isConfigured else { return [] }
+        let fingerprint = config.identityFingerprint
+        if let slot = whisparrSlot, slot.fingerprint == fingerprint, Self.isFresh(slot.fetchedAt) {
+            return slot.records
+        }
+        if let inFlight = whisparrFetch { return commit(await inFlight.value, .whisparr, &whisparrSlot, fingerprint) }
+        let task = Task<[WhisparrLibraryRecord]?, Never> {
+            try? await WhisparrClient(config: config).fetchAllMovies()
+        }
+        whisparrFetch = task
+        let records = await task.value
+        whisparrFetch = nil
+        return commit(records, .whisparr, &whisparrSlot, fingerprint)
+    }
+
+    /// One commit rule for all four sources.
+    ///
+    /// `nil` means the fetch threw. A failed fetch keeps whatever we had — a
+    /// momentarily unreachable arr must not turn into "your library is empty",
+    /// which reads as "you own nothing" everywhere downstream — and leaves the
+    /// version where it was, so nobody downstream re-unifies for nothing.
+    /// An empty-but-successful fetch IS a commit: a genuinely empty library is
+    /// an answer, not a failure.
+    private func commit<Record: Sendable>(
+        _ records: [Record]?,
+        _ source: QueueItem.Source,
+        _ slot: inout Slot<Record>?,
+        _ fingerprint: String
+    ) -> [Record] {
+        guard let records else {
+            failedSources.insert(source)
+            if let slot, slot.fingerprint == fingerprint { return slot.records }
+            return []
+        }
+        failedSources.remove(source)
+        slot = Slot(records: records, fetchedAt: Date(), fingerprint: fingerprint)
+        versions[source, default: 0] += 1
         return records
     }
 
     // MARK: - Invalidation
 
-    /// Drop a source's snapshot. Called when an import lands and after the
-    /// agent itself changes library state, so the next answer can't contradict
+    /// Expire a source's snapshot. Called when an import lands and after the
+    /// app itself changes library state, so the next answer can't contradict
     /// the action the user just watched happen.
+    ///
+    /// The slot is EXPIRED rather than dropped: the next read refetches, and
+    /// if that refetch fails the stale records are still there to fall back
+    /// on. Dropping it would turn "the arr is down right after an add" into an
+    /// empty library.
     public func invalidate(_ source: QueueItem.Source) {
         switch source {
-        case .radarr: movieSlot = nil
-        case .sonarr: seriesSlot = nil
-        default: break
+        case .radarr:   movieSlot?.fetchedAt = .distantPast
+        case .sonarr:   seriesSlot?.fetchedAt = .distantPast
+        case .lidarr:   artistSlot?.fetchedAt = .distantPast
+        case .whisparr: whisparrSlot?.fetchedAt = .distantPast
         }
+        versions[source, default: 0] += 1
     }
 
     /// Fire-and-forget form for synchronous call sites (the realtime event
