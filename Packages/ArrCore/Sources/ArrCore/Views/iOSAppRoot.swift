@@ -46,8 +46,6 @@ public struct iOSAppRoot: View {
 
     enum RootTab: Hashable { case queue, library, upcoming, chat, settings }
 
-    private var iosSearchScopes: [SearchScope] { SearchScope.available(for: configStore) }
-
     /// "More picks like these" is a chat turn — the mood and the already-shown
     /// titles are in the conversation, so the model has the context without us
     /// stuffing them into the visible message.
@@ -123,9 +121,7 @@ public struct iOSAppRoot: View {
         // An empty search field left open behind a tab switch is just chrome
         // taking a row; one with a query is a result set worth returning to.
         .onChange(of: selectedTab) { _, _ in
-            if searchVM.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                searchPresented = false
-            }
+            if !searchVM.isActive { searchPresented = false }
         }
         // Posted by the `discover_in_quiz` chat tool and by the resume card.
         // userInfo carries the mood label, pre-resolved items and an optional
@@ -328,12 +324,6 @@ private struct QueueTab: View {
         // out of the mode. Mail and Files drop their search bar there too.
         .modifier(SearchField(searchVM: searchVM, enabled: !selecting,
                               isPresented: $searchPresented))
-        .onChange(of: searchVM.query) { _, new in
-            if new.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                searchVM.scope = .all
-            }
-            searchVM.onQueryChange()
-        }
         .onAppear {
             searchVM.setup(
                 radarrConfig: configStore.radarr,
@@ -348,7 +338,6 @@ private struct QueueTab: View {
             guard let q = note.userInfo?["query"] as? String else { return }
             searchResult = nil
             searchVM.query = q
-            searchVM.onQueryChange()
         }
         .personDestination($personRef)
         .navigationDestination(item: $detailItem) { item in
