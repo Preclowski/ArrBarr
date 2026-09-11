@@ -8,9 +8,22 @@ import Foundation
 private final class LibraryVMStubState: @unchecked Sendable {
     private let lock = NSLock()
     private var _movieHits = 0
+    /// Ports whose arr is "down" — every request to them answers 500. Keyed by
+    /// port so one test can hold a healthy arr and a broken one side by side.
+    private var _failingPorts = Set<Int>()
     var movieHits: Int { lock.lock(); defer { lock.unlock() }; return _movieHits }
     func countMovie() { lock.lock(); defer { lock.unlock() }; _movieHits += 1 }
-    func reset() { lock.lock(); defer { lock.unlock() }; _movieHits = 0 }
+    func fail(port: Int) { lock.lock(); defer { lock.unlock() }; _failingPorts.insert(port) }
+    func heal(port: Int) { lock.lock(); defer { lock.unlock() }; _failingPorts.remove(port) }
+    func isFailing(port: Int?) -> Bool {
+        lock.lock(); defer { lock.unlock() }
+        return port.map(_failingPorts.contains) ?? false
+    }
+    func reset() {
+        lock.lock(); defer { lock.unlock() }
+        _movieHits = 0
+        _failingPorts.removeAll()
+    }
 }
 
 private final class LibraryVMStub: URLProtocol, @unchecked Sendable {
@@ -24,6 +37,15 @@ private final class LibraryVMStub: URLProtocol, @unchecked Sendable {
 
     override func startLoading() {
         let url = request.url ?? URL(string: "about:blank")!
+        if Self.state.isFailing(port: url.port) {
+            if url.path.hasSuffix("/movie") { Self.state.countMovie() }
+            let response = HTTPURLResponse(url: url, statusCode: 500,
+                                           httpVersion: "HTTP/1.1", headerFields: [:])!
+            client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+            client?.urlProtocol(self, didLoad: Data("{}".utf8))
+            client?.urlProtocolDidFinishLoading(self)
+            return
+        }
         let body: String
         if url.path.hasSuffix("/movie") {
             Self.state.countMovie()
@@ -93,6 +115,35 @@ struct LibraryViewModelTests {
         await vm.loadIfNeeded(source: .radarr, config: cfg)
         await vm.loadIfNeeded(source: .radarr, config: cfg, force: true)
         #expect(LibraryVMStub.state.movieHits == 2)
+    }
+
+    @Test("A failed refetch keeps the grid up and retries on the next load")
+    func failedRefetchKeepsEntriesAndRetries() async {
+        LibraryVMStub.state.reset()
+        URLProtocol.registerClass(LibraryVMStub.self)
+        defer { URLProtocol.unregisterClass(LibraryVMStub.self) }
+
+        let vm = LibraryViewModel()
+        await vm.loadIfNeeded(source: .radarr, config: config(port: 17304))
+        #expect(vm.entries[.radarr]?.count == 1)
+        #expect(LibraryVMStub.state.movieHits == 1)
+
+        // A different arr that is down: the index has no snapshot for it, so
+        // the failed fetch comes back EMPTY rather than stale. Committing that
+        // is what used to blank a grid that was fine a second ago.
+        let broken = config(port: 17305)
+        LibraryVMStub.state.fail(port: 17305)
+        await vm.loadIfNeeded(source: .radarr, config: broken, force: true)
+        #expect(vm.entries[.radarr]?.count == 1)
+        // Something IS on screen, so this is not the tab's error state.
+        #expect(!vm.loadFailed.contains(.radarr))
+
+        // …and the failed load must not count as done: the next one retries.
+        LibraryVMStub.state.heal(port: 17305)
+        let hitsBefore = LibraryVMStub.state.movieHits
+        await vm.loadIfNeeded(source: .radarr, config: broken)
+        #expect(LibraryVMStub.state.movieHits == hitsBefore + 1)
+        #expect(vm.entries[.radarr]?.count == 1)
     }
 
     @Test("An unreachable arr with nothing cached sets loadFailed")

@@ -186,17 +186,20 @@ public final class LibraryViewModel {
                                baseURL: config.baseURL, profiles: profiles)
         }
 
-        // The index swallows the error and hands back a stale snapshot (or
-        // nothing). Keep any stale cache on screen; the flag only surfaces an
-        // error state when there is nothing at all to show. That quietness is
-        // right for the UI and wrong for diagnosis, so the failure is said out
-        // loud in the log.
+        // The index swallows the error and hands back a stale snapshot — or,
+        // when it has no snapshot that covers this config, NOTHING. So a failed
+        // fetch never commits: `fresh` may legitimately be empty, and writing
+        // that over a grid that was fine a second ago is the worst answer this
+        // app can give ("you own nothing"). Whatever is on screen stays, and
+        // the flag only surfaces an error state when there is nothing at all
+        // to show. Returning here also leaves `indexVersions` unwritten, so the
+        // next `loadIfNeeded` retries instead of treating the failure as done.
+        // That quietness is right for the UI and wrong for diagnosis, so the
+        // failure is said out loud in the log.
         if await LibraryIndex.shared.fetchFailed(source) {
             Self.log.error("\(source.rawValue, privacy: .public) library load failed — index reports an unreachable arr")
-            if entries[source] == nil {
-                loadFailed.insert(source)
-                return
-            }
+            if entries[source] == nil { loadFailed.insert(source) }
+            return
         }
 
         entries[source] = fresh
