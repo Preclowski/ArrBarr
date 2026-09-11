@@ -6,12 +6,12 @@ import Foundation
 /// own section rather than interleaved with titles).
 ///
 /// Score = how much of the query the name covers (order-free, punctuation
-/// folded — reusing `SearchRelevance.normalize`) weighted by the person's TMDB
+/// folded — reusing `TitleMatch.fold`) weighted by the person's TMDB
 /// popularity, with a nudge for the people a media library is actually browsed
 /// by — actors AND directors, weighted the same.
 enum PersonRelevance {
     static func score(person: TMDBPerson, normalizedQuery q: String) -> Double {
-        let name = SearchRelevance.normalize(person.name)
+        let name = TitleMatch.fold(person.name)
         let qTokens = q.split(separator: " ").map(String.init)
         guard !qTokens.isEmpty else { return 0 }
         let nTokens = name.split(separator: " ").map(String.init)
@@ -32,7 +32,7 @@ enum PersonRelevance {
 
     /// People sorted best-first, dropping non-matches.
     static func rank(_ people: [TMDBPerson], query: String) -> [TMDBPerson] {
-        let q = SearchRelevance.normalize(query)
+        let q = TitleMatch.fold(query)
         return people
             .map { ($0, score(person: $0, normalizedQuery: q)) }
             .filter { $0.1 > 0 }
@@ -45,12 +45,12 @@ enum PersonRelevance {
     /// a real (not incidental-namesake) popularity, and a query long enough to
     /// mean it. Deliberately conservative — "Alien" must not surface a person.
     static func isConfidentHeadliner(_ person: TMDBPerson, query: String) -> Bool {
-        let q = SearchRelevance.normalize(query)
+        let q = TitleMatch.fold(query)
         // ≥4 chars keeps common short words ("tom", "the") from headlining a
         // whole Starring section; ≥8 popularity keeps incidental namesakes out.
         guard q.count >= 4 else { return false }
         let qTokens = q.split(separator: " ").map(String.init)
-        let nTokens = SearchRelevance.normalize(person.name).split(separator: " ").map(String.init)
+        let nTokens = TitleMatch.fold(person.name).split(separator: " ").map(String.init)
         guard !qTokens.isEmpty, !nTokens.isEmpty else { return false }
         let allMatched = qTokens.allSatisfy { qt in nTokens.contains { $0.hasPrefix(qt) } }
         return allMatched && (person.popularity ?? 0) >= 8
@@ -66,9 +66,9 @@ enum PersonRelevance {
     /// queries, where a popularity floor is what stops "alien" or "hanks" from
     /// dragging a namesake into a title search.
     static func isFullNameMatch(_ person: TMDBPerson, query: String) -> Bool {
-        let qTokens = SearchRelevance.normalize(query).split(separator: " ").map(String.init)
+        let qTokens = TitleMatch.fold(query).split(separator: " ").map(String.init)
         guard qTokens.count >= 2 else { return false }
-        var remaining = SearchRelevance.normalize(person.name).split(separator: " ").map(String.init)
+        var remaining = TitleMatch.fold(person.name).split(separator: " ").map(String.init)
         guard remaining.count >= qTokens.count else { return false }
         for qt in qTokens {
             guard let hit = remaining.firstIndex(where: { $0.hasPrefix(qt) }) else { return false }

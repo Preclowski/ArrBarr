@@ -34,14 +34,14 @@ struct SearchRelevanceNormalisationTests {
     /// queue filter already used.
     @Test("Normalising folds case, strips diacritics and trims")
     func folding() {
-        #expect(SearchRelevance.normalize("  PoŻeracz  ") == "pozeracz")
-        #expect(SearchRelevance.normalize("Blade Runner") == "blade runner")
+        #expect(TitleMatch.fold("  PoŻeracz  ") == "pozeracz")
+        #expect(TitleMatch.fold("Blade Runner") == "blade runner")
     }
 
     @Test("An already-normalised string comes back unchanged")
     func idempotent() {
-        let once = SearchRelevance.normalize("dune part two")
-        #expect(SearchRelevance.normalize(once) == once)
+        let once = TitleMatch.fold("dune part two")
+        #expect(TitleMatch.fold(once) == once)
     }
 
     @Test("A diacritic-carrying query still scores as an exact match")
@@ -363,9 +363,9 @@ struct SearchRelevancePunctuationTests {
     /// titles are reachable by typing the plain words.
     @Test("Punctuation folds to spaces")
     func punctuationFolds() {
-        #expect(SearchRelevance.normalize("Spider-Man: No Way Home") == "spider man no way home")
-        #expect(SearchRelevance.normalize("WALL·E") == "wall e")
-        #expect(SearchRelevance.normalize("Mission: Impossible") == "mission impossible")
+        #expect(TitleMatch.fold("Spider-Man: No Way Home") == "spider man no way home")
+        #expect(TitleMatch.fold("WALL·E") == "wall e")
+        #expect(TitleMatch.fold("Mission: Impossible") == "mission impossible")
     }
 
     @Test("A punctuation-free query still reaches a punctuated title")
@@ -442,14 +442,14 @@ struct SearchRelevanceModifierTests {
     /// ambiguity that kept year parsing out of `QueryParser` in the first place.
     @Test("A bare year is still a title search")
     func bareYearIsNotStripped() {
-        #expect(SearchRelevance.splitYear("1917").year == nil)
-        #expect(SearchRelevance.splitYear("1917").query == "1917")
+        #expect(TitleMatch.splitTrailingYear("1917").year == nil)
+        #expect(TitleMatch.splitTrailingYear("1917").query == "1917")
         #expect(SearchRelevance.score(result("1917"), normalizedQuery: "1917") == 10_000)
     }
 
     @Test("A year is only taken out when other words remain")
     func yearSplitKeepsTheRest() {
-        let split = SearchRelevance.splitYear("dune 2024")
+        let split = TitleMatch.splitTrailingYear("dune 2024")
         #expect(split.query == "dune")
         #expect(split.year == 2024)
     }
@@ -485,7 +485,7 @@ struct SearchRelevanceYearTests {
     /// and the mismatch penalty would then bury the 1968 film it names.
     @Test("A leading year stays part of the title")
     func leadingYearIsNotAFilter() {
-        let split = SearchRelevance.splitYear("2001 a space odyssey")
+        let split = TitleMatch.splitTrailingYear("2001 a space odyssey")
         #expect(split.year == nil)
         #expect(split.query == "2001 a space odyssey")
 
@@ -497,7 +497,7 @@ struct SearchRelevanceYearTests {
     /// in a far-future number.
     @Test("A trailing number too far in the future is title, not year")
     func farFutureNumberIsTitle() {
-        #expect(SearchRelevance.splitYear("blade runner 2049").year == nil)
+        #expect(TitleMatch.splitTrailingYear("blade runner 2049").year == nil)
 
         let bladeRunner = result("Blade Runner 2049", year: 2017)
         #expect(SearchRelevance.rank(bladeRunner, against: .text("blade runner 2049")) >= 10_000)
