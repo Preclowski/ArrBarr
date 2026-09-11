@@ -25,7 +25,6 @@ struct SearchViewModelStaleResultsTests {
     private func settled(on query: String) -> SearchViewModel {
         let vm = SearchViewModel()
         vm.query = query
-        vm.onQueryChange()
         vm.radarrResults = [result(id: 1), result(id: 2)]
         vm.isSearching = false
         return vm
@@ -35,7 +34,6 @@ struct SearchViewModelStaleResultsTests {
     func newTermClearsResults() {
         let vm = settled(on: "matrix")
         vm.query = "inception"
-        vm.onQueryChange()
         #expect(vm.radarrResults.isEmpty)
         #expect(vm.isSearching)
         #expect(!vm.hasResults)
@@ -45,7 +43,6 @@ struct SearchViewModelStaleResultsTests {
     func refinementKeepsResults() {
         let vm = settled(on: "matrix")
         vm.query = "matrix 2"
-        vm.onQueryChange()
         #expect(vm.radarrResults.count == 2)
         #expect(vm.isSearching)
         #expect(vm.hasResults)
@@ -55,7 +52,6 @@ struct SearchViewModelStaleResultsTests {
     func backspaceKeepsResults() {
         let vm = settled(on: "matrix")
         vm.query = "matri"
-        vm.onQueryChange()
         #expect(vm.radarrResults.count == 2)
     }
 
@@ -63,7 +59,6 @@ struct SearchViewModelStaleResultsTests {
     func caseInsensitiveRefinement() {
         let vm = settled(on: "matrix")
         vm.query = "Matrix"
-        vm.onQueryChange()
         #expect(vm.radarrResults.count == 2)
     }
 
@@ -71,7 +66,6 @@ struct SearchViewModelStaleResultsTests {
     func emptyQueryClearsEverything() {
         let vm = settled(on: "matrix")
         vm.query = ""
-        vm.onQueryChange()
         #expect(vm.radarrResults.isEmpty)
         #expect(!vm.isSearching)
     }
@@ -82,9 +76,7 @@ struct SearchViewModelStaleResultsTests {
     func retypeAfterClear() {
         let vm = settled(on: "matrix")
         vm.query = ""
-        vm.onQueryChange()
         vm.query = "i"
-        vm.onQueryChange()
         #expect(vm.radarrResults.isEmpty)
         #expect(vm.isSearching)
     }

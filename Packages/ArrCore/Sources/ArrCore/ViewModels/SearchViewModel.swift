@@ -4,7 +4,29 @@ import Observation
 @MainActor
 @Observable
 public final class SearchViewModel {
-    var query = ""
+    /// The one query. Every field on every surface binds straight to this, so
+    /// there is nothing to mirror and nothing to keep in sync — the `didSet`
+    /// IS the trigger that three separate `onChange` sites used to be.
+    var query = "" {
+        didSet { if query != oldValue { onQueryChange() } }
+    }
+
+    /// True while a live query owns the surface. One definition, used by the
+    /// tab-bar hide, the focus logic, the takeover host and both tabs.
+    var isActive: Bool {
+        !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    /// How many times `onQueryChange` has run. Not UI state — it exists so the
+    /// "an empty query resets the scope EXACTLY once" invariant is testable;
+    /// the re-entry it guards against is invisible from the outside otherwise.
+    @ObservationIgnored private(set) var queryChangePasses = 0
+
+    /// Set while `onQueryChange` resets the scope itself, so `scope`'s own
+    /// `didSet` doesn't bounce back in and run a second pass over the same
+    /// (empty) query.
+    @ObservationIgnored private var isResettingScope = false
+
     var radarrResults: [SearchResult] = []
     var sonarrResults: [SearchResult] = []
     var lidarrResults: [SearchResult] = []
@@ -80,7 +102,7 @@ public final class SearchViewModel {
     /// Radarr and a people search only hits TMDB. Set from the search field's
     /// scope chip; reset to `all` when the search surface closes.
     var scope: SearchScope = .all {
-        didSet { if scope != oldValue { onQueryChange() } }
+        didSet { if scope != oldValue, !isResettingScope { onQueryChange() } }
     }
 
     /// Library-only search: match the user's own library — the Library tab's
@@ -129,6 +151,7 @@ public final class SearchViewModel {
     }
 
     func onQueryChange() {
+        queryChangePasses += 1
         searchTask?.cancel()
         errorMessage = nil
         searchGeneration += 1
@@ -139,6 +162,14 @@ public final class SearchViewModel {
         let previous = previousQuery
         previousQuery = trimmed
         guard !trimmed.isEmpty else {
+            // Ending the search drops any narrow scope: a scope that outlives
+            // the query it was chosen for reads as a bug on the next search.
+            // `libraryOnly` is deliberately sticky and stays.
+            if scope != .all {
+                isResettingScope = true
+                scope = .all
+                isResettingScope = false
+            }
             // Empty query: kill the loader, clear results. Anything
             // mid-flight that hasn't returned will be ignored when it
             // does (its generation no longer matches).

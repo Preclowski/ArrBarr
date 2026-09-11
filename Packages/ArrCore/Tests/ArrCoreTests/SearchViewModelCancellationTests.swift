@@ -62,7 +62,6 @@ struct SearchViewModelCancellationTests {
     /// `onQueryChange` debounces for 300 ms before it even starts.
     private func startSearch(_ vm: SearchViewModel, _ query: String) async throws {
         vm.query = query
-        vm.onQueryChange()
         try await Task.sleep(for: .milliseconds(600))
     }
 
