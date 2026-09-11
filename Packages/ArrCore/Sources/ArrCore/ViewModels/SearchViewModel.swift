@@ -13,8 +13,14 @@ public final class SearchViewModel {
 
     /// True while a live query owns the surface. One definition, used by the
     /// tab-bar hide, the focus logic, the takeover host and both tabs.
-    var isActive: Bool {
-        !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    var isActive: Bool { !trimmedQuery.isEmpty }
+
+    /// The query as every decision about it must read it. One definition
+    /// because two disagreed: `isActive` trimmed newlines and `onQueryChange`
+    /// did not, so a pasted line ending looked empty on screen while a lookup
+    /// ran behind it.
+    private var trimmedQuery: String {
+        query.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     /// How many times `onQueryChange` has run. Not UI state — it exists so the
@@ -158,7 +164,7 @@ public final class SearchViewModel {
         let myGen = searchGeneration
         parsedInput = QueryParser.parse(query)
 
-        let trimmed = query.trimmingCharacters(in: .whitespaces)
+        let trimmed = trimmedQuery
         let previous = previousQuery
         previousQuery = trimmed
         guard !trimmed.isEmpty else {

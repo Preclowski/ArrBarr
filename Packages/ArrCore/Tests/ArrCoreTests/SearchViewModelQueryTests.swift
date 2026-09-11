@@ -35,6 +35,21 @@ struct SearchViewModelQueryTests {
         #expect(vm.isActive)
     }
 
+    @Test("A newline is as empty as a space — no search runs behind it")
+    func newlineOnlyQueryStartsNothing() {
+        let vm = SearchViewModel()
+        vm.setup(radarrConfig: ServiceConfig(enabled: true, baseURL: "http://127.0.0.1:1/",
+                                             apiKey: "k", username: "", password: ""),
+                 sonarrConfig: .empty)
+        defer { vm.reset() }
+
+        // A pasted line ending. `isActive` calls it empty, so the surface shows
+        // nothing — a search behind it is a lookup nobody can see the result of.
+        vm.query = "\n"
+        #expect(!vm.isActive)
+        #expect(!vm.isSearching)
+    }
+
     @Test("Emptying the query resets scope to .all exactly once and keeps libraryOnly")
     func emptyQueryResetsScopeOnce() {
         let vm = SearchViewModel()
