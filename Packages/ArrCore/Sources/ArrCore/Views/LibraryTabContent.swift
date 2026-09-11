@@ -222,7 +222,10 @@ struct LibraryTabContent: View {
     /// Under takeover these rows ARE the grid's answer — the grid itself is not
     /// shown, and clearing the query brings it back.
     private var localHits: [LocalHit] {
-        guard searchVM.isActive else { return [] }
+        // A query that folds away to nothing — "..." or a lone "-" — matches
+        // every entry there is, and the takeover would answer it with the
+        // whole library.
+        guard searchVM.isActive, !TitleMatch.fold(searchVM.query).isEmpty else { return [] }
         return visibleEntries.map(LocalHit.library)
     }
 
@@ -605,9 +608,9 @@ struct LibraryTabContent: View {
         SearchResultsSurface(
             searchVM: searchVM,
             localHits: localHits,
-            // The Library tab has no live queue rows of its own — every local
-            // hit here is a `.library` one, which routes itself.
-            onSelectQueueItem: { _ in },
+            // No `onSelectQueueItem`: the Library tab has no live queue rows of
+            // its own — every local hit here is a `.library` one, which routes
+            // itself.
             onSelectAddResult: { searchResult = $0 },
             onSelectPerson: { personRef = $0 }
         )

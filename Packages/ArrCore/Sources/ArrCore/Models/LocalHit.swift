@@ -58,7 +58,10 @@ public extension LocalHit {
     static func queueHits(viewModel: QueueViewModel,
                           sources: [QueueItem.Source],
                           query: String) -> [LocalHit] {
-        sources.flatMap { source -> [LocalHit] in
+        // A query with no letters or digits in it folds to nothing, and the
+        // matcher answers that by keeping every candidate — the whole queue.
+        guard !TitleMatch.fold(query).isEmpty else { return [] }
+        return sources.flatMap { source -> [LocalHit] in
             let matched = TitleMatch.indexedFilter(
                 viewModel.items(for: source),
                 query: query,

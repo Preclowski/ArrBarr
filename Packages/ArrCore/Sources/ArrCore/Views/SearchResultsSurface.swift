@@ -20,8 +20,10 @@ struct SearchResultsSurface: View {
     var searchVM: SearchViewModel
     /// Host-supplied local context, already filtered and ordered.
     var localHits: [LocalHit]
-    /// Tap on a live queue row (drills into detail).
-    let onSelectQueueItem: (QueueItem) -> Void
+    /// Tap on a live queue row (drills into detail). Defaulted: a host with no
+    /// queue rows of its own (the Library tab) supplies no local `.queue` hits,
+    /// so this is never called there.
+    var onSelectQueueItem: (QueueItem) -> Void = { _ in }
     /// Tap on an add-new (not-in-library) result.
     let onSelectAddResult: (SearchResult) -> Void
     /// Tap on a person row / "Starring X" — host pushes the person view.
@@ -40,7 +42,10 @@ struct SearchResultsSurface: View {
         let reloading = searchVM.isSearching && !lookupRows.isEmpty
 
         VStack(alignment: .leading, spacing: 0) {
-            VStack(spacing: 2) {
+            // Lazy: a broad query over a big library can hand us hundreds of
+            // local hits, and an eager stack builds every row before the first
+            // one is on screen.
+            LazyVStack(spacing: 2) {
                 ForEach(localHits) { hit in
                     localRow(hit)
                 }
