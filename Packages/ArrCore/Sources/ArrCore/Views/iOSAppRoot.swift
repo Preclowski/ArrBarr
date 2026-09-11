@@ -23,7 +23,10 @@ public struct iOSAppRoot: View {
     @ObservedObject private var trailerSession = TrailerSession.shared
     @Environment(\.scenePhase) private var scenePhase
     /// Shared by the Queue and Library surfaces.
-    @State private var searchVM = SearchViewModel()
+    @State private var searchVM: SearchViewModel
+    /// The Library tab's cache, owned up here so the queue's library-only
+    /// search reads the same one instead of loading a second copy.
+    @State private var libraryViewModel: LibraryViewModel
     /// The quiz deck is raised by a notification from ANY tab (chat's CTA, the
     /// resume card), so its state and its chat bridge live above the TabView —
     /// the same place `PopoverContentView` keeps them on macOS.
@@ -59,6 +62,11 @@ public struct iOSAppRoot: View {
         let cs = configStore ?? .shared
         self._viewModel = State(initialValue: vm)
         self._configStore = ObservedObject(wrappedValue: cs)
+        let library = LibraryViewModel()
+        let search = SearchViewModel()
+        search.library = library
+        self._libraryViewModel = State(initialValue: library)
+        self._searchVM = State(initialValue: search)
     }
 
     public var body: some View {
@@ -70,7 +78,7 @@ public struct iOSAppRoot: View {
             }
 
             Tab(value: RootTab.library) {
-                NavigationStack { LibraryTab(searchVM: searchVM, viewModel: viewModel, isActive: selectedTab == .library) }
+                NavigationStack { LibraryTab(searchVM: searchVM, libraryViewModel: libraryViewModel, viewModel: viewModel, isActive: selectedTab == .library) }
             } label: {
                 Label { Text("Library", bundle: .module) } icon: { Image(systemName: "books.vertical") }
             }
@@ -273,9 +281,20 @@ private struct QueueTab: View {
     /// macOS popover does it — it no longer owns a tab of its own.
     @State private var historySource: QueueItem.Source?
 
-    private var isSearching: Bool { !searchVM.query.trimmingCharacters(in: .whitespaces).isEmpty }
-
     private var iosSearchScopes: [SearchScope] { SearchScope.available(for: configStore) }
+
+    private var configuredSources: [QueueItem.Source] {
+        QueueItem.Source.allCases.filter { configStore.config(for: $0.serviceKind).isVisible }
+    }
+
+    /// This tab's local context: the live queue, matched with the same folder
+    /// the library grid uses.
+    private var queueLocalHits: [LocalHit] {
+        guard searchVM.isActive else { return [] }
+        return LocalHit.queueHits(viewModel: viewModel,
+                                  sources: configuredSources,
+                                  query: searchVM.query)
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -364,12 +383,11 @@ private struct QueueTab: View {
                 )
                 // Typing shows the same unified surface as macOS: live queue
                 // rows that still match on top, arr library / add-new below.
-                if isSearching {
+                if searchVM.isActive {
                     ScrollView {
-                        QueueSearchResultsView(
-                            viewModel: viewModel,
-                            searchViewModel: searchVM,
-                            scope: nil,
+                        SearchResultsSurface(
+                            searchVM: searchVM,
+                            localHits: queueLocalHits,
                             onSelectQueueItem: { detailItem = $0 },
                             onSelectAddResult: { searchResult = $0 },
                             onSelectPerson: { personRef = $0 }
@@ -424,17 +442,39 @@ struct SearchScopeBar: View {
     @Environment(\.isSearching) private var isSearching
 
     var body: some View {
-        if isSearching, scopes.count > 1 {
-            Picker("", selection: $searchVM.scope) {
-                ForEach(scopes) { s in
-                    Text(LocalizedStringKey(s.labelKey), bundle: .module).tag(s)
+        if isSearching {
+            HStack(spacing: 8) {
+                if scopes.count > 1 {
+                    Picker("", selection: $searchVM.scope) {
+                        ForEach(scopes) { s in
+                            Text(LocalizedStringKey(s.labelKey), bundle: .module).tag(s)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                } else {
+                    Spacer(minLength: 0)
                 }
+                libraryOnlyToggle
             }
-            .pickerStyle(.segmented)
-            .labelsHidden()
             .padding(.horizontal, 12)
             .padding(.bottom, 8)
         }
+    }
+
+    /// "In library" — narrows the search to titles the user owns. Beside the
+    /// scopes rather than among them because it combines with any of them;
+    /// a glyph because the segmented scopes already fill the row.
+    private var libraryOnlyToggle: some View {
+        Button { searchVM.libraryOnly.toggle() } label: {
+            Image(systemName: searchVM.libraryOnly ? "books.vertical.fill" : "books.vertical")
+                .foregroundStyle(searchVM.libraryOnly ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.secondary))
+                .frame(width: 32, height: 28)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text("search.libraryOnly.toggle", bundle: .module))
+        .accessibilityAddTraits(searchVM.libraryOnly ? .isSelected : [])
     }
 }
 
@@ -486,9 +526,9 @@ struct MinimizedSearchToolbar: ViewModifier {
 /// popover fills from `PopoverContentView`.
 private struct LibraryTab: View {
     var searchVM: SearchViewModel
+    var libraryViewModel: LibraryViewModel
     var viewModel: QueueViewModel
     var isActive: Bool
-    @State private var libraryViewModel = LibraryViewModel()
     @State private var searchResult: SearchResult?
     @State private var detailItem: QueueItem?
 

@@ -93,7 +93,7 @@ struct QueueTabContent: View {
                         // Only while nothing is rendered yet. With rows up this
                         // spinner sits below the fold and the user sees no
                         // loading state at all on a re-search — that case is
-                        // covered inside QueueSearchResultsView instead.
+                        // covered inside SearchResultsSurface instead.
                         if searchAvailable, searchViewModel.isSearching, !searchViewModel.hasResults {
                             loadingIndicator
                                 .frame(maxWidth: .infinity)
@@ -156,26 +156,33 @@ struct QueueTabContent: View {
         PlatformURLOpener.open(url)
     }
 
-    /// The one search-results surface. Queue rows that still match
-    /// the substring filter sit at the top (live downloads with
-    /// progress + action chrome — they don't flatten well into a
-    /// search row), then a single merged + cross-source-sorted block
-    /// of library + new hits. The library/new distinction is read
-    /// per-row from the trailing InLibraryBadge on already-owned
-    /// rows. No section divider; this IS the search result list.
+    /// The one search-results surface. Live queue rows that still match sit at
+    /// the top (downloads with progress + action chrome — they don't flatten
+    /// into a search row), then a single merged, cross-source-sorted block of
+    /// library + add-new hits. No section divider; this IS the result list.
     @ViewBuilder
     private var searchResults: some View {
-        // Delegates to the shared surface so macOS and iOS render search
-        // identically. Scope chips still narrow via `queueScope`.
-        QueueSearchResultsView(
-            viewModel: viewModel,
-            searchViewModel: searchViewModel,
-            scope: queueScope,
+        SearchResultsSurface(
+            searchVM: searchViewModel,
+            localHits: localHits,
             onSelectQueueItem: { detailItem = $0 },
             onSelectAddResult: { searchResult = $0 },
             onSelectPerson: { personRef = $0 }
         )
         .personDestination($personRef)
+    }
+
+    /// This tab's local context: the live queue, matched with the same folder
+    /// the library grid uses (so "wall e" finds WALL·E here too).
+    private var localHits: [LocalHit] {
+        guard searchViewModel.isActive else { return [] }
+        return LocalHit.queueHits(viewModel: viewModel,
+                                  sources: configuredSources,
+                                  query: searchViewModel.query)
+    }
+
+    private var configuredSources: [QueueItem.Source] {
+        QueueItem.Source.allCases.filter { configStore.config(for: $0.serviceKind).isVisible }
     }
 
     private var queueFilterBar: some View {
@@ -231,10 +238,12 @@ struct QueueTabContent: View {
     }
 
     /// Compact menu chip on the search field's trailing edge — narrows which
-    /// backends the query hits. Tinted accent while a non-`all` scope is
-    /// active, so a stuck narrow scope is visible at a glance.
+    /// backends the query hits, and holds the "In library" toggle. Tinted
+    /// accent while anything narrows the search (a non-`all` scope or
+    /// library-only), so a stuck narrow search is visible at a glance.
     private var scopeMenu: some View {
         let scope = searchViewModel.scope
+        let libraryOnly = searchViewModel.libraryOnly
         return Menu {
             ForEach(availableScopes) { s in
                 Button { searchViewModel.scope = s } label: {
@@ -245,10 +254,18 @@ struct QueueTabContent: View {
                     }
                 }
             }
+            Divider()
+            Button { searchViewModel.libraryOnly.toggle() } label: {
+                Label {
+                    Text("search.libraryOnly.toggle", bundle: .module)
+                } icon: {
+                    Image(systemName: libraryOnly ? "checkmark" : "books.vertical")
+                }
+            }
         } label: {
-            Image(systemName: scope.symbol)
+            Image(systemName: libraryOnly ? "books.vertical.fill" : scope.symbol)
                 .scaledFont(size: 13, weight: .medium)
-                .foregroundStyle(scope == .all ? AnyShapeStyle(.tertiary) : AnyShapeStyle(Color.accentColor))
+                .foregroundStyle(scope == .all && !libraryOnly ? AnyShapeStyle(.tertiary) : AnyShapeStyle(Color.accentColor))
                 .frame(width: 20, height: 20)
                 .contentShape(Rectangle())
         }
