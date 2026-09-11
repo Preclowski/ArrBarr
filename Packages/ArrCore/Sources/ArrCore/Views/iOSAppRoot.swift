@@ -365,7 +365,6 @@ private struct QueueTab: View {
             ZStack {
                 QueueListView(
                     viewModel: viewModel,
-                    scope: nil,
                     onShowDetail: { detailItem = $0 },
                     onNeedsYouTap: { needs in openNeedsYouQueue(needs) },
                     onShowHistory: { historySource = $0 },

@@ -16,8 +16,6 @@ struct QueueListView: View {
     var viewModel: QueueViewModel
     @EnvironmentObject var configStore: ConfigStore
 
-    /// Narrow to one arr (macOS scope chips). nil = every configured arr.
-    var scope: QueueItem.Source? = nil
     let onShowDetail: (QueueItem) -> Void
     /// macOS opens the arr's queue page in the browser; iOS (nil) drills into
     /// the matching queue item's detail.
@@ -95,8 +93,7 @@ struct QueueListView: View {
     /// Drives the rendered order from `arrOrder`, mirroring the old
     /// section-list logic so banners keep their user-chosen position.
     private var orderedEntries: [Entry] {
-        if let scope { return isVisible(scope) ? [.arr(scope)] : [] }
-        return configStore.arrOrder.compactMap { key -> Entry? in
+        configStore.arrOrder.compactMap { key -> Entry? in
             #if os(macOS)
             // "Next week" peek — macOS-only (iOS has a dedicated Upcoming tab).
             if key == ConfigStore.tonightOrderKey {
@@ -114,8 +111,6 @@ struct QueueListView: View {
             return nil
         }
     }
-
-    private var hideHeader: Bool { scope != nil }
 
     var body: some View {
         // Native multi-select: bind the List's own selection while in selecting
@@ -517,10 +512,8 @@ struct QueueListView: View {
         let collapsed = (arrError == nil || isUnreachable) && configStore.isCollapsed(source)
         // Header + rows as plain List rows (no Section wrapper). Same inset and
         // mechanism as the Needs-you / Next-week headers → chevrons line up.
-        if !hideHeader {
-            sectionHeader(source, error: arrError, isUnreachable: isUnreachable, collapsed: collapsed)
-                .plainQueueRow(insets: Self.headerRowInsets)
-        }
+        sectionHeader(source, error: arrError, isUnreachable: isUnreachable, collapsed: collapsed)
+            .plainQueueRow(insets: Self.headerRowInsets)
         if !collapsed {
                 let rows = displayRows(for: source)
                 if rows.isEmpty {

@@ -55,7 +55,6 @@ struct QueueTabContent: View {
         } else {
             QueueListView(
                 viewModel: viewModel,
-                scope: nil,
                 onShowDetail: { item in
                     withAnimation(.smooth(duration: 0.22)) { detailItem = item }
                 },
