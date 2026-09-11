@@ -55,12 +55,21 @@ public struct SearchResult: Identifiable, Equatable, Hashable, Sendable {
     let network: String?         // Sonarr network / Radarr studio
     let certification: String?   // Radarr only
     var posterURL: URL?
+    /// True when `posterURL` points at the arr itself, whose `/MediaCover`
+    /// route answers 401 without the API key. Only library-sourced rows can
+    /// set it — a lookup row's artwork comes from TMDB/TVDB, which is public —
+    /// so it defaults to false and the row passes no key at all.
+    var posterRequiresAuth: Bool = false
     let source: QueueItem.Source
     /// Set when the backend has cross-referenced this result with the arr's
     /// library and found a match. Carries the arr's internal record id so the
     /// chat UI can route a tap to DetailView instead of the add flow.
     /// `nil` for non-cross-referenced results (e.g. regular `*_search` calls).
     var inLibraryArrId: Int?
+    /// Whether that library record's files are on disk — the ownership chip's
+    /// "Downloaded" vs "library". Set together with `inLibraryArrId` by
+    /// `withLibraryOwnership`.
+    var libraryDownloaded: Bool = false
     /// Lidarr only: true when this row is an ALBUM (`/album/lookup`), false
     /// for artists (`/artist/lookup`). The two route differently on tap —
     /// albums open/add the album, artists open the artist view — and the two
@@ -130,17 +139,18 @@ public struct SearchResult: Identifiable, Equatable, Hashable, Sendable {
         return "\(source.rawValue):\(ref.urlString)"
     }
 
-    /// Re-stamp `inLibraryArrId`. Used by tools (suggest_titles, *_search)
-    /// that resolve results first and then cross-reference against a library
-    /// map.
+    /// Stamp library ownership — arr record id and downloaded state, always
+    /// together. Used by every path that resolves results first and then
+    /// cross-references them against `ArrLibraryMaps`. `nil` clears both.
     ///
     /// A mutating copy rather than a field-by-field rebuild. The rebuild had
     /// to name every property, so adding one silently dropped it here — the
     /// failure mode being a freshly-added id that vanishes between the
     /// mapping that set it and the row that needed it.
-    func withInLibraryArrId(_ id: Int?) -> SearchResult {
+    func withLibraryOwnership(_ ownership: LibraryOwnership?) -> SearchResult {
         var copy = self
-        copy.inLibraryArrId = id
+        copy.inLibraryArrId = ownership?.arrId
+        copy.libraryDownloaded = ownership?.isDownloaded ?? false
         return copy
     }
 
@@ -265,5 +275,30 @@ public enum SonarrSeriesType: String, CaseIterable, Identifiable {
         case .daily: return String(localized: "search.daily.button", bundle: .module)
         case .anime: return String(localized: "search.anime.button", bundle: .module)
         }
+    }
+}
+
+// MARK: - Library entry → search row
+
+extension SearchResult {
+    /// A Library-tab entry as a search row — what library-only search returns.
+    /// Owned by definition, so it arrives stamped: it opens the detail view,
+    /// and its chip reads "Downloaded" or "library" from the same file state
+    /// the Library tab shows.
+    init(libraryEntry e: LibraryEntry) {
+        self.init(
+            externalId: e.externalId ?? 0,
+            foreignId: e.externalId.map(String.init) ?? "",
+            title: e.title, subtitle: nil, year: e.year,
+            rating: e.ratingTmdb ?? e.ratingArr,
+            imdb: e.ratingImdb, rottenTomatoes: e.ratingRt, metacritic: e.ratingMetacritic,
+            overview: e.overview, runtime: e.runtime, genres: e.genres,
+            network: nil, certification: e.certification,
+            posterURL: e.posterURL, source: e.source
+        )
+        self = withLibraryOwnership(LibraryOwnership(arrId: e.arrId, isDownloaded: e.state == .complete))
+        // The grid's covers are the arr's own `/MediaCover` files behind the
+        // API key; a row that forgets that renders a placeholder.
+        self.posterRequiresAuth = e.posterRequiresAuth
     }
 }

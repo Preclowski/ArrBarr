@@ -22,7 +22,11 @@ public struct SearchResultRow: View {
     public var body: some View {
         PosterMetadataRow(
             posterURL: result.posterURL,
-            posterAPIKey: nil,
+            // Library-sourced rows point at the arr's own MediaCover route,
+            // which needs the key; lookup rows point at TMDB/TVDB, which
+            // must never see it.
+            posterAPIKey: result.posterRequiresAuth
+                ? configStore.config(for: result.source.serviceKind).apiKey : nil,
             posterSize: CGSize(width: 26, height: 38),
             posterBlurred: configStore.shouldBlurPoster(for: result.source),
             posterFallbackSymbol: result.source.symbol,
@@ -40,7 +44,7 @@ public struct SearchResultRow: View {
             // draws — a second trailing chevron (or a `+`) made search rows
             // read differently from every other row surface.
             if isInLibrary {
-                InLibraryBadge()
+                LibraryStateBadge(isDownloaded: result.libraryDownloaded)
             }
         }
         #if os(macOS)
