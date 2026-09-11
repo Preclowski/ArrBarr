@@ -56,10 +56,6 @@ public struct PopoverContentView: View {
     /// for `arrBarrConfirmRequest`. Rendered as a panel-wide overlay
     /// at the end of body.
     @State private var pendingConfirm: PendingConfirm?
-    /// Push-target for "open the series view" from inside an
-    /// EpisodeQuickDetail. Registered as a sibling navigationDestination
-    /// on the root NavigationStack so SwiftUI doesn't get confused
-    /// about insertion order when the binding fires from a deeper view.
     /// The macOS search capsule's focus, owned here because ⌘N, the Add intent
     /// and the search intent all aim at it from outside any tab. Passed down to
     /// whichever tab is rendering the capsule.
@@ -465,7 +461,9 @@ public struct PopoverContentView: View {
                         case .library:
                             LibraryTabContent(
                                 viewModel: libraryViewModel,
-                                searchResult: $searchResult
+                                searchVM: searchViewModel,
+                                searchResult: $searchResult,
+                                searchFieldFocused: $searchFieldFocused
                             )
                         case .upcoming: UpcomingTabContent(viewModel: viewModel)
                         case .chat:

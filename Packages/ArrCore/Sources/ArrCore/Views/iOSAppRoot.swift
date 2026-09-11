@@ -326,8 +326,8 @@ private struct QueueTab: View {
         // Search steps aside entirely in edit mode: its magnifier otherwise
         // competes with "Done" for the trailing slot and wins, leaving no way
         // out of the mode. Mail and Files drop their search bar there too.
-        .modifier(QueueSearchField(searchVM: searchVM, scopes: iosSearchScopes,
-                                   enabled: !selecting, isPresented: $searchPresented))
+        .modifier(SearchField(searchVM: searchVM, enabled: !selecting,
+                              isPresented: $searchPresented))
         .onChange(of: searchVM.query) { _, new in
             if new.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 searchVM.scope = .all
@@ -478,10 +478,11 @@ struct SearchScopeBar: View {
     }
 }
 
-/// The queue's search field, withdrawn while multi-select owns the bar.
-private struct QueueSearchField: ViewModifier {
+/// The one iOS search field, used by the Queue and Library tabs. Withdrawn
+/// while multi-select owns the toolbar: its magnifier otherwise competes with
+/// "Done" for the trailing slot and wins, leaving no way out of the mode.
+struct SearchField: ViewModifier {
     @Bindable var searchVM: SearchViewModel
-    let scopes: [SearchScope]
     let enabled: Bool
     @Binding var isPresented: Bool
 
@@ -492,16 +493,15 @@ private struct QueueSearchField: ViewModifier {
                     text: $searchVM.query,
                     isPresented: $isPresented,
                     placement: .toolbar,
-                    prompt: Text("search.searchMoviesAndTv.label", bundle: .module)
+                    prompt: Text("search.global.prompt", bundle: .module)
                 )
                 // iOS 26 collapses the field into a toolbar magnifier that
                 // expands on tap, so search shares a row with the other actions
                 // instead of a permanent drawer stealing one from the list.
+                // `SearchScopeBar` renders the scopes under it; `.searchScopes`
+                // can't, see that type's note.
                 .modifier(MinimizedSearchToolbar())
                 .autocorrectionDisabled(true)
-                // Native scope bar under the field — the iOS idiom for the
-                // macOS scope chip. Options gate which backends fire.
-
         } else {
             content
         }
@@ -521,9 +521,8 @@ struct MinimizedSearchToolbar: ViewModifier {
 
 // MARK: - Library tab
 
-/// Same surface macOS shows in its `.library` tab. `LibraryTabContent` owns its
-/// own arr-lookup state; this wrapper only supplies the add-panel slot the
-/// popover fills from `PopoverContentView`.
+/// Same surface macOS shows in its `.library` tab. This wrapper only supplies
+/// the add-panel slot the popover fills from `PopoverContentView`.
 private struct LibraryTab: View {
     var searchVM: SearchViewModel
     var libraryViewModel: LibraryViewModel
@@ -531,6 +530,9 @@ private struct LibraryTab: View {
     var isActive: Bool
     @State private var searchResult: SearchResult?
     @State private var detailItem: QueueItem?
+    /// Only the macOS capsule reads this; iOS drives the field through
+    /// `.searchable`. Declared so the one component signature serves both.
+    @FocusState private var searchFieldFocused: Bool
 
     var body: some View {
         Group {
@@ -540,8 +542,10 @@ private struct LibraryTab: View {
                 }
             } else {
                 LibraryTabContent(viewModel: libraryViewModel,
+                                  searchVM: searchVM,
                                   searchResult: $searchResult,
-                                  isActive: isActive)
+                                  searchFieldFocused: $searchFieldFocused,
+                                  isTabActive: isActive)
             }
         }
         .navigationBarTitleDisplayMode(.inline)
