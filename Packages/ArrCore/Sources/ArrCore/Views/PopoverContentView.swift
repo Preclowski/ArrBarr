@@ -747,8 +747,12 @@ public struct PopoverContentView: View {
                     }
                     // Re-tapping the active tab clears a live query — a
                     // "reset to home" affordance that needs no chrome of its
-                    // own (Spotify / Apple Music tab-bar idiom).
-                    if tab == selectedTab, searchViewModel.isActive {
+                    // own (Spotify / Apple Music tab-bar idiom). Only where a
+                    // query IS the tab's content: the other tabs don't own the
+                    // field, and wiping it from them loses a search the user
+                    // stepped away from.
+                    if tab == selectedTab, tab == .queue || tab == .library,
+                       searchViewModel.isActive {
                         withAnimation(.easeOut(duration: 0.18)) {
                             searchViewModel.query = ""
                         }
