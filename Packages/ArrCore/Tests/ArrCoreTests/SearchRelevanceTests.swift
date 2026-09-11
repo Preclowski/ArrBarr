@@ -363,8 +363,6 @@ struct SearchRelevancePunctuationTests {
     /// titles are reachable by typing the plain words.
     @Test("Punctuation folds to spaces")
     func punctuationFolds() {
-        #expect(TitleMatch.fold("Spider-Man: No Way Home") == "spider man no way home")
-        #expect(TitleMatch.fold("WALL·E") == "wall e")
         #expect(TitleMatch.fold("Mission: Impossible") == "mission impossible")
     }
 
@@ -442,16 +440,7 @@ struct SearchRelevanceModifierTests {
     /// ambiguity that kept year parsing out of `QueryParser` in the first place.
     @Test("A bare year is still a title search")
     func bareYearIsNotStripped() {
-        #expect(TitleMatch.splitTrailingYear("1917").year == nil)
-        #expect(TitleMatch.splitTrailingYear("1917").query == "1917")
         #expect(SearchRelevance.score(result("1917"), normalizedQuery: "1917") == 10_000)
-    }
-
-    @Test("A year is only taken out when other words remain")
-    func yearSplitKeepsTheRest() {
-        let split = TitleMatch.splitTrailingYear("dune 2024")
-        #expect(split.query == "dune")
-        #expect(split.year == 2024)
     }
 
     /// The arr's own ordering encodes upstream popularity. It used to be

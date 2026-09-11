@@ -18,7 +18,8 @@ public enum TitleMatch {
     /// Case, accent, width and punctuation-insensitive form — articles intact.
     /// This is the space a live filter field compares in: dropping a leading
     /// article here would empty the list the moment someone types "a" or "the"
-    /// on the way to a longer query.
+    /// on the way to a longer query. Relevance ranking compares in this space
+    /// too, for the same reason: articles must survive.
     public static func fold(_ raw: String) -> String {
         let folded = raw.folding(options: [.diacriticInsensitive, .caseInsensitive, .widthInsensitive],
                                  locale: nil)
@@ -69,8 +70,9 @@ public enum TitleMatch {
         return candidates.filter { index($0).contains(folded) }
     }
 
-    /// `fold`, plus a leading article dropped. Everything that *ranks* titles
-    /// compares in this space; nothing compares raw.
+    /// `fold` plus a leading article dropped — do not use for relevance
+    /// ranking, where `fold` is the right space. Everything that matches one
+    /// title against a library compares here; nothing compares raw.
     public static func normalize(_ raw: String) -> String {
         let tokens = fold(raw).split(separator: " ").map(String.init)
         guard let first = tokens.first else { return "" }
@@ -112,7 +114,7 @@ public enum TitleMatch {
     /// 1880…(this year + 5). The upper bound is what keeps "Blade Runner
     /// 2049" intact — 2049 is not a plausible release year, so the title
     /// keeps its last word instead of being read as a year filter.
-    public static func isPlausibleYear(_ token: Substring) -> Bool {
+    public static func isPlausibleYear(_ token: some StringProtocol) -> Bool {
         guard token.count == 4, let n = Int(token) else { return false }
         let currentYear = Calendar.current.component(.year, from: Date())
         return n >= 1880 && n <= currentYear + 5

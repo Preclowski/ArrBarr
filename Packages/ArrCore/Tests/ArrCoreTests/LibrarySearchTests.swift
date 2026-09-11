@@ -144,9 +144,9 @@ struct TitleMatchTests {
     func plausibleYearBounds() {
         let now = Calendar.current.component(.year, from: Date())
         #expect(TitleMatch.isPlausibleYear("1880"))
-        #expect(TitleMatch.isPlausibleYear(Substring(String(now))))
+        #expect(TitleMatch.isPlausibleYear(String(now)))
         #expect(!TitleMatch.isPlausibleYear("1879"))
-        #expect(!TitleMatch.isPlausibleYear(Substring(String(now + 6))))
+        #expect(!TitleMatch.isPlausibleYear(String(now + 6)))
         #expect(!TitleMatch.isPlausibleYear("24"))
         #expect(!TitleMatch.isPlausibleYear("20x4"))
     }
@@ -159,7 +159,6 @@ struct TitleMatchTests {
         #expect(TitleMatch.fold("Spider-Man: No Way Home") == "spider man no way home")
         #expect(TitleMatch.fold("WALL·E") == "wall e")
     }
-
 }
 
 @Suite("Library filtering")
