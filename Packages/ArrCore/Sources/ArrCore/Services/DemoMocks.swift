@@ -267,9 +267,15 @@ public enum DemoMocks {
         title: String, subtitle: String? = nil,
         sourceTitle: String?,
         quality: String?, formats: [String], score: Int,
+        posterSeed: String? = nil,
+        arrId: Int? = nil, fileKey: String? = nil, downloadId: String? = nil,
+        client: String? = nil, indexer: String? = nil, sizeGB: Double? = nil,
+        reason: String? = nil, fileOnDisk: HistoryItem.FileSnapshot? = nil, hadFile: Bool? = nil,
         hint: HistoryItem.GroupHint? = nil
     ) -> HistoryItem {
-        HistoryItem(
+        // Square covers for Lidarr artists, 2:3 posters for everything else.
+        let (w, h) = source == .lidarr ? (300, 300) : (200, 300)
+        return HistoryItem(
             id: "demo-\(id)",
             source: source,
             date: Date().addingTimeInterval(-Double(minutesAgo) * 60),
@@ -280,7 +286,18 @@ public enum DemoMocks {
             quality: quality,
             customFormats: formats,
             customFormatScore: score,
-            groupHint: hint
+            groupHint: hint,
+            posterURL: posterSeed.flatMap { poster(label: title, seed: $0, w: w, h: h) },
+            posterRequiresAuth: false,
+            arrId: arrId,
+            fileKey: fileKey,
+            downloadId: downloadId,
+            downloadClient: client,
+            indexer: indexer,
+            size: sizeGB.map { Int64($0 * 1_073_741_824) },
+            deleteReason: reason,
+            fileOnDisk: fileOnDisk,
+            hadFileOnDisk: hadFile
         )
     }
 

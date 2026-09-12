@@ -165,7 +165,8 @@ public final class LibraryViewModel {
         // a file (and for Sonarr/Lidarr, which have no single file). One cheap
         // call. Failure degrades to no quality caption, not a failed load.
         let profiles = await SearchClient.profileNameMap(config: config, source: source)
-        let fresh: [LibraryEntry]
+        let baseURL = config.baseURL
+        let projection: Projection
         switch source {
         case .radarr:
             let movies = await LibraryIndex.shared.movies(config: config)
@@ -174,16 +175,18 @@ public final class LibraryViewModel {
             // list actually changed — reaching this line at all means the
             // index version moved.
             let alts = await RadarrClient(config: config).alternateTitleMap(for: movies)
-            fresh = Self.unify(movies, baseURL: config.baseURL, profiles: profiles, alternateTitles: alts)
+            projection = await Self.project {
+                Self.unify(movies, baseURL: baseURL, profiles: profiles, alternateTitles: alts)
+            }
         case .sonarr:
-            fresh = Self.unify(await LibraryIndex.shared.series(config: config),
-                               baseURL: config.baseURL, profiles: profiles)
+            let series = await LibraryIndex.shared.series(config: config)
+            projection = await Self.project { Self.unify(series, baseURL: baseURL, profiles: profiles) }
         case .lidarr:
-            fresh = Self.unify(await LibraryIndex.shared.artists(config: config),
-                               baseURL: config.baseURL, profiles: profiles)
+            let artists = await LibraryIndex.shared.artists(config: config)
+            projection = await Self.project { Self.unify(artists, baseURL: baseURL, profiles: profiles) }
         case .whisparr:
-            fresh = Self.unify(await LibraryIndex.shared.whisparrMovies(config: config),
-                               baseURL: config.baseURL, profiles: profiles)
+            let movies = await LibraryIndex.shared.whisparrMovies(config: config)
+            projection = await Self.project { Self.unify(movies, baseURL: baseURL, profiles: profiles) }
         }
 
         // The index swallows the error and hands back a stale snapshot — or,
@@ -202,13 +205,31 @@ public final class LibraryViewModel {
             return
         }
 
-        entries[source] = fresh
-        sortCache[source] = nil
-        // Pre-warm the default axis so the first Library visit after a fetch
-        // renders without paying the sort inside body.
-        _ = sorted(source, cacheKey: "title", using: Self.titleAscending)
+        entries[source] = projection.entries
+        // The default axis arrives already sorted, so the first Library visit
+        // after a fetch renders without paying the sort inside body.
+        sortCache[source] = ["title": projection.byTitle]
         indexVersions[source] = await LibraryIndex.shared.version(for: source)
-        Self.logAliasCoverage(fresh, source: source)
+        Self.logAliasCoverage(projection.entries, source: source)
+    }
+
+    /// One source's unified entries plus their default (title) order.
+    private struct Projection: Sendable {
+        let entries: [LibraryEntry]
+        let byTitle: [LibraryEntry]
+    }
+
+    /// Runs the unify and the title sort off the main actor. Both walk the
+    /// whole library — ICU folding for every search index, a localized compare
+    /// per sort step — and on a few-thousand-title shelf that work, done on the
+    /// main actor, was the stall on the first Library visit.
+    nonisolated private static func project(
+        _ unify: @escaping @Sendable () -> [LibraryEntry]
+    ) async -> Projection {
+        await Task.detached(priority: .userInitiated) {
+            let entries = unify()
+            return Projection(entries: entries, byTitle: entries.sorted(by: titleAscending))
+        }.value
     }
 
     // MARK: - Diagnostics
@@ -236,7 +257,7 @@ public final class LibraryViewModel {
 
     // MARK: - Unify
 
-    private static func unify(_ records: [RadarrLibraryRecord], baseURL: String, profiles: [Int: String],
+    nonisolated private static func unify(_ records: [RadarrLibraryRecord], baseURL: String, profiles: [Int: String],
                               alternateTitles: [Int: [String]] = [:]) -> [LibraryEntry] {
         records.compactMap { r in
             guard let id = r.id, let title = r.title else { return nil }
@@ -270,7 +291,7 @@ public final class LibraryViewModel {
         }
     }
 
-    private static func unify(_ records: [SonarrLibraryRecord], baseURL: String, profiles: [Int: String]) -> [LibraryEntry] {
+    nonisolated private static func unify(_ records: [SonarrLibraryRecord], baseURL: String, profiles: [Int: String]) -> [LibraryEntry] {
         records.compactMap { r in
             guard let id = r.id, let title = r.title else { return nil }
             let (poster, auth) = (r.images ?? []).posterURL(
@@ -297,7 +318,7 @@ public final class LibraryViewModel {
         }
     }
 
-    private static func unify(_ records: [LidarrLibraryRecord], baseURL: String, profiles: [Int: String]) -> [LibraryEntry] {
+    nonisolated private static func unify(_ records: [LidarrLibraryRecord], baseURL: String, profiles: [Int: String]) -> [LibraryEntry] {
         records.compactMap { r in
             guard let id = r.id, let name = r.artistName else { return nil }
             let (poster, auth) = (r.images ?? []).posterURL(baseURL: baseURL)
@@ -322,7 +343,7 @@ public final class LibraryViewModel {
         }
     }
 
-    private static func unify(_ records: [WhisparrLibraryRecord], baseURL: String, profiles: [Int: String]) -> [LibraryEntry] {
+    nonisolated private static func unify(_ records: [WhisparrLibraryRecord], baseURL: String, profiles: [Int: String]) -> [LibraryEntry] {
         records.compactMap { r in
             guard let id = r.id, let title = r.title else { return nil }
             let (poster, auth) = (r.images ?? []).posterURL(baseURL: baseURL)

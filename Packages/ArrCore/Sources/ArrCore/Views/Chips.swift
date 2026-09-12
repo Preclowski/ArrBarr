@@ -138,6 +138,29 @@ public struct MediaStateChip: View {
     }
 }
 
+/// The one ownership chip: "Downloaded" (green) when the title is on disk,
+/// "library" when it's on the arr but not downloaded yet. Never both — they
+/// used to sit side by side, or disagree between a row and its detail view.
+public struct LibraryStateBadge: View {
+    /// Rows get it from `SearchResult.libraryDownloaded` (stamped from
+    /// `LibraryOwnership`); calendar / episode / track pass their own file state.
+    let isDownloaded: Bool
+
+    @Environment(\.locale) private var locale
+
+    public init(isDownloaded: Bool) {
+        self.isDownloaded = isDownloaded
+    }
+
+    public var body: some View {
+        if isDownloaded {
+            MediaStateChip(state: .complete, locale: locale)
+        } else {
+            InLibraryBadge()
+        }
+    }
+}
+
 public struct InLibraryBadge: View {
     public init() {}
 

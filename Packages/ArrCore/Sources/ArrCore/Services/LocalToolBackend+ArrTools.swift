@@ -64,7 +64,7 @@ extension LocalToolBackend {
         // RichToolResultView reads that field to route the tap to
         // DetailView instead of SearchAddPanel — without this, cards for
         // owned series/movies surface as "add me" instead of "open me".
-        async let libraryMapFetch: [Int: Int] = (kind == "series")
+        async let libraryMapFetch: [Int: LibraryOwnership] = (kind == "series")
             ? sonarrLibraryByTVDBId()
             : radarrLibraryByTMDBId()
 
@@ -107,8 +107,8 @@ extension LocalToolBackend {
         // is tvdbId for series / tmdbId for movies — matches the library
         // map's keys exactly.
         let tagged = resolved.map { entry -> SearchResult in
-            guard let arrId = libraryMap[entry.result.externalId] else { return entry.result }
-            return entry.result.withInLibraryArrId(arrId)
+            guard let ownership = libraryMap[entry.result.externalId] else { return entry.result }
+            return entry.result.withLibraryOwnership(ownership)
         }
         let afterOwned = excludeOwned ? tagged.filter { $0.inLibraryArrId == nil } : tagged
         let droppedAsOwned = tagged.count - afterOwned.count

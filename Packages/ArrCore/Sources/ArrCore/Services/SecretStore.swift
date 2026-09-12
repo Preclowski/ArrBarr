@@ -199,10 +199,18 @@ public struct KeychainSecretStore: SecretStore {
 /// `KeychainSecretStore` instead, and
 /// `ConfigStore.migratePlaintextSecretsIntoKeychain` lifts anything this store
 /// still holds over to it on the first such launch.
+public extension SecretKey {
+    /// Where this secret sits when it is stored in plain `UserDefaults` — the
+    /// ad-hoc build's home for it. Public because a reader holding a snapshot
+    /// of those defaults (a sibling app in the family) must not have to guess
+    /// the naming: one definition, here, next to the store that writes it.
+    var plaintextDefaultsKey: String { "ArrBarr.\(account)" }
+}
+
 public struct UserDefaultsSecretStore: SecretStore, @unchecked Sendable {
     private let defaults: UserDefaults
     public init(defaults: UserDefaults) { self.defaults = defaults }
-    private func key(_ k: SecretKey) -> String { "ArrBarr.\(k.account)" }
+    private func key(_ k: SecretKey) -> String { k.plaintextDefaultsKey }
     public func read(_ k: SecretKey) -> String? {
         let v = defaults.string(forKey: key(k))
         return (v?.isEmpty == false) ? v : nil

@@ -28,7 +28,7 @@ struct HistoryGroupingTests {
             row(id: "t2", minutesAgo: 3, hint: hint),
             row(id: "t3", minutesAgo: 4, hint: hint),
         ]
-        let out = HistoryItem.collapsingImportBatches(items)
+        let out = HistoryItem.collapsingBatches(items)
         #expect(out.map(\.id) == ["grab", "t1"])
         #expect(out[1].groupedCount == 3)
         #expect(out[1].subtitle == "Album")
@@ -42,7 +42,7 @@ struct HistoryGroupingTests {
             row(id: "e1", source: .sonarr, minutesAgo: 1, subtitle: "S02E08 · Finale", hint: hint),
             row(id: "e2", source: .sonarr, minutesAgo: 2, subtitle: "S02E07", hint: hint),
         ]
-        let out = HistoryItem.collapsingImportBatches(items)
+        let out = HistoryItem.collapsingBatches(items)
         #expect(out.count == 1)
         #expect(out[0].subtitle == "Season 2")
         #expect(out[0].groupedCount == 2)
@@ -55,22 +55,40 @@ struct HistoryGroupingTests {
             row(id: "a", quality: "FLAC", hint: hint),
             row(id: "b", quality: "MP3-320", hint: hint),
         ]
-        let out = HistoryItem.collapsingImportBatches(items)
+        let out = HistoryItem.collapsingBatches(items)
         #expect(out.map(\.id) == ["a", "b"])
         #expect(out.allSatisfy { $0.groupedCount == 1 })
     }
 
-    @Test("A lone hinted row and non-import events pass through untouched")
+    @Test("A lone hinted row and failures pass through untouched")
     func singletonsAndOtherEventsUntouched() {
         let hint = HistoryItem.GroupHint(key: "dl4|album-2")
         let items = [
             row(id: "solo", hint: hint),
-            row(id: "del1", event: .deleted, hint: hint),
-            row(id: "del2", event: .deleted, hint: hint),
+            row(id: "fail1", event: .failed, hint: hint),
+            row(id: "fail2", event: .failed, hint: hint),
             row(id: "plain", hint: nil),
         ]
-        let out = HistoryItem.collapsingImportBatches(items)
+        let out = HistoryItem.collapsingBatches(items)
         #expect(out == items)
+    }
+
+    @Test("The folded row keeps the batch's poster")
+    func foldKeepsPoster() {
+        let hint = HistoryItem.GroupHint(key: "dl5|album-3")
+        let poster = URL(string: "https://arr.example/MediaCover/3/poster.jpg")
+        let items = ["x", "y"].map { id in
+            HistoryItem(
+                id: id, source: .lidarr, date: Date(timeIntervalSince1970: 1_000_000),
+                eventType: .imported, title: "Artist", subtitle: "Album",
+                sourceTitle: nil, quality: "FLAC", customFormats: [], customFormatScore: 0,
+                groupHint: hint, posterURL: poster, posterRequiresAuth: true
+            )
+        }
+        let out = HistoryItem.collapsingBatches(items)
+        #expect(out.count == 1)
+        #expect(out[0].posterURL == poster)
+        #expect(out[0].posterRequiresAuth)
     }
 
     @Test("Same group key on different sources never merges")
@@ -80,6 +98,6 @@ struct HistoryGroupingTests {
             row(id: "l", source: .lidarr, hint: hint),
             row(id: "s", source: .sonarr, hint: hint),
         ]
-        #expect(HistoryItem.collapsingImportBatches(items).count == 2)
+        #expect(HistoryItem.collapsingBatches(items).count == 2)
     }
 }

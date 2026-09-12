@@ -729,6 +729,10 @@ private struct HistoryTab: View {
     /// (HistoryItem.EventType.parse maps both Sonarr + Radarr the same way),
     /// so one filter list works for every service.
     @State private var selectedType: HistoryItem.EventType?
+    /// A title opened from a history row. Pushed from here, on top of this
+    /// view — the queue root's own detail destination would race the history
+    /// destination it already has pushed.
+    @State private var detailItem: QueueItem?
 
     /// Event types offered in the filter (skip `.other`, the catch-all).
     private let filterableTypes: [HistoryItem.EventType] = [.grabbed, .imported, .failed, .deleted]
@@ -750,12 +754,15 @@ private struct HistoryTab: View {
                 HistoryView(
                     source: selected,
                     viewModel: viewModel,
-                    refreshNonce: 0,
                     showHeader: false,
                     typeFilter: selectedType,
+                    onOpenDetail: { detailItem = $0 },
                     onClose: {}
                 )
             }
+        }
+        .navigationDestination(item: $detailItem) { item in
+            DetailView(item: item, onBack: { detailItem = nil }, viewModel: viewModel)
         }
         .onAppear {
             guard !didSeedSource else { return }

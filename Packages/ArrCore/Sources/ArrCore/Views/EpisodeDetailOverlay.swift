@@ -446,7 +446,7 @@ public struct EpisodeDetailOverlay: View {
                     // from beside the existing-file banner, matching the
                     // movie/album heroes.
                     if episode.hasFile == true {
-                        InLibraryBadge()
+                        LibraryStateBadge(isDownloaded: true)
                     }
                     // Series title (with year) shows in content as a
                     // drill-in link — the episode's series context. Only

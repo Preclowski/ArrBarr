@@ -69,7 +69,7 @@ public enum ChatLinkRouter {
         for (source, config) in candidates where config.isConfigured {
             let client = SearchClient(config: config, source: source)
             guard let result = try? await client.lookup(input: .ref(ref)).first else { continue }
-            let owned = await libraryId(for: ref, source: source, config: config)
+            let owned = await libraryOwnership(for: ref, source: source, config: config)
             // `.notice`, not `.info`: this line exists to be read back AFTER a
             // user reports "that link opened the wrong film", and `log show`
             // doesn't return info-level entries on this machine. Says which ref
@@ -85,7 +85,7 @@ public enum ChatLinkRouter {
                 \(source.rawValue, privacy: .public) "\(result.title, privacy: .private)" \
                 (\(result.year.map(String.init) ?? "—", privacy: .public))
                 """)
-            DetailRequest.tap(result.withInLibraryArrId(owned ?? result.inLibraryArrId))
+            DetailRequest.tap(owned.map(result.withLibraryOwnership) ?? result)
             return
         }
         // Nothing resolved: the id was wrong, or the arr that owns this kind of
@@ -97,11 +97,11 @@ public enum ChatLinkRouter {
         )
     }
 
-    /// arr-internal id for a ref the user already owns, or nil. Sonarr's map is
-    /// keyed by TVDB id and Radarr's by TMDB id — the same maps the chat's TMDB
-    /// tools use to tag results as OWNED.
-    private static func libraryId(for ref: MediaRef, source: QueueItem.Source,
-                                  config: ServiceConfig) async -> Int? {
+    /// Library ownership for a ref the user already owns, or nil. Sonarr's map
+    /// is keyed by TVDB id and Radarr's by TMDB id — the same maps the chat's
+    /// TMDB tools use to tag results as OWNED.
+    private static func libraryOwnership(for ref: MediaRef, source: QueueItem.Source,
+                                         config: ServiceConfig) async -> LibraryOwnership? {
         switch (ref, source) {
         case (.tmdb(let id), .radarr):
             return await ArrLibraryMaps.radarrByTMDBId(config: config)[id]

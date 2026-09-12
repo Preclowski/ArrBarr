@@ -233,7 +233,12 @@ public struct DetailView: View {
 
     private var canPauseResume: Bool {
         let s = focused.status
-        return s == .downloading || s == .paused
+        return s == .downloading || s == .paused || s == .queued
+    }
+
+    /// Queued (deferred) items get "play" like paused ones — resume force-starts them.
+    private var focusedShowsPlay: Bool {
+        focused.isPaused || focused.status == .queued
     }
 
     // MARK: - Monitored state
@@ -923,15 +928,16 @@ public struct DetailView: View {
     @ViewBuilder
     private var pauseResumeProminent: some View {
         let f = focused
+        let showsPlay = focusedShowsPlay
         PauseResumeButton(
-            isPaused: f.isPaused,
+            isPaused: showsPlay,
             progress: f.source == .sonarr ? 1 : f.progress,
             // Tint by the ACTION, not the status: Pause orange, Resume blue
             // (Search moved to the header, so blue is free again). Red stays
             // Cancel's.
-            tint: f.isPaused ? .blue : .orange
+            tint: showsPlay ? .blue : .orange
         ) {
-            if f.isPaused {
+            if showsPlay {
                 await viewModel.resume(f)
             } else {
                 await viewModel.pause(f)
@@ -1099,9 +1105,8 @@ public struct DetailView: View {
     /// implied — you can't have a file for something you don't own — and the
     /// tag left the question you actually opened the panel with unanswered.
     private var movieFileState: LibraryEntry.FileState {
-        guard (radarrMovieFile ?? radarrDetail?.movieFile) == nil else { return .complete }
-        if radarrDetail?.monitored == false { return .unmonitored }
-        return .missing
+        .movie(monitored: radarrDetail?.monitored,
+               hasFile: (radarrMovieFile ?? radarrDetail?.movieFile) != nil)
     }
 
     /// Series hero's title badges — assigned profile + how much is on disk.
@@ -1121,21 +1126,12 @@ public struct DetailView: View {
     /// the arr's own numbers, which is what makes this agree with the Library
     /// tab. Counting `sonarrEpisodes` instead would call every ongoing series
     /// half-missing, since unaired episodes are in that list too.
-    private var seriesEpisodeCounts: (have: Int, total: Int) {
-        let seasons = sonarrDetail?.seasons ?? []
-        return (
-            have: seasons.reduce(0) { $0 + ($1.statistics?.episodeFileCount ?? 0) },
-            total: seasons.reduce(0) { $0 + ($1.statistics?.episodeCount ?? 0) }
-        )
+    private var seriesEpisodeCounts: EpisodeFileCounts {
+        sonarrDetail?.episodeFileCounts ?? EpisodeFileCounts(have: 0, total: 0)
     }
 
     private var seriesFileState: LibraryEntry.FileState {
-        if sonarrDetail?.monitored == false { return .unmonitored }
-        let counts = seriesEpisodeCounts
-        if counts.total > 0, counts.have >= counts.total { return .complete }
-        if counts.have > 0 { return .partial }
-        // Nothing aired yet is not the same as nothing grabbed.
-        return counts.total > 0 ? .missing : .notAvailable
+        .series(monitored: sonarrDetail?.monitored, counts: seriesEpisodeCounts)
     }
 
     // MARK: - Trailer
@@ -1389,8 +1385,7 @@ public struct DetailView: View {
                 let client = WhisparrClient(config: configStore.whisparr)
                 radarrDetail = try await client.fetchMovieDetails(id: entityId)
                 qualityProfileName = await Self.profileName(
-                    id: radarrDetail?.qualityProfileId, config: configStore.whisparr, source: .whisparr)
-            }
+                    id: radarrDetail?.qualityProfileId, config: configStore.whisparr, source: .whisparr)            }
         } catch {
             loadError = "Couldn't load details: \(error.localizedDescription)"
         }

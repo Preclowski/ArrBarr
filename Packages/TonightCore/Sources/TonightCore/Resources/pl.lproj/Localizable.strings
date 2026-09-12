@@ -1,0 +1,294 @@
+"Home" = "Start";
+"Movies" = "Filmy";
+"Series" = "Seriale";
+"My Library" = "Moja biblioteka";
+"My Lists" = "Moje listy";
+"Watched" = "Obejrzane";
+"New List…" = "Nowa lista…";
+"New List" = "Nowa lista";
+"Create" = "Utwórz";
+"Cancel" = "Anuluj";
+"Name" = "Nazwa";
+"The title will be added to the new list." = "Tytuł zostanie dodany do nowej listy.";
+"Delete List" = "Usuń listę";
+"No list selected" = "Nie wybrano listy";
+
+"Add to List" = "Dodaj do listy";
+"Mark Watched" = "Oznacz jako obejrzane";
+"Trailer" = "Zwiastun";
+"Done" = "Gotowe";
+
+"Storyline" = "Opis";
+"Cast" = "Obsada";
+"Reviews" = "Recenzje";
+"More Like This" = "Podobne";
+
+"Trending Movies" = "Filmy na czasie";
+"Trending Series" = "Seriale na czasie";
+"In Theaters" = "W kinach";
+"Top Rated Movies" = "Najlepiej oceniane filmy";
+"Top Rated Series" = "Najlepiej oceniane seriale";
+
+"Can't reach TMDB" = "Brak połączenia z TMDB";
+"Can't load title" = "Nie można wczytać tytułu";
+"Retry" = "Ponów";
+"Add your TMDB key" = "Dodaj klucz TMDB";
+"TonightBarr browses TMDB. Paste a free API key in Settings, or import it from ArrBarr." = "TonightBarr przegląda TMDB. Wklej darmowy klucz API w Ustawieniach albo zaimportuj go z ArrBarr.";
+"Import from ArrBarr" = "Importuj z ArrBarr";
+
+"Search" = "Szukaj";
+"Movies, series…" = "Filmy, seriale…";
+"No results" = "Brak wyników";
+"Nothing matches" = "Nic nie pasuje";
+"Try loosening the filters." = "Spróbuj poluzować filtry.";
+"Empty list" = "Pusta lista";
+"Add titles from any poster's detail page." = "Dodawaj tytuły ze strony szczegółów.";
+"Nothing watched yet" = "Nic jeszcze nie obejrzano";
+"Mark titles as watched from their detail page." = "Oznaczaj tytuły jako obejrzane na stronie szczegółów.";
+
+"Genre" = "Gatunek";
+"Decade" = "Dekada";
+"Rating" = "Ocena";
+"Length" = "Długość";
+"Reset" = "Wyczyść";
+"Sort" = "Sortuj";
+"Popularity" = "Popularność";
+"Newest" = "Najnowsze";
+
+"Movie" = "Film";
+"TV Series" = "Serial";
+"%d votes" = "%d głosów";
+"%d seasons" = "%d sez.";
+"%d episodes" = "%d odc.";
+"Director" = "Reżyseria";
+"Created by" = "Twórcy";
+
+"TMDB API Key" = "Klucz API TMDB";
+"Test" = "Testuj";
+"Key works." = "Klucz działa.";
+"Imported." = "Zaimportowano.";
+"ArrBarr key not found." = "Nie znaleziono klucza ArrBarr.";
+"Streaming Region" = "Region streamingu";
+
+"Featured in Lists" = "Na listach TMDB";
+"Streaming" = "Streaming";
+"Language" = "Język";
+"Select" = "Zaznacz";
+"%d selected" = "Zaznaczono: %d";
+"Remove from List" = "Usuń z listy";
+"Mark Unwatched" = "Oznacz jako nieobejrzane";
+"Refresh" = "Odśwież";
+"Not connected" = "Nie połączono";
+
+"Lists" = "Listy";
+"All" = "Wszystkie";
+"Library" = "Biblioteka";
+"Born" = "Ur.";
+"Died" = "Zm.";
+"More" = "Więcej";
+"Less" = "Mniej";
+"%d titles" = "%d tytułów";
+"%1$d titles, %2$d watched — %3$@" = "%1$d tytułów, %2$d obejrzanych — %3$@";
+"Uses ArrBarr's Plex/Radarr/Sonarr connections, read-only." = "Używa połączeń Plex/Radarr/Sonarr z ArrBarr, tylko do odczytu.";
+
+"People" = "Osoby";
+"Results for “%@”" = "Wyniki dla „%@”";
+
+
+"Previous" = "Poprzedni";
+
+"Quiz" = "Quiz";
+"Quiz Picks" = "Typy z Quizu";
+"Out of cards" = "Karty się skończyły";
+"Deal again" = "Rozdaj jeszcze raz";
+"Read more" = "Czytaj dalej";
+"Close" = "Zamknij";
+
+/* Ustawienia — sekcje i układ ekranu Start */
+"General" = "Ogólne";
+"About" = "O aplikacji";
+"Back" = "Wstecz";
+"Forward" = "Dalej";
+"TMDB" = "TMDB";
+"Storage" = "Dane";
+"Acknowledgements" = "Podziękowania";
+"Version" = "Wersja";
+"Data Folder" = "Folder danych";
+"Show in Finder" = "Pokaż w Finderze";
+"Pick something to watch tonight." = "Wybierz, co obejrzeć dziś wieczorem.";
+"Decides which streaming services are shown on a title." = "Decyduje, które serwisy streamingowe są pokazywane przy tytule.";
+"Banner" = "Baner";
+"Banner shows" = "Baner pokazuje";
+"The big carousel at the top of Home." = "Duża karuzela na górze ekranu Start.";
+"Rows" = "Rzędy";
+"Drag to reorder. Unchecked rows are hidden from Home." = "Przeciągnij, aby zmienić kolejność. Odznaczone rzędy są ukryte na ekranie Start.";
+"Reset to Defaults" = "Przywróć domyślne";
+"Mix" = "Mieszane";
+"Trending Now" = "Na czasie";
+"On The Air" = "Aktualnie emitowane";
+"Popular Movies" = "Popularne filmy";
+"Popular Series" = "Popularne seriale";
+
+/* Gatunki, W kinach, Nagrodzone */
+"Decades" = "Dekady";
+"Genres" = "Gatunki";
+"Awarded" = "Nagrodzone";
+"Now Playing" = "Grane teraz";
+"Coming Soon" = "Wkrótce";
+"Nothing scheduled" = "Brak repertuaru";
+"TMDB lists no releases for your region right now." = "TMDB nie ma teraz premier dla Twojego regionu.";
+"All Years" = "Wszystkie lata";
+"No award selected" = "Nie wybrano nagrody";
+"Academy Awards" = "Oscary";
+"Best Picture" = "Najlepszy film";
+"Cannes Film Festival" = "Festiwal w Cannes";
+"Palme d'Or" = "Złota Palma";
+"Golden Globes" = "Złote Globy";
+"Best Motion Picture — Drama" = "Najlepszy dramat";
+"BAFTA" = "BAFTA";
+"Best Film" = "Najlepszy film";
+
+/* Filtry zaawansowane */
+"Advanced Filters" = "Filtry zaawansowane";
+"Filters" = "Filtry";
+"Hide Filters" = "Ukryj filtry";
+"Reset All" = "Wyczyść wszystko";
+"Years" = "Lata";
+"Any" = "Dowolne";
+"To" = "Do";
+"Minimum votes" = "Minimum głosów";
+"Most Voted" = "Najczęściej oceniane";
+
+/* Nazwy gatunków */
+"Action" = "Akcja";
+"Adventure" = "Przygodowy";
+"Animation" = "Animacja";
+"Comedy" = "Komedia";
+"Crime" = "Kryminał";
+"Documentary" = "Dokument";
+"Drama" = "Dramat";
+"Family" = "Familijny";
+"Fantasy" = "Fantasy";
+"History" = "Historyczny";
+"Horror" = "Horror";
+"Music" = "Muzyczny";
+"Mystery" = "Tajemnica";
+"Romance" = "Romans";
+"Science Fiction" = "Science Fiction";
+"Thriller" = "Thriller";
+"War" = "Wojenny";
+"Western" = "Western";
+"Action & Adventure" = "Akcja i przygoda";
+"Kids" = "Dla dzieci";
+"News" = "Informacje";
+"Reality" = "Reality show";
+"Sci-Fi & Fantasy" = "Sci-Fi i fantasy";
+"Soap" = "Telenowela";
+"Talk" = "Talk-show";
+"War & Politics" = "Wojna i polityka";
+"Quiz History" = "Historia quizu";
+"Liked" = "Polubione";
+"Skipped" = "Pominięte";
+"Clear History" = "Wyczyść historię";
+"Clear Quiz History?" = "Wyczyścić historię quizu?";
+"Clear" = "Wyczyść";
+"This only deletes the log. Titles saved to Quiz Picks stay." = "Usuwa tylko zapis historii. Tytuły w liście Quiz Picks zostają.";
+"No swipes yet" = "Nic jeszcze nie ocenione";
+"Cards you like or skip in the Quiz are logged here." = "Karty polubione lub pominięte w quizie trafiają tutaj.";
+
+/* Przełącznik okładki / lista */
+"Posters" = "Okładki";
+"List" = "Lista";
+"Columns" = "Kolumny";
+"Poster" = "Okładka";
+"Title" = "Tytuł";
+"Year" = "Rok";
+"Type" = "Typ";
+"Overview" = "Opis";
+"Load More" = "Wczytaj więcej";
+"Open" = "Otwórz";
+
+/* Panel diagnostyczny MediaKit */
+"Media Data" = "Dane mediów";
+"Debug" = "Diagnostyka";
+"Collect usage data" = "Zbieraj dane o zużyciu";
+"Refresh" = "Odśwież";
+"Reset" = "Wyzeruj";
+"Copy Report" = "Kopiuj raport";
+"Counts requests, cache hits and bytes per provider. No URLs or keys are recorded." = "Liczy zapytania, trafienia cache i bajty na źródło. Adresy i klucze nie są zapisywane.";
+"Nothing recorded yet — open a title." = "Nic jeszcze nie zapisano — otwórz jakiś tytuł.";
+"Switch collecting on to see traffic." = "Włącz zbieranie, żeby zobaczyć ruch.";
+"Providers" = "Źródła";
+"Fields" = "Pola";
+"Which source actually won each field." = "Które źródło faktycznie dostarczyło dane pole.";
+"Repeated fetches" = "Powtórzone pobrania";
+"The same title asked of the same source more than once — usually a cache key or a view that rebuilds." = "Ten sam tytuł pytany tego samego źródła więcej niż raz — zwykle klucz cache albo przebudowujący się widok.";
+"In Library" = "W bibliotece";
+
+/* Sezony i odcinki */
+"Seasons" = "Sezony";
+"Season %d" = "Sezon %d";
+"No episodes listed for this season yet." = "Ten sezon nie ma jeszcze spisu odcinków.";
+"Can't load season" = "Nie można wczytać sezonu";
+"Upcoming" = "Wkrótce";
+
+"In %@" = "Jest w %@";
+"Not in %@" = "Nie ma w %@";
+
+/* Okładki z serwera mediów */
+"Artwork" = "Okładki";
+"Use posters from my media server" = "Używaj okładek z serwera mediów";
+"Titles your server has use its artwork; everything else uses TMDB." = "Tytuły, które masz na serwerze, biorą okładki stamtąd; reszta z TMDB.";
+"Connect Plex, Jellyfin or Emby in ArrBarr to use its artwork." = "Podłącz Plex, Jellyfin lub Emby w ArrBarr, żeby używać ich okładek.";
+
+"In library" = "Biblioteka";
+"Downloaded" = "Pobrane";
+"Missing" = "Brak";
+
+"Watch" = "Oglądaj";
+
+"Own" = "Mam";
+
+"TV Series" = "Serial";
+
+"Trailers" = "Zwiastuny";
+
+/* Zwiastuny */
+"Another One" = "Losuj inny";
+"Shuffle All" = "Losuj wszystko";
+"Shuffle" = "Losuj";
+"Teaser" = "Zapowiedź";
+"Clip" = "Klip";
+"Featurette" = "Making of";
+"Behind the Scenes" = "Zza kulis";
+"On The Air" = "Aktualnie emitowane";
+"Popular Series" = "Popularne seriale";
+
+/* Menu widoku, sortowanie i panel filtrów */
+"as Posters" = "jako okładki";
+"as List" = "jako lista";
+"Classic" = "Klasyczne";
+"Widescreen" = "Panoramiczne";
+"Card Size" = "Rozmiar kart";
+"Small" = "Małe";
+"Medium" = "Średnie";
+"Large" = "Duże";
+"View Options" = "Opcje widoku";
+"Default Order" = "Kolejność domyślna";
+"More Filters" = "Więcej filtrów";
+"Clear All" = "Wyczyść";
+"%d votes+" = "%d głosów+";
+"Discover" = "Odkrywaj";
+"Nothing in your library matches" = "Nic w Twojej bibliotece nie pasuje";
+"Switch to All to see everything TMDB has." = "Przełącz na Wszystko, by zobaczyć całe TMDB.";
+"You already have everything here" = "Masz już tutaj wszystko";
+"Nice. Try another genre or loosen the filters." = "Nieźle. Spróbuj innego gatunku albo poluzuj filtry.";
+"Only what I have" = "Tylko posiadane";
+"Hide titles your media server doesn't have" = "Ukryj tytuły, których nie ma Twój serwer mediów";
+"TMDB score — the only one a list can be filtered by" = "Ocena TMDB — jedyna, po której da się filtrować listę";
+"Open in Quiz" = "Otwórz w Quizie";
+"Back to Random" = "Wróć do losowych";
+"That's the whole collection" = "To cała kolekcja";
+"Deck: %@" = "Talia: %@";
+"Random Cards" = "Losowe karty";
+"Back to %@" = "Wróć do: %@";

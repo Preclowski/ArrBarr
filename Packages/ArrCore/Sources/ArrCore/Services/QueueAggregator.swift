@@ -26,7 +26,7 @@ protocol QueueDataProviding {
     func fetch(source: QueueItem.Source) async -> SourceQueueResult
     func fetchUpcoming() async -> (items: [UpcomingItem], failed: Set<QueueItem.Source>)
     func fetchHealth() async -> HealthResult
-    func fetchHistory(for source: QueueItem.Source) async -> HistoryResult
+    func fetchHistory(for source: QueueItem.Source, page: Int, pageSize: Int) async -> HistoryResult
     func perform(_ action: QueueAggregator.Action, on item: QueueItem) async throws
     func deleteAll(_ items: [QueueItem]) async throws
 }
@@ -195,16 +195,16 @@ public final class QueueAggregator: QueueDataProviding {
         do { return try await block() } catch { return [] }
     }
 
-    func fetchHistory(for source: QueueItem.Source) async -> HistoryResult {
+    func fetchHistory(for source: QueueItem.Source, page: Int, pageSize: Int) async -> HistoryResult {
         do {
-            let items: [HistoryItem]
+            let result: HistoryPage
             switch source {
-            case .radarr: items = try await radarrClient(for: configStore.radarr).fetchHistory()
-            case .sonarr: items = try await sonarrClient(for: configStore.sonarr).fetchHistory()
-            case .lidarr: items = try await lidarrClient(for: configStore.lidarr).fetchHistory()
-            case .whisparr: items = try await whisparrClient(for: configStore.whisparr).fetchHistory()
+            case .radarr: result = try await radarrClient(for: configStore.radarr).fetchHistory(page: page, pageSize: pageSize)
+            case .sonarr: result = try await sonarrClient(for: configStore.sonarr).fetchHistory(page: page, pageSize: pageSize)
+            case .lidarr: result = try await lidarrClient(for: configStore.lidarr).fetchHistory(page: page, pageSize: pageSize)
+            case .whisparr: result = try await whisparrClient(for: configStore.whisparr).fetchHistory(page: page, pageSize: pageSize)
             }
-            return HistoryResult(items: HistoryItem.collapsingImportBatches(items), error: nil)
+            return HistoryResult(items: result.items, hasMore: result.hasMore, error: nil)
         } catch {
             let message = error.userFacingMessage
             return HistoryResult(items: [], error: message)
@@ -616,11 +616,14 @@ public final class QueueAggregator: QueueDataProviding {
     }
 }
 
+/// One page of an arr's history — raw rows, whether the arr has older pages,
+/// or the error that stopped it.
 public struct HistoryResult: Equatable {
     public let items: [HistoryItem]
+    public let hasMore: Bool
     public let error: String?
-    public init(items: [HistoryItem], error: String?) {
-        self.items = items; self.error = error
+    public init(items: [HistoryItem], hasMore: Bool = false, error: String?) {
+        self.items = items; self.hasMore = hasMore; self.error = error
     }
 }
 

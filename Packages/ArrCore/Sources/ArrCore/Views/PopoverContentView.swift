@@ -40,7 +40,6 @@ public struct PopoverContentView: View {
     /// QueueTabContent → QueueListView (the native-`List` selection).
     @State private var queueSelecting = false
     @State private var historySource: QueueItem.Source?
-    @State private var historyRefreshNonce = 0
     @State private var searchViewModel = SearchViewModel()
     /// Library tab's per-arr cache — owned here (not inside the tab view) so
     /// switching tabs doesn't drop the fetched libraries.
@@ -434,7 +433,12 @@ public struct PopoverContentView: View {
                     HistoryView(
                         source: historySource,
                         viewModel: viewModel,
-                        refreshNonce: historyRefreshNonce,
+                        // Pushed onto this stack directly rather than through
+                        // `.arrBarrOpenDetail`, whose handler drops the history
+                        // surface — Back has to land here, not on the queue.
+                        onOpenDetail: { item in
+                            withAnimation(.smooth(duration: 0.22)) { detailItem = item }
+                        },
                         onClose: { self.historySource = nil }
                     )
                 } else if anyArrConfigured {

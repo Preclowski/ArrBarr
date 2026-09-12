@@ -92,7 +92,7 @@ struct TrackDetailOverlay: View {
                 // Library chip up top (title-level fact), matching the
                 // movie / episode / album heroes.
                 if file != nil {
-                    InLibraryBadge()
+                    LibraryStateBadge(isDownloaded: true)
                 }
                 if let artist {
                     if let onOpenArtist {

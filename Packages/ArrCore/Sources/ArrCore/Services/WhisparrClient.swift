@@ -145,25 +145,29 @@ public actor WhisparrClient: ArrAPIClient {
         return records.compactMap { Self.unifyCalendar($0, baseURL: baseURL) }
     }
 
-    func fetchHistory() async throws -> [HistoryItem] {
+    func fetchHistory(page: Int, pageSize: Int) async throws -> HistoryPage {
         guard config.isConfigured else { throw HTTPError.notConfigured }
         guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
         let url = try http.url(
             base: config.baseURL,
             path: "\(apiBase)/history",
             query: [
-                URLQueryItem(name: "page", value: "1"),
-                URLQueryItem(name: "pageSize", value: "50"),
+                URLQueryItem(name: "page", value: String(page)),
+                URLQueryItem(name: "pageSize", value: String(pageSize)),
                 URLQueryItem(name: "sortKey", value: "date"),
                 URLQueryItem(name: "sortDirection", value: "descending"),
                 URLQueryItem(name: "includeMovie", value: "true"),
             ]
         )
         let data = try await http.get(url, headers: apiHeaders)
-        let page: ArrQueuePage<WhisparrHistoryRecord>
-        do { page = try JSONDecoder().decode(ArrQueuePage<WhisparrHistoryRecord>.self, from: data) }
+        let response: ArrQueuePage<WhisparrHistoryRecord>
+        do { response = try JSONDecoder().decode(ArrQueuePage<WhisparrHistoryRecord>.self, from: data) }
         catch { throw HTTPError.decoding(error) }
-        return page.records.compactMap(Self.unifyHistory)
+        let baseURL = config.baseURL
+        return HistoryPage(
+            items: response.records.compactMap { Self.unifyHistory($0, baseURL: baseURL) },
+            hasMore: page * pageSize < response.totalRecords
+        )
     }
 
     func fetchAllMovies() async throws -> [WhisparrLibraryRecord] {
@@ -221,8 +225,9 @@ public actor WhisparrClient: ArrAPIClient {
         )
     }
 
-    private static func unifyHistory(_ r: WhisparrHistoryRecord) -> HistoryItem? {
+    private static func unifyHistory(_ r: WhisparrHistoryRecord, baseURL: String) -> HistoryItem? {
         guard let dateStr = r.date, let date = parseArrDate(dateStr) else { return nil }
+        let (poster, auth) = (r.movie?.images ?? []).posterURL(baseURL: baseURL)
         return HistoryItem(
             id: "whisparr-h-\(r.id)",
             source: .whisparr,
@@ -233,7 +238,18 @@ public actor WhisparrClient: ArrAPIClient {
             sourceTitle: r.sourceTitle,
             quality: r.quality?.name,
             customFormats: (r.customFormats ?? []).map(\.name),
-            customFormatScore: r.customFormatScore ?? 0
+            customFormatScore: r.customFormatScore ?? 0,
+            posterURL: poster,
+            posterRequiresAuth: auth,
+            arrId: r.movieId ?? r.movie?.id,
+            fileKey: (r.movieId ?? r.movie?.id).map { "movie-\($0)" },
+            downloadId: r.downloadId,
+            downloadClient: r.data?.historyString("downloadClientName") ?? r.data?.historyString("downloadClient"),
+            indexer: r.data?.historyString("indexer"),
+            size: r.data?.historyString("size").flatMap { Int64($0) },
+            deleteReason: r.data?.historyString("reason"),
+            fileOnDisk: r.movie?.movieFile.map { HistoryItem.FileSnapshot(file: $0) },
+            hadFileOnDisk: r.movie?.hasFile
         )
     }
 

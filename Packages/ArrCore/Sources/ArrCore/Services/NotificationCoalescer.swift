@@ -67,7 +67,9 @@ struct RunLoopCoalescerScheduler: CoalescerScheduler {
 ///
 ///  - **Movies / music (leading edge).** A grab is a single self-contained event,
 ///    so the first one fires its banner immediately and any tail that follows
-///    within `burstWindow` folds into one batch. Nothing waits on a maybe.
+///    within `burstWindow` folds into one batch. Nothing waits on a *maybe* —
+///    the one thing a banner will wait for is artwork already being downloaded,
+///    and only up to `NotificationArtwork`'s budget.
 ///  - **Series (grouped).** A Sonarr season search grabs one release *per
 ///    episode*, seconds apart, so the first grab is held for
 ///    `seriesGroupingDelay` and each sibling slides the window. One episode →
@@ -106,9 +108,9 @@ public final class NotificationCoalescer {
     /// indexer query, separate download-client add — so they land seconds apart.
     /// Firing the first one instantly (the movie/music rule) would split one
     /// logical event into a headline banner plus a batch, which is exactly the
-    /// fragmentation this class exists to prevent. 10 s rather than 5 s because
-    /// the costs are asymmetric: too short re-fragments the group, too long just
-    /// delays a purely informational "download started" banner nobody acts on.
+    /// fragmentation this class exists to prevent. 5 s: long enough for back-to-
+    /// back episode grabs to catch up (each one slides the window), short enough
+    /// that the banner still reads as "just now".
     private let seriesGroupingDelay: TimeInterval
     /// The grouping window *slides* — each new episode restarts it — so a slow
     /// season search still collapses into one banner. This caps how long that
@@ -147,11 +149,11 @@ public final class NotificationCoalescer {
 
     /// The timings default to the production policy. They're injectable, along
     /// with the `scheduler`, so tests can run this exact logic on a virtual clock
-    /// instead of waiting out a real 10 s hold and 60 s cap.
+    /// instead of waiting out a real 5 s hold and 60 s cap.
     init(
         configStore: ConfigStore,
         burstWindow: TimeInterval = 8,
-        seriesGroupingDelay: TimeInterval = 10,
+        seriesGroupingDelay: TimeInterval = 5,
         seriesGroupingCap: TimeInterval = 60,
         scheduler: any CoalescerScheduler = RunLoopCoalescerScheduler(),
         deliver: (@MainActor (QueueItem.Source, [QueueItem]) -> Void)? = nil
@@ -175,6 +177,11 @@ public final class NotificationCoalescer {
 
     func enqueue(_ item: QueueItem) {
         let source = item.source
+        // Start the poster download at the earliest moment we know a banner is
+        // coming. For an episodic arr that is a whole grouping window before
+        // the banner is due, so the artwork is usually already on disk by the
+        // time `post` asks for it.
+        NotificationArtwork.prefetch(item, apiKey: posterAPIKey(for: item))
 
         guard let delay = groupingDelay(for: source) else {
             // Movies / music — leading edge: show the first grab now, fold any
@@ -206,7 +213,8 @@ public final class NotificationCoalescer {
     ///   2. Upgrade with score delta (Radarr)
     ///   3. New grab, paused — actions show "Start downloading" (Lidarr)
     ///   4. Needs attention (failed Sonarr)
-    ///   5. Multi-item batch (3 Radarr items, batch category, no per-item actions)
+    ///   5. Season batch — one title, count in the subtitle (3 Sonarr episodes)
+    ///   6. Mixed batch — no shared title, count as the headline (3 Radarr items)
     /// They're staggered ~1.2s apart so macOS shows each one rather than
     /// collapsing them into a single grouped banner instantly. Same arr
     /// `threadIdentifier` means Notification Center will still group them
@@ -217,6 +225,7 @@ public final class NotificationCoalescer {
             (.radarr, [Self.sampleUpgradeRadarr()]),
             (.lidarr, [Self.samplePausedLidarr()]),
             (.sonarr, [Self.sampleFailedSonarr()]),
+            (.sonarr, Self.sampleSeasonBatchSonarr()),
             (.radarr, Self.sampleBatchRadarr()),
         ]
         Task { @MainActor [weak self] in
@@ -235,7 +244,8 @@ public final class NotificationCoalescer {
             source: .sonarr, arrQueueId: -1,
             downloadId: nil, downloadProtocol: .torrent,
             downloadClient: "qBittorrent", indexer: "Test Tracker",
-            title: "Pioneer One", subtitle: "S01E03 · Endurance",
+            title: "Pioneer One (2010)", subtitle: "S01E03 · Endurance",
+            seasonNumber: 1, episodeNumber: 3, episodeTitle: "Endurance",
             releaseName: "Pioneer.One.S01E03.720p.HDTV.x264-TEST",
             status: .downloading, progress: 0.42,
             sizeTotal: 1_200_000_000, sizeLeft: 700_000_000, timeLeft: nil,
@@ -285,7 +295,8 @@ public final class NotificationCoalescer {
             source: .sonarr, arrQueueId: -4,
             downloadId: nil, downloadProtocol: .torrent,
             downloadClient: "qBittorrent", indexer: "Test Tracker",
-            title: "Northern Cascade", subtitle: "S02E04 · Cold Start",
+            title: "Northern Cascade (2019)", subtitle: "S02E04 · Cold Start",
+            seasonNumber: 2, episodeNumber: 4, episodeTitle: "Cold Start",
             releaseName: "Northern.Cascade.S02E04.2160p.WEB-DL.DV.HDR10-TEST",
             status: .failed, progress: 0.92,
             sizeTotal: 28_000_000_000, sizeLeft: 0, timeLeft: nil,
@@ -293,6 +304,27 @@ public final class NotificationCoalescer {
             quality: "WEB-DL 2160p", isUpgrade: false,
             contentSlug: "northern-cascade"
         )
+    }
+
+    /// The batch shape that actually happens in the wild: one season search,
+    /// N episodes of one series.
+    private static func sampleSeasonBatchSonarr() -> [QueueItem] {
+        (1...3).map { episode in
+            QueueItem(
+                id: "arrbarr.test.\(UUID().uuidString)",
+                source: .sonarr, arrQueueId: -(20 + episode),
+                downloadId: nil, downloadProtocol: .usenet,
+                downloadClient: "SABnzbd", indexer: "Test Usenet",
+                title: "Pioneer One (2010)", subtitle: String(format: "S02E%02d", episode),
+                seasonNumber: 2, episodeNumber: episode,
+                releaseName: String(format: "Pioneer.One.S02E%02d.1080p.WEB-DL-TEST", episode),
+                status: .downloading, progress: 0.05,
+                sizeTotal: 2_100_000_000, sizeLeft: 2_000_000_000, timeLeft: nil,
+                customFormats: ["AMZN", "x264"], customFormatScore: 240,
+                quality: "WEB-DL 1080p", isUpgrade: false,
+                contentSlug: "pioneer-one"
+            )
+        }
     }
 
     private static func sampleBatchRadarr() -> [QueueItem] {
@@ -373,9 +405,15 @@ public final class NotificationCoalescer {
     /// than stacks if the same problem is somehow announced twice.
     func postHealthIssue(source: QueueItem.Source, message: String) {
         let content = UNMutableNotificationContent()
+        // The one notification that really is *about* the arr rather than
+        // about a title, so its name stays in the text.
         content.title = source.displayName
         content.body = message
         content.sound = configuredSound
+        content.relevanceScore = Self.relevance(for: .failed)
+        if let art = NotificationArtwork.attachment(for: source) {
+            content.attachments = [art]
+        }
         let digest = String(message.hashValue, radix: 16)
         let req = UNNotificationRequest(
             identifier: "arrbarr.health.\(source.rawValue).\(digest)",
@@ -385,23 +423,39 @@ public final class NotificationCoalescer {
         UNUserNotificationCenter.current().add(req)
     }
 
+    /// Builds and delivers the banner. Asynchronous only because the artwork
+    /// may still be downloading — see `NotificationArtwork.attachment`, which
+    /// bounds that wait so a slow poster can delay a banner but never lose it.
     private func post(source: QueueItem.Source, items: [QueueItem]) {
-        let cfg = configStore.config(for: source.serviceKind)
-        let baseURL = cfg.baseURL
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            let cfg = self.configStore.config(for: source.serviceKind)
+            let baseURL = cfg.baseURL
 
-        let content: UNMutableNotificationContent
-        let identifier: String
-        if items.count == 1 {
-            let item = items[0]
-            content = makeSingleItemContent(item: item, baseURL: baseURL)
-            identifier = "arrbarr.\(source.rawValue).\(item.id)"
-        } else {
-            content = makeMultiItemContent(source: source, items: items, baseURL: baseURL)
-            identifier = "arrbarr.\(source.rawValue).\(UUID().uuidString)"
+            let content: UNMutableNotificationContent
+            let identifier: String
+            if items.count == 1 {
+                let item = items[0]
+                content = await self.makeSingleItemContent(item: item, baseURL: baseURL)
+                identifier = "arrbarr.\(source.rawValue).\(item.id)"
+            } else {
+                content = await self.makeMultiItemContent(
+                    source: source, items: items, baseURL: baseURL)
+                identifier = "arrbarr.\(source.rawValue).\(UUID().uuidString)"
+            }
+
+            let req = UNNotificationRequest(
+                identifier: identifier, content: content, trigger: nil)
+            try? await UNUserNotificationCenter.current().add(req)
         }
+    }
 
-        let req = UNNotificationRequest(identifier: identifier, content: content, trigger: nil)
-        UNUserNotificationCenter.current().add(req)
+    /// The arr's key, but only for artwork the arr itself serves. A TMDB or
+    /// TheTVDB URL takes no key, and appending one would change the cache key
+    /// for a poster the rest of the app already holds.
+    private func posterAPIKey(for item: QueueItem) -> String? {
+        guard item.posterRequiresAuth else { return nil }
+        return configStore.serviceConfig(for: item.source).apiKey
     }
 
     /// Maps the user's `notificationSoundName` preference onto a
@@ -421,16 +475,23 @@ public final class NotificationCoalescer {
 
     // MARK: - Content builders
 
-    private func makeSingleItemContent(item: QueueItem, baseURL: String) -> UNMutableNotificationContent {
+    private func makeSingleItemContent(
+        item: QueueItem, baseURL: String
+    ) async -> UNMutableNotificationContent {
         let content = UNMutableNotificationContent()
-        content.title = titleText(for: item)
-        content.subtitle = subtitleText(for: item)
-        content.body = bodyText(for: item)
+        content.title = item.title
+        content.subtitle = Self.subtitleText(for: item)
+        content.body = Self.bodyText(for: item)
         content.sound = configuredSound
         content.categoryIdentifier = item.isPaused
             ? Self.pausedCategoryIdentifier
             : Self.downloadingCategoryIdentifier
         content.threadIdentifier = "arrbarr.\(item.source.rawValue)"
+        content.relevanceScore = Self.relevance(for: item.status)
+        if let art = await NotificationArtwork.attachment(
+            for: item, apiKey: posterAPIKey(for: item)) {
+            content.attachments = [art]
+        }
 
         if !baseURL.isEmpty {
             content.userInfo[Self.userInfoBaseURLKey] = baseURL
@@ -440,17 +501,41 @@ public final class NotificationCoalescer {
         return content
     }
 
+    /// A batch keeps the same three-line shape as a single item wherever it can.
+    /// When every grab in the group belongs to one title — a season search, an
+    /// album's tracks, which is what a batch nearly always is — the title line
+    /// stays the title and the count moves into the middle line, so the banner
+    /// reads identically to the single-item case. Only a genuinely mixed batch
+    /// falls back to a count as the headline, because there is no one title to
+    /// put there.
     private func makeMultiItemContent(
         source: QueueItem.Source, items: [QueueItem], baseURL: String
-    ) -> UNMutableNotificationContent {
+    ) async -> UNMutableNotificationContent {
         let content = UNMutableNotificationContent()
-        content.title = source.displayName
-        let titles = items.prefix(3).map(\.title).joined(separator: ", ")
-        let format = NSLocalizedString("unit.itemsNamed", bundle: .module, comment: "")
-        content.body = String.localizedStringWithFormat(format, items.count, titles)
+        let sharedTitle = Set(items.map(\.title)).count == 1 ? items[0].title : nil
+
+        if let sharedTitle {
+            content.title = sharedTitle
+            content.subtitle = Self.countText(source: source, count: items.count)
+            content.body = Self.batchBodyText(items)
+        } else {
+            let format = NSLocalizedString("unit.downloads", bundle: .module, comment: "")
+            content.title = String.localizedStringWithFormat(format, items.count)
+            content.subtitle = items.prefix(3).map(\.title).joined(separator: ", ")
+            content.body = Self.batchBodyText(items)
+        }
+
         content.sound = configuredSound
         content.categoryIdentifier = Self.categoryIdentifier
         content.threadIdentifier = "arrbarr.\(source.rawValue)"
+        content.relevanceScore = Self.relevance(for: .downloading)
+        // A shared title has a poster worth showing; a mixed batch does not,
+        // so it gets the arr's mark.
+        let art = sharedTitle == nil
+            ? NotificationArtwork.attachment(for: source)
+            : await NotificationArtwork.attachment(
+                for: items[0], apiKey: posterAPIKey(for: items[0]))
+        if let art { content.attachments = [art] }
         if !baseURL.isEmpty {
             content.userInfo[Self.userInfoBaseURLKey] = baseURL
         }
@@ -459,52 +544,98 @@ public final class NotificationCoalescer {
 
     // MARK: - Text formatting
 
-    /// Title pulls the high-level "what kind of event" info onto the bold
-    /// first line: `Sonarr · Upgrade · Downloading`. Status sits next to
-    /// intent so users can tell whether the upgrade is in flight, paused, or
-    /// already importing without expanding the banner.
-    private func titleText(for item: QueueItem) -> String {
-        [
-            item.source.displayName,
-            intentLabel(for: item),
-            String(localized: String.LocalizationValue(item.status.displayName), bundle: .module),
-        ].joined(separator: " · ")
+    /// Three lines, thinnest to thickest information:
+    ///
+    /// ```
+    /// Pioneer One (2010)                  ← title:    the thing
+    /// Upgrade · S01E03                    ← subtitle: what happened to it
+    /// HDTV-720p · +60 → +720 · 1,2 GB     ← body:     the release
+    /// ```
+    ///
+    /// The arr's name is gone from the text entirely — the attachment carries
+    /// it now (`NotificationArtwork`) — and so are the custom-format tags,
+    /// which never fit and whose whole content is summarised by the score they
+    /// add up to.
+    ///
+    /// Middle line: the event, then the finer coordinate if the item has one
+    /// (an episode does, a movie doesn't). Both pieces drop out silently when
+    /// they don't apply.
+    static func subtitleText(for item: QueueItem) -> String {
+        var parts = [intentLabel(for: item)]
+        if let code = episodeCode(for: item) { parts.append(code) }
+        return parts.joined(separator: " · ")
     }
 
-    /// Subtitle: release title plus episode subtitle for Sonarr.
-    private func subtitleText(for item: QueueItem) -> String {
-        if let sub = item.subtitle, !sub.isEmpty {
-            return "\(item.title) · \(sub)"
-        }
-        return item.title
+    /// Bottom line: `<Quality> · <Score> · <Size>`, fields dropping out when
+    /// missing rather than rendering empty separators.
+    ///
+    /// The score sits between the other two rather than after them because all
+    /// three describe the same thing — how good this release is — and quality
+    /// and score are the pair you read together. An upgrade spends that one
+    /// slot on the move it makes (`+60 → +720`) instead of the bare new value.
+    static func bodyText(for item: QueueItem) -> String {
+        var parts: [String] = []
+        if let q = item.quality, !q.isEmpty { parts.append(q) }
+        parts.append(scoreMoveText(for: item) ?? signedScore(item.customFormatScore))
+        if let sizeStr = sizeText(item.sizeTotal) { parts.append(sizeStr) }
+        return parts.joined(separator: " · ")
     }
 
-    /// Two-line body:
-    ///   Line 1: `<Quality> · <Size> · <Score>` — the headline numbers, with
-    ///           the score showing `old → new` for upgrades.
-    ///   Line 2: `[tag1][tag2][tag3]` — custom-format tags.
-    /// Fields drop out of line 1 when missing rather than rendering empty
-    /// separators. macOS only shows ~3 body lines before truncating.
-    private func bodyText(for item: QueueItem) -> String {
-        var lines: [String] = []
-
-        var head: [String] = []
-        if let q = item.quality, !q.isEmpty { head.append(q) }
-        if let sizeStr = sizeText(item.sizeTotal) { head.append(sizeStr) }
-        head.append(scoreText(for: item))
-        if !head.isEmpty {
-            lines.append(head.joined(separator: " · "))
-        }
-
-        if !item.customFormats.isEmpty {
-            lines.append(item.customFormats.map { "[\($0)]" }.joined())
-        }
-
-        return lines.joined(separator: "\n")
+    /// Bottom line of a batch: total size of the group. There is no one
+    /// quality or score to report across N releases, and the sum is the one
+    /// number that is meaningfully different from a single grab's.
+    static func batchBodyText(_ items: [QueueItem]) -> String {
+        sizeText(items.reduce(Int64(0)) { $0 + $1.sizeTotal }) ?? ""
     }
 
-    /// Intent badge for the title: fresh grab vs upgrade vs failed/warning.
-    private func intentLabel(for item: QueueItem) -> String {
+    /// "6 episodes" / "6 tracks" / "6 downloads" — the unit the arr deals in,
+    /// so a Sonarr batch doesn't call episodes "items".
+    static func countText(source: QueueItem.Source, count: Int) -> String {
+        let key = switch source {
+        case .sonarr, .whisparr: "unit.episodes"
+        case .lidarr:            "unit.tracks"
+        case .radarr:            "unit.downloads"
+        }
+        let format = NSLocalizedString(key, bundle: .module, comment: "")
+        return String.localizedStringWithFormat(format, count)
+    }
+
+    /// `S01E03`, or `S01` for a whole-season grab. nil when the item has no
+    /// episode coordinates at all — a movie or an album, where the title line
+    /// already names the thing completely.
+    static func episodeCode(for item: QueueItem) -> String? {
+        guard let season = item.seasonNumber else { return nil }
+        guard let episode = item.episodeNumber else {
+            return String(format: "S%02d", season)
+        }
+        return String(format: "S%02dE%02d", season, episode)
+    }
+
+    /// `+60 → +720`, and only for an upgrade that actually knows what it is
+    /// replacing. nil otherwise, which is what tells `bodyText` to print the
+    /// plain score instead.
+    static func scoreMoveText(for item: QueueItem) -> String? {
+        guard item.isUpgrade, let old = item.existingCustomFormatScore else { return nil }
+        return "\(signedScore(old)) → \(signedScore(item.customFormatScore))"
+    }
+
+    /// How high this sits in a notification summary. Failures outrank grabs:
+    /// one needs the user, the other is a receipt.
+    ///
+    /// Deliberately not paired with `interruptionLevel = .timeSensitive`, which
+    /// would be the matching lever — that one needs the Time Sensitive
+    /// Notifications entitlement, and asking for it changes provisioning for
+    /// both the DMG and the App Store build.
+    static func relevance(for status: QueueItem.Status) -> Double {
+        switch status {
+        case .warning, .failed: return 1.0
+        case .paused:           return 0.7
+        default:                return 0.4
+        }
+    }
+
+    /// Intent badge for the subtitle: fresh grab vs upgrade vs failed/warning.
+    static func intentLabel(for item: QueueItem) -> String {
         switch item.status {
         case .warning, .failed:
             return String(localized: "queue.needsAttention.button", bundle: .module)
@@ -515,25 +646,14 @@ public final class NotificationCoalescer {
         }
     }
 
-    /// Score formatting:
-    ///   - Upgrade: "+45 → +1850"
-    ///   - Fresh:   "+1850" (or "0", "-200")
     /// Sign prefix makes the value scan as a quality delta, which is how
     /// arr communities talk about custom-format scores.
-    private func scoreText(for item: QueueItem) -> String {
-        let new = signedScore(item.customFormatScore)
-        if item.isUpgrade, let old = item.existingCustomFormatScore {
-            return "\(signedScore(old)) → \(new)"
-        }
-        return new
-    }
-
-    private func signedScore(_ n: Int) -> String {
+    static func signedScore(_ n: Int) -> String {
         if n > 0 { return "+\(n)" }
         return "\(n)"
     }
 
-    private func sizeText(_ bytes: Int64) -> String? {
+    static func sizeText(_ bytes: Int64) -> String? {
         guard bytes > 0 else { return nil }
         let formatter = ByteCountFormatter()
         formatter.allowedUnits = [.useMB, .useGB, .useTB]

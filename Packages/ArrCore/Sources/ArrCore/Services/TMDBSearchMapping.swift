@@ -9,12 +9,12 @@ import Foundation
 /// re-derived per surface.
 public enum TMDBSearchMapping {
 
-    /// TMDB movies → `SearchResult`. `libraryMap` (tmdbId → Radarr movie id)
-    /// tags already-owned results with `inLibraryArrId`, so the UI routes their
-    /// tap to the detail view instead of the add flow.
+    /// TMDB movies → `SearchResult`. `libraryMap` (tmdbId → ownership) tags
+    /// already-owned results, so the UI routes their tap to the detail view
+    /// instead of the add flow and shows the right ownership chip.
     public static func movies(
         _ movies: some Sequence<TMDBMovieSummary>,
-        libraryMap: [Int: Int] = [:],
+        libraryMap: [Int: LibraryOwnership] = [:],
         roles: [Int: String] = [:]
     ) -> [SearchResult] {
         movies.map { m in
@@ -32,9 +32,9 @@ public enum TMDBSearchMapping {
                 network: nil,
                 certification: nil,
                 posterURL: TMDBClient.imageURL(path: m.posterPath),
-                source: .radarr,
-                inLibraryArrId: libraryMap[m.id]
+                source: .radarr
             )
+            .withLibraryOwnership(libraryMap[m.id])
         }
     }
 
@@ -45,11 +45,11 @@ public enum TMDBSearchMapping {
     /// add flow — resolves from it by id. Nothing downstream may re-find the
     /// show by title; that is what opened the wrong series.
     ///
-    /// `libraryMap` is **tmdbId → Sonarr series id** (`ArrLibraryMaps
+    /// `libraryMap` is **tmdbId → ownership** (`ArrLibraryMaps
     /// .sonarrByTMDBId`), so these rows tag exactly like the movie ones.
     public static func series(
         _ shows: some Sequence<TMDBTVSummary>,
-        libraryMap: [Int: Int] = [:],
+        libraryMap: [Int: LibraryOwnership] = [:],
         roles: [Int: String] = [:]
     ) -> [SearchResult] {
         shows.map { s in
@@ -68,9 +68,9 @@ public enum TMDBSearchMapping {
                 certification: nil,
                 posterURL: TMDBClient.imageURL(path: s.posterPath),
                 source: .sonarr,
-                inLibraryArrId: libraryMap[s.id],
                 tmdbTVId: s.id
             )
+            .withLibraryOwnership(libraryMap[s.id])
         }
     }
 }

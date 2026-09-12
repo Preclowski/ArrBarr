@@ -418,9 +418,9 @@ struct LibraryTabContent: View {
     // MARK: - Grid
 
     @ViewBuilder
-    private var gridOrState: some View {
-        let entries = visibleEntries
-        if allEntries.isEmpty, viewModel.loading.contains(source) {
+    private func gridOrState(_ entries: [LibraryEntry], phase: Phase) -> some View {
+        switch phase {
+        case .loading:
             ScrollView {
                 VStack(spacing: 10) {
                     ProgressView().controlSize(.small)
@@ -433,7 +433,7 @@ struct LibraryTabContent: View {
             }
             .scrollBounceBehavior(.basedOnSize)
             .frame(maxHeight: .infinity)
-        } else if allEntries.isEmpty, viewModel.loadFailed.contains(source) {
+        case .failed:
             emptyState(symbol: "exclamationmark.triangle", textKey: "library.error.title") {
                 Button {
                     Task { await load(force: true) }
@@ -442,9 +442,9 @@ struct LibraryTabContent: View {
                 }
                 .modifier(GlassButtonStyle())
             }
-        } else if entries.isEmpty {
+        case .empty:
             emptyState(symbol: "books.vertical", textKey: "library.empty.title") { EmptyView() }
-        } else {
+        case .content:
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     if viewMode == .grid {
@@ -500,14 +500,37 @@ struct LibraryTabContent: View {
 
     // MARK: - Surface
 
+    /// Which of the grid's states is on screen.
+    private enum Phase: Equatable { case loading, failed, empty, content }
+
+    private func phase(_ entries: [LibraryEntry]) -> Phase {
+        if allEntries.isEmpty {
+            if viewModel.loadFailed.contains(source) { return .failed }
+            // A source that was never projected counts as loading too: the
+            // frame between `onAppear` and `loadIfNeeded` raising its flag
+            // used to flash the "empty library" state.
+            if viewModel.entries[source] == nil || viewModel.loading.contains(source) { return .loading }
+        }
+        return entries.isEmpty ? .empty : .content
+    }
+
     /// Browsing strip over the grid. On iOS the strip steps aside while the
     /// system search field is open (`LibraryFilterStrip`); on macOS the host's
     /// takeover replaces this whole view, strip included.
+    ///
+    /// The states cross-fade: the first visit to a source holds the spinner
+    /// while the library projects off the main actor, then the covers fade in
+    /// rather than popping in over a stalled frame.
     private var surface: some View {
-        VStack(spacing: 0) {
+        let entries = visibleEntries
+        let phase = phase(entries)
+        return VStack(spacing: 0) {
             LibraryFilterStrip { topStrip }
-            gridOrState
+            gridOrState(entries, phase: phase)
+                .id(phase)
+                .transition(.opacity)
         }
+        .animation(.easeOut(duration: 0.25), value: phase)
     }
 }
 
@@ -755,6 +778,10 @@ private struct LibraryEntryTooltip: View {
     /// so they arrive here ~200 ms after the tooltip opens. The clients
     /// keep a per-movie TTL cache, so re-hovers are free.
     @State private var fileDetails: ArrFile?
+    /// Country of production — TMDB-only (see `CountryProvider`), fetched
+    /// when the tooltip opens; the detail view then gets a cache hit.
+    @State private var countries: [String] = []
+    @Environment(\.locale) private var locale
 
     var body: some View {
         MediaTooltipChrome(
@@ -776,13 +803,14 @@ private struct LibraryEntryTooltip: View {
             if !entry.genres.isEmpty {
                 GenreChips(genres: entry.genres)
             }
-            TooltipRatingPills(chips: ratingChips)
+            // Detail-hero order: metadata line above the rating pills.
             if !subtitle.isEmpty {
                 Text(verbatim: subtitle)
                     .scaledFont(size: 11)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
+            TooltipRatingPills(chips: ratingChips)
             TooltipInfoGrid(lines: infoLines)
             TooltipOverview(text: entry.overview)
             // Quality-composition strip: assigned profile chip (same chip the
@@ -800,6 +828,18 @@ private struct LibraryEntryTooltip: View {
                 .padding(.top, 2)
             }
             TooltipFileName(name: fileDetails?.relativePath ?? entry.fileName)
+        }
+        .task {
+            switch entry.source {
+            case .radarr:
+                countries = await CountryProvider.movieCountries(
+                    tmdbId: entry.externalId, demoMovieId: entry.arrId, configStore: configStore)
+            case .sonarr:
+                countries = await CountryProvider.seriesCountries(
+                    tmdbId: nil, tvdbId: entry.externalId, demoSeriesId: entry.arrId, configStore: configStore)
+            case .lidarr, .whisparr:
+                break
+            }
         }
         .task {
             guard fileDetails == nil, entry.state == .complete else { return }
@@ -836,6 +876,8 @@ private struct LibraryEntryTooltip: View {
         if let cert = entry.certification, !cert.isEmpty {
             parts.append(cert)
         }
+        // Country closes the line, as it does in the detail hero.
+        parts.append(contentsOf: CountryProvider.displayNames(countries, locale: locale))
         return parts.joined(separator: " · ")
     }
 

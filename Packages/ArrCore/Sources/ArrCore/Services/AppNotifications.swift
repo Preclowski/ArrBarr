@@ -126,15 +126,23 @@ public enum DetailRequest {
     public static func open(source: QueueItem.Source, arrId: Int, title: String,
                             posterURL: URL? = nil, posterRequiresAuth: Bool = false,
                             isLidarrAlbum: Bool = false) {
+        post(item(source: source, arrId: arrId, title: title, posterURL: posterURL,
+                  posterRequiresAuth: posterRequiresAuth, isLidarrAlbum: isLidarrAlbum))
+    }
+
+    /// The item `open` posts, for hosts that push it themselves — the history
+    /// list opens a title on its own navigation stack so Back returns to it.
+    public static func item(source: QueueItem.Source, arrId: Int, title: String,
+                            posterURL: URL? = nil, posterRequiresAuth: Bool = false,
+                            isLidarrAlbum: Bool = false) -> QueueItem {
         if source == .lidarr, !isLidarrAlbum {
-            post(syntheticArtistItem(artistId: arrId, name: title,
-                                     posterURL: posterURL,
-                                     posterRequiresAuth: posterRequiresAuth))
-            return
+            return syntheticArtistItem(artistId: arrId, name: title,
+                                       posterURL: posterURL,
+                                       posterRequiresAuth: posterRequiresAuth)
         }
-        post(syntheticItem(source: source, entityId: arrId, title: title,
-                           posterURL: posterURL,
-                           posterRequiresAuth: posterRequiresAuth))
+        return syntheticItem(source: source, entityId: arrId, title: title,
+                             posterURL: posterURL,
+                             posterRequiresAuth: posterRequiresAuth)
     }
 
     /// Tap-router for a `SearchResult`. Owns the "is it in the

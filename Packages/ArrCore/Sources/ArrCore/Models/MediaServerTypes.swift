@@ -109,6 +109,38 @@ public struct MediaServerWatch: Sendable, Equatable {
     }
 }
 
+/// One library on the server — a "section" on Plex, a "virtual folder" on
+/// Jellyfin / Emby. The unit maintenance runs on: a rescan or a purge is
+/// asked of one library, never of the whole server, so a 40 000-track music
+/// section isn't rescanned because a movie just finished importing.
+public struct MediaServerLibrary: Identifiable, Equatable, Sendable {
+    public enum Kind: Sendable {
+        case movies, series, music, other
+
+        /// The glyph a Settings row wears for this library.
+        public var symbol: String {
+            switch self {
+            case .movies: return "film"
+            case .series: return "tv"
+            case .music: return "music.note"
+            case .other: return "folder"
+            }
+        }
+    }
+
+    /// The server's own key for the library — Plex's section key, Jellyfin's
+    /// folder item id. Opaque; only ever handed back to the same server.
+    public let id: String
+    public let name: String
+    public let kind: Kind
+
+    public init(id: String, name: String, kind: Kind) {
+        self.id = id
+        self.name = name
+        self.kind = kind
+    }
+}
+
 /// Outcome of a successful connection test: what to show the user, plus the
 /// user id the client resolved on their behalf (Jellyfin / Emby only).
 public struct MediaServerHandshake: Sendable, Equatable {

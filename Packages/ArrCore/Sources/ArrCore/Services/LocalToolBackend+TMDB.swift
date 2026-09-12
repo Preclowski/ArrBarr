@@ -236,12 +236,12 @@ extension LocalToolBackend {
     /// `tmdbId → movie.id` for the Radarr library — tags owned TMDB results.
     /// Thin wrapper over the shared `ArrLibraryMaps` (also used by the person
     /// view) so the two build the map identically.
-    func radarrLibraryByTMDBId() async -> [Int: Int] {
+    func radarrLibraryByTMDBId() async -> [Int: LibraryOwnership] {
         await ArrLibraryMaps.radarrByTMDBId(config: radarr)
     }
 
     /// `tvdbId → series.id` for the Sonarr library. See `ArrLibraryMaps`.
-    func sonarrLibraryByTVDBId() async -> [Int: Int] {
+    func sonarrLibraryByTVDBId() async -> [Int: LibraryOwnership] {
         await ArrLibraryMaps.sonarrByTVDBId(config: sonarr)
     }
 
@@ -249,7 +249,7 @@ extension LocalToolBackend {
     /// series as owned. The id route is open now that `SonarrLibraryRecord`
     /// decodes `tmdbId`; this replaced a normalized title + year join that
     /// could mistake a remake for the show the user actually has.
-    func sonarrLibraryByTMDBId() async -> [Int: Int] {
+    func sonarrLibraryByTMDBId() async -> [Int: LibraryOwnership] {
         await ArrLibraryMaps.sonarrByTMDBId(config: sonarr)
     }
 

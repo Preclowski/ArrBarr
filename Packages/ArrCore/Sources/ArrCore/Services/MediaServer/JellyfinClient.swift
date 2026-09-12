@@ -4,7 +4,7 @@ import Foundation
 ///
 /// Jellyfin is a fork of Emby and the endpoints ArrBarr touches never
 /// diverged: `/System/Info`, `/Users`, `/Users/{id}/Items`, `/Sessions` and
-/// `/Library/Refresh` behave the same on both. The only real difference is the
+/// `/Items/{id}/Refresh` behave the same on both. The only real difference is the
 /// auth header, and that already lives on `MediaServerKind`, so one type serves
 /// both rather than a subclass that would differ by nothing.
 struct JellyfinClient: MediaServerClient {
@@ -35,6 +35,23 @@ struct JellyfinClient: MediaServerClient {
 
     private struct ItemsPage: Decodable {
         let Items: [Item]?
+    }
+
+    /// One row of `/Library/VirtualFolders` — a library as the dashboard
+    /// lists it. `CollectionType` is absent on a mixed-content folder.
+    private struct VirtualFolder: Decodable {
+        let Name: String?
+        let ItemId: String?
+        let CollectionType: String?
+
+        var libraryKind: MediaServerLibrary.Kind {
+            switch CollectionType?.lowercased() {
+            case "movies": return .movies
+            case "tvshows": return .series
+            case "music": return .music
+            default: return .other
+            }
+        }
     }
 
     private struct Item: Decodable {
@@ -144,13 +161,32 @@ struct JellyfinClient: MediaServerClient {
         return (page.Items ?? []).compactMap(entry(from:))
     }
 
-    func scanLibraries() async throws {
+    func libraries() async throws -> [MediaServerLibrary] {
         guard config.isConfigured else { throw MediaServerError.notConfigured }
-        let url = try http.url(base: normalizedBaseURL, path: "/Library/Refresh")
+        let folders = try await get("/Library/VirtualFolders", as: [VirtualFolder].self)
+        return folders.compactMap { folder in
+            guard let id = folder.ItemId, !id.isEmpty else { return nil }
+            return MediaServerLibrary(id: id, name: folder.Name ?? id, kind: folder.libraryKind)
+        }
+    }
+
+    /// The same request the dashboard's per-library "Scan Library" sends: a
+    /// recursive metadata refresh rooted at the library folder.
+    func scanLibrary(id: String) async throws {
+        guard config.isConfigured else { throw MediaServerError.notConfigured }
+        let url = try http.url(
+            base: normalizedBaseURL,
+            path: "/Items/\(id)/Refresh",
+            query: [
+                URLQueryItem(name: "Recursive", value: "true"),
+                URLQueryItem(name: "MetadataRefreshMode", value: "Default"),
+                URLQueryItem(name: "ImageRefreshMode", value: "Default"),
+            ]
+        )
         _ = try await http.post(url, headers: headers, body: Data())
     }
 
-    func emptyTrash() async throws {
+    func emptyTrash(libraryId: String) async throws {
         // Neither server has a trash to empty — items vanish from the library
         // when their files do, at the next scan. Surfaced as an explicit
         // "unsupported" so Settings can hide the button instead of offering one

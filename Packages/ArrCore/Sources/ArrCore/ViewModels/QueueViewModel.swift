@@ -579,11 +579,31 @@ public final class QueueViewModel {
         return timer
     }
 
-    func fetchHistory(for source: QueueItem.Source) async -> HistoryResult {
+    /// One raw page of `source`'s history. Pairing and folding run over all
+    /// pages loaded so far, in `HistoryFeed`.
+    func fetchHistory(for source: QueueItem.Source, page: Int) async -> HistoryResult {
+        let pageSize = HistoryFeed.pageSize
         if DemoMode.isActive {
-            return HistoryResult(items: HistoryItem.collapsingImportBatches(DemoMocks.history(for: source)), error: nil)
+            let all = DemoMocks.history(for: source)
+            let start = (page - 1) * pageSize
+            return HistoryResult(items: Array(all.dropFirst(start).prefix(pageSize)),
+                                 hasMore: start + pageSize < all.count, error: nil)
         }
-        return await aggregator.fetchHistory(for: source)
+        return await aggregator.fetchHistory(for: source, page: page, pageSize: pageSize)
+    }
+
+    /// History feeds, one per set of sources, kept for the app's lifetime. The
+    /// popover rebuilds its History view on every open, and a feed owned by
+    /// the view started from nothing each time — a spinner on every reopen.
+    @ObservationIgnored private var historyFeeds: [[QueueItem.Source]: HistoryFeed] = [:]
+
+    func historyFeed(for sources: [QueueItem.Source]) -> HistoryFeed {
+        if let cached = historyFeeds[sources] { return cached }
+        let feed = HistoryFeed(sources: sources) { [weak self] source, page in
+            await self?.fetchHistory(for: source, page: page) ?? HistoryResult(items: [], error: nil)
+        }
+        historyFeeds[sources] = feed
+        return feed
     }
 
     public func startForegroundPolling() {

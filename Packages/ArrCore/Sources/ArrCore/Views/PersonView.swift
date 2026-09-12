@@ -413,7 +413,7 @@ private struct PersonFilmographyRow: View {
             // Ownership reads from the trailing edge — same placement as the
             // queue / upcoming rows.
             if result.inLibraryArrId != nil {
-                InLibraryBadge()
+                LibraryStateBadge(isDownloaded: result.libraryDownloaded)
             }
         }
         #if os(macOS)

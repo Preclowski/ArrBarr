@@ -241,15 +241,15 @@ public actor SonarrClient: ArrAPIClient {
         return records.compactMap { Self.unifyCalendar($0, baseURL: baseURL) }
     }
 
-    func fetchHistory() async throws -> [HistoryItem] {
+    func fetchHistory(page: Int, pageSize: Int) async throws -> HistoryPage {
         guard config.isConfigured else { throw HTTPError.notConfigured }
         guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
         let url = try http.url(
             base: config.baseURL,
             path: "\(apiBase)/history",
             query: [
-                URLQueryItem(name: "page", value: "1"),
-                URLQueryItem(name: "pageSize", value: "50"),
+                URLQueryItem(name: "page", value: String(page)),
+                URLQueryItem(name: "pageSize", value: String(pageSize)),
                 URLQueryItem(name: "sortKey", value: "date"),
                 URLQueryItem(name: "sortDirection", value: "descending"),
                 URLQueryItem(name: "includeSeries", value: "true"),
@@ -257,13 +257,17 @@ public actor SonarrClient: ArrAPIClient {
             ]
         )
         let data = try await http.get(url, headers: apiHeaders)
-        let page: ArrQueuePage<SonarrHistoryRecord>
-        do { page = try JSONDecoder().decode(ArrQueuePage<SonarrHistoryRecord>.self, from: data) }
+        let response: ArrQueuePage<SonarrHistoryRecord>
+        do { response = try JSONDecoder().decode(ArrQueuePage<SonarrHistoryRecord>.self, from: data) }
         catch { throw HTTPError.decoding(error) }
-        return page.records.compactMap(Self.unifyHistory)
+        let baseURL = config.baseURL
+        return HistoryPage(
+            items: response.records.compactMap { Self.unifyHistory($0, baseURL: baseURL) },
+            hasMore: page * pageSize < response.totalRecords
+        )
     }
 
-    private static func unifyHistory(_ r: SonarrHistoryRecord) -> HistoryItem? {
+    private static func unifyHistory(_ r: SonarrHistoryRecord, baseURL: String) -> HistoryItem? {
         guard let dateStr = r.date, let date = parseArrDate(dateStr) else { return nil }
         let eventType = HistoryItem.EventType.parse(r.eventType)
         var subtitle: String?
@@ -271,17 +275,20 @@ public actor SonarrClient: ArrAPIClient {
         if let ep = r.episode, let s = ep.seasonNumber, let e = ep.episodeNumber {
             let code = String(format: "S%02dE%02d", s, e)
             subtitle = (ep.title?.isEmpty == false) ? "\(code) · \(ep.title!)" : code
-            // A season pack imports as one row per episode, all sharing a
-            // downloadId (one release → one group, one quality). Tie them
-            // together so history shows the season once; the folded row swaps
-            // the per-episode code for a season label.
-            if eventType == .imported, let batch = r.downloadId ?? r.sourceTitle {
+            // A season pack is grabbed and imported as one row per episode,
+            // all sharing a downloadId (one release → one group, one
+            // quality). Tie them together so history shows the season once;
+            // the folded row swaps the per-episode code for a season label.
+            if eventType == .imported || eventType == .grabbed, let batch = r.downloadId ?? r.sourceTitle {
                 groupHint = .init(
                     key: "\(batch)|s\(s)",
                     collapsedSubtitle: String(format: String(localized: "detail.seasonLld.label", bundle: .module), s)
                 )
             }
         }
+        let (poster, auth) = (r.series?.images ?? []).posterURL(
+            baseURL: baseURL, mediaServerKeys: r.series?.mediaServerKeys ?? []
+        )
         return HistoryItem(
             id: "sonarr-h-\(r.id)",
             source: .sonarr,
@@ -293,7 +300,19 @@ public actor SonarrClient: ArrAPIClient {
             quality: r.quality?.name,
             customFormats: (r.customFormats ?? []).map(\.name),
             customFormatScore: r.customFormatScore ?? 0,
-            groupHint: groupHint
+            groupHint: groupHint,
+            posterURL: poster,
+            posterRequiresAuth: auth,
+            arrId: r.seriesId ?? r.series?.id,
+            fileKey: (r.episodeId ?? r.episode?.id).map { "episode-\($0)" },
+            downloadId: r.downloadId,
+            downloadClient: r.data?.historyString("downloadClientName") ?? r.data?.historyString("downloadClient"),
+            indexer: r.data?.historyString("indexer"),
+            size: r.data?.historyString("size").flatMap { Int64($0) },
+            deleteReason: r.data?.historyString("reason"),
+            // Sonarr embeds the episode but not its file, so a grab still on
+            // its way gets its Upgrade / New verdict without a diff.
+            hadFileOnDisk: r.episode?.hasFile
         )
     }
 
@@ -571,7 +590,8 @@ public actor SonarrClient: ArrAPIClient {
             releaseStatus: r.series?.status,
             qualityProfileId: r.series?.qualityProfileId,
             seasonNumber: r.seasonNumber,
-            episodeNumber: r.episodeNumber
+            episodeNumber: r.episodeNumber,
+            tvdbId: r.series?.tvdbId
         )
     }
 

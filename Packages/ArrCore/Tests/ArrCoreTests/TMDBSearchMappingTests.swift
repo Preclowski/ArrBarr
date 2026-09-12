@@ -30,7 +30,7 @@ struct TMDBSearchMappingTests {
     @Test("An owned movie is tagged from the library map")
     func movieOwnershipTagging() throws {
         let m = try decodeMovie(#"{"id": 550, "title": "Fight Club"}"#)
-        let result = TMDBSearchMapping.movies([m], libraryMap: [550: 42]).first
+        let result = TMDBSearchMapping.movies([m], libraryMap: [550: LibraryOwnership(arrId: 42, isDownloaded: false)]).first
         #expect(result?.inLibraryArrId == 42)
     }
 
@@ -54,7 +54,7 @@ struct TMDBSearchMappingTests {
     @Test("An owned series is tagged from the tmdb-keyed library map")
     func seriesOwnershipTagging() throws {
         let s = try decodeTV(#"{"id": 1396, "name": "Breaking Bad"}"#)
-        let result = TMDBSearchMapping.series([s], libraryMap: [1396: 7]).first
+        let result = TMDBSearchMapping.series([s], libraryMap: [1396: LibraryOwnership(arrId: 7, isDownloaded: true)]).first
         #expect(result?.inLibraryArrId == 7)
     }
 
@@ -65,7 +65,7 @@ struct TMDBSearchMappingTests {
     func sameTitleDifferentShowIsNotTagged() throws {
         let owned = try decodeTV(#"{"id": 1234, "name": "The Closer", "first_air_date": "2005-06-13"}"#)
         let namesake = try decodeTV(#"{"id": 9999, "name": "The Closer", "first_air_date": "2005-09-01"}"#)
-        let rows = TMDBSearchMapping.series([owned, namesake], libraryMap: [1234: 42])
+        let rows = TMDBSearchMapping.series([owned, namesake], libraryMap: [1234: LibraryOwnership(arrId: 42, isDownloaded: false)])
         #expect(rows.first?.inLibraryArrId == 42)
         #expect(rows.last?.inLibraryArrId == nil)
     }
