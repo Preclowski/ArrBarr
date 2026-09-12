@@ -56,15 +56,9 @@ public struct PopoverContentView: View {
     /// for `arrBarrConfirmRequest`. Rendered as a panel-wide overlay
     /// at the end of body.
     @State private var pendingConfirm: PendingConfirm?
-    /// The macOS search capsule's focus, owned here because ⌘N, the Add intent
-    /// and the search intent all aim at it from outside any tab. Passed down to
-    /// whichever tab is rendering the capsule.
+    /// The search capsule's focus, owned here because ⌘N, the Add intent and
+    /// the search intent all aim at it from outside any tab.
     @FocusState private var searchFieldFocused: Bool
-    /// Second-axis filter: which class of result to show. `.all`
-    /// shows queue + library + new. `.inQueue` collapses to queue
-    /// rows only (useful for "where's my Foo?" when the search would
-    /// otherwise drown the list in add-new candidates). `.libraryOrNew`
-    /// hides queue rows and surfaces only search results.
 
     /// `true` when the SearchAddPanel overlay was opened via a chat
     /// tap-to-add rather than the Add tab. Drives the Back behaviour in
@@ -110,18 +104,25 @@ public struct PopoverContentView: View {
     }
 
     /// Put the caret in the search capsule so the panel is typeable the instant
-    /// it opens.
-    ///
-    /// Queue AND Library: they render the SAME capsule, bound to the same
-    /// query, so there is one field to focus and one owner of that focus.
-    /// Upcoming has no field; Chat focuses its own composer on appear.
+    /// it opens. Every tab but Chat sits under the one `SearchHost`; Chat
+    /// focuses its own composer on appear.
     ///
     /// Hopped to the next main-actor turn rather than set inline: on the
     /// `onAppear` pass the field isn't in the responder chain yet, and an
     /// assignment made before it is there is silently dropped.
     private func focusInputForCurrentTab() {
-        guard selectedTab == .queue || selectedTab == .library else { return }
+        guard selectedTab.hostsSearch else { return }
         Task { @MainActor in searchFieldFocused = true }
+    }
+
+    /// What the app already knows about that matches the query — live queue
+    /// rows and owned titles from every loaded library. The same on every tab.
+    private var localHits: [LocalHit] {
+        guard searchViewModel.isActive else { return [] }
+        return LocalHit.hits(
+            queue: viewModel, library: libraryViewModel,
+            sources: QueueItem.Source.allCases.filter { configStore.config(for: $0.serviceKind).isVisible },
+            query: searchViewModel.query)
     }
 
     /// Queue rows that are for a specific Sonarr episode (season pack
@@ -154,10 +155,9 @@ public struct PopoverContentView: View {
         case library = "Library"
         case upcoming = "Upcoming"
         case chat = "Chat"
-        // `.add` (Search) removed — the queue's floating filter bar
-        // now doubles as a global search. Empty filter → queue rows;
-        // typing → queue rows that match + library/add-new candidates
-        // pulled via `SearchViewModel`. One surface, both jobs.
+
+        /// Every tab but Chat sits under the one `SearchHost`.
+        var hostsSearch: Bool { self != .chat }
 
         /// Every tab renders as its glyph by default; only the ACTIVE tab
         /// expands to its text label. Four labels ("Nadchodzące",
@@ -439,35 +439,41 @@ public struct PopoverContentView: View {
                     )
                 } else if anyArrConfigured {
                     // Tab bar hides while a query is live — search becomes a
-                    // full-size surface on BOTH tabs (the back chevron in the
-                    // top strip is the only nav affordance you need). Tabs
-                    // reappear the moment the query clears.
-                    if !(searchViewModel.isActive
-                         && (selectedTab == .queue || selectedTab == .library)) {
+                    // full-size surface (the back chevron in the top strip is
+                    // the only nav affordance you need). Tabs reappear the
+                    // moment the query clears.
+                    if !(searchViewModel.isActive && selectedTab.hostsSearch) {
                         tabBar
                     }
                     Group {
-                        switch selectedTab {
-                        case .queue:
-                            QueueTabContent(
-                                viewModel: viewModel,
-                                searchViewModel: searchViewModel,
-                                searchFieldFocused: $searchFieldFocused,
-                                detailItem: $detailItem,
-                                historySource: $historySource,
-                                searchResult: $searchResult,
-                                selecting: $queueSelecting
-                            )
-                        case .library:
-                            LibraryTabContent(
-                                viewModel: libraryViewModel,
-                                searchVM: searchViewModel,
-                                searchResult: $searchResult,
-                                searchFieldFocused: $searchFieldFocused
-                            )
-                        case .upcoming: UpcomingTabContent(viewModel: viewModel)
-                        case .chat:
+                        if selectedTab == .chat {
                             ChatTabContent(chatHolder: chatHolder)
+                        } else {
+                            // One search, hosted once: the capsule, the takeover
+                            // and the results are the same view whichever tab
+                            // sits underneath.
+                            SearchHost(
+                                searchVM: searchViewModel,
+                                localHits: localHits,
+                                searchAvailable: anyArrConfigured,
+                                focused: $searchFieldFocused,
+                                onSelectQueueItem: { detailItem = $0 },
+                                onSelectAddResult: { searchResult = $0 }
+                            ) {
+                                switch selectedTab {
+                                case .queue:
+                                    QueueTabContent(
+                                        viewModel: viewModel,
+                                        detailItem: $detailItem,
+                                        historySource: $historySource,
+                                        selecting: $queueSelecting
+                                    )
+                                case .library:
+                                    LibraryTabContent(viewModel: libraryViewModel)
+                                case .upcoming, .chat:
+                                    UpcomingTabContent(viewModel: viewModel)
+                                }
+                            }
                         }
                     }
                 } else {
@@ -747,12 +753,11 @@ public struct PopoverContentView: View {
                     }
                     // Re-tapping the active tab clears a live query — a
                     // "reset to home" affordance that needs no chrome of its
-                    // own (Spotify / Apple Music tab-bar idiom). Only where a
-                    // query IS the tab's content: the other tabs don't own the
-                    // field, and wiping it from them loses a search the user
-                    // stepped away from.
-                    if tab == selectedTab, tab == .queue || tab == .library,
-                       searchViewModel.isActive {
+                    // own (Spotify / Apple Music tab-bar idiom). Only where the
+                    // search is on screen: Chat doesn't show the field, and
+                    // wiping it from there loses a search the user stepped
+                    // away from.
+                    if tab == selectedTab, tab.hostsSearch, searchViewModel.isActive {
                         withAnimation(.easeOut(duration: 0.18)) {
                             searchViewModel.query = ""
                         }

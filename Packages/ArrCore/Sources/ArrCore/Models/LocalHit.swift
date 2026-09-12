@@ -1,9 +1,9 @@
 import Foundation
 
-/// One row the HOST already knows about, handed to the search surface as its
-/// local context. The tabs differ in exactly this: the Queue tab supplies live
-/// download rows, the Library tab supplies owned titles from the browsed
-/// library. Everything below this line looks and behaves identically.
+/// One row the app already knows about, handed to the search surface as its
+/// local context: a live download from the queue, or an owned title from a
+/// loaded library. The same context on every tab — search is one surface,
+/// hosted once, and the tab underneath it does not change what it answers.
 public enum LocalHit: Identifiable {
     /// A live download — progress and action chrome, rendered by `QueueSearchRow`.
     case queue(QueueRowEntry)
@@ -47,8 +47,29 @@ public struct OwnershipKey: Hashable, Sendable {
 }
 
 public extension LocalHit {
-    /// The Queue tab's local context: every configured source's live rows that
-    /// still match the query, Sonarr's grouped into packs.
+    /// The one local context: live queue rows that match the query, then owned
+    /// titles from every library already in memory (deduped against the queue
+    /// rows, which already answer for them). A library that hasn't loaded yet
+    /// contributes nothing — the lookup rows below still wear their ownership
+    /// badge, so nothing reads as "not owned".
+    @MainActor
+    static func hits(queue: QueueViewModel,
+                     library: LibraryViewModel,
+                     sources: [QueueItem.Source],
+                     query: String) -> [LocalHit] {
+        let queueRows = queueHits(viewModel: queue, sources: sources, query: query)
+        guard !TitleMatch.fold(query).isEmpty else { return queueRows }
+        let owned = Set(queueRows.flatMap(\.ownershipKeys))
+        let libraryRows = sources.flatMap { source -> [LocalHit] in
+            guard let entries = library.entries[source] else { return [] }
+            return TitleMatch.indexedFilter(entries, query: query, index: \.searchIndex)
+                .filter { !owned.contains(OwnershipKey(source: $0.source, arrId: $0.arrId)) }
+                .map(LocalHit.library)
+        }
+        return queueRows + libraryRows
+    }
+
+    /// Live queue rows that still match the query, Sonarr's grouped into packs.
     ///
     /// Matching is `TitleMatch.indexedFilter` over a per-item fold of title +
     /// episode title + subtitle — the same matcher the library grid uses, so

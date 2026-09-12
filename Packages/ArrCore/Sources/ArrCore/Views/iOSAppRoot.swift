@@ -46,6 +46,16 @@ public struct iOSAppRoot: View {
 
     enum RootTab: Hashable { case queue, library, upcoming, chat, settings }
 
+    /// What the app already knows about that matches the query — live queue
+    /// rows and owned titles from every loaded library. The same on every tab.
+    private var localHits: [LocalHit] {
+        guard searchVM.isActive else { return [] }
+        return LocalHit.hits(
+            queue: viewModel, library: libraryViewModel,
+            sources: QueueItem.Source.allCases.filter { configStore.config(for: $0.serviceKind).isVisible },
+            query: searchVM.query)
+    }
+
     /// "More picks like these" is a chat turn — the mood and the already-shown
     /// titles are in the conversation, so the model has the context without us
     /// stuffing them into the visible message.
@@ -70,19 +80,19 @@ public struct iOSAppRoot: View {
     public var body: some View {
         TabView(selection: $selectedTab) {
             Tab(value: RootTab.queue) {
-                NavigationStack { QueueTab(viewModel: viewModel, searchVM: searchVM, isActive: selectedTab == .queue, searchPresented: $searchPresented) }
+                NavigationStack { QueueTab(viewModel: viewModel, searchVM: searchVM, localHits: localHits, isActive: selectedTab == .queue, searchPresented: $searchPresented) }
             } label: {
                 Label { Text("paywall.queue.button", bundle: .module) } icon: { Image(systemName: "arrow.down.circle") }
             }
 
             Tab(value: RootTab.library) {
-                NavigationStack { LibraryTab(searchVM: searchVM, libraryViewModel: libraryViewModel, viewModel: viewModel, isActive: selectedTab == .library) }
+                NavigationStack { LibraryTab(searchVM: searchVM, localHits: localHits, libraryViewModel: libraryViewModel, viewModel: viewModel, isActive: selectedTab == .library, searchPresented: $searchPresented) }
             } label: {
                 Label { Text("Library", bundle: .module) } icon: { Image(systemName: "books.vertical") }
             }
 
             Tab(value: RootTab.upcoming) {
-                NavigationStack { UpcomingTab(viewModel: viewModel, isActive: selectedTab == .upcoming) }
+                NavigationStack { UpcomingTab(viewModel: viewModel, searchVM: searchVM, localHits: localHits, isActive: selectedTab == .upcoming, searchPresented: $searchPresented) }
             } label: {
                 Label { Text("queue.upcoming.button", bundle: .module) } icon: { Image(systemName: "calendar") }
             }
@@ -275,38 +285,24 @@ private struct ChatLockedPlaceholder: View {
 
 private struct QueueTab: View {
     var viewModel: QueueViewModel
-    @Bindable var searchVM: SearchViewModel
+    var searchVM: SearchViewModel
+    var localHits: [LocalHit]
     var isActive: Bool
     @Binding var searchPresented: Bool
     @EnvironmentObject var configStore: ConfigStore
     @State private var detailItem: QueueItem?
     @State private var searchResult: SearchResult?
-    @State private var personRef: PersonRef?
     @State private var selecting = false
     /// History is reached from the queue's per-arr section header, the way the
     /// macOS popover does it — it no longer owns a tab of its own.
     @State private var historySource: QueueItem.Source?
 
-    private var iosSearchScopes: [SearchScope] { SearchScope.available(for: configStore) }
-
-    private var configuredSources: [QueueItem.Source] {
-        QueueItem.Source.allCases.filter { configStore.config(for: $0.serviceKind).isVisible }
-    }
-
-    /// This tab's local context: the live queue, matched with the same folder
-    /// the library grid uses.
-    private var queueLocalHits: [LocalHit] {
-        guard searchVM.isActive else { return [] }
-        return LocalHit.queueHits(viewModel: viewModel,
-                                  sources: configuredSources,
-                                  query: searchVM.query)
+    private var searchAvailable: Bool {
+        QueueItem.Source.allCases.contains { configStore.config(for: $0.serviceKind).isVisible }
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            SearchScopeBar(searchVM: searchVM, scopes: iosSearchScopes)
-            queueContent
-        }
+        queueContent
         .refreshable { await viewModel.refresh() }
         // No nav-bar title — it only duplicated the tab-bar label below.
         .navigationBarTitleDisplayMode(.inline)
@@ -329,18 +325,12 @@ private struct QueueTab: View {
         // way the bottom action bar has anywhere to draw, and it stops the tab
         // bar offering navigation away from a half-made selection.
         .toolbar(selecting ? .hidden : .visible, for: .tabBar)
-        // Search steps aside entirely in edit mode: its magnifier otherwise
-        // competes with "Done" for the trailing slot and wins, leaving no way
-        // out of the mode. Mail and Files drop their search bar there too.
-        .modifier(SearchField(searchVM: searchVM, enabled: !selecting,
-                              isPresented: $searchPresented))
         // Search-to-add App Intent → run the search here.
         .onReceive(NotificationCenter.default.publisher(for: .arrBarrSearchQuery)) { note in
             guard let q = note.userInfo?["query"] as? String else { return }
             searchResult = nil
             searchVM.query = q
         }
-        .personDestination($personRef)
         .navigationDestination(item: $detailItem) { item in
             DetailView(item: item, onBack: { detailItem = nil }, viewModel: viewModel)
         }
@@ -362,7 +352,18 @@ private struct QueueTab: View {
                 searchResult = nil
             }
         } else {
-            ZStack {
+            // Search steps aside entirely in edit mode: its magnifier otherwise
+            // competes with "Done" for the trailing slot and wins, leaving no
+            // way out of the mode. Mail and Files drop their search bar there too.
+            SearchHost(
+                searchVM: searchVM,
+                localHits: localHits,
+                searchAvailable: searchAvailable,
+                enabled: !selecting,
+                isPresented: $searchPresented,
+                onSelectQueueItem: { detailItem = $0 },
+                onSelectAddResult: { searchResult = $0 }
+            ) {
                 QueueListView(
                     viewModel: viewModel,
                     onShowDetail: { detailItem = $0 },
@@ -370,26 +371,6 @@ private struct QueueTab: View {
                     onShowHistory: { historySource = $0 },
                     selecting: $selecting
                 )
-                // Typing shows the same unified surface as macOS: live queue
-                // rows that still match on top, arr library / add-new below.
-                if searchVM.isActive {
-                    ScrollView {
-                        SearchResultsSurface(
-                            searchVM: searchVM,
-                            localHits: queueLocalHits,
-                            onSelectQueueItem: { detailItem = $0 },
-                            onSelectAddResult: { searchResult = $0 },
-                            onSelectPerson: { personRef = $0 }
-                        )
-                        .padding(.vertical, 8)
-                        if searchVM.isSearching, !searchVM.hasResults {
-                            ProgressView()
-                                .controlSize(.small)
-                                .padding(.vertical, 16)
-                        }
-                    }
-                    .background(Color(.systemBackground))
-                }
             }
         }
     }
@@ -510,18 +491,19 @@ struct MinimizedSearchToolbar: ViewModifier {
 
 // MARK: - Library tab
 
-/// Same surface macOS shows in its `.library` tab. This wrapper only supplies
-/// the add-panel slot the popover fills from `PopoverContentView`.
+/// Same surface macOS shows in its `.library` tab, under the same `SearchHost`.
+/// This wrapper only supplies the add-panel slot the popover fills from
+/// `PopoverContentView`.
 private struct LibraryTab: View {
     var searchVM: SearchViewModel
+    var localHits: [LocalHit]
     var libraryViewModel: LibraryViewModel
     var viewModel: QueueViewModel
     var isActive: Bool
+    @Binding var searchPresented: Bool
+    @EnvironmentObject var configStore: ConfigStore
     @State private var searchResult: SearchResult?
     @State private var detailItem: QueueItem?
-    /// Only the macOS capsule reads this; iOS drives the field through
-    /// `.searchable`. Declared so the one component signature serves both.
-    @FocusState private var searchFieldFocused: Bool
 
     var body: some View {
         Group {
@@ -530,11 +512,16 @@ private struct LibraryTab: View {
                     searchResult = nil
                 }
             } else {
-                LibraryTabContent(viewModel: libraryViewModel,
-                                  searchVM: searchVM,
-                                  searchResult: $searchResult,
-                                  searchFieldFocused: $searchFieldFocused,
-                                  isTabActive: isActive)
+                SearchHost(
+                    searchVM: searchVM,
+                    localHits: localHits,
+                    searchAvailable: QueueItem.Source.allCases.contains { configStore.config(for: $0.serviceKind).isVisible },
+                    isPresented: $searchPresented,
+                    onSelectQueueItem: { detailItem = $0 },
+                    onSelectAddResult: { searchResult = $0 }
+                ) {
+                    LibraryTabContent(viewModel: libraryViewModel)
+                }
             }
         }
         .navigationBarTitleDisplayMode(.inline)
@@ -555,26 +542,31 @@ private struct LibraryTab: View {
 
 private struct UpcomingTab: View {
     var viewModel: QueueViewModel
+    var searchVM: SearchViewModel
+    var localHits: [LocalHit]
     var isActive: Bool
+    @Binding var searchPresented: Bool
     @EnvironmentObject var configStore: ConfigStore
     @State private var detailItem: QueueItem?
+    @State private var searchResult: SearchResult?
 
     var body: some View {
         Group {
-            if viewModel.upcoming.isEmpty {
-                emptyState
-            } else {
-                List {
-                    ForEach(grouped, id: \.label) { group in
-                        Section(group.label) {
-                            ForEach(group.items) { item in
-                                UpcomingRowView(item: item)
-                                    .listRowInsets(EdgeInsets(top: 6, leading: 12, bottom: 6, trailing: 12))
-                            }
-                        }
-                    }
+            if let result = searchResult {
+                SearchAddPanel(result: result, viewModel: searchVM) {
+                    searchResult = nil
                 }
-                .listStyle(.insetGrouped)
+            } else {
+                SearchHost(
+                    searchVM: searchVM,
+                    localHits: localHits,
+                    searchAvailable: QueueItem.Source.allCases.contains { configStore.config(for: $0.serviceKind).isVisible },
+                    isPresented: $searchPresented,
+                    onSelectQueueItem: { detailItem = $0 },
+                    onSelectAddResult: { searchResult = $0 }
+                ) {
+                    upcomingList
+                }
             }
         }
         .navigationBarTitleDisplayMode(.inline)
@@ -595,6 +587,25 @@ private struct UpcomingTab: View {
         .onReceive(NotificationCenter.default.publisher(for: .arrBarrOpenDetail)) { note in
             guard isActive, let item = note.userInfo?["item"] as? QueueItem else { return }
             detailItem = item
+        }
+    }
+
+    @ViewBuilder
+    private var upcomingList: some View {
+        if viewModel.upcoming.isEmpty {
+            emptyState
+        } else {
+            List {
+                ForEach(grouped, id: \.label) { group in
+                    Section(group.label) {
+                        ForEach(group.items) { item in
+                            UpcomingRowView(item: item)
+                                .listRowInsets(EdgeInsets(top: 6, leading: 12, bottom: 6, trailing: 12))
+                        }
+                    }
+                }
+            }
+            .listStyle(.insetGrouped)
         }
     }
 

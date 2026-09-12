@@ -2,11 +2,6 @@ import SwiftUI
 
 /// Library tab — a browsable cover grid of everything already on the arrs.
 /// Top strip: arr picker (menu-chip) + status filter chips + sort menu.
-/// Bottom: the same floating capsule the Queue tab uses, driving the same
-/// search view model. Typing takes the window over: the browsed library's
-/// matches become this tab's local hits at the top of the shared results
-/// surface, with the arr lookups under them. Clearing the query brings the
-/// grid back.
 /// The library's chrome was sized for a 400pt popover and a mouse. On touch the
 /// same numbers give 20pt hit areas — half Apple's 44pt minimum — so every
 /// value the strip uses is forked rather than sprinkled with `#if` at each call.
@@ -48,25 +43,11 @@ private struct LibraryFilterStrip<Content: View>: View {
 }
 #endif
 
+/// The Library tab's content: the browsing strip and the cover grid. Search is
+/// not this view's business — `SearchHost` wraps it above the tabs.
 struct LibraryTabContent: View {
     var viewModel: LibraryViewModel
-    /// The ONE search view model, owned by the root and shared with the Queue
-    /// tab. The Library tab used to run its own instance; two owners of one
-    /// query fought across every tab switch, and this one had no TMDB key, so
-    /// its "In library" toggle answered with nothing.
-    var searchVM: SearchViewModel
     @EnvironmentObject var configStore: ConfigStore
-    /// Tapping an add-new lookup row routes here — `PopoverContentView`
-    /// presents the shared `SearchAddPanel` overlay for it, same as the
-    /// queue surface's rows.
-    @Binding var searchResult: SearchResult?
-    /// The macOS capsule's focus, owned by the root (it is the same field the
-    /// Queue tab renders). Unused on iOS, which uses `.searchable`.
-    var searchFieldFocused: FocusState<Bool>.Binding
-    /// True while this is the tab on screen. Leaving it closes an EMPTY search
-    /// field; one holding a query is kept, so coming back shows the results
-    /// again instead of a blank list. macOS always passes the default.
-    var isTabActive: Bool = true
 
     /// Which arr's library is on screen. Defaults to the first configured
     /// arr on appear; not persisted (the popover session is short-lived,
@@ -75,10 +56,6 @@ struct LibraryTabContent: View {
     @State private var sourceResolved = false
     @State private var statusFilter: StatusFilter = .all
     @State private var sort: SortMode = .title
-    @State private var searchPresented = false
-    /// Person-view push from a search person row / "Starring X" section — the
-    /// Library tab reaches people now that it runs the full search.
-    @State private var personRef: PersonRef?
     /// Grid (covers) vs list (compact rows). Persisted — a layout preference,
     /// not per-session state like the filters above.
     @AppStorage("libraryViewMode") private var viewModeRaw = ViewMode.grid.rawValue
@@ -217,49 +194,18 @@ struct LibraryTabContent: View {
         allEntries.count { matches($0, filter: filter) }
     }
 
-    /// This tab's local context: the browsed arr's entries in the current sort
-    /// axis with the status chips applied, matched over the alias index.
-    /// Under takeover these rows ARE the grid's answer — the grid itself is not
-    /// shown, and clearing the query brings it back.
-    private var localHits: [LocalHit] {
-        // A query that folds away to nothing — "..." or a lone "-" — matches
-        // every entry there is, and the takeover would answer it with the
-        // whole library.
-        guard searchVM.isActive, !TitleMatch.fold(searchVM.query).isEmpty else { return [] }
-        return visibleEntries.map(LocalHit.library)
-    }
-
-    /// True when at least one arr can answer a lookup — gates the takeover's
-    /// cold-start spinner.
-    private var searchAvailable: Bool {
-        QueueItem.Source.allCases.contains { configStore.config(for: $0.serviceKind).isVisible }
-    }
-
     private var visibleEntries: [LibraryEntry] {
-        let query = searchVM.query.trimmingCharacters(in: .whitespacesAndNewlines)
         // Sort FIRST, through the view model's memoized per-axis cache —
         // filtering a pre-sorted list preserves order, and the filters are
         // the cheap half (sub-ms even at ~3k entries; the localized title
         // sort was the ~20ms-per-body-pass hitch felt on tab entry).
         var out = viewModel.sorted(source, cacheKey: sort.cacheKey, using: sort.areInIncreasingOrder)
         out = out.filter { matches($0, filter: statusFilter) }
-        if !query.isEmpty {
-            // Searches the entry's whole alias set, not its visible title:
-            // accents folded ("leon" → "Léon"), and every translated name the
-            // arr knows ("leon zawodowiec"). A raw compare on `title` hid both,
-            // which reads as "you don't own it" — the one wrong answer this
-            // app must never give.
-            out = TitleMatch.indexedFilter(out, query: query, index: \.searchIndex)
-        }
         return out
     }
 
     var body: some View {
         surface
-        .personDestination($personRef)
-        .onChange(of: isTabActive) { _, nowActive in
-            if !nowActive, !searchVM.isActive { searchPresented = false }
-        }
         .onAppear {
             // The default `.radarr` may not be configured — snap to the first
             // arr that is, once. (Re-running on every appear would fight a
@@ -554,66 +500,14 @@ struct LibraryTabContent: View {
 
     // MARK: - Surface
 
-    /// macOS keeps the floating bottom capsule (the popover has no navigation
-    /// bar to hang a field on). iOS uses the system search field, so Library
-    /// reads like Queue and like every other iOS app. Either way it is the
-    /// SAME field, the same scopes and the same takeover.
-    @ViewBuilder
+    /// Browsing strip over the grid. On iOS the strip steps aside while the
+    /// system search field is open (`LibraryFilterStrip`); on macOS the host's
+    /// takeover replaces this whole view, strip included.
     private var surface: some View {
-        #if os(iOS)
         VStack(spacing: 0) {
-            // Browsing filters and search scopes are different jobs, so they
-            // never share a row: the arr picker + status chips + sort belong to
-            // the grid, the scope bar belongs to the query.
             LibraryFilterStrip { topStrip }
-            SearchScopeBar(searchVM: searchVM, scopes: SearchScope.available(for: configStore))
-            if searchVM.isActive {
-                ScrollView {
-                    resultsSurface
-                        .padding(.vertical, 8)
-                    if searchVM.isSearching, !searchVM.hasResults {
-                        ProgressView()
-                            .controlSize(.small)
-                            .padding(.vertical, 16)
-                    }
-                }
-                .background(Color(.systemBackground))
-            } else {
-                gridOrState
-            }
+            gridOrState
         }
-        .modifier(SearchField(searchVM: searchVM, enabled: true, isPresented: $searchPresented))
-        #else
-        VStack(spacing: 0) {
-            // Under takeover the browsing strip steps aside too — matching what
-            // `LibraryFilterStrip` already does on iOS.
-            if !searchVM.isActive { topStrip }
-            ZStack(alignment: .bottom) {
-                if searchVM.isActive {
-                    SearchTakeoverView(searchVM: searchVM, searchAvailable: searchAvailable) {
-                        resultsSurface
-                    }
-                } else {
-                    gridOrState
-                }
-                SearchCapsule(searchVM: searchVM, focused: searchFieldFocused)
-                    .padding(.horizontal, 10)
-                    .padding(.bottom, 10)
-            }
-        }
-        #endif
-    }
-
-    private var resultsSurface: some View {
-        SearchResultsSurface(
-            searchVM: searchVM,
-            localHits: localHits,
-            // No `onSelectQueueItem`: the Library tab has no live queue rows of
-            // its own — every local hit here is a `.library` one, which routes
-            // itself.
-            onSelectAddResult: { searchResult = $0 },
-            onSelectPerson: { personRef = $0 }
-        )
     }
 }
 

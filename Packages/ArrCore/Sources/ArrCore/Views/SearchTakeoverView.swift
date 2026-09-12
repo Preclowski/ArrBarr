@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// The takeover host: while a query is live, search owns the window on BOTH
-/// tabs. The header is pinned ABOVE the ScrollView so it stays stuck to the
+/// The takeover host: while a query is live, search owns the window on every
+/// tab that hosts it. The header is pinned ABOVE the ScrollView so it stays stuck to the
 /// top of the popover — in search mode it stands in for the hidden tab bar as
 /// the top strip — instead of scrolling away with the results beneath it.
 struct SearchTakeoverView<Surface: View>: View {
