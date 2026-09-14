@@ -41,7 +41,7 @@ public struct InQueueBadge: View {
             .padding(.vertical, 1)
             .overlay(
                 RoundedRectangle(cornerRadius: Tokens.Radius.chip)
-                    .stroke(Color.orange.opacity(0.55), lineWidth: 1)
+                    .stroke(Color.orange.opacity(0.55), lineWidth: 0.75)
             )
     }
 }
@@ -67,7 +67,7 @@ public struct SourceGlyphChip: View {
         .foregroundStyle(.secondary)
         .padding(.horizontal, 5)
         .padding(.vertical, 1)
-        .background(Color.primary.opacity(0.08), in: RoundedRectangle(cornerRadius: Tokens.Radius.chip))
+        .filledChipBackground()
     }
 }
 
@@ -173,7 +173,7 @@ public struct InLibraryBadge: View {
             .padding(.vertical, 1)
             .overlay(
                 RoundedRectangle(cornerRadius: Tokens.Radius.chip)
-                    .stroke(Color.accentColor.opacity(0.55), lineWidth: 1)
+                    .stroke(Color.accentColor.opacity(0.55), lineWidth: 0.75)
             )
     }
 }
@@ -219,7 +219,20 @@ public struct ProfileChip: View {
             .foregroundStyle(.secondary)
             .padding(.horizontal, 5)
             .padding(.vertical, 1)
-            .background(Color.primary.opacity(0.08), in: RoundedRectangle(cornerRadius: Tokens.Radius.chip))
+            .filledChipBackground()
+    }
+}
+
+extension View {
+    /// Fill for the un-outlined chips. Outlined chips centre a 0.75 pt stroke
+    /// on their edge, so half of it draws outside the frame — the fill grows
+    /// by that half so filled and outlined chips read the same size.
+    func filledChipBackground() -> some View {
+        background(
+            RoundedRectangle(cornerRadius: Tokens.Radius.chip)
+                .fill(Color.primary.opacity(0.08))
+                .padding(-0.375)
+        )
     }
 }
 
@@ -244,7 +257,7 @@ public struct StateChip: View {
             .padding(.vertical, 1)
             .overlay(
                 RoundedRectangle(cornerRadius: Tokens.Radius.chip)
-                    .stroke(color.opacity(0.55), lineWidth: 1)
+                    .stroke(color.opacity(0.55), lineWidth: 0.75)
             )
     }
 }

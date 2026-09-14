@@ -167,7 +167,10 @@ public struct PosterMetadataRow<TrailingAccessory: View>: View {
                 if idx > 0 {
                     SeparatorDot()
                 }
+                // One line, always: an overlong segment truncates rather
+                // than wrapping into a narrow column.
                 Text(seg)
+                    .lineLimit(1)
                     .foregroundStyle(
                         (idx < colors.count ? colors[idx] : nil)
                             .map { AnyShapeStyle($0) } ?? AnyShapeStyle(.secondary)

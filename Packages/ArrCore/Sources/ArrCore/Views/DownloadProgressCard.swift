@@ -102,10 +102,7 @@ public struct DownloadProgressCard: View {
             // grid is part of this header block.
             if showHeader {
                 HStack(spacing: 6) {
-                    // Queue rows (compactSpec) drop the bordered "pill" — the
-                    // icon + coloured word are enough; the border read as a
-                    // redundant label there.
-                    StatusIconLabel(status: item.status, bordered: !compactSpec)
+                    StatusIconLabel(status: item.status)
                     // Compact queue rows carry the badge on their title line
                     // (no room here next to status + client + spec); detail
                     // surfaces show it in this header.
