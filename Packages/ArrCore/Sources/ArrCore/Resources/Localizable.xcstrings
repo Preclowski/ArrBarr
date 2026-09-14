@@ -22802,7 +22802,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Przechwycone"
+            "value": "Złapane"
           }
         },
         "de": {
@@ -43356,6 +43356,47 @@
         }
       },
       "comment": "Settings → Media server: per-library rescan button (the library name sits next to it)"
+    },
+    "detail.showHistory.button": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show history"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pokaż historię"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verlauf anzeigen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostrar historial"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Afficher l’historique"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geschiedenis tonen"
+          }
+        }
+      }
     }
   }
 }

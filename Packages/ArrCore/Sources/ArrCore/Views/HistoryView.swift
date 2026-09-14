@@ -4,6 +4,12 @@ public struct HistoryView: View {
     /// nil = "All" — merge history across every configured arr (iOS filter).
     /// macOS passes a concrete source (per-arr "Show history").
     let source: QueueItem.Source?
+    /// One library record's history (a detail view's "Show history") — the
+    /// arr filters server-side, so it pages like the arr-wide feed. Needs a
+    /// concrete `source`.
+    var entityId: Int? = nil
+    /// Header title override — the record's title when `entityId` is set.
+    var title: String? = nil
     var viewModel: QueueViewModel
     @EnvironmentObject var configStore: ConfigStore
     let onClose: () -> Void
@@ -25,7 +31,7 @@ public struct HistoryView: View {
         // The feed outlives this view, so a reopened popover shows the rows it
         // had at once; this brings them up to date behind them. Re-run when the
         // iOS tab swaps `source` in place.
-        .task(id: source?.rawValue ?? "all") { await feed.load() }
+        .task(id: "\(source?.rawValue ?? "all")/\(entityId.map(String.init) ?? "")") { await feed.load() }
     }
 
     /// Arrs the user has configured — used to fan out the "All" load.
@@ -34,7 +40,7 @@ public struct HistoryView: View {
     }
 
     private var feed: HistoryFeed {
-        viewModel.historyFeed(for: source.map { [$0] } ?? availableSources)
+        viewModel.historyFeed(for: source.map { [$0] } ?? availableSources, entityId: entityId)
     }
 
     /// Loaded items after the optional event-type filter.
@@ -63,6 +69,7 @@ public struct HistoryView: View {
     /// "History (Radarr)". `AppLocalized` rather than `String(localized:)` so
     /// a live language switch reaches it.
     private var headerTitle: String {
+        if let title { return title }
         let history = AppLocalized.string("discover.history.button", locale: configStore.currentLocale)
         guard let source else { return history }
         return "\(history) (\(source.displayName))"
@@ -123,7 +130,9 @@ public struct HistoryView: View {
                     sectionHeader(group.bucket, isFirst: group.id == groups.first?.id)
                     ForEach(group.items) { item in
                         HistoryRowView(item: item, showSourceBadge: source == nil, onOpenDetail: onOpenDetail)
-                            .padding(.horizontal, Self.queueListInset)
+                            // `PosterMetadataRow` pads itself 12 pt; top that
+                            // up to the queue row's edge.
+                            .padding(.horizontal, Tokens.Spacing.queueRowH + Self.queueListInset - 12)
                             .onAppear {
                                 if prefetchIDs.contains(item.id) { feed.requestMore() }
                             }
@@ -169,10 +178,13 @@ public struct HistoryView: View {
         }
     }
 
-    init(source: QueueItem.Source?, viewModel: QueueViewModel, showHeader: Bool = true,
+    init(source: QueueItem.Source?, entityId: Int? = nil, title: String? = nil,
+         viewModel: QueueViewModel, showHeader: Bool = true,
          typeFilter: HistoryItem.EventType? = nil, onOpenDetail: ((QueueItem) -> Void)? = nil,
          onClose: @escaping () -> Void) {
         self.source = source
+        self.entityId = entityId
+        self.title = title
         self.viewModel = viewModel
         self.showHeader = showHeader
         self.typeFilter = typeFilter
@@ -181,11 +193,14 @@ public struct HistoryView: View {
     }
 }
 
-/// One history event laid out like a queue row (`QueueRowView`): poster, a
-/// drill-in title line with the event as its trailing chip (where the queue
-/// puts Upgrade / New), a line with the download client and quality · size,
-/// and the release's custom formats with the score. Time lives in the section
-/// header; the upgrade diff in the tooltip.
+/// One history event at the Upcoming rows' sizes (26×38 poster, 12 pt title,
+/// 10 pt metadata) in the queue row's arrangement: poster and text top-aligned,
+/// the event chip on the title line's trailing edge, client · quality · size
+/// below, and for a release that was grabbed or imported, the format chips with
+/// the score pinned to the row's trailing edge. Not `PosterMetadataRow`: that
+/// centres the text on the poster and parks its accessory in a column of its
+/// own, which leaves no full-width line for the chip strip. Time lives in the
+/// section header; the upgrade diff in the tooltip.
 public struct HistoryRowView: View {
     let item: HistoryItem
     /// Show the item's arr icon (used by the "All" history filter where rows
@@ -195,24 +210,23 @@ public struct HistoryRowView: View {
     @EnvironmentObject var configStore: ConfigStore
 
     public var body: some View {
-        HStack(alignment: .top, spacing: 10) {
-            PosterBlurContainer(blurred: configStore.shouldBlurPoster(for: item.source), cornerRadius: Tokens.Radius.chip) {
+        HStack(alignment: .top, spacing: 8) {
+            PosterBlurContainer(blurred: configStore.shouldBlurPoster(for: item.source), cornerRadius: 3) {
                 RemotePoster(
                     url: item.posterURL,
                     apiKey: apiKey,
                     tier: .icon,
                     size: posterSize,
-                    cornerRadius: Tokens.Radius.chip,
+                    cornerRadius: 3,
                     fallbackSymbol: item.source.symbol
                 )
             }
 
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 4) {
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 5) {
                     Text(verbatim: rowTitle)
-                        .scaledFont(size: 12)
+                        .scaledFont(size: 12, weight: .medium)
                         .lineLimit(1)
-                        .truncationMode(.tail)
                     if openAction != nil {
                         LinkChevron(size: 9)
                             .accessibilityHidden(true)
@@ -222,38 +236,36 @@ public struct HistoryRowView: View {
                         text: AppLocalized.string(item.eventType.labelKey, locale: configStore.currentLocale),
                         color: item.eventType.tint
                     )
+                    if showSourceBadge {
+                        ServiceIcon(source: item.source, size: 13)
+                            .foregroundStyle(.tertiary)
+                    }
                 }
-                if item.downloadClient != nil || !specSegments.isEmpty || showSourceBadge {
-                    HStack(spacing: 6) {
+                if item.downloadClient != nil || !metadataSegments.isEmpty {
+                    HStack(spacing: 5) {
                         if let client = item.downloadClient {
                             DownloadClientLabel(name: client)
                         }
-                        Spacer(minLength: 6)
-                        HStack(spacing: 3) {
-                            ForEach(Array(specSegments.enumerated()), id: \.offset) { index, segment in
+                        HStack(spacing: 4) {
+                            ForEach(Array(metadataSegments.enumerated()), id: \.offset) { index, segment in
                                 if index > 0 { SeparatorDot() }
                                 Text(verbatim: segment)
+                                    .lineLimit(1)
                             }
                         }
-                        .scaledFont(size: 10)
                         .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        if showSourceBadge {
-                            ServiceIcon(source: item.source, size: 11)
-                                .foregroundStyle(.tertiary)
-                        }
                     }
+                    .scaledFont(size: 10)
                 }
-                if showsFormats {
-                    QueueRowFormatStrip(
-                        formats: item.customFormats,
-                        score: item.customFormatScore,
-                        baseline: item.replaced?.score
-                    )
+                if let formatStrip {
+                    formatStrip
+                        .padding(.top, 1)
                 }
             }
         }
-        .padding(.horizontal, Tokens.Spacing.queueRowH)
+        // Same insets as `PosterMetadataRow`; the list adds the rest to reach
+        // the queue row's edge.
+        .padding(.horizontal, 12)
         .padding(.vertical, 6)
         .contentShape(Rectangle())
         .modifier(RowTapToOpen(action: openAction))
@@ -271,19 +283,29 @@ public struct HistoryRowView: View {
             .joined(separator: " · ")
     }
 
+    /// A deletion's or failure's formats and score describe a file that's gone
+    /// or never arrived — only a release that was grabbed or imported shows them.
+    private var describesRelease: Bool {
+        item.eventType == .grabbed || item.eventType == .imported
+    }
+
     /// Quality · size.
-    private var specSegments: [String] {
+    private var metadataSegments: [String] {
         [
             item.quality.flatMap { $0.isEmpty ? nil : $0 },
             item.size.flatMap { $0 > 0 ? ByteCountFormatter.string(fromByteCount: $0, countStyle: .file) : nil },
         ].compactMap { $0 }
     }
 
-    /// A deletion's or failure's formats describe a file that's gone or never
-    /// arrived — only a release that was grabbed or imported gets the strip.
-    private var showsFormats: Bool {
-        guard item.eventType == .grabbed || item.eventType == .imported else { return false }
-        return !item.customFormats.isEmpty || item.customFormatScore != 0
+    /// The queue row's format strip: chips on one line fading out at the edge,
+    /// the score pinned trailing.
+    private var formatStrip: AnyView? {
+        guard describesRelease, !item.customFormats.isEmpty || item.customFormatScore != 0 else { return nil }
+        return AnyView(QueueRowFormatStrip(
+            formats: item.customFormats,
+            score: item.customFormatScore,
+            baseline: item.replaced?.score
+        ))
     }
 
     private var openAction: (() -> Void)? {
@@ -303,9 +325,9 @@ public struct HistoryRowView: View {
             NSLocalizedString(unitKey, bundle: .module, comment: ""), item.groupedCount)
     }
 
-    /// The queue row's poster box: 2:3, square for Lidarr covers.
+    /// The Upcoming row's poster box: 2:3, square for Lidarr covers.
     private var posterSize: CGSize {
-        item.source == .lidarr ? CGSize(width: 40, height: 40) : CGSize(width: 40, height: 60)
+        item.source == .lidarr ? CGSize(width: 26, height: 26) : CGSize(width: 26, height: 38)
     }
 
     private var apiKey: String? {

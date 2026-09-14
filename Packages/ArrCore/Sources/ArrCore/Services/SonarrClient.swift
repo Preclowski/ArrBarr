@@ -43,7 +43,6 @@ public actor SonarrClient: ArrAPIClient {
                 // import lands. Moving it into the metadata store would trade a
                 // large regression surface for a rounding error.
                 URLQueryItem(name: "includeEpisode", value: "true"),
-                URLQueryItem(name: "includeUnknownSeriesItems", value: "true"),
             ]
         )
         let data = try await http.get(url, headers: apiHeaders)
@@ -241,7 +240,9 @@ public actor SonarrClient: ArrAPIClient {
         return records.compactMap { Self.unifyCalendar($0, baseURL: baseURL) }
     }
 
-    func fetchHistory(page: Int, pageSize: Int) async throws -> HistoryPage {
+    /// `entityId` narrows the page to one library record (the arr's own
+    /// `seriesIds` filter), so a title's history pages like the global feed.
+    func fetchHistory(page: Int, pageSize: Int, entityId: Int? = nil) async throws -> HistoryPage {
         guard config.isConfigured else { throw HTTPError.notConfigured }
         guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
         let url = try http.url(
@@ -254,7 +255,7 @@ public actor SonarrClient: ArrAPIClient {
                 URLQueryItem(name: "sortDirection", value: "descending"),
                 URLQueryItem(name: "includeSeries", value: "true"),
                 URLQueryItem(name: "includeEpisode", value: "true"),
-            ]
+            ] + (entityId.map { [URLQueryItem(name: "seriesIds", value: String($0))] } ?? [])
         )
         let data = try await http.get(url, headers: apiHeaders)
         let response: ArrQueuePage<SonarrHistoryRecord>

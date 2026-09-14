@@ -125,7 +125,9 @@ public actor RadarrClient: ArrAPIClient {
         return records.compactMap { Self.unifyCalendar($0, baseURL: baseURL) }
     }
 
-    func fetchHistory(page: Int, pageSize: Int) async throws -> HistoryPage {
+    /// `entityId` narrows the page to one library record (the arr's own
+    /// `movieIds` filter), so a title's history pages like the global feed.
+    func fetchHistory(page: Int, pageSize: Int, entityId: Int? = nil) async throws -> HistoryPage {
         guard config.isConfigured else { throw HTTPError.notConfigured }
         guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
         let url = try http.url(
@@ -137,7 +139,7 @@ public actor RadarrClient: ArrAPIClient {
                 URLQueryItem(name: "sortKey", value: "date"),
                 URLQueryItem(name: "sortDirection", value: "descending"),
                 URLQueryItem(name: "includeMovie", value: "true"),
-            ]
+            ] + (entityId.map { [URLQueryItem(name: "movieIds", value: String($0))] } ?? [])
         )
         let data = try await http.get(url, headers: apiHeaders)
         let response: ArrQueuePage<RadarrHistoryRecord>

@@ -188,10 +188,12 @@ public struct DetailView: View {
     @State private var seasonDrill: SeasonDrill?
     /// Manual-search push target (movie / album) when not downloading.
     @State private var manualSearchTarget: ManualSearchTarget?
-    /// Header pencil → edit panel push (profile / availability / root folder).
+    /// Header "..." → Edit: edit panel push (profile / availability / root folder).
     @State private var editRequest: MediaEditRequest?
-    /// The other half of the pencil's menu — remove this record from the arr.
+    /// Header "..." → Delete — remove this record from the arr.
     @State private var deleteRequest: MediaDeleteRequest?
+    /// "Show history" push — this record's history, scoped by `entityId`.
+    @State private var historyShown = false
     /// Automatic-search in flight / just-queued feedback for the bottom CTA.
     @State private var autoSearching = false
     @State private var autoDidSearch = false
@@ -546,6 +548,11 @@ public struct DetailView: View {
                             existing: manualSearchExistingFile,
                             onBack: { manualSearchTarget = nil })
         }
+        // "Show history" — this record's events only, titled after it.
+        .navigationDestination(isPresented: $historyShown) {
+            HistoryView(source: item.source, entityId: item.entityId, title: navTitleString,
+                        viewModel: viewModel, onClose: { historyShown = false })
+        }
         // Inline confirmation — replaces `.confirmationDialog` because
         // the system dialog steals focus from MenuBarExtra(.window),
         // which auto-dismisses the panel. The inline overlay renders
@@ -607,42 +614,46 @@ public struct DetailView: View {
                 .foregroundStyle(.primary)
                 .lineLimit(1)
             Spacer(minLength: 0)
-            // Cluster order: edit, search, safari, (trash on iOS). Monitor
+            // Cluster: search, then everything else behind "...". Monitor
             // moved out to the poster's top-right corner — see `headerCard`.
-            if let target = editTarget {
-                // The pencil opens a menu now, not the edit card directly: edit
-                // and delete are the two things you do to a library record, and
-                // a second glyph for a destructive action in a four-glyph
-                // cluster is how you get it clicked by accident.
-                Menu {
+            headerSearchMenu
+            Menu {
+                if let target = editTarget {
                     Button { editRequest = target } label: {
                         Label { Text("detail.edit.button", bundle: .module) } icon: { Image(systemName: "pencil") }
                     }
-                    Button(role: .destructive) { deleteRequest = deleteTarget } label: {
-                        Label { Text("detail.delete.button", bundle: .module) } icon: { Image(systemName: "trash") }
+                }
+                if item.entityId != nil {
+                    Button { historyShown = true } label: {
+                        Label { Text("detail.showHistory.button", bundle: .module) } icon: { Image(systemName: "clock.arrow.circlepath") }
                     }
-                } label: {
-                    Image(systemName: "pencil")
-                        .scaledFont(size: 14, weight: .medium)
-                        .foregroundStyle(.secondary)
-                        .frame(width: 22, height: 22)
-                        .contentShape(Rectangle())
                 }
-                .menuStyle(.button)
-                .buttonStyle(.plain)
-                .menuIndicator(.hidden)
-                .help(Text("detail.editOrDelete.tooltip", bundle: .module))
-            }
-            headerSearchMenu
-            if let url = arrWebURL(for: item, in: configStore) {
-                Button { PlatformURLOpener.open(url) } label: {
-                    Image(systemName: "safari")
-                        .scaledFont(size: 14, weight: .medium)
-                        .foregroundStyle(.secondary)
+                if let url = arrWebURL(for: item, in: configStore) {
+                    Button { PlatformURLOpener.open(url) } label: {
+                        Label { Text("detail.openInBrowser.button", bundle: .module) } icon: { Image(systemName: "safari") }
+                    }
                 }
-                .buttonStyle(.plain)
-                .help(Text("detail.openInBrowser.button", bundle: .module))
+                // Own section, last: the destructive item doesn't sit next to
+                // "open in browser" where a mis-click costs a library record.
+                if let target = deleteTarget {
+                    Section {
+                        Button(role: .destructive) { deleteRequest = target } label: {
+                            Label { Text("detail.delete.button", bundle: .module) } icon: { Image(systemName: "trash") }
+                        }
+                    }
+                }
+            } label: {
+                Image(systemName: "ellipsis")
+                    .scaledFont(size: 14, weight: .medium)
+                    .foregroundStyle(.secondary)
+                    .frame(width: 22, height: 22)
+                    .contentShape(Rectangle())
             }
+            .menuStyle(.button)
+            .buttonStyle(.plain)
+            .menuIndicator(.hidden)
+            .help(Text("common.moreActions.button", bundle: .module))
+            .accessibilityLabel(Text("common.moreActions.button", bundle: .module))
         }
         .padding(.horizontal, 12)
         .padding(.top, 10)
@@ -652,15 +663,15 @@ public struct DetailView: View {
         #endif
     }
 
-    /// What the header pencil edits. Nil for Lidarr ALBUM details — the
+    /// What the header's Edit item edits. Nil for Lidarr ALBUM details — the
     /// editable Lidarr entity is the artist (profiles / root folder live on
-    /// it), so the pencil lives in `LidarrArtistView` instead.
+    /// it), so Edit lives in `LidarrArtistView` instead.
     private var editTarget: MediaEditRequest? {
         guard item.source != .lidarr, let entityId = item.entityId else { return nil }
         return MediaEditRequest(source: item.source, entityId: entityId)
     }
 
-    /// Same record the pencil edits, addressed for removal. Lidarr is excluded
+    /// Same record Edit edits, addressed for removal. Lidarr is excluded
     /// for the same reason: this surface's Lidarr entity is an ALBUM, and the
     /// deletable library record is its artist — that lives in `LidarrArtistView`.
     private var deleteTarget: MediaDeleteRequest? {
@@ -686,6 +697,11 @@ public struct DetailView: View {
             if let target = editTarget {
                 Button { editRequest = target } label: {
                     Label { Text("detail.edit.button", bundle: .module) } icon: { Image(systemName: "pencil") }
+                }
+            }
+            if item.entityId != nil {
+                Button { historyShown = true } label: {
+                    Label { Text("detail.showHistory.button", bundle: .module) } icon: { Image(systemName: "clock.arrow.circlepath") }
                 }
             }
             if manualTarget != nil {
@@ -727,7 +743,7 @@ public struct DetailView: View {
     #endif
 
     /// The Search choice, relocated from the bottom CTA strip into the header
-    /// action cluster (leads it: search, bookmark, safari, trash).
+    /// action cluster (leads it, ahead of the "..." menu).
     @ViewBuilder
     private var headerSearchMenu: some View {
         if let target = manualTarget {

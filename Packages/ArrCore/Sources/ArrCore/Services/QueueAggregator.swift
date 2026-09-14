@@ -26,7 +26,8 @@ protocol QueueDataProviding {
     func fetch(source: QueueItem.Source) async -> SourceQueueResult
     func fetchUpcoming() async -> (items: [UpcomingItem], failed: Set<QueueItem.Source>)
     func fetchHealth() async -> HealthResult
-    func fetchHistory(for source: QueueItem.Source, page: Int, pageSize: Int) async -> HistoryResult
+    /// `entityId` narrows the page to one library record's history.
+    func fetchHistory(for source: QueueItem.Source, page: Int, pageSize: Int, entityId: Int?) async -> HistoryResult
     func perform(_ action: QueueAggregator.Action, on item: QueueItem) async throws
     func deleteAll(_ items: [QueueItem]) async throws
 }
@@ -195,14 +196,14 @@ public final class QueueAggregator: QueueDataProviding {
         do { return try await block() } catch { return [] }
     }
 
-    func fetchHistory(for source: QueueItem.Source, page: Int, pageSize: Int) async -> HistoryResult {
+    func fetchHistory(for source: QueueItem.Source, page: Int, pageSize: Int, entityId: Int?) async -> HistoryResult {
         do {
             let result: HistoryPage
             switch source {
-            case .radarr: result = try await radarrClient(for: configStore.radarr).fetchHistory(page: page, pageSize: pageSize)
-            case .sonarr: result = try await sonarrClient(for: configStore.sonarr).fetchHistory(page: page, pageSize: pageSize)
-            case .lidarr: result = try await lidarrClient(for: configStore.lidarr).fetchHistory(page: page, pageSize: pageSize)
-            case .whisparr: result = try await whisparrClient(for: configStore.whisparr).fetchHistory(page: page, pageSize: pageSize)
+            case .radarr: result = try await radarrClient(for: configStore.radarr).fetchHistory(page: page, pageSize: pageSize, entityId: entityId)
+            case .sonarr: result = try await sonarrClient(for: configStore.sonarr).fetchHistory(page: page, pageSize: pageSize, entityId: entityId)
+            case .lidarr: result = try await lidarrClient(for: configStore.lidarr).fetchHistory(page: page, pageSize: pageSize, entityId: entityId)
+            case .whisparr: result = try await whisparrClient(for: configStore.whisparr).fetchHistory(page: page, pageSize: pageSize, entityId: entityId)
             }
             return HistoryResult(items: result.items, hasMore: result.hasMore, error: nil)
         } catch {
