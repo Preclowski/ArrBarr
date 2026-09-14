@@ -91,65 +91,73 @@ public struct PosterMetadataRow<TrailingAccessory: View>: View {
     }
 
     public var body: some View {
-        Button(action: onTap) {
-            HStack(spacing: 8) {
-                PosterBlurContainer(blurred: posterBlurred, cornerRadius: posterCornerRadius) {
-                    RemotePoster(
-                        url: posterURL,
-                        apiKey: posterAPIKey,
-                        tier: posterTier,
-                        size: posterSize,
-                        cornerRadius: posterCornerRadius,
-                        fallbackSymbol: posterFallbackSymbol
-                    )
-                }
-
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: 5) {
-                        Text(title)
-                            .scaledFont(size: 12, weight: .medium)
-                            .lineLimit(1)
-                        if let titleBadge {
-                            titleBadge
-                        }
-                        // Chevron telegraphs "tap to drill in" without
-                        // depending on hover — works on iOS (no hover)
-                        // and clarifies macOS rows too. Skipped on
-                        // disabled rows (no tap target).
-                        if !disabled {
-                            LinkChevron(size: 9)
-                        }
-                    }
-                    if metadataBadge != nil || !metadataSegments.isEmpty {
-                        HStack(spacing: 5) {
-                            if let metadataBadge {
-                                metadataBadge
-                            }
-                            metadataLine(metadataSegments, colors: metadataSegmentColors)
-                        }
-                        .scaledFont(size: 10)
-                    }
-                    if !metadataSegments2.isEmpty {
-                        metadataLine(metadataSegments2, colors: [])
-                            .scaledFont(size: 10)
-                    }
-                }
-
-                Spacer(minLength: 0)
-                trailing()
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .contentShape(Rectangle())
+        // A non-interactive row is plain content, not a disabled Button — a
+        // disabled plain-style Button greys its whole label (title, poster,
+        // chips), which read as "unavailable" rather than "nothing to open".
+        if disabled {
+            rowContent
+        } else {
+            Button(action: onTap) { rowContent }
+                .buttonStyle(.plain)
+                // Publish the row's hover state to the drill-in title chevron
+                // so it lights up on row hover, not on glyph hover.
+                .linkRowHover()
+                // Hover-tint dropped — chevron after the title now signals
+                // "tap to drill in" without depending on cursor state. Works
+                // identically on macOS (mouse) and iOS (touch).
         }
-        .buttonStyle(.plain)
-        .disabled(disabled)
-        // Publish the row's hover state to the drill-in title chevron
-        // so it lights up on row hover, not on glyph hover.
-        .linkRowHover()
-        // Hover-tint dropped — chevron after the title now signals
-        // "tap to drill in" without depending on cursor state. Works
-        // identically on macOS (mouse) and iOS (touch).
+    }
+
+    private var rowContent: some View {
+        HStack(spacing: 8) {
+            PosterBlurContainer(blurred: posterBlurred, cornerRadius: posterCornerRadius) {
+                RemotePoster(
+                    url: posterURL,
+                    apiKey: posterAPIKey,
+                    tier: posterTier,
+                    size: posterSize,
+                    cornerRadius: posterCornerRadius,
+                    fallbackSymbol: posterFallbackSymbol
+                )
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 5) {
+                    Text(title)
+                        .scaledFont(size: 12, weight: .medium)
+                        .lineLimit(1)
+                    if let titleBadge {
+                        titleBadge
+                    }
+                    // Chevron telegraphs "tap to drill in" without
+                    // depending on hover — works on iOS (no hover)
+                    // and clarifies macOS rows too. Skipped on
+                    // disabled rows (no tap target).
+                    if !disabled {
+                        LinkChevron(size: 9)
+                    }
+                }
+                if metadataBadge != nil || !metadataSegments.isEmpty {
+                    HStack(spacing: 5) {
+                        if let metadataBadge {
+                            metadataBadge
+                        }
+                        metadataLine(metadataSegments, colors: metadataSegmentColors)
+                    }
+                    .scaledFont(size: 10)
+                }
+                if !metadataSegments2.isEmpty {
+                    metadataLine(metadataSegments2, colors: [])
+                        .scaledFont(size: 10)
+                }
+            }
+
+            Spacer(minLength: 0)
+            trailing()
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .contentShape(Rectangle())
     }
 
     @ViewBuilder
@@ -159,7 +167,10 @@ public struct PosterMetadataRow<TrailingAccessory: View>: View {
                 if idx > 0 {
                     SeparatorDot()
                 }
+                // One line, always: an overlong segment truncates rather
+                // than wrapping into a narrow column.
                 Text(seg)
+                    .lineLimit(1)
                     .foregroundStyle(
                         (idx < colors.count ? colors[idx] : nil)
                             .map { AnyShapeStyle($0) } ?? AnyShapeStyle(.secondary)

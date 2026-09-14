@@ -47,8 +47,14 @@ struct MultiRow: View {
         #endif
     }
 
+    // Same rule as QueueRowView: a queued item (deferred / behind the client's
+    // queue limit) gets "play" too — `QueueViewModel.resume` force-starts it.
     private var canPauseResume: Bool {
-        item.status == .downloading || item.status == .paused
+        item.status == .downloading || item.status == .paused || item.status == .queued
+    }
+
+    private var showsPlay: Bool {
+        item.isPaused || item.status == .queued
     }
 
     public var body: some View {
@@ -91,11 +97,11 @@ struct MultiRow: View {
         // control column so the actions are reachable both ways.
         .contextMenu {
             if canPauseResume {
-                if item.isPaused, let onResume {
+                if showsPlay, let onResume {
                     Button { onResume() } label: {
                         Label { Text("queue.resume.button", bundle: .module) } icon: { Image(systemName: "play.fill") }
                     }
-                } else if !item.isPaused, let onPause {
+                } else if !showsPlay, let onPause {
                     Button { onPause() } label: {
                         Label { Text("queue.pause.button", bundle: .module) } icon: { Image(systemName: "pause.fill") }
                     }
@@ -153,16 +159,16 @@ struct MultiRow: View {
     @ViewBuilder
     private var controlColumn: some View {
         HStack(spacing: 4) {
-            if canPauseResume, item.isPaused ? onResume != nil : onPause != nil {
+            if canPauseResume, showsPlay ? onResume != nil : onPause != nil {
                 Button {
-                    if item.isPaused { onResume?() } else { onPause?() }
+                    if showsPlay { onResume?() } else { onPause?() }
                 } label: {
                     // No dark disc — that backdrop exists to guarantee
                     // contrast over poster artwork; on the plain row it read
                     // as a black blob. The ring tints adaptively instead.
                     LiveProgress(item: item) { progress in
                         DownloadProgressRing(
-                            systemName: item.isPaused ? "play.fill" : "pause.fill",
+                            systemName: showsPlay ? "play.fill" : "pause.fill",
                             progress: progress,
                             diameter: 24,
                             lineWidth: 2,
@@ -173,10 +179,10 @@ struct MultiRow: View {
                     .contentShape(Circle())
                 }
                 .buttonStyle(.plain)
-                .help(item.isPaused
+                .help(showsPlay
                       ? Text("queue.resume.button", bundle: .module)
                       : Text("queue.pause.button", bundle: .module))
-                .accessibilityLabel(item.isPaused
+                .accessibilityLabel(showsPlay
                                     ? Text("queue.resume.button", bundle: .module)
                                     : Text("queue.pause.button", bundle: .module))
             }

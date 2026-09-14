@@ -102,7 +102,7 @@ extension LocalToolBackend {
         // suggest_titles). Owned picks get inLibraryArrId set and
         // originLabel=.library so the matched-list sections them under
         // "In library" with an openDetail tap instead of an add flow.
-        async let libraryMapFetch: [Int: Int] = (kind == "series")
+        async let libraryMapFetch: [Int: LibraryOwnership] = (kind == "series")
             ? sonarrLibraryByTVDBId()
             : radarrLibraryByTMDBId()
         let radarrClient = RadarrClient(config: radarr)
@@ -136,10 +136,10 @@ extension LocalToolBackend {
                     source: .radarr,
                     inLibraryArrId: nil
                 )
-                if let arrId = libraryMap[tmdbId] {
-                    let owned = resultBase.withInLibraryArrId(arrId)
+                if let ownership = libraryMap[tmdbId] {
+                    let owned = resultBase.withLibraryOwnership(ownership)
                     return DiscoverItem(result: owned,
-                                        action: .openDetail(source: .radarr, arrId: arrId),
+                                        action: .openDetail(source: .radarr, arrId: ownership.arrId),
                                         originLabel: .library, kind: .movie)
                 }
                 return DiscoverItem(result: resultBase, action: .addToRadarr,
@@ -164,10 +164,10 @@ extension LocalToolBackend {
                     inLibraryArrId: nil,
                     tmdbTVId: first.tmdbId
                 )
-                if let arrId = libraryMap[tvdbId] {
-                    let owned = resultBase.withInLibraryArrId(arrId)
+                if let ownership = libraryMap[tvdbId] {
+                    let owned = resultBase.withLibraryOwnership(ownership)
                     return DiscoverItem(result: owned,
-                                        action: .openDetail(source: .sonarr, arrId: arrId),
+                                        action: .openDetail(source: .sonarr, arrId: ownership.arrId),
                                         originLabel: .library, kind: .show)
                 }
                 return DiscoverItem(result: resultBase, action: .addToSonarr,
@@ -210,8 +210,9 @@ extension LocalToolBackend {
                     overview: rec.overview, runtime: rec.runtime,
                     genres: rec.genres ?? [], network: rec.studio,
                     certification: rec.certification,
-                    posterURL: poster, source: .radarr, inLibraryArrId: arrId
+                    posterURL: poster, source: .radarr
                 )
+                .withLibraryOwnership(rec.ownership)
                 return DiscoverItem(result: result,
                                     action: .openDetail(source: .radarr, arrId: arrId),
                                     originLabel: .library, kind: .movie,
@@ -232,9 +233,10 @@ extension LocalToolBackend {
                 imdb: nil, rottenTomatoes: nil, metacritic: nil,
                 overview: rec.overview, runtime: nil,
                 genres: rec.genres ?? [], network: nil, certification: nil,
-                posterURL: poster, source: .sonarr, inLibraryArrId: arrId,
+                posterURL: poster, source: .sonarr,
                 tmdbTVId: rec.tmdbId
             )
+            .withLibraryOwnership(rec.ownership)
             return DiscoverItem(result: result,
                                 action: .openDetail(source: .sonarr, arrId: arrId),
                                 originLabel: .library, kind: .show,
@@ -385,7 +387,7 @@ extension LocalToolBackend {
         let sonarrClient = SonarrClient(config: sonarr)
 
         // Library map for owned cross-ref (same pattern as suggestTitles).
-        async let libraryMapFetch: [Int: Int] = (kind == "series")
+        async let libraryMapFetch: [Int: LibraryOwnership] = (kind == "series")
             ? sonarrLibraryByTVDBId()
             : radarrLibraryByTMDBId()
 
@@ -468,9 +470,10 @@ extension LocalToolBackend {
             for item in anchorList {
                 guard seen.insert(item.dedupKey).inserted else { continue }
                 let metadataId = item.result.externalId
-                if let arrId = libraryMap[metadataId] {
+                if let ownership = libraryMap[metadataId] {
                     if libraryMode == "new" { continue }
-                    let owned = item.result.withInLibraryArrId(arrId)
+                    let arrId = ownership.arrId
+                    let owned = item.result.withLibraryOwnership(ownership)
                     let detailAction: DiscoverAction = (kind == "movie")
                         ? .openDetail(source: .radarr, arrId: arrId)
                         : .openDetail(source: .sonarr, arrId: arrId)

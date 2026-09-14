@@ -125,29 +125,38 @@ public actor RadarrClient: ArrAPIClient {
         return records.compactMap { Self.unifyCalendar($0, baseURL: baseURL) }
     }
 
-    func fetchHistory() async throws -> [HistoryItem] {
+    /// `entityId` narrows the page to one library record (the arr's own
+    /// `movieIds` filter), so a title's history pages like the global feed.
+    func fetchHistory(page: Int, pageSize: Int, entityId: Int? = nil) async throws -> HistoryPage {
         guard config.isConfigured else { throw HTTPError.notConfigured }
         guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
         let url = try http.url(
             base: config.baseURL,
             path: "\(apiBase)/history",
             query: [
-                URLQueryItem(name: "page", value: "1"),
-                URLQueryItem(name: "pageSize", value: "50"),
+                URLQueryItem(name: "page", value: String(page)),
+                URLQueryItem(name: "pageSize", value: String(pageSize)),
                 URLQueryItem(name: "sortKey", value: "date"),
                 URLQueryItem(name: "sortDirection", value: "descending"),
                 URLQueryItem(name: "includeMovie", value: "true"),
-            ]
+            ] + (entityId.map { [URLQueryItem(name: "movieIds", value: String($0))] } ?? [])
         )
         let data = try await http.get(url, headers: apiHeaders)
-        let page: ArrQueuePage<RadarrHistoryRecord>
-        do { page = try JSONDecoder().decode(ArrQueuePage<RadarrHistoryRecord>.self, from: data) }
+        let response: ArrQueuePage<RadarrHistoryRecord>
+        do { response = try JSONDecoder().decode(ArrQueuePage<RadarrHistoryRecord>.self, from: data) }
         catch { throw HTTPError.decoding(error) }
-        return page.records.compactMap(Self.unifyHistory)
+        let baseURL = config.baseURL
+        return HistoryPage(
+            items: response.records.compactMap { Self.unifyHistory($0, baseURL: baseURL) },
+            hasMore: page * pageSize < response.totalRecords
+        )
     }
 
-    private static func unifyHistory(_ r: RadarrHistoryRecord) -> HistoryItem? {
+    private static func unifyHistory(_ r: RadarrHistoryRecord, baseURL: String) -> HistoryItem? {
         guard let dateStr = r.date, let date = parseArrDate(dateStr) else { return nil }
+        let (poster, auth) = (r.movie?.images ?? []).posterURL(
+            baseURL: baseURL, mediaServerKeys: r.movie?.mediaServerKeys ?? []
+        )
         return HistoryItem(
             id: "radarr-h-\(r.id)",
             source: .radarr,
@@ -158,7 +167,18 @@ public actor RadarrClient: ArrAPIClient {
             sourceTitle: r.sourceTitle,
             quality: r.quality?.name,
             customFormats: (r.customFormats ?? []).map(\.name),
-            customFormatScore: r.customFormatScore ?? 0
+            customFormatScore: r.customFormatScore ?? 0,
+            posterURL: poster,
+            posterRequiresAuth: auth,
+            arrId: r.movieId ?? r.movie?.id,
+            fileKey: (r.movieId ?? r.movie?.id).map { "movie-\($0)" },
+            downloadId: r.downloadId,
+            downloadClient: r.data?.historyString("downloadClientName") ?? r.data?.historyString("downloadClient"),
+            indexer: r.data?.historyString("indexer"),
+            size: r.data?.historyString("size").flatMap { Int64($0) },
+            deleteReason: r.data?.historyString("reason"),
+            fileOnDisk: r.movie?.movieFile.map { HistoryItem.FileSnapshot(file: $0) },
+            hadFileOnDisk: r.movie?.hasFile
         )
     }
 
@@ -313,7 +333,8 @@ public actor RadarrClient: ArrAPIClient {
             releaseStatus: r.status,
             ratingRt: r.ratings?.rottenTomatoes?.value,
             ratingMetacritic: r.ratings?.metacritic?.value,
-            qualityProfileId: r.qualityProfileId
+            qualityProfileId: r.qualityProfileId,
+            tmdbId: r.tmdbId
         )
     }
 
@@ -554,7 +575,12 @@ func parseStatus(arrStatus: String?, trackedState: String?, trackedStatus: Strin
             // a dead download, not a finished one.
             case "downloadfailed", "downloadfailedpending", "failedpending", "failed", "importfailed":
                 return .failed
-            case "importing", "importpending": return .importing
+            // A stuck import ("manual import required", no eligible files…)
+            // stays in `importPending` with a `warning` verdict. Reported as
+            // plain importing it looked like progress, and the reason only
+            // surfaced once the user opened the detail view.
+            case "importing", "importpending":
+                return trackedStatus?.lowercased() == "warning" ? .warning : .importing
             case "imported": return .completed
             // `ignored` = the arr deliberately stopped tracking this grab
             // (manually ignored, or a release it can't match). Not an error,

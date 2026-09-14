@@ -2,11 +2,6 @@ import SwiftUI
 
 /// Library tab — a browsable cover grid of everything already on the arrs.
 /// Top strip: arr picker (menu-chip) + status filter chips + sort menu.
-/// Bottom: the same floating capsule the Queue tab uses, with the same
-/// meaning — search everywhere. Typing filters the cover grid locally and
-/// instantly (substring match over the cached library), and the same arr
-/// lookups the global search fires render underneath as a lookup section:
-/// add-new hits plus anything owned beyond what the grid already shows.
 /// The library's chrome was sized for a 400pt popover and a mouse. On touch the
 /// same numbers give 20pt hit areas — half Apple's 44pt minimum — so every
 /// value the strip uses is forked rather than sprinkled with `#if` at each call.
@@ -48,17 +43,11 @@ private struct LibraryFilterStrip<Content: View>: View {
 }
 #endif
 
+/// The Library tab's content: the browsing strip and the cover grid. Search is
+/// not this view's business — `SearchHost` wraps it above the tabs.
 struct LibraryTabContent: View {
     var viewModel: LibraryViewModel
     @EnvironmentObject var configStore: ConfigStore
-    /// Tapping an add-new lookup row routes here — `PopoverContentView`
-    /// presents the shared `SearchAddPanel` overlay for it, same as the
-    /// queue surface's rows.
-    @Binding var searchResult: SearchResult?
-    /// True while this is the tab on screen. Leaving it closes an EMPTY search
-    /// field; one holding a query is kept, so coming back shows the results
-    /// again instead of a blank list. macOS always passes the default.
-    var isActive: Bool = true
 
     /// Which arr's library is on screen. Defaults to the first configured
     /// arr on appear; not persisted (the popover session is short-lived,
@@ -67,16 +56,6 @@ struct LibraryTabContent: View {
     @State private var sourceResolved = false
     @State private var statusFilter: StatusFilter = .all
     @State private var sort: SortMode = .title
-    @State private var filterText = ""
-    @FocusState private var filterFocused: Bool
-    /// This surface's own arr-lookup state — deliberately NOT the shared
-    /// global `SearchViewModel`: the queue's field mirrors its text into
-    /// that instance, and two owners of one query fight across tab
-    /// switches. Same per-surface pattern iOS's `QueueTab` uses. Set up
-    /// without a TMDB key, so the people/"Starring X" machinery stays off
-    /// here — the full search on the Queue tab keeps it.
-    @State private var searchVM = SearchViewModel()
-    @State private var searchPresented = false
     /// Grid (covers) vs list (compact rows). Persisted — a layout preference,
     /// not per-session state like the filters above.
     @AppStorage("libraryViewMode") private var viewModeRaw = ViewMode.grid.rawValue
@@ -215,62 +194,18 @@ struct LibraryTabContent: View {
         allEntries.count { matches($0, filter: filter) }
     }
 
-    private var trimmedFilter: String {
-        filterText.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
     private var visibleEntries: [LibraryEntry] {
-        let query = trimmedFilter
         // Sort FIRST, through the view model's memoized per-axis cache —
         // filtering a pre-sorted list preserves order, and the filters are
         // the cheap half (sub-ms even at ~3k entries; the localized title
         // sort was the ~20ms-per-body-pass hitch felt on tab entry).
         var out = viewModel.sorted(source, cacheKey: sort.cacheKey, using: sort.areInIncreasingOrder)
         out = out.filter { matches($0, filter: statusFilter) }
-        if !query.isEmpty {
-            // Searches the entry's whole alias set, not its visible title:
-            // accents folded ("leon" → "Léon"), and every translated name the
-            // arr knows ("leon zawodowiec"). A raw compare on `title` hid both,
-            // which reads as "you don't own it" — the one wrong answer this
-            // app must never give.
-            out = TitleMatch.indexedFilter(out, query: query, index: \.searchIndex)
-        }
         return out
-    }
-
-    /// The arr-lookup rows under the grid, relevance-sorted. Deduplicated
-    /// against the local alias matches for the browsed arr — computed over
-    /// `allEntries` and NOT `visibleEntries`, because the grid answers for
-    /// an owned title even while a status chip happens to hide it. Cross-arr
-    /// on purpose (the capsule means "search everywhere"): a series typed
-    /// into the Radarr-scoped grid still surfaces, wearing its own arr's
-    /// row identity.
-    private var remoteResults: [SearchResult] {
-        guard !trimmedFilter.isEmpty else { return [] }
-        let all = searchVM.radarrResults + searchVM.sonarrResults
-            + searchVM.lidarrResults + searchVM.whisparrResults
-        let localIds = Set(
-            TitleMatch.indexedFilter(allEntries, query: trimmedFilter, index: \.searchIndex)
-                .map(\.arrId)
-        )
-        let kept = SearchResultDedup.removingGridDuplicates(
-            results: all, gridSource: source, gridArrIds: localIds)
-        return SearchRelevance.sortedByRelevance(kept, input: searchVM.parsedInput)
     }
 
     var body: some View {
         surface
-        .onChange(of: isActive) { _, nowActive in
-            if !nowActive, filterText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                searchPresented = false
-            }
-        }
-        .onChange(of: filterText) { _, new in
-            // Mirror the typed query into this surface's SearchViewModel —
-            // same trigger the queue tab wires from its bar.
-            searchVM.query = new
-            searchVM.onQueryChange()
-        }
         .onAppear {
             // The default `.radarr` may not be configured — snap to the first
             // arr that is, once. (Re-running on every appear would fight a
@@ -281,13 +216,6 @@ struct LibraryTabContent: View {
                     source = first
                 }
             }
-            searchVM.setup(
-                radarrConfig: configStore.radarr,
-                sonarrConfig: configStore.sonarr,
-                lidarrConfig: configStore.lidarr,
-                whisparrConfig: configStore.whisparr,
-                tmdbApiKey: configStore.tmdbApiKey
-            )
             Task { await load() }
         }
         .onChange(of: source) { _, _ in
@@ -490,9 +418,9 @@ struct LibraryTabContent: View {
     // MARK: - Grid
 
     @ViewBuilder
-    private var gridOrState: some View {
-        let entries = visibleEntries
-        if allEntries.isEmpty, viewModel.loading.contains(source) {
+    private func gridOrState(_ entries: [LibraryEntry], phase: Phase) -> some View {
+        switch phase {
+        case .loading:
             ScrollView {
                 VStack(spacing: 10) {
                     ProgressView().controlSize(.small)
@@ -505,7 +433,7 @@ struct LibraryTabContent: View {
             }
             .scrollBounceBehavior(.basedOnSize)
             .frame(maxHeight: .infinity)
-        } else if allEntries.isEmpty, viewModel.loadFailed.contains(source) {
+        case .failed:
             emptyState(symbol: "exclamationmark.triangle", textKey: "library.error.title") {
                 Button {
                     Task { await load(force: true) }
@@ -514,86 +442,33 @@ struct LibraryTabContent: View {
                 }
                 .modifier(GlassButtonStyle())
             }
-        } else if entries.isEmpty, trimmedFilter.isEmpty {
-            // Only with the field empty — with a query live the scroll
-            // surface stays up so the lookup section can answer for titles
-            // the grid doesn't hold.
+        case .empty:
             emptyState(symbol: "books.vertical", textKey: "library.empty.title") { EmptyView() }
-        } else {
+        case .content:
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    if !entries.isEmpty {
-                        if viewMode == .grid {
-                            LazyVGrid(columns: gridColumns, spacing: 12) {
-                                ForEach(entries) { entry in
-                                    LibraryTile(entry: entry, apiKey: apiKey(for: entry))
-                                }
+                    if viewMode == .grid {
+                        LazyVGrid(columns: gridColumns, spacing: 12) {
+                            ForEach(entries) { entry in
+                                LibraryTile(entry: entry, apiKey: apiKey(for: entry))
                             }
-                            .padding(.horizontal, 12)
-                            .padding(.top, 2)
-                        } else {
-                            LazyVStack(spacing: 0) {
-                                ForEach(entries) { entry in
-                                    LibraryListRow(entry: entry, apiKey: apiKey(for: entry))
-                                }
-                            }
-                            .padding(.top, 2)
                         }
-                    }
-                    if !trimmedFilter.isEmpty {
-                        lookupSection(hasLocalRows: !entries.isEmpty)
+                        .padding(.horizontal, 12)
+                        .padding(.top, 2)
+                    } else {
+                        LazyVStack(spacing: 0) {
+                            ForEach(entries) { entry in
+                                LibraryListRow(entry: entry, apiKey: apiKey(for: entry))
+                            }
+                        }
+                        .padding(.top, 2)
                     }
                 }
-                // Keep the last row clear of the floating filter bar.
+                // Keep the last row clear of the floating capsule.
                 .padding(.bottom, 58)
             }
             .scrollBounceBehavior(.basedOnSize)
             .frame(maxHeight: .infinity)
-        }
-    }
-
-    /// The arr-lookup rows under the grid — the part that makes this capsule
-    /// mean the same thing as the queue's: search everywhere. In-library rows
-    /// drill into the detail overlay; add-new rows open the shared
-    /// SearchAddPanel. The "More results" header only earns its place when
-    /// grid rows sit above it — with no local matches these rows ARE the
-    /// result list, and "more" than nothing reads wrong.
-    @ViewBuilder
-    private func lookupSection(hasLocalRows: Bool) -> some View {
-        let remote = remoteResults
-        // Refinements keep the previous rows up while the new lookups run —
-        // see `lookupReloadDim` for the treatment they get meanwhile.
-        let reloading = searchVM.isSearching && !remote.isEmpty
-        if !remote.isEmpty {
-            VStack(alignment: .leading, spacing: 2) {
-                if hasLocalRows {
-                    DetailSectionHeader("library.moreResults.header")
-                        .padding(.horizontal, 12)
-                        .padding(.top, 12)
-                }
-                ForEach(remote) { r in
-                    SearchResultRow(result: r) {
-                        if r.inLibraryArrId != nil {
-                            DetailRequest.tap(r)
-                        } else {
-                            searchResult = r
-                        }
-                    }
-                }
-            }
-            .lookupReloadDim(reloading)
-        } else if searchVM.isSearching {
-            // First lookups for this query still in flight. With grid rows
-            // above, the capsule's own spinner already carries the signal
-            // and this stays quiet.
-            if !hasLocalRows {
-                ProgressView()
-                    .controlSize(.small)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-            }
-        } else if !hasLocalRows {
-            SearchLookupEmptyState(errorMessage: searchVM.errorMessage)
         }
     }
 
@@ -623,85 +498,39 @@ struct LibraryTabContent: View {
         .frame(maxHeight: .infinity)
     }
 
-    // MARK: - Bottom filter bar
+    // MARK: - Surface
 
-    /// Same floating-capsule chrome as the Queue tab's bar, minus the scope
-    /// menu (the arr picker up top scopes the GRID; the lookups deliberately
-    /// search every configured arr). Same meaning as the queue's bar too —
-    /// grid narrowing is just the local tier of the one search.
-    /// macOS keeps the floating bottom filter bar (the popover has no navigation
-    /// bar to hang a field on). iOS uses the system search field instead, so the
-    /// Library reads like the Queue tab and like every other iOS app.
-    @ViewBuilder
-    private var surface: some View {
-        #if os(iOS)
-        VStack(spacing: 0) {
-            // Browsing filters and search scopes are different jobs, so they
-            // never share a row: the arr picker + status chips + sort belong to
-            // the grid, the scope bar belongs to the query. But the scope bar
-            // itself is the QUEUE'S — one search, one set of scopes, wherever
-            // it is opened from. Only the ordering of results differs here,
-            // where locally-owned titles are already deduped and ranked against
-            // the grid (see `lookupResults`).
-            LibraryFilterStrip { topStrip }
-            SearchScopeBar(searchVM: searchVM, scopes: SearchScope.available(for: configStore))
-            gridOrState
+    /// Which of the grid's states is on screen.
+    private enum Phase: Equatable { case loading, failed, empty, content }
+
+    private func phase(_ entries: [LibraryEntry]) -> Phase {
+        if allEntries.isEmpty {
+            if viewModel.loadFailed.contains(source) { return .failed }
+            // A source that was never projected counts as loading too: the
+            // frame between `onAppear` and `loadIfNeeded` raising its flag
+            // used to flash the "empty library" state.
+            if viewModel.entries[source] == nil || viewModel.loading.contains(source) { return .loading }
         }
-        .searchable(
-            text: $filterText,
-            isPresented: $searchPresented,
-            placement: .toolbar,
-            prompt: Text("search.global.prompt", bundle: .module)
-        )
-        .modifier(MinimizedSearchToolbar())
-        .autocorrectionDisabled(true)
-        #else
-        VStack(spacing: 0) {
-            topStrip
-            ZStack(alignment: .bottom) {
-                gridOrState
-                filterBar
-                    .padding(.horizontal, 10)
-                    .padding(.bottom, 10)
-            }
-        }
-        #endif
+        return entries.isEmpty ? .empty : .content
     }
 
-    private var filterBar: some View {
-        HStack(spacing: 8) {
-            SearchFieldLeadingIcon(spinning: searchVM.isSearching && !trimmedFilter.isEmpty)
-            TextField("", text: $filterText, prompt:
-                Text("search.global.prompt", bundle: .module)
-            )
-            .scaledFont(size: 14)
-            .textFieldStyle(.plain)
-            .focused($filterFocused)
-            if !filterText.isEmpty {
-                Button { filterText = "" } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .scaledFont(size: 14)
-                        .foregroundStyle(.tertiary)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(Text("queue.clearFilter.button", bundle: .module))
-            }
+    /// Browsing strip over the grid. On iOS the strip steps aside while the
+    /// system search field is open (`LibraryFilterStrip`); on macOS the host's
+    /// takeover replaces this whole view, strip included.
+    ///
+    /// The states cross-fade: the first visit to a source holds the spinner
+    /// while the library projects off the main actor, then the covers fade in
+    /// rather than popping in over a stalled frame.
+    private var surface: some View {
+        let entries = visibleEntries
+        let phase = phase(entries)
+        return VStack(spacing: 0) {
+            LibraryFilterStrip { topStrip }
+            gridOrState(entries, phase: phase)
+                .id(phase)
+                .transition(.opacity)
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .contentShape(Capsule())
-        .onTapGesture { filterFocused = true }
-        .glassyFloatingBar(focused: filterFocused)
-        // Typeable the moment Library is on screen, whether the panel opened
-        // on this tab or the user switched to it — same as Chat, and the same
-        // end state the Queue reaches via `PopoverContentView`. (Queue's field
-        // is driven from up there because it's the global search and ⌘N / the
-        // Add intent aim at it too; this one and Chat's own theirs.)
-        //
-        // Hopped to the next main-actor turn because the field is not in the
-        // responder chain during `onAppear`, and an assignment made before it
-        // is there is silently dropped.
-        .onAppear { Task { @MainActor in filterFocused = true } }
+        .animation(.easeOut(duration: 0.25), value: phase)
     }
 }
 
@@ -760,25 +589,11 @@ private extension LibraryEntry {
         sizeOnDisk > 0 ? ByteCountFormatter.string(fromByteCount: sizeOnDisk, countStyle: .file) : nil
     }
 
-    /// Tap routes through DetailRequest so the arr's full record opens in the
-    /// same DetailView the queue rows use (Lidarr → the artist surface).
+    /// Tap routes through `DetailRequest.open` so the arr's full record opens
+    /// in the same DetailView the queue rows use (Lidarr → the artist surface).
     func openDetail() {
-        if source == .lidarr {
-            DetailRequest.post(DetailRequest.syntheticArtistItem(
-                artistId: arrId,
-                name: title,
-                posterURL: posterURL,
-                posterRequiresAuth: posterRequiresAuth
-            ))
-        } else {
-            DetailRequest.post(DetailRequest.syntheticItem(
-                source: source,
-                entityId: arrId,
-                title: title,
-                posterURL: posterURL,
-                posterRequiresAuth: posterRequiresAuth
-            ))
-        }
+        DetailRequest.open(source: source, arrId: arrId, title: title,
+                           posterURL: posterURL, posterRequiresAuth: posterRequiresAuth)
     }
 }
 
@@ -963,6 +778,10 @@ private struct LibraryEntryTooltip: View {
     /// so they arrive here ~200 ms after the tooltip opens. The clients
     /// keep a per-movie TTL cache, so re-hovers are free.
     @State private var fileDetails: ArrFile?
+    /// Country of production — TMDB-only (see `CountryProvider`), fetched
+    /// when the tooltip opens; the detail view then gets a cache hit.
+    @State private var countries: [String] = []
+    @Environment(\.locale) private var locale
 
     var body: some View {
         MediaTooltipChrome(
@@ -984,13 +803,14 @@ private struct LibraryEntryTooltip: View {
             if !entry.genres.isEmpty {
                 GenreChips(genres: entry.genres)
             }
-            TooltipRatingPills(chips: ratingChips)
+            // Detail-hero order: metadata line above the rating pills.
             if !subtitle.isEmpty {
                 Text(verbatim: subtitle)
                     .scaledFont(size: 11)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
+            TooltipRatingPills(chips: ratingChips)
             TooltipInfoGrid(lines: infoLines)
             TooltipOverview(text: entry.overview)
             // Quality-composition strip: assigned profile chip (same chip the
@@ -1008,6 +828,18 @@ private struct LibraryEntryTooltip: View {
                 .padding(.top, 2)
             }
             TooltipFileName(name: fileDetails?.relativePath ?? entry.fileName)
+        }
+        .task {
+            switch entry.source {
+            case .radarr:
+                countries = await CountryProvider.movieCountries(
+                    tmdbId: entry.externalId, demoMovieId: entry.arrId, configStore: configStore)
+            case .sonarr:
+                countries = await CountryProvider.seriesCountries(
+                    tmdbId: nil, tvdbId: entry.externalId, demoSeriesId: entry.arrId, configStore: configStore)
+            case .lidarr, .whisparr:
+                break
+            }
         }
         .task {
             guard fileDetails == nil, entry.state == .complete else { return }
@@ -1044,6 +876,8 @@ private struct LibraryEntryTooltip: View {
         if let cert = entry.certification, !cert.isEmpty {
             parts.append(cert)
         }
+        // Country closes the line, as it does in the detail hero.
+        parts.append(contentsOf: CountryProvider.displayNames(countries, locale: locale))
         return parts.joined(separator: " · ")
     }
 

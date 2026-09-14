@@ -73,10 +73,10 @@ public struct UpcomingRowView: View {
         ) {
             HStack(spacing: 6) {
                 if item.hasFile {
-                    // Same accent-tinted pill as the search view's library
-                    // hits — one visual for "you already own this" across
-                    // every surface (see `InLibraryBadge`).
-                    InLibraryBadge()
+                    // A calendar entry is always in the library, so the only
+                    // news is "downloaded" — one ownership chip everywhere
+                    // (see `LibraryStateBadge`).
+                    LibraryStateBadge(isDownloaded: true)
                 }
                 // Which arr this upcoming item comes from.
                 ServiceIcon(source: item.source, size: 13)
@@ -221,6 +221,9 @@ public struct UpcomingItemTooltip: View {
     @State private var fileDetails: FileFacts?
     /// Assigned quality-profile name — lazily resolved like the file facts.
     @State private var profileName: String?
+    /// Country of production — TMDB-only (see `CountryProvider`).
+    @State private var countries: [String] = []
+    @Environment(\.locale) private var locale
 
     public var body: some View {
         MediaTooltipChrome(
@@ -249,13 +252,14 @@ public struct UpcomingItemTooltip: View {
             if !item.genres.isEmpty {
                 GenreChips(genres: item.genres)
             }
-            TooltipRatingPills(chips: ratingChips)
+            // Detail-hero order: metadata line above the rating pills.
             if !runtimeCertLine.isEmpty {
                 Text(verbatim: runtimeCertLine)
                     .scaledFont(size: 11)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
+            TooltipRatingPills(chips: ratingChips)
             TooltipInfoGrid(lines: infoLines)
             TooltipOverview(text: item.overview)
             if profileName != nil || fileDetails.map({ !$0.formats.isEmpty || $0.score != 0 }) == true {
@@ -271,6 +275,18 @@ public struct UpcomingItemTooltip: View {
                 .padding(.top, 2)
             }
             TooltipFileName(name: fileDetails?.fileName)
+        }
+        .task {
+            switch item.source {
+            case .radarr:
+                countries = await CountryProvider.movieCountries(
+                    tmdbId: item.tmdbId, demoMovieId: item.entityId, configStore: configStore)
+            case .sonarr:
+                countries = await CountryProvider.seriesCountries(
+                    tmdbId: nil, tvdbId: item.tvdbId, demoSeriesId: item.entityId, configStore: configStore)
+            case .lidarr, .whisparr:
+                break
+            }
         }
         .task {
             // Assigned profile — independent of the file (shown for
@@ -309,6 +325,8 @@ public struct UpcomingItemTooltip: View {
         var parts: [String] = []
         if let r = item.runtime, r > 0 { parts.append("\(r) min") }
         if let c = item.certification, !c.isEmpty { parts.append(c) }
+        // Country closes the line, as it does in the detail hero.
+        parts.append(contentsOf: CountryProvider.displayNames(countries, locale: locale))
         return parts.joined(separator: " · ")
     }
 

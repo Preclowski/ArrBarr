@@ -13,16 +13,25 @@ struct MediaServerSettingsPane: View {
     @EnvironmentObject var configStore: ConfigStore
     @ObservedObject private var storeManager = StoreManager.shared
 
-    /// Two independent operations, one shape: the connection test and the
-    /// maintenance buttons both run, then either say a short thing or show the
-    /// error they came back with.
+    /// Every operation here has one shape: it runs, then either says a short
+    /// thing or shows the error it came back with. The connection test and
+    /// the index refresh each own one; library maintenance owns one per
+    /// library, so a scan on Movies and a purge on TV report side by side.
     @State private var testState: OperationState = .idle
-    @State private var actionState: OperationState = .idle
+    @State private var reindexState: OperationState = .idle
+    @State private var libraryStates: [String: OperationState] = [:]
+    @State private var libraries: LibrariesState = .loading
     @State private var indexSummary: IndexSummary = .init(titles: 0, refreshedAt: nil)
 
     private enum OperationState: Equatable {
         case idle, running
         case succeeded(String)
+        case failed(String)
+    }
+
+    private enum LibrariesState: Equatable {
+        case loading
+        case loaded([MediaServerLibrary])
         case failed(String)
     }
 
@@ -49,6 +58,10 @@ struct MediaServerSettingsPane: View {
             if isLocked { ProLockOverlay(feature: .mediaServer) }
         }
         .task { refreshIndexSummary() }
+        // Re-read the library list whenever the connection changes: a new
+        // server has different libraries, and a token fix is what makes the
+        // list load at all.
+        .task(id: configStore.mediaServer) { await loadLibraries() }
         #if os(iOS)
         .navigationTitle(Text("settings.mediaServer.label", bundle: .module))
         .navigationBarTitleDisplayMode(.inline)
@@ -59,10 +72,10 @@ struct MediaServerSettingsPane: View {
 
     private var connectionSection: some View {
         Section {
-            // One segmented control instead of a switch plus a picker: the
-            // integration has exactly four states and naming all four —
-            // including Off — says more than a toggle whose label has to be
-            // read together with a separate picker below it.
+            // One picker instead of a switch plus a picker: the integration
+            // has exactly four states and naming all four — including Off —
+            // says more than a toggle read together with a separate picker.
+            // A menu, not segments: it matches the other selects in Settings.
             Picker(selection: selectionBinding) {
                 ForEach(MediaServerKind.allCases) { kind in
                     Text(verbatim: kind.displayName).tag(Optional(kind))
@@ -72,7 +85,7 @@ struct MediaServerSettingsPane: View {
             } label: {
                 Text("settings.server.label", bundle: .module)
             }
-            .pickerStyle(.segmented)
+            .pickerStyle(.menu)
 
             if configStore.mediaServer.enabled {
                 TextField(text: baseURLBinding,
@@ -87,10 +100,10 @@ struct MediaServerSettingsPane: View {
                 }
                 .apiKeyField()
 
-                // Same slot the other two servers put their hint in, so the
-                // three read identically: how to get a token, then the test.
-                tokenHint
+                // Test directly under the credentials it checks, then the
+                // how-to for where the token comes from.
                 testRow
+                tokenHint
             }
         } header: {
             HStack(spacing: 6) {
@@ -170,24 +183,58 @@ struct MediaServerSettingsPane: View {
 
     private var librarySection: some View {
         Section {
-            Button { run(.scan) } label: {
-                Label { Text("settings.scanLibrary.button", bundle: .module) } icon: { Image(systemName: "arrow.clockwise") }
-            }
-            .disabled(actionState == .running)
-
-            // Plex only. Jellyfin and Emby have no trash — an item leaves the
-            // library when its file does — so the button is absent rather than
-            // present and permanently failing.
-            if configStore.mediaServer.kind == .plex {
-                Button { run(.emptyTrash) } label: {
-                    Label { Text("settings.emptyTrash.button", bundle: .module) } icon: { Image(systemName: "trash") }
+            switch libraries {
+            case .loading:
+                ProgressView().controlSize(.small)
+            case .failed(let message):
+                status(.failed(message))
+            case .loaded(let list) where list.isEmpty:
+                Text("settings.noLibraries.label", bundle: .module)
+                    .foregroundStyle(.secondary)
+            case .loaded(let list):
+                ForEach(list) { library in
+                    libraryRow(library)
                 }
-                .disabled(actionState == .running)
             }
-
-            status(actionState)
         } header: {
-            Text("settings.library.label", bundle: .module)
+            Text("settings.libraries.label", bundle: .module)
+        }
+    }
+
+    /// One library: its name and kind on the left, the maintenance it
+    /// accepts on the right, with that library's own last outcome beside
+    /// the buttons.
+    private func libraryRow(_ library: MediaServerLibrary) -> some View {
+        let state = libraryStates[library.id] ?? .idle
+        return LabeledContent {
+            HStack(spacing: 8) {
+                status(state)
+                Button { run(.scan, on: library) } label: {
+                    Label { Text("settings.scan.button", bundle: .module) } icon: { Image(systemName: "arrow.clockwise") }
+                }
+                .modifier(GlassButtonStyle())
+                .controlSize(.small)
+                .disabled(state == .running)
+
+                // Plex only. Jellyfin and Emby have no trash — an item leaves
+                // the library when its file does — so the button is absent
+                // rather than present and permanently failing.
+                if configStore.mediaServer.kind == .plex {
+                    Button { run(.emptyTrash, on: library) } label: {
+                        Label { Text("settings.emptyTrash.button", bundle: .module) } icon: { Image(systemName: "trash") }
+                    }
+                    .modifier(GlassButtonStyle())
+                    .controlSize(.small)
+                    .disabled(state == .running)
+                }
+            }
+        } label: {
+            Label {
+                Text(verbatim: library.name)
+            } icon: {
+                Image(systemName: library.kind.symbol)
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 
@@ -211,10 +258,11 @@ struct MediaServerSettingsPane: View {
                     Text("settings.lastUpdated.label", bundle: .module)
                 }
             }
-            Button { run(.reindex) } label: {
+            Button { runReindex() } label: {
                 Label { Text("settings.refreshNow.button", bundle: .module) } icon: { Image(systemName: "arrow.triangle.2.circlepath") }
             }
-            .disabled(actionState == .running)
+            .disabled(reindexState == .running)
+            status(reindexState)
         } header: {
             Text("settings.artworkAndHistory.label", bundle: .module)
         }
@@ -322,41 +370,61 @@ struct MediaServerSettingsPane: View {
                 }
                 testState = .succeeded(handshake.versionLine)
                 // A successful test is the moment the index can finally be
-                // built — don't make the user wait for the next poll.
+                // built — don't make the user wait for the next poll. Same
+                // for the library list, whose earlier failure was the very
+                // thing the user just fixed.
                 await MediaServerIndex.shared.refresh(config: configStore.mediaServer)
                 refreshIndexSummary()
+                await loadLibraries()
             } catch {
                 testState = .failed(error.userFacingMessage)
             }
         }
     }
 
-    private enum Action { case scan, emptyTrash, reindex }
+    private func loadLibraries() async {
+        guard let client = MediaServerClientFactory.make(config: configStore.mediaServer) else { return }
+        libraries = .loading
+        libraryStates = [:]
+        do {
+            libraries = .loaded(try await client.libraries())
+        } catch {
+            libraries = .failed(error.userFacingMessage)
+        }
+    }
 
-    private func run(_ action: Action) {
-        actionState = .running
+    private enum LibraryAction { case scan, emptyTrash }
+
+    private func run(_ action: LibraryAction, on library: MediaServerLibrary) {
+        libraryStates[library.id] = .running
         let config = configStore.mediaServer
         Task {
             guard let client = MediaServerClientFactory.make(config: config) else {
-                actionState = .failed(String(localized: "settings.enterAValidUrl.tooltip", bundle: .module))
+                libraryStates[library.id] = .failed(String(localized: "settings.enterAValidUrl.tooltip", bundle: .module))
                 return
             }
             do {
                 switch action {
                 case .scan:
-                    try await client.scanLibraries()
-                    actionState = .succeeded(String(localized: "settings.scanRequested.label", bundle: .module))
+                    try await client.scanLibrary(id: library.id)
+                    libraryStates[library.id] = .succeeded(String(localized: "settings.scanRequested.label", bundle: .module))
                 case .emptyTrash:
-                    try await client.emptyTrash()
-                    actionState = .succeeded(String(localized: "settings.trashEmptied.label", bundle: .module))
-                case .reindex:
-                    await MediaServerIndex.shared.refresh(config: config)
-                    refreshIndexSummary()
-                    actionState = .succeeded(String(localized: "settings.upToDate.label", bundle: .module))
+                    try await client.emptyTrash(libraryId: library.id)
+                    libraryStates[library.id] = .succeeded(String(localized: "settings.trashEmptied.label", bundle: .module))
                 }
             } catch {
-                actionState = .failed(error.userFacingMessage)
+                libraryStates[library.id] = .failed(error.userFacingMessage)
             }
+        }
+    }
+
+    private func runReindex() {
+        reindexState = .running
+        let config = configStore.mediaServer
+        Task {
+            await MediaServerIndex.shared.refresh(config: config)
+            refreshIndexSummary()
+            reindexState = .succeeded(String(localized: "settings.upToDate.label", bundle: .module))
         }
     }
 

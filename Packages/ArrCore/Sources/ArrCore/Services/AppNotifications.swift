@@ -117,6 +117,34 @@ public enum DetailRequest {
         NotificationCenter.default.post(name: .arrBarrOpenDetail, object: nil, userInfo: ["item": item])
     }
 
+    /// The one place that knows "a Lidarr ARTIST is not a Lidarr ALBUM".
+    ///
+    /// Lidarr's addable/search entity is the artist, so an artist id handed to
+    /// the album-shaped `DetailView` fetched `/album/{artistId}` and landed on
+    /// an unrelated record. Three call sites each carried their own copy of
+    /// that branch; this is it, once.
+    public static func open(source: QueueItem.Source, arrId: Int, title: String,
+                            posterURL: URL? = nil, posterRequiresAuth: Bool = false,
+                            isLidarrAlbum: Bool = false) {
+        post(item(source: source, arrId: arrId, title: title, posterURL: posterURL,
+                  posterRequiresAuth: posterRequiresAuth, isLidarrAlbum: isLidarrAlbum))
+    }
+
+    /// The item `open` posts, for hosts that push it themselves — the history
+    /// list opens a title on its own navigation stack so Back returns to it.
+    public static func item(source: QueueItem.Source, arrId: Int, title: String,
+                            posterURL: URL? = nil, posterRequiresAuth: Bool = false,
+                            isLidarrAlbum: Bool = false) -> QueueItem {
+        if source == .lidarr, !isLidarrAlbum {
+            return syntheticArtistItem(artistId: arrId, name: title,
+                                       posterURL: posterURL,
+                                       posterRequiresAuth: posterRequiresAuth)
+        }
+        return syntheticItem(source: source, entityId: arrId, title: title,
+                             posterURL: posterURL,
+                             posterRequiresAuth: posterRequiresAuth)
+    }
+
     /// Tap-router for a `SearchResult`. Owns the "is it in the
     /// library?" decision so individual call sites stop reimplementing
     /// the same `if let arrId = ... { detail } else { addPanel }`
@@ -127,34 +155,16 @@ public enum DetailRequest {
     /// Not in library → open SearchAddPanel with the search result so
     /// the user gets the same hero card + form as the `+` flow.
     public static func tap(_ result: SearchResult) {
-        if let arrId = result.inLibraryArrId {
-            // Lidarr ARTIST results (artist/lookup) carry an artist id —
-            // route to the artist view, not the album-shaped DetailView.
-            // Album rows (`isLidarrAlbum`) carry an album id and fall
-            // through to the generic path, which IS the album detail.
-            if result.source == .lidarr, !result.isLidarrAlbum {
-                post(syntheticArtistItem(
-                    artistId: arrId,
-                    name: result.title,
-                    posterURL: result.posterURL,
-                    posterRequiresAuth: false
-                ))
-                return
-            }
-            post(syntheticItem(
-                source: result.source,
-                entityId: arrId,
-                title: result.title,
-                posterURL: result.posterURL,
-                // Library-side rows came through `fetchLibraryArrIdMap`
-                // which doesn't require auth on poster URLs (they're
-                // resolved against the arr's own image cache via
-                // public CDN paths).
-                posterRequiresAuth: false
-            ))
-        } else {
+        guard let arrId = result.inLibraryArrId else {
             SearchAddRequest.post(result)
+            return
         }
+        // Library-side rows came through `fetchLibraryOwnership`, which
+        // doesn't require auth on poster URLs (they resolve against the arr's
+        // own image cache via public CDN paths).
+        open(source: result.source, arrId: arrId, title: result.title,
+             posterURL: result.posterURL, posterRequiresAuth: false,
+             isLidarrAlbum: result.isLidarrAlbum)
     }
 }
 

@@ -104,7 +104,7 @@ public struct DiscoverCardView: View {
             // library pick reads as the quiz suggesting things you already
             // have. Same chip the search results / detail views use.
             if item.result.inLibraryArrId != nil {
-                InLibraryBadge()
+                LibraryStateBadge(isDownloaded: item.result.libraryDownloaded)
             }
             if !runtimeCertSegments.isEmpty {
                 Text(runtimeCertSegments.joined(separator: " · "))

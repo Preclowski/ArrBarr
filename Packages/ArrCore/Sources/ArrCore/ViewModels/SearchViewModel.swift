@@ -4,7 +4,35 @@ import Observation
 @MainActor
 @Observable
 public final class SearchViewModel {
-    var query = ""
+    /// The one query. Every field on every surface binds straight to this, so
+    /// there is nothing to mirror and nothing to keep in sync — the `didSet`
+    /// IS the trigger that three separate `onChange` sites used to be.
+    var query = "" {
+        didSet { if query != oldValue { onQueryChange() } }
+    }
+
+    /// True while a live query owns the surface. One definition, used by the
+    /// tab-bar hide, the focus logic, the takeover host and both tabs.
+    var isActive: Bool { !trimmedQuery.isEmpty }
+
+    /// The query as every decision about it must read it. One definition
+    /// because two disagreed: `isActive` trimmed newlines and `onQueryChange`
+    /// did not, so a pasted line ending looked empty on screen while a lookup
+    /// ran behind it.
+    private var trimmedQuery: String {
+        query.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// How many times `onQueryChange` has run. Not UI state — it exists so the
+    /// "an empty query resets the scope EXACTLY once" invariant is testable;
+    /// the re-entry it guards against is invisible from the outside otherwise.
+    @ObservationIgnored private(set) var queryChangePasses = 0
+
+    /// Set while `onQueryChange` resets the scope itself, so `scope`'s own
+    /// `didSet` doesn't bounce back in and run a second pass over the same
+    /// (empty) query.
+    @ObservationIgnored private var isResettingScope = false
+
     var radarrResults: [SearchResult] = []
     var sonarrResults: [SearchResult] = []
     var lidarrResults: [SearchResult] = []
@@ -80,8 +108,19 @@ public final class SearchViewModel {
     /// Radarr and a people search only hits TMDB. Set from the search field's
     /// scope chip; reset to `all` when the search surface closes.
     var scope: SearchScope = .all {
-        didSet { if scope != oldValue { onQueryChange() } }
+        didSet { if scope != oldValue, !isResettingScope { onQueryChange() } }
     }
+
+    /// Library-only search: match the user's own library — the Library tab's
+    /// alias-aware index — instead of asking the arrs and TMDB. Combines with
+    /// `scope`; people are skipped. Kept for the session, unlike `scope`.
+    var libraryOnly = false {
+        didSet { if libraryOnly != oldValue { onQueryChange() } }
+    }
+
+    /// The Library tab's model: the cache library-only search reads. Set by the
+    /// surface that owns both, so search and the tab never hold separate copies.
+    @ObservationIgnored var library: LibraryViewModel?
 
     private var searchTask: Task<Void, Never>?
     private var radarrClient: SearchClient?
@@ -117,22 +156,61 @@ public final class SearchViewModel {
         }
     }
 
+    /// `setup` from the app's configuration — the one reading of what the
+    /// search clients are built from, so macOS and iOS cannot drift.
+    func setup(store: ConfigStore) {
+        setup(radarrConfig: store.radarr, sonarrConfig: store.sonarr,
+              lidarrConfig: store.lidarr, whisparrConfig: store.whisparr,
+              tmdbApiKey: store.tmdbApiKey)
+    }
+
+    /// Identity of everything `setup` reads. The hosts observe this and re-run
+    /// `setup` when it moves: the clients are built once from the config, so
+    /// without it a server edited in Settings leaves every search talking to
+    /// the old one for the rest of the session.
+    static func configSignature(store: ConfigStore) -> String {
+        [
+            store.radarr.baseURL, store.radarr.apiKey, "\(store.radarr.enabled)",
+            store.sonarr.baseURL, store.sonarr.apiKey, "\(store.sonarr.enabled)",
+            store.lidarr.baseURL, store.lidarr.apiKey, "\(store.lidarr.enabled)",
+            store.whisparr.baseURL, store.whisparr.apiKey, "\(store.whisparr.enabled)",
+            store.tmdbApiKey,
+        ].joined(separator: "|")
+    }
+
     func onQueryChange() {
+        queryChangePasses += 1
         searchTask?.cancel()
         errorMessage = nil
         searchGeneration += 1
         let myGen = searchGeneration
         parsedInput = QueryParser.parse(query)
 
-        let trimmed = query.trimmingCharacters(in: .whitespaces)
+        let trimmed = trimmedQuery
         let previous = previousQuery
         previousQuery = trimmed
         guard !trimmed.isEmpty else {
+            // Ending the search drops any narrow scope: a scope that outlives
+            // the query it was chosen for reads as a bug on the next search.
+            // `libraryOnly` is deliberately sticky and stays.
+            if scope != .all {
+                isResettingScope = true
+                scope = .all
+                isResettingScope = false
+            }
             // Empty query: kill the loader, clear results. Anything
             // mid-flight that hasn't returned will be ignored when it
             // does (its generation no longer matches).
             isSearching = false
             clearResults()
+            return
+        }
+
+        // Library-only with the libraries already in memory is a filter, not a
+        // fetch: answer on this keystroke — no debounce, no loader. The bumped
+        // generation above already retires anything still in flight.
+        if libraryOnly, let found = libraryMatches(scope: effectiveScope) {
+            applyLibraryResults(found)
             return
         }
 
@@ -205,6 +283,14 @@ public final class SearchViewModel {
 
     private func search(generation: Int) async {
         let effective = effectiveScope
+        if libraryOnly {
+            // Only reached when a library wasn't in memory yet — see
+            // `onQueryChange`. Same generation gate as the lookup path below.
+            let found = await searchLibrary(scope: effective)
+            guard searchGeneration == generation else { return }
+            applyLibraryResults(found)
+            return
+        }
         // Scope gates which arr clients fire — a nil client short-circuits to
         // [] in `fetchOne`, so an out-of-scope source simply doesn't run.
         async let r = fetchOne(client: effective.allows(.radarr) ? radarrClient : nil, generation: generation)
@@ -231,6 +317,44 @@ public final class SearchViewModel {
         whisparrResults = wRes
         peopleResults = pRes.rows
         starring = pRes.starring
+        isSearching = false
+    }
+
+    /// Library-only matches straight from memory: each in-scope arr's library
+    /// filtered through the same `searchIndex` the Library tab's field uses —
+    /// accents folded, alternate and translated titles included. Synchronous
+    /// and cheap, so it runs per keystroke. `nil` when an in-scope library
+    /// hasn't loaded yet; `searchLibrary` loads it and comes back here.
+    private func libraryMatches(scope: SearchScope) -> [QueueItem.Source: [SearchResult]]? {
+        guard let library else { return [:] }
+        let term = query.trimmingCharacters(in: .whitespaces)
+        var out: [QueueItem.Source: [SearchResult]] = [:]
+        for source in QueueItem.Source.allCases where scope.allows(source) && configs[source] != nil {
+            guard let entries = library.entries[source] else { return nil }
+            out[source] = TitleMatch.indexedFilter(entries, query: term, index: \.searchIndex)
+                .map(SearchResult.init(libraryEntry:))
+        }
+        return out
+    }
+
+    /// First library-only search for a source: load its library (after this it
+    /// is the cache the Library tab renders from), then filter it.
+    private func searchLibrary(scope: SearchScope) async -> [QueueItem.Source: [SearchResult]] {
+        guard let library else { return [:] }
+        for source in QueueItem.Source.allCases where scope.allows(source) {
+            guard let config = configs[source] else { continue }
+            await library.loadIfNeeded(source: source, config: config)
+        }
+        return libraryMatches(scope: scope) ?? [:]
+    }
+
+    private func applyLibraryResults(_ found: [QueueItem.Source: [SearchResult]]) {
+        radarrResults = found[.radarr] ?? []
+        sonarrResults = found[.sonarr] ?? []
+        lidarrResults = found[.lidarr] ?? []
+        whisparrResults = found[.whisparr] ?? []
+        peopleResults = []
+        starring = nil
         isSearching = false
     }
 
@@ -278,9 +402,15 @@ public final class SearchViewModel {
     private func fetchOne(client: SearchClient?, generation: Int) async -> [SearchResult] {
         guard let client else { return [] }
         do {
-            async let fetchResults = client.lookup(input: parsedInput)
-            async let fetchLibrary = client.fetchLibraryArrIdMap()
-            let (raw, map) = try await (fetchResults, fetchLibrary)
+            // Ownership comes off the shared `LibraryIndex`, whose in-flight
+            // fetch belongs to every caller and isn't cancelled with this
+            // search. As an `async let` child it held a failed lookup's error
+            // hostage until the whole library had loaded; unstructured, the
+            // lookup reports straight away and the fetch just runs on.
+            let libraryFetch = Task { try await client.fetchLibraryOwnership() }
+            defer { libraryFetch.cancel() }
+            let raw = try await client.lookup(input: parsedInput)
+            let map = try await libraryFetch.value
             // Used to be `raw.filter { !ids.contains($0.id) }` — hiding
             // library hits entirely. The "Search" tab now wants both
             // kinds in one list, so we keep them all and stamp
@@ -289,10 +419,7 @@ public final class SearchViewModel {
             // an "In library" pill + drill into DetailView; addable
             // rows flow into SearchAddPanel.
             return raw.map { result in
-                if let arrId = map[result.externalId] {
-                    return result.withInLibraryArrId(arrId)
-                }
-                return result
+                map[result.externalId].map(result.withLibraryOwnership) ?? result
             }
         } catch {
             // A superseded keystroke cancelled this lookup — not a failure the
@@ -396,6 +523,10 @@ public final class SearchViewModel {
                                                   rootFolderPath: rootFolderPath, monitor: monitor,
                                                   searchOnAdd: searchOnAdd)
             whisparrResults.removeAll { $0.id == result.id }
+            // Search reads ownership from the index; without this the title
+            // just added would read as addable until `LibraryIndex.ttl`, and
+            // the Library grid would keep it "not owned" until its next load.
+            await LibraryIndex.shared.invalidate(.whisparr)
             navigateToAdded(result, source: .whisparr, arrId: arrId)
         } catch {
             addError = error.localizedDescription
@@ -413,6 +544,7 @@ public final class SearchViewModel {
                                                  rootFolderPath: rootFolderPath, monitor: monitor,
                                                  searchOnAdd: searchOnAdd)
             radarrResults.removeAll { $0.id == result.id }
+            await LibraryIndex.shared.invalidate(.radarr)
             navigateToAdded(result, source: .radarr, arrId: arrId)
         } catch {
             addError = error.localizedDescription
@@ -442,6 +574,7 @@ public final class SearchViewModel {
                                                   seriesType: seriesType, seasonFolder: seasonFolder,
                                                   searchOnAdd: searchOnAdd)
             sonarrResults.removeAll { $0.id == result.id }
+            await LibraryIndex.shared.invalidate(.sonarr)
             navigateToAdded(result, source: .sonarr, arrId: arrId)
         } catch {
             addError = error.localizedDescription
@@ -462,6 +595,7 @@ public final class SearchViewModel {
                                                   monitor: monitor.rawValue,
                                                   searchOnAdd: searchOnAdd)
             lidarrResults.removeAll { $0.id == result.id }
+            await LibraryIndex.shared.invalidate(.lidarr)
             navigateToAdded(result, source: .lidarr, arrId: arrId)
         } catch {
             addError = error.localizedDescription
@@ -482,16 +616,14 @@ public final class SearchViewModel {
                                                   rootFolderPath: rootFolderPath,
                                                   searchOnAdd: searchOnAdd)
             lidarrResults.removeAll { $0.id == result.id }
+            // An album add creates its artist too, so the whole Lidarr
+            // snapshot is stale.
+            await LibraryIndex.shared.invalidate(.lidarr)
             // The POST returns the ALBUM record — deep-link straight into the
             // album detail (unlike the artist add, which lands on the artist).
             guard let arrId else { return }
-            DetailRequest.post(DetailRequest.syntheticItem(
-                source: .lidarr,
-                entityId: arrId,
-                title: result.title,
-                posterURL: result.posterURL,
-                posterRequiresAuth: false
-            ))
+            DetailRequest.open(source: .lidarr, arrId: arrId, title: result.title,
+                               posterURL: result.posterURL, isLidarrAlbum: true)
         } catch {
             addError = error.localizedDescription
         }
@@ -504,25 +636,8 @@ public final class SearchViewModel {
     /// add still succeeded, we just can't deep-link to it.
     private func navigateToAdded(_ result: SearchResult, source: QueueItem.Source, arrId: Int?) {
         guard let arrId else { return }
-        // Lidarr's POST /artist returns an ARTIST id — route to the artist
-        // view; the album-shaped DetailView would fetch /album/{artistId}
-        // and land on an unrelated album.
-        if source == .lidarr {
-            DetailRequest.post(DetailRequest.syntheticArtistItem(
-                artistId: arrId,
-                name: result.title,
-                posterURL: result.posterURL,
-                posterRequiresAuth: false
-            ))
-            return
-        }
-        DetailRequest.post(DetailRequest.syntheticItem(
-            source: source,
-            entityId: arrId,
-            title: result.title,
-            posterURL: result.posterURL,
-            posterRequiresAuth: false
-        ))
+        DetailRequest.open(source: source, arrId: arrId, title: result.title,
+                           posterURL: result.posterURL, posterRequiresAuth: false)
     }
 
     private func client(for source: QueueItem.Source) -> SearchClient? {

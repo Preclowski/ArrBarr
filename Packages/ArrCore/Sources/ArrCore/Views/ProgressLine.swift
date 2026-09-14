@@ -27,7 +27,6 @@ struct ProgressLine: View {
     private var statusRow: some View {
         HStack(spacing: 4) {
             StatusIconLabel(status: item.status,
-                            iconSize: 10,
                             labelSize: 11,
                             labelWeight: .semibold)
             Spacer(minLength: 6)

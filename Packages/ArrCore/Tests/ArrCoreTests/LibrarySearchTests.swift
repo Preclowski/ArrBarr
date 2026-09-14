@@ -118,6 +118,47 @@ struct TitleMatchTests {
                                     title: { $0.0 }, year: { $0.1 })
         #expect(older?.1 == 1984)
     }
+
+    @Test("A trailing year splits off; a title that IS a year does not")
+    func splitsTrailingYear() {
+        // "1917" is the film, not an empty query filtered to 1917.
+        #expect(TitleMatch.splitTrailingYear("1917").year == nil)
+        #expect(TitleMatch.splitTrailingYear("1917").query == "1917")
+
+        let dune = TitleMatch.splitTrailingYear("dune 2024")
+        #expect(dune.query == "dune")
+        #expect(dune.year == 2024)
+
+        // Leading years are part of the title — scanning the whole query
+        // would bury Kubrick under a 2001 release-year filter.
+        let odyssey = TitleMatch.splitTrailingYear("2001 a space odyssey")
+        #expect(odyssey.query == "2001 a space odyssey")
+        #expect(odyssey.year == nil)
+
+        // 2049 is not a plausible release year, so the title keeps its last word.
+        #expect(TitleMatch.splitTrailingYear("blade runner 2049").year == nil)
+        #expect(TitleMatch.splitTrailingYear("blade runner 2049").query == "blade runner 2049")
+    }
+
+    @Test("isPlausibleYear brackets 1880…(now + 5)")
+    func plausibleYearBounds() {
+        let now = Calendar.current.component(.year, from: Date())
+        #expect(TitleMatch.isPlausibleYear("1880"))
+        #expect(TitleMatch.isPlausibleYear(String(now)))
+        #expect(!TitleMatch.isPlausibleYear("1879"))
+        #expect(!TitleMatch.isPlausibleYear(String(now + 6)))
+        #expect(!TitleMatch.isPlausibleYear("24"))
+        #expect(!TitleMatch.isPlausibleYear("20x4"))
+    }
+
+    @Test("fold is width-insensitive as well as accent- and punctuation-insensitive")
+    func foldIsWidthInsensitive() {
+        // Full-width Latin (a Japanese release title's ASCII half) folds to
+        // the same tokens the user types on a normal keyboard.
+        #expect(TitleMatch.fold("ＡＫＩＲＡ") == "akira")
+        #expect(TitleMatch.fold("Spider-Man: No Way Home") == "spider man no way home")
+        #expect(TitleMatch.fold("WALL·E") == "wall e")
+    }
 }
 
 @Suite("Library filtering")

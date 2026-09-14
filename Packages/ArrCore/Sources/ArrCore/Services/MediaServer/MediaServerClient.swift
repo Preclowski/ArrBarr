@@ -1,6 +1,6 @@
 import Foundation
 
-/// What ArrBarr asks of a media server. Seven calls, all of them either reads or
+/// What ArrBarr asks of a media server. Eight calls, all of them either reads or
 /// maintenance the user explicitly pressed — nothing here writes library
 /// content, and there is no delete path on purpose.
 public protocol MediaServerClient: Sendable {
@@ -14,12 +14,15 @@ public protocol MediaServerClient: Sendable {
     /// play state. One pass — this is what `MediaServerIndex` is built from.
     func libraryIndex() async throws -> [MediaServerEntry]
 
-    /// Ask the server to rescan its libraries.
-    func scanLibraries() async throws
+    /// The server's libraries, in the order the server lists them.
+    func libraries() async throws -> [MediaServerLibrary]
 
-    /// Purge entries whose files are gone. Plex only — the others throw
-    /// `MediaServerError.trashUnsupported`.
-    func emptyTrash() async throws
+    /// Ask the server to rescan one library (`MediaServerLibrary.id`).
+    func scanLibrary(id: String) async throws
+
+    /// Purge one library's entries whose files are gone. Plex only — the
+    /// others throw `MediaServerError.trashUnsupported`.
+    func emptyTrash(libraryId: String) async throws
 
     func nowPlaying() async throws -> [MediaServerSession]
 
@@ -61,6 +64,13 @@ extension MediaServerClient {
         return base
     }
 
+    /// Rescan every library — what the `media_server_scan` tool asks for,
+    /// where "the one an arr just imported into" isn't known.
+    func scanLibraries() async throws {
+        for library in try await libraries() {
+            try await scanLibrary(id: library.id)
+        }
+    }
 }
 
 /// Parses the provider-id strings the servers hand out.

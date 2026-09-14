@@ -57,6 +57,9 @@ struct SeasonDetailView: View {
     /// The connected media server's artwork for *this season*, once fetched.
     /// nil keeps the series poster, which is what every surface showed before.
     @State private var mediaServerSeasonPoster: URL?
+    /// Same series-level country the series view shows — a cache hit in
+    /// `CountryProvider` when the user drilled in from there.
+    @State private var countries: [String] = []
 
     /// Season art when the media server has it, series art otherwise. Every
     /// poster on this screen goes through here so the header, the lightbox and
@@ -172,6 +175,11 @@ struct SeasonDetailView: View {
         // Lazily — one request per series the user actually opens a season of,
         // and the index caches the answer for the rest of the session.
         .task(id: drill.seriesId) {
+            countries = await CountryProvider.seriesCountries(
+                tmdbId: sonarrDetail?.tmdbId, tvdbId: sonarrDetail?.tvdbId,
+                demoSeriesId: drill.seriesId, configStore: configStore)
+        }
+        .task(id: drill.seriesId) {
             let keys = sonarrDetail?.mediaServerKeys ?? []
             guard !keys.isEmpty else { return }
             await MediaServerIndex.shared.loadSeasonPosters(for: keys)
@@ -277,6 +285,7 @@ struct SeasonDetailView: View {
             runtime: sonarrDetail?.runtime,
             network: nil,
             certification: sonarrDetail?.network,
+            countries: countries,
             genres: sonarrDetail?.genres ?? [],
             ratings: ratings,
             overview: sonarrDetail?.overview,

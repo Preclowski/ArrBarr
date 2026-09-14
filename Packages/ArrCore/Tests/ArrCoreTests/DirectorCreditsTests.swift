@@ -102,7 +102,7 @@ struct DirectorCreditsTests {
             {"id": 1, "name": "\(name)", "popularity": 20, "known_for_department": "\(dept)"}
             """.utf8))
         }
-        let q = SearchRelevance.normalize("nolan")
+        let q = TitleMatch.fold("nolan")
         let director = try person("Nolan", TMDBDepartment.directing)
         let actor = try person("Nolan", TMDBDepartment.acting)
         let composer = try person("Nolan", "Sound")

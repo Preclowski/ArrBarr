@@ -121,6 +121,10 @@ struct StatusParsingTests {
     func trackedImporting() {
         #expect(parseStatus(arrStatus: nil, trackedState: "importing") == .importing)
         #expect(parseStatus(arrStatus: nil, trackedState: "importPending") == .importing)
+        #expect(parseStatus(arrStatus: nil, trackedState: "importPending", trackedStatus: "ok") == .importing)
+        // Stuck import: the arr wants a manual import — that's a warning, not progress.
+        #expect(parseStatus(arrStatus: "completed", trackedState: "importPending", trackedStatus: "warning") == .warning)
+        #expect(parseStatus(arrStatus: nil, trackedState: "importing", trackedStatus: "Warning") == .warning)
     }
 
     @Test("Tracked state: imported is completed")

@@ -68,6 +68,7 @@ public struct SearchAddPanel: View {
     /// Directing credits from the same fetch — a movie's director(s), a
     /// series' creator(s). Rendered above the cast strip.
     @State private var directors: [CastMember] = []
+    @State private var countries: [String] = []
     /// True while the TMDB credits fetch is in flight — drives the cast
     /// skeleton so the hero doesn't jump when the strip pops in.
     @State private var castLoading = false
@@ -293,6 +294,7 @@ public struct SearchAddPanel: View {
                 runtime: result.runtime,
                 network: result.network,
                 certification: result.certification,
+                countries: countries,
                 genres: result.genres,
                 ratings: ratingChips,
                 // Overview beside the poster — same right-column layout the
@@ -342,18 +344,32 @@ public struct SearchAddPanel: View {
         guard !configStore.tmdbApiKey.isEmpty else { return }
         castLoading = true
         defer { castLoading = false }
+        // Country rides along with the cast: same TMDB ids, and
+        // `CountryProvider`'s cache means opening the title in DetailView
+        // afterwards doesn't refetch it.
         switch result.source {
         case .radarr, .whisparr:
+            // Radarr only: Whisparr has no country of its own, and its ids
+            // aren't guaranteed to be TMDB movie ids.
+            async let movieCountries: [String] = result.source == .radarr
+                ? CountryProvider.movieCountries(
+                    tmdbId: result.externalId, demoMovieId: nil, configStore: configStore)
+                : []
             let credits = await CastProvider.movieCredits(
                 radarrMovieId: nil, tmdbId: result.externalId, configStore: configStore)
             cast = credits.cast
             directors = credits.directors
+            countries = await movieCountries
         case .sonarr:
+            async let seriesCountries = CountryProvider.seriesCountries(
+                tmdbId: result.tmdbTVId, tvdbId: result.externalId, demoSeriesId: nil,
+                configStore: configStore)
             let credits = await CastProvider.seriesCredits(
                 tmdbId: result.tmdbTVId, tvdbId: result.externalId, demoSeriesId: nil,
                 configStore: configStore)
             cast = credits.cast
             directors = credits.directors
+            countries = await seriesCountries
         case .lidarr:
             break  // no TMDB cast for music
         }

@@ -453,6 +453,30 @@ struct HistoryDecodingTests {
         #expect(r.customFormatScore == 100)
     }
 
+    @Test("History data bag: grab details, deletion reason, non-string values")
+    func historyDataBag() throws {
+        let json = """
+        {
+          "page": 1, "pageSize": 2, "totalRecords": 2,
+          "records": [
+            {"id": 2, "movieId": 50, "downloadId": "ABC", "date": "2024-09-01T12:00:00Z", "eventType": "grabbed",
+             "data": {"indexer": "DemoTracker", "downloadClientName": "qBittorrent", "size": "4831838208"}},
+            {"id": 3, "movieId": 50, "date": "2024-09-01T12:30:00Z", "eventType": "movieFileDeleted",
+             "data": {"reason": "Upgrade", "size": 123, "nothing": null, "empty": ""}}
+          ]
+        }
+        """
+        let page = try JSONDecoder().decode(ArrQueuePage<RadarrHistoryRecord>.self, from: Data(json.utf8))
+        let grab = page.records[0], deletion = page.records[1]
+        #expect(grab.downloadId == "ABC")
+        #expect(grab.data?.historyString("indexer") == "DemoTracker")
+        #expect(grab.data?.historyString("size").flatMap { Int64($0) } == 4_831_838_208)
+        #expect(deletion.data?.historyString("reason") == "Upgrade")
+        #expect(deletion.data?.historyString("size") == "123")
+        #expect(deletion.data?.historyString("nothing") == nil)
+        #expect(deletion.data?.historyString("empty") == nil)
+    }
+
     @Test("Sonarr history record with episode")
     func sonarrHistory() throws {
         let json = """

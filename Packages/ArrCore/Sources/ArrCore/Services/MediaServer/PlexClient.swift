@@ -36,8 +36,18 @@ struct PlexClient: MediaServerClient {
 
     private struct Section: Decodable {
         let key: String
+        let title: String?
         /// "movie", "show", "artist", "photo".
         let type: String?
+
+        var libraryKind: MediaServerLibrary.Kind {
+            switch type {
+            case "movie": return .movies
+            case "show": return .series
+            case "artist": return .music
+            default: return .other
+            }
+        }
     }
 
     private struct Items: Decodable {
@@ -131,22 +141,28 @@ struct PlexClient: MediaServerClient {
         return entries
     }
 
-    func scanLibraries() async throws {
+    func libraries() async throws -> [MediaServerLibrary] {
         guard config.isConfigured else { throw MediaServerError.notConfigured }
         let sections = try await get("/library/sections", as: Sections.self)
-        for section in sections.Directory ?? [] {
-            let url = try http.url(base: normalizedBaseURL, path: "/library/sections/\(section.key)/refresh")
-            _ = try await http.get(url, headers: headers)
+        return (sections.Directory ?? []).map { section in
+            MediaServerLibrary(
+                id: section.key,
+                name: section.title ?? section.key,
+                kind: section.libraryKind
+            )
         }
     }
 
-    func emptyTrash() async throws {
+    func scanLibrary(id: String) async throws {
         guard config.isConfigured else { throw MediaServerError.notConfigured }
-        let sections = try await get("/library/sections", as: Sections.self)
-        for section in sections.Directory ?? [] {
-            let url = try http.url(base: normalizedBaseURL, path: "/library/sections/\(section.key)/emptyTrash")
-            _ = try await http.put(url, headers: headers, body: Data())
-        }
+        let url = try http.url(base: normalizedBaseURL, path: "/library/sections/\(id)/refresh")
+        _ = try await http.get(url, headers: headers)
+    }
+
+    func emptyTrash(libraryId: String) async throws {
+        guard config.isConfigured else { throw MediaServerError.notConfigured }
+        let url = try http.url(base: normalizedBaseURL, path: "/library/sections/\(libraryId)/emptyTrash")
+        _ = try await http.put(url, headers: headers, body: Data())
     }
 
     func nowPlaying() async throws -> [MediaServerSession] {

@@ -23,7 +23,10 @@ public struct iOSAppRoot: View {
     @ObservedObject private var trailerSession = TrailerSession.shared
     @Environment(\.scenePhase) private var scenePhase
     /// Shared by the Queue and Library surfaces.
-    @State private var searchVM = SearchViewModel()
+    @State private var searchVM: SearchViewModel
+    /// The Library tab's cache, owned up here so the queue's library-only
+    /// search reads the same one instead of loading a second copy.
+    @State private var libraryViewModel: LibraryViewModel
     /// The quiz deck is raised by a notification from ANY tab (chat's CTA, the
     /// resume card), so its state and its chat bridge live above the TabView —
     /// the same place `PopoverContentView` keeps them on macOS.
@@ -43,7 +46,15 @@ public struct iOSAppRoot: View {
 
     enum RootTab: Hashable { case queue, library, upcoming, chat, settings }
 
-    private var iosSearchScopes: [SearchScope] { SearchScope.available(for: configStore) }
+    /// What the app already knows about that matches the query — live queue
+    /// rows and owned titles from every loaded library. The same on every tab.
+    private var localHits: [LocalHit] {
+        guard searchVM.isActive else { return [] }
+        return LocalHit.hits(
+            queue: viewModel, library: libraryViewModel,
+            sources: QueueItem.Source.allCases.filter { configStore.config(for: $0.serviceKind).isVisible },
+            query: searchVM.query)
+    }
 
     /// "More picks like these" is a chat turn — the mood and the already-shown
     /// titles are in the conversation, so the model has the context without us
@@ -59,24 +70,29 @@ public struct iOSAppRoot: View {
         let cs = configStore ?? .shared
         self._viewModel = State(initialValue: vm)
         self._configStore = ObservedObject(wrappedValue: cs)
+        let library = LibraryViewModel()
+        let search = SearchViewModel()
+        search.library = library
+        self._libraryViewModel = State(initialValue: library)
+        self._searchVM = State(initialValue: search)
     }
 
     public var body: some View {
         TabView(selection: $selectedTab) {
             Tab(value: RootTab.queue) {
-                NavigationStack { QueueTab(viewModel: viewModel, searchVM: searchVM, isActive: selectedTab == .queue, searchPresented: $searchPresented) }
+                NavigationStack { QueueTab(viewModel: viewModel, searchVM: searchVM, localHits: localHits, isActive: selectedTab == .queue, searchPresented: $searchPresented) }
             } label: {
                 Label { Text("paywall.queue.button", bundle: .module) } icon: { Image(systemName: "arrow.down.circle") }
             }
 
             Tab(value: RootTab.library) {
-                NavigationStack { LibraryTab(searchVM: searchVM, viewModel: viewModel, isActive: selectedTab == .library) }
+                NavigationStack { LibraryTab(searchVM: searchVM, localHits: localHits, libraryViewModel: libraryViewModel, viewModel: viewModel, isActive: selectedTab == .library, searchPresented: $searchPresented) }
             } label: {
                 Label { Text("Library", bundle: .module) } icon: { Image(systemName: "books.vertical") }
             }
 
             Tab(value: RootTab.upcoming) {
-                NavigationStack { UpcomingTab(viewModel: viewModel, isActive: selectedTab == .upcoming) }
+                NavigationStack { UpcomingTab(viewModel: viewModel, searchVM: searchVM, localHits: localHits, isActive: selectedTab == .upcoming, searchPresented: $searchPresented) }
             } label: {
                 Label { Text("queue.upcoming.button", bundle: .module) } icon: { Image(systemName: "calendar") }
             }
@@ -108,16 +124,24 @@ public struct iOSAppRoot: View {
         .environmentObject(configStore)
         // Root-owned so the quiz's chat bridge works even before the Chat tab
         // has ever been shown.
-        .onAppear { chatHolder.reconfigure(store: configStore) }
+        .onAppear {
+            chatHolder.reconfigure(store: configStore)
+            searchVM.setup(store: configStore)
+        }
         .onChange(of: ChatViewModelHolder.signature(store: configStore)) { _, _ in
             chatHolder.reconfigure(store: configStore)
+        }
+        // Root-owned as well, and re-run on a config edit: the search clients
+        // are built once from the config, and the Queue tab's `onAppear` fires
+        // only the first time that tab is built — a server changed in Settings
+        // afterwards left every search talking to the old one.
+        .onChange(of: SearchViewModel.configSignature(store: configStore)) { _, _ in
+            searchVM.setup(store: configStore)
         }
         // An empty search field left open behind a tab switch is just chrome
         // taking a row; one with a query is a result set worth returning to.
         .onChange(of: selectedTab) { _, _ in
-            if searchVM.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                searchPresented = false
-            }
+            if !searchVM.isActive { searchPresented = false }
         }
         // Posted by the `discover_in_quiz` chat tool and by the resume card.
         // userInfo carries the mood label, pre-resolved items and an optional
@@ -261,27 +285,24 @@ private struct ChatLockedPlaceholder: View {
 
 private struct QueueTab: View {
     var viewModel: QueueViewModel
-    @Bindable var searchVM: SearchViewModel
+    var searchVM: SearchViewModel
+    var localHits: [LocalHit]
     var isActive: Bool
     @Binding var searchPresented: Bool
     @EnvironmentObject var configStore: ConfigStore
     @State private var detailItem: QueueItem?
     @State private var searchResult: SearchResult?
-    @State private var personRef: PersonRef?
     @State private var selecting = false
     /// History is reached from the queue's per-arr section header, the way the
     /// macOS popover does it — it no longer owns a tab of its own.
     @State private var historySource: QueueItem.Source?
 
-    private var isSearching: Bool { !searchVM.query.trimmingCharacters(in: .whitespaces).isEmpty }
-
-    private var iosSearchScopes: [SearchScope] { SearchScope.available(for: configStore) }
+    private var searchAvailable: Bool {
+        QueueItem.Source.allCases.contains { configStore.config(for: $0.serviceKind).isVisible }
+    }
 
     var body: some View {
-        VStack(spacing: 0) {
-            SearchScopeBar(searchVM: searchVM, scopes: iosSearchScopes)
-            queueContent
-        }
+        queueContent
         .refreshable { await viewModel.refresh() }
         // No nav-bar title — it only duplicated the tab-bar label below.
         .navigationBarTitleDisplayMode(.inline)
@@ -304,34 +325,12 @@ private struct QueueTab: View {
         // way the bottom action bar has anywhere to draw, and it stops the tab
         // bar offering navigation away from a half-made selection.
         .toolbar(selecting ? .hidden : .visible, for: .tabBar)
-        // Search steps aside entirely in edit mode: its magnifier otherwise
-        // competes with "Done" for the trailing slot and wins, leaving no way
-        // out of the mode. Mail and Files drop their search bar there too.
-        .modifier(QueueSearchField(searchVM: searchVM, scopes: iosSearchScopes,
-                                   enabled: !selecting, isPresented: $searchPresented))
-        .onChange(of: searchVM.query) { _, new in
-            if new.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                searchVM.scope = .all
-            }
-            searchVM.onQueryChange()
-        }
-        .onAppear {
-            searchVM.setup(
-                radarrConfig: configStore.radarr,
-                sonarrConfig: configStore.sonarr,
-                lidarrConfig: configStore.lidarr,
-                whisparrConfig: configStore.whisparr,
-                tmdbApiKey: configStore.tmdbApiKey
-            )
-        }
         // Search-to-add App Intent → run the search here.
         .onReceive(NotificationCenter.default.publisher(for: .arrBarrSearchQuery)) { note in
             guard let q = note.userInfo?["query"] as? String else { return }
             searchResult = nil
             searchVM.query = q
-            searchVM.onQueryChange()
         }
-        .personDestination($personRef)
         .navigationDestination(item: $detailItem) { item in
             DetailView(item: item, onBack: { detailItem = nil }, viewModel: viewModel)
         }
@@ -353,36 +352,25 @@ private struct QueueTab: View {
                 searchResult = nil
             }
         } else {
-            ZStack {
+            // Search steps aside entirely in edit mode: its magnifier otherwise
+            // competes with "Done" for the trailing slot and wins, leaving no
+            // way out of the mode. Mail and Files drop their search bar there too.
+            SearchHost(
+                searchVM: searchVM,
+                localHits: localHits,
+                searchAvailable: searchAvailable,
+                enabled: !selecting,
+                isPresented: $searchPresented,
+                onSelectQueueItem: { detailItem = $0 },
+                onSelectAddResult: { searchResult = $0 }
+            ) {
                 QueueListView(
                     viewModel: viewModel,
-                    scope: nil,
                     onShowDetail: { detailItem = $0 },
                     onNeedsYouTap: { needs in openNeedsYouQueue(needs) },
                     onShowHistory: { historySource = $0 },
                     selecting: $selecting
                 )
-                // Typing shows the same unified surface as macOS: live queue
-                // rows that still match on top, arr library / add-new below.
-                if isSearching {
-                    ScrollView {
-                        QueueSearchResultsView(
-                            viewModel: viewModel,
-                            searchViewModel: searchVM,
-                            scope: nil,
-                            onSelectQueueItem: { detailItem = $0 },
-                            onSelectAddResult: { searchResult = $0 },
-                            onSelectPerson: { personRef = $0 }
-                        )
-                        .padding(.vertical, 8)
-                        if searchVM.isSearching, !searchVM.hasResults {
-                            ProgressView()
-                                .controlSize(.small)
-                                .padding(.vertical, 16)
-                        }
-                    }
-                    .background(Color(.systemBackground))
-                }
             }
         }
     }
@@ -424,24 +412,47 @@ struct SearchScopeBar: View {
     @Environment(\.isSearching) private var isSearching
 
     var body: some View {
-        if isSearching, scopes.count > 1 {
-            Picker("", selection: $searchVM.scope) {
-                ForEach(scopes) { s in
-                    Text(LocalizedStringKey(s.labelKey), bundle: .module).tag(s)
+        if isSearching {
+            HStack(spacing: 8) {
+                if scopes.count > 1 {
+                    Picker("", selection: $searchVM.scope) {
+                        ForEach(scopes) { s in
+                            Text(LocalizedStringKey(s.labelKey), bundle: .module).tag(s)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                } else {
+                    Spacer(minLength: 0)
                 }
+                libraryOnlyToggle
             }
-            .pickerStyle(.segmented)
-            .labelsHidden()
             .padding(.horizontal, 12)
             .padding(.bottom, 8)
         }
     }
+
+    /// "In library" — narrows the search to titles the user owns. Beside the
+    /// scopes rather than among them because it combines with any of them;
+    /// a glyph because the segmented scopes already fill the row.
+    private var libraryOnlyToggle: some View {
+        Button { searchVM.libraryOnly.toggle() } label: {
+            Image(systemName: searchVM.libraryOnly ? "books.vertical.fill" : "books.vertical")
+                .foregroundStyle(searchVM.libraryOnly ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.secondary))
+                .frame(width: 32, height: 28)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text("search.libraryOnly.toggle", bundle: .module))
+        .accessibilityAddTraits(searchVM.libraryOnly ? .isSelected : [])
+    }
 }
 
-/// The queue's search field, withdrawn while multi-select owns the bar.
-private struct QueueSearchField: ViewModifier {
+/// The one iOS search field, used by the Queue and Library tabs. Withdrawn
+/// while multi-select owns the toolbar: its magnifier otherwise competes with
+/// "Done" for the trailing slot and wins, leaving no way out of the mode.
+struct SearchField: ViewModifier {
     @Bindable var searchVM: SearchViewModel
-    let scopes: [SearchScope]
     let enabled: Bool
     @Binding var isPresented: Bool
 
@@ -452,16 +463,15 @@ private struct QueueSearchField: ViewModifier {
                     text: $searchVM.query,
                     isPresented: $isPresented,
                     placement: .toolbar,
-                    prompt: Text("search.searchMoviesAndTv.label", bundle: .module)
+                    prompt: Text("search.global.prompt", bundle: .module)
                 )
                 // iOS 26 collapses the field into a toolbar magnifier that
                 // expands on tap, so search shares a row with the other actions
                 // instead of a permanent drawer stealing one from the list.
+                // `SearchScopeBar` renders the scopes under it; `.searchScopes`
+                // can't, see that type's note.
                 .modifier(MinimizedSearchToolbar())
                 .autocorrectionDisabled(true)
-                // Native scope bar under the field — the iOS idiom for the
-                // macOS scope chip. Options gate which backends fire.
-
         } else {
             content
         }
@@ -481,14 +491,17 @@ struct MinimizedSearchToolbar: ViewModifier {
 
 // MARK: - Library tab
 
-/// Same surface macOS shows in its `.library` tab. `LibraryTabContent` owns its
-/// own arr-lookup state; this wrapper only supplies the add-panel slot the
-/// popover fills from `PopoverContentView`.
+/// Same surface macOS shows in its `.library` tab, under the same `SearchHost`.
+/// This wrapper only supplies the add-panel slot the popover fills from
+/// `PopoverContentView`.
 private struct LibraryTab: View {
     var searchVM: SearchViewModel
+    var localHits: [LocalHit]
+    var libraryViewModel: LibraryViewModel
     var viewModel: QueueViewModel
     var isActive: Bool
-    @State private var libraryViewModel = LibraryViewModel()
+    @Binding var searchPresented: Bool
+    @EnvironmentObject var configStore: ConfigStore
     @State private var searchResult: SearchResult?
     @State private var detailItem: QueueItem?
 
@@ -499,9 +512,16 @@ private struct LibraryTab: View {
                     searchResult = nil
                 }
             } else {
-                LibraryTabContent(viewModel: libraryViewModel,
-                                  searchResult: $searchResult,
-                                  isActive: isActive)
+                SearchHost(
+                    searchVM: searchVM,
+                    localHits: localHits,
+                    searchAvailable: QueueItem.Source.allCases.contains { configStore.config(for: $0.serviceKind).isVisible },
+                    isPresented: $searchPresented,
+                    onSelectQueueItem: { detailItem = $0 },
+                    onSelectAddResult: { searchResult = $0 }
+                ) {
+                    LibraryTabContent(viewModel: libraryViewModel)
+                }
             }
         }
         .navigationBarTitleDisplayMode(.inline)
@@ -522,26 +542,31 @@ private struct LibraryTab: View {
 
 private struct UpcomingTab: View {
     var viewModel: QueueViewModel
+    var searchVM: SearchViewModel
+    var localHits: [LocalHit]
     var isActive: Bool
+    @Binding var searchPresented: Bool
     @EnvironmentObject var configStore: ConfigStore
     @State private var detailItem: QueueItem?
+    @State private var searchResult: SearchResult?
 
     var body: some View {
         Group {
-            if viewModel.upcoming.isEmpty {
-                emptyState
-            } else {
-                List {
-                    ForEach(grouped, id: \.label) { group in
-                        Section(group.label) {
-                            ForEach(group.items) { item in
-                                UpcomingRowView(item: item)
-                                    .listRowInsets(EdgeInsets(top: 6, leading: 12, bottom: 6, trailing: 12))
-                            }
-                        }
-                    }
+            if let result = searchResult {
+                SearchAddPanel(result: result, viewModel: searchVM) {
+                    searchResult = nil
                 }
-                .listStyle(.insetGrouped)
+            } else {
+                SearchHost(
+                    searchVM: searchVM,
+                    localHits: localHits,
+                    searchAvailable: QueueItem.Source.allCases.contains { configStore.config(for: $0.serviceKind).isVisible },
+                    isPresented: $searchPresented,
+                    onSelectQueueItem: { detailItem = $0 },
+                    onSelectAddResult: { searchResult = $0 }
+                ) {
+                    upcomingList
+                }
             }
         }
         .navigationBarTitleDisplayMode(.inline)
@@ -562,6 +587,25 @@ private struct UpcomingTab: View {
         .onReceive(NotificationCenter.default.publisher(for: .arrBarrOpenDetail)) { note in
             guard isActive, let item = note.userInfo?["item"] as? QueueItem else { return }
             detailItem = item
+        }
+    }
+
+    @ViewBuilder
+    private var upcomingList: some View {
+        if viewModel.upcoming.isEmpty {
+            emptyState
+        } else {
+            List {
+                ForEach(grouped, id: \.label) { group in
+                    Section(group.label) {
+                        ForEach(group.items) { item in
+                            UpcomingRowView(item: item)
+                                .listRowInsets(EdgeInsets(top: 6, leading: 12, bottom: 6, trailing: 12))
+                        }
+                    }
+                }
+            }
+            .listStyle(.insetGrouped)
         }
     }
 
@@ -685,6 +729,10 @@ private struct HistoryTab: View {
     /// (HistoryItem.EventType.parse maps both Sonarr + Radarr the same way),
     /// so one filter list works for every service.
     @State private var selectedType: HistoryItem.EventType?
+    /// A title opened from a history row. Pushed from here, on top of this
+    /// view — the queue root's own detail destination would race the history
+    /// destination it already has pushed.
+    @State private var detailItem: QueueItem?
 
     /// Event types offered in the filter (skip `.other`, the catch-all).
     private let filterableTypes: [HistoryItem.EventType] = [.grabbed, .imported, .failed, .deleted]
@@ -706,12 +754,15 @@ private struct HistoryTab: View {
                 HistoryView(
                     source: selected,
                     viewModel: viewModel,
-                    refreshNonce: 0,
                     showHeader: false,
                     typeFilter: selectedType,
+                    onOpenDetail: { detailItem = $0 },
                     onClose: {}
                 )
             }
+        }
+        .navigationDestination(item: $detailItem) { item in
+            DetailView(item: item, onBack: { detailItem = nil }, viewModel: viewModel)
         }
         .onAppear {
             guard !didSeedSource else { return }

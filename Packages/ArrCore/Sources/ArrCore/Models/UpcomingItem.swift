@@ -54,6 +54,10 @@ public struct UpcomingItem: Identifiable, Equatable, Sendable, Codable {
     /// matches every episode of the show).
     public var seasonNumber: Int? = nil
     public var episodeNumber: Int? = nil
+    /// Foreign ids for the tooltip's country line — TMDB for movies, TVDB
+    /// for series (what Sonarr's calendar embeds). Nil for music.
+    public var tmdbId: Int? = nil
+    public var tvdbId: Int? = nil
 
     public init(
         id: String, source: Source, title: String, subtitle: String?,
@@ -66,7 +70,8 @@ public struct UpcomingItem: Identifiable, Equatable, Sendable, Codable {
         ratingRt: Double? = nil, ratingMetacritic: Double? = nil,
         qualityProfileId: Int? = nil,
         seasonNumber: Int? = nil, episodeNumber: Int? = nil,
-        trackCount: Int? = nil
+        trackCount: Int? = nil,
+        tmdbId: Int? = nil, tvdbId: Int? = nil
     ) {
         self.id = id; self.source = source; self.title = title; self.subtitle = subtitle
         self.airDate = airDate; self.releaseType = releaseType
@@ -81,6 +86,7 @@ public struct UpcomingItem: Identifiable, Equatable, Sendable, Codable {
         self.qualityProfileId = qualityProfileId
         self.seasonNumber = seasonNumber; self.episodeNumber = episodeNumber
         self.trackCount = trackCount
+        self.tmdbId = tmdbId; self.tvdbId = tvdbId
     }
 
     /// Compact when-label for one-line rows (the queue's "This week"

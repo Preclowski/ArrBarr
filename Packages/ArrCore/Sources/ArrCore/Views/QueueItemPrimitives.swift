@@ -707,58 +707,37 @@ public struct MediaTooltipChrome<Content: View>: View {
 
 // MARK: -
 
-/// Status symbol + tinted display name, both wearing the same
-/// `status.tint` so the row picks up its semantic colour (blue for
-/// Downloading, orange for Paused, green for Completed, etc.). Lives
-/// at the leading edge of the status line on every surface.
+/// Tinted status word in a tinted-outline chip, wearing `status.tint`
+/// so the row picks up its semantic colour (blue for Downloading,
+/// orange for Paused, green for Completed, etc.). Lives at the leading
+/// edge of the status line on every surface.
 public struct StatusIconLabel: View {
     let status: QueueItem.Status
-    var iconSize: CGFloat
     var labelSize: CGFloat
     var labelWeight: Font.Weight
-    /// When false, drop the tinted-outline chip chrome and render just the
-    /// icon + text inline. Queue rows use this — the bordered "pill" read as
-    /// a redundant label there; the icon + coloured word carry the status.
-    var bordered: Bool
 
     public init(status: QueueItem.Status,
-                iconSize: CGFloat = 9,
                 labelSize: CGFloat = 9,
-                labelWeight: Font.Weight = .medium,
-                bordered: Bool = true) {
+                labelWeight: Font.Weight = .medium) {
         self.status = status
-        self.iconSize = iconSize
         self.labelSize = labelSize
         self.labelWeight = labelWeight
-        self.bordered = bordered
     }
 
     public var body: some View {
-        // Badge-styled to match TagChip / MediaBadgeCluster — icon +
-        // text on a single tinted-outline chip. Single visual idiom
-        // across "status pill", "upgrade chip", "custom format" so the
+        // Badge-styled to match TagChip / MediaBadgeCluster. Single visual
+        // idiom across "status pill", "upgrade chip", "custom format" so the
         // status row reads as one cohesive strip of chips instead of
         // free-floating text next to bordered pills.
-        HStack(spacing: 3) {
-            // Icon and word carry the SAME meaning — announcing both makes
-            // VoiceOver read "pause circle fill, Paused".
-            Image(systemName: status.symbol)
-                .scaledFont(size: iconSize)
-                .accessibilityHidden(true)
-            Text(LocalizedStringKey(status.displayName))
-                .scaledFont(size: labelSize, weight: labelWeight)
-        }
-        .foregroundStyle(status.tint)
-        .padding(.horizontal, bordered ? 5 : 0)
-        .padding(.vertical, bordered ? 1 : 0)
-        .overlay(
-            Group {
-                if bordered {
-                    RoundedRectangle(cornerRadius: Tokens.Radius.chip)
-                        .stroke(status.tint.opacity(0.30), lineWidth: 0.75)
-                }
-            }
-        )
+        Text(LocalizedStringKey(status.displayName))
+            .scaledFont(size: labelSize, weight: labelWeight)
+            .foregroundStyle(status.tint)
+            .padding(.horizontal, 5)
+            .padding(.vertical, 1)
+            .overlay(
+                RoundedRectangle(cornerRadius: Tokens.Radius.chip)
+                    .stroke(status.tint.opacity(0.30), lineWidth: 0.75)
+            )
         .fixedSize()
     }
 }

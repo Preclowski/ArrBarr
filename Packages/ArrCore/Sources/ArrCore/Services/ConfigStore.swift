@@ -905,6 +905,37 @@ public final class ConfigStore: ObservableObject {
         load(kind, from: defaults)
     }
 
+    /// The media-server counterpart, for the same reason and with the same
+    /// caveat: the token is blanked in the stored blob and has to come from a
+    /// `SecretStore` alongside it.
+    public nonisolated static func decodeMediaServerConfig(from defaults: UserDefaults) -> MediaServerConfig {
+        decodeMediaServerConfig(from: defaults.dictionaryRepresentation())
+    }
+
+    /// Both decoders again, over a plain dictionary rather than a
+    /// `UserDefaults`.
+    ///
+    /// For a reader that holds this app's stored values WITHOUT owning the
+    /// store they came from — a sibling app in the family reading a snapshot of
+    /// this one's preferences. Routing it through a `UserDefaults` suite would
+    /// mean either persisting a second plaintext copy of every secret, or
+    /// registering them into the process-wide registration domain where every
+    /// other `UserDefaults` in the process would see them. A dictionary is
+    /// simply the values, with the storage format still known only here.
+    public nonisolated static func decodeServiceConfig(_ kind: ServiceKind, from storage: [String: Any]) -> ServiceConfig {
+        guard let data = storage[key(kind)] as? Data,
+              let cfg = try? JSONDecoder().decode(ServiceConfig.self, from: data)
+        else { return .empty }
+        return cfg
+    }
+
+    public nonisolated static func decodeMediaServerConfig(from storage: [String: Any]) -> MediaServerConfig {
+        guard let data = storage[mediaServerKey] as? Data,
+              let cfg = try? JSONDecoder().decode(MediaServerConfig.self, from: data)
+        else { return .empty }
+        return cfg
+    }
+
     private func setOrDelete(_ value: String, for key: SecretKey) {
         if value.isEmpty { secrets.delete(key) } else { secrets.set(value, for: key) }
     }

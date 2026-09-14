@@ -411,19 +411,27 @@ public struct MediaHeaderCard: View {
 
     /// Metadata row under the genres: runtime · network · certification ·
     /// country (dot-joined plain text). Ratings get their own row below this.
+    ///
+    /// Wraps as a line, never inside a segment: in a plain `HStack` the narrow
+    /// right column squeezed every `Text`, so a long country name broke over
+    /// three lines in place. Each segment is `fixedSize` and carries the dot
+    /// that follows it, so a wrapped line never opens with a separator.
     @ViewBuilder
     private var metadataRow: some View {
-        HStack(spacing: 6) {
-            let countryNames = CountryProvider.displayNames(countries, locale: locale)
-            let segments: [String] = [
-                (runtime ?? 0) > 0 ? "\(runtime!) min" : nil,
-                network.flatMap { $0.isEmpty ? nil : $0 },
-                certification.flatMap { $0.isEmpty ? nil : $0 },
-                countryNames.isEmpty ? nil : countryNames.joined(separator: " / "),
-            ].compactMap { $0 }
+        let countryNames = CountryProvider.displayNames(countries, locale: locale)
+        let segments: [String] = [
+            (runtime ?? 0) > 0 ? "\(runtime!) min" : nil,
+            network.flatMap { $0.isEmpty ? nil : $0 },
+            certification.flatMap { $0.isEmpty ? nil : $0 },
+            countryNames.isEmpty ? nil : countryNames.joined(separator: " / "),
+        ].compactMap { $0 }
+        TooltipFlowLayout(spacing: 6) {
             ForEach(Array(segments.enumerated()), id: \.offset) { idx, segment in
-                if idx > 0 { SeparatorDot() }
-                Text(segment).foregroundStyle(.secondary)
+                HStack(spacing: 6) {
+                    Text(segment).foregroundStyle(.secondary)
+                    if idx < segments.count - 1 { SeparatorDot() }
+                }
+                .fixedSize()
             }
         }
         .scaledFont(size: 11)
@@ -663,7 +671,11 @@ public struct PosterLightbox: View {
             // Shared with the trailer overlay — see `LightboxCloseButton`,
             // which also carries the shadow the glass pill needs over
             // unpredictable artwork, and the Esc shortcut.
+            // Top-leading, where every pushed view puts its back chevron — the
+            // way out of an overlay sits in the same corner as the way out of
+            // a screen.
             LightboxCloseButton(labelKey: "detail.closePoster.button", action: onDismiss)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             #if os(macOS)
             // Fades on the same timer as the zoom slider. Deliberately still
             // hit-testable while invisible: clicking where it sits dismisses

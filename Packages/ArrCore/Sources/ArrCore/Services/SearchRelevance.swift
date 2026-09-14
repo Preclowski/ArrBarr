@@ -49,34 +49,17 @@ import Foundation
 ///     ranker re-sorted on a continuous score that essentially never
 ///     ties, so the arr's ordering could never break through.
 ///
-/// Diacritic-, case- and punctuation-insensitive throughout, so
-/// "spiderman" reaches "Spider-Man" and "pozeracz" reaches "Pożeracz".
+/// Diacritic-, case-, width- and punctuation-insensitive throughout (the fold
+/// is `TitleMatch.fold`, shared with the library filter), so "spiderman"
+/// reaches "Spider-Man" and "pozeracz" reaches "Pożeracz".
 enum SearchRelevance {
-    /// Normalize once on the caller side; folding is allocation-heavy
-    /// and we'd otherwise repeat it for every result × every render.
-    ///
-    /// Punctuation collapses to spaces rather than being deleted, so
-    /// "Spider-Man" → "spider man" (two tokens) instead of "spiderman"
-    /// (one). Deleting it would make "spiderman" an exact match but
-    /// break the far more common "spider man"; folding to a separator
-    /// serves both, because the token-coverage band reassembles them.
-    static func normalize(_ s: String) -> String {
-        let folded = s.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: nil)
-        let separated = folded.map { ch -> Character in
-            ch.isLetter || ch.isNumber ? ch : " "
-        }
-        return String(separated)
-            .split(separator: " ", omittingEmptySubsequences: true)
-            .joined(separator: " ")
-    }
-
     /// Score a single result against a *pre-normalised* query. Returns
     /// 0 for "no match" so the caller can keep or drop based on intent
     /// (the live filter is substring-driven and shows every match;
     /// stricter call sites can filter to score > 0).
     static func score(_ result: SearchResult, normalizedQuery q: String) -> Int {
         guard !q.isEmpty else { return 0 }
-        let title = normalize(result.title)
+        let title = TitleMatch.fold(result.title)
         if title == q { return 10_000 }
         if title.hasPrefix(q) {
             // Shorter titles win the prefix band — typing "Foo" should
@@ -200,9 +183,9 @@ enum SearchRelevance {
     /// ever manage. Records with no year at all are left alone —
     /// unknown is not the same as wrong.
     ///
-    /// Only safe because `splitYear` reads the TRAILING token only, so
-    /// "2001 a space odyssey" is never mistaken for a year-qualified
-    /// query and demoted to nothing.
+    /// Only safe because `TitleMatch.splitTrailingYear` reads the TRAILING
+    /// token only, so "2001 a space odyssey" is never mistaken for a
+    /// year-qualified query and demoted to nothing.
     private static let yearMismatchPenalty: Double = 6_000
 
     /// How much the arr's own ordering can move a result, and how deep
@@ -230,39 +213,6 @@ enum SearchRelevance {
         Double(score(result, normalizedQuery: q)) + modifiers(result, queryYear: nil)
     }
 
-    // MARK: - Year disambiguation
-
-    /// Splits a normalised query into "the words to match on" and "the
-    /// year the user typed", when there is one.
-    ///
-    /// Two guards, both load-bearing:
-    ///
-    ///   - **Trailing token only.** People type the year after the title
-    ///     ("dune 2024"), never before it. Scanning the whole query would
-    ///     read "2001 A Space Odyssey" as a 2001 film — and since a year
-    ///     mismatch is a heavy demotion, that would bury the one record
-    ///     the user actually wanted.
-    ///   - **Never the only token.** `1917` stays a search for the FILM
-    ///     rather than an empty query with a year attached — the exact
-    ///     ambiguity that made `QueryParser` refuse to parse years at all.
-    static func splitYear(_ normalizedQuery: String) -> (query: String, year: Int?) {
-        var tokens = normalizedQuery.split(separator: " ")
-        guard tokens.count > 1, let last = tokens.last, isPlausibleYear(last) else {
-            return (normalizedQuery, nil)
-        }
-        let year = Int(tokens.removeLast())
-        return (tokens.joined(separator: " "), year)
-    }
-
-    /// 1880…(this year + 5). The upper bound is what keeps "Blade Runner
-    /// 2049" intact — 2049 is not a plausible release year, so the title
-    /// keeps its last word instead of being read as a year filter.
-    private static func isPlausibleYear(_ token: Substring) -> Bool {
-        guard token.count == 4, let n = Int(token) else { return false }
-        let currentYear = Calendar.current.component(.year, from: Date())
-        return n >= 1880 && n <= currentYear + 5
-    }
-
     /// Ref-aware rank. For `.text` inputs, falls through to the
     /// string-based scoring above. For `.ref(_:)` inputs, the result
     /// either matches the ref (max score) or doesn't (zero) — there's
@@ -270,7 +220,7 @@ enum SearchRelevance {
     static func rank(_ result: SearchResult, against input: SearchInput) -> Double {
         switch input {
         case .text(let q):
-            let (text, year) = splitYear(normalize(q))
+            let (text, year) = TitleMatch.splitTrailingYear(TitleMatch.fold(q))
             return Double(score(result, normalizedQuery: text))
                 + modifiers(result, queryYear: year)
         case .ref(let ref):
@@ -306,7 +256,7 @@ enum SearchRelevance {
     static func sortedByRelevance(_ results: [SearchResult], input: SearchInput) -> [SearchResult] {
         switch input {
         case .text(let q):
-            let normalized = normalize(q)
+            let normalized = TitleMatch.fold(q)
             guard !normalized.isEmpty else { return results }
             // Rank once per result rather than per comparison — the
             // year split and normalisation are not free, and a sort

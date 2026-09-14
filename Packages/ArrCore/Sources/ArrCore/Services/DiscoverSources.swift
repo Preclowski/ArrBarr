@@ -52,8 +52,9 @@ public enum DiscoverSources {
                     genres: rec.genres ?? [],
                     network: rec.studio,
                     certification: rec.certification,
-                    posterURL: poster, source: .radarr, inLibraryArrId: arrId
+                    posterURL: poster, source: .radarr
                 )
+                .withLibraryOwnership(rec.ownership)
                 return DiscoverItem(
                     result: result,
                     action: .openDetail(source: .radarr, arrId: arrId),
@@ -100,8 +101,9 @@ public enum DiscoverSources {
                     rottenTomatoes: nil, metacritic: nil,
                     overview: rec.overview, runtime: nil,
                     genres: [], network: nil, certification: nil,
-                    posterURL: poster, source: .sonarr, inLibraryArrId: arrId
+                    posterURL: poster, source: .sonarr
                 )
+                .withLibraryOwnership(rec.ownership)
                 return DiscoverItem(
                     result: result,
                     action: .openDetail(source: .sonarr, arrId: arrId),

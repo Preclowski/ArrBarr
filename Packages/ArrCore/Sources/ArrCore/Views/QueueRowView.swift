@@ -1,19 +1,6 @@
 import SwiftUI
 
 public extension QueueItem.Status {
-    var symbol: String {
-        switch self {
-        case .downloading: return "arrow.down.circle.fill"
-        case .paused: return "pause.circle.fill"
-        case .queued: return "clock.fill"
-        case .importing: return "tray.and.arrow.down.fill"
-        case .completed: return "checkmark.circle.fill"
-        case .warning: return "exclamationmark.triangle.fill"
-        case .failed: return "xmark.circle.fill"
-        case .unknown: return "questionmark.circle"
-        }
-    }
-
     var tint: Color {
         switch self {
         case .paused: return .orange

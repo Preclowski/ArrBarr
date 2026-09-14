@@ -349,15 +349,22 @@ public struct LidarrCalendarRecord: Decodable {
 
 // MARK: - History
 
+// Every history record carries a schema-less `data` bag whose keys depend on
+// the event: `indexer`, `downloadClientName`, `size` on a grab; `reason` on a
+// deletion ("Upgrade" when an import replaced the file). Read it through
+// `historyString(_:)`.
+
 public struct RadarrHistoryRecord: Decodable {
     let id: Int
     let movieId: Int?
     let sourceTitle: String?
+    let downloadId: String?
     let date: String?
     let eventType: String?
     let quality: ArrQuality?
     let customFormats: [ArrCustomFormat]?
     let customFormatScore: Int?
+    let data: [String: JSONValue]?
     let movie: RadarrMovie?
 }
 
@@ -372,6 +379,7 @@ public struct SonarrHistoryRecord: Decodable {
     let quality: ArrQuality?
     let customFormats: [ArrCustomFormat]?
     let customFormatScore: Int?
+    let data: [String: JSONValue]?
     let series: SonarrSeries?
     let episode: SonarrEpisode?
 }
@@ -387,6 +395,7 @@ public struct LidarrHistoryRecord: Decodable {
     let quality: ArrQuality?
     let customFormats: [ArrCustomFormat]?
     let customFormatScore: Int?
+    let data: [String: JSONValue]?
     let artist: LidarrArtist?
     let album: LidarrAlbum?
 }
@@ -850,11 +859,14 @@ public struct WhisparrHistoryRecord: Decodable {
     let id: Int
     let movieId: Int?
     let sourceTitle: String?
+    let downloadId: String?
     let date: String?
     let eventType: String?
     let quality: ArrQuality?
     let customFormats: [ArrCustomFormat]?
     let customFormatScore: Int?
+    /// See the note above `RadarrHistoryRecord`.
+    let data: [String: JSONValue]?
     let movie: WhisparrMovie?
 }
 

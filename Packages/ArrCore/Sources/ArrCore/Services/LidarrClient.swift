@@ -196,26 +196,28 @@ public actor LidarrClient: ArrAPIClient {
         return records.compactMap { Self.unifyCalendar($0, baseURL: baseURL) }
     }
 
-    func fetchHistory() async throws -> [HistoryItem] {
+    /// `entityId` narrows the page to one library record (the arr's own
+    /// `albumIds` filter), so a title's history pages like the global feed.
+    func fetchHistory(page: Int, pageSize: Int, entityId: Int? = nil) async throws -> HistoryPage {
         guard config.isConfigured else { throw HTTPError.notConfigured }
         guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
         let url = try http.url(
             base: config.baseURL,
             path: "/api/v1/history",
             query: [
-                URLQueryItem(name: "page", value: "1"),
-                URLQueryItem(name: "pageSize", value: "50"),
+                URLQueryItem(name: "page", value: String(page)),
+                URLQueryItem(name: "pageSize", value: String(pageSize)),
                 URLQueryItem(name: "sortKey", value: "date"),
                 URLQueryItem(name: "sortDirection", value: "descending"),
                 URLQueryItem(name: "includeArtist", value: "true"),
                 URLQueryItem(name: "includeAlbum", value: "true"),
-            ]
+            ] + (entityId.map { [URLQueryItem(name: "albumIds", value: String($0))] } ?? [])
         )
         let data = try await http.get(url, headers: apiHeaders)
-        let page: ArrQueuePage<LidarrHistoryRecord>
-        do { page = try JSONDecoder().decode(ArrQueuePage<LidarrHistoryRecord>.self, from: data) }
+        let response: ArrQueuePage<LidarrHistoryRecord>
+        do { response = try JSONDecoder().decode(ArrQueuePage<LidarrHistoryRecord>.self, from: data) }
         catch { throw HTTPError.decoding(error) }
-        return page.records.compactMap { r in
+        let items: [HistoryItem] = response.records.compactMap { r in
             guard let dateStr = r.date, let date = parseArrDate(dateStr) else { return nil }
             let eventType = HistoryItem.EventType.parse(r.eventType)
             // Lidarr logs one `trackFileImported` row per track; tie the rows
@@ -225,6 +227,15 @@ public actor LidarrClient: ArrAPIClient {
             if eventType == .imported, let albumId = r.albumId,
                let batch = r.downloadId ?? r.sourceTitle {
                 groupHint = .init(key: "\(batch)|album-\(albumId)")
+            }
+            // A Lidarr history row is an album event: the album's cover first,
+            // the artist's poster as a fallback — the queue rows' order. The
+            // artist alone left the rows coverless.
+            var (poster, auth) = (r.album?.images ?? [])
+                .posterURL(baseURL: config.baseURL, coverTypes: ["cover", "poster"])
+            if poster == nil {
+                (poster, auth) = (r.artist?.images ?? [])
+                    .posterURL(baseURL: config.baseURL, coverTypes: ["poster", "cover"])
             }
             return HistoryItem(
                 id: "lidarr-h-\(r.id)",
@@ -237,9 +248,18 @@ public actor LidarrClient: ArrAPIClient {
                 quality: r.quality?.name,
                 customFormats: (r.customFormats ?? []).map(\.name),
                 customFormatScore: r.customFormatScore ?? 0,
-                groupHint: groupHint
+                groupHint: groupHint,
+                posterURL: poster,
+                posterRequiresAuth: auth,
+                arrId: r.artistId ?? r.artist?.id,
+                downloadId: r.downloadId,
+                downloadClient: r.data?.historyString("downloadClientName") ?? r.data?.historyString("downloadClient"),
+                indexer: r.data?.historyString("indexer"),
+                size: r.data?.historyString("size").flatMap { Int64($0) },
+                deleteReason: r.data?.historyString("reason")
             )
         }
+        return HistoryPage(items: items, hasMore: page * pageSize < response.totalRecords)
     }
 
     func fetchAlbumDetails(id: Int) async throws -> LidarrAlbumDetail {

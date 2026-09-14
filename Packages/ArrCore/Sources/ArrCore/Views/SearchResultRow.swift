@@ -5,12 +5,21 @@ public struct SearchResultRow: View {
     let onTap: () -> Void
 
     @EnvironmentObject var configStore: ConfigStore
+    /// Drives the country name's language — see `MediaHeaderCard`.
+    @Environment(\.locale) private var locale
+
+    /// Country of production (ISO 3166-1), fetched per row through
+    /// `CountryProvider`. The arr lookups carry no country, so this is the
+    /// one segment the row has to ask TMDB for; the provider's cache means
+    /// the detail view opened from here shows it without a second fetch.
+    /// Empty (no key, no id, music) = the segment just isn't there.
+    @State private var countries: [String] = []
 
     /// True when the search result carries enough metadata to populate
     /// a tooltip — guards against renderering empty popover chrome on
     /// results stripped of overview/genres by an upstream cache.
     private var hasTooltipContent: Bool {
-        (result.overview.map { !$0.isEmpty } ?? false) || !result.genres.isEmpty
+        (result.overview.map { !$0.isEmpty } ?? false) || !result.genres.isEmpty || !countries.isEmpty
     }
 
     /// True when this result is already in the user's arr library.
@@ -22,7 +31,11 @@ public struct SearchResultRow: View {
     public var body: some View {
         PosterMetadataRow(
             posterURL: result.posterURL,
-            posterAPIKey: nil,
+            // Library-sourced rows point at the arr's own MediaCover route,
+            // which needs the key; lookup rows point at TMDB/TVDB, which
+            // must never see it.
+            posterAPIKey: result.posterRequiresAuth
+                ? configStore.config(for: result.source.serviceKind).apiKey : nil,
             posterSize: CGSize(width: 26, height: 38),
             posterBlurred: configStore.shouldBlurPoster(for: result.source),
             posterFallbackSymbol: result.source.symbol,
@@ -40,7 +53,7 @@ public struct SearchResultRow: View {
             // draws — a second trailing chevron (or a `+`) made search rows
             // read differently from every other row surface.
             if isInLibrary {
-                InLibraryBadge()
+                LibraryStateBadge(isDownloaded: result.libraryDownloaded)
             }
         }
         #if os(macOS)
@@ -48,10 +61,28 @@ public struct SearchResultRow: View {
         // ratings that arr's lookup already sent with this result, no
         // additional network call. Shared 600 ms plumbing (HoverTooltip).
         .hoverTooltip(enabled: hasTooltipContent) {
-            SearchResultTooltip(result: result)
+            SearchResultTooltip(result: result, countries: countries)
                 .environmentObject(configStore)
         }
         #endif
+        .task(id: result.id) { countries = await loadCountries() }
+    }
+
+    /// Radarr rows are keyed by TMDB movie id; Sonarr rows carry TMDB's own
+    /// series id when SkyHook shipped one, else the TVDB id the provider
+    /// resolves. Whisparr ids aren't TMDB ids and music has no country.
+    private func loadCountries() async -> [String] {
+        switch result.source {
+        case .radarr:
+            return await CountryProvider.movieCountries(
+                tmdbId: result.externalId, demoMovieId: nil, configStore: configStore)
+        case .sonarr:
+            return await CountryProvider.seriesCountries(
+                tmdbId: result.tmdbTVId, tvdbId: result.externalId, demoSeriesId: nil,
+                configStore: configStore)
+        case .lidarr, .whisparr:
+            return []
+        }
     }
 
     /// "Title (1994)" — same idea as MediaHeaderCard. The year is just a
@@ -67,9 +98,12 @@ public struct SearchResultRow: View {
     /// the same response that fetched the row, so showing them costs zero
     /// extra requests: subtitle (Sonarr "X seasons" / Lidarr disambiguation)
     /// → IMDb → RT → Metacritic → ★ (TMDB, when IMDb is missing) → runtime
-    /// → certification. Filter to what's populated.
+    /// → certification → country. Filter to what's populated. One country
+    /// only: the row has a single line, and a co-production's full list
+    /// belongs to the tooltip and the detail.
     private var metadataSegments: [String] {
-        [
+        let country: String? = CountryProvider.displayNames(countries, locale: locale, limit: 1).first
+        let segments: [String?] = [
             result.subtitle.flatMap { $0.isEmpty ? nil : $0 },
             result.imdb.flatMap { $0 > 0 ? String(format: "IMDb %.1f", $0) : nil },
             result.rottenTomatoes.flatMap { $0 > 0 ? "RT \(Int($0))%" : nil },
@@ -77,7 +111,9 @@ public struct SearchResultRow: View {
             result.imdb == nil ? result.rating.flatMap { $0 > 0 ? String(format: "★%.1f", $0) : nil } : nil,
             result.runtime.flatMap { $0 > 0 ? "\($0) min" : nil },
             result.certification.flatMap { $0.isEmpty ? nil : $0 },
-        ].compactMap { $0 }
+            country,
+        ]
+        return segments.compactMap { $0 }
     }
 }
 
@@ -91,7 +127,10 @@ public struct SearchResultRow: View {
 
 public struct SearchResultTooltip: View {
     let result: SearchResult
+    /// Country codes the row already fetched — the tooltip never fetches.
+    var countries: [String] = []
     @EnvironmentObject var configStore: ConfigStore
+    @Environment(\.locale) private var locale
 
     public var body: some View {
         MediaTooltipChrome(
@@ -108,6 +147,13 @@ public struct SearchResultTooltip: View {
                 // genres (GenreChips), rating pills, then extras.
                 if !result.genres.isEmpty {
                     GenreChips(genres: result.genres)
+                }
+                // Detail-hero order: metadata line above the rating pills.
+                if !runtimeCertLine.isEmpty {
+                    Text(verbatim: runtimeCertLine)
+                        .scaledFont(size: 11)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
                 }
                 TooltipRatingPills(chips: ratingChips)
                 TooltipInfoGrid(lines: infoLines)
@@ -126,10 +172,18 @@ public struct SearchResultTooltip: View {
                 value: n
             ))
         }
-        if let r = result.runtime, r > 0 {
-            lines.append(TooltipInfoLine(labelKey: "Runtime", value: "\(r) min"))
-        }
         return lines
+    }
+
+    /// "148 min · R · United States" — the same line the Library and
+    /// Upcoming tooltips put under the rating pills, and the detail hero's
+    /// metadata row.
+    private var runtimeCertLine: String {
+        var parts: [String] = []
+        if let r = result.runtime, r > 0 { parts.append("\(r) min") }
+        if let c = result.certification, !c.isEmpty { parts.append(c) }
+        parts.append(contentsOf: CountryProvider.displayNames(countries, locale: locale))
+        return parts.joined(separator: " · ")
     }
 
     /// Same brand-icon pills as the detail headers (`RatingPill`), minus the

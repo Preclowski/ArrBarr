@@ -188,10 +188,12 @@ public struct DetailView: View {
     @State private var seasonDrill: SeasonDrill?
     /// Manual-search push target (movie / album) when not downloading.
     @State private var manualSearchTarget: ManualSearchTarget?
-    /// Header pencil → edit panel push (profile / availability / root folder).
+    /// Header "..." → Edit: edit panel push (profile / availability / root folder).
     @State private var editRequest: MediaEditRequest?
-    /// The other half of the pencil's menu — remove this record from the arr.
+    /// Header "..." → Delete — remove this record from the arr.
     @State private var deleteRequest: MediaDeleteRequest?
+    /// "Show history" push — this record's history, scoped by `entityId`.
+    @State private var historyShown = false
     /// Automatic-search in flight / just-queued feedback for the bottom CTA.
     @State private var autoSearching = false
     @State private var autoDidSearch = false
@@ -233,7 +235,12 @@ public struct DetailView: View {
 
     private var canPauseResume: Bool {
         let s = focused.status
-        return s == .downloading || s == .paused
+        return s == .downloading || s == .paused || s == .queued
+    }
+
+    /// Queued (deferred) items get "play" like paused ones — resume force-starts them.
+    private var focusedShowsPlay: Bool {
+        focused.isPaused || focused.status == .queued
     }
 
     // MARK: - Monitored state
@@ -541,6 +548,11 @@ public struct DetailView: View {
                             existing: manualSearchExistingFile,
                             onBack: { manualSearchTarget = nil })
         }
+        // "Show history" — this record's events only, titled after it.
+        .navigationDestination(isPresented: $historyShown) {
+            HistoryView(source: item.source, entityId: item.entityId, title: navTitleString,
+                        viewModel: viewModel, onClose: { historyShown = false })
+        }
         // Inline confirmation — replaces `.confirmationDialog` because
         // the system dialog steals focus from MenuBarExtra(.window),
         // which auto-dismisses the panel. The inline overlay renders
@@ -602,42 +614,46 @@ public struct DetailView: View {
                 .foregroundStyle(.primary)
                 .lineLimit(1)
             Spacer(minLength: 0)
-            // Cluster order: edit, search, safari, (trash on iOS). Monitor
+            // Cluster: search, then everything else behind "...". Monitor
             // moved out to the poster's top-right corner — see `headerCard`.
-            if let target = editTarget {
-                // The pencil opens a menu now, not the edit card directly: edit
-                // and delete are the two things you do to a library record, and
-                // a second glyph for a destructive action in a four-glyph
-                // cluster is how you get it clicked by accident.
-                Menu {
+            headerSearchMenu
+            Menu {
+                if let target = editTarget {
                     Button { editRequest = target } label: {
                         Label { Text("detail.edit.button", bundle: .module) } icon: { Image(systemName: "pencil") }
                     }
-                    Button(role: .destructive) { deleteRequest = deleteTarget } label: {
-                        Label { Text("detail.delete.button", bundle: .module) } icon: { Image(systemName: "trash") }
+                }
+                if item.entityId != nil {
+                    Button { historyShown = true } label: {
+                        Label { Text("detail.showHistory.button", bundle: .module) } icon: { Image(systemName: "clock.arrow.circlepath") }
                     }
-                } label: {
-                    Image(systemName: "pencil")
-                        .scaledFont(size: 14, weight: .medium)
-                        .foregroundStyle(.secondary)
-                        .frame(width: 22, height: 22)
-                        .contentShape(Rectangle())
                 }
-                .menuStyle(.button)
-                .buttonStyle(.plain)
-                .menuIndicator(.hidden)
-                .help(Text("detail.editOrDelete.tooltip", bundle: .module))
-            }
-            headerSearchMenu
-            if let url = arrWebURL(for: item, in: configStore) {
-                Button { PlatformURLOpener.open(url) } label: {
-                    Image(systemName: "safari")
-                        .scaledFont(size: 14, weight: .medium)
-                        .foregroundStyle(.secondary)
+                if let url = arrWebURL(for: item, in: configStore) {
+                    Button { PlatformURLOpener.open(url) } label: {
+                        Label { Text("detail.openInBrowser.button", bundle: .module) } icon: { Image(systemName: "safari") }
+                    }
                 }
-                .buttonStyle(.plain)
-                .help(Text("detail.openInBrowser.button", bundle: .module))
+                // Own section, last: the destructive item doesn't sit next to
+                // "open in browser" where a mis-click costs a library record.
+                if let target = deleteTarget {
+                    Section {
+                        Button(role: .destructive) { deleteRequest = target } label: {
+                            Label { Text("detail.delete.button", bundle: .module) } icon: { Image(systemName: "trash") }
+                        }
+                    }
+                }
+            } label: {
+                Image(systemName: "ellipsis")
+                    .scaledFont(size: 14, weight: .medium)
+                    .foregroundStyle(.secondary)
+                    .frame(width: 22, height: 22)
+                    .contentShape(Rectangle())
             }
+            .menuStyle(.button)
+            .buttonStyle(.plain)
+            .menuIndicator(.hidden)
+            .help(Text("common.moreActions.button", bundle: .module))
+            .accessibilityLabel(Text("common.moreActions.button", bundle: .module))
         }
         .padding(.horizontal, 12)
         .padding(.top, 10)
@@ -647,15 +663,15 @@ public struct DetailView: View {
         #endif
     }
 
-    /// What the header pencil edits. Nil for Lidarr ALBUM details — the
+    /// What the header's Edit item edits. Nil for Lidarr ALBUM details — the
     /// editable Lidarr entity is the artist (profiles / root folder live on
-    /// it), so the pencil lives in `LidarrArtistView` instead.
+    /// it), so Edit lives in `LidarrArtistView` instead.
     private var editTarget: MediaEditRequest? {
         guard item.source != .lidarr, let entityId = item.entityId else { return nil }
         return MediaEditRequest(source: item.source, entityId: entityId)
     }
 
-    /// Same record the pencil edits, addressed for removal. Lidarr is excluded
+    /// Same record Edit edits, addressed for removal. Lidarr is excluded
     /// for the same reason: this surface's Lidarr entity is an ALBUM, and the
     /// deletable library record is its artist — that lives in `LidarrArtistView`.
     private var deleteTarget: MediaDeleteRequest? {
@@ -681,6 +697,11 @@ public struct DetailView: View {
             if let target = editTarget {
                 Button { editRequest = target } label: {
                     Label { Text("detail.edit.button", bundle: .module) } icon: { Image(systemName: "pencil") }
+                }
+            }
+            if item.entityId != nil {
+                Button { historyShown = true } label: {
+                    Label { Text("detail.showHistory.button", bundle: .module) } icon: { Image(systemName: "clock.arrow.circlepath") }
                 }
             }
             if manualTarget != nil {
@@ -722,7 +743,7 @@ public struct DetailView: View {
     #endif
 
     /// The Search choice, relocated from the bottom CTA strip into the header
-    /// action cluster (leads it: search, bookmark, safari, trash).
+    /// action cluster (leads it, ahead of the "..." menu).
     @ViewBuilder
     private var headerSearchMenu: some View {
         if let target = manualTarget {
@@ -923,15 +944,16 @@ public struct DetailView: View {
     @ViewBuilder
     private var pauseResumeProminent: some View {
         let f = focused
+        let showsPlay = focusedShowsPlay
         PauseResumeButton(
-            isPaused: f.isPaused,
+            isPaused: showsPlay,
             progress: f.source == .sonarr ? 1 : f.progress,
             // Tint by the ACTION, not the status: Pause orange, Resume blue
             // (Search moved to the header, so blue is free again). Red stays
             // Cancel's.
-            tint: f.isPaused ? .blue : .orange
+            tint: showsPlay ? .blue : .orange
         ) {
-            if f.isPaused {
+            if showsPlay {
                 await viewModel.resume(f)
             } else {
                 await viewModel.pause(f)
@@ -1099,9 +1121,8 @@ public struct DetailView: View {
     /// implied — you can't have a file for something you don't own — and the
     /// tag left the question you actually opened the panel with unanswered.
     private var movieFileState: LibraryEntry.FileState {
-        guard (radarrMovieFile ?? radarrDetail?.movieFile) == nil else { return .complete }
-        if radarrDetail?.monitored == false { return .unmonitored }
-        return .missing
+        .movie(monitored: radarrDetail?.monitored,
+               hasFile: (radarrMovieFile ?? radarrDetail?.movieFile) != nil)
     }
 
     /// Series hero's title badges — assigned profile + how much is on disk.
@@ -1121,21 +1142,12 @@ public struct DetailView: View {
     /// the arr's own numbers, which is what makes this agree with the Library
     /// tab. Counting `sonarrEpisodes` instead would call every ongoing series
     /// half-missing, since unaired episodes are in that list too.
-    private var seriesEpisodeCounts: (have: Int, total: Int) {
-        let seasons = sonarrDetail?.seasons ?? []
-        return (
-            have: seasons.reduce(0) { $0 + ($1.statistics?.episodeFileCount ?? 0) },
-            total: seasons.reduce(0) { $0 + ($1.statistics?.episodeCount ?? 0) }
-        )
+    private var seriesEpisodeCounts: EpisodeFileCounts {
+        sonarrDetail?.episodeFileCounts ?? EpisodeFileCounts(have: 0, total: 0)
     }
 
     private var seriesFileState: LibraryEntry.FileState {
-        if sonarrDetail?.monitored == false { return .unmonitored }
-        let counts = seriesEpisodeCounts
-        if counts.total > 0, counts.have >= counts.total { return .complete }
-        if counts.have > 0 { return .partial }
-        // Nothing aired yet is not the same as nothing grabbed.
-        return counts.total > 0 ? .missing : .notAvailable
+        .series(monitored: sonarrDetail?.monitored, counts: seriesEpisodeCounts)
     }
 
     // MARK: - Trailer
@@ -1389,8 +1401,7 @@ public struct DetailView: View {
                 let client = WhisparrClient(config: configStore.whisparr)
                 radarrDetail = try await client.fetchMovieDetails(id: entityId)
                 qualityProfileName = await Self.profileName(
-                    id: radarrDetail?.qualityProfileId, config: configStore.whisparr, source: .whisparr)
-            }
+                    id: radarrDetail?.qualityProfileId, config: configStore.whisparr, source: .whisparr)            }
         } catch {
             loadError = "Couldn't load details: \(error.localizedDescription)"
         }

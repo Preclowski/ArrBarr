@@ -40,7 +40,6 @@ public struct PopoverContentView: View {
     /// QueueTabContent → QueueListView (the native-`List` selection).
     @State private var queueSelecting = false
     @State private var historySource: QueueItem.Source?
-    @State private var historyRefreshNonce = 0
     @State private var searchViewModel = SearchViewModel()
     /// Library tab's per-arr cache — owned here (not inside the tab view) so
     /// switching tabs doesn't drop the fetched libraries.
@@ -56,27 +55,9 @@ public struct PopoverContentView: View {
     /// for `arrBarrConfirmRequest`. Rendered as a panel-wide overlay
     /// at the end of body.
     @State private var pendingConfirm: PendingConfirm?
-    /// Push-target for "open the series view" from inside an
-    /// EpisodeQuickDetail. Registered as a sibling navigationDestination
-    /// on the root NavigationStack so SwiftUI doesn't get confused
-    /// about insertion order when the binding fires from a deeper view.
-    /// Queue tab filter — substring match against item titles. Mirrors
-    /// the search view's floating bar (same `.glassyFloatingBar()`
-    /// chrome). When non-empty, tonight/needsYou sections collapse out
-    /// (they're status-based, not search-targets) and every arr
-    /// section drops rows whose title doesn't contain the substring.
-    @State private var queueFilter: String = ""
-    @FocusState private var queueFilterFocused: Bool
-    /// Source scope for the queue filter / search bar. `nil` = all
-    /// arrs; setting a concrete source narrows both the queue filter
-    /// (rows from other arrs hidden) AND the search query (only that
-    /// arr is asked for library / add-new hits).
-    @State private var queueScope: QueueItem.Source? = nil
-    /// Second-axis filter: which class of result to show. `.all`
-    /// shows queue + library + new. `.inQueue` collapses to queue
-    /// rows only (useful for "where's my Foo?" when the search would
-    /// otherwise drown the list in add-new candidates). `.libraryOrNew`
-    /// hides queue rows and surfaces only search results.
+    /// The search capsule's focus, owned here because ⌘N, the Add intent and
+    /// the search intent all aim at it from outside any tab.
+    @FocusState private var searchFieldFocused: Bool
 
     /// `true` when the SearchAddPanel overlay was opened via a chat
     /// tap-to-add rather than the Add tab. Drives the Back behaviour in
@@ -121,26 +102,26 @@ public struct PopoverContentView: View {
         searchResult != nil || detailItem != nil
     }
 
-    private var isFiltering: Bool {
-        !queueFilter.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-    }
-
-    /// Put the caret in the tab's text field so the panel is typeable the
-    /// instant it opens.
-    ///
-    /// Queue only — its floating bar is the global search, and ⌘N plus the Add
-    /// intent aim at it from out here too. Upcoming has no field to focus, and
-    /// Chat and Library each focus their own on appear (the field lives inside
-    /// `ChatView` / `LibraryTabContent`, and it appears both on open and on tab
-    /// switch, so driving it from here would just be a second owner of the same
-    /// state).
+    /// Put the caret in the search capsule so the panel is typeable the instant
+    /// it opens. Every tab but Chat sits under the one `SearchHost`; Chat
+    /// focuses its own composer on appear.
     ///
     /// Hopped to the next main-actor turn rather than set inline: on the
     /// `onAppear` pass the field isn't in the responder chain yet, and an
     /// assignment made before it is there is silently dropped.
     private func focusInputForCurrentTab() {
-        guard selectedTab == .queue else { return }
-        Task { @MainActor in queueFilterFocused = true }
+        guard selectedTab.hostsSearch else { return }
+        Task { @MainActor in searchFieldFocused = true }
+    }
+
+    /// What the app already knows about that matches the query — live queue
+    /// rows and owned titles from every loaded library. The same on every tab.
+    private var localHits: [LocalHit] {
+        guard searchViewModel.isActive else { return [] }
+        return LocalHit.hits(
+            queue: viewModel, library: libraryViewModel,
+            sources: QueueItem.Source.allCases.filter { configStore.config(for: $0.serviceKind).isVisible },
+            query: searchViewModel.query)
     }
 
     /// Queue rows that are for a specific Sonarr episode (season pack
@@ -173,10 +154,9 @@ public struct PopoverContentView: View {
         case library = "Library"
         case upcoming = "Upcoming"
         case chat = "Chat"
-        // `.add` (Search) removed — the queue's floating filter bar
-        // now doubles as a global search. Empty filter → queue rows;
-        // typing → queue rows that match + library/add-new candidates
-        // pulled via `SearchViewModel`. One surface, both jobs.
+
+        /// Every tab but Chat sits under the one `SearchHost`.
+        var hostsSearch: Bool { self != .chat }
 
         /// Every tab renders as its glyph by default; only the ACTIVE tab
         /// expands to its text label. Four labels ("Nadchodzące",
@@ -223,13 +203,9 @@ public struct PopoverContentView: View {
             .appFontScale(configStore)
             .preferredColorScheme(configStore.preferredColorScheme)
             .onAppear {
-                searchViewModel.setup(
-                    radarrConfig: configStore.radarr,
-                    sonarrConfig: configStore.sonarr,
-                    lidarrConfig: configStore.lidarr,
-                    whisparrConfig: configStore.whisparr,
-                    tmdbApiKey: configStore.tmdbApiKey
-                )
+                searchViewModel.setup(store: configStore)
+                // Library-only search reads the Library tab's own cache.
+                searchViewModel.library = libraryViewModel
                 chatHolder.reconfigure(store: configStore)
                 // The panel is on screen (menu-bar popover opened, or the
                 // detached window is visible) — poll at the fast foreground
@@ -251,6 +227,12 @@ public struct PopoverContentView: View {
             }
             .onChange(of: ChatViewModelHolder.signature(store: configStore)) { _, _ in
                 chatHolder.reconfigure(store: configStore)
+            }
+            // The search clients are built once from the config. The popover
+            // outlives a trip to Settings, so a re-pointed server has to rebuild
+            // them here or every search keeps asking the old one.
+            .onChange(of: SearchViewModel.configSignature(store: configStore)) { _, _ in
+                searchViewModel.setup(store: configStore)
             }
             .onChange(of: chatAvailable) { _, available in
                 if !available && selectedTab == .chat {
@@ -280,7 +262,7 @@ public struct PopoverContentView: View {
                     withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
                         selectedTab = .queue
                     }
-                    queueFilterFocused = true
+                    searchFieldFocused = true
                 }
                 .keyboardShortcut("n", modifiers: .command)
                 .opacity(0)
@@ -310,14 +292,15 @@ public struct PopoverContentView: View {
                 withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
                     selectedTab = .queue
                 }
-                queueFilterFocused = true
+                searchFieldFocused = true
             }
             // Search-to-add App Intent. The menu-bar popover can't be opened
             // programmatically, so this stages the query for whenever it opens.
             .onReceive(NotificationCenter.default.publisher(for: .arrBarrSearchQuery)) { note in
                 guard let q = note.userInfo?["query"] as? String else { return }
                 selectedTab = .queue
-                queueFilter = q
+                // The `didSet` runs the search; there is nothing to mirror.
+                searchViewModel.query = q
             }
             .onReceive(NotificationCenter.default.publisher(for: .arrBarrOpenDetail)) { note in
                 guard let item = note.userInfo?["item"] as? QueueItem else { return }
@@ -450,40 +433,51 @@ public struct PopoverContentView: View {
                     HistoryView(
                         source: historySource,
                         viewModel: viewModel,
-                        refreshNonce: historyRefreshNonce,
+                        // Pushed onto this stack directly rather than through
+                        // `.arrBarrOpenDetail`, whose handler drops the history
+                        // surface — Back has to land here, not on the queue.
+                        onOpenDetail: { item in
+                            withAnimation(.smooth(duration: 0.22)) { detailItem = item }
+                        },
                         onClose: { self.historySource = nil }
                     )
                 } else if anyArrConfigured {
-                    // Tab bar hides while a queue-filter / search
-                    // query is live — search becomes a full-size
-                    // surface (back chevron in the top strip is the
-                    // only nav affordance you need). Tabs reappear
-                    // the moment the query clears.
-                    if !(selectedTab == .queue && isFiltering) {
+                    // Tab bar hides while a query is live — search becomes a
+                    // full-size surface (the back chevron in the top strip is
+                    // the only nav affordance you need). Tabs reappear the
+                    // moment the query clears.
+                    if !(searchViewModel.isActive && selectedTab.hostsSearch) {
                         tabBar
                     }
                     Group {
-                        switch selectedTab {
-                        case .queue:
-                            QueueTabContent(
-                                viewModel: viewModel,
-                                searchViewModel: searchViewModel,
-                                queueFilter: $queueFilter,
-                                queueScope: $queueScope,
-                                queueFilterFocused: $queueFilterFocused,
-                                detailItem: $detailItem,
-                                historySource: $historySource,
-                                searchResult: $searchResult,
-                                selecting: $queueSelecting
-                            )
-                        case .library:
-                            LibraryTabContent(
-                                viewModel: libraryViewModel,
-                                searchResult: $searchResult
-                            )
-                        case .upcoming: UpcomingTabContent(viewModel: viewModel)
-                        case .chat:
+                        if selectedTab == .chat {
                             ChatTabContent(chatHolder: chatHolder)
+                        } else {
+                            // One search, hosted once: the capsule, the takeover
+                            // and the results are the same view whichever tab
+                            // sits underneath.
+                            SearchHost(
+                                searchVM: searchViewModel,
+                                localHits: localHits,
+                                searchAvailable: anyArrConfigured,
+                                focused: $searchFieldFocused,
+                                onSelectQueueItem: { detailItem = $0 },
+                                onSelectAddResult: { searchResult = $0 }
+                            ) {
+                                switch selectedTab {
+                                case .queue:
+                                    QueueTabContent(
+                                        viewModel: viewModel,
+                                        detailItem: $detailItem,
+                                        historySource: $historySource,
+                                        selecting: $queueSelecting
+                                    )
+                                case .library:
+                                    LibraryTabContent(viewModel: libraryViewModel)
+                                case .upcoming, .chat:
+                                    UpcomingTabContent(viewModel: viewModel)
+                                }
+                            }
                         }
                     }
                 } else {
@@ -664,16 +658,8 @@ public struct PopoverContentView: View {
             tabPills
                 .frame(maxWidth: .infinity)
                 .glassyFloatingBar()
-            // Quiet "you've left the LAN" chip — only present while the whole
-            // stack is unreachable, slotted between the tabs and the kebab so
-            // it reads as ambient status, not an alert.
-            if viewModel.isFullyOffline {
-                OfflineIndicator(viewModel: viewModel)
-                    .padding(.horizontal, 12)
-                    .frame(height: Self.pillHeight)
-                    .glassyFloatingBar()
-                    .transition(.opacity.combined(with: .scale(scale: 0.9)))
-            }
+            // No offline chip here: the queue itself already says the stack
+            // is unreachable, and a third capsule in the bar only crowded it.
             // One island: the kebab (and, in detached mode, the window's ×)
             // inside a single glass capsule (like the tab cluster nests its
             // buttons in one capsule). The detach/attach toggle lives INSIDE
@@ -697,7 +683,6 @@ public struct PopoverContentView: View {
         .padding(.horizontal, 12)
         .padding(.top, 10)
         .padding(.bottom, 8)
-        .animation(.easeInOut(duration: 0.2), value: viewModel.isFullyOffline)
     }
 
     #if os(macOS)
@@ -770,16 +755,15 @@ public struct PopoverContentView: View {
                         storeManager.gate(.chat)
                         return
                     }
-                    // Re-tapping the active queue tab clears the
-                    // filter + scope — gives the user a "reset to
-                    // home" affordance that doesn't need its own
-                    // chrome (Spotify / Apple Music tab-bar idiom).
-                    if tab == .queue && selectedTab == .queue {
-                        if isFiltering || queueScope != nil {
-                            withAnimation(.easeOut(duration: 0.18)) {
-                                queueFilter = ""
-                                queueScope = nil
-                            }
+                    // Re-tapping the active tab clears a live query — a
+                    // "reset to home" affordance that needs no chrome of its
+                    // own (Spotify / Apple Music tab-bar idiom). Only where the
+                    // search is on screen: Chat doesn't show the field, and
+                    // wiping it from there loses a search the user stepped
+                    // away from.
+                    if tab == selectedTab, tab.hostsSearch, searchViewModel.isActive {
+                        withAnimation(.easeOut(duration: 0.18)) {
+                            searchViewModel.query = ""
                         }
                     }
                     withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) { selectedTab = tab }
@@ -875,7 +859,9 @@ public struct PopoverContentView: View {
                     // the accessory / close / offline islands grow to match it
                     // via `pillHeight` (they don't shrink the tabs).
                     .padding(.horizontal, 18)
-                    .padding(.vertical, 9)
+                    // Fixed, not padding-derived: the accessory island uses the
+                    // same constant, so the two capsules can't drift apart.
+                    .frame(height: Self.pillHeight)
                     .contentShape(Rectangle())
                     .background(
                         GeometryReader { proxy in
@@ -967,11 +953,8 @@ public struct PopoverContentView: View {
                       width: max(0, rightEdge - leftEdge), height: height)
     }
 
-    /// Height of the accessory / close / offline islands — set to MATCH the tab
-    /// cluster's natural height (its per-tab `.padding(.vertical, 9)` + 12pt font
-    /// lands around 32pt), so every capsule in the toolbar is the same height
-    /// (the tabs keep their natural size; these grow up to them). Keep in sync if
-    /// the tab vertical padding / font ever moves.
+    /// The one toolbar height: every tab and the accessory island's glyph
+    /// buttons (kebab, detached ×) are framed to it, so all capsules match.
     private static let pillHeight: CGFloat = 32
 
     /// Overflow menu — capsule of equal width and height = a perfect

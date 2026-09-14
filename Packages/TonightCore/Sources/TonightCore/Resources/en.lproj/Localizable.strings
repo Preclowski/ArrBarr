@@ -1,0 +1,296 @@
+/* Keys are the English literals (ArrBarr convention) — this file pins them. */
+
+"Home" = "Home";
+"Movies" = "Movies";
+"Series" = "Series";
+"My Library" = "My Library";
+"My Lists" = "My Lists";
+"Watched" = "Watched";
+"New List…" = "New List…";
+"New List" = "New List";
+"Create" = "Create";
+"Cancel" = "Cancel";
+"Name" = "Name";
+"The title will be added to the new list." = "The title will be added to the new list.";
+"Delete List" = "Delete List";
+"No list selected" = "No list selected";
+
+"Add to List" = "Add to List";
+"Mark Watched" = "Mark Watched";
+"Trailer" = "Trailer";
+"Done" = "Done";
+
+"Storyline" = "Storyline";
+"Cast" = "Cast";
+"Reviews" = "Reviews";
+"More Like This" = "More Like This";
+
+"Trending Movies" = "Trending Movies";
+"Trending Series" = "Trending Series";
+"In Theaters" = "In Theaters";
+"Top Rated Movies" = "Top Rated Movies";
+"Top Rated Series" = "Top Rated Series";
+
+"Can't reach TMDB" = "Can't reach TMDB";
+"Can't load title" = "Can't load title";
+"Retry" = "Retry";
+"Add your TMDB key" = "Add your TMDB key";
+"TonightBarr browses TMDB. Paste a free API key in Settings, or import it from ArrBarr." = "TonightBarr browses TMDB. Paste a free API key in Settings, or import it from ArrBarr.";
+"Import from ArrBarr" = "Import from ArrBarr";
+
+"Search" = "Search";
+"Movies, series…" = "Movies, series…";
+"No results" = "No results";
+"Nothing matches" = "Nothing matches";
+"Try loosening the filters." = "Try loosening the filters.";
+"Empty list" = "Empty list";
+"Add titles from any poster's detail page." = "Add titles from any poster's detail page.";
+"Nothing watched yet" = "Nothing watched yet";
+"Mark titles as watched from their detail page." = "Mark titles as watched from their detail page.";
+
+"Genre" = "Genre";
+"Decade" = "Decade";
+"Rating" = "Rating";
+"Length" = "Length";
+"Reset" = "Reset";
+"Sort" = "Sort";
+"Popularity" = "Popularity";
+"Newest" = "Newest";
+
+"Movie" = "Movie";
+"TV Series" = "TV Series";
+"%d votes" = "%d votes";
+"%d seasons" = "%d seasons";
+"%d episodes" = "%d episodes";
+"Director" = "Director";
+"Created by" = "Created by";
+
+"TMDB API Key" = "TMDB API Key";
+"Test" = "Test";
+"Key works." = "Key works.";
+"Imported." = "Imported.";
+"ArrBarr key not found." = "ArrBarr key not found.";
+"Streaming Region" = "Streaming Region";
+
+"Featured in Lists" = "Featured in Lists";
+"Streaming" = "Streaming";
+"Language" = "Language";
+"Select" = "Select";
+"%d selected" = "%d selected";
+"Remove from List" = "Remove from List";
+"Mark Unwatched" = "Mark Unwatched";
+"Refresh" = "Refresh";
+"Not connected" = "Not connected";
+
+"Lists" = "Lists";
+"All" = "All";
+"Library" = "Library";
+"Born" = "Born";
+"Died" = "Died";
+"More" = "More";
+"Less" = "Less";
+"%d titles" = "%d titles";
+"%1$d titles, %2$d watched — %3$@" = "%1$d titles, %2$d watched — %3$@";
+"Uses ArrBarr's Plex/Radarr/Sonarr connections, read-only." = "Uses ArrBarr's Plex/Radarr/Sonarr connections, read-only.";
+
+"People" = "People";
+"Results for “%@”" = "Results for “%@”";
+
+
+"Previous" = "Previous";
+
+"Quiz" = "Quiz";
+"Quiz Picks" = "Quiz Picks";
+"Out of cards" = "Out of cards";
+"Deal again" = "Deal again";
+"Read more" = "Read more";
+"Close" = "Close";
+
+/* Settings — sections and Home layout */
+"General" = "General";
+"About" = "About";
+"Back" = "Back";
+"Forward" = "Forward";
+"TMDB" = "TMDB";
+"Storage" = "Storage";
+"Acknowledgements" = "Acknowledgements";
+"Version" = "Version";
+"Data Folder" = "Data Folder";
+"Show in Finder" = "Show in Finder";
+"Pick something to watch tonight." = "Pick something to watch tonight.";
+"Decides which streaming services are shown on a title." = "Decides which streaming services are shown on a title.";
+"Banner" = "Banner";
+"Banner shows" = "Banner shows";
+"The big carousel at the top of Home." = "The big carousel at the top of Home.";
+"Rows" = "Rows";
+"Drag to reorder. Unchecked rows are hidden from Home." = "Drag to reorder. Unchecked rows are hidden from Home.";
+"Reset to Defaults" = "Reset to Defaults";
+"Mix" = "Mix";
+"Trending Now" = "Trending Now";
+"On The Air" = "On The Air";
+"Popular Movies" = "Popular Movies";
+"Popular Series" = "Popular Series";
+
+/* Genres, In Theaters, Awarded */
+"Decades" = "Decades";
+"Genres" = "Genres";
+"Awarded" = "Awarded";
+"Now Playing" = "Now Playing";
+"Coming Soon" = "Coming Soon";
+"Nothing scheduled" = "Nothing scheduled";
+"TMDB lists no releases for your region right now." = "TMDB lists no releases for your region right now.";
+"All Years" = "All Years";
+"No award selected" = "No award selected";
+"Academy Awards" = "Academy Awards";
+"Best Picture" = "Best Picture";
+"Cannes Film Festival" = "Cannes Film Festival";
+"Palme d'Or" = "Palme d'Or";
+"Golden Globes" = "Golden Globes";
+"Best Motion Picture — Drama" = "Best Motion Picture — Drama";
+"BAFTA" = "BAFTA";
+"Best Film" = "Best Film";
+
+/* Advanced filters */
+"Advanced Filters" = "Advanced Filters";
+"Filters" = "Filters";
+"Hide Filters" = "Hide Filters";
+"Reset All" = "Reset All";
+"Years" = "Years";
+"Any" = "Any";
+"To" = "To";
+"Minimum votes" = "Minimum votes";
+"Most Voted" = "Most Voted";
+
+/* Genre names */
+"Action" = "Action";
+"Adventure" = "Adventure";
+"Animation" = "Animation";
+"Comedy" = "Comedy";
+"Crime" = "Crime";
+"Documentary" = "Documentary";
+"Drama" = "Drama";
+"Family" = "Family";
+"Fantasy" = "Fantasy";
+"History" = "History";
+"Horror" = "Horror";
+"Music" = "Music";
+"Mystery" = "Mystery";
+"Romance" = "Romance";
+"Science Fiction" = "Science Fiction";
+"Thriller" = "Thriller";
+"War" = "War";
+"Western" = "Western";
+"Action & Adventure" = "Action & Adventure";
+"Kids" = "Kids";
+"News" = "News";
+"Reality" = "Reality";
+"Sci-Fi & Fantasy" = "Sci-Fi & Fantasy";
+"Soap" = "Soap";
+"Talk" = "Talk";
+"War & Politics" = "War & Politics";
+"Quiz History" = "Quiz History";
+"Liked" = "Liked";
+"Skipped" = "Skipped";
+"Clear History" = "Clear History";
+"Clear Quiz History?" = "Clear Quiz History?";
+"Clear" = "Clear";
+"This only deletes the log. Titles saved to Quiz Picks stay." = "This only deletes the log. Titles saved to Quiz Picks stay.";
+"No swipes yet" = "No swipes yet";
+"Cards you like or skip in the Quiz are logged here." = "Cards you like or skip in the Quiz are logged here.";
+
+/* Poster / list layout switch */
+"Posters" = "Posters";
+"List" = "List";
+"Columns" = "Columns";
+"Poster" = "Poster";
+"Title" = "Title";
+"Year" = "Year";
+"Type" = "Type";
+"Overview" = "Overview";
+"Load More" = "Load More";
+"Open" = "Open";
+
+/* MediaKit debug pane */
+"Media Data" = "Media Data";
+"Debug" = "Debug";
+"Collect usage data" = "Collect usage data";
+"Refresh" = "Refresh";
+"Reset" = "Reset";
+"Copy Report" = "Copy Report";
+"Counts requests, cache hits and bytes per provider. No URLs or keys are recorded." = "Counts requests, cache hits and bytes per provider. No URLs or keys are recorded.";
+"Nothing recorded yet — open a title." = "Nothing recorded yet — open a title.";
+"Switch collecting on to see traffic." = "Switch collecting on to see traffic.";
+"Providers" = "Providers";
+"Fields" = "Fields";
+"Which source actually won each field." = "Which source actually won each field.";
+"Repeated fetches" = "Repeated fetches";
+"The same title asked of the same source more than once — usually a cache key or a view that rebuilds." = "The same title asked of the same source more than once — usually a cache key or a view that rebuilds.";
+"In Library" = "In Library";
+
+/* Seasons & episodes */
+"Seasons" = "Seasons";
+"Season %d" = "Season %d";
+"No episodes listed for this season yet." = "No episodes listed for this season yet.";
+"Can't load season" = "Can't load season";
+"Upcoming" = "Upcoming";
+
+"In %@" = "In %@";
+"Not in %@" = "Not in %@";
+
+/* Media-server artwork */
+"Artwork" = "Artwork";
+"Use posters from my media server" = "Use posters from my media server";
+"Titles your server has use its artwork; everything else uses TMDB." = "Titles your server has use its artwork; everything else uses TMDB.";
+"Connect Plex, Jellyfin or Emby in ArrBarr to use its artwork." = "Connect Plex, Jellyfin or Emby in ArrBarr to use its artwork.";
+
+"In library" = "In library";
+"Downloaded" = "Downloaded";
+"Missing" = "Missing";
+
+"Watch" = "Watch";
+
+"Own" = "Own";
+
+"TV Series" = "TV Series";
+
+"Trailers" = "Trailers";
+
+/* Trailers */
+"Another One" = "Another One";
+"Shuffle All" = "Shuffle All";
+"Shuffle" = "Shuffle";
+"Teaser" = "Teaser";
+"Clip" = "Clip";
+"Featurette" = "Featurette";
+"Behind the Scenes" = "Behind the Scenes";
+"On The Air" = "On The Air";
+"Popular Series" = "Popular Series";
+
+/* View menu, sort and the filter panel */
+"as Posters" = "as Posters";
+"as List" = "as List";
+"Classic" = "Classic";
+"Widescreen" = "Widescreen";
+"Card Size" = "Card Size";
+"Small" = "Small";
+"Medium" = "Medium";
+"Large" = "Large";
+"View Options" = "View Options";
+"Default Order" = "Default Order";
+"More Filters" = "More Filters";
+"Clear All" = "Clear All";
+"%d votes+" = "%d votes+";
+"Discover" = "Discover";
+"Nothing in your library matches" = "Nothing in your library matches";
+"Switch to All to see everything TMDB has." = "Switch to All to see everything TMDB has.";
+"You already have everything here" = "You already have everything here";
+"Nice. Try another genre or loosen the filters." = "Nice. Try another genre or loosen the filters.";
+"Only what I have" = "Only what I have";
+"Hide titles your media server doesn't have" = "Hide titles your media server doesn't have";
+"TMDB score — the only one a list can be filtered by" = "TMDB score — the only one a list can be filtered by";
+"Open in Quiz" = "Open in Quiz";
+"Back to Random" = "Back to Random";
+"That's the whole collection" = "That's the whole collection";
+"Deck: %@" = "Deck: %@";
+"Random Cards" = "Random Cards";
+"Back to %@" = "Back to %@";
