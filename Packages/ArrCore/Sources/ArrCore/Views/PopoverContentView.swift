@@ -52,7 +52,7 @@ public struct PopoverContentView: View {
     /// their own person destination; chat has none, so the root hosts this one.
     @State private var personRef: PersonRef?
     /// Pending confirmation payload — set by `.onReceive` listening
-    /// for `arrBarrConfirmRequest`. Rendered as a panel-wide overlay
+    /// for `AppMessages.ConfirmRequest`. Rendered as a panel-wide overlay
     /// at the end of body.
     @State private var pendingConfirm: PendingConfirm?
     /// The search capsule's focus, owned here because ⌘N, the Add intent and
@@ -66,7 +66,7 @@ public struct PopoverContentView: View {
     @State private var searchAddFromChat = false
     /// Discover/Quiz overlay state. The view-model survives across opens
     /// (so accept/skip counters and the deck persist) and the overlay
-    /// flag is flipped by the `arrBarrOpenDiscoverQuiz` notification
+    /// flag is flipped by the `AppMessages.OpenDiscoverQuiz` notification
     /// posted by the `discover_in_quiz` chat tool.
     @State private var discoverViewModel = DiscoverViewModel.shared
     @State private var showDiscoverOverlay = false
@@ -185,13 +185,7 @@ public struct PopoverContentView: View {
                 // Deferred for the same reason the menu-bar drop defers: this
                 // runs inside the drag handling, and opening a window from
                 // there can leave the drag session's tracking loop wedged.
-                DispatchQueue.main.async {
-                    NotificationCenter.default.post(
-                        name: .arrBarrDropDownloads,
-                        object: nil,
-                        userInfo: ["urls": urls]
-                    )
-                }
+                DispatchQueue.main.async { AppMessages.post(AppMessages.DropDownloads(urls: urls)) }
                 return true
             }
             #endif
@@ -287,22 +281,15 @@ public struct PopoverContentView: View {
                         .frame(width: 0, height: 0)
                 }
             }
-            .onReceive(NotificationCenter.default.publisher(for: .arrBarrTriggerAdd)) { _ in
-                withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
-                    selectedTab = .queue
-                }
-                searchFieldFocused = true
-            }
             // Search-to-add App Intent. The menu-bar popover can't be opened
             // programmatically, so this stages the query for whenever it opens.
-            .onReceive(NotificationCenter.default.publisher(for: .arrBarrSearchQuery)) { note in
-                guard let q = note.userInfo?["query"] as? String else { return }
+            .onMessage(AppMessages.SearchQuery.self) { message in
                 selectedTab = .queue
                 // The `didSet` runs the search; there is nothing to mirror.
-                searchViewModel.query = q
+                searchViewModel.query = message.query
             }
-            .onReceive(NotificationCenter.default.publisher(for: .arrBarrOpenDetail)) { note in
-                guard let item = note.userInfo?["item"] as? QueueItem else { return }
+            .onMessage(AppMessages.OpenDetail.self) { message in
+                let item = message.item
                 searchResult = nil
                 historySource = nil
                 if detailItem == nil {
@@ -322,31 +309,24 @@ public struct PopoverContentView: View {
                     }
                 }
             }
-            .onReceive(NotificationCenter.default.publisher(for: .arrBarrOpenPerson)) { note in
-                guard let ref = note.userInfo?["ref"] as? PersonRef else { return }
+            .onMessage(AppMessages.OpenPerson.self) { message in
                 searchResult = nil
                 historySource = nil
                 detailItem = nil
-                personRef = ref
+                personRef = message.ref
             }
-            .onReceive(NotificationCenter.default.publisher(for: .arrBarrOpenSearchAdd)) { note in
+            .onMessage(AppMessages.OpenSearchAdd.self) { message in
                 // Chat tap-to-add — show the SearchAddPanel overlay
                 // pre-loaded with the result. `searchAddFromChat` lets
                 // Back return straight to chat instead of dropping the
                 // user on the Add tab.
-                guard let result = note.userInfo?["result"] as? SearchResult else { return }
                 historySource = nil
                 detailItem = nil
                 searchAddFromChat = true
-                searchResult = result
+                searchResult = message.result
             }
-            .onReceive(NotificationCenter.default.publisher(for: .arrBarrOpenDiscoverQuiz)) { note in
-                // Posted by the `discover_in_quiz` chat tool. userInfo carries
-                // mood label + pre-resolved items + optional `append` flag
-                // (extends an existing deck instead of replacing it).
-                guard let mood = note.userInfo?["mood"] as? String,
-                      let items = note.userInfo?["items"] as? [DiscoverItem] else { return }
-                let append = (note.userInfo?["append"] as? Bool) ?? false
+            .onMessage(AppMessages.OpenDiscoverQuiz.self) { message in
+                let (mood, items, append) = (message.mood, message.items, message.append)
                 let hasActiveSession = !discoverViewModel.sessionMatched.isEmpty
                     || !discoverViewModel.sessionSkipped.isEmpty
                     || discoverViewModel.current != nil
@@ -361,11 +341,7 @@ public struct PopoverContentView: View {
                 historySource = nil
                 showDiscoverOverlay = true
             }
-            .onReceive(NotificationCenter.default.publisher(for: .arrBarrConfirmRequest)) { note in
-                if let payload = note.userInfo?["payload"] as? PendingConfirm {
-                    pendingConfirm = payload
-                }
-            }
+            .onMessage(AppMessages.ConfirmRequest.self) { pendingConfirm = $0.payload }
             // The one trailer overlay for the whole surface, driven by the
             // shared session. Rendered up here — not inside DetailView /
             // SearchAddPanel / the Quiz, which merely start it — so a clip
@@ -433,7 +409,7 @@ public struct PopoverContentView: View {
                         source: historySource,
                         viewModel: viewModel,
                         // Pushed onto this stack directly rather than through
-                        // `.arrBarrOpenDetail`, whose handler drops the history
+                        // `AppMessages.OpenDetail`, whose handler drops the history
                         // surface — Back has to land here, not on the queue.
                         onOpenDetail: { item in
                             withAnimation(.smooth(duration: 0.22)) { detailItem = item }
@@ -626,7 +602,7 @@ public struct PopoverContentView: View {
     /// IS the session (see `DiscoverViewModel.seed`) — fresh picks can only come
     /// from the agent, so "more" round-trips through the chat: this prompt makes
     /// the model call `discover_in_quiz` again with `append: true`, which extends
-    /// the live deck via the `.arrBarrOpenDiscoverQuiz` handler. `mood` + the
+    /// the live deck via the `AppMessages.OpenDiscoverQuiz` handler. `mood` + the
     /// already-shown picks live in the chat history, so the model has the "like
     /// these" context without us stuffing every title into the visible message.
     /// Without this wiring the button fell back to `onRequestMore`'s no-op

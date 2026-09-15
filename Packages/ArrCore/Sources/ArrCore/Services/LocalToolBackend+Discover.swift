@@ -335,17 +335,7 @@ extension LocalToolBackend {
             return ToolCallOutput(text: text)
         }
 
-        await MainActor.run {
-            NotificationCenter.default.post(
-                name: .arrBarrOpenDiscoverQuiz,
-                object: nil,
-                userInfo: [
-                    "mood": label,
-                    "items": payload,
-                    "append": append,
-                ]
-            )
-        }
+        AppMessages.post(AppMessages.OpenDiscoverQuiz(mood: label, items: payload, append: append))
         let frontPosters = payload.prefix(3).compactMap { $0.result.posterURL }
         let curatedCount = payload.filter { curatedKeys.contains($0.dedupKey) }.count
         var summary = "Opened Discover quiz with \(payload.count) picks for: \(label) (\(curatedCount) curated + \(payload.count - curatedCount) similar)"

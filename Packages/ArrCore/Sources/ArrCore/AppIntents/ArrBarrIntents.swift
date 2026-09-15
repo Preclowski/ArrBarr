@@ -219,7 +219,7 @@ public struct SearchToAddIntent: AppIntent {
         // and listening before we post.
         Task { @MainActor in
             try? await Task.sleep(nanoseconds: 400_000_000)
-            NotificationCenter.default.post(name: .arrBarrSearchQuery, object: nil, userInfo: ["query": q])
+            AppMessages.post(AppMessages.SearchQuery(query: q))
         }
         return .result()
     }

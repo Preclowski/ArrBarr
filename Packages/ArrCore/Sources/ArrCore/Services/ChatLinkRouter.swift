@@ -92,9 +92,7 @@ public enum ChatLinkRouter {
         // title isn't configured. Fall back to the search bar with the ref
         // pre-typed — the user sees what was asked for rather than a dead tap.
         log.notice("chat link \(incoming.urlString, privacy: .public) resolved to nothing — falling back to search")
-        NotificationCenter.default.post(
-            name: .arrBarrSearchQuery, object: nil, userInfo: ["query": ref.lookupTerm]
-        )
+        AppMessages.post(AppMessages.SearchQuery(query: ref.lookupTerm))
     }
 
     /// Library ownership for a ref the user already owns, or nil. Sonarr's map

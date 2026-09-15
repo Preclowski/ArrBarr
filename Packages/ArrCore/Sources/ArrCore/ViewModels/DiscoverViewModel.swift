@@ -23,7 +23,7 @@ public final class DiscoverViewModel {
     /// Held for the view model's lifetime — the observer must outlive every
     /// deck the user opens, and the view model itself lives as long as the
     /// Quiz does, so there is nothing to unregister early.
-    private var addObserver: (any NSObjectProtocol)?
+    private var addObserver: Task<Void, Never>?
     public private(set) var queue: [DiscoverItem] = []
     public var filter = DiscoverFilter()
     public var moodText: String = ""
@@ -104,13 +104,15 @@ public final class DiscoverViewModel {
         // Observed HERE rather than in the view: the deck is hidden while the
         // add panel is up, so a view-level listener would be torn down exactly
         // when the "added" signal arrives.
-        addObserver = NotificationCenter.default.addObserver(
-            forName: .arrBarrDidAddToLibrary, object: nil, queue: .main
-        ) { [weak self] note in
-            guard let foreignId = note.userInfo?["foreignId"] as? String else { return }
-            Task { @MainActor in self?.didAddToLibrary(foreignId: foreignId) }
+        addObserver = Task { [weak self] in
+            for await message in NotificationCenter.default.messages(of: nil as AppMessageBus?, for: AppMessages.DidAddToLibrary.self) {
+                self?.didAddToLibrary(foreignId: message.foreignId)
+            }
         }
+
     }
+
+    isolated deinit { addObserver?.cancel() }
 
     /// The user finished adding the card they were on — drop it and move to the
     /// next. Not `skip()`: this title was a *pick* (already recorded by

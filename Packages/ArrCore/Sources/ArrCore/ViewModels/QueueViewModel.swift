@@ -115,6 +115,7 @@ public final class QueueViewModel {
     private var foregroundTimer: Timer?
     private var backgroundTimer: Timer?
     private var intervalObservers: Set<AnyCancellable> = []
+    private var configValidatedTask: Task<Void, Never>?
     private var optimisticOverrides: [String: OptimisticOverride] = [:]
     public private(set) var isRefreshing = false
     /// Set when `refresh()` is called while another refresh is mid-flight.
@@ -310,13 +311,12 @@ public final class QueueViewModel {
             .sink { [weak self] _ in self?.reprobe(.mediaServer) }
             .store(in: &intervalObservers)
 
-        // A successful "Test Connection" in Settings posts this — refresh now
-        // so a freshly-saved key clears any stale per-arr error immediately.
-        NotificationCenter.default.publisher(for: .arrBarrConfigValidated)
-            .sink { [weak self] _ in
-                Task { [weak self] in await self?.refresh() }
+        // A successful "Test Connection" in Settings: refresh now so a freshly-saved key clears any stale per-arr error.
+        configValidatedTask = Task { [weak self] in
+            for await _ in NotificationCenter.default.messages(of: nil as AppMessageBus?, for: AppMessages.ConfigValidated.self) {
+                await self?.refresh()
             }
-            .store(in: &intervalObservers)
+        }
     }
 
     /// `isolated` so the body runs on the main actor: a plain `deinit` is
@@ -325,6 +325,7 @@ public final class QueueViewModel {
     /// the timer (`RunLoop.main`, see `commonModeTimer`).
     isolated deinit {
         realtimeTask?.cancel()
+        configValidatedTask?.cancel()
         // A scheduled `Timer` is owned by the run loop, not by us — dropping
         // the view-model doesn't stop it. Without these, every discarded
         // instance leaves timers firing on `RunLoop.main` forever, each

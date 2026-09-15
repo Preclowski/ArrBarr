@@ -102,7 +102,7 @@ public struct DemoChatProvider: LLMProvider {
     // MARK: - Quiz deck
 
     /// Opens the Discover deck with the whole demo pool, mirroring
-    /// `LocalToolBackend.assembleDeck`: post `.arrBarrOpenDiscoverQuiz`,
+    /// `LocalToolBackend.assembleDeck`: post `AppMessages.OpenDiscoverQuiz`,
     /// answer with the `.discoverSession` resume card.
     private static func quizResponse(kind: SuggestionKind) async -> LLMResponse {
         let pool = (kind == .series) ? seriesPool : moviePool
@@ -120,13 +120,7 @@ public struct DemoChatProvider: LLMProvider {
         let mood = NSLocalizedString(
             kind == .series ? "demo.quizMood.series" : "demo.quizMood.movies",
             bundle: .module, comment: "")
-        await MainActor.run {
-            NotificationCenter.default.post(
-                name: .arrBarrOpenDiscoverQuiz,
-                object: nil,
-                userInfo: ["mood": mood, "items": items, "append": false]
-            )
-        }
+        AppMessages.post(AppMessages.OpenDiscoverQuiz(mood: mood, items: items, append: false))
         let text = NSLocalizedString("demo.quizOpened", bundle: .module, comment: "")
         let posters = items.prefix(3).compactMap { $0.result.posterURL }
         return LLMResponse(

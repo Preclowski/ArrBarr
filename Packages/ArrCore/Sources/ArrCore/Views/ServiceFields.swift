@@ -213,7 +213,7 @@ struct ServiceFields: View {
                     ConnectionHealth.shared.forceOK(.arr(kind), detail: result)
                     // Kick a queue refresh so a just-entered key clears the
                     // stale "missing API key" banner right away.
-                    NotificationCenter.default.post(name: .arrBarrConfigValidated, object: nil)
+                    AppMessages.post(AppMessages.ConfigValidated())
                 }
             } catch {
                 let message = error.userFacingMessage

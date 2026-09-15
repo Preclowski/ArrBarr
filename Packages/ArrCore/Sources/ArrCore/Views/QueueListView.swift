@@ -865,7 +865,7 @@ struct QueueListView: View {
 
     /// Sends the tonight-banner item into the detail pipeline — a synthetic
     /// `QueueItem` posted via `DetailRequest`, picked up by the popover's
-    /// `arrBarrOpenDetail` listener (same shape as `UpcomingRowView.openDetail`).
+    /// `AppMessages.OpenDetail` listener (same shape as `UpcomingRowView.openDetail`).
     private func openUpcomingDetail(_ item: UpcomingItem) {
         guard let entityId = item.entityId else { return }
         DetailRequest.post(

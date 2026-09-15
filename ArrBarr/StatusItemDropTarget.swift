@@ -158,13 +158,7 @@ private enum StatusItemDropBridge {
             // AppKit's drag-tracking loop, and opening a window (or activating
             // the app) from in there leaves the status item stuck in tracking —
             // the drop looks ignored and the icon stops responding entirely.
-            DispatchQueue.main.async {
-                NotificationCenter.default.post(
-                    name: .arrBarrDropDownloads,
-                    object: nil,
-                    userInfo: ["urls": dropped]
-                )
-            }
+            DispatchQueue.main.async { AppMessages.post(AppMessages.DropDownloads(urls: dropped)) }
             return true
         }
 
