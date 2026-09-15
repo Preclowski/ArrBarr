@@ -478,14 +478,9 @@ struct SearchField: ViewModifier {
     }
 }
 
-/// `searchToolbarBehavior` is iOS 26; below that the field stays a drawer.
 struct MinimizedSearchToolbar: ViewModifier {
     func body(content: Content) -> some View {
-        if #available(iOS 26.0, *) {
-            content.searchToolbarBehavior(.minimize)
-        } else {
-            content
-        }
+        content.searchToolbarBehavior(.minimize)
     }
 }
 

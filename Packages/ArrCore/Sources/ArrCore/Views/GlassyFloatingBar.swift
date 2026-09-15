@@ -86,27 +86,7 @@ private struct SelectionModeBarModifier: ViewModifier {
 
 private struct GlassPillModifier: ViewModifier {
     func body(content: Content) -> some View {
-        #if os(macOS)
-        if #available(macOS 26.0, *) {
-            content.glassEffect(.regular, in: .capsule)
-        } else {
-            content
-                .background(.thinMaterial, in: Capsule())
-                .overlay(
-                    Capsule().stroke(Color.primary.opacity(0.08), lineWidth: 0.5)
-                )
-        }
-        #else
-        if #available(iOS 26.0, *) {
-            content.glassEffect(.regular, in: .capsule)
-        } else {
-            content
-                .background(.thinMaterial, in: Capsule())
-                .overlay(
-                    Capsule().stroke(Color.primary.opacity(0.08), lineWidth: 0.5)
-                )
-        }
-        #endif
+        content.glassEffect(.regular, in: .capsule)
     }
 }
 
@@ -167,8 +147,7 @@ private struct GlassyFloatingBarModifier: ViewModifier, Animatable {
         decorated(base(content))
     }
 
-    /// The glass / material capsule backdrop (26+ Liquid Glass, `.regularMaterial`
-    /// below).
+    /// The glass capsule backdrop (Liquid Glass).
     ///
     /// Focus brightens the glass through `.tint` rather than by stacking a white
     /// capsule behind the content: a `.background` sits *on top of* the glass
@@ -183,23 +162,7 @@ private struct GlassyFloatingBarModifier: ViewModifier, Animatable {
     /// invisible.
     @ViewBuilder
     private func base(_ content: Content) -> some View {
-        #if os(macOS)
-        if #available(macOS 26.0, *) {
-            content.glassEffect(.regular.tint(Color.white.opacity(lift)), in: shape)
-        } else {
-            content
-                .background(shape.fill(Color.white.opacity(lift * 0.7)))
-                .background(.regularMaterial, in: shape)
-        }
-        #else
-        if #available(iOS 26.0, *) {
-            content.glassEffect(.regular.tint(Color.white.opacity(lift)), in: shape)
-        } else {
-            content
-                .background(shape.fill(Color.white.opacity(lift * 0.7)))
-                .background(.regularMaterial, in: shape)
-        }
-        #endif
+        content.glassEffect(.regular.tint(Color.white.opacity(lift)), in: shape)
     }
 
     private func decorated<V: View>(_ v: V) -> some View {

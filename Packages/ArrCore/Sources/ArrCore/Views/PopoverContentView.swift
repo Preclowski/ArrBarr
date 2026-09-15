@@ -142,8 +142,7 @@ public struct PopoverContentView: View {
         if DemoMode.isActive { return true }
         switch configStore.chatProvider {
         case .foundationModels:
-            if #available(macOS 26.0, iOS 26.0, *) { return true }
-            return false
+            return true
         case .openai:
             return configStore.openai.isConfigured
         }
@@ -1040,11 +1039,7 @@ public struct GlassButtonStyle: ViewModifier {
         // Capsule to match GlassProminentButtonStyle — the secondary "Add to
         // Radarr" next to a capsule "Add and search" read as a leftover
         // rectangle otherwise.
-        if #available(macOS 26.0, iOS 26.0, *) {
-            content.buttonStyle(.glass).buttonBorderShape(.capsule)
-        } else {
-            content.buttonStyle(.bordered).buttonBorderShape(.capsule)
-        }
+        content.buttonStyle(.glass).buttonBorderShape(.capsule)
     }
 }
 
@@ -1056,16 +1051,9 @@ public struct GlassProminentButtonStyle: ViewModifier {
         // text (and made the red trash glyph illegible on gray glass).
         // Call sites with a semantic glyph colour (the red trash) override
         // it locally — an inner foregroundStyle wins over this outer one.
-        if #available(macOS 26.0, iOS 26.0, *) {
-            content
-                .buttonStyle(.glassProminent)
-                .buttonBorderShape(.capsule)
-                .foregroundStyle(.white)
-        } else {
-            content
-                .buttonStyle(.borderedProminent)
-                .buttonBorderShape(.capsule)
-                .foregroundStyle(.white)
-        }
+        content
+            .buttonStyle(.glassProminent)
+            .buttonBorderShape(.capsule)
+            .foregroundStyle(.white)
     }
 }

@@ -1,4 +1,4 @@
-// swift-tools-version: 6.0
+// swift-tools-version: 6.2
 import PackageDescription
 
 // The shared media data layer. It lives in the TonightBarr repo while it
@@ -10,8 +10,8 @@ let package = Package(
     name: "MediaKit",
     platforms: [
         // ArrCore's floor, not TonightBarr's stricter macOS 15 — see above.
-        .macOS(.v14),
-        .iOS(.v18),
+        .macOS(.v26),
+        .iOS(.v26),
     ],
     products: [
         .library(name: "MediaKit", targets: ["MediaKit"]),

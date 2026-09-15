@@ -26,8 +26,7 @@ public struct QuizSettingsPane: View {
         if DemoMode.isActive { return true }
         switch store.chatProvider {
         case .foundationModels:
-            if #available(macOS 26.0, iOS 26.0, *) { return true }
-            return false
+            return true
         case .openai:
             return store.openai.isConfigured
         }
@@ -116,8 +115,10 @@ public struct QuizSettingsPane: View {
                         SwipeSignalStore.shared.resetSkips()
                         signalsTick += 1
                     } label: {
-                        Text("settings.taste.resetSkips", bundle: .module)
-                            + Text(verbatim: " (\(skips))")
+                        HStack(spacing: 0) {
+                            Text("settings.taste.resetSkips", bundle: .module)
+                            Text(verbatim: " (\(skips))")
+                        }
                     }
                 }
             }

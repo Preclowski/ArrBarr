@@ -1,12 +1,12 @@
-// swift-tools-version: 6.0
+// swift-tools-version: 6.2
 import PackageDescription
 
 let package = Package(
     name: "ArrCore",
     defaultLocalization: "en",
     platforms: [
-        .macOS(.v14),
-        .iOS(.v18),
+        .macOS(.v26),
+        .iOS(.v26),
     ],
     products: [
         .library(name: "ArrCore", targets: ["ArrCore"]),
