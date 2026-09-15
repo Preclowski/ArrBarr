@@ -3,7 +3,7 @@ import Foundation
 /// One filesystem mount reported by an arr's `/diskspace` endpoint. Every arr
 /// (Sonarr/Radarr/Lidarr/Whisparr, both API v1 and v3) serves the same shape,
 /// so the shared `ArrAPIClient.fetchDiskSpace()` decodes straight into this.
-public struct DiskSpace: Decodable, Equatable, Sendable, Identifiable {
+public struct DiskSpace: Codable, Equatable, Sendable, Identifiable {
     /// Mount path as the server sees it (e.g. "/data", "/movies").
     public let path: String
     /// Optional human label the arr attaches to the mount (often empty).

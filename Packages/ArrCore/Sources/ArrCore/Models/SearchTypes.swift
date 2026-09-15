@@ -2,12 +2,12 @@ import Foundation
 
 // MARK: - Shared
 
-public struct QualityProfile: Decodable, Identifiable, Sendable {
+public struct QualityProfile: Codable, Identifiable, Sendable {
     public let id: Int
     let name: String
 }
 
-public struct RootFolder: Decodable, Identifiable {
+public struct RootFolder: Codable, Identifiable, Sendable {
     public let id: Int
     let path: String
 }

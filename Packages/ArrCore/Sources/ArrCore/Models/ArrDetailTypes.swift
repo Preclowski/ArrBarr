@@ -2,7 +2,7 @@ import Foundation
 
 // MARK: - Radarr movie detail
 
-public struct RadarrMovieDetail: Decodable {
+public struct RadarrMovieDetail: Codable, Sendable {
     public let id: Int
     /// TMDB movie id — used to fetch cast/credits (TMDB-only data). `var`
     /// (not `let`) with a default so it still DECODES from JSON while the
@@ -37,21 +37,21 @@ public struct RadarrMovieDetail: Decodable {
     var youTubeTrailerId: String? = nil
 }
 
-public struct RadarrDetailRatings: Decodable {
+public struct RadarrDetailRatings: Codable, Sendable {
     let imdb: RadarrRatingValue?
     let tmdb: RadarrRatingValue?
     let metacritic: RadarrRatingValue?
     let rottenTomatoes: RadarrRatingValue?
 }
 
-public struct RadarrRatingValue: Decodable {
+public struct RadarrRatingValue: Codable, Sendable {
     let value: Double?
     let votes: Int?
 }
 
 // MARK: - Sonarr series detail
 
-public struct SonarrSeriesDetail: Decodable {
+public struct SonarrSeriesDetail: Codable, Sendable {
     public let id: Int
     /// TMDB series id — Sonarr v3 ships it; used for TMDB cast/credits.
     /// `var` (not `let`) with a default so it still DECODES while the
@@ -81,19 +81,19 @@ public struct SonarrSeriesDetail: Decodable {
     var qualityProfileId: Int? = nil
 }
 
-public struct SonarrDetailRatings: Decodable {
+public struct SonarrDetailRatings: Codable, Sendable {
     let value: Double?
     let votes: Int?
 }
 
-public struct SonarrSeasonInfo: Decodable {
+public struct SonarrSeasonInfo: Codable, Sendable {
     let seasonNumber: Int
     /// `var` for the optimistic in-place write from the monitor toggle.
     var monitored: Bool?
     let statistics: SonarrSeasonStats?
 }
 
-public struct SonarrSeasonStats: Decodable {
+public struct SonarrSeasonStats: Codable, Sendable {
     let episodeFileCount: Int?
     let episodeCount: Int?
     let totalEpisodeCount: Int?
@@ -101,7 +101,7 @@ public struct SonarrSeasonStats: Decodable {
     let percentOfEpisodes: Double?
 }
 
-public struct SonarrEpisodeDetail: Decodable, Identifiable, Hashable {
+public struct SonarrEpisodeDetail: Codable, Identifiable, Hashable, Sendable {
     public let id: Int
     let seasonNumber: Int?
     let episodeNumber: Int?
@@ -120,7 +120,7 @@ public struct SonarrEpisodeDetail: Decodable, Identifiable, Hashable {
 
 // MARK: - Lidarr album detail
 
-public struct LidarrAlbumDetail: Decodable {
+public struct LidarrAlbumDetail: Codable, Sendable {
     public let id: Int
     let title: String
     let overview: String?
@@ -139,12 +139,12 @@ public struct LidarrAlbumDetail: Decodable {
     var qualityProfileId: Int? = nil
 }
 
-public struct LidarrDetailRatings: Decodable {
+public struct LidarrDetailRatings: Codable, Sendable {
     let value: Double?
     let votes: Int?
 }
 
-public struct LidarrAlbumStats: Decodable, Sendable {
+public struct LidarrAlbumStats: Codable, Sendable {
     let trackCount: Int?
     let trackFileCount: Int?
     let totalTrackCount: Int?
@@ -154,7 +154,7 @@ public struct LidarrAlbumStats: Decodable, Sendable {
 /// Slim album record returned by `/api/v1/album?artistId=N`. Used by the
 /// chat `lidarr_get_artist_albums` tool — keeps the response compact
 /// when an artist has dozens of releases.
-public struct LidarrAlbumListRecord: Decodable, Identifiable, Sendable {
+public struct LidarrAlbumListRecord: Codable, Identifiable, Sendable {
     public let id: Int
     let title: String
     let albumType: String?
@@ -169,7 +169,7 @@ public struct LidarrAlbumListRecord: Decodable, Identifiable, Sendable {
 /// `/api/v1/artist/{id}` — the artist-level record behind `LidarrArtistView`.
 /// Lidarr's library entity is the artist (albums hang off it), which is why
 /// search results and the add flow land here rather than on an album.
-public struct LidarrArtistDetail: Decodable {
+public struct LidarrArtistDetail: Codable, Sendable {
     public let id: Int
     let artistName: String
     let overview: String?
@@ -183,7 +183,7 @@ public struct LidarrArtistDetail: Decodable {
     public var monitored: Bool?
 }
 
-public struct LidarrTrackDetail: Decodable, Identifiable, Hashable {
+public struct LidarrTrackDetail: Codable, Identifiable, Hashable, Sendable {
     public let id: Int
     let trackNumber: String?
     let absoluteTrackNumber: Int?

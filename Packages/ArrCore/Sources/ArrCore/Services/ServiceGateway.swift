@@ -25,17 +25,25 @@ extension MediaServerKind {
 /// The one place ArrCore reaches MediaKit. Owned by `ConfigStore`; rebuilt for demo mode, reconciled on every config change.
 @MainActor
 public final class ServiceGateway {
-    public private(set) var kit: MediaStack
+    /// The process-wide gateway, for the arr client values that are built anywhere and hold no reference.
+    public nonisolated(unsafe) static var current: ServiceGateway?
+    private let kitLock: OSAllocatedUnfairLock<MediaStack>
+    public nonisolated var kit: MediaStack { kitLock.withLock { $0 } }
     public let telemetry = TelemetryRecorder()
     private let configStore: ConfigStore
     private var observers: Set<AnyCancellable> = []
     private var started = false
     private var startTask: Task<Void, Never>?
     private var realtime: [InstanceID: SignalRSource] = [:]
+    /// Configs handed to a client that differ from the saved profile (Settings drafts, tests). Each distinct config
+    /// is its own instance (ordinal 1...), so a draft never displaces the saved instance's cache or credentials.
+    private let adHoc = OSAllocatedUnfairLock<[ServiceKind: [ServiceConfig]]>(initialState: [:])
+    private nonisolated(unsafe) static var testGateway: ServiceGateway?
 
     public init(configStore: ConfigStore) {
         self.configStore = configStore
-        kit = Self.makeKit(configStore: configStore, telemetry: telemetry, demo: DemoMode.isActive)
+        kitLock = OSAllocatedUnfairLock(initialState: Self.makeKit(configStore: configStore, telemetry: telemetry, demo: DemoMode.isActive))
+        if Self.current == nil { Self.current = self }
         observe()
         startTask = Task { await self.start() }
     }
@@ -43,10 +51,52 @@ public final class ServiceGateway {
     /// Consumers await this before their first read so the registry is populated.
     public func ready() async { await startTask?.value }
 
+    /// The gateway for values built without one: the shared profile's, created on first use. A test process
+    /// gets an empty profile instead, so nothing reaches the owner's services from a test.
+    public static func resolve() async -> ServiceGateway {
+        if isRunningTests {
+            if let testGateway { return testGateway }
+            return await MainActor.run {
+                if let testGateway { return testGateway }
+                let gateway = ConfigStore(defaults: UserDefaults(suiteName: "ArrCoreTests.gateway")!).gateway
+                testGateway = gateway
+                return gateway
+            }
+        }
+        if let current { return current }
+        return await MainActor.run { current ?? ConfigStore.shared.gateway }
+    }
+
+    static let isRunningTests = NSClassFromString("XCTestCase") != nil
+
+    /// A client built with a config that is not the saved one (a Settings draft, a test) gets its own instance.
+    public func adopt(_ config: ServiceConfig, for kind: ServiceKind) async -> InstanceID {
+        if config == configStore.config(for: kind) { return kind.instanceID }
+        let (ordinal, added): (Int, Bool) = adHoc.withLock { table in
+            var list = table[kind] ?? []
+            if let index = list.firstIndex(of: config) { return (index + 1, false) }
+            list.append(config)
+            table[kind] = list
+            return (list.count, true)
+        }
+        let instance = InstanceID(kind.instanceKind, ordinal: ordinal)
+        await ready()
+        // A concurrent adopter may have appended the same draft; whoever finds it unregistered reconciles.
+        if added || kit.registry.descriptor(instance) == nil { _ = await kit.reconcile(descriptors()) }
+        return instance
+    }
+
+    nonisolated func adHocConfig(for instance: InstanceID) -> ServiceConfig? {
+        guard instance.ordinal > 0, let kind = ServiceKind(rawValue: instance.kind.rawValue) else { return nil }
+        return adHoc.withLock { $0[kind].flatMap { $0.indices.contains(instance.ordinal - 1) ? $0[instance.ordinal - 1] : nil } }
+    }
+
+
     public func start() async {
         started = true
+        // Under tests the saved profile is never registered: a client's adopted config is the only way in.
         await kit.start(instances: descriptors())
-        await syncRealtime()
+        if !Self.isRunningTests { await syncRealtime() }
     }
 
     public func reconcile() async {
@@ -59,7 +109,8 @@ public final class ServiceGateway {
     public func rebuild(demo: Bool) async {
         await kit.stop()
         realtime = [:]
-        kit = Self.makeKit(configStore: configStore, telemetry: telemetry, demo: demo)
+        let fresh = Self.makeKit(configStore: configStore, telemetry: telemetry, demo: demo)
+        kitLock.withLock { $0 = fresh }
         if started {
             await kit.start(instances: descriptors())
             await syncRealtime()
@@ -85,19 +136,23 @@ public final class ServiceGateway {
         await kit.events.wakeAll()
     }
 
-    public func servarr(_ source: QueueItem.Source) -> ServarrService { kit.servarr(source.instanceID)! }
-    public func download(_ kind: ServiceKind) -> (any DownloadService)? { kit.download(kind.instanceID) }
+    public nonisolated func servarr(_ source: QueueItem.Source) -> ServarrService { kit.servarr(source.instanceID)! }
+    public nonisolated func download(_ kind: ServiceKind) -> (any DownloadService)? { kit.download(kind.instanceID) }
     public var mediaServer: MediaServerService? {
         guard configStore.mediaServer.isConfigured else { return nil }
         return kit.mediaServer(configStore.mediaServer.kind.instanceID)
     }
-    public var tmdb: TMDBService { kit.tmdb }
-    public var store: ResourceStore { kit.store }
-    public var engine: CompositionEngine { kit.engine }
-    public var events: EventHub { kit.events }
+    public nonisolated var tmdb: TMDBService { kit.tmdb }
+    public nonisolated var store: ResourceStore { kit.store }
+    public nonisolated var engine: CompositionEngine { kit.engine }
+    public nonisolated var events: EventHub { kit.events }
 
-    public func isConfigured(_ source: QueueItem.Source) -> Bool {
+    public nonisolated func isConfigured(_ source: QueueItem.Source) -> Bool {
         kit.registry.descriptor(source.instanceID)?.enabled ?? false
+    }
+
+    public nonisolated func isConfigured(_ instance: InstanceID) -> Bool {
+        kit.registry.descriptor(instance)?.enabled ?? false
     }
 
     // MARK: - Assembly
@@ -109,11 +164,13 @@ public final class ServiceGateway {
             configuration = MediaStack.Configuration(transport: FixtureTransport(), sockets: nil, credentials: credentials)
             configuration.database = .memory
         } else {
-            let plain = URLSessionTransport(session: URLSessionTransport.makeSession(cookies: false))
-            let cookies = URLSessionTransport(session: URLSessionTransport.makeSession(cookies: true))
+            // A test process answers through URLProtocol stubs registered on the shared session, as the old clients did.
+            let plain = URLSessionTransport(session: Self.isRunningTests ? .shared : URLSessionTransport.makeSession(cookies: false))
+            let cookies = URLSessionTransport(session: Self.isRunningTests ? .shared : URLSessionTransport.makeSession(cookies: true))
             let transport = CookieSplittingTransport(plain: plain, cookies: cookies)
             configuration = MediaStack.Configuration(transport: transport, sockets: plain, credentials: credentials)
-            configuration.database = databaseLocation()
+            configuration.database = Self.isRunningTests ? .memory : databaseLocation()
+            if Self.isRunningTests { configuration.readPolicyOverride = .mustRevalidate }
         }
         configuration.telemetry = telemetry
         configuration.log = OSLogSink(subsystem: "pl.incred.ArrBarr")
@@ -141,10 +198,15 @@ public final class ServiceGateway {
         var out: [InstanceDescriptor] = []
         for kind in ServiceKind.allCases {
             let config = configStore.config(for: kind)
-            guard let url = URL(string: config.baseURL), config.isConfigured else { continue }
-            let generation = SecretGenerations.generation(for: .apiKey(for: kind), in: configStore.defaultsForGateway)
-                + "." + SecretGenerations.generation(for: .password(for: kind), in: configStore.defaultsForGateway)
-            out.append(InstanceDescriptor(id: kind.instanceID, baseURL: url, enabled: config.isVisible, generation: generation))
+            if !Self.isRunningTests, let url = URL(string: config.baseURL), config.isConfigured {
+                let generation = SecretGenerations.generation(for: .apiKey(for: kind), in: configStore.defaultsForGateway)
+                    + "." + SecretGenerations.generation(for: .password(for: kind), in: configStore.defaultsForGateway)
+                out.append(InstanceDescriptor(id: kind.instanceID, baseURL: url, enabled: config.isVisible, generation: generation))
+            }
+            for (index, draft) in (adHoc.withLock { $0[kind] } ?? []).enumerated() {
+                guard let url = URL(string: draft.baseURL), draft.isConfigured else { continue }
+                out.append(InstanceDescriptor(id: InstanceID(kind.instanceKind, ordinal: index + 1), baseURL: url, enabled: draft.isVisible, generation: "draft"))
+            }
         }
         let server = configStore.mediaServer
         if server.isConfigured, let url = URL(string: server.baseURL) {
@@ -175,8 +237,8 @@ private struct CookieSplittingTransport: Transport {
     let cookies: URLSessionTransport
     func send(_ request: HTTPRequest) async throws -> HTTPResponse {
         switch request.operation.kind {
-        case .qbittorrent, .deluge: try await cookies.send(request)
-        default: try await plain.send(request)
+        case .qbittorrent, .deluge: return try await cookies.send(request)
+        default: return try await plain.send(request)
         }
     }
 }
@@ -204,7 +266,8 @@ private struct ConfigCredentialProvider: CredentialProvider {
                                generation: SecretGenerations.generation(for: .tmdbKey, in: defaults))
         default:
             guard let kind = ServiceKind(rawValue: instance.kind.rawValue) else { return nil }
-            let config = configStore.config(for: kind)
+            let draft = configStore.gateway.adHocConfig(for: instance)
+            let config = draft ?? configStore.config(for: kind)
             guard let url = URL(string: config.baseURL) else { return nil }
             let material: Credentials.Material
             if kind.requiresApiKey || (kind == .qbittorrent && !config.apiKey.isEmpty) {
@@ -212,7 +275,9 @@ private struct ConfigCredentialProvider: CredentialProvider {
             } else {
                 material = .userPassword(user: config.username, password: config.password)
             }
-            let generation = SecretGenerations.generation(for: .apiKey(for: kind), in: defaults) + "." + SecretGenerations.generation(for: .password(for: kind), in: defaults)
+            let generation = draft == nil
+                ? SecretGenerations.generation(for: .apiKey(for: kind), in: defaults) + "." + SecretGenerations.generation(for: .password(for: kind), in: defaults)
+                : "draft"
             return Credentials(baseURL: url, material: demo ? .apiKey("demo") : material, generation: generation)
         }
     }

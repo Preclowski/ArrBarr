@@ -19,6 +19,7 @@ public final class MediaStack: Sendable {
         public var overrides: [InstanceKind: HostGovernor.Limits] = [.tmdb: { var l = HostGovernor.Limits(); l.minimumInterval = .milliseconds(250); return l }()]
         public var center: NotificationCenter = .default
         public var mediaServerUserID: String?
+        public var readPolicyOverride: ReadPolicy?
 
         public init(transport: any Transport, sockets: (any SocketTransport)?, credentials: any CredentialProvider) {
             self.transport = transport; self.sockets = sockets; self.credentials = credentials
@@ -55,6 +56,7 @@ public final class MediaStack: Sendable {
         store = ResourceStore(database: database, pipeline: pipeline, identity: identity, clock: c.clock, telemetry: c.telemetry, log: c.log,
                               center: c.center, memoryBudget: c.role == .app ? 8 << 20 : 2 << 20)
         probe = CapabilityProbe(store: store, index: capabilities, database: database, clock: c.clock, log: c.log)
+        if let override = c.readPolicyOverride { Task { [store] in await store.setPolicyOverride(override) } }
         engine = CompositionEngine(store: store, identity: identity, capabilities: capabilities, clock: c.clock, telemetry: c.telemetry)
         events = EventHub(store: store, clock: c.clock, telemetry: c.telemetry, log: c.log)
         discovery = Discovery(log: c.log)

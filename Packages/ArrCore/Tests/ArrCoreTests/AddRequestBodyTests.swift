@@ -57,12 +57,11 @@ private final class AddStub: URLProtocol, @unchecked Sendable {
 struct AddRequestBodyTests {
 
     private func client(_ source: QueueItem.Source) -> SearchClient {
-        let cfg = URLSessionConfiguration.ephemeral
-        cfg.protocolClasses = [AddStub.self]
+        URLProtocol.registerClass(AddStub.self)
         return SearchClient(
             config: ServiceConfig(enabled: true, baseURL: "http://\(AddStub.host):7878",
                                   apiKey: "k", username: "", password: ""),
-            source: source, session: URLSession(configuration: cfg))
+            source: source)
     }
 
     private func movieRow() -> SearchResult {

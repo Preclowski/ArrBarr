@@ -174,21 +174,20 @@ struct DownloadDropSuite {
 
     // MARK: - Arr download-client resolution
 
-    /// Minimal `ArrAPIClient` whose transport we control — `SonarrClient` and
-    /// friends build their own `HTTPClient`, so the shared extension is exercised
-    /// through this instead.
+    /// Minimal `ArrAPIClient` so the shared extension is exercised with the drop stub answering.
     private struct StubArrClient: ArrAPIClient {
         let config: ServiceConfig
-        let apiBase = "/api/v3"
+        let source: QueueItem.Source = .sonarr
         let serviceName = "Stub"
-        let http: HTTPClient
     }
 
     @Suite("Arr download clients")
     struct ArrDownloadClientTests {
         private func clients(_ json: String) async throws -> [ArrDownloadClient] {
             DropMockURLProtocol.handler = { request in reply(request, json) }
-            let client = StubArrClient(config: config(), http: HTTPClient(session: dropSession()))
+            URLProtocol.registerClass(DropMockURLProtocol.self)
+            defer { URLProtocol.unregisterClass(DropMockURLProtocol.self) }
+            let client = StubArrClient(config: config())
             return try await client.fetchDownloadClients()
         }
 

@@ -110,7 +110,7 @@ enum SeriesIdentityResolver {
     private static func resolveRecord(
         tmdbTVId: Int, sonarrConfig: ServiceConfig, tmdbKey: String
     ) async -> SearchResult? {
-        let client = SearchClient(config: sonarrConfig, source: .sonarr, session: session)
+        let client = SearchClient(config: sonarrConfig, source: .sonarr)
 
         // 1. Free: the user already owns it, so both ids are in the snapshot.
         if let owned = await ArrLibraryMaps.sonarrTVDBByTMDBId(config: sonarrConfig)[tmdbTVId] {

@@ -44,13 +44,15 @@ Approach: the old client types (`RadarrClient`, `SonarrClient`, `LidarrClient`, 
 `CoalescingCache` and the `DemoMode` branches go. The assembly class is `MediaStack`
 (the name `MediaKit` collides with the module for qualified lookups).
 
-- [ ] `DetailView`, `SeasonDetailView`, `EpisodeQuickDetail`, `LidarrArtistView`,
-      `MediaEditPanel`, `MediaDeletePanel`, `ReleaseListView`: MediaKit resources/commands via
-      the gateway; ArrCore detail models (`RadarrMovieDetail`, `SonarrSeriesDetail`, ...) become
-      typealiases or thin wrappers over `ArrMovie`/`ArrSeries`/`ArrArtist`/`ArrAlbum`.
-- [ ] `SearchViewModel`, `SearchClient`, `LibraryViewModel`, `LibraryIndex`,
-      `LibrarySummaryService`, `LibraryPosterSampler`, `SeriesIdentityResolver` → store reads,
-      `IdentityStore` crosswalk.
+- [x] `RadarrClient`, `SonarrClient`, `LidarrClient`, `WhisparrClient`, `SearchClient`,
+      `ArrAPIClient` (+ `ArrDownloadClients`) are facades over MediaKit; every view, tool and
+      service that built a client keeps working. A config that is not the saved one (Settings
+      draft, tests) becomes its own instance ordinal via `ServiceGateway.adopt`.
+- [x] Tests: `QueueUnificationTests`, `SeasonPackArtworkTests`, `LidarrWireDecodingTests` on
+      `ArrCompositions`; stub suites keep global `URLProtocol` registration (a test process
+      routes through `URLSession.shared`, `.memory` database, `mustRevalidate` override).
+- [ ] Later: `LibraryIndex`/`LibraryViewModel` as store consumers (today they call the facades
+      with `mustRevalidate` and keep their own snapshot).
 
 ## Wave 3 — tools, MCP, settings, health, intents, widget
 

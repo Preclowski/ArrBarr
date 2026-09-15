@@ -24,7 +24,8 @@ public actor ResourceStore {
     let log: any LogSink
     let center: NotificationCenter
     private var memory: MemoryTier
-    private var inFlight: [ResourceKey: InFlight] = [:]
+    /// Keyed by key and fingerprint: a request for a reconfigured instance never joins the old instance's fetch.
+    private var inFlight: [String: InFlight] = [:]
     private var nextWaiter: UInt64 = 0
     private var revalidations: [ResourceKey: Task<Void, Never>] = [:]
     private var commandTrackers: [Int: Task<Void, Never>] = [:]
@@ -32,6 +33,8 @@ public actor ResourceStore {
     private var lastSweep: Date?
     var probe: CapabilityProbe?
     var capabilities = CapabilityIndex()
+    /// Forces every read to this policy; a test process sets `.mustRevalidate` so stubs answer each request.
+    public var policyOverride: ReadPolicy?
 
     public init(database: SQLiteDatabase?, pipeline: RequestPipeline, identity: IdentityStore?, clock: any MediaClock,
                 telemetry: any TelemetrySink, log: any LogSink, center: NotificationCenter = .default, memoryBudget: Int = 8 << 20) {
@@ -39,6 +42,8 @@ public actor ResourceStore {
         self.telemetry = telemetry; self.log = log; self.center = center
         memory = MemoryTier(budget: memoryBudget)
     }
+
+    public func setPolicyOverride(_ policy: ReadPolicy?) { policyOverride = policy }
 
     func attach(probe: CapabilityProbe, capabilities: CapabilityIndex) {
         self.probe = probe
@@ -49,8 +54,9 @@ public actor ResourceStore {
 
     // MARK: - Reads
 
-    public func read<V>(_ resource: Resource<V>, policy: ReadPolicy = .cacheFirst, maxAge: Duration? = nil,
+    public func read<V>(_ resource: Resource<V>, policy requested: ReadPolicy = .cacheFirst, maxAge: Duration? = nil,
                         priority: RequestPriority = .interactive) async throws -> Fetched<V> {
+        let policy = policyOverride ?? requested
         let now = clock.now
         let fingerprint = pipeline.registry.fingerprint(resource.key.instance)
         let cached = await lookup(resource.key, fingerprint: fingerprint, now: now)
@@ -76,8 +82,8 @@ public actor ResourceStore {
         }
         telemetry.record(.cacheMiss(resource.key))
         do {
-            let row = try await fetch(resource, priority: priority)
-            return Fetched(value: try Self.stored(V.self, row.payload, operation: resource.key.operation), origin: inFlight[resource.key] == nil ? .network : .coalesced,
+            let row = try await fetch(resource, fingerprint: fingerprint, priority: priority)
+            return Fetched(value: try Self.stored(V.self, row.payload, operation: resource.key.operation), origin: .network,
                            fetchedAt: row.fetchedAt, isStale: false, tags: row.tags, degraded: nil)
         } catch let error as MediaKitError {
             if policy != .mustRevalidate, let cached {
@@ -277,13 +283,14 @@ public actor ResourceStore {
         catch { throw MediaKitError.decoding(operation, detail: "stored payload: " + WireCodec.describe(error)) }
     }
 
-    private func fetch<V>(_ resource: Resource<V>, priority: RequestPriority) async throws -> CommittedRow {
+    private func fetch<V>(_ resource: Resource<V>, fingerprint: Fingerprint?, priority: RequestPriority) async throws -> CommittedRow {
         let key = resource.key
+        let slot = key.storageKey + "|" + (fingerprint?.rawValue ?? "")
         let waiter = nextWaiter
         nextWaiter += 1
-        if var existing = inFlight[key] {
+        if var existing = inFlight[slot] {
             existing.waiters.insert(waiter)
-            inFlight[key] = existing
+            inFlight[slot] = existing
             telemetry.record(.coalesced(key, waiters: existing.waiters.count))
         } else {
             var plan = resource.plan
@@ -297,50 +304,50 @@ public actor ResourceStore {
                 if let harvest = resource.harvest { await self.identity?.record(harvest(value)) }
                 return CommittedRow(payload: payload, fetchedAt: now, staleAt: now.addingTimeInterval(resource.freshness.retention.seconds), tags: resource.tags)
             }
-            inFlight[key] = InFlight(task: task, waiters: [waiter])
+            inFlight[slot] = InFlight(task: task, waiters: [waiter])
         }
-        let task = inFlight[key]!.task
-        defer { removeWaiter(key, waiter) }
+        let task = inFlight[slot]!.task
+        defer { removeWaiter(slot, waiter) }
         return try await withTaskCancellationHandler {
             let row = try await task.value
-            if inFlight[key]?.task == task, !Task.isCancelled {
-                let fingerprint = pipeline.registry.fingerprint(key.instance) ?? Fingerprint(rawValue: "")
-                commit(row, for: resource, fingerprint: fingerprint)
+            if inFlight[slot]?.task == task, !Task.isCancelled {
+                commit(row, for: resource, fingerprint: fingerprint ?? Fingerprint(rawValue: ""), slot: slot)
             }
             return row
         } onCancel: {
-            Task { await self.removeWaiter(key, waiter) }
+            Task { await self.removeWaiter(slot, waiter) }
         }
     }
 
-    private func removeWaiter(_ key: ResourceKey, _ waiter: UInt64) {
-        guard var entry = inFlight[key] else { return }
+    private func removeWaiter(_ slot: String, _ waiter: UInt64) {
+        guard var entry = inFlight[slot] else { return }
         entry.waiters.remove(waiter)
         if entry.waiters.isEmpty {
             entry.task.cancel()
-            inFlight.removeValue(forKey: key)
+            inFlight.removeValue(forKey: slot)
         } else {
-            inFlight[key] = entry
+            inFlight[slot] = entry
         }
     }
 
     private var committed: Set<ResourceKey> = []
 
-    private func commit<V>(_ row: CommittedRow, for resource: Resource<V>, fingerprint: Fingerprint) {
+    private func commit<V>(_ row: CommittedRow, for resource: Resource<V>, fingerprint: Fingerprint, slot: String? = nil) {
         let entry = StoredEntry(key: resource.key, fingerprint: fingerprint, freshness: resource.freshness, payload: row.payload,
                                 fetchedAt: row.fetchedAt, staleAt: row.staleAt, tags: row.tags)
         memory.put(entry, now: row.fetchedAt)
         if resource.freshness.persists, let database {
             Task { try? await database.put([entry], lastUsed: row.fetchedAt) }
         }
-        inFlight.removeValue(forKey: resource.key)
+        if let slot { inFlight.removeValue(forKey: slot) }
         revision.bump(resource.tags)
     }
 
     private func scheduleRevalidation<V>(_ resource: Resource<V>) {
         guard revalidations[resource.key] == nil else { return }
+        let fingerprint = pipeline.registry.fingerprint(resource.key.instance)
         revalidations[resource.key] = Task {
-            _ = try? await self.fetch(resource, priority: .background)
+            _ = try? await self.fetch(resource, fingerprint: fingerprint, priority: .background)
             self.finishRevalidation(resource.key)
         }
     }

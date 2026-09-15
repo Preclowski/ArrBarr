@@ -99,6 +99,19 @@ public struct ServarrService: Sendable {
         }))
     }
 
+    /// The batch strategies as plain resources, for callers that read one parent or one id list at a time.
+    public func movieFiles(_ ids: [Int]) -> Resource<[ArrFile]> {
+        guard case let .chunked(_, make, _) = files.strategy else { return filesOf(parent: ids.first ?? 0) }
+        return make(ids)
+    }
+
+    public func filesOf(parent: Int) -> Resource<[ArrFile]> {
+        switch files.strategy {
+        case let .perKey(make): return make(parent)
+        case let .chunked(_, make, _): return make([parent])
+        }
+    }
+
     public func episodes(seriesID: Int) -> Resource<[ArrEpisode]> {
         .json(plan("fetchEpisodes", path: "/episode", query: [("seriesId", String(seriesID))]), tags: [entityTag(seriesID)], freshness: .reference)
     }

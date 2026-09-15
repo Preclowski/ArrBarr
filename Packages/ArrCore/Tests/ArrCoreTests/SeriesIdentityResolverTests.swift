@@ -318,10 +318,7 @@ struct SeriesIdentityResolverTests {
     @Test("Adding an unresolved series refuses rather than posting a guess")
     func addSeriesRefusesUnresolvedRow() async throws {
         try await withStub {
-            let cfg = URLSessionConfiguration.ephemeral
-            cfg.protocolClasses = [ResolverStub.self]
-            let client = SearchClient(config: config(port: 8010), source: .sonarr,
-                                      session: URLSession(configuration: cfg))
+            let client = SearchClient(config: config(port: 8010), source: .sonarr)
             let lean = TMDBSearchMapping.series([tvSummary()]).first!
 
             await #expect(throws: (any Error).self) {

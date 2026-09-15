@@ -1,5 +1,6 @@
 import Testing
 import Foundation
+import MediaKit
 @testable import ArrCore
 
 // Complements the "Lidarr JSON Decoding" suite in JSONDecodingTests.swift,
@@ -422,9 +423,9 @@ struct LidarrCalendarArtTests {
           {"id": 97, "title": "No Statistics At All", "releaseDate": "2026-09-03"}
         ]
         """
-        let records = try JSONDecoder().decode([LidarrCalendarRecord].self, from: Data(json.utf8))
+        let records = try WireCodec.decoder.decode([ArrCalendarRecord].self, from: Data(json.utf8))
         let items = records.compactMap {
-            LidarrClient.unifyCalendar($0, baseURL: "http://localhost:8686")
+            ArrCompositions.upcoming($0, source: .lidarr, baseURL: "http://localhost:8686")
         }
         #expect(items.count == 3)
         #expect(items[0].trackCount == 11)

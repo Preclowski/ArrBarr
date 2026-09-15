@@ -1,4 +1,5 @@
 import Foundation
+import MediaKit
 
 public enum HTTPError: LocalizedError {
     case badURL
@@ -109,7 +110,8 @@ public extension Error {
     /// for `HTTPError` is where the *arr's* own reason lives. Eight call sites
     /// spelled this out identically before it lived here.
     var userFacingMessage: String {
-        (self as? LocalizedError)?.errorDescription ?? localizedDescription
+        if let mk = self as? MediaKitError { return MediaKitErrorPresenter.message(for: mk) }
+        return (self as? LocalizedError)?.errorDescription ?? localizedDescription
     }
 }
 

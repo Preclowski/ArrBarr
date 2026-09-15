@@ -1,407 +1,142 @@
 import Foundation
-import os
+import MediaKit
 
-/// Minimal `/system/status` shape — just enough for `testConnection()`.
-private struct ArrSystemStatus: Decodable { let version: String? }
+/// ArrCore keeps its own `JSONValue` for the MCP surface; the wire one is MediaKit's.
+typealias KitJSON = MediaKit.JSONValue
 
-/// Shares QueueAggregator's category so one predicate covers the whole
-/// queue-refresh path in Console / `log show`.
-private let arrLog = Logger(category: "QueueFetch")
-
-/// Common HTTP+auth boilerplate shared by every *arr* REST client
-/// (Sonarr/Radarr/Lidarr/Whisparr/...). Each conforming type supplies
-/// its `config` and `apiBase` ("/api/v3" for Sonarr/Radarr, "/api/v1"
-/// for Lidarr); the default GET/POST/DELETE helpers handle URL
-/// construction, X-Api-Key header injection, and JSON decoding.
+/// What the four arr clients share. Every request goes through MediaKit; a client is a value that names its arr
+/// and carries the config it was built with (the saved one, a Settings draft, or a test's).
 public protocol ArrAPIClient: Sendable {
     var config: ServiceConfig { get }
-    /// API root path, e.g. "/api/v3" or "/api/v1".
-    var apiBase: String { get }
-    var http: HTTPClient { get }
-    /// Product name ("Sonarr", "Radarr", …) shown in connection-test results.
+    var source: QueueItem.Source { get }
     var serviceName: String { get }
 }
 
+/// The gateway plus the service bound to this client's instance: the saved profile's, or the draft's own ordinal.
+struct ArrContext {
+    let gateway: ServiceGateway
+    let service: ServarrService
+    var store: ResourceStore { gateway.store }
+    var instance: InstanceID { service.instance }
+}
+
 extension ArrAPIClient {
-    /// Standard auth header for every request to an arr.
-    var apiHeaders: [String: String] {
-        ["X-Api-Key": config.apiKey]
+    func context() async throws -> ArrContext {
+        let gateway = await ServiceGateway.resolve()
+        let instance = await gateway.adopt(config, for: source.serviceKind)
+        await gateway.ready()
+        guard gateway.isConfigured(instance), let service = gateway.kit.servarr(instance) else { throw MediaKitError.notConfigured(instance) }
+        return ArrContext(gateway: gateway, service: service)
     }
 
-    /// `pageSize` every client asks `/queue` for. Servarr paginates the queue
-    /// and offers no "give me everything" sentinel, so this has to be a
-    /// number; 1000 covers any sane install. `warnIfQueueTruncated` makes the
-    /// pathological case audible instead of silently dropping rows.
-    static var queuePageSize: Int { 1000 }
-
-    /// Cap on how many per-entity side-load GETs (episode files, track files)
-    /// a single queue refresh keeps in flight.
-    ///
-    /// `URLSession.shared` allows 6 connections per host and the poster loader
-    /// competes for the same pool, so an uncapped task group over a 40-series
-    /// queue doesn't fan out — it stacks 34 requests behind the first 6, long
-    /// enough for the tail to hit `HTTPClient.requestTimeout`. Those failures
-    /// are swallowed by `try?`, and the upgrade-diff quietly disappears from
-    /// the rows. Four saturates the pool while leaving lanes for posters.
-    static var maxConcurrentSideLoads: Int { 4 }
-
-    /// Resolve display metadata for a set of entity ids: cache first, then one
-    /// bounded fan-out for the misses, then write the results back.
-    ///
-    /// Three clients had a line-for-line copy of this, differing only in their
-    /// source, entity kind and per-id fetch. The shape is the interesting part
-    /// and it is identical everywhere — miss-only fetching, a bounded group so a
-    /// first-run queue can't saturate the six-connections-per-host pool (see
-    /// `maxConcurrentSideLoads`), and a single batched store write.
-    ///
-    /// `fetch` returns nil for an id it couldn't resolve; that id is simply
-    /// absent from the result and the row falls back to its release name rather
-    /// than the whole refresh failing.
-    func resolveMetadata(
-        ids: [Int],
-        source: QueueItem.Source,
-        kind: TitleMetadataStore.Kind,
-        fetch: @Sendable @escaping (Int) async -> TitleMetadataStore.Metadata?
-    ) async -> [Int: TitleMetadataStore.Metadata] {
-        guard !ids.isEmpty else { return [:] }
-        let baseURL = config.baseURL
-        func key(_ id: Int) -> TitleMetadataStore.Key {
-            TitleMetadataStore.Key(source: source, baseURL: baseURL, kind: kind, id: id)
-        }
-
-        var byId: [Int: TitleMetadataStore.Metadata] = [:]
-        for (cached, value) in await TitleMetadataStore.shared.metadata(for: ids.map(key)) {
-            byId[cached.id] = value
-        }
-        // Deliberately after the cache read, and applied again to the fresh
-        // records below: which artwork wins is a property of the CURRENT media
-        // server connection, not of whenever the entry happened to be cached.
-        // Baking it in on write is what left queue rows on the arr's poster
-        // while detail views — which resolve live — showed the server's.
-        // A record with `mediaServerKeys == nil` predates the ids being
-        // recorded (or was written by a seeder that dropped them) and can never
-        // be matched against the media server — it is stale, not a hit, so it
-        // is refetched once. Every writer stores `[]` for titles that genuinely
-        // have no ids, so this cannot loop.
-        let missing = ids.filter { byId[$0]?.mediaServerKeys == nil }
-        guard !missing.isEmpty else { return byId }
-
-        var fresh: [TitleMetadataStore.Key: TitleMetadataStore.Metadata] = [:]
-        await withTaskGroup(of: (Int, TitleMetadataStore.Metadata)?.self) { group in
-            var next = 0
-            func schedule() {
-                guard next < missing.count else { return }
-                let id = missing[next]
-                next += 1
-                group.addTask { await fetch(id).map { (id, $0) } }
-            }
-            for _ in 0 ..< min(Self.maxConcurrentSideLoads, missing.count) { schedule() }
-            while let done = await group.next() {
-                if let (id, metadata) = done {
-                    byId[id] = metadata
-                    fresh[key(id)] = metadata
-                }
-                schedule()
-            }
-        }
-        if !fresh.isEmpty { await TitleMetadataStore.shared.store(fresh) }
-        // The store keeps the arr's artwork; the media server's is layered on
-        // here, over cached and freshly-fetched records alike.
-        return byId.mapValues { $0.applyingMediaServerArtwork() }
+    /// Reads a MediaKit resource decoded into one of ArrCore's own record types (same plan, same tags, same freshness).
+    func read<T: Codable & Sendable, V>(_ type: T.Type, policy: ReadPolicy = .cacheFirst, maxAge: Duration? = nil,
+                                        priority: RequestPriority = .interactive, _ make: (ServarrService) -> Resource<V>) async throws -> T {
+        let context = try await context()
+        let template = make(context.service)
+        let resource = Resource<T>.json(template.plan, tags: template.tags, freshness: template.freshness, ttl: template.ttl)
+        return try await context.store.read(resource, policy: policy, maxAge: maxAge, priority: priority).value
     }
 
-    /// Shout when the arr says its queue holds more rows than the single page
-    /// we asked for returned. We deliberately don't page — a >1000-item queue
-    /// is pathological — but the rows past the cut are invisible in the UI,
-    /// which reads to the user as "my download vanished".
-    func warnIfQueueTruncated(returned: Int, totalRecords: Int) {
-        guard totalRecords > returned else { return }
-        arrLog.notice(
-            "\(serviceName, privacy: .public) queue truncated: showing \(returned, privacy: .public) of \(totalRecords, privacy: .public) records (pageSize=\(Self.queuePageSize, privacy: .public))"
-        )
-    }
-
-    /// GET <apiBase><path> and decode the JSON body as T. `timeout` overrides
-    /// the client's default for this one call (see `fetchReleases`).
-    func get<T: Decodable & Sendable>(_ path: String, query: [URLQueryItem] = [],
-                                      timeout: TimeInterval? = nil) async throws -> T {
-        guard config.isConfigured else { throw HTTPError.notConfigured }
-        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
-        let url = try http.url(base: config.baseURL, path: "\(apiBase)\(path)", query: query)
-        let data = try await http.get(url, headers: apiHeaders, timeout: timeout)
-        return try JSONDecoder().decode(T.self, from: data)
-    }
-
-    /// Same as `get` but tolerates decode failures with a fallback (used by
-    /// some library-listing paths that today silently return [] on decode
-    /// errors to keep the UI happy). New code should prefer plain `get`.
-    func getOrDefault<T: Decodable & Sendable>(_ path: String, query: [URLQueryItem] = [], default fallback: T) async throws -> T {
-        guard config.isConfigured else { return fallback }
-        // Same key check every sibling makes — without it a key-less config
-        // spends a round-trip to collect a 401 and then degrades to `fallback`
-        // anyway, so short-circuit it here.
-        guard !config.apiKey.isEmpty else { return fallback }
-        let url = try http.url(base: config.baseURL, path: "\(apiBase)\(path)", query: query)
-        let data = try await http.get(url, headers: apiHeaders)
-        return (try? JSONDecoder().decode(T.self, from: data)) ?? fallback
-    }
-
-    /// POST a JSON body to <apiBase><path>. Returns the raw response data.
     @discardableResult
-    func post(_ path: String, body: [String: Any], timeout: TimeInterval? = nil) async throws -> Data {
-        guard config.isConfigured else { throw HTTPError.notConfigured }
-        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
-        let url = try http.url(base: config.baseURL, path: "\(apiBase)\(path)")
-        let data = try JSONSerialization.data(withJSONObject: body)
-        return try await http.post(
-            url,
-            headers: apiHeaders.merging(["Content-Type": "application/json"]) { $1 },
-            body: data,
-            timeout: timeout
-        )
+    func run(_ make: (ServarrService) -> Command) async throws -> CommandReceipt {
+        let context = try await context()
+        return try await context.store.run(make(context.service))
     }
 
-    /// PUT a JSON body to <apiBase><path>. Returns the raw response data.
+    /// A one-request write with a JSON body; answers the new record id when the arr echoes one.
     @discardableResult
-    func put(_ path: String, query: [URLQueryItem] = [], body: [String: Any]) async throws -> Data {
-        guard config.isConfigured else { throw HTTPError.notConfigured }
-        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
-        let url = try http.url(base: config.baseURL, path: "\(apiBase)\(path)", query: query)
-        let data = try JSONSerialization.data(withJSONObject: body)
-        return try await http.put(
-            url,
-            headers: apiHeaders.merging(["Content-Type": "application/json"]) { $1 },
-            body: data
-        )
+    func post(_ operation: String, path: String, body: [String: KitJSON], invalidates: (InstanceID) -> Set<InvalidationTag>, timeout: Duration = .seconds(15)) async throws -> Int? {
+        let context = try await context()
+        let plan = RequestPlan(instance: context.instance, operation: operation, method: "POST", pathTemplate: context.service.profile.apiBase + path,
+                               body: try RequestBuilder.json(KitJSON.object(body)), auth: .header("X-Api-Key"), timeout: timeout)
+        let command = Command(name: plan.operation, instance: context.instance, invalidates: invalidates(context.instance)) { ctx in
+            let response = try await ctx.send(plan)
+            let id = (try? await ctx.decode(KitJSON.self, from: response, operation: plan.operation))?["id"]?.intValue
+            return CommandReceipt(acceptedAt: ctx.clock.now, serverMessage: RequestBuilder.serverMessage(from: response.body), trackingID: id)
+        }
+        return try await context.store.run(command).trackingID
     }
 
-    /// GET <apiBase><path> as an untyped JSON object — for read-modify-write
-    /// round-trips (e.g. flipping one season flag inside `/series/{id}`)
-    /// where decoding into our lean structs would drop fields the PUT must
-    /// carry back.
+    // MARK: - Shared reads
+
+    /// The record as the arr sent it, for forms that read fields MediaKit does not model.
     func getRawObject(_ path: String) async throws -> [String: Any] {
-        guard config.isConfigured else { throw HTTPError.notConfigured }
-        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
-        let url = try http.url(base: config.baseURL, path: "\(apiBase)\(path)")
-        let data = try await http.get(url, headers: apiHeaders)
-        guard let obj = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            throw HTTPError.decoding(NSError(domain: "ArrAPIClient", code: 1, userInfo: [
-                NSLocalizedDescriptionKey: "Expected a JSON object at \(path)"
-            ]))
-        }
-        return obj
+        let context = try await context()
+        let plan = RequestPlan(instance: context.instance, operation: "fetchRawRecord", pathTemplate: context.service.profile.apiBase + path, auth: .header("X-Api-Key"))
+        let value = try await context.store.read(Resource<KitJSON>.json(plan, tags: [], freshness: .volatile), policy: .mustRevalidate).value
+        let object = try JSONSerialization.jsonObject(with: JSONEncoder().encode(value))
+        guard let dictionary = object as? [String: Any] else { throw MediaKitError.decoding(plan.operation, detail: "expected a JSON object") }
+        return dictionary
     }
 
-    /// Flip a movie's monitored flag (Radarr and its Whisparr fork share the
-    /// `/movie/{id}` shape). Full-record round-trip: PUT wants the whole
-    /// object back, so mutate the raw JSON rather than a strip-decoded struct.
-    func setMovieMonitored(movieId: Int, monitored: Bool) async throws {
-        if DemoMode.isActive {
-            try? await Task.sleep(nanoseconds: 400_000_000)
-            await DemoMonitorState.setMovie(movieId, monitored: monitored)
-            return
-        }
-        var movie = try await getRawObject("/movie/\(movieId)")
-        movie["monitored"] = monitored
-        try await put("/movie/\(movieId)", body: movie)
-    }
+    func fetchCustomFormats() async throws -> [ArrCore.ArrCustomFormatDetail] { try await read([ArrCore.ArrCustomFormatDetail].self) { $0.customFormats() } }
+    func fetchQualityProfiles() async throws -> [ArrCore.ArrQualityProfile] { try await read([ArrCore.ArrQualityProfile].self) { $0.qualityProfiles() } }
+    func fetchHealth() async throws -> [ArrHealthRecord] { try await read([ArrHealthRecord].self, policy: .mustRevalidate) { $0.health() } }
+    func fetchDiskSpace() async throws -> [DiskSpace] { try await read([DiskSpace].self) { $0.diskSpace() } }
 
-    /// Edit a library record (`/movie/{id}`, `/series/{id}`, `/artist/{id}`).
-    /// Full-record round-trip like `setMovieMonitored`: the arrs' PUT wants the
-    /// whole object back, so fetch raw JSON, overlay `fields`, PUT it back.
-    ///
-    /// A `rootFolderPath` change also rewrites `path` (new root + the record's
-    /// existing folder name) and is sent with `moveFiles=true` so the arr
-    /// relocates the files on disk — mirrors what the arrs' own edit UI does.
-    func updateLibraryRecord(path recordPath: String, fields: [String: Any]) async throws {
-        if DemoMode.isActive {
-            try? await Task.sleep(nanoseconds: 500_000_000)
-            return
-        }
-        var record = try await getRawObject(recordPath)
-        var moveFiles = false
-        if let newRoot = (fields["rootFolderPath"] as? String),
-           let oldRoot = record["rootFolderPath"] as? String,
-           newRoot.trimmingCharacters(in: CharacterSet(charactersIn: "/")) !=
-               oldRoot.trimmingCharacters(in: CharacterSet(charactersIn: "/")),
-           let oldPath = record["path"] as? String,
-           let folderName = oldPath.split(separator: "/").last.map(String.init) {
-            let base = newRoot.hasSuffix("/") ? String(newRoot.dropLast()) : newRoot
-            record["path"] = "\(base)/\(folderName)"
-            moveFiles = true
-        }
-        for (key, value) in fields { record[key] = value }
-        try await put(recordPath,
-                      query: [URLQueryItem(name: "moveFiles", value: moveFiles ? "true" : "false")],
-                      body: record)
-    }
-
-    /// All custom formats defined on this arr (`/customformat`). Shared by
-    /// Sonarr + Radarr (both v3); powers the chat `list_custom_formats` /
-    /// `describe_format` tools.
-    func fetchCustomFormats() async throws -> [ArrCustomFormatDetail] {
-        if DemoMode.isActive { return DemoMocks.customFormats() }
-        return try await get("/customformat")
-    }
-
-    /// All quality profiles (`/qualityprofile`). Decoded down to the
-    /// per-format score table so `describe_format` can report where a
-    /// custom format earns or loses points.
-    func fetchQualityProfiles() async throws -> [ArrQualityProfile] {
-        if DemoMode.isActive { return DemoMocks.qualityProfiles() }
-        return try await get("/qualityprofile")
-    }
-
-    /// Interactive / manual search: candidate releases on the indexers for a
-    /// movie / episode / album. `query` carries the keying param (movieId /
-    /// episodeId / albumId). Shared by every arr (Sonarr/Radarr/Lidarr/Whisparr).
     func fetchReleases(query: [URLQueryItem]) async throws -> [Release] {
-        if DemoMode.isActive {
-            // Indexer searches are slow in production and the list's loading
-            // state is part of what's being demoed, so don't return instantly.
-            try? await Task.sleep(nanoseconds: 900_000_000)
-            return DemoMocks.releases(query: query, source: demoSource)
-        }
-        // The arr answers only once its slowest indexer does — minutes, not the
-        // seconds a queue refresh is budgeted for. Sonarr's own UI waits; so do
-        // we, or every search of a well-stocked series reads as a timeout while
-        // the identical search in Sonarr succeeds.
-        return try await get("/release", query: query, timeout: HTTPClient.interactiveSearchTimeout)
+        let context = try await context()
+        var plan = context.service.releases(entityID: 0).plan
+        plan.query = query.map { RequestPlan.QueryItem($0.name, $0.value ?? "") }
+        return try await context.store.read(Resource<[Release]>.json(plan, tags: [], freshness: .volatile, ttl: .seconds(60))).value
     }
 
-    /// Remove a record from the arr's library (`DELETE /movie|series|artist/{id}`).
-    /// `deleteFiles` deletes what is on disk with it; `addImportExclusion` stops
-    /// an import list from silently putting it back.
-    ///
-    /// Both spellings of the exclusion flag go out because the arrs disagree on
-    /// it — Radarr (and its Whisparr fork) bind `addImportExclusion`, Sonarr and
-    /// Lidarr bind `addImportListExclusion`. They all run ASP.NET, which ignores
-    /// a query parameter its action doesn't declare, so sending both is exactly
-    /// as correct as a per-fork lookup table and doesn't rot when a fork renames
-    /// its own.
-    func deleteLibraryRecord(path: String, deleteFiles: Bool, addImportExclusion: Bool) async throws {
-        if DemoMode.isActive {
-            try? await Task.sleep(nanoseconds: 500_000_000)
-            return
-        }
-        let files = deleteFiles ? "true" : "false"
-        let exclusion = addImportExclusion ? "true" : "false"
-        try await delete(path, query: [
-            URLQueryItem(name: "deleteFiles", value: files),
-            URLQueryItem(name: "addImportExclusion", value: exclusion),
-            URLQueryItem(name: "addImportListExclusion", value: exclusion),
-        ])
-    }
-
-    /// Grab a release returned by `fetchReleases` — hands it to the arr's
-    /// download client. arr identifies the release by guid + indexerId.
-    func grabRelease(guid: String, indexerId: Int) async throws {
-        if DemoMode.isActive { try? await Task.sleep(nanoseconds: 500_000_000); return }
-        // Same budget as the search: the arr fetches the .nzb/.torrent from the
-        // indexer and hands it to the download client before it answers.
-        _ = try await post("/release", body: ["guid": guid, "indexerId": indexerId],
-                           timeout: HTTPClient.interactiveSearchTimeout)
-    }
-
-    /// Which arr this client is, for fixture lookup. `serviceName` is the only
-    /// identity the protocol carries and it matches `Source`'s raw values
-    /// one-for-one once lowercased.
-    private var demoSource: QueueItem.Source {
-        QueueItem.Source(rawValue: serviceName.lowercased()) ?? .radarr
-    }
-
-    /// DELETE <apiBase><path>?key=val&...
-    func delete(_ path: String, query: [URLQueryItem] = []) async throws {
-        guard config.isConfigured else { throw HTTPError.notConfigured }
-        // Matches `post`/`deleteQueueItem`: a missing key is a configuration
-        // problem, and saying so beats surfacing the arr's bare 401.
-        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
-        let url = try http.url(base: config.baseURL, path: "\(apiBase)\(path)", query: query)
-        _ = try await http.delete(url, headers: apiHeaders)
-    }
-
-    /// GET /system/status and report "<serviceName> <version>". Auth-gated,
-    /// so a wrong API key fails here. Powers the Settings "Test" button.
     func testConnection() async throws -> String {
-        if DemoMode.isActive {
-            try? await Task.sleep(nanoseconds: 600_000_000)
-            return DemoMocks.systemStatus(serviceName: serviceName)
-        }
-        guard config.isConfigured else { throw HTTPError.notConfigured }
-        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
-        let url = try http.url(base: config.baseURL, path: "\(apiBase)/system/status")
-        let data = try await http.get(url, headers: apiHeaders)
-        let status = try? JSONDecoder().decode(ArrSystemStatus.self, from: data)
-        return status?.version.map { "\(serviceName) \($0)" } ?? "OK"
+        let status = try await read(MediaKit.ArrSystemStatus.self, policy: .mustRevalidate) { $0.status() }
+        return status.version.map { "\(serviceName) \($0)" } ?? "OK"
     }
 
-    /// DELETE /queue/{id} — remove a queue item, optionally deleting the
-    /// download from the client and/or blocklisting the release.
-    func deleteQueueItem(id: Int, removeFromClient: Bool = true, blocklist: Bool = false) async throws {
-        guard config.isConfigured else { throw HTTPError.notConfigured }
-        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
-        let url = try http.url(
-            base: config.baseURL,
-            path: "\(apiBase)/queue/\(id)",
-            query: [
-                URLQueryItem(name: "removeFromClient", value: removeFromClient ? "true" : "false"),
-                URLQueryItem(name: "blocklist", value: blocklist ? "true" : "false"),
-            ]
-        )
-        _ = try await http.delete(url, headers: apiHeaders)
-    }
-
-    /// Force-grab a pending/delayed queue item now (the arr is holding it
-    /// before sending to the download client). `POST /queue/grab/{id}` — no
-    /// download-client involvement, so it works for items not yet in the client.
-    func grabQueueItem(id: Int) async throws {
-        if DemoMode.isActive { try? await Task.sleep(nanoseconds: 400_000_000); return }
-        try await post("/queue/grab/\(id)", body: [:])
-    }
-
-    /// GET /health — current server health records. Decode failures degrade
-    /// to [] so a quirky arr never breaks the health UI.
-    func fetchHealth() async throws -> [ArrHealthRecord] {
-        guard config.isConfigured else { throw HTTPError.notConfigured }
-        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
-        let url = try http.url(base: config.baseURL, path: "\(apiBase)/health")
-        let data = try await http.get(url, headers: apiHeaders)
-        return (try? JSONDecoder().decode([ArrHealthRecord].self, from: data)) ?? []
-    }
-
-    /// GET /diskspace — every filesystem the server can see, with free/total
-    /// bytes. Shared by all arrs (v1 and v3). Decode failures degrade to [] so a
-    /// quirky server never breaks the status page.
-    func fetchDiskSpace() async throws -> [DiskSpace] {
-        guard config.isConfigured else { throw HTTPError.notConfigured }
-        guard !config.apiKey.isEmpty else { throw HTTPError.missingApiKey }
-        let url = try http.url(base: config.baseURL, path: "\(apiBase)/diskspace")
-        let data = try await http.get(url, headers: apiHeaders)
-        return (try? JSONDecoder().decode([DiskSpace].self, from: data)) ?? []
-    }
-
-    /// POST /command — fire an arr command (indexer searches, refreshes, …).
-    /// In demo mode no real work happens; a short sleep lets the UI's
-    /// spinner-fade play.
-    func postCommand(_ body: [String: Any]) async throws {
-        if DemoMode.isActive {
-            try? await Task.sleep(nanoseconds: 600_000_000)
-            return
-        }
-        try await post("/command", body: body)
-    }
-
-    /// True while the server has a queued or running indexer search touching
-    /// this record. Asking the server is the only honest answer: `postCommand`
-    /// discards the command id, and a search started by
-    /// `addOptions.searchForMovie` never had a client-visible id to begin with.
-    ///
-    /// Never throws — a search indicator is not worth surfacing an error over,
-    /// and "can't tell" degrades to "not searching", which unblocks the UI
-    /// rather than wedging it.
     func isSearchRunning(entityId: Int) async -> Bool {
-        if DemoMode.isActive { return false }
-        let commands: [ArrCommand] = (try? await getOrDefault("/command", default: [])) ?? []
+        let commands = (try? await read([ArrCore.ArrCommand].self, policy: .mustRevalidate) { $0.commands() }) ?? []
         return commands.contains { $0.isSearch(for: entityId) }
+    }
+
+    // MARK: - Shared writes
+
+    func setMovieMonitored(movieId: Int, monitored: Bool) async throws {
+        try await run { $0.setMonitored(entityID: movieId, monitored) }
+    }
+
+    /// Merges `fields` over the current record; a changed root folder moves the files along.
+    func updateLibraryRecord(path recordPath: String, fields: [String: Any]) async throws {
+        let context = try await context()
+        let operation = OperationID(context.instance.kind, "updateLibraryRecord")
+        guard let id = Int(recordPath.split(separator: "/").last ?? "") else { throw MediaKitError.decoding(operation, detail: "no id in \(recordPath)") }
+        let edits = try JSONDecoder().decode([String: KitJSON].self, from: JSONSerialization.data(withJSONObject: fields))
+        let plan = RequestPlan(instance: context.instance, operation: "updateLibraryRecord", pathTemplate: context.service.profile.apiBase + recordPath, auth: .header("X-Api-Key"))
+        let current = try await context.store.read(Resource<KitJSON>.json(plan, tags: [], freshness: .volatile), policy: .mustRevalidate).value
+        var movedPath: String?
+        if let newRoot = fields["rootFolderPath"] as? String, let oldRoot = current["rootFolderPath"]?.stringValue,
+           newRoot.trimmingCharacters(in: CharacterSet(charactersIn: "/")) != oldRoot.trimmingCharacters(in: CharacterSet(charactersIn: "/")),
+           let folder = current["path"]?.stringValue?.split(separator: "/").last.map(String.init) {
+            movedPath = (newRoot.hasSuffix("/") ? String(newRoot.dropLast()) : newRoot) + "/" + folder
+        }
+        let path = movedPath
+        _ = try await context.store.run(context.service.update(entityID: id, moveFiles: path != nil) { envelope in
+            for (key, value) in edits { envelope.set(key, value) }
+            if let path { envelope.set("path", .string(path)) }
+        })
+    }
+
+    func deleteLibraryRecord(path: String, deleteFiles: Bool, addImportExclusion: Bool) async throws {
+        guard let id = Int(path.split(separator: "/").last ?? "") else { return }
+        try await run { $0.delete(entityID: id, deleteFiles: deleteFiles, addImportExclusion: addImportExclusion) }
+    }
+
+    func grabRelease(guid: String, indexerId: Int) async throws { try await run { $0.grabRelease(guid: guid, indexerID: indexerId) } }
+
+    func deleteQueueItem(id: Int, removeFromClient: Bool = true, blocklist: Bool = false) async throws {
+        try await run { $0.deleteQueueItem(id: id, removeFromClient: removeFromClient, blocklist: blocklist, now: Date()) }
+    }
+
+    func grabQueueItem(id: Int) async throws { try await run { $0.grabQueueItem(id: id) } }
+
+    func postCommand(_ body: [String: Any]) async throws {
+        guard let name = body["name"] as? String else { return }
+        var extra = try JSONDecoder().decode([String: KitJSON].self, from: JSONSerialization.data(withJSONObject: body))
+        extra.removeValue(forKey: "name")
+        let entityID = (body["movieId"] as? Int) ?? (body["seriesId"] as? Int) ?? (body["artistId"] as? Int) ?? (body["movieIds"] as? [Int])?.first
+        try await run { $0.command(named: name, body: extra, entityID: entityID) }
     }
 }

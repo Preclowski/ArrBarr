@@ -317,7 +317,7 @@ enum MediaKitErrorPresenter {
 
     static func message(for error: any Error) -> String {
         if let mk = error as? MediaKitError { return message(for: mk) }
-        return error.userFacingMessage
+        return (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
     }
 
     /// Unreachable in the aggregator's sense: the host, not the request, is the problem.
