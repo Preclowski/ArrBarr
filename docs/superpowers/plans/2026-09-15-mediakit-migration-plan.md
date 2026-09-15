@@ -114,10 +114,18 @@ Approach: the old client types (`RadarrClient`, `SonarrClient`, `LidarrClient`, 
 
 ## Phase 6 — verification
 
-- [ ] Three schemes build, three `swift test`, relaunch, `TelemetryRecorder.report()` per screen
-      read through `GetConsoleOutput`, parity run with `RecordingTransport` (reads only), fixture
-      re-anonymisation, phase-6 report under `docs/superpowers/baseline/`.
+- [x] Three schemes build, three `swift test`, relaunch; `GoldenParityTests` (criterion 26) with six
+      documented exclusions; `anonymize_fixtures.py --check` clean; error presenter on catalogue keys
+      (`MediaKitErrorCatalogTests`); `DiscoveryTests`; report:
+      `docs/superpowers/baseline/2026-09-15-mediakit-phase6-report.md`.
+- [ ] Per-screen request counters: `log show` is empty in this environment; the owner reads the telemetry
+      report from Developer options.
 
 ## Phase 7 — API 26 UI (macOS)
 
-- [ ] Spec §12, four commits, relaunch after each.
+- [x] Typed `AppMessages` replace every `Notification.Name` post (criterion 23).
+- [x] `GlassEffectContainer` around the popover islands; queue selection bar as `safeAreaBar` with
+      `.scrollEdgeEffectStyle(.soft, for: .top)`.
+- [ ] `Observations` for `ConfigStore` consumers (37 views on an `ObservableObject`; separate change).
+- [ ] Markdown via `Text(.init(markdown:))`: swift-markdown stays for GFM tables, nothing to remove.
+- [ ] Criterion 28 (Spotlight intents with parameters, queue snippet, `@Generable` results).
