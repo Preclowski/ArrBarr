@@ -172,7 +172,7 @@ struct Row: Codable, Sendable, Equatable { let id: Int; let title: String }
         }, identify: { $0.id }))
         let result = await kit.store.batch(batch, keys: Array(1...25))
         #expect(result.count == 25 && kit.transport.count == 3)
-        if case let .success(row)? = result[13] { #expect(row.title == "m13") } else { Issue.record("missing 13") }
+        if case let .success(rows)? = result[13] { #expect(rows.first?.title == "m13") } else { Issue.record("missing 13") }
     }
 
     @Test func observeEmitsOnInvalidationAndCommit() async throws {

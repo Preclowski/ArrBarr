@@ -1,0 +1,96 @@
+# MediaKit migration plan (phases 5–7)
+
+State on 2026-09-15 after `c68706e`: `Packages/MediaKit` is complete for phases 3–4
+(6,766 production lines, 81 tests, zero warnings, zero dependencies). ArrCore still runs on the
+old clients. Spec: `docs/superpowers/specs/2026-09-15-mediakit-foundation-design.md` (§9–§12
+describe the gateway, the waves, the parity run and phase 7). This file is the working list;
+tick items as commits land.
+
+## Rules that hold for every wave
+
+- One commit per wave; every commit builds `ArrBarr`, `ArrBarriOS`, `ArrBarrWidgets` and passes
+  `swift test` in ArrCore, ArrMCPServer, MediaKit. Relaunch the macOS app after each wave.
+- MediaKit changes are allowed when a consumer needs a resource that is missing; keep the
+  budget (≤ 8,590 lines) and the parity test green.
+- No new agents. Read files by section (`sed -n`), never whole.
+- Old code is deleted in wave 6 only; until then the old clients stay compilable.
+
+## Wave 1 — gateway + queue path
+
+- [x] `Packages/ArrCore/Package.swift`: add `.package(path: "../MediaKit")`, product `MediaKit`.
+- [x] `Services/ServiceGateway.swift` (@MainActor): builds `MediaKit` from `ConfigStore`
+      (`ServiceKind` → `InstanceKind`, media server, TMDB), `ConfigCredentialProvider` reading
+      `ConfigStore` + `SecretStore` with a generation stamp per secret write,
+      `reconcile()` on every config publisher (debounced 1.5 s as today), demo → `FixtureTransport`
+      (`DemoMode.isActive`), `OSLogSink(subsystem: "pl.incred.ArrBarr")`, `TelemetryRecorder`.
+- [x] `Compositions/ArrCompositions.swift`: `unify(ArrQueueRecord, source:baseURL:files:meta:)`
+      → `QueueItem` (one function for the four flavours; Sonarr season-pack poster and
+      `packSeasons` kept), `unifyCalendar` → `UpcomingItem`, `unifyHistory` → `HistoryItem`.
+- [x] `QueueAggregator` internals on MediaKit: queue via `kit.servarr(id).queue()` through the
+      store (volatile) + `files` batch + `TitleMetadataStore` resolution via `movie/series/album`
+      details resources; progress overlay via `kit.download(id).fetchTasks`; health via
+      `health()`; history via `history()/historyFor()`; upcoming via `calendar()`; actions via
+      `Command`s. Public API (`QueueDataProviding`) unchanged so `QueueViewModel` and views
+      compile untouched.
+- [x] Realtime: `RealtimeManager` replaced by `EventHub` + `SignalRSource` per arr;
+      `QueueViewModel.bootstrapRealtime` subscribes to `events.events()`.
+
+## Wave 2 — details, library, search, add/edit/delete
+
+Approach: the old client types (`RadarrClient`, `SonarrClient`, `LidarrClient`, `WhisparrClient`,
+`SearchClient`) keep their method signatures and return types; their bodies become
+`store.read(Resource<OldType>.json(service.<x>().plan, ...))` and `store.run(command)` through
+`ServiceGateway.current`. Consumers stay untouched; `HTTPClient`, `ArrAPIClient`,
+`CoalescingCache` and the `DemoMode` branches go. The assembly class is `MediaStack`
+(the name `MediaKit` collides with the module for qualified lookups).
+
+- [ ] `DetailView`, `SeasonDetailView`, `EpisodeQuickDetail`, `LidarrArtistView`,
+      `MediaEditPanel`, `MediaDeletePanel`, `ReleaseListView`: MediaKit resources/commands via
+      the gateway; ArrCore detail models (`RadarrMovieDetail`, `SonarrSeriesDetail`, ...) become
+      typealiases or thin wrappers over `ArrMovie`/`ArrSeries`/`ArrArtist`/`ArrAlbum`.
+- [ ] `SearchViewModel`, `SearchClient`, `LibraryViewModel`, `LibraryIndex`,
+      `LibrarySummaryService`, `LibraryPosterSampler`, `SeriesIdentityResolver` → store reads,
+      `IdentityStore` crosswalk.
+
+## Wave 3 — tools, MCP, settings, health, intents, widget
+
+- [ ] `LocalToolBackend*` (28 tools) through the store (`ReadPolicy.cachedOrFetch`);
+      `LocalToolBackendFixtureTests`.
+- [ ] `ServerStatusModel`, `ServiceFields` probes → `CapabilityProbe.ensure` + `status()`.
+- [ ] `ConnectionHealthMonitor` → `HostGovernor.health` + `EventHub.lastEventAt`.
+- [ ] `MediaServerIndex` → `Snapshot` over `libraryIndex`/`watchHistory`; `PosterStore` consumes
+      `ArtworkReference` + `kit.artworkHeaders`.
+- [ ] TMDB consumers (`CastProvider`, `PersonStore`, `CountryProvider`, `TrailerProvider`,
+      `LocalToolBackend+TMDB/+Discover`).
+- [ ] Widget: `MediaKit(role: .snapshotReader)` on the group container database.
+- [ ] `SpotlightIndexer` as a store consumer.
+
+## Wave 4 — QueueViewModel on LiveStream
+
+- [ ] Replace the timers/debounce/burst logic with `liveQueue` + `liveProgress` + `EventHub`;
+      `systemDidWake` → `events.wakeAll()` + `governor.noteWake`.
+
+## Wave 5 — demo
+
+- [ ] `DemoMocks*`, `DemoQueueState`, `DemoMonitorState` and the 46 `DemoMode.isActive` client
+      branches replaced by `FixtureTransport` + `DemoRule`s; `DemoMode.isActive` stays for badges.
+
+## Wave 6 — removal + isolation
+
+- [ ] Delete `Services/{Radarr,Sonarr,Lidarr,Whisparr}Client.swift`, the six download clients,
+      `HTTPClient`, `ArrAPIClient`, `ArrDownloadClients`, `RealtimeUpdates`,
+      `ConnectionHealthMonitor`, `CoalescingCache`, `TMDBClient`, `MediaServer/*Client.swift`,
+      `DownloadProgressService`, `Models/ArrTypes.swift` (what MediaKit now owns).
+- [ ] Migrate the 14 `URLProtocol` test files to `ScriptedTransport`/`FixtureTransport`.
+- [ ] `.defaultIsolation(MainActor.self)` in `Packages/ArrCore/Package.swift`; fix what the
+      compiler reports; `python3 Tools/loc/lint_missing_keys.py`.
+
+## Phase 6 — verification
+
+- [ ] Three schemes build, three `swift test`, relaunch, `TelemetryRecorder.report()` per screen
+      read through `GetConsoleOutput`, parity run with `RecordingTransport` (reads only), fixture
+      re-anonymisation, phase-6 report under `docs/superpowers/baseline/`.
+
+## Phase 7 — API 26 UI (macOS)
+
+- [ ] Spec §12, four commits, relaunch after each.

@@ -1,44 +1,34 @@
 import Foundation
+import MediaKit
 import os
 
-/// The slice of `QueueAggregator` that `QueueViewModel` depends on. Extracted
-/// as a protocol purely so the view-model can be driven by a fake in tests —
-/// production always wires the concrete `QueueAggregator`.
-/// One arr's queue slice. The unit a realtime push actually describes.
 public struct SourceQueueResult: Equatable {
-    let source: QueueItem.Source
-    let items: [QueueItem]
-    var error: String?
-    /// Transport-level failure (host unreachable), as opposed to the arr
-    /// answering with an HTTP/decode error. Drives the offline indicator.
-    var unreachable: Bool
+    public let source: QueueItem.Source
+    public let items: [QueueItem]
+    public let error: String?
+    public let unreachable: Bool
+    public init(source: QueueItem.Source, items: [QueueItem], error: String?, unreachable: Bool) {
+        self.source = source; self.items = items; self.error = error; self.unreachable = unreachable
+    }
 }
 
-@MainActor
-protocol QueueDataProviding {
+/// What `QueueViewModel` needs from the data layer; tests inject a fake.
+protocol QueueDataProviding: Sendable {
     func fetch() async -> AggregateResult
-    /// Fetch a single arr's queue.
-    ///
-    /// Servarr's realtime push names the arr it came from, so a Lidarr event
-    /// should cost a Lidarr fetch — not a fetch of all four. The all-four
-    /// `fetch()` remains for launch, wake and manual refresh, where "everything
-    /// at once" is genuinely what is wanted.
     func fetch(source: QueueItem.Source) async -> SourceQueueResult
     func fetchUpcoming() async -> (items: [UpcomingItem], failed: Set<QueueItem.Source>)
     func fetchHealth() async -> HealthResult
-    /// `entityId` narrows the page to one library record's history.
     func fetchHistory(for source: QueueItem.Source, page: Int, pageSize: Int, entityId: Int?) async -> HistoryResult
     func perform(_ action: QueueAggregator.Action, on item: QueueItem) async throws
     func deleteAll(_ items: [QueueItem]) async throws
 }
 
-@MainActor
-public final class QueueAggregator: QueueDataProviding {
+/// Queue, calendar, history and health for the four arrs plus the download-client progress overlay, all through MediaKit.
+public final class QueueAggregator: QueueDataProviding, @unchecked Sendable {
     enum AggregateError: LocalizedError {
         case noDownloadId
         case downloadProtocolUnknown
         case downloadClientNotConfigured(QueueItem.DownloadProtocol)
-
         var errorDescription: String? {
             switch self {
             case .noDownloadId: return String(localized: "queue.noDownloadIdItem.tooltip", bundle: .module)
@@ -52,573 +42,320 @@ public final class QueueAggregator: QueueDataProviding {
     enum Action { case pause, resume, delete, continueDownload }
 
     private let configStore: ConfigStore
-    private var cachedRadarrClient: RadarrClient?
-    private var cachedRadarrConfig: ServiceConfig?
-    private var cachedSonarrClient: SonarrClient?
-    private var cachedSonarrConfig: ServiceConfig?
-    private var cachedLidarrClient: LidarrClient?
-    private var cachedLidarrConfig: ServiceConfig?
-    private var cachedWhisparrClient: WhisparrClient?
-    private var cachedWhisparrConfig: ServiceConfig?
-    private var cachedQbitClient: QbittorrentClient?
-    private var cachedQbitConfig: ServiceConfig?
-    private var cachedTransmissionClient: TransmissionClient?
-    private var cachedTransmissionConfig: ServiceConfig?
-    private var cachedDelugeClient: DelugeClient?
-    private var cachedDelugeConfig: ServiceConfig?
+    private let gateway: ServiceGateway
+    private let progressLock = NSLock()
+    private var progress: LiveStream<DownloadTask>?
+    private var progressInstances: [InstanceID] = []
+    private static let logger = Logger(category: "QueueFetch")
 
+    @MainActor
     init(configStore: ConfigStore) {
         self.configStore = configStore
+        self.gateway = configStore.gateway
     }
 
+    // MARK: - Queue
+
     func fetch() async -> AggregateResult {
-        // The app's heaviest recurring operation: four arrs in parallel, each
-        // possibly side-loading per-episode metadata, then a download-client
-        // round for live progress. Its cost is a wall-clock question ("why does
-        // the popover take two seconds to catch up") that no log line answers —
-        // an interval does, and Instruments can then show which arr is the tail.
         let signpost = AppSignpost.queue
         let state = signpost.beginInterval("queue refresh")
         defer { signpost.endInterval("queue refresh", state) }
-
-        let radarrClient = self.radarrClient(for: configStore.radarr)
-        let sonarrClient = self.sonarrClient(for: configStore.sonarr)
-        let lidarrClient = self.lidarrClient(for: configStore.lidarr)
-        let whisparrClient = self.whisparrClient(for: configStore.whisparr)
-
-        async let radarr = Self.safeFetch { try await radarrClient.fetchQueue() }
-        async let sonarr = Self.safeFetch { try await sonarrClient.fetchQueue() }
-        async let lidarr = Self.safeFetch { try await lidarrClient.fetchQueue() }
-        async let whisparr = Self.safeFetch { try await whisparrClient.fetchQueue() }
-        let (r, s, l, w) = await (radarr, sonarr, lidarr, whisparr)
-        // Only *transport-level* failures (no response from the host) count as
-        // unreachable — an HTTP 502/500/401 means the server answered, so it's
-        // a service problem, not "we've left the LAN". This is what keeps the
-        // offline indicator from firing on an outage.
+        var results: [QueueItem.Source: (items: [QueueItem], error: String?, unreachable: Bool)] = [:]
+        await withTaskGroup(of: (QueueItem.Source, (items: [QueueItem], error: String?, unreachable: Bool)).self) { group in
+            for source in QueueItem.Source.allCases { group.addTask { (source, await self.safeQueue(source)) } }
+            for await (source, result) in group { results[source] = result }
+        }
+        let ids = Set(results.values.flatMap { $0.items.compactMap { $0.downloadId?.lowercased() }.filter { !$0.isEmpty } })
+        let tasks = await progressSnapshot(ids: ids)
         var unreachable: Set<QueueItem.Source> = []
-        if r.unreachable { unreachable.insert(.radarr) }
-        if s.unreachable { unreachable.insert(.sonarr) }
-        if l.unreachable { unreachable.insert(.lidarr) }
-        if w.unreachable { unreachable.insert(.whisparr) }
-        // Overlay live progress from the download clients on top of the arr's
-        // polled `/queue` value — the arr stays the fallback (no client / no
-        // match / client unreachable). Cached + batched in DownloadProgressService.
-        // Only ask the download clients for progress when an arr says there is
-        // something to overlay it onto. `overlay` matches on `downloadId`, so a
-        // row without one can't be improved by the client either — an empty (or
-        // id-less) queue used to poll every configured client forever to enrich
-        // nothing, which on an idle stack was the app's whole remaining traffic.
-        let trackableIds = Set([r.items, s.items, l.items, w.items].flatMap { rows in
-            rows.compactMap { $0.downloadId?.lowercased() }.filter { !$0.isEmpty }
-        })
-        let clientProgress = trackableIds.isEmpty
-            ? [:]
-            : await DownloadProgressService.shared.snapshot(
-                configs: downloadClientConfigs(), ids: trackableIds)
+        for (source, r) in results where r.unreachable { unreachable.insert(source) }
+        func slice(_ s: QueueItem.Source) -> [QueueItem] { Self.overlay(results[s]?.items ?? [], with: tasks) }
         return AggregateResult(
-            radarr: Self.overlay(r.items, with: clientProgress),
-            sonarr: Self.overlay(s.items, with: clientProgress),
-            lidarr: Self.overlay(l.items, with: clientProgress),
-            whisparr: Self.overlay(w.items, with: clientProgress),
-            radarrError: r.error, sonarrError: s.error, lidarrError: l.error, whisparrError: w.error,
-            unreachableSources: unreachable
-        )
+            radarr: slice(.radarr), sonarr: slice(.sonarr), lidarr: slice(.lidarr), whisparr: slice(.whisparr),
+            radarrError: results[.radarr]?.error, sonarrError: results[.sonarr]?.error,
+            lidarrError: results[.lidarr]?.error, whisparrError: results[.whisparr]?.error,
+            unreachableSources: unreachable)
     }
 
     func fetch(source: QueueItem.Source) async -> SourceQueueResult {
-        let outcome: (items: [QueueItem], error: String?, unreachable: Bool)
-        switch source {
-        case .radarr:   outcome = await Self.safeFetch { try await self.radarrClient(for: self.configStore.radarr).fetchQueue() }
-        case .sonarr:   outcome = await Self.safeFetch { try await self.sonarrClient(for: self.configStore.sonarr).fetchQueue() }
-        case .lidarr:   outcome = await Self.safeFetch { try await self.lidarrClient(for: self.configStore.lidarr).fetchQueue() }
-        case .whisparr: outcome = await Self.safeFetch { try await self.whisparrClient(for: self.configStore.whisparr).fetchQueue() }
-        }
-        // The client snapshot is TTL-cached and shared, so asking for it here
-        // costs nothing extra when a sibling source just refreshed. Same gate as
-        // `fetch()`: no trackable row means nothing to overlay onto.
+        let outcome = await safeQueue(source)
         let ids = Set(outcome.items.compactMap { $0.downloadId?.lowercased() }.filter { !$0.isEmpty })
-        let progress = ids.isEmpty
-            ? [:]
-            : await DownloadProgressService.shared.snapshot(
-                configs: downloadClientConfigs(), ids: ids)
-        return SourceQueueResult(
-            source: source,
-            items: Self.overlay(outcome.items, with: progress),
-            error: outcome.error,
-            unreachable: outcome.unreachable
-        )
+        let tasks = await progressSnapshot(ids: ids)
+        return SourceQueueResult(source: source, items: Self.overlay(outcome.items, with: tasks), error: outcome.error, unreachable: outcome.unreachable)
     }
 
-    /// Configs for every download-client kind, handed to `DownloadProgressService`
-    /// (which builds + caches the source clients and never re-logs in needlessly).
-    private func downloadClientConfigs() -> [ServiceKind: ServiceConfig] {
-        var configs: [ServiceKind: ServiceConfig] = [:]
-        for kind in MonitoredService.downloadClientKinds {
-            configs[kind] = configStore.config(for: kind)
+    private func safeQueue(_ source: QueueItem.Source) async -> (items: [QueueItem], error: String?, unreachable: Bool) {
+        do {
+            return (try await queueItems(source), nil, false)
+        } catch is CancellationError {
+            return ([], nil, false)
+        } catch MediaKitError.notConfigured {
+            return ([], nil, false)
+        } catch {
+            let message = MediaKitErrorPresenter.message(for: error)
+            Self.logger.error("queue fetch failed: \(message, privacy: .public) | \(String(reflecting: error), privacy: .private)")
+            return ([], message, MediaKitErrorPresenter.isUnreachable(error))
         }
-        return configs
     }
 
-    /// Replace each item's arr-polled progress with the client's live value when
-    /// we have it (matched by lowercased download id); no match keeps the arr value.
-    /// `internal` + `nonisolated` (not private/MainActor) so it's unit-testable
-    /// as the pure function it is — it touches no aggregator state.
-    nonisolated static func overlay(_ items: [QueueItem], with progress: [String: DownloadProgress]) -> [QueueItem] {
-        guard !progress.isEmpty else { return items }
+    /// Queue rows plus the side loads a row needs: entity details (title, poster, ids) and the existing file for the upgrade diff.
+    private func queueItems(_ source: QueueItem.Source) async throws -> [QueueItem] {
+        await gateway.ready()
+        guard await gateway.isConfigured(source) else { throw MediaKitError.notConfigured(source.instanceID) }
+        let service = await gateway.servarr(source)
+        let store = await gateway.store
+        let baseURL = await configStore.config(for: source.serviceKind).baseURL
+        let records = try await store.read(service.queue(), policy: .mustRevalidate).value.records
+        let entityIDs = Array(Set(records.compactMap { ArrCompositions.entityID(of: $0, source: source) }.filter { $0 > 0 }))
+        async let metaTask = entityMeta(service: service, source: source, ids: entityIDs, baseURL: baseURL)
+        async let filesTask = store.batch(service.files, keys: entityIDs, priority: .background)
+        let meta = await metaTask
+        var files: [Int: [MediaKit.ArrFile]] = [:]
+        for (id, result) in await filesTask { if case let .success(rows) = result { files[id] = rows } }
+        if source == .sonarr {
+            // Sonarr keys files by series; the row wants its episode file, found by id across the series' files.
+            let all = files.values.flatMap { $0 }
+            files = Dictionary(grouping: all, by: { $0.seriesId ?? 0 })
+            let packs = ArrCompositions.seasonPackSeasons(records)
+            for r in records where packs[r.downloadId ?? ""] != nil {
+                let keys = (r.seriesId ?? r.series?.id).flatMap { meta[$0]?.mediaServerKeys } ?? ArrCompositions.keys(series: r.series)
+                if !keys.isEmpty { await MediaServerIndex.shared.loadSeasonPosters(for: keys) }
+            }
+            return records.map { r in
+                let keys = (r.seriesId ?? r.series?.id).flatMap { meta[$0]?.mediaServerKeys } ?? ArrCompositions.keys(series: r.series)
+                let seasonPoster = (r.downloadId.flatMap { packs[$0] }).flatMap { MediaServerIndex.shared.seasonPosterURL(for: keys, season: $0) }
+                return ArrCompositions.queueItem(r, source: source, baseURL: baseURL, files: files, meta: meta, seasonPoster: seasonPoster)
+            }
+        }
+        return records.map { ArrCompositions.queueItem($0, source: source, baseURL: baseURL, files: files, meta: meta) }
+    }
+
+    private func entityMeta(service: ServarrService, source: QueueItem.Source, ids: [Int], baseURL: String) async -> [Int: ArrCompositions.EntityMeta] {
+        guard !ids.isEmpty else { return [:] }
+        let store = await gateway.store
+        var out: [Int: ArrCompositions.EntityMeta] = [:]
+        await withTaskGroup(of: (Int, ArrCompositions.EntityMeta?).self) { group in
+            for id in ids {
+                group.addTask {
+                    switch source {
+                    case .radarr, .whisparr:
+                        guard let m = try? await store.read(service.movie(id: id), priority: .background).value else { return (id, nil) }
+                        let keys = source == .radarr ? ArrCompositions.keys(movie: m) : []
+                        let (poster, auth) = ArrCompositions.posterURL(m.images, baseURL: baseURL, keys: keys)
+                        return (id, .init(title: m.title, year: m.year, slug: m.titleSlug, poster: poster, posterRequiresAuth: auth, mediaServerKeys: keys))
+                    case .sonarr:
+                        guard let s = try? await store.read(service.seriesDetails(id: id), priority: .background).value else { return (id, nil) }
+                        let keys = ArrCompositions.keys(series: s)
+                        let (poster, auth) = ArrCompositions.posterURL(s.images, baseURL: baseURL, keys: keys)
+                        return (id, .init(title: s.title, year: s.year, slug: s.titleSlug, poster: poster, posterRequiresAuth: auth, mediaServerKeys: keys))
+                    case .lidarr:
+                        guard let a = try? await store.read(service.album(id: id), priority: .background).value else { return (id, nil) }
+                        var (poster, auth) = ArrCompositions.posterURL(a.images, baseURL: baseURL, coverTypes: ["cover", "poster"])
+                        if poster == nil { (poster, auth) = ArrCompositions.posterURL(a.artist?.images, baseURL: baseURL, coverTypes: ["poster", "cover"]) }
+                        return (id, .init(title: a.title, secondary: a.artist?.artistName, slug: a.foreignAlbumId, poster: poster, posterRequiresAuth: auth))
+                    }
+                }
+            }
+            for await (id, meta) in group { if let meta { out[id] = meta } }
+        }
+        return out
+    }
+
+    // MARK: - Download-client progress
+
+    /// One live stream over the configured download clients; `staleGrace` keeps the bars steady across a blip.
+    private func progressSnapshot(ids: Set<String>) async -> [String: DownloadTask] {
+        guard !ids.isEmpty else { return [:] }
+        let instances = await MainActor.run {
+            MonitoredService.downloadClientKinds.filter { MonitoredService.arr($0).isConfigured(in: configStore) }.map(\.instanceID)
+        }
+        guard !instances.isEmpty else { return [:] }
+        let stream = await liveProgress(instances: instances)
+        await stream.setScope(.ids(ids))
+        await stream.refreshNow(priority: .interactive)
+        var out: [String: DownloadTask] = [:]
+        for task in stream.last()?.elements ?? [] { out[task.id] = task }
+        return out
+    }
+
+    private func liveProgress(instances: [InstanceID]) async -> LiveStream<DownloadTask> {
+        let existing: LiveStream<DownloadTask>? = progressLock.withLock { progressInstances == instances ? progress : nil }
+        if let existing { return existing }
+        let stream = await gateway.kit.liveProgress(instances: instances)
+        progressLock.withLock { progress = stream; progressInstances = instances }
+        return stream
+    }
+
+    nonisolated static func overlay(_ items: [QueueItem], with tasks: [String: DownloadTask]) -> [QueueItem] {
+        guard !tasks.isEmpty else { return items }
         return items.map { item in
-            guard let id = item.downloadId?.lowercased(), let p = progress[id] else { return item }
+            guard let id = item.downloadId?.lowercased(), let task = tasks[id] else { return item }
             var copy = item
-            copy.progress = p.progress
-            if let speed = p.downloadSpeed { copy.downloadSpeed = speed }
+            copy.progress = task.progress
+            if let speed = task.downloadSpeed { copy.downloadSpeed = speed }
             return copy
         }
     }
 
+    // MARK: - Health, history, upcoming
+
     func fetchHealth() async -> HealthResult {
-        let radarrCfg = configStore.radarr
-        let sonarrCfg = configStore.sonarr
-        let lidarrCfg = configStore.lidarr
-        let whisparrCfg = configStore.whisparr
-
-        let radarrClient = self.radarrClient(for: radarrCfg)
-        let sonarrClient = self.sonarrClient(for: sonarrCfg)
-        let lidarrClient = self.lidarrClient(for: lidarrCfg)
-        let whisparrClient = self.whisparrClient(for: whisparrCfg)
-        async let radarr = Self.safeFetchHealth { try await radarrClient.fetchHealth() }
-        async let sonarr = Self.safeFetchHealth { try await sonarrClient.fetchHealth() }
-        async let lidarr = Self.safeFetchHealth { try await lidarrClient.fetchHealth() }
-        async let whisparr = Self.safeFetchHealth { try await whisparrClient.fetchHealth() }
-        let (r, s, l, w) = await (radarr, sonarr, lidarr, whisparr)
-        return HealthResult(radarr: r, sonarr: s, lidarr: l, whisparr: w)
-    }
-
-    private static func safeFetchHealth(_ block: () async throws -> [ArrHealthRecord]) async -> [ArrHealthRecord] {
-        do { return try await block() } catch { return [] }
+        await gateway.ready()
+        var records: [QueueItem.Source: [ArrHealthRecord]] = [:]
+        await withTaskGroup(of: (QueueItem.Source, [ArrHealthRecord]).self) { group in
+            for source in QueueItem.Source.allCases {
+                group.addTask {
+                    guard await self.gateway.isConfigured(source) else { return (source, []) }
+                    let rows = (try? await self.gateway.store.read(await self.gateway.servarr(source).health(), policy: .mustRevalidate).value) ?? []
+                    return (source, rows.map { ArrHealthRecord(source: $0.source, type: $0.type, message: $0.message, wikiUrl: $0.wikiUrl) })
+                }
+            }
+            for await (source, rows) in group { records[source] = rows }
+        }
+        return HealthResult(radarr: records[.radarr] ?? [], sonarr: records[.sonarr] ?? [], lidarr: records[.lidarr] ?? [], whisparr: records[.whisparr] ?? [])
     }
 
     func fetchHistory(for source: QueueItem.Source, page: Int, pageSize: Int, entityId: Int?) async -> HistoryResult {
         do {
-            let result: HistoryPage
-            switch source {
-            case .radarr: result = try await radarrClient(for: configStore.radarr).fetchHistory(page: page, pageSize: pageSize, entityId: entityId)
-            case .sonarr: result = try await sonarrClient(for: configStore.sonarr).fetchHistory(page: page, pageSize: pageSize, entityId: entityId)
-            case .lidarr: result = try await lidarrClient(for: configStore.lidarr).fetchHistory(page: page, pageSize: pageSize, entityId: entityId)
-            case .whisparr: result = try await whisparrClient(for: configStore.whisparr).fetchHistory(page: page, pageSize: pageSize, entityId: entityId)
-            }
-            return HistoryResult(items: result.items, hasMore: result.hasMore, error: nil)
+            await gateway.ready()
+            guard await gateway.isConfigured(source) else { throw MediaKitError.notConfigured(source.instanceID) }
+            let service = await gateway.servarr(source)
+            let baseURL = await configStore.config(for: source.serviceKind).baseURL
+            let resource = entityId.map { service.historyFor(entityID: $0, pageSize: pageSize) } ?? service.history(page: page, pageSize: pageSize)
+            let result = try await gateway.store.read(resource, policy: page == 1 ? .staleWhileRevalidate : .cacheFirst).value
+            let items = result.records.compactMap { ArrCompositions.history($0, source: source, baseURL: baseURL) }
+            return HistoryResult(items: items, hasMore: page * pageSize < (result.totalRecords ?? 0), error: nil)
         } catch {
-            let message = error.userFacingMessage
-            return HistoryResult(items: [], error: message)
+            return HistoryResult(items: [], error: MediaKitErrorPresenter.message(for: error))
         }
-    }
-
-    private func radarrClient(for cfg: ServiceConfig) -> RadarrClient {
-        if let cached = cachedRadarrClient, cachedRadarrConfig == cfg { return cached }
-        let client = RadarrClient(config: cfg)
-        cachedRadarrClient = client
-        cachedRadarrConfig = cfg
-        return client
-    }
-
-    private func sonarrClient(for cfg: ServiceConfig) -> SonarrClient {
-        if let cached = cachedSonarrClient, cachedSonarrConfig == cfg { return cached }
-        let client = SonarrClient(config: cfg)
-        cachedSonarrClient = client
-        cachedSonarrConfig = cfg
-        return client
-    }
-
-    private func lidarrClient(for cfg: ServiceConfig) -> LidarrClient {
-        if let cached = cachedLidarrClient, cachedLidarrConfig == cfg { return cached }
-        let client = LidarrClient(config: cfg)
-        cachedLidarrClient = client
-        cachedLidarrConfig = cfg
-        return client
-    }
-
-    private func whisparrClient(for cfg: ServiceConfig) -> WhisparrClient {
-        if let cached = cachedWhisparrClient, cachedWhisparrConfig == cfg { return cached }
-        let client = WhisparrClient(config: cfg)
-        cachedWhisparrClient = client
-        cachedWhisparrConfig = cfg
-        return client
     }
 
     func fetchUpcoming() async -> (items: [UpcomingItem], failed: Set<QueueItem.Source>) {
-        let radarrCfg = configStore.radarr
-        let sonarrCfg = configStore.sonarr
-        let lidarrCfg = configStore.lidarr
-        let whisparrCfg = configStore.whisparr
-
-        let radarrClient = self.radarrClient(for: radarrCfg)
-        let sonarrClient = self.sonarrClient(for: sonarrCfg)
-        let lidarrClient = self.lidarrClient(for: lidarrCfg)
-        let whisparrClient = self.whisparrClient(for: whisparrCfg)
-        async let radarr = Self.safeFetchUpcoming { try await radarrClient.fetchCalendar() }
-        async let sonarr = Self.safeFetchUpcoming { try await sonarrClient.fetchCalendar() }
-        async let lidarr = Self.safeFetchUpcoming { try await lidarrClient.fetchCalendar() }
-        async let whisparr = Self.safeFetchUpcoming { try await whisparrClient.fetchCalendar() }
-        let (r, s, l, w) = await (radarr, sonarr, lidarr, whisparr)
+        let now = Date()
+        let end = Calendar.current.date(byAdding: .day, value: 30, to: now)!
+        var items: [UpcomingItem] = []
         var failed: Set<QueueItem.Source> = []
-        if r.failed { failed.insert(.radarr) }
-        if s.failed { failed.insert(.sonarr) }
-        if l.failed { failed.insert(.lidarr) }
-        if w.failed { failed.insert(.whisparr) }
-        let startOfToday = Calendar.current.startOfDay(for: Date())
-        let items = (r.items + s.items + l.items + w.items)
-            .filter { $0.airDate >= startOfToday }
-            .sorted { $0.airDate < $1.airDate }
-        return (items, failed)
+        await gateway.ready()
+        await withTaskGroup(of: (QueueItem.Source, [UpcomingItem]?).self) { group in
+            for source in QueueItem.Source.allCases {
+                group.addTask {
+                    guard await self.gateway.isConfigured(source) else { return (source, []) }
+                    let service = await self.gateway.servarr(source)
+                    let baseURL = await self.configStore.config(for: source.serviceKind).baseURL
+                    do {
+                        let records = try await self.gateway.store.read(service.calendar(start: now, end: end), policy: .staleWhileRevalidate).value
+                        return (source, records.compactMap { ArrCompositions.upcoming($0, source: source, baseURL: baseURL) })
+                    } catch is CancellationError {
+                        return (source, [])
+                    } catch {
+                        return (source, nil)
+                    }
+                }
+            }
+            for await (source, rows) in group {
+                if let rows { items += rows } else { failed.insert(source) }
+            }
+        }
+        let startOfToday = Calendar.current.startOfDay(for: now)
+        return (items.filter { $0.airDate >= startOfToday }.sorted { $0.airDate < $1.airDate }, failed)
     }
 
-    private static func safeFetch(_ block: () async throws -> [QueueItem]) async -> (items: [QueueItem], error: String?, unreachable: Bool) {
-        do {
-            return (try await block(), nil, false)
-        } catch is CancellationError {
-            // Refresh task was cancelled (e.g. user released pull-to-refresh,
-            // or an overlapping refresh superseded this one). Not a real
-            // failure — return no error so the caller keeps the last good data.
-            return ([], nil, false)
-        } catch let error as URLError where error.code == .cancelled {
-            // URLSession's cancellation variant (code -999) — same story.
-            return ([], nil, false)
-        } catch HTTPError.notConfigured, HTTPError.missingApiKey {
-            // The arr isn't set up — not a failure to surface. `fetchUpcoming`
-            // and `fetchHealth` already swallow these; the queue must too,
-            // otherwise an unconfigured Lidarr/Whisparr shows "Service not
-            // configured" in the queue while Upcoming (which swallows it)
-            // looks fine. Settings is where missing config/keys are reported.
-            return ([], nil, false)
-        } catch {
-            let message = error.userFacingMessage
-            // Genuine failure (HTTP status, transport/timeout, decode). Log the
-            // full reflection — a DecodingError's coding path or a URLError's
-            // numeric code — since the UI string drops it. Keep it `.private`,
-            // though: a URLError embeds its failing URL, and for SABnzbd that
-            // URL carries `apikey=` in the query, which must not land in the
-            // public unified-log. `message` stays public (it's sanitized).
-            Self.logger.error("queue fetch failed: \(message, privacy: .public) | \(String(reflecting: error), privacy: .private)")
-            return ([], message, Self.isUnreachable(error))
+    // MARK: - Actions
+
+    func perform(_ action: Action, on item: QueueItem) async throws {
+        if action == .delete {
+            try await deleteViaArr(item, removeFromClient: true)
+            return
+        }
+        if action == .continueDownload, (item.downloadId?.isEmpty ?? true) {
+            _ = try await gateway.store.run(await gateway.servarr(item.source).grabQueueItem(id: item.arrQueueId))
+            return
+        }
+        guard let downloadId = item.downloadId, !downloadId.isEmpty else { throw AggregateError.noDownloadId }
+        guard item.downloadProtocol != .unknown else { throw AggregateError.downloadProtocolUnknown }
+        let configured = await MainActor.run {
+            Self.candidateKinds(for: item.downloadProtocol).filter { MonitoredService.arr($0).isConfigured(in: configStore) }
+        }
+        guard let kind = Self.route(clientNamed: item.downloadClient, among: configured),
+              let service = await gateway.download(kind) else {
+            throw AggregateError.downloadClientNotConfigured(item.downloadProtocol)
+        }
+        let clientAction: DownloadAction = switch action {
+        case .pause: .pause
+        case .resume: .resume
+        case .continueDownload: .forceStart
+        case .delete: .delete
+        }
+        _ = try await gateway.store.run(service.action(clientAction, ids: [downloadId], deleteFiles: false))
+    }
+
+    private func deleteViaArr(_ item: QueueItem, removeFromClient: Bool) async throws {
+        let service = await gateway.servarr(item.source)
+        _ = try await gateway.store.run(service.deleteQueueItem(id: item.arrQueueId, removeFromClient: removeFromClient, blocklist: false, now: Date()))
+    }
+
+    func deleteAll(_ items: [QueueItem]) async throws {
+        let downloadIds = Set(items.compactMap { $0.downloadId?.isEmpty == false ? $0.downloadId : nil })
+        let sharedDownload = downloadIds.count <= 1
+        var first = true
+        for item in items {
+            try await deleteViaArr(item, removeFromClient: sharedDownload ? first : true)
+            first = false
         }
     }
 
-    /// Distinguishes "couldn't reach the arr" from "the arr itself answered
-    /// with an error". Only the former feeds the offline indicator.
-    ///
-    /// Subtlety that bit us: a status code alone can't always tell the two
-    /// apart, because a reverse proxy / split-horizon-DNS endpoint sits in
-    /// front. So we split by *who* produced the failure:
-    ///  • Transport failure (no route / refused / DNS / timeout) → unreachable.
-    ///  • Gateway statuses (502/503/504, Cloudflare 52x) and 404/410 → a proxy
-    ///    or the wrong endpoint answered, NOT the arr (a real arr never 404s
-    ///    its own `/api/v3/queue`) → unreachable. This is the away-behind-
-    ///    split-DNS case.
-    ///  • Arr-origin statuses (500 it threw, 401/403 bad key, 400/422 bad
-    ///    request) prove we're actually talking to the arr → reachable; those
-    ///    stay a "service problem" (and point the user at Settings/the arr).
     nonisolated static func isUnreachable(_ error: Error) -> Bool {
         switch error {
-        case HTTPError.transport(let inner):
-            return isConnectivityFailure(inner)
-        case HTTPError.status(let code, _):
-            // 408 request timeout, 404/410 wrong endpoint, 502/503/504 gateway,
-            // 522/523/524 Cloudflare — none come from the arr answering its own
-            // API, so treat as "couldn't reach the arr".
-            switch code {
-            case 404, 408, 410, 502, 503, 504, 522, 523, 524:
-                return true
-            default:
-                return false
-            }
-        case let urlError as URLError:
-            return isConnectivityFailure(urlError)
-        default:
-            // HTTPError.decoding / .badURL etc. → local failure, not a reach
-            // signal either way.
-            return false
+        case HTTPError.transport(let inner): return isConnectivityFailure(inner)
+        case HTTPError.status(let code, _): return [404, 408, 410, 502, 503, 504, 522, 523, 524].contains(code)
+        case let urlError as URLError: return isConnectivityFailure(urlError)
+        default: return MediaKitErrorPresenter.isUnreachable(error)
         }
     }
 
     nonisolated static func isConnectivityFailure(_ error: Error) -> Bool {
         guard let urlError = error as? URLError else { return false }
         switch urlError.code {
-        case .notConnectedToInternet, .networkConnectionLost,
-             .cannotConnectToHost, .cannotFindHost, .dnsLookupFailed,
+        case .notConnectedToInternet, .networkConnectionLost, .cannotConnectToHost, .cannotFindHost, .dnsLookupFailed,
              .timedOut, .dataNotAllowed, .internationalRoamingOff:
             return true
         default:
-            // e.g. .secureConnectionFailed means the TLS handshake started —
-            // the host was reached — so that's not an unreachable signal.
             return false
         }
     }
 
-    private static let logger = Logger(category: "QueueFetch")
-
-    private static func safeFetchUpcoming(_ block: () async throws -> [UpcomingItem]) async -> (items: [UpcomingItem], failed: Bool) {
-        do {
-            return (try await block(), false)
-        } catch HTTPError.notConfigured, HTTPError.missingApiKey {
-            // Not set up → genuinely empty, nothing to preserve.
-            return ([], false)
-        } catch is CancellationError {
-            return ([], false)
-        } catch let error as URLError where error.code == .cancelled {
-            return ([], false)
-        } catch {
-            // Real failure (transport / HTTP / decode). Flag it so the caller
-            // keeps this source's last-known calendar instead of dropping it —
-            // otherwise a blocked Radarr silently erases its movies from a
-            // merged "Upcoming".
-            return ([], true)
-        }
-    }
-
-    func perform(_ action: Action, on item: QueueItem) async throws {
-        // Demo has neither an arr to delete through nor a client to pause — the
-        // in-memory fixture state is the whole backend. Held here rather than in
-        // each client so every route below (arr delete, client pause, force-grab)
-        // is covered by one branch.
-        if DemoMode.isActive {
-            try? await Task.sleep(nanoseconds: 400_000_000)
-            DemoQueueState.perform(action, on: item)
-            return
-        }
-        // Delete is routed through the arr API — works for any download client.
-        if action == .delete {
-            try await deleteViaArr(item)
-            return
-        }
-
-        // A deferred item the arr is still holding (delay profile) has no
-        // download-client entry yet, so "continue" can't go through the client —
-        // force-grab it via the arr API instead (POST /queue/grab/{id}).
-        if action == .continueDownload, (item.downloadId?.isEmpty ?? true) {
-            try await grabViaArr(item)
-            return
-        }
-
-        guard let downloadId = item.downloadId, !downloadId.isEmpty else {
-            throw AggregateError.noDownloadId
-        }
-
-        switch item.downloadProtocol {
-        case .usenet, .torrent:
-            try await performViaClient(action, on: item, downloadId: downloadId)
-        case .unknown:
-            throw AggregateError.downloadProtocolUnknown
-        }
-    }
-
-    private func deleteViaArr(_ item: QueueItem) async throws {
-        try await deleteViaArr(item, removeFromClient: true)
-    }
-
-    private func deleteViaArr(_ item: QueueItem, removeFromClient: Bool) async throws {
-        switch item.source {
-        case .radarr: try await radarrClient(for: configStore.radarr).deleteQueueItem(id: item.arrQueueId, removeFromClient: removeFromClient)
-        case .sonarr: try await sonarrClient(for: configStore.sonarr).deleteQueueItem(id: item.arrQueueId, removeFromClient: removeFromClient)
-        case .lidarr: try await lidarrClient(for: configStore.lidarr).deleteQueueItem(id: item.arrQueueId, removeFromClient: removeFromClient)
-        case .whisparr: try await whisparrClient(for: configStore.whisparr).deleteQueueItem(id: item.arrQueueId, removeFromClient: removeFromClient)
-        }
-    }
-
-    private func grabViaArr(_ item: QueueItem) async throws {
-        switch item.source {
-        case .radarr: try await radarrClient(for: configStore.radarr).grabQueueItem(id: item.arrQueueId)
-        case .sonarr: try await sonarrClient(for: configStore.sonarr).grabQueueItem(id: item.arrQueueId)
-        case .lidarr: try await lidarrClient(for: configStore.lidarr).grabQueueItem(id: item.arrQueueId)
-        case .whisparr: try await whisparrClient(for: configStore.whisparr).grabQueueItem(id: item.arrQueueId)
-        }
-    }
-
-    /// Removes every member of a grouped row from the arr queue.
-    ///
-    /// Two cases share this entry point:
-    ///   - **Real season pack** — all members share one `downloadId`. The
-    ///     first call sets `removeFromClient: true` (that single call
-    ///     removes the physical download); the rest just clean up sibling
-    ///     queue rows so the popover doesn't leave them orphaned for ~30s
-    ///     while Sonarr's queue GC catches up.
-    ///   - **Virtual season bundle** — members have distinct `downloadId`s,
-    ///     each backing its own download. Every call must set
-    ///     `removeFromClient: true` so every torrent/nzb is removed.
-    ///
-    /// The two cases are distinguished by whether all members share the
-    /// same non-empty downloadId.
-    func deleteAll(_ items: [QueueItem]) async throws {
-        if DemoMode.isActive {
-            try? await Task.sleep(nanoseconds: 400_000_000)
-            for item in items { DemoQueueState.perform(.delete, on: item) }
-            return
-        }
-        let downloadIds = Set(items.compactMap { $0.downloadId?.isEmpty == false ? $0.downloadId : nil })
-        let sharedDownload = downloadIds.count <= 1
-        var first = true
-        for item in items {
-            let removeFromClient = sharedDownload ? first : true
-            try await deleteViaArr(item, removeFromClient: removeFromClient)
-            first = false
-        }
-    }
-
-    /// Sends a client-side action (pause / resume / force-start) to the client
-    /// that actually owns this download.
-    ///
-    /// The arr already tells us which one, in `QueueItem.downloadClient` — its
-    /// *user-chosen name* for the client, e.g. "qBittorrent" or "Transmission
-    /// (4K)". Honouring it matters as soon as two clients are configured: with
-    /// the old fixed priority order, a Sonarr row backed by Transmission had its
-    /// hash sent to qBittorrent, which answers 200 OK for a hash it doesn't know
-    /// and does nothing — so the row flipped to "paused" optimistically and
-    /// silently snapped back on the next refresh.
-    private func performViaClient(_ action: Action, on item: QueueItem, downloadId: String) async throws {
-        let configured = configuredClients(for: item.downloadProtocol)
-        guard let kind = Self.route(clientNamed: item.downloadClient, among: configured) else {
-            throw AggregateError.downloadClientNotConfigured(item.downloadProtocol)
-        }
-        let cfg = configStore.config(for: kind)
-        switch kind {
-        case .sabnzbd:
-            try await SabnzbdClient(config: cfg).perform(sabAction(action), nzoId: downloadId)
-        case .nzbget:
-            try await NzbgetClient(config: cfg).perform(nzbgetAction(action), nzbId: downloadId)
-        case .qbittorrent:
-            try await qbitClient(for: cfg).perform(qbitAction(action), hash: downloadId)
-        case .transmission:
-            try await transmissionClient(for: cfg).perform(transmissionAction(action), hash: downloadId)
-        case .rtorrent:
-            try await RtorrentClient(config: cfg).perform(rtorrentAction(action), hash: downloadId)
-        case .deluge:
-            try await delugeClient(for: cfg).perform(delugeAction(action), hash: downloadId)
-        case .radarr, .sonarr, .lidarr, .whisparr:
-            // Unreachable — `candidateKinds` only ever yields download clients.
-            throw AggregateError.downloadClientNotConfigured(item.downloadProtocol)
-        }
-    }
-
-    /// The configured download clients that can serve `proto`, in the historical
-    /// priority order. Doubles as the candidate set for name matching and as the
-    /// fallback order when the name identifies none of them.
-    private func configuredClients(for proto: QueueItem.DownloadProtocol) -> [ServiceKind] {
-        Self.candidateKinds(for: proto).filter { kind in
-            let cfg = configStore.config(for: kind)
-            guard cfg.isConfigured else { return false }
-            // SABnzbd is key-authenticated: a URL without a key can't perform
-            // anything, so it must not shadow a working NZBGet.
-            return kind.requiresApiKey ? !cfg.apiKey.isEmpty : true
-        }
-    }
-
-    /// Every client that *could* serve `proto`, in the fallback priority order.
-    /// `internal` because `ConfigStore.selectedDownloadClient` — which decides
-    /// whose reachability gates the pause/resume controls — has to agree with
-    /// this list to stay in step with `route`.
     nonisolated static func candidateKinds(for proto: QueueItem.DownloadProtocol) -> [ServiceKind] {
         switch proto {
-        case .usenet:  return [.sabnzbd, .nzbget]
+        case .usenet: return [.sabnzbd, .nzbget]
         case .torrent: return [.qbittorrent, .transmission, .rtorrent, .deluge]
         case .unknown: return []
         }
     }
 
-    /// Picks which of `configured` (already filtered to the item's protocol, in
-    /// priority order) owns a download the arr labelled `name`.
-    ///
-    /// `name` is free text the user typed into the arr, so matching is lenient:
-    /// exact display name first, then a token found anywhere in the name, so a
-    /// renamed instance ("qBit — 4K", "Transmission-sonarr") still lands right.
-    /// No match — or nothing to disambiguate — falls back to the first
-    /// configured client, i.e. exactly the previous fixed-order behaviour.
-    /// `internal` + `nonisolated` (not private/MainActor) so it's unit-testable
-    /// as the pure function it is — it touches no aggregator state.
+    /// The arr names the client it used; match that name among the configured ones before falling back to the first.
     nonisolated static func route(clientNamed name: String?, among configured: [ServiceKind]) -> ServiceKind? {
         guard let fallback = configured.first else { return nil }
         guard configured.count > 1 else { return fallback }
         let needle = (name ?? "").trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard !needle.isEmpty else { return fallback }
         if let exact = configured.first(where: { $0.displayName.lowercased() == needle }) { return exact }
-        if let fuzzy = configured.first(where: { kind in
-            nameTokens(kind).contains { needle.contains($0) }
-        }) { return fuzzy }
+        if let fuzzy = configured.first(where: { kind in nameTokens(kind).contains { needle.contains($0) } }) { return fuzzy }
         return fallback
     }
 
-    /// Substrings that identify a client inside an arbitrary user-chosen name.
-    /// Deliberately narrow — "torrent" alone would match every torrent client.
     private nonisolated static func nameTokens(_ kind: ServiceKind) -> [String] {
         switch kind {
-        case .sabnzbd:      return ["sabnzbd", "sab"]
-        case .nzbget:       return ["nzbget"]
-        case .qbittorrent:  return ["qbittorrent", "qbit"]
+        case .sabnzbd: return ["sabnzbd", "sab"]
+        case .nzbget: return ["nzbget"]
+        case .qbittorrent: return ["qbittorrent", "qbit"]
         case .transmission: return ["transmission"]
-        case .rtorrent:     return ["rtorrent", "rutorrent"]
-        case .deluge:       return ["deluge"]
+        case .rtorrent: return ["rtorrent", "rutorrent"]
+        case .deluge: return ["deluge"]
         case .radarr, .sonarr, .lidarr, .whisparr: return []
         }
     }
-
-    // Reuse qBittorrent client to avoid re-login on every action.
-    private func qbitClient(for cfg: ServiceConfig) -> QbittorrentClient {
-        if let cached = cachedQbitClient, cachedQbitConfig == cfg {
-            return cached
-        }
-        let client = QbittorrentClient(config: cfg)
-        cachedQbitClient = client
-        cachedQbitConfig = cfg
-        return client
-    }
-
-    private func transmissionClient(for cfg: ServiceConfig) -> TransmissionClient {
-        if let cached = cachedTransmissionClient, cachedTransmissionConfig == cfg {
-            return cached
-        }
-        let client = TransmissionClient(config: cfg)
-        cachedTransmissionClient = client
-        cachedTransmissionConfig = cfg
-        return client
-    }
-
-    private func delugeClient(for cfg: ServiceConfig) -> DelugeClient {
-        if let cached = cachedDelugeClient, cachedDelugeConfig == cfg {
-            return cached
-        }
-        let client = DelugeClient(config: cfg)
-        cachedDelugeClient = client
-        cachedDelugeConfig = cfg
-        return client
-    }
-
-    // `.continueDownload` maps to qBittorrent's force-start (bypass the queue +
-    // begin downloading). The other clients have no distinct force-start, so it
-    // falls back to a plain resume — still the right intent ("start this now").
-    private func sabAction(_ a: Action) -> SabnzbdClient.Action {
-        switch a { case .pause: .pause; case .resume, .continueDownload: .resume; case .delete: .delete }
-    }
-
-    private func qbitAction(_ a: Action) -> QbittorrentClient.Action {
-        switch a { case .pause: .pause; case .resume: .resume; case .delete: .delete; case .continueDownload: .forceStart }
-    }
-
-    private func nzbgetAction(_ a: Action) -> NzbgetClient.Action {
-        switch a { case .pause: .pause; case .resume, .continueDownload: .resume; case .delete: .delete }
-    }
-
-    private func transmissionAction(_ a: Action) -> TransmissionClient.Action {
-        switch a { case .pause: .pause; case .resume, .continueDownload: .resume; case .delete: .delete }
-    }
-
-    private func rtorrentAction(_ a: Action) -> RtorrentClient.Action {
-        switch a { case .pause: .pause; case .resume, .continueDownload: .resume; case .delete: .delete }
-    }
-
-    private func delugeAction(_ a: Action) -> DelugeClient.Action {
-        switch a { case .pause: .pause; case .resume, .continueDownload: .resume; case .delete: .delete }
-    }
 }
 
-/// One page of an arr's history — raw rows, whether the arr has older pages,
-/// or the error that stopped it.
 public struct HistoryResult: Equatable {
     public let items: [HistoryItem]
     public let hasMore: Bool
@@ -633,63 +370,45 @@ public struct HealthResult: Equatable {
     public let sonarr: [ArrHealthRecord]
     public let lidarr: [ArrHealthRecord]
     public let whisparr: [ArrHealthRecord]
-    public init(radarr: [ArrHealthRecord], sonarr: [ArrHealthRecord], lidarr: [ArrHealthRecord],
-                whisparr: [ArrHealthRecord] = []) {
+    public init(radarr: [ArrHealthRecord], sonarr: [ArrHealthRecord], lidarr: [ArrHealthRecord], whisparr: [ArrHealthRecord] = []) {
         self.radarr = radarr; self.sonarr = sonarr; self.lidarr = lidarr; self.whisparr = whisparr
     }
     public static let empty = HealthResult(radarr: [], sonarr: [], lidarr: [], whisparr: [])
-
     public func records(for source: QueueItem.Source) -> [ArrHealthRecord] {
         switch source {
-        case .radarr:   return radarr
-        case .sonarr:   return sonarr
-        case .lidarr:   return lidarr
-        case .whisparr: return whisparr
+        case .radarr: radarr
+        case .sonarr: sonarr
+        case .lidarr: lidarr
+        case .whisparr: whisparr
         }
     }
 }
 
 public struct AggregateResult: Equatable {
-    let radarr: [QueueItem]
-    let sonarr: [QueueItem]
-    let lidarr: [QueueItem]
-    let whisparr: [QueueItem]
-    var radarrError: String?
-    var sonarrError: String?
-    var lidarrError: String?
-    var whisparrError: String?
-    /// Sources that failed at the transport level this fetch (host unreachable),
-    /// as opposed to those that answered with an HTTP/decode error. Drives the
-    /// offline indicator; empty for a healthy or merely outaged stack.
-    var unreachableSources: Set<QueueItem.Source>
+    public let radarr: [QueueItem]
+    public let sonarr: [QueueItem]
+    public let lidarr: [QueueItem]
+    public let whisparr: [QueueItem]
+    public let radarrError: String?
+    public let sonarrError: String?
+    public let lidarrError: String?
+    public let whisparrError: String?
+    public let unreachableSources: Set<QueueItem.Source>
 
-    /// One source's view of this result, in the same shape the per-source fetch
-    /// returns — so the all-sources path can commit through exactly the same
-    /// code as a realtime-driven single-source refresh.
     func slice(for source: QueueItem.Source) -> SourceQueueResult {
-        let (items, error): ([QueueItem], String?) = switch source {
-        case .radarr:   (radarr, radarrError)
-        case .sonarr:   (sonarr, sonarrError)
-        case .lidarr:   (lidarr, lidarrError)
-        case .whisparr: (whisparr, whisparrError)
+        switch source {
+        case .radarr: SourceQueueResult(source: source, items: radarr, error: radarrError, unreachable: unreachableSources.contains(source))
+        case .sonarr: SourceQueueResult(source: source, items: sonarr, error: sonarrError, unreachable: unreachableSources.contains(source))
+        case .lidarr: SourceQueueResult(source: source, items: lidarr, error: lidarrError, unreachable: unreachableSources.contains(source))
+        case .whisparr: SourceQueueResult(source: source, items: whisparr, error: whisparrError, unreachable: unreachableSources.contains(source))
         }
-        return SourceQueueResult(
-            source: source, items: items, error: error,
-            unreachable: unreachableSources.contains(source)
-        )
     }
 
     init(radarr: [QueueItem], sonarr: [QueueItem], lidarr: [QueueItem], whisparr: [QueueItem] = [],
-         radarrError: String? = nil, sonarrError: String? = nil, lidarrError: String? = nil,
-         whisparrError: String? = nil, unreachableSources: Set<QueueItem.Source> = []) {
+         radarrError: String? = nil, sonarrError: String? = nil, lidarrError: String? = nil, whisparrError: String? = nil,
+         unreachableSources: Set<QueueItem.Source> = []) {
         self.radarr = radarr; self.sonarr = sonarr; self.lidarr = lidarr; self.whisparr = whisparr
-        self.radarrError = radarrError; self.sonarrError = sonarrError; self.lidarrError = lidarrError
-        self.whisparrError = whisparrError
+        self.radarrError = radarrError; self.sonarrError = sonarrError; self.lidarrError = lidarrError; self.whisparrError = whisparrError
         self.unreachableSources = unreachableSources
-    }
-
-    var totalCount: Int { radarr.count + sonarr.count + lidarr.count + whisparr.count }
-    var activeCount: Int {
-        (radarr + sonarr + lidarr + whisparr).filter { $0.status != .completed }.count
     }
 }

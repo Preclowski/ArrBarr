@@ -2,7 +2,7 @@ import Foundation
 import os
 
 /// One assembled data layer: kernel, store, services and streams behind a single value the app owns.
-public final class MediaKit: Sendable {
+public final class MediaStack: Sendable {
     public enum Role: Sendable { case app, widgetRefresher, snapshotReader }
 
     public struct Configuration: Sendable {

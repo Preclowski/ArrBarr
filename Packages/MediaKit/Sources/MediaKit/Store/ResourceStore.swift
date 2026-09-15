@@ -115,9 +115,10 @@ public actor ResourceStore {
         }
     }
 
+    /// Every key maps to the rows the source returned for it (empty when none), or the failure of its chunk.
     public func batch<K, V>(_ batch: BatchResource<K, V>, keys: [K], policy: ReadPolicy = .cacheFirst, maxAge: Duration? = nil,
-                            priority: RequestPriority = .interactive) async -> [K: Result<V, MediaKitError>] where K: Comparable {
-        var out: [K: Result<V, MediaKitError>] = [:]
+                            priority: RequestPriority = .interactive) async -> [K: Result<[V], MediaKitError>] where K: Comparable {
+        var out: [K: Result<[V], MediaKitError>] = [:]
         let unique = Array(Set(keys)).sorted()
         switch batch.strategy {
         case let .chunked(max, make, identify):
@@ -132,7 +133,8 @@ public actor ResourceStore {
                 for await (chunk, result) in group {
                     switch result {
                     case let .success(values):
-                        for value in values { if let key = identify(value) { out[key] = .success(value) } }
+                        for key in chunk { out[key] = .success([]) }
+                        for value in values { if let key = identify(value), case var .success(rows)? = out[key] { rows.append(value); out[key] = .success(rows) } }
                     case let .failure(error):
                         for key in chunk { out[key] = .failure(error) }
                     }
@@ -147,12 +149,7 @@ public actor ResourceStore {
                         catch { return (key, .failure(.unreachable(Host(URL(string: "mediakit://cancelled")!), .other))) }
                     }
                 }
-                for await (key, result) in group {
-                    switch result {
-                    case let .success(values): if let first = values.first { out[key] = .success(first) }
-                    case let .failure(error): out[key] = .failure(error)
-                    }
-                }
+                for await (key, result) in group { out[key] = result }
             }
         }
         return out

@@ -1,4 +1,5 @@
 import Foundation
+import MediaKit
 import Combine
 import SwiftUI
 import UserNotifications
@@ -188,9 +189,8 @@ public final class QueueViewModel {
         coalescer.postTest()
     }
 
-    /// Pushes real-time updates from each arr's SignalR hub straight
-    /// into a debounced refresh. Polling stays as fallback.
-    private let realtime: RealtimeManager
+    /// Feeds the hub's events into the debounced per-arr refresh; polling stays as fallback.
+    @ObservationIgnored private var realtimeTask: Task<Void, Never>?
 
     /// Process-wide shared view-model. Used by both the AppDelegate (status
     /// bar badge updates) and the SwiftUI `MenuBarExtra` scene so they see
@@ -207,8 +207,6 @@ public final class QueueViewModel {
         self.coalescer = NotificationCoalescer(configStore: configStore)
         // Hold off setting `realtime`'s callback until `self` exists — we
         // capture weakly to avoid the manager retaining the view-model.
-        let placeholder: @Sendable (RealtimeEvent) async -> Void = { _ in }
-        self.realtime = RealtimeManager(onEvent: placeholder)
         commonSetup(autostart: true)
     }
 
@@ -226,8 +224,6 @@ public final class QueueViewModel {
         self.notificationDefaults = notificationDefaults
         self.aggregator = aggregator
         self.coalescer = NotificationCoalescer(configStore: configStore)
-        let placeholder: @Sendable (RealtimeEvent) async -> Void = { _ in }
-        self.realtime = RealtimeManager(onEvent: placeholder)
         commonSetup(autostart: autostart)
     }
 
@@ -281,22 +277,6 @@ public final class QueueViewModel {
         // `http://nas:8989` emitted ~15 configs — each one a full teardown and
         // re-dial of that arr's SignalR connection against a half-typed host,
         // all of them overlapping inside `reconfigure`.
-        Publishers.CombineLatest4(
-            configStore.$sonarr, configStore.$radarr,
-            configStore.$lidarr, configStore.$whisparr
-        )
-        .dropFirst()
-        .removeDuplicates { $0 == $1 }
-        .debounce(for: .seconds(1.5), scheduler: DispatchQueue.main)
-        .sink { [weak self] sonarr, radarr, lidarr, whisparr in
-            Task { [weak self] in
-                await self?.realtime.reconfigure(
-                    sonarr: sonarr, radarr: radarr,
-                    lidarr: lidarr, whisparr: whisparr
-                )
-            }
-        }
-        .store(in: &intervalObservers)
 
         // Re-probe a download client / AI service the moment its connection
         // details change, so the status dot reflects the new credentials
@@ -345,7 +325,7 @@ public final class QueueViewModel {
     /// `invalidate()`, which Foundation requires on the run loop that installed
     /// the timer (`RunLoop.main`, see `commonModeTimer`).
     isolated deinit {
-        Task { [realtime] in await realtime.shutdown() }
+        realtimeTask?.cancel()
         // A scheduled `Timer` is owned by the run loop, not by us — dropping
         // the view-model doesn't stop it. Without these, every discarded
         // instance leaves timers firing on `RunLoop.main` forever, each
@@ -363,43 +343,29 @@ public final class QueueViewModel {
     /// configuration. Runs once at init time, after `self` is fully
     /// constructed so the weak-self capture is valid.
     private func bootstrapRealtime() async {
-        // Replace the placeholder callback with one that refreshes
-        // the queue for the affected arr. Debounce so a flurry of
-        // queue events (common during episode import) collapses into
-        // a single HTTP roundtrip.
-        await realtime.setHandler { [weak self] event in
-            guard let self else { return }
-            switch event {
-            case .queueStatus(let source, let status):
-                await self.noteQueueStatus(status, for: source)
-            case .queueChanged(let source):
-                await self.scheduleRealtimeRefresh(source: source)
-            case .fileImported(let source):
-                // An import changes what the user OWNS, which is the one thing
-                // the library snapshot must not be stale about: "did that
-                // finish?" is asked seconds after it lands, long before any
-                // TTL would expire.
-                LibraryIndex.shared.invalidateSoon(source)
-                await self.scheduleRealtimeRefresh(source: source)
-            case .other(_, let name, _):
-                // Servarr broadcasts health changes on the same socket
-                // (`HealthController` handles `HealthCheckCompleteEvent`), so
-                // the health poll is only ever a backstop. Everything else here
-                // is genuinely not ours: `queue/details` and `queue/status` are
-                // sibling controllers re-announcing the change `queue` already
-                // carried, and `system/task` / `command` / `version` describe
-                // the arr's own housekeeping.
-                if name == "health" {
-                    await self.scheduleHealthRefresh()
+        let events = await configStore.gateway.events.events()
+        realtimeTask?.cancel()
+        realtimeTask = Task { [weak self] in
+            for await event in events {
+                guard let self, !Task.isCancelled else { return }
+                guard let instance = event.instance, let kind = ServiceKind(rawValue: instance.kind.rawValue),
+                      let source = QueueItem.Source(rawValue: kind.rawValue) else { continue }
+                switch event {
+                case .queueStatus(_, let counts):
+                    self.noteQueueStatus(counts, for: source)
+                case .queueChanged:
+                    self.scheduleRealtimeRefresh(source: source)
+                case .fileImported:
+                    // An import changes what the user OWNS; the library snapshot must not be stale about it.
+                    LibraryIndex.shared.invalidateSoon(source)
+                    self.scheduleRealtimeRefresh(source: source)
+                case .healthChanged:
+                    self.scheduleHealthRefresh()
+                default:
+                    break
                 }
             }
         }
-        await realtime.reconfigure(
-            sonarr: configStore.sonarr,
-            radarr: configStore.radarr,
-            lidarr: configStore.lidarr,
-            whisparr: configStore.whisparr
-        )
     }
 
     /// How long a burst of arr events is allowed to keep collapsing into one
@@ -421,12 +387,12 @@ public final class QueueViewModel {
     /// not *how many* there are.
     /// Servarr's queue summary, kept per source so a `queue` push can be judged
     /// against it. See `canSkipRefresh(for:)`.
-    @MainActor private var latestStatus: [QueueItem.Source: QueueStatus] = [:]
+    @MainActor private var latestStatus: [QueueItem.Source: QueueCounts] = [:]
     /// The summary that was true when we last committed this source's rows.
-    @MainActor private var statusAtLastFetch: [QueueItem.Source: QueueStatus] = [:]
+    @MainActor private var statusAtLastFetch: [QueueItem.Source: QueueCounts] = [:]
 
     @MainActor
-    private func noteQueueStatus(_ status: QueueStatus, for source: QueueItem.Source) {
+    private func noteQueueStatus(_ status: QueueCounts, for source: QueueItem.Source) {
         latestStatus[source] = status
         // …and act on it. Servarr broadcasts `queue` BEFORE `queue/status` —
         // measured 5 s apart on a live hub — so when the sync arrived,
@@ -678,7 +644,7 @@ public final class QueueViewModel {
     /// user opens the popover post-wake everything is current.
     public func systemDidWake() {
         Task {
-            await self.realtime.forceReconnect()
+            await configStore.gateway.systemDidWake()
             await self.refresh()
         }
     }
@@ -707,7 +673,7 @@ public final class QueueViewModel {
         guard !configured.isEmpty else { return false }
         let cutoff = Date().addingTimeInterval(-configStore.realtimeSilenceTimeout)
         for source in configured {
-            guard let last = await realtime.lastEventAt(source), last > cutoff else { return false }
+            guard let last = configStore.gateway.events.lastEventAt(source.instanceID), last > cutoff else { return false }
         }
         return true
     }

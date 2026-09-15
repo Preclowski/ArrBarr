@@ -49,9 +49,9 @@ public final class CompositionContext: Sendable {
         try? await read(r, maxAge: maxAge)
     }
 
-    public func batch<K: Comparable, V>(_ b: BatchResource<K, V>, keys: [K], maxAge: Duration? = nil) async -> [K: V] {
+    public func batch<K: Comparable, V>(_ b: BatchResource<K, V>, keys: [K], maxAge: Duration? = nil) async -> [K: [V]] {
         let results = await store.batch(b, keys: keys, policy: policy, maxAge: maxAge, priority: priority)
-        var out: [K: V] = [:]
+        var out: [K: [V]] = [:]
         for (key, result) in results {
             switch result {
             case let .success(v): out[key] = v

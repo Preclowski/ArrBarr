@@ -23,12 +23,14 @@ let package = Package(
         // Bumping is a deliberate one-line change — same posture as the MCP SDK
         // pin in ArrMCPServer.
         .package(url: "https://github.com/swiftlang/swift-markdown.git", exact: "0.8.0"),
+        .package(path: "../MediaKit"),
     ],
     targets: [
         .target(
             name: "ArrCore",
             dependencies: [
                 .product(name: "Markdown", package: "swift-markdown"),
+                .product(name: "MediaKit", package: "MediaKit"),
             ],
             path: "Sources/ArrCore",
             resources: [
