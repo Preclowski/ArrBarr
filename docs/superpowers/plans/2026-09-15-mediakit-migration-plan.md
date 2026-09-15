@@ -79,6 +79,9 @@ Approach: the old client types (`RadarrClient`, `SonarrClient`, `LidarrClient`, 
       monitor toggles stick); `DemoQueueState`, `DemoMonitorState` and the queue/upcoming/
       history/details/releases/library mocks are deleted. `DemoMocks` (+People, +Search) stay for
       the chat persona and people search, which are outside the communication layer.
+- [x] `DemoDataFlowTests`: a gateway built with `demo: true` (no global flag) serves queue, upcoming
+      and history for all four arr flavours from the bundled fixtures. (`log show` returns nothing
+      in this environment, so the gateway notice could not be read back; the test is the evidence.)
 
 ## Wave 6 — removal + isolation
 

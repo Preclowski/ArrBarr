@@ -35,6 +35,8 @@ public final class ServiceGateway {
     private var started = false
     private var startTask: Task<Void, Never>?
     private var realtime: [InstanceID: SignalRSource] = [:]
+    /// Demo answers from bundled fixtures; held here so a gateway built for a test can be a demo one without the global flag.
+    private var demo: Bool
     /// Configs handed to a client that differ from the saved profile (Settings drafts, tests). Each distinct config
     /// is its own instance (ordinal 1...), so a draft never displaces the saved instance's cache or credentials.
     private let adHoc = OSAllocatedUnfairLock<[ServiceKind: [ServiceConfig]]>(initialState: [:])
@@ -42,9 +44,10 @@ public final class ServiceGateway {
     private let adHocTMDBKeys = OSAllocatedUnfairLock<[String]>(initialState: [])
     private nonisolated(unsafe) static var testGateway: ServiceGateway?
 
-    public init(configStore: ConfigStore) {
+    public init(configStore: ConfigStore, demo: Bool = DemoMode.isActive) {
         self.configStore = configStore
-        kitLock = OSAllocatedUnfairLock(initialState: Self.makeKit(configStore: configStore, telemetry: telemetry, demo: DemoMode.isActive))
+        self.demo = demo
+        kitLock = OSAllocatedUnfairLock(initialState: Self.makeKit(configStore: configStore, telemetry: telemetry, demo: demo))
         if Self.current == nil { Self.current = self }
         observe()
         startTask = Task { await self.start() }
@@ -138,7 +141,7 @@ public final class ServiceGateway {
         let instances = descriptors()
         await kit.start(instances: instances)
         if !Self.isRunningTests { await syncRealtime() }
-        Logger(category: "Gateway").notice("MediaKit started with \(instances.count, privacy: .public) instance(s), demo \(DemoMode.isActive, privacy: .public)")
+        Logger(category: "Gateway").notice("MediaKit started with \(instances.count, privacy: .public) instance(s), demo \(self.demo, privacy: .public)")
     }
 
     public func reconcile() async {
@@ -149,6 +152,7 @@ public final class ServiceGateway {
 
     /// Demo toggles swap the transport and the database; the profile itself is `ConfigStore`'s business.
     public func rebuild(demo: Bool) async {
+        self.demo = demo
         await kit.stop()
         realtime = [:]
         let fresh = Self.makeKit(configStore: configStore, telemetry: telemetry, demo: demo)
@@ -237,11 +241,10 @@ public final class ServiceGateway {
     }
 
     /// The demo profile has no hosts; every enabled kind gets a placeholder origin that only the fixture transport sees.
-    static func demoURL(_ kind: InstanceKind) -> URL { URL(string: "http://\(kind.rawValue).demo.invalid")! }
+    nonisolated static func demoURL(_ kind: InstanceKind) -> URL { URL(string: "http://\(kind.rawValue).demo.invalid")! }
 
     private func descriptors() -> [InstanceDescriptor] {
         var out: [InstanceDescriptor] = []
-        let demo = DemoMode.isActive
         for kind in ServiceKind.allCases {
             let config = configStore.config(for: kind)
             if demo {

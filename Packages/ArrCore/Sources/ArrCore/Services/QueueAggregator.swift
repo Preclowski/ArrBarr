@@ -123,7 +123,7 @@ public final class QueueAggregator: QueueDataProviding, @unchecked Sendable {
     private func liveProgress(instances: [InstanceID]) async -> LiveStream<DownloadTask> {
         let existing: LiveStream<DownloadTask>? = progressLock.withLock { progressInstances == instances ? progress : nil }
         if let existing { return existing }
-        let stream = await gateway.kit.liveProgress(instances: instances)
+        let stream = gateway.kit.liveProgress(instances: instances)
         progressLock.withLock { progress = stream; progressInstances = instances }
         return stream
     }
@@ -147,8 +147,8 @@ public final class QueueAggregator: QueueDataProviding, @unchecked Sendable {
         await withTaskGroup(of: (QueueItem.Source, [ArrHealthRecord]).self) { group in
             for source in QueueItem.Source.allCases {
                 group.addTask {
-                    guard await self.gateway.isConfigured(source) else { return (source, []) }
-                    let rows = (try? await self.gateway.store.read(await self.gateway.servarr(source).health(), policy: .mustRevalidate).value) ?? []
+                    guard self.gateway.isConfigured(source) else { return (source, []) }
+                    let rows = (try? await self.gateway.store.read(self.gateway.servarr(source).health(), policy: .mustRevalidate).value) ?? []
                     return (source, rows.map { ArrHealthRecord(source: $0.source, type: $0.type, message: $0.message, wikiUrl: $0.wikiUrl) })
                 }
             }
@@ -196,7 +196,7 @@ public final class QueueAggregator: QueueDataProviding, @unchecked Sendable {
             return
         }
         if action == .continueDownload, (item.downloadId?.isEmpty ?? true) {
-            _ = try await gateway.store.run(await gateway.servarr(item.source).grabQueueItem(id: item.arrQueueId))
+            _ = try await gateway.store.run(gateway.servarr(item.source).grabQueueItem(id: item.arrQueueId))
             return
         }
         guard let downloadId = item.downloadId, !downloadId.isEmpty else { throw AggregateError.noDownloadId }
@@ -205,7 +205,7 @@ public final class QueueAggregator: QueueDataProviding, @unchecked Sendable {
             Self.candidateKinds(for: item.downloadProtocol).filter { MonitoredService.arr($0).isConfigured(in: configStore) }
         }
         guard let kind = Self.route(clientNamed: item.downloadClient, among: configured),
-              let service = await gateway.download(kind) else {
+              let service = gateway.download(kind) else {
             throw AggregateError.downloadClientNotConfigured(item.downloadProtocol)
         }
         let clientAction: DownloadAction = switch action {
@@ -218,7 +218,7 @@ public final class QueueAggregator: QueueDataProviding, @unchecked Sendable {
     }
 
     private func deleteViaArr(_ item: QueueItem, removeFromClient: Bool) async throws {
-        let service = await gateway.servarr(item.source)
+        let service = gateway.servarr(item.source)
         _ = try await gateway.store.run(service.deleteQueueItem(id: item.arrQueueId, removeFromClient: removeFromClient, blocklist: false, now: Date()))
     }
 
