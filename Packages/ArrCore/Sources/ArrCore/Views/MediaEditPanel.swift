@@ -374,12 +374,7 @@ struct MediaEditPanel: View {
     }
 
     private var client: any ArrAPIClient {
-        switch request.source {
-        case .radarr: return RadarrClient(config: configStore.radarr)
-        case .sonarr: return SonarrClient(config: configStore.sonarr)
-        case .lidarr: return LidarrClient(config: configStore.lidarr)
-        case .whisparr: return WhisparrClient(config: configStore.whisparr)
-        }
+        configStore.arrClient(for: request.source)
     }
 
     /// The record's REST path — the same one the raw fetch and the PUT hit.
@@ -403,7 +398,7 @@ struct MediaEditPanel: View {
             onReady?()
         }
 
-        let search = SearchClient(config: config, source: request.source)
+        let search = ServiceHandles.search(request.source, config: config)
         async let q = (try? search.fetchQualityProfiles()) ?? []
         async let f = (try? search.fetchRootFolders()) ?? []
         qualityProfiles = await q

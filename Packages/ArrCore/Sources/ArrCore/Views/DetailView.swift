@@ -294,16 +294,16 @@ public struct DetailView: View {
             case .radarr, .whisparr:
                 radarrDetail?.monitored = monitored
                 let client: any ArrAPIClient = item.source == .radarr
-                    ? RadarrClient(config: configStore.radarr)
-                    : WhisparrClient(config: configStore.whisparr)
+                    ? configStore.radarrClient
+                    : configStore.whisparrClient
                 try await client.setMovieMonitored(movieId: entityId, monitored: monitored)
             case .sonarr:
                 sonarrDetail?.monitored = monitored
-                try await SonarrClient(config: configStore.sonarr)
+                try await configStore.sonarrClient
                     .setSeriesMonitored(seriesId: entityId, monitored: monitored)
             case .lidarr:
                 lidarrAlbum?.monitored = monitored
-                try await LidarrClient(config: configStore.lidarr)
+                try await configStore.lidarrClient
                     .setAlbumMonitored(albumId: entityId, monitored: monitored)
             }
         } catch {
@@ -333,7 +333,7 @@ public struct DetailView: View {
             sonarrDetail?.seasons = seasons
         }
         do {
-            try await SonarrClient(config: configStore.sonarr).setSeasonMonitored(
+            try await configStore.sonarrClient.setSeasonMonitored(
                 seriesId: seriesId, seasonNumber: seasonNumber, monitored: monitored)
         } catch {}
         await load(showSpinner: false)
@@ -520,7 +520,7 @@ public struct DetailView: View {
                         sonarrEpisodes[idx].monitored = monitored
                     }
                     do {
-                        try await SonarrClient(config: configStore.sonarr)
+                        try await configStore.sonarrClient
                             .setEpisodesMonitored(episodeIds: [episodeId], monitored: monitored)
                     } catch {
                         await load(showSpinner: false)
@@ -849,12 +849,7 @@ public struct DetailView: View {
     private static let searchWatchWindow: TimeInterval = 180
 
     private func searchClient() -> (any ArrAPIClient)? {
-        switch item.source {
-        case .radarr: return RadarrClient(config: configStore.radarr)
-        case .whisparr: return WhisparrClient(config: configStore.whisparr)
-        case .lidarr: return LidarrClient(config: configStore.lidarr)
-        case .sonarr: return nil
-        }
+        item.source == .sonarr ? nil : configStore.arrClient(for: item.source)
     }
 
     /// Fire the arr's own "search now" command for this movie / album — the
@@ -865,12 +860,12 @@ public struct DetailView: View {
         do {
             switch item.source {
             case .radarr:
-                try await RadarrClient(config: configStore.radarr).searchMovie(movieId: entityId)
+                try await configStore.radarrClient.searchMovie(movieId: entityId)
             case .whisparr:
-                try await WhisparrClient(config: configStore.whisparr)
+                try await configStore.whisparrClient
                     .postCommand(["name": "MoviesSearch", "movieIds": [entityId]])
             case .lidarr:
-                try await LidarrClient(config: configStore.lidarr).searchAlbum(albumId: entityId)
+                try await configStore.lidarrClient.searchAlbum(albumId: entityId)
             case .sonarr:
                 break
             }
@@ -1057,7 +1052,7 @@ public struct DetailView: View {
                         await setSeasonMonitored(seasonNumber: season.seasonNumber, monitored: monitored)
                     },
                     onAutomaticSeasonSearch: { season in
-                        try? await SonarrClient(config: configStore.sonarr).searchSeason(
+                        try? await configStore.sonarrClient.searchSeason(
                             seriesId: item.entityId ?? 0, seasonNumber: season.seasonNumber)
                     },
                     onManualSeasonSearch: { season in
@@ -1341,7 +1336,7 @@ public struct DetailView: View {
         do {
             switch item.source {
             case .radarr:
-                let client = RadarrClient(config: configStore.radarr)
+                let client = configStore.radarrClient
                 async let detail = client.fetchMovieDetails(id: entityId)
                 // Movie-file is fetched separately because /movie/{id}
                 // doesn't include customFormats on the inline movieFile
@@ -1362,7 +1357,7 @@ public struct DetailView: View {
                 directors = movieCredits.directors
                 countries = await movieCountries
             case .sonarr:
-                let client = SonarrClient(config: configStore.sonarr)
+                let client = configStore.sonarrClient
                 async let d = client.fetchSeriesDetails(id: entityId)
                 async let eps = client.fetchEpisodes(seriesId: entityId)
                 async let files = (try? client.fetchEpisodeFileMap(seriesId: entityId)) ?? [:]
@@ -1388,7 +1383,7 @@ public struct DetailView: View {
                 directors = seriesCredits.directors
                 countries = await seriesCountries
             case .lidarr:
-                let client = LidarrClient(config: configStore.lidarr)
+                let client = configStore.lidarrClient
                 async let a = client.fetchAlbumDetails(id: entityId)
                 async let ts = client.fetchTracks(albumId: entityId)
                 async let fs = client.fetchTrackFiles(albumId: entityId)
@@ -1396,7 +1391,7 @@ public struct DetailView: View {
                 lidarrTracks = try await ts
                 lidarrTrackFiles = (try? await fs) ?? []
             case .whisparr:
-                let client = WhisparrClient(config: configStore.whisparr)
+                let client = configStore.whisparrClient
                 radarrDetail = try await client.fetchMovieDetails(id: entityId)
                 qualityProfileName = await Self.profileName(
                     id: radarrDetail?.qualityProfileId, config: configStore.whisparr, source: .whisparr)            }

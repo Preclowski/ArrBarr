@@ -197,7 +197,7 @@ struct SeasonDetailView: View {
                 queueItems: queueByEpisodeId[ep.id] ?? [],
                 onClose: { selectedEpisode = nil },
                 onSearch: { episodeId in
-                    try? await SonarrClient(config: configStore.sonarr).searchEpisodes(episodeIds: [episodeId])
+                    try? await configStore.sonarrClient.searchEpisodes(episodeIds: [episodeId])
                 },
                 onPauseEpisode: { q in await viewModel.pause(q); await viewModel.refresh() },
                 onResumeEpisode: { q in await viewModel.resume(q); await viewModel.refresh() },
@@ -254,14 +254,14 @@ struct SeasonDetailView: View {
     /// row owns the spinner; failures are silent for the same reason the
     /// header's sweep is — the arr queues the search, it doesn't report on it.
     private func searchEpisode(_ ep: SonarrEpisodeDetail) async {
-        try? await SonarrClient(config: configStore.sonarr).searchEpisodes(episodeIds: [ep.id])
+        try? await configStore.sonarrClient.searchEpisodes(episodeIds: [ep.id])
     }
 
     private func startAutomaticSearch() {
         guard !autoSearching else { return }
         Task {
             autoSearching = true
-            try? await SonarrClient(config: configStore.sonarr)
+            try? await configStore.sonarrClient
                 .searchSeason(seriesId: drill.seriesId, seasonNumber: drill.seasonNumber)
             autoSearching = false
             autoDidSearch = true

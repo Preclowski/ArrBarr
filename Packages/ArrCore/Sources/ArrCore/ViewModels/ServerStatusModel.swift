@@ -4,7 +4,6 @@ import Foundation
 /// queue activity are read straight from their shared singletons
 /// (`ConnectionHealth`, `QueueViewModel`); only `/diskspace` needs its own
 /// fetch, so that's all this model carries.
-@MainActor
 @Observable
 public final class ServerStatusModel {
     public private(set) var disks: [DiskSpace] = []
@@ -56,12 +55,7 @@ public final class ServerStatusModel {
     /// The four arrs share `ArrAPIClient`, so an existential is enough to call
     /// the protocol-extension `fetchDiskSpace()`.
     private static func client(_ kind: ServiceKind, _ cfg: ServiceConfig) -> any ArrAPIClient {
-        switch kind {
-        case .radarr:   return RadarrClient(config: cfg)
-        case .sonarr:   return SonarrClient(config: cfg)
-        case .lidarr:   return LidarrClient(config: cfg)
-        default:        return WhisparrClient(config: cfg)
-        }
+        ServiceHandles.arr(QueueItem.Source(rawValue: kind.rawValue) ?? .whisparr, config: cfg)
     }
 
     /// Different arrs sharing a mount report it identically — collapse by path

@@ -100,6 +100,18 @@ Approach: the old client types (`RadarrClient`, `SonarrClient`, `LidarrClient`, 
 - [x] Widget demo: `UpcomingService.demo(sources:limit:)` over `ServiceGateway.demo(kinds:)` (bundled
       fixtures, no global flag); the dead `DemoMocks` queue/upcoming/history builders deleted.
 
+## Wave 6c — criteria sweep
+
+- [x] Criterion 18: views and view-models take facades from `ConfigStore` (`radarrClient`, `arrClient(for:)`,
+      `tmdbClient`, `mediaServerClient`) or `ServiceHandles` for drafts; `grep "Client("` in Views/ViewModels = 0.
+- [x] Criterion 19: `LocalToolBackendFixtureTests` runs all 28 tools on the bundled fixtures through
+      `ServiceGateway.override` (task-local), a demo gateway with placeholder origins.
+- [x] Criterion 21: Developer options → "MediaKit telemetry" shows `TelemetryRecorder.report()`.
+- [x] Criterion 24: explicit `@MainActor` on Views/ViewModels types removed (default isolation).
+- [x] `ServiceGateway.reconcileRegistry()` serialises reconciles; two adopters racing produced a second
+      concurrent `MediaStack.reconcile` that dropped an in-flight read (flaky `lidarrSearchFormatted`).
+- [x] Dead `SeriesIdentityResolver` session override removed.
+
 ## Phase 6 — verification
 
 - [ ] Three schemes build, three `swift test`, relaunch, `TelemetryRecorder.report()` per screen

@@ -1,7 +1,6 @@
 import Foundation
 import Observation
 
-@MainActor
 @Observable
 public final class SearchViewModel {
     /// The one query. Every field on every surface binds straight to this, so
@@ -139,19 +138,19 @@ public final class SearchViewModel {
                tmdbApiKey: String = "") {
         self.tmdbApiKey = tmdbApiKey
         if radarrConfig.isConfigured {
-            radarrClient = SearchClient(config: radarrConfig, source: .radarr)
+            radarrClient = ServiceHandles.search(.radarr, config: radarrConfig)
             configs[.radarr] = radarrConfig
         }
         if sonarrConfig.isConfigured {
-            sonarrClient = SearchClient(config: sonarrConfig, source: .sonarr)
+            sonarrClient = ServiceHandles.search(.sonarr, config: sonarrConfig)
             configs[.sonarr] = sonarrConfig
         }
         if lidarrConfig.isConfigured {
-            lidarrClient = SearchClient(config: lidarrConfig, source: .lidarr)
+            lidarrClient = ServiceHandles.search(.lidarr, config: lidarrConfig)
             configs[.lidarr] = lidarrConfig
         }
         if whisparrConfig.isConfigured {
-            whisparrClient = SearchClient(config: whisparrConfig, source: .whisparr)
+            whisparrClient = ServiceHandles.search(.whisparr, config: whisparrConfig)
             configs[.whisparr] = whisparrConfig
         }
     }
@@ -367,7 +366,7 @@ public final class SearchViewModel {
         guard term.count >= 2 else { return ([], nil) }
         let raw = DemoMode.isActive
             ? DemoMocks.searchPeople(query: term)
-            : (try? await TMDBClient(apiKey: tmdbApiKey).searchPerson(query: term)) ?? []
+            : (try? await ServiceHandles.tmdb(apiKey: tmdbApiKey).searchPerson(query: term)) ?? []
         let ranked = PersonRelevance.rank(raw, query: term)
         if scope == .people {
             return (ranked, nil)

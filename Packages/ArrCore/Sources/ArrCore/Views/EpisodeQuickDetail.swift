@@ -111,7 +111,7 @@ public struct EpisodeQuickDetail: View {
             queueItems: liveQueueItems,
             onClose: onBack,
             onSearch: { episodeId in
-                let client = SonarrClient(config: configStore.sonarr)
+                let client = configStore.sonarrClient
                 try? await client.searchEpisodes(episodeIds: [episodeId])
             },
             warningActionURL: arrWebURL(for: item, in: configStore),
@@ -141,7 +141,7 @@ public struct EpisodeQuickDetail: View {
                     allEpisodes[idx].monitored = monitored
                 }
                 do {
-                    try await SonarrClient(config: configStore.sonarr)
+                    try await configStore.sonarrClient
                         .setEpisodesMonitored(episodeIds: [epId], monitored: monitored)
                 } catch {
                     await load()
@@ -179,7 +179,7 @@ public struct EpisodeQuickDetail: View {
                         sonarrDetail?.seasons = seasons
                     }
                     do {
-                        try await SonarrClient(config: configStore.sonarr).setSeasonMonitored(
+                        try await configStore.sonarrClient.setSeasonMonitored(
                             seriesId: drill.seriesId, seasonNumber: drill.seasonNumber, monitored: monitored)
                     } catch {}
                     // Refetch either way — the flip cascades every episode flag.
@@ -190,7 +190,7 @@ public struct EpisodeQuickDetail: View {
                         allEpisodes[idx].monitored = monitored
                     }
                     do {
-                        try await SonarrClient(config: configStore.sonarr)
+                        try await configStore.sonarrClient
                             .setEpisodesMonitored(episodeIds: [episodeId], monitored: monitored)
                     } catch {
                         await load()
@@ -285,7 +285,7 @@ public struct EpisodeQuickDetail: View {
 
     private func load() async {
         guard let seriesId = item.entityId else { return }
-        let client = SonarrClient(config: configStore.sonarr)
+        let client = configStore.sonarrClient
         do {
             async let detailReq = client.fetchSeriesDetails(id: seriesId)
             async let episodesReq = client.fetchEpisodes(seriesId: seriesId)

@@ -4,7 +4,6 @@ import Combine
 import SwiftUI
 import UserNotifications
 
-@MainActor
 @Observable
 public final class QueueViewModel {
     /// Per-source queue snapshot. Single source of truth; replaces the four

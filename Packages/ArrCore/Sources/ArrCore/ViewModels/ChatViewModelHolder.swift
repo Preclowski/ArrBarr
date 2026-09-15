@@ -5,7 +5,6 @@ import Observation
 /// survives Queue ↔ Upcoming ↔ Chat switches. SwiftUI's `@State` holder can't be
 /// reassigned, so we wrap the VM in a holder that rebuilds it when the AI
 /// configuration actually changes.
-@MainActor
 @Observable
 public final class ChatViewModelHolder {
     public private(set) var vm: ChatViewModel

@@ -14,7 +14,6 @@ import WebKit
 ///
 /// One session, not one per surface: the overlay is full-surface, so two
 /// concurrent clips can't exist anyway.
-@MainActor
 public final class TrailerSession: ObservableObject {
     public static let shared = TrailerSession()
 

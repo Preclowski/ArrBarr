@@ -12,7 +12,6 @@ import AppKit
 /// something that must never be worth a prompt. The monitor is installed on
 /// `start()` and torn down on `stop()` — the popover appears and disappears
 /// constantly, and a leaked monitor keeps firing for the app's lifetime.
-@MainActor
 @Observable
 final class CommandKeyMonitor {
     private(set) var isHeld = false

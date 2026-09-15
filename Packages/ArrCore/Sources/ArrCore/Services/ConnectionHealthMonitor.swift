@@ -82,7 +82,7 @@ actor ConnectionHealthMonitor {
                 guard let cfg = inputs.clients[kind] else {
                     return ProbeOutcome(service: service, success: false, detail: nil, message: nil)
                 }
-                let detail = try await ConnectionTester.test(kind: kind, config: cfg)
+                let detail = try await ServiceHandles.testConnection(kind, config: cfg)
                 return ProbeOutcome(service: service, success: true, detail: detail, message: nil)
             case .openai:
                 guard let cfg = inputs.openai else {

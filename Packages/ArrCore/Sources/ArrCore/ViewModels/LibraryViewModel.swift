@@ -97,7 +97,6 @@ public struct LibraryEntry: Identifiable, Equatable, Sendable {
 /// (a few MB of JSON for a few thousand titles), so the unify runs only when
 /// the index's version for a source moves. Switching tabs or sources renders
 /// instantly from the already-unified entries.
-@MainActor
 @Observable
 public final class LibraryViewModel {
     public private(set) var entries: [QueueItem.Source: [LibraryEntry]] = [:]
@@ -174,7 +173,7 @@ public final class LibraryViewModel {
             // Polish or German name. Best-effort, and only paid when the movie
             // list actually changed — reaching this line at all means the
             // index version moved.
-            let alts = await RadarrClient(config: config).alternateTitleMap(for: movies)
+            let alts = await ServiceHandles.radarr(config: config).alternateTitleMap(for: movies)
             projection = await Self.project {
                 Self.unify(movies, baseURL: baseURL, profiles: profiles, alternateTitles: alts)
             }

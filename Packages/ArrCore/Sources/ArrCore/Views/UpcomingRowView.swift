@@ -298,18 +298,18 @@ public struct UpcomingItemTooltip: View {
             guard item.hasFile, fileDetails == nil, let entityId = item.entityId else { return }
             switch item.source {
             case .radarr:
-                if let f = try? await RadarrClient(config: configStore.radarr).fetchMovieFile(movieId: entityId) {
+                if let f = try? await configStore.radarrClient.fetchMovieFile(movieId: entityId) {
                     fileDetails = FileFacts(f)
                 }
             case .whisparr:
-                if let f = try? await WhisparrClient(config: configStore.whisparr).fetchMovieFile(movieId: entityId) {
+                if let f = try? await configStore.whisparrClient.fetchMovieFile(movieId: entityId) {
                     fileDetails = FileFacts(f)
                 }
             case .sonarr:
                 // entityId is the SERIES id; the calendar's episodeFileId
                 // picks this episode's file out of the series map.
                 guard let fileId = item.episodeFileId else { break }
-                let map = (try? await SonarrClient(config: configStore.sonarr).fetchEpisodeFileMap(seriesId: entityId)) ?? [:]
+                let map = (try? await configStore.sonarrClient.fetchEpisodeFileMap(seriesId: entityId)) ?? [:]
                 if let f = map[fileId] {
                     fileDetails = FileFacts(f)
                 }

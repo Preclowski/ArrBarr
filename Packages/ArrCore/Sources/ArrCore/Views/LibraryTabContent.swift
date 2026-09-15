@@ -845,9 +845,9 @@ private struct LibraryEntryTooltip: View {
             guard fileDetails == nil, entry.state == .complete else { return }
             switch entry.source {
             case .radarr:
-                fileDetails = try? await RadarrClient(config: configStore.radarr).fetchMovieFile(movieId: entry.arrId)
+                fileDetails = try? await configStore.radarrClient.fetchMovieFile(movieId: entry.arrId)
             case .whisparr:
-                fileDetails = try? await WhisparrClient(config: configStore.whisparr).fetchMovieFile(movieId: entry.arrId)
+                fileDetails = try? await configStore.whisparrClient.fetchMovieFile(movieId: entry.arrId)
             case .sonarr, .lidarr:
                 break
             }

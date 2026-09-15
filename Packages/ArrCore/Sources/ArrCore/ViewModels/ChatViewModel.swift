@@ -2,7 +2,6 @@ import Foundation
 import Observation
 import os
 
-@MainActor
 @Observable
 public final class ChatViewModel {
     public private(set) var messages: [ChatMessage] = []

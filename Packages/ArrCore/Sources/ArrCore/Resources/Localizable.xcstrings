@@ -34745,6 +34745,48 @@
       },
       "comment": "Button in settings"
     },
+    "settings.mediaKitTelemetry.button": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MediaKit telemetry"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Telemetria MediaKit"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MediaKit-Telemetrie"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Telemetría de MediaKit"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Télémétrie MediaKit"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MediaKit-telemetrie"
+          }
+        }
+      },
+      "comment": "Developer options button that shows the MediaKit request and cache counters"
+    },
     "settings.demoMode.button": {
       "extractionState": "manual",
       "localizations": {

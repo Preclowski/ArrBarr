@@ -1,7 +1,6 @@
 import Foundation
 import SwiftUI
 
-@MainActor
 @Observable
 public final class DiscoverViewModel {
 
@@ -73,9 +72,9 @@ public final class DiscoverViewModel {
 
     // MARK: - Source closures
 
-    public typealias TMDBSource = @MainActor (DiscoverFilter, Int) async throws -> [DiscoverItem]
-    public typealias LibrarySource = @MainActor (DiscoverFilter) async throws -> [DiscoverItem]
-    public typealias LLMSource = @MainActor ([String], String) async throws -> [DiscoverItem]
+    public typealias TMDBSource = (DiscoverFilter, Int) async throws -> [DiscoverItem]
+    public typealias LibrarySource = (DiscoverFilter) async throws -> [DiscoverItem]
+    public typealias LLMSource = ([String], String) async throws -> [DiscoverItem]
 
     private var tmdb: TMDBSource?
     private var library: LibrarySource?

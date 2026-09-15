@@ -129,14 +129,6 @@ struct SeriesIdentityResolverTests {
         ResolverStub.state.understandsTMDBTerm = false
         ResolverStub.state.externalTVDBId = Fixtures.tvdbId
         ResolverStub.state.libraryJSON = "[]"
-        // An ephemeral session carrying ONLY this stub. Global
-        // `URLProtocol.registerClass` is not enough: several suites in this
-        // package register stubs whose `canInit` answers every request, so a
-        // resolution test that relied on the global registry passed alone and
-        // failed in a full run — answered by somebody else's fixture.
-        let cfg = URLSessionConfiguration.ephemeral
-        cfg.protocolClasses = [ResolverStub.self]
-        SeriesIdentityResolver.sessionOverrideForTesting = URLSession(configuration: cfg)
         URLProtocol.registerClass(ResolverStub.self)
         defer {
             URLProtocol.unregisterClass(ResolverStub.self)

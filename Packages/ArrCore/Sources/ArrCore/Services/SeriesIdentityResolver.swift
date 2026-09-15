@@ -51,17 +51,6 @@ enum SeriesIdentityResolver {
     /// not one per title.
     private static var acceptsTMDBTerm: [String: Bool] = [:]
 
-    #if DEBUG
-    /// Tests hand in an ephemeral session carrying only their own stub.
-    /// Several suites register process-wide `URLProtocol`s whose `canInit`
-    /// answers *every* request, so relying on global registration makes a
-    /// resolution test pass alone and fail in a full run.
-    static var sessionOverrideForTesting: URLSession?
-    private static var session: URLSession { sessionOverrideForTesting ?? .shared }
-    #else
-    private static var session: URLSession { .shared }
-    #endif
-
     // MARK: - Public API
 
     /// Sonarr's own record for a TMDB tv id — the enriched row (real tvdbId,
@@ -192,7 +181,6 @@ enum SeriesIdentityResolver {
     #if DEBUG
     /// Tests share one process; identity caches must not leak between them.
     static func resetForTesting() {
-        sessionOverrideForTesting = nil
         records.removeAll()
         tvdbIds.removeAll()
         acceptsTMDBTerm = [:]

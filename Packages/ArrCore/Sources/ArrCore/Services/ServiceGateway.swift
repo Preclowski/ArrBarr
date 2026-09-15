@@ -59,6 +59,7 @@ public final class ServiceGateway {
     /// The gateway for values built without one: the shared profile's, created on first use. A test process
     /// gets an empty profile instead, so nothing reaches the owner's services from a test.
     public static func resolve() async -> ServiceGateway {
+        if let override { return override }
         if isRunningTests {
             if let testGateway { return testGateway }
             return await MainActor.run {
@@ -74,15 +75,18 @@ public final class ServiceGateway {
 
     static let isRunningTests = NSClassFromString("XCTestCase") != nil
 
+    /// The gateway every facade resolves inside `withValue`: a fixture-backed run of the tools under test.
+    @TaskLocal public static var override: ServiceGateway?
+
     /// A gateway on the bundled fixtures for `kinds`, independent of the global demo flag: the widget's demo and tests.
     /// It never becomes the process-wide gateway.
     public static func demo(kinds: Set<ServiceKind>) -> ServiceGateway {
         let store = ConfigStore(defaults: UserDefaults(suiteName: "pl.incred.ArrBarr.demo.fixtures")!, secrets: InMemorySecretStore())
-        for kind in ServiceKind.allCases {
-            var config = ServiceConfig.empty
-            config.enabled = kinds.contains(kind)
-            store.update(kind, with: config)
+        for kind in ServiceKind.allCases where kinds.contains(kind) {
+            // A placeholder origin and key, so the profile counts as configured without the global demo flag.
+            store.update(kind, with: ServiceConfig(enabled: true, baseURL: demoURL(kind.instanceKind).absoluteString, apiKey: "demo", username: "", password: ""))
         }
+        for kind in ServiceKind.allCases where !kinds.contains(kind) { store.update(kind, with: .empty) }
         let hadCurrent = current != nil
         let gateway = ServiceGateway(configStore: store, demo: true)
         if !hadCurrent { current = nil }
@@ -102,7 +106,7 @@ public final class ServiceGateway {
         let instance = InstanceID(kind.instanceKind, ordinal: ordinal)
         await ready()
         // A concurrent adopter may have appended the same draft; whoever finds it unregistered reconciles.
-        if added || kit.registry.descriptor(instance) == nil { _ = await kit.reconcile(descriptors()) }
+        if added || kit.registry.descriptor(instance) == nil { await reconcileRegistry() }
         return instance
     }
 
@@ -116,7 +120,7 @@ public final class ServiceGateway {
         }
         let instance = InstanceID(config.kind.instanceID.kind, ordinal: ordinal)
         await ready()
-        if added || kit.registry.descriptor(instance) == nil { _ = await kit.reconcile(descriptors()) }
+        if added || kit.registry.descriptor(instance) == nil { await reconcileRegistry() }
         return instance
     }
 
@@ -130,7 +134,7 @@ public final class ServiceGateway {
         }
         let instance = InstanceID(.tmdb, ordinal: ordinal)
         await ready()
-        if added || kit.registry.descriptor(instance) == nil { _ = await kit.reconcile(descriptors()) }
+        if added || kit.registry.descriptor(instance) == nil { await reconcileRegistry() }
         return instance
     }
 
@@ -161,8 +165,29 @@ public final class ServiceGateway {
 
     public func reconcile() async {
         guard started else { return }
-        _ = await kit.reconcile(descriptors())
+        await reconcileRegistry()
         await syncRealtime()
+    }
+
+    private var reconcileTask: Task<Void, Never>?
+    private var reconcileAgain = false
+
+    /// One reconcile at a time; adopters arriving mid-run get a second pass instead of a concurrent one.
+    private func reconcileRegistry() async {
+        if let running = reconcileTask {
+            reconcileAgain = true
+            await running.value
+            return
+        }
+        let task = Task { @MainActor in
+            repeat {
+                reconcileAgain = false
+                _ = await kit.reconcile(descriptors())
+            } while reconcileAgain
+        }
+        reconcileTask = task
+        await task.value
+        reconcileTask = nil
     }
 
     /// Demo toggles swap the transport and the database; the profile itself is `ConfigStore`'s business.
