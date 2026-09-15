@@ -38,6 +38,8 @@ public final class ServiceGateway {
     /// Configs handed to a client that differ from the saved profile (Settings drafts, tests). Each distinct config
     /// is its own instance (ordinal 1...), so a draft never displaces the saved instance's cache or credentials.
     private let adHoc = OSAllocatedUnfairLock<[ServiceKind: [ServiceConfig]]>(initialState: [:])
+    private let adHocServers = OSAllocatedUnfairLock<[MediaServerConfig]>(initialState: [])
+    private let adHocTMDBKeys = OSAllocatedUnfairLock<[String]>(initialState: [])
     private nonisolated(unsafe) static var testGateway: ServiceGateway?
 
     public init(configStore: ConfigStore) {
@@ -84,6 +86,44 @@ public final class ServiceGateway {
         // A concurrent adopter may have appended the same draft; whoever finds it unregistered reconciles.
         if added || kit.registry.descriptor(instance) == nil { _ = await kit.reconcile(descriptors()) }
         return instance
+    }
+
+    /// A media server config that is not the saved one gets its own instance; the saved one stays ordinal 0.
+    public func adopt(mediaServer config: MediaServerConfig) async -> InstanceID {
+        if config == configStore.mediaServer { return config.kind.instanceID }
+        let (ordinal, added): (Int, Bool) = adHocServers.withLock { list in
+            if let index = list.firstIndex(of: config) { return (index + 1, false) }
+            list.append(config)
+            return (list.count, true)
+        }
+        let instance = InstanceID(config.kind.instanceID.kind, ordinal: ordinal)
+        await ready()
+        if added || kit.registry.descriptor(instance) == nil { _ = await kit.reconcile(descriptors()) }
+        return instance
+    }
+
+    /// A TMDB key that is not the saved one (Settings draft) gets its own instance.
+    public func adopt(tmdbKey key: String) async -> InstanceID {
+        if key == configStore.tmdbApiKey { return InstanceID(.tmdb) }
+        let (ordinal, added): (Int, Bool) = adHocTMDBKeys.withLock { list in
+            if let index = list.firstIndex(of: key) { return (index + 1, false) }
+            list.append(key)
+            return (list.count, true)
+        }
+        let instance = InstanceID(.tmdb, ordinal: ordinal)
+        await ready()
+        if added || kit.registry.descriptor(instance) == nil { _ = await kit.reconcile(descriptors()) }
+        return instance
+    }
+
+    nonisolated func adHocServer(for instance: InstanceID) -> MediaServerConfig? {
+        guard instance.ordinal > 0 else { return nil }
+        return adHocServers.withLock { $0.indices.contains(instance.ordinal - 1) ? $0[instance.ordinal - 1] : nil }
+    }
+
+    nonisolated func adHocTMDBKey(for instance: InstanceID) -> String? {
+        guard instance.ordinal > 0 else { return nil }
+        return adHocTMDBKeys.withLock { $0.indices.contains(instance.ordinal - 1) ? $0[instance.ordinal - 1] : nil }
     }
 
     nonisolated func adHocConfig(for instance: InstanceID) -> ServiceConfig? {
@@ -209,13 +249,21 @@ public final class ServiceGateway {
             }
         }
         let server = configStore.mediaServer
-        if server.isConfigured, let url = URL(string: server.baseURL) {
+        if !Self.isRunningTests, server.isConfigured, let url = URL(string: server.baseURL) {
             out.append(InstanceDescriptor(id: server.kind.instanceID, baseURL: url, enabled: true,
                                           generation: SecretGenerations.generation(for: .mediaServerToken, in: configStore.defaultsForGateway)))
         }
-        if !configStore.tmdbApiKey.isEmpty {
-            out.append(InstanceDescriptor(id: InstanceID(.tmdb), baseURL: URL(string: "https://api.themoviedb.org")!, enabled: true,
+        for (index, draft) in adHocServers.withLock({ $0 }).enumerated() where draft.isConfigured {
+            guard let url = URL(string: draft.baseURL) else { continue }
+            out.append(InstanceDescriptor(id: InstanceID(draft.kind.instanceID.kind, ordinal: index + 1), baseURL: url, enabled: true, generation: "draft"))
+        }
+        let tmdbURL = URL(string: "https://api.themoviedb.org")!
+        if !Self.isRunningTests, !configStore.tmdbApiKey.isEmpty {
+            out.append(InstanceDescriptor(id: InstanceID(.tmdb), baseURL: tmdbURL, enabled: true,
                                           generation: SecretGenerations.generation(for: .tmdbKey, in: configStore.defaultsForGateway)))
+        }
+        for index in adHocTMDBKeys.withLock({ $0 }).indices {
+            out.append(InstanceDescriptor(id: InstanceID(.tmdb, ordinal: index + 1), baseURL: tmdbURL, enabled: true, generation: "draft"))
         }
         return out
     }
@@ -257,13 +305,17 @@ private struct ConfigCredentialProvider: CredentialProvider {
         let defaults = configStore.defaultsForGateway
         switch instance.kind {
         case .plex, .jellyfin, .emby:
-            let server = configStore.mediaServer
+            let draft = configStore.gateway.adHocServer(for: instance)
+            let server = draft ?? configStore.mediaServer
             guard server.isConfigured, let url = URL(string: server.baseURL) else { return nil }
-            return Credentials(baseURL: url, material: .token(server.token), generation: SecretGenerations.generation(for: .mediaServerToken, in: defaults))
+            return Credentials(baseURL: url, material: .token(server.token),
+                               generation: draft == nil ? SecretGenerations.generation(for: .mediaServerToken, in: defaults) : "draft")
         case .tmdb:
-            guard !configStore.tmdbApiKey.isEmpty else { return nil }
-            return Credentials(baseURL: URL(string: "https://api.themoviedb.org")!, material: .apiKey(configStore.tmdbApiKey),
-                               generation: SecretGenerations.generation(for: .tmdbKey, in: defaults))
+            let draft = configStore.gateway.adHocTMDBKey(for: instance)
+            let key = draft ?? configStore.tmdbApiKey
+            guard !key.isEmpty else { return nil }
+            return Credentials(baseURL: URL(string: "https://api.themoviedb.org")!, material: .apiKey(key),
+                               generation: draft == nil ? SecretGenerations.generation(for: .tmdbKey, in: defaults) : "draft")
         default:
             guard let kind = ServiceKind(rawValue: instance.kind.rawValue) else { return nil }
             let draft = configStore.gateway.adHocConfig(for: instance)

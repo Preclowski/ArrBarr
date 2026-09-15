@@ -287,3 +287,53 @@ enum ProducedOperations {
         return ops
     }
 }
+
+@Suite struct DownloadAddShapeTests {
+    private func kit(_ kind: InstanceKind) async throws -> (TestKit, InstanceID) {
+        let id = InstanceID(kind)
+        let material: Credentials.Material = kind == .sabnzbd ? .apiKey("k") : .userPassword(user: "u", password: "p")
+        let kit = try await TestKit(instances: [id], credentials: [id: Credentials(baseURL: URL(string: "http://dl.fixture.invalid:8080")!, material: material, generation: "g")])
+        return (kit, id)
+    }
+
+    private func body(_ request: HTTPRequest) -> String {
+        if case let .bytes(d, _) = request.body { return String(decoding: d, as: UTF8.self) }
+        return ""
+    }
+
+    @Test func transmissionCategoryBecomesADownloadSubdirectory() async throws {
+        let (kit, id) = try await kit(.transmission)
+        kit.transport.answer("addMagnet", json: #"{"result":"success","arguments":{"download-dir":"/data/downloads"}}"#)
+        kit.transport.answer("addMagnet", json: #"{"result":"success","arguments":{}}"#)
+        _ = try await kit.store.run(TransmissionService(instance: id).add(DownloadPayload(.magnet("magnet:?xt=urn:btih:abc")), category: "tv", paused: true))
+        let add = kit.transport.requests[1]
+        #expect(add.rpcMethod == "torrent-add" && body(add).contains(#""download-dir":"/data/downloads/tv""#) && body(add).contains(#""paused":true"#))
+    }
+
+    @Test func sabnzbdUploadsMultipartUnderTheCategoryWithPausedPriority() async throws {
+        let (kit, id) = try await kit(.sabnzbd)
+        kit.transport.answer("addFile", json: #"{"status":true}"#)
+        _ = try await kit.store.run(SABnzbdService(instance: id).add(DownloadPayload(.file(Data("nzb".utf8), filename: "x.nzb")), category: "tv", paused: true))
+        let request = kit.transport.requests[0]
+        let query = request.url.query ?? ""
+        #expect(query.contains("mode=addfile") && query.contains("cat=tv") && query.contains("priority=-2") && query.contains("apikey="))
+        if case let .multipart(_, file) = request.body { #expect(file?.name == "name" && file?.filename == "x.nzb") } else { Issue.record("not multipart") }
+    }
+
+    @Test func nzbgetAppendCarriesTheFileBase64WithCategoryAndPaused() async throws {
+        let (kit, id) = try await kit(.nzbget)
+        kit.transport.answer("addFile", json: #"{"result":42}"#)
+        _ = try await kit.store.run(NZBGetService(instance: id).add(DownloadPayload(.file(Data("nzb".utf8), filename: "x.nzb")), category: "tv", paused: true))
+        let text = body(kit.transport.requests[0])
+        #expect(text.contains(#""method":"append""#) && text.contains(Data("nzb".utf8).base64EncodedString()) && text.contains(#""tv""#) && text.contains("true"))
+        #expect(kit.transport.requests[0].headers["Authorization"]?.hasPrefix("Basic ") == true)
+    }
+
+    @Test func rtorrentLoadPicksTheNonStartingMethodWhenPaused() async throws {
+        let (kit, id) = try await kit(.rtorrent)
+        kit.transport.answer("addMagnet", json: "<methodResponse><params><param><value><i4>0</i4></value></param></params></methodResponse>")
+        _ = try await kit.store.run(RTorrentService(instance: id).add(DownloadPayload(.magnet("magnet:?xt=urn:btih:abc")), category: "tv", paused: true))
+        let text = body(kit.transport.requests[0])
+        #expect(kit.transport.requests[0].rpcMethod == "load.normal" && text.contains("d.custom1.set=tv"))
+    }
+}

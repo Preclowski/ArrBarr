@@ -10,8 +10,11 @@ public struct MediaServerIndexEntry: Sendable, Hashable, Codable {
     public let artworkPath: String?
     public let viewCount: Int
     public let lastViewedAt: Date?
-    public init(itemID: String, kind: MediaKind, ids: Set<MediaID>, title: String, year: Int?, artworkPath: String?, viewCount: Int, lastViewedAt: Date?) {
-        self.itemID = itemID; self.kind = kind; self.ids = ids; self.title = title; self.year = year; self.artworkPath = artworkPath; self.viewCount = viewCount; self.lastViewedAt = lastViewedAt
+    /// A movie played once, or a series with every leaf played.
+    public let watched: Bool
+    public init(itemID: String, kind: MediaKind, ids: Set<MediaID>, title: String, year: Int?, artworkPath: String?, viewCount: Int, lastViewedAt: Date?, watched: Bool) {
+        self.itemID = itemID; self.kind = kind; self.ids = ids; self.title = title; self.year = year; self.artworkPath = artworkPath
+        self.viewCount = viewCount; self.lastViewedAt = lastViewedAt; self.watched = watched
     }
 }
 
@@ -29,6 +32,8 @@ public struct MediaServerSession: Sendable, Hashable, Codable, LivePatchable {
     public let state: String
     public let kind: MediaKind?
     public let parentTitle: String?
+    public let device: String?
+    public let isTranscoding: Bool
     public func applying(_ change: PendingEffect.Change) -> MediaServerSession? { nil }
 }
 
@@ -74,6 +79,10 @@ struct PlexMetadata: Decodable {
     let duration: Int?
     let grandparentTitle: String?
     let grandparentThumb: String?
+    let leafCount: Int?
+    let viewedLeafCount: Int?
+    let index: Int?
+    let TranscodeSession: JSONValue?
     let Guid: [Guid]?
     /// Anonymised recordings replace these objects with scalars; read them loosely.
     let User: JSONValue?
@@ -94,12 +103,17 @@ struct JellyfinItem: Decodable {
     let ImageTags: [String: String]?
     let UserData: UserData?
     let SeriesName: String?
-    enum CodingKeys: String, CodingKey { case Id, Name, itemType = "Type", ProductionYear, ProviderIds, ImageTags, UserData, SeriesName }
+    let IndexNumber: Int?
+    enum CodingKeys: String, CodingKey { case Id, Name, itemType = "Type", ProductionYear, ProviderIds, ImageTags, UserData, SeriesName, IndexNumber }
 }
 
 struct JellyfinSession: Decodable {
     struct PlayState: Decodable { let PositionTicks: Int64?; let IsPaused: Bool? }
+    struct Transcoding: Decodable { let IsVideoDirect: Bool?; let IsAudioDirect: Bool? }
     let UserName: String?
+    let DeviceName: String?
+    let Client: String?
+    let TranscodingInfo: Transcoding?
     let NowPlayingItem: NowPlaying?
     let PlayState: PlayState?
     struct NowPlaying: Decodable {

@@ -175,7 +175,7 @@ enum SeriesIdentityResolver {
     /// in `tvdbIds`, which wraps every route into this one.
     private static func externalTVDBId(tmdbTVId: Int, tmdbKey: String) async -> Int? {
         guard !tmdbKey.isEmpty,
-              let tvdb = try? await TMDBClient(apiKey: tmdbKey, session: session).tvdbIdFromTVId(tmdbTVId),
+              let tvdb = try? await TMDBClient(apiKey: tmdbKey).tvdbIdFromTVId(tmdbTVId),
               tvdb > 0
         else { return nil }
         return tvdb

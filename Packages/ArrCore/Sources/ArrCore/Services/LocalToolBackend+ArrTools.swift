@@ -278,15 +278,13 @@ extension LocalToolBackend {
         // their sessions stranded one apiece per call, cookie jar and delegate
         // queue included. Own the session here and tear it down on the way out.
         // The other four run on `URLSession.shared` and have nothing to leak.
-        let cookieSession = Self.cookieSession(for: kind)
-        defer { cookieSession?.finishTasksAndInvalidate() }
         switch kind {
-        case .qbittorrent:  return try await QbittorrentClient(config: cfg, session: cookieSession).testConnection()
+        case .qbittorrent:  return try await QbittorrentClient(config: cfg).testConnection()
         case .transmission: return try await TransmissionClient(config: cfg).testConnection()
         case .nzbget:       return try await NzbgetClient(config: cfg).testConnection()
         case .sabnzbd:      return try await SabnzbdClient(config: cfg).testConnection()
         case .rtorrent:     return try await RtorrentClient(config: cfg).testConnection()
-        case .deluge:       return try await DelugeClient(config: cfg, session: cookieSession).testConnection()
+        case .deluge:       return try await DelugeClient(config: cfg).testConnection()
         }
     }
 
@@ -294,18 +292,6 @@ extension LocalToolBackend {
     /// log in with a cookie, nil for the rest. Per-probe rather than one shared
     /// jar: qBittorrent's SID and Deluge's session cookie would otherwise share
     /// storage whenever both live on the same host.
-    private static func cookieSession(for kind: DownloadClientKind) -> URLSession? {
-        switch kind {
-        case .qbittorrent, .deluge:
-            let cfg = HTTPClient.uncachedConfiguration()
-            cfg.httpCookieStorage = HTTPCookieStorage()
-            cfg.httpCookieAcceptPolicy = .always
-            cfg.httpShouldSetCookies = true
-            return URLSession(configuration: cfg)
-        case .transmission, .nzbget, .sabnzbd, .rtorrent:
-            return nil
-        }
-    }
 
     // MARK: - Lifecycle control tools (monitor + search)
 

@@ -56,14 +56,14 @@ Approach: the old client types (`RadarrClient`, `SonarrClient`, `LidarrClient`, 
 
 ## Wave 3 — tools, MCP, settings, health, intents, widget
 
-- [ ] `LocalToolBackend*` (28 tools) through the store (`ReadPolicy.cachedOrFetch`);
-      `LocalToolBackendFixtureTests`.
-- [ ] `ServerStatusModel`, `ServiceFields` probes → `CapabilityProbe.ensure` + `status()`.
-- [ ] `ConnectionHealthMonitor` → `HostGovernor.health` + `EventHub.lastEventAt`.
+- [x] Tools, MCP, settings probes and the health monitor reach MediaKit through the facades.
+- [x] Six download clients, `TMDBClient` and the Plex/Jellyfin/Emby client are facades
+      (`DownloadClients.swift`, `MediaServerFacade.swift`); their HTTP-level tests retired,
+      add-request shapes covered in MediaKit `DownloadAddShapeTests`. `DownloadProgressService`
+      and the phase-0 recorder test deleted (parity now uses `MediaKitRecording`).
 - [ ] `MediaServerIndex` → `Snapshot` over `libraryIndex`/`watchHistory`; `PosterStore` consumes
-      `ArtworkReference` + `kit.artworkHeaders`.
-- [ ] TMDB consumers (`CastProvider`, `PersonStore`, `CountryProvider`, `TrailerProvider`,
-      `LocalToolBackend+TMDB/+Discover`).
+      `ArtworkReference` + `kit.artworkHeaders` (today the facade feeds the old index).
+- [ ] `ConnectionHealthMonitor` → `HostGovernor.health` + `EventHub.lastEventAt`.
 - [ ] Widget: `MediaKit(role: .snapshotReader)` on the group container database.
 - [ ] `SpotlightIndexer` as a store consumer.
 

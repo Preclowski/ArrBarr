@@ -35,21 +35,9 @@ public protocol MediaServerClient: Sendable {
 }
 
 public enum MediaServerClientFactory {
-    /// The client for the currently selected server, or nil when the feature is
-    /// off / half-configured. Callers treat nil as "no media server", which is
-    /// the same path they take when a fetch fails.
     public static func make(config: MediaServerConfig) -> MediaServerClient? {
         guard config.isConfigured else { return nil }
-        switch config.kind {
-        case .plex:
-            return PlexClient(config: config)
-        case .jellyfin, .emby:
-            // One implementation for both: Jellyfin is Emby's fork and the
-            // endpoints ArrBarr touches (`/System/Info`, `/Users`, `/Items`,
-            // `/Sessions`, `/Library/Refresh`) never diverged. Only the auth
-            // header differs, and that already lives on `MediaServerKind`.
-            return JellyfinClient(config: config)
-        }
+        return MediaServerFacade(config: config)
     }
 }
 

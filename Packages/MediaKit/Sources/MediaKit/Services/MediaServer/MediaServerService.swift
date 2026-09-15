@@ -87,15 +87,19 @@ public struct MediaServerService: Sendable {
                 return (try WireCodec.decoder.decode(PlexContainer<PlexMetadata>.self, from: response.body).MediaContainer.Metadata ?? []).compactMap { m in
                     guard let key = m.ratingKey else { return nil }
                     let progress = (m.viewOffset.map(Double.init) ?? 0) / max(Double(m.duration ?? 0), 1)
+                    let transcoding = m.TranscodeSession?["videoDecision"]?.stringValue == "transcode" || m.TranscodeSession?["audioDecision"]?.stringValue == "transcode"
                     return MediaServerSession(itemID: key, title: m.title ?? "", user: m.User?["title"]?.stringValue, progress: m.duration == nil ? nil : progress,
-                                              state: m.Player?["state"]?.stringValue ?? "playing", kind: Self.kind(m.type), parentTitle: m.grandparentTitle)
+                                              state: m.Player?["state"]?.stringValue ?? "playing", kind: Self.kind(m.type), parentTitle: m.grandparentTitle,
+                                              device: m.Player?["title"]?.stringValue ?? m.Player?["product"]?.stringValue, isTranscoding: transcoding)
                 }
             }
             return try WireCodec.decoder.decode([JellyfinSession].self, from: response.body).compactMap { s in
                 guard let item = s.NowPlayingItem else { return nil }
                 let progress = Double(s.PlayState?.PositionTicks ?? 0) / max(Double(item.RunTimeTicks ?? 0), 1)
+                let transcoding = s.TranscodingInfo.map { $0.IsVideoDirect != true || $0.IsAudioDirect != true } ?? false
                 return MediaServerSession(itemID: item.Id, title: item.Name ?? "", user: s.UserName, progress: item.RunTimeTicks == nil ? nil : progress,
-                                          state: s.PlayState?.IsPaused == true ? "paused" : "playing", kind: Self.kind(item.itemType), parentTitle: item.SeriesName)
+                                          state: s.PlayState?.IsPaused == true ? "paused" : "playing", kind: Self.kind(item.itemType), parentTitle: item.SeriesName,
+                                          device: s.DeviceName ?? s.Client, isTranscoding: transcoding)
             }
         } catch { throw MediaKitError.decoding(op, detail: WireCodec.describe(error)) }
     }
@@ -129,15 +133,19 @@ public struct MediaServerService: Sendable {
                        : plan("seasonPosters", path: "/Shows/{id}/Seasons", values: ["id": item], query: [("userId", user)])
         let plex = isPlex
         return Resource(plan: p, tags: [.entity(instance, .series, Int(item) ?? 0)], freshness: .reference) { data in
+            // Keyed by season number; the value is the Plex thumb path or the Jellyfin "<itemID>|<tag>" pair.
             if plex {
                 var out: [String: String] = [:]
-                for m in try WireCodec.decoder.decode(PlexContainer<PlexMetadata>.self, from: data).MediaContainer.Metadata ?? [] {
-                    if let index = m.ratingKey, let thumb = m.thumb { out[index] = thumb }
+                let container = try WireCodec.decoder.decode(PlexContainer<PlexMetadata>.self, from: data).MediaContainer
+                for m in (container.Metadata ?? []) + (container.Directory ?? []) {
+                    if let index = m.index, let thumb = m.thumb, out[String(index)] == nil { out[String(index)] = thumb }
                 }
                 return out
             }
             var out: [String: String] = [:]
-            for i in try WireCodec.decoder.decode(JellyfinItems.self, from: data).Items { if let tag = i.ImageTags?["Primary"] { out[i.Id] = tag } }
+            for i in try WireCodec.decoder.decode(JellyfinItems.self, from: data).Items {
+                if let number = i.IndexNumber, let tag = i.ImageTags?["Primary"] { out[String(number)] = "\(i.Id)|\(tag)" }
+            }
             return out
         }
     }
@@ -178,9 +186,10 @@ public struct MediaServerService: Sendable {
     static func plexIndex(_ data: Data) throws -> [MediaServerIndexEntry] {
         (try WireCodec.decoder.decode(PlexContainer<PlexMetadata>.self, from: data).MediaContainer.Metadata ?? []).compactMap { m in
             guard let key = m.ratingKey, let kind = kind(m.type) else { return nil }
+            let watched = kind == .series ? (m.leafCount ?? 0) > 0 && (m.viewedLeafCount ?? 0) >= (m.leafCount ?? 0) : (m.viewCount ?? 0) > 0
             return MediaServerIndexEntry(itemID: key, kind: kind, ids: ExternalIDParsing.plexGuids((m.Guid ?? []).map(\.id), kind: kind), title: m.title ?? "",
                                          year: m.year, artworkPath: m.thumb, viewCount: m.viewCount ?? 0,
-                                         lastViewedAt: m.lastViewedAt.map { Date(timeIntervalSince1970: TimeInterval($0)) })
+                                         lastViewedAt: m.lastViewedAt.map { Date(timeIntervalSince1970: TimeInterval($0)) }, watched: watched)
         }
     }
 
@@ -189,7 +198,8 @@ public struct MediaServerService: Sendable {
             guard let kind = kind(i.itemType) else { return nil }
             return MediaServerIndexEntry(itemID: i.Id, kind: kind, ids: ExternalIDParsing.jellyfinProviderIDs(i.ProviderIds ?? [:], kind: kind), title: i.Name ?? "",
                                          year: i.ProductionYear, artworkPath: i.ImageTags?["Primary"], viewCount: i.UserData?.PlayCount ?? 0,
-                                         lastViewedAt: i.UserData?.LastPlayedDate.flatMap { try? Date($0, strategy: WireCodec.iso8601Fractional) })
+                                         lastViewedAt: i.UserData?.LastPlayedDate.flatMap { try? Date($0, strategy: WireCodec.iso8601Fractional) },
+                                         watched: i.UserData?.Played ?? ((i.UserData?.PlayCount ?? 0) > 0))
         }
     }
 }
