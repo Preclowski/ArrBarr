@@ -40,7 +40,7 @@ struct MarkdownMessage: View {
     private var hasSpoilers: Bool { ChatSpoilerMarkup.containsSpoiler(source) }
 
     var body: some View {
-        let doc = Document(parsing: source)
+        let doc = Markdown.Document(parsing: source)
         Group {
             // A message that is ENTIRELY spoiler gets the blurred block, never
             // inline redaction. Inline redaction hides glyphs by colouring them
@@ -84,7 +84,7 @@ struct MarkdownMessage: View {
     /// The only thing lost is the bullets' hanging indent — a wrapped bullet
     /// wraps to the margin rather than under its own text — because a plain
     /// `Text` has no way to express one.
-    private func flattened(_ doc: Document) -> AttributedString? {
+    private func flattened(_ doc: Markdown.Document) -> AttributedString? {
         var out = AttributedString()
         for (idx, block) in doc.blockChildren.enumerated() {
             guard let piece = flattenBlock(block) else { return nil }
