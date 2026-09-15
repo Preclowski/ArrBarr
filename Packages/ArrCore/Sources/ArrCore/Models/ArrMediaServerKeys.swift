@@ -70,20 +70,5 @@ public extension SearchResult {
     }
 }
 
-public extension RadarrCalendarRecord {
-    var mediaServerKeys: [MediaServerExternalKey] {
-        tmdbId.map { [.tmdb($0)] } ?? []
-    }
-}
 
-public extension SonarrSeries {
-    var mediaServerKeys: [MediaServerExternalKey] {
-        tvdbId.map { [.tvdb($0)] } ?? []
-    }
-}
 
-public extension RadarrMovie {
-    var mediaServerKeys: [MediaServerExternalKey] {
-        tmdbId.map { [.tmdb($0)] } ?? []
-    }
-}

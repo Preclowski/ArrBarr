@@ -148,40 +148,7 @@ public extension Optional where Wrapped == [ArrStatusMessage] {
 
 // MARK: - Radarr
 
-public struct RadarrQueueRecord: Codable, Sendable {
-    let id: Int
-    let movieId: Int?
-    let title: String?
-    let status: String?
-    let trackedDownloadStatus: String?
-    let trackedDownloadState: String?
-    let downloadId: String?
-    let downloadClient: String?
-    let indexer: String?
-    let `protocol`: String?
-    let size: Double?
-    let sizeleft: Double?
-    let timeleft: String?
-    let estimatedCompletionTime: String?
-    let customFormats: [ArrCustomFormat]?
-    let customFormatScore: Int?
-    let quality: ArrQuality?
-    let movie: RadarrMovie?
-    let statusMessages: [ArrStatusMessage]?
-}
 
-public struct RadarrMovie: Codable, Sendable {
-    let id: Int
-    let title: String
-    let year: Int?
-    /// TMDB id — the media server's join key. See `SonarrSeries.tvdbId`.
-    var tmdbId: Int? = nil
-    let originalTitle: String?
-    let hasFile: Bool?
-    let titleSlug: String?
-    let images: [ArrImage]?
-    let movieFile: ArrFile?
-}
 
 public struct ArrFile: Codable, Sendable {
     let customFormats: [ArrCustomFormat]?
@@ -194,76 +161,12 @@ public struct ArrFile: Codable, Sendable {
     var languages: [ArrFileLanguage]? = nil
 }
 
-public struct ArrFileLanguage: Codable, Sendable {
-    let name: String?
-}
 
-public struct RadarrMovieFile: Codable, Sendable {
-    let id: Int
-    let movieId: Int?
-    let customFormats: [ArrCustomFormat]?
-    let customFormatScore: Int?
-    let quality: ArrQuality?
-    let size: Int64?
-    let relativePath: String?
-}
 
 // MARK: - Sonarr
 
-public struct SonarrQueueRecord: Codable, Sendable {
-    let id: Int
-    let seriesId: Int?
-    let episodeId: Int?
-    let seasonNumber: Int?
-    let title: String?
-    let status: String?
-    let trackedDownloadStatus: String?
-    let trackedDownloadState: String?
-    let downloadId: String?
-    let downloadClient: String?
-    let indexer: String?
-    let `protocol`: String?
-    let size: Double?
-    let sizeleft: Double?
-    let timeleft: String?
-    let estimatedCompletionTime: String?
-    let customFormats: [ArrCustomFormat]?
-    let customFormatScore: Int?
-    let quality: ArrQuality?
-    let series: SonarrSeries?
-    let episode: SonarrEpisode?
-    let statusMessages: [ArrStatusMessage]?
-}
 
-public struct SonarrSeries: Codable, Sendable {
-    let id: Int
-    let title: String
-    let year: Int?
-    /// TVDB id — how the media server's series entries are matched. Always on
-    /// the wire (Sonarr keys on TVDB); newly decoded. `var … = nil` so demo
-    /// mocks' memberwise inits keep compiling.
-    var tvdbId: Int? = nil
-    let titleSlug: String?
-    let images: [ArrImage]?
-    // Calendar fetches the series with `includeSeries=true`, so both of
-    // these are populated when the upstream record came from /calendar.
-    // SonarrLookupRatings just wraps a `value: Double?` — reuse it.
-    let runtime: Int?
-    let ratings: SonarrLookupRatings?
-    /// Library-tooltip parity for the Upcoming tooltip.
-    var genres: [String]? = nil
-    var status: String? = nil
-    var qualityProfileId: Int? = nil
-}
 
-public struct SonarrEpisode: Codable, Sendable {
-    let id: Int
-    let seasonNumber: Int?
-    let episodeNumber: Int?
-    let title: String?
-    let hasFile: Bool?
-    let episodeFileId: Int?
-}
 
 public struct SonarrEpisodeFile: Codable, Sendable {
     let id: Int
@@ -277,29 +180,6 @@ public struct SonarrEpisodeFile: Codable, Sendable {
 
 // MARK: - Lidarr
 
-public struct LidarrQueueRecord: Codable, Sendable {
-    let id: Int
-    let artistId: Int?
-    let albumId: Int?
-    let title: String?
-    let status: String?
-    let trackedDownloadStatus: String?
-    let trackedDownloadState: String?
-    let downloadId: String?
-    let downloadClient: String?
-    let indexer: String?
-    let `protocol`: String?
-    let size: Double?
-    let sizeleft: Double?
-    let timeleft: String?
-    let estimatedCompletionTime: String?
-    let customFormats: [ArrCustomFormat]?
-    let customFormatScore: Int?
-    let quality: ArrQuality?
-    let artist: LidarrArtist?
-    let album: LidarrAlbum?
-    let statusMessages: [ArrStatusMessage]?
-}
 
 public struct LidarrArtist: Codable, Sendable {
     let id: Int
@@ -308,14 +188,6 @@ public struct LidarrArtist: Codable, Sendable {
     let images: [ArrImage]?
 }
 
-public struct LidarrAlbum: Codable, Sendable {
-    let id: Int
-    let title: String
-    let releaseDate: String?
-    let foreignAlbumId: String?
-    let artist: LidarrArtist?
-    let images: [ArrImage]?
-}
 
 /// One on-disk track file (`/api/v1/trackfile?albumId=N`). Lidarr's queue is
 /// per-album, so an album upgrade replaces N of these — the client aggregates
@@ -334,18 +206,6 @@ public struct LidarrTrackFile: Codable, Sendable {
     let path: String?
 }
 
-public struct LidarrCalendarRecord: Codable, Sendable {
-    let id: Int
-    let title: String
-    let releaseDate: String?
-    let foreignAlbumId: String?
-    let overview: String?
-    let artist: LidarrArtist?
-    let images: [ArrImage]?
-    /// Albums have no `hasFile` bool — ownership is derived from the
-    /// track/file tallies (same shape the library endpoint ships).
-    var statistics: LidarrLibraryStatistics? = nil
-}
 
 // MARK: - History
 
@@ -354,51 +214,8 @@ public struct LidarrCalendarRecord: Codable, Sendable {
 // deletion ("Upgrade" when an import replaced the file). Read it through
 // `historyString(_:)`.
 
-public struct RadarrHistoryRecord: Codable, Sendable {
-    let id: Int
-    let movieId: Int?
-    let sourceTitle: String?
-    let downloadId: String?
-    let date: String?
-    let eventType: String?
-    let quality: ArrQuality?
-    let customFormats: [ArrCustomFormat]?
-    let customFormatScore: Int?
-    let data: [String: JSONValue]?
-    let movie: RadarrMovie?
-}
 
-public struct SonarrHistoryRecord: Codable, Sendable {
-    let id: Int
-    let episodeId: Int?
-    let seriesId: Int?
-    let sourceTitle: String?
-    let downloadId: String?
-    let date: String?
-    let eventType: String?
-    let quality: ArrQuality?
-    let customFormats: [ArrCustomFormat]?
-    let customFormatScore: Int?
-    let data: [String: JSONValue]?
-    let series: SonarrSeries?
-    let episode: SonarrEpisode?
-}
 
-public struct LidarrHistoryRecord: Codable, Sendable {
-    let id: Int
-    let albumId: Int?
-    let artistId: Int?
-    let sourceTitle: String?
-    let downloadId: String?
-    let date: String?
-    let eventType: String?
-    let quality: ArrQuality?
-    let customFormats: [ArrCustomFormat]?
-    let customFormatScore: Int?
-    let data: [String: JSONValue]?
-    let artist: LidarrArtist?
-    let album: LidarrAlbum?
-}
 
 // MARK: - Health
 
@@ -455,46 +272,7 @@ public struct ArrCommand: Codable, Equatable, Sendable {
 
 // MARK: - Calendar
 
-public struct RadarrCalendarRecord: Codable, Sendable {
-    let id: Int
-    let title: String
-    let year: Int?
-    let digitalRelease: String?
-    let physicalRelease: String?
-    let inCinemas: String?
-    let hasFile: Bool?
-    let overview: String?
-    let images: [ArrImage]?
-    let titleSlug: String?
-    // Same fields the search lookup decoder already extracts — calendar
-    // returns identical movie records, just filtered by release window.
-    let runtime: Int?
-    let ratings: RadarrLookupRatings?
-    /// Library-tooltip parity for the Upcoming tooltip: the calendar record
-    /// IS a full movie resource — decode the same title facts.
-    var genres: [String]? = nil
-    var certification: String? = nil
-    var status: String? = nil
-    var qualityProfileId: Int? = nil
-    /// TMDB id — the media server's join key for movies. See
-    /// `SonarrSeries.tvdbId` for why this is a `var` with a default.
-    var tmdbId: Int? = nil
-}
 
-public struct SonarrCalendarRecord: Codable, Sendable {
-    let id: Int
-    let seriesId: Int?
-    let seasonNumber: Int?
-    let episodeNumber: Int?
-    let title: String?
-    let airDateUtc: String?
-    let hasFile: Bool?
-    let overview: String?
-    let series: SonarrSeries?
-    /// On-disk file id when `hasFile` — the Upcoming tooltip's route to the
-    /// episode's file details.
-    var episodeFileId: Int? = nil
-}
 
 // MARK: - Search Lookup
 
@@ -658,20 +436,6 @@ public struct MetadataProfile: Codable, Sendable, Equatable, Identifiable {
     public let name: String
 }
 
-/// Minimal movie-file projection for library records — just the quality
-/// name. The full `RadarrMovieFile` isn't Sendable/Equatable and the
-/// library surfaces need nothing else from it.
-public struct ArrLibraryFile: Codable, Sendable, Equatable {
-    public struct Quality: Codable, Sendable, Equatable {
-        public struct Name: Codable, Sendable, Equatable { let name: String? }
-        let quality: Name?
-    }
-    let quality: Quality?
-    var customFormats: [ArrCustomFormat]? = nil
-    var customFormatScore: Int? = nil
-    var relativePath: String? = nil
-    var qualityName: String? { quality?.quality?.name }
-}
 
 /// One entry of an arr's alternate-title list — the translated, regional and
 /// scene names a title is also known by ("Leon zawodowiec" for "Léon: The
@@ -802,73 +566,9 @@ public struct SonarrLibrarySeasonStatistics: Codable, Sendable, Equatable {
 
 // MARK: - Whisparr
 
-public struct WhisparrQueueRecord: Codable, Sendable {
-    let id: Int
-    let movieId: Int?
-    let title: String?
-    let status: String?
-    let trackedDownloadStatus: String?
-    let trackedDownloadState: String?
-    let downloadId: String?
-    let downloadClient: String?
-    let indexer: String?
-    let `protocol`: String?
-    let size: Double?
-    let sizeleft: Double?
-    let timeleft: String?
-    let estimatedCompletionTime: String?
-    let customFormats: [ArrCustomFormat]?
-    let customFormatScore: Int?
-    let quality: ArrQuality?
-    let movie: WhisparrMovie?
-    let statusMessages: [ArrStatusMessage]?
-}
 
-public struct WhisparrMovie: Codable, Sendable {
-    let id: Int
-    let title: String
-    let year: Int?
-    let studio: String?
-    let hasFile: Bool?
-    let titleSlug: String?
-    let images: [ArrImage]?
-    let movieFile: ArrFile?
-}
 
-public struct WhisparrCalendarRecord: Codable, Sendable {
-    let id: Int
-    let title: String
-    let year: Int?
-    let digitalRelease: String?
-    let physicalRelease: String?
-    let inCinemas: String?
-    let hasFile: Bool?
-    let overview: String?
-    let images: [ArrImage]?
-    let titleSlug: String?
-    let studio: String?
-    // Whisparr is a Radarr fork and returns the same shape for scenes.
-    let runtime: Int?
-    let ratings: RadarrLookupRatings?
-    var genres: [String]? = nil
-    var status: String? = nil
-    var qualityProfileId: Int? = nil
-}
 
-public struct WhisparrHistoryRecord: Codable, Sendable {
-    let id: Int
-    let movieId: Int?
-    let sourceTitle: String?
-    let downloadId: String?
-    let date: String?
-    let eventType: String?
-    let quality: ArrQuality?
-    let customFormats: [ArrCustomFormat]?
-    let customFormatScore: Int?
-    /// See the note above `RadarrHistoryRecord`.
-    let data: [String: JSONValue]?
-    let movie: WhisparrMovie?
-}
 
 public struct WhisparrLibraryRecord: Codable, Sendable, Equatable {
     public let id: Int?
@@ -960,4 +660,20 @@ public extension Array where Element == ArrImage {
         }
         return (nil, false)
     }
+}
+
+public struct ArrLibraryFile: Codable, Sendable, Equatable {
+    public struct Quality: Codable, Sendable, Equatable {
+        public struct Name: Codable, Sendable, Equatable { let name: String? }
+        let quality: Name?
+    }
+    let quality: Quality?
+    var customFormats: [ArrCustomFormat]? = nil
+    var customFormatScore: Int? = nil
+    var relativePath: String? = nil
+    var qualityName: String? { quality?.quality?.name }
+}
+
+public struct ArrFileLanguage: Codable, Sendable {
+    let name: String?
 }
