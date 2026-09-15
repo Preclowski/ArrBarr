@@ -22,7 +22,7 @@ final class ScriptedTransport: Transport, SocketTransport, @unchecked Sendable {
     init() {}
 
     func answer(_ operation: String, _ answers: Answer...) { lock.withLock { script[operation, default: []].append(contentsOf: answers) } }
-    func answer(_ operation: String, json: String, status: Int = 200) { answer(operation, Answer(status: status, body: Data(json.utf8))) }
+    func answer(_ operation: String, json: String, status: Int = 200, instance: InstanceID? = nil) { answer(operation, Answer(status: status, body: Data(json.utf8))) }
 
     var operations: [String] { lock.withLock { requests.map(\.operation.name) } }
     var count: Int { lock.withLock { requests.count } }
