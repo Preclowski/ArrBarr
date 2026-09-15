@@ -28,7 +28,6 @@ enum TrailerProvider {
         // Demo has no TMDB key, so the real lookup can only ever answer nil and
         // the trailer button would never appear. The fixtures carry their own
         // ids — see `DemoMocks.trailerKey`.
-        if DemoMode.isActive, let tmdbId, let key = DemoMocks.trailerKey(forId: tmdbId) { return key }
         guard let tmdbId, tmdbId > 0 else { return nil }
         return await cache.value(for: "movie:\(tmdbId)") {
             await fetch(configStore: configStore) { try await $0.movieVideos(movieId: tmdbId) }
@@ -40,7 +39,6 @@ enum TrailerProvider {
     /// strip makes.
     static func seriesTrailerKey(tmdbId: Int?, tvdbId: Int?,
                                  configStore: ConfigStore) async -> String? {
-        if DemoMode.isActive, let key = (tmdbId ?? tvdbId).flatMap(DemoMocks.trailerKey(forId:)) { return key }
         guard (tmdbId ?? 0) > 0 || (tvdbId ?? 0) > 0 else { return nil }
         let key = "series:\(tmdbId.map(String.init) ?? "-"):\(tvdbId.map(String.init) ?? "-")"
         return await cache.value(for: key) {
@@ -66,8 +64,6 @@ enum TrailerProvider {
 
     private static func fetch(configStore: ConfigStore,
                               _ videos: @escaping (TMDBClient) async throws -> [TMDBVideo]) async -> String? {
-        // Demo runs offline by design — no TMDB call, no trailer chip.
-        guard !DemoMode.isActive else { return nil }
         let apiKey = configStore.tmdbApiKey
         guard !apiKey.isEmpty else { return nil }
         guard let list = try? await videos(TMDBClient(apiKey: apiKey)) else { return nil }

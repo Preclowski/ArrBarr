@@ -69,52 +69,6 @@ struct HTTPErrorTests {
     }
 }
 
-@Suite("HTTPClient URL + form encoding")
-struct HTTPClientEncodingTests {
-    @Test("Form fields escape the separators that used to split them apart")
-    func formEscapesSeparators() {
-        // Under `.urlQueryAllowed` this password was spliced into extra fields
-        // ("password=p", "ss=w+rd") and qBittorrent login failed with a 403 loop.
-        #expect(HTTPClient.encodeForm(["username": "admin", "password": "p&ss=w+rd"])
-                == "password=p%26ss%3Dw%2Brd&username=admin")
-    }
-
-    @Test("Form values keep spaces and non-ASCII percent-encoded, never literal")
-    func formEscapesSpacesAndUnicode() {
-        #expect(HTTPClient.encodeForm(["q": "a b"]) == "q=a%20b")
-        #expect(HTTPClient.encodeForm(["q": "café"]) == "q=caf%C3%A9")
-    }
-
-    @Test("Query keeps '+' encoded so ASP.NET doesn't read it as a space")
-    func queryEscapesPlus() throws {
-        let url = try HTTPClient().url(base: "https://host", path: "/api/v3/search",
-                                       query: [URLQueryItem(name: "term", value: "Disney+")])
-        #expect(url.absoluteString == "https://host/api/v3/search?term=Disney%2B")
-    }
-
-    @Test("Escaping '+' leaves everything else URLComponents encoded intact")
-    func queryPlusFixIsSurgical() throws {
-        let url = try HTTPClient().url(base: "https://host", path: "/x",
-                                       query: [URLQueryItem(name: "t", value: "a&b=c d é+f")])
-        #expect(url.absoluteString == "https://host/x?t=a%26b%3Dc%20d%20%C3%A9%2Bf")
-    }
-
-    @Test("Trailing slashes on the base never double up in the joined path",
-          arguments: ["https://host/sonarr", "https://host/sonarr/", "https://host/sonarr//"])
-    func baseTrailingSlashes(_ base: String) throws {
-        let url = try HTTPClient().url(base: base, path: "/api/v3/queue")
-        #expect(url.absoluteString == "https://host/sonarr/api/v3/queue")
-    }
-
-    @Test("A bare host with no path still joins cleanly")
-    func baseWithoutPath() throws {
-        for base in ["https://host", "https://host/"] {
-            let url = try HTTPClient().url(base: base, path: "/api/v3/queue")
-            #expect(url.absoluteString == "https://host/api/v3/queue")
-        }
-    }
-}
-
 @Suite("SonarrMonitorMode API mapping")
 struct SonarrMonitorModeTests {
     @Test("Season modes map to Sonarr's camelCase MonitorTypes")

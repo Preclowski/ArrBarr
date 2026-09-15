@@ -176,8 +176,7 @@ struct SeasonDetailView: View {
         // and the index caches the answer for the rest of the session.
         .task(id: drill.seriesId) {
             countries = await CountryProvider.seriesCountries(
-                tmdbId: sonarrDetail?.tmdbId, tvdbId: sonarrDetail?.tvdbId,
-                demoSeriesId: drill.seriesId, configStore: configStore)
+                tmdbId: sonarrDetail?.tmdbId, tvdbId: sonarrDetail?.tvdbId, configStore: configStore)
         }
         .task(id: drill.seriesId) {
             let keys = sonarrDetail?.mediaServerKeys ?? []

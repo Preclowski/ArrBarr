@@ -833,10 +833,10 @@ private struct LibraryEntryTooltip: View {
             switch entry.source {
             case .radarr:
                 countries = await CountryProvider.movieCountries(
-                    tmdbId: entry.externalId, demoMovieId: entry.arrId, configStore: configStore)
+                    tmdbId: entry.externalId, configStore: configStore)
             case .sonarr:
                 countries = await CountryProvider.seriesCountries(
-                    tmdbId: nil, tvdbId: entry.externalId, demoSeriesId: entry.arrId, configStore: configStore)
+                    tmdbId: nil, tvdbId: entry.externalId, configStore: configStore)
             case .lidarr, .whisparr:
                 break
             }

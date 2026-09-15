@@ -47,12 +47,12 @@ enum CastProvider {
     }
 
     /// Series cast + creators. `tmdbId` is tried first; when absent, `tvdbId`
-    /// is resolved to a tmdb id via TMDB `/find`. `demoSeriesId` serves demo
+    /// is resolved to a tmdb id via TMDB `/find`.
     /// fixtures.
-    static func seriesCredits(tmdbId: Int?, tvdbId: Int?, demoSeriesId: Int?, configStore: ConfigStore) async -> TitleCredits {
-        let key = "series:\(tmdbId.map(String.init) ?? "-"):\(tvdbId.map(String.init) ?? "-"):\(demoSeriesId.map(String.init) ?? "-")"
+    static func seriesCredits(tmdbId: Int?, tvdbId: Int?, configStore: ConfigStore) async -> TitleCredits {
+        let key = "series:\(tmdbId.map(String.init) ?? "-"):\(tvdbId.map(String.init) ?? "-")"
         return await cache.value(for: key) {
-            await fetchSeriesCredits(tmdbId: tmdbId, tvdbId: tvdbId, demoSeriesId: demoSeriesId, configStore: configStore)
+            await fetchSeriesCredits(tmdbId: tmdbId, tvdbId: tvdbId, configStore: configStore)
         }
     }
 
@@ -62,7 +62,7 @@ enum CastProvider {
         // Radarr `/credit` first — it needs no TMDB key and serves demo. Only
         // usable when the caller has a Radarr movie id (the detail view does;
         // a TMDB-search add-panel result does not).
-        if let radarrMovieId, DemoMode.isActive || configStore.radarr.isConfigured {
+        if let radarrMovieId, configStore.radarr.isConfigured {
             let credits = (try? await RadarrClient(config: configStore.radarr).fetchCredits(movieId: radarrMovieId)) ?? []
             let members = TitleCredits(cast: CastMember.from(radarrCredits: credits),
                                        directors: CastMember.directors(radarrCredits: credits))
@@ -70,7 +70,6 @@ enum CastProvider {
             // Radarr frequently has no credits for unreleased movies — fall
             // through to TMDB when we can.
         }
-        guard !DemoMode.isActive else { return .empty }
         let key = configStore.tmdbApiKey
         guard !key.isEmpty, let tmdbId, tmdbId > 0,
               let credits = try? await TMDBClient(apiKey: key).movieCredits(movieId: tmdbId)
@@ -79,12 +78,7 @@ enum CastProvider {
                             directors: CastMember.directors(tmdbCrew: credits.crew))
     }
 
-    private static func fetchSeriesCredits(tmdbId: Int?, tvdbId: Int?, demoSeriesId: Int?, configStore: ConfigStore) async -> TitleCredits {
-        if DemoMode.isActive {
-            guard let demoSeriesId else { return .empty }
-            return TitleCredits(cast: DemoMocks.sonarrSeriesCast(seriesId: demoSeriesId),
-                                directors: DemoMocks.sonarrSeriesCreators(seriesId: demoSeriesId))
-        }
+    private static func fetchSeriesCredits(tmdbId: Int?, tvdbId: Int?, configStore: ConfigStore) async -> TitleCredits {
         let key = configStore.tmdbApiKey
         guard !key.isEmpty else { return .empty }
         let client = TMDBClient(apiKey: key)

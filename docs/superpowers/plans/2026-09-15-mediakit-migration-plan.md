@@ -74,16 +74,21 @@ Approach: the old client types (`RadarrClient`, `SonarrClient`, `LidarrClient`, 
 
 ## Wave 5 — demo
 
-- [ ] `DemoMocks*`, `DemoQueueState`, `DemoMonitorState` and the 46 `DemoMode.isActive` client
-      branches replaced by `FixtureTransport` + `DemoRule`s; `DemoMode.isActive` stays for badges.
+- [x] Queue, calendar, history, health, details, library, search, releases and TMDB in demo come
+      from `FixtureTransport` (placeholder origins per enabled kind, PUT bodies remembered so
+      monitor toggles stick); `DemoQueueState`, `DemoMonitorState` and the queue/upcoming/
+      history/details/releases/library mocks are deleted. `DemoMocks` (+People, +Search) stay for
+      the chat persona and people search, which are outside the communication layer.
 
 ## Wave 6 — removal + isolation
 
-- [ ] Delete `Services/{Radarr,Sonarr,Lidarr,Whisparr}Client.swift`, the six download clients,
-      `HTTPClient`, `ArrAPIClient`, `ArrDownloadClients`, `RealtimeUpdates`,
-      `ConnectionHealthMonitor`, `CoalescingCache`, `TMDBClient`, `MediaServer/*Client.swift`,
-      `DownloadProgressService`, `Models/ArrTypes.swift` (what MediaKit now owns).
-- [ ] Migrate the 14 `URLProtocol` test files to `ScriptedTransport`/`FixtureTransport`.
+- [x] `HTTPClient`, `RealtimeUpdates`, `DownloadProgressService`, the per-arr queue/calendar/
+      history wire records and the old client HTTP paths are gone; the client type names remain
+      as facades (consumers unchanged). `ConnectionHealthMonitor` stays (it schedules probes,
+      not HTTP). `CoalescingCache` and `TitleMetadataStore` stay (in-memory caches over
+      MediaKit-backed calls; candidates for a later pass).
+- [ ] Migrate the remaining `URLProtocol` stub suites to `ScriptedTransport`/`FixtureTransport`
+      (today they run through the shared session with global registration).
 - [ ] `.defaultIsolation(MainActor.self)` in `Packages/ArrCore/Package.swift`; fix what the
       compiler reports; `python3 Tools/loc/lint_missing_keys.py`.
 

@@ -549,12 +549,6 @@ public final class QueueViewModel {
     /// pages loaded so far, in `HistoryFeed`.
     func fetchHistory(for source: QueueItem.Source, page: Int, entityId: Int? = nil) async -> HistoryResult {
         let pageSize = HistoryFeed.pageSize
-        if DemoMode.isActive {
-            let all = DemoMocks.history(for: source).filter { entityId == nil || $0.arrId == entityId }
-            let start = (page - 1) * pageSize
-            return HistoryResult(items: Array(all.dropFirst(start).prefix(pageSize)),
-                                 hasMore: start + pageSize < all.count, error: nil)
-        }
         return await aggregator.fetchHistory(for: source, page: page, pageSize: pageSize, entityId: entityId)
     }
 
@@ -759,33 +753,6 @@ public final class QueueViewModel {
                 pendingRefresh = false
                 Task { await self.refresh() }
             }
-        }
-        if DemoMode.isActive {
-            // Simulate a real network round-trip so the spinner is visible and
-            // popover-blink regressions are easier to spot in demo mode.
-            try? await Task.sleep(nanoseconds: 1_000_000_000)
-            // Through DemoQueueState so a pause / cancel the user just performed
-            // survives this refresh — the fixtures themselves are immutable and
-            // would otherwise undo the action on the next poll.
-            self.queues = [
-                .radarr:   DemoQueueState.apply(DemoMocks.radarrQueue),
-                .sonarr:   DemoQueueState.apply(DemoMocks.sonarrQueue),
-                .lidarr:   DemoQueueState.apply(DemoMocks.lidarrQueue),
-                .whisparr: DemoQueueState.apply(DemoMocks.whisparrQueue),
-            ]
-            self.upcoming = DemoMocks.upcoming
-            self.tonight = Self.tonightSlice(from: DemoMocks.upcoming, hours: configStore.tonightHours)
-            self.health = DemoMocks.health
-            self.errors = [:]
-            self.unreachableArrs = []
-            self.lastUnreachable = []
-            self.needsYou = Self.computeNeedsYou(queues: self.queues, errors: [:], health: DemoMocks.health, showWarnings: configStore.showWarnings)
-            for service in MonitoredService.allCases {
-                ConnectionHealth.shared.forceOK(service, detail: nil)
-            }
-            self.lastError = nil
-            self.lastSuccessfulRefresh = Date()
-            return
         }
         // Everything at once — what launch, wake, panel-open and a manual pull
         // want. The three fetches are independent and each commits through the
@@ -1094,7 +1061,6 @@ public final class QueueViewModel {
     /// own schedule, and re-pulling them at the queue's cadence was the last
     /// place the old monolith survived.
     public func refreshQueues() async {
-        guard !DemoMode.isActive else { return await refresh() }
         guard !isRefreshing else {
             pendingRefresh = true
             return
@@ -1120,7 +1086,6 @@ public final class QueueViewModel {
     /// What a realtime push actually justifies. The all-sources `refresh()` is
     /// still what launch, wake and a manual pull run.
     public func refreshQueue(source: QueueItem.Source) async {
-        guard !DemoMode.isActive else { return await refresh() }
         guard configStore.config(for: source.serviceKind).isConfigured else { return }
         let result = await aggregator.fetch(source: source)
         if Task.isCancelled { return }
@@ -1133,7 +1098,6 @@ public final class QueueViewModel {
     /// download progressing, and because Servarr pushes health changes on the
     /// same socket, so the poll is only a backstop.
     public func refreshHealth() async {
-        guard !DemoMode.isActive else { return }
         let result = await aggregator.fetchHealth()
         if Task.isCancelled { return }
         health = result
@@ -1173,7 +1137,6 @@ public final class QueueViewModel {
     /// the next 30 days change about once a day, and used to be refetched on
     /// every queue tick.
     public func refreshUpcoming() async {
-        guard !DemoMode.isActive else { return }
         let result = await aggregator.fetchUpcoming()
         if Task.isCancelled { return }
         commitUpcoming(items: result.items, failed: result.failed)

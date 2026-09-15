@@ -75,10 +75,10 @@ public struct SearchResultRow: View {
         switch result.source {
         case .radarr:
             return await CountryProvider.movieCountries(
-                tmdbId: result.externalId, demoMovieId: nil, configStore: configStore)
+                tmdbId: result.externalId, configStore: configStore)
         case .sonarr:
             return await CountryProvider.seriesCountries(
-                tmdbId: result.tmdbTVId, tvdbId: result.externalId, demoSeriesId: nil,
+                tmdbId: result.tmdbTVId, tvdbId: result.externalId,
                 configStore: configStore)
         case .lidarr, .whisparr:
             return []

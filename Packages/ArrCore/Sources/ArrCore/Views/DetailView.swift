@@ -225,7 +225,7 @@ public struct DetailView: View {
         // unavailable — the data is stale, the action can't land. Both cases
         // hide the CTA (and the episode-row pause/resume/delete callbacks below).
         // Demo is exempt: no client is configured there and the actions are
-        // served by the fixture state (DemoQueueState).
+        // served by the fixture transport.
         if DemoMode.isActive { return true }
         guard let kind = configStore.selectedDownloadClient(for: item.downloadProtocol) else { return false }
         if case .down = ConnectionHealth.shared.state(for: .arr(kind)) { return false }
@@ -1355,7 +1355,7 @@ public struct DetailView: View {
                 qualityProfileName = await Self.profileName(
                     id: radarrDetail?.qualityProfileId, config: configStore.radarr, source: .radarr)
                 async let movieCountries = CountryProvider.movieCountries(
-                    tmdbId: radarrDetail?.tmdbId, demoMovieId: entityId, configStore: configStore)
+                    tmdbId: radarrDetail?.tmdbId, configStore: configStore)
                 let movieCredits = await CastProvider.movieCredits(
                     radarrMovieId: entityId, tmdbId: radarrDetail?.tmdbId, configStore: configStore)
                 cast = movieCredits.cast
@@ -1381,11 +1381,9 @@ public struct DetailView: View {
                 qualityProfileName = await Self.profileName(
                     id: sonarrDetail?.qualityProfileId, config: configStore.sonarr, source: .sonarr)
                 async let seriesCountries = CountryProvider.seriesCountries(
-                    tmdbId: sonarrDetail?.tmdbId, tvdbId: sonarrDetail?.tvdbId,
-                    demoSeriesId: entityId, configStore: configStore)
+                    tmdbId: sonarrDetail?.tmdbId, tvdbId: sonarrDetail?.tvdbId, configStore: configStore)
                 let seriesCredits = await CastProvider.seriesCredits(
-                    tmdbId: sonarrDetail?.tmdbId, tvdbId: sonarrDetail?.tvdbId,
-                    demoSeriesId: entityId, configStore: configStore)
+                    tmdbId: sonarrDetail?.tmdbId, tvdbId: sonarrDetail?.tvdbId, configStore: configStore)
                 cast = seriesCredits.cast
                 directors = seriesCredits.directors
                 countries = await seriesCountries

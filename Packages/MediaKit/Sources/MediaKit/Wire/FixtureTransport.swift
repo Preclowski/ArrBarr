@@ -28,6 +28,8 @@ public actor FixtureTransport: Transport, SocketTransport {
     private let clock: any MediaClock
     private var files: [InstanceKind: [String: Entry]] = [:]
     private var overrides: [String: JSONValue] = [:]
+    /// PUT bodies keyed by path: a demo monitor toggle survives the next GET of the same record.
+    private var putBodies: [String: JSONValue] = [:]
     private var queueStatus: [String: String] = [:]
     private var removedQueueItems: Set<String> = []
     private var frames: [InstanceID: [String]] = [:]
@@ -53,6 +55,14 @@ public actor FixtureTransport: Transport, SocketTransport {
             while s.hasSuffix("-") { s.removeLast() }
             return s.replacingOccurrences(of: "--", with: "-")
         }()
+        let pathKey = "\(kind.rawValue)\(request.url.path)"
+        if request.method == "PUT", case let .bytes(data, contentType) = request.body, contentType.contains("json"),
+           let json = try? JSONDecoder().decode(JSONValue.self, from: data) {
+            putBodies[pathKey] = json
+        }
+        if request.method == "GET", let remembered = putBodies[pathKey] {
+            return HTTPResponse(status: 200, headers: ["Content-Type": "application/json"], body: try encode(remembered))
+        }
         if let entry = table["\(name)-\(slug)"] ?? table[name] {
             var body = entry.body
             if let override = overrides[request.operation.rawValue] { body = override }
@@ -81,7 +91,7 @@ public actor FixtureTransport: Transport, SocketTransport {
 
     public func enqueueFrames(_ newFrames: [String], for instance: InstanceID) { frames[instance, default: []].append(contentsOf: newFrames) }
     public func requestLog() -> [(OperationID, Date)] { log }
-    public func reset() { overrides = [:]; queueStatus = [:]; removedQueueItems = []; frames = [:]; log = []; commands = [:] }
+    public func reset() { overrides = [:]; putBodies = [:]; queueStatus = [:]; removedQueueItems = []; frames = [:]; log = []; commands = [:] }
 
     /// Tests and the demo seed variants without touching the bundle.
     public func override(_ operation: OperationID, body: JSONValue) { overrides[operation.rawValue] = body }

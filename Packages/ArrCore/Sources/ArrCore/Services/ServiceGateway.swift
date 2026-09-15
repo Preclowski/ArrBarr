@@ -135,8 +135,10 @@ public final class ServiceGateway {
     public func start() async {
         started = true
         // Under tests the saved profile is never registered: a client's adopted config is the only way in.
-        await kit.start(instances: descriptors())
+        let instances = descriptors()
+        await kit.start(instances: instances)
         if !Self.isRunningTests { await syncRealtime() }
+        Logger(category: "Gateway").notice("MediaKit started with \(instances.count, privacy: .public) instance(s), demo \(DemoMode.isActive, privacy: .public)")
     }
 
     public func reconcile() async {
@@ -234,10 +236,18 @@ public final class ServiceGateway {
         return .file(in: base.appendingPathComponent("MediaKit"))
     }
 
+    /// The demo profile has no hosts; every enabled kind gets a placeholder origin that only the fixture transport sees.
+    static func demoURL(_ kind: InstanceKind) -> URL { URL(string: "http://\(kind.rawValue).demo.invalid")! }
+
     private func descriptors() -> [InstanceDescriptor] {
         var out: [InstanceDescriptor] = []
+        let demo = DemoMode.isActive
         for kind in ServiceKind.allCases {
             let config = configStore.config(for: kind)
+            if demo {
+                if config.enabled { out.append(InstanceDescriptor(id: kind.instanceID, baseURL: Self.demoURL(kind.instanceKind), enabled: true, generation: "demo")) }
+                continue
+            }
             if !Self.isRunningTests, let url = URL(string: config.baseURL), config.isConfigured {
                 let generation = SecretGenerations.generation(for: .apiKey(for: kind), in: configStore.defaultsForGateway)
                     + "." + SecretGenerations.generation(for: .password(for: kind), in: configStore.defaultsForGateway)
@@ -249,6 +259,11 @@ public final class ServiceGateway {
             }
         }
         let server = configStore.mediaServer
+        if demo {
+            if server.enabled { out.append(InstanceDescriptor(id: server.kind.instanceID, baseURL: Self.demoURL(server.kind.instanceID.kind), enabled: true, generation: "demo")) }
+            out.append(InstanceDescriptor(id: InstanceID(.tmdb), baseURL: Self.demoURL(.tmdb), enabled: true, generation: "demo"))
+            return out
+        }
         if !Self.isRunningTests, server.isConfigured, let url = URL(string: server.baseURL) {
             out.append(InstanceDescriptor(id: server.kind.instanceID, baseURL: url, enabled: true,
                                           generation: SecretGenerations.generation(for: .mediaServerToken, in: configStore.defaultsForGateway)))
@@ -302,6 +317,7 @@ private struct ConfigCredentialProvider: CredentialProvider {
 
     @MainActor
     private func resolve(_ instance: InstanceID) -> Credentials? {
+        if demo { return Credentials(baseURL: ServiceGateway.demoURL(instance.kind), material: .apiKey("demo"), generation: "demo") }
         let defaults = configStore.defaultsForGateway
         switch instance.kind {
         case .plex, .jellyfin, .emby:

@@ -280,10 +280,10 @@ public struct UpcomingItemTooltip: View {
             switch item.source {
             case .radarr:
                 countries = await CountryProvider.movieCountries(
-                    tmdbId: item.tmdbId, demoMovieId: item.entityId, configStore: configStore)
+                    tmdbId: item.tmdbId, configStore: configStore)
             case .sonarr:
                 countries = await CountryProvider.seriesCountries(
-                    tmdbId: nil, tvdbId: item.tvdbId, demoSeriesId: item.entityId, configStore: configStore)
+                    tmdbId: nil, tvdbId: item.tvdbId, configStore: configStore)
             case .lidarr, .whisparr:
                 break
             }

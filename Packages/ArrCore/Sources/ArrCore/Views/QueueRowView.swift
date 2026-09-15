@@ -117,7 +117,7 @@ public struct QueueRowView: View {
     private var canControl: Bool {
         // Demo has no download client to configure, and hiding pause/resume
         // there would hide one of the things the demo exists to show. The
-        // action is served by the fixture state — see DemoQueueState.
+        // action is served by the fixture transport.
         if DemoMode.isActive { return true }
         guard let kind = configStore.selectedDownloadClient(for: item.downloadProtocol) else { return false }
         if case .down = ConnectionHealth.shared.state(for: .arr(kind)) { return false }
