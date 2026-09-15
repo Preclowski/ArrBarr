@@ -1,0 +1,32 @@
+{
+  "headers": {
+    "Age": "1627",
+    "Alt-Svc": "h3=\":443\"; ma=86400",
+    "Cache-Control": "public, max-age=7508",
+    "Content-Encoding": "gzip",
+    "Content-Type": "application/json;charset=utf-8",
+    "Date": "Tue, 15 Sep 2026 00:03:05 GMT",
+    "Etag": "W/\"f9208701bb3c6b48a1cb1092413d57143daed968060e814fc252220c638a435d\"",
+    "Server": "openresty",
+    "Vary": "Origin",
+    "Via": "1.1 ca4bc82573be586920ccabe8e2946522.cloudfront.net (CloudFront)",
+    "x-amz-cf-id": "bvXyUrrHTgExAIK-WeI8GdTKmezoL39O6HudlesH5WNmtKm8h9VZRw==",
+    "x-amz-cf-pop": "WAW51-P1",
+    "x-az": "us-east-1c",
+    "x-cache": "Hit from cloudfront",
+    "x-gateway-cache-status": "HIT",
+    "x-task-id": "db5a529ce11a4c688c4279d4b86a2a3d"
+  },
+  "operation": "movieCountries",
+  "original_array_count": {
+    "genres": 2,
+    "origin_country": 1,
+    "production_companies": 5,
+    "production_countries": 2,
+    "spoken_languages": 1
+  },
+  "recorded_at": "2026-09-15",
+  "request_path": "/3/movie/{id}",
+  "status": 200,
+  "truncated": false
+}

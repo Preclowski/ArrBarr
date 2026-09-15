@@ -1,0 +1,347 @@
+[
+  {
+    "customFormatScore": 1760,
+    "customFormats": [
+      {
+        "id": 34,
+        "name": "DD+"
+      },
+      {
+        "id": 128,
+        "name": "MULTi"
+      },
+      {
+        "id": 137,
+        "name": "Season Pack"
+      }
+    ],
+    "dateAdded": "2024-01-30T10:29:26Z",
+    "id": 38398,
+    "indexerFlags": 0,
+    "languages": [
+      {
+        "id": 1,
+        "name": "English"
+      },
+      {
+        "id": 12,
+        "name": "Polish"
+      }
+    ],
+    "mediaInfo": {
+      "audioBitrate": 640000,
+      "audioChannels": 5.1,
+      "audioCodec": "EAC3",
+      "audioLanguages": "eng/pol",
+      "audioStreamCount": 2,
+      "resolution": "1920x1080",
+      "runTime": "1:00:48",
+      "scanType": "Progressive",
+      "subtitles": "eng/pol",
+      "videoBitDepth": 8,
+      "videoBitrate": 0,
+      "videoCodec": "h264",
+      "videoDynamicRange": "",
+      "videoDynamicRangeType": "",
+      "videoFps": 23.976
+    },
+    "path": "/data/sonarr/Open Series 30/Open Series 23/Open.Movie.64.S01E01-DEMO.mkv",
+    "quality": {
+      "quality": {
+        "id": 3,
+        "name": "WEBDL-1080p",
+        "resolution": 1080,
+        "source": "web"
+      },
+      "revision": {
+        "isRepack": false,
+        "real": 0,
+        "version": 1
+      }
+    },
+    "qualityCutoffNotMet": false,
+    "relativePath": "Open Series 23/Open.Movie.64.S01E01-DEMO.mkv",
+    "releaseGroup": "DEMO",
+    "releaseType": "seasonPack",
+    "sceneName": "Open.Movie.64.2020.S01E01.MULTi.1080p.WEB-DL-DEMO",
+    "seasonNumber": 1,
+    "seriesId": 166,
+    "size": 3438243271
+  },
+  {
+    "customFormatScore": 1760,
+    "customFormats": [
+      {
+        "id": 34,
+        "name": "DD+"
+      },
+      {
+        "id": 128,
+        "name": "MULTi"
+      },
+      {
+        "id": 137,
+        "name": "Season Pack"
+      }
+    ],
+    "dateAdded": "2024-01-30T10:29:30Z",
+    "id": 38399,
+    "indexerFlags": 0,
+    "languages": [
+      {
+        "id": 1,
+        "name": "English"
+      },
+      {
+        "id": 12,
+        "name": "Polish"
+      }
+    ],
+    "mediaInfo": {
+      "audioBitrate": 640000,
+      "audioChannels": 5.1,
+      "audioCodec": "EAC3",
+      "audioLanguages": "eng/pol",
+      "audioStreamCount": 2,
+      "resolution": "1920x1080",
+      "runTime": "58:39",
+      "scanType": "Progressive",
+      "subtitles": "eng/pol",
+      "videoBitDepth": 8,
+      "videoBitrate": 0,
+      "videoCodec": "h264",
+      "videoDynamicRange": "",
+      "videoDynamicRangeType": "",
+      "videoFps": 23.976
+    },
+    "path": "/data/sonarr/Open Series 30/Open Series 23/Open.Movie.64.S01E02-DEMO.mkv",
+    "quality": {
+      "quality": {
+        "id": 3,
+        "name": "WEBDL-1080p",
+        "resolution": 1080,
+        "source": "web"
+      },
+      "revision": {
+        "isRepack": false,
+        "real": 0,
+        "version": 1
+      }
+    },
+    "qualityCutoffNotMet": false,
+    "relativePath": "Open Series 23/Open.Movie.64.S01E02-DEMO.mkv",
+    "releaseGroup": "DEMO",
+    "releaseType": "seasonPack",
+    "sceneName": "Open.Movie.64.2020.S01E02.MULTi.1080p.WEB-DL-DEMO",
+    "seasonNumber": 1,
+    "seriesId": 166,
+    "size": 3018745478
+  },
+  {
+    "customFormatScore": 1760,
+    "customFormats": [
+      {
+        "id": 34,
+        "name": "DD+"
+      },
+      {
+        "id": 128,
+        "name": "MULTi"
+      },
+      {
+        "id": 137,
+        "name": "Season Pack"
+      }
+    ],
+    "dateAdded": "2024-01-30T10:30:15Z",
+    "id": 38401,
+    "indexerFlags": 0,
+    "languages": [
+      {
+        "id": 1,
+        "name": "English"
+      },
+      {
+        "id": 12,
+        "name": "Polish"
+      }
+    ],
+    "mediaInfo": {
+      "audioBitrate": 640000,
+      "audioChannels": 5.1,
+      "audioCodec": "EAC3",
+      "audioLanguages": "eng/pol",
+      "audioStreamCount": 2,
+      "resolution": "1920x1080",
+      "runTime": "1:00:00",
+      "scanType": "Progressive",
+      "subtitles": "eng/eng/pol",
+      "videoBitDepth": 8,
+      "videoBitrate": 0,
+      "videoCodec": "h264",
+      "videoDynamicRange": "",
+      "videoDynamicRangeType": "",
+      "videoFps": 23.976
+    },
+    "path": "/data/sonarr/Open Series 30/Open Series 23/Open.Movie.64.S01E04-DEMO.mkv",
+    "quality": {
+      "quality": {
+        "id": 3,
+        "name": "WEBDL-1080p",
+        "resolution": 1080,
+        "source": "web"
+      },
+      "revision": {
+        "isRepack": false,
+        "real": 0,
+        "version": 1
+      }
+    },
+    "qualityCutoffNotMet": false,
+    "relativePath": "Open Series 23/Open.Movie.64.S01E04-DEMO.mkv",
+    "releaseGroup": "DEMO",
+    "releaseType": "seasonPack",
+    "sceneName": "Open.Movie.64.2020.S01E04.MULTi.1080p.WEB-DL-DEMO",
+    "seasonNumber": 1,
+    "seriesId": 166,
+    "size": 3464158218
+  },
+  {
+    "customFormatScore": 760,
+    "customFormats": [
+      {
+        "id": 43,
+        "name": "DD"
+      },
+      {
+        "id": 128,
+        "name": "MULTi"
+      },
+      {
+        "id": 137,
+        "name": "Season Pack"
+      }
+    ],
+    "dateAdded": "2024-01-30T10:30:34Z",
+    "id": 38402,
+    "indexerFlags": 0,
+    "languages": [
+      {
+        "id": 12,
+        "name": "Polish"
+      },
+      {
+        "id": 1,
+        "name": "English"
+      }
+    ],
+    "mediaInfo": {
+      "audioBitrate": 384000,
+      "audioChannels": 2,
+      "audioCodec": "AC3",
+      "audioLanguages": "pol/eng",
+      "audioStreamCount": 2,
+      "resolution": "1920x1080",
+      "runTime": "55:49",
+      "scanType": "Progressive",
+      "subtitles": "eng",
+      "videoBitDepth": 8,
+      "videoBitrate": 0,
+      "videoCodec": "h264",
+      "videoDynamicRange": "",
+      "videoDynamicRangeType": "",
+      "videoFps": 23.976
+    },
+    "path": "/data/sonarr/Open Series 30/Open Series 23/Open.Movie.64.S01E05-DEMO.mkv",
+    "quality": {
+      "quality": {
+        "id": 3,
+        "name": "WEBDL-1080p",
+        "resolution": 1080,
+        "source": "web"
+      },
+      "revision": {
+        "isRepack": false,
+        "real": 0,
+        "version": 1
+      }
+    },
+    "qualityCutoffNotMet": false,
+    "relativePath": "Open Series 23/Open.Movie.64.S01E05-DEMO.mkv",
+    "releaseGroup": "DEMO",
+    "releaseType": "seasonPack",
+    "sceneName": "Open.Movie.64.2020.S01E05.MULTi.1080p.WEB-DL-DEMO",
+    "seasonNumber": 1,
+    "seriesId": 166,
+    "size": 3336840492
+  },
+  {
+    "customFormatScore": 760,
+    "customFormats": [
+      {
+        "id": 43,
+        "name": "DD"
+      },
+      {
+        "id": 128,
+        "name": "MULTi"
+      },
+      {
+        "id": 137,
+        "name": "Season Pack"
+      }
+    ],
+    "dateAdded": "2024-01-30T10:31:25Z",
+    "id": 38405,
+    "indexerFlags": 0,
+    "languages": [
+      {
+        "id": 12,
+        "name": "Polish"
+      },
+      {
+        "id": 1,
+        "name": "English"
+      }
+    ],
+    "mediaInfo": {
+      "audioBitrate": 384000,
+      "audioChannels": 2,
+      "audioCodec": "AC3",
+      "audioLanguages": "pol/eng",
+      "audioStreamCount": 2,
+      "resolution": "1920x1080",
+      "runTime": "57:20",
+      "scanType": "Progressive",
+      "subtitles": "pol/eng",
+      "videoBitDepth": 8,
+      "videoBitrate": 0,
+      "videoCodec": "h264",
+      "videoDynamicRange": "",
+      "videoDynamicRangeType": "",
+      "videoFps": 23.976
+    },
+    "path": "/data/sonarr/Open Series 30/Open Series 23/Open.Movie.64.S01E08-DEMO.mkv",
+    "quality": {
+      "quality": {
+        "id": 3,
+        "name": "WEBDL-1080p",
+        "resolution": 1080,
+        "source": "web"
+      },
+      "revision": {
+        "isRepack": false,
+        "real": 0,
+        "version": 1
+      }
+    },
+    "qualityCutoffNotMet": false,
+    "relativePath": "Open Series 23/Open.Movie.64.S01E08-DEMO.mkv",
+    "releaseGroup": "DEMO",
+    "releaseType": "seasonPack",
+    "sceneName": "Open.Movie.64.2020.S01E08.MULTi.1080p.WEB-DL-DEMO",
+    "seasonNumber": 1,
+    "seriesId": 166,
+    "size": 3679904688
+  }
+]

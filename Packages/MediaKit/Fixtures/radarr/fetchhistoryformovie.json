@@ -1,0 +1,768 @@
+{
+  "page": 1,
+  "pageSize": 20,
+  "records": [
+    {
+      "customFormatScore": 5900,
+      "customFormats": [
+        {
+          "id": 308,
+          "name": "5.1 Surround"
+        },
+        {
+          "id": 66,
+          "name": "DTS-HD MA"
+        },
+        {
+          "id": 287,
+          "name": "DV Boost"
+        },
+        {
+          "id": 234,
+          "name": "HDR"
+        },
+        {
+          "id": 94,
+          "name": "Remux Tier 02"
+        }
+      ],
+      "data": {
+        "age": "0",
+        "ageHours": "0.39878491716666664",
+        "ageMinutes": "23.927102156666667",
+        "customFormatScore": "5850",
+        "downloadClient": "SABnzbd",
+        "downloadClientName": "SABnzbd",
+        "downloadUrl": "<redacted>",
+        "guid": "https://demo-f0db3ff5c410",
+        "indexer": "Demo Indexer 3",
+        "indexerFlags": "0",
+        "indexerId": "19",
+        "nzbInfoUrl": "<redacted>",
+        "protocol": "1",
+        "publishedDate": "2023-04-22T11:34:31Z",
+        "releaseGroup": "DEMO",
+        "size": "66067042102",
+        "tmdbId": "0"
+      },
+      "date": "2023-04-22T11:58:26Z",
+      "downloadId": "SABnzbd_nzo_0vo8pqob",
+      "eventType": "grabbed",
+      "id": 20232,
+      "languages": [
+        {
+          "id": 1,
+          "name": "English"
+        }
+      ],
+      "movie": {
+        "added": "2021-06-22T19:56:47Z",
+        "alternateTitles": [],
+        "certification": "R",
+        "cleanTitle": "openmovie27",
+        "digitalRelease": "2002-08-07T00:00:00Z",
+        "folderName": "/data/radarr/Open Movie 27 (1989) {tmdb-341981}",
+        "genres": [
+          "Action",
+          "Crime",
+          "Drama",
+          "Thriller"
+        ],
+        "id": 1525,
+        "images": [
+          {
+            "coverType": "poster",
+            "remoteUrl": "https://example.invalid/movie/open-movie-27/poster.jpg"
+          },
+          {
+            "coverType": "fanart",
+            "remoteUrl": "https://example.invalid/movie/open-movie-27/fanart.jpg"
+          }
+        ],
+        "imdbId": "tt9241542",
+        "inCinemas": "1989-08-04T00:00:00Z",
+        "isAvailable": true,
+        "keywords": [
+          "car mechanic",
+          "jail guard",
+          "prison",
+          "prison warden",
+          "self sacrifice"
+        ],
+        "minimumAvailability": "inCinemas",
+        "monitored": true,
+        "movieFileId": 10825,
+        "originalLanguage": {
+          "id": 1,
+          "name": "English"
+        },
+        "originalTitle": "Open Movie 27",
+        "overview": "An open-licensed short film from the demo library.",
+        "path": "/data/radarr/Open Movie 27 (1989) {tmdb-341981}",
+        "physicalRelease": "1991-06-25T00:00:00Z",
+        "popularity": 7.087,
+        "qualityProfileId": 18,
+        "ratings": {
+          "imdb": {
+            "type": "user",
+            "value": 6.4,
+            "votes": 48864
+          },
+          "metacritic": {
+            "type": "user",
+            "value": 52,
+            "votes": 0
+          },
+          "rottenTomatoes": {
+            "type": "user",
+            "value": 31,
+            "votes": 0
+          },
+          "tmdb": {
+            "type": "user",
+            "value": 6.801,
+            "votes": 1364
+          },
+          "trakt": {
+            "type": "user",
+            "value": 6.78819,
+            "votes": 1355
+          }
+        },
+        "releaseDate": "1989-08-04T00:00:00Z",
+        "runtime": 109,
+        "secondaryYearSourceId": 0,
+        "sortTitle": "open movie 27",
+        "status": "released",
+        "studio": "Open Studio 7",
+        "tags": [
+          6
+        ],
+        "title": "Open Movie 27",
+        "titleSlug": "open-movie-27-341981",
+        "tmdbId": 341981,
+        "website": "",
+        "year": 1989,
+        "youTubeTrailerId": ""
+      },
+      "movieId": 1525,
+      "quality": {
+        "quality": {
+          "id": 31,
+          "modifier": "remux",
+          "name": "Remux-2160p",
+          "resolution": 2160,
+          "source": "bluray"
+        },
+        "revision": {
+          "isRepack": false,
+          "real": 0,
+          "version": 1
+        }
+      },
+      "qualityCutoffNotMet": false,
+      "sourceTitle": "Open.Movie.27.1989.2160p.UHD.Remux.HEVC.DTS-HD-DEMO"
+    },
+    {
+      "customFormatScore": 5900,
+      "customFormats": [
+        {
+          "id": 308,
+          "name": "5.1 Surround"
+        },
+        {
+          "id": 66,
+          "name": "DTS-HD MA"
+        },
+        {
+          "id": 287,
+          "name": "DV Boost"
+        },
+        {
+          "id": 234,
+          "name": "HDR"
+        },
+        {
+          "id": 94,
+          "name": "Remux Tier 02"
+        }
+      ],
+      "data": {
+        "indexerFlags": "0",
+        "path": "/data/radarr/Open Movie 27 (1989) {tmdb-341981}/Open.Movie.27-DEMO.mkv",
+        "relativePath": "Open.Movie.27-DEMO.mkv",
+        "releaseGroup": "DEMO",
+        "size": "60966287154",
+        "sourcePath": "/data/radarr/Open Movie 27 (1989) {tmdb-341981}/Open.Movie.27-DEMO.mkv",
+        "sourceRelativePath": "Open.Movie.27-DEMO.mkv"
+      },
+      "date": "2025-09-11T23:14:54Z",
+      "eventType": "movieFileRenamed",
+      "id": 69696,
+      "languages": [
+        {
+          "id": 1,
+          "name": "English"
+        }
+      ],
+      "movie": {
+        "added": "2021-06-22T19:56:47Z",
+        "alternateTitles": [],
+        "certification": "R",
+        "cleanTitle": "openmovie27",
+        "digitalRelease": "2002-08-07T00:00:00Z",
+        "folderName": "/data/radarr/Open Movie 27 (1989) {tmdb-341981}",
+        "genres": [
+          "Action",
+          "Crime",
+          "Drama",
+          "Thriller"
+        ],
+        "id": 1525,
+        "images": [
+          {
+            "coverType": "poster",
+            "remoteUrl": "https://example.invalid/movie/open-movie-27/poster.jpg"
+          },
+          {
+            "coverType": "fanart",
+            "remoteUrl": "https://example.invalid/movie/open-movie-27/fanart.jpg"
+          }
+        ],
+        "imdbId": "tt9241542",
+        "inCinemas": "1989-08-04T00:00:00Z",
+        "isAvailable": true,
+        "keywords": [
+          "car mechanic",
+          "jail guard",
+          "prison",
+          "prison warden",
+          "self sacrifice"
+        ],
+        "minimumAvailability": "inCinemas",
+        "monitored": true,
+        "movieFileId": 10825,
+        "originalLanguage": {
+          "id": 1,
+          "name": "English"
+        },
+        "originalTitle": "Open Movie 27",
+        "overview": "An open-licensed short film from the demo library.",
+        "path": "/data/radarr/Open Movie 27 (1989) {tmdb-341981}",
+        "physicalRelease": "1991-06-25T00:00:00Z",
+        "popularity": 7.087,
+        "qualityProfileId": 18,
+        "ratings": {
+          "imdb": {
+            "type": "user",
+            "value": 6.4,
+            "votes": 48864
+          },
+          "metacritic": {
+            "type": "user",
+            "value": 52,
+            "votes": 0
+          },
+          "rottenTomatoes": {
+            "type": "user",
+            "value": 31,
+            "votes": 0
+          },
+          "tmdb": {
+            "type": "user",
+            "value": 6.801,
+            "votes": 1364
+          },
+          "trakt": {
+            "type": "user",
+            "value": 6.78819,
+            "votes": 1355
+          }
+        },
+        "releaseDate": "1989-08-04T00:00:00Z",
+        "runtime": 109,
+        "secondaryYearSourceId": 0,
+        "sortTitle": "open movie 27",
+        "status": "released",
+        "studio": "Open Studio 7",
+        "tags": [
+          6
+        ],
+        "title": "Open Movie 27",
+        "titleSlug": "open-movie-27-341981",
+        "tmdbId": 341981,
+        "website": "",
+        "year": 1989,
+        "youTubeTrailerId": ""
+      },
+      "movieId": 1525,
+      "quality": {
+        "quality": {
+          "id": 31,
+          "modifier": "remux",
+          "name": "Remux-2160p",
+          "resolution": 2160,
+          "source": "bluray"
+        },
+        "revision": {
+          "isRepack": false,
+          "real": 0,
+          "version": 1
+        }
+      },
+      "qualityCutoffNotMet": false,
+      "sourceTitle": "Open.Movie.49-DEMO.mkv"
+    },
+    {
+      "customFormatScore": 5900,
+      "customFormats": [
+        {
+          "id": 308,
+          "name": "5.1 Surround"
+        },
+        {
+          "id": 66,
+          "name": "DTS-HD MA"
+        },
+        {
+          "id": 287,
+          "name": "DV Boost"
+        },
+        {
+          "id": 234,
+          "name": "HDR"
+        },
+        {
+          "id": 94,
+          "name": "Remux Tier 02"
+        }
+      ],
+      "data": {
+        "customFormatScore": "5850",
+        "downloadClient": "SABnzbd",
+        "downloadClientName": "SABnzbd",
+        "droppedPath": "/data/sabnzbd/movies/Open Movie 50/Open.Movie.27.1989.2160p.UHD.Remux.HEVC.DTS-HD-DEMO.mkv",
+        "fileId": "5277",
+        "importedPath": "/data/radarr/Open Movie 27 (1989)/Open.Movie.27-DEMO.mkv",
+        "releaseGroup": "DEMO"
+      },
+      "date": "2023-04-22T13:06:59Z",
+      "downloadId": "SABnzbd_nzo_0vo8pqob",
+      "eventType": "downloadFolderImported",
+      "id": 20236,
+      "languages": [
+        {
+          "id": 1,
+          "name": "English"
+        }
+      ],
+      "movie": {
+        "added": "2021-06-22T19:56:47Z",
+        "alternateTitles": [],
+        "certification": "R",
+        "cleanTitle": "openmovie27",
+        "digitalRelease": "2002-08-07T00:00:00Z",
+        "folderName": "/data/radarr/Open Movie 27 (1989) {tmdb-341981}",
+        "genres": [
+          "Action",
+          "Crime",
+          "Drama",
+          "Thriller"
+        ],
+        "id": 1525,
+        "images": [
+          {
+            "coverType": "poster",
+            "remoteUrl": "https://example.invalid/movie/open-movie-27/poster.jpg"
+          },
+          {
+            "coverType": "fanart",
+            "remoteUrl": "https://example.invalid/movie/open-movie-27/fanart.jpg"
+          }
+        ],
+        "imdbId": "tt9241542",
+        "inCinemas": "1989-08-04T00:00:00Z",
+        "isAvailable": true,
+        "keywords": [
+          "car mechanic",
+          "jail guard",
+          "prison",
+          "prison warden",
+          "self sacrifice"
+        ],
+        "minimumAvailability": "inCinemas",
+        "monitored": true,
+        "movieFileId": 10825,
+        "originalLanguage": {
+          "id": 1,
+          "name": "English"
+        },
+        "originalTitle": "Open Movie 27",
+        "overview": "An open-licensed short film from the demo library.",
+        "path": "/data/radarr/Open Movie 27 (1989) {tmdb-341981}",
+        "physicalRelease": "1991-06-25T00:00:00Z",
+        "popularity": 7.087,
+        "qualityProfileId": 18,
+        "ratings": {
+          "imdb": {
+            "type": "user",
+            "value": 6.4,
+            "votes": 48864
+          },
+          "metacritic": {
+            "type": "user",
+            "value": 52,
+            "votes": 0
+          },
+          "rottenTomatoes": {
+            "type": "user",
+            "value": 31,
+            "votes": 0
+          },
+          "tmdb": {
+            "type": "user",
+            "value": 6.801,
+            "votes": 1364
+          },
+          "trakt": {
+            "type": "user",
+            "value": 6.78819,
+            "votes": 1355
+          }
+        },
+        "releaseDate": "1989-08-04T00:00:00Z",
+        "runtime": 109,
+        "secondaryYearSourceId": 0,
+        "sortTitle": "open movie 27",
+        "status": "released",
+        "studio": "Open Studio 7",
+        "tags": [
+          6
+        ],
+        "title": "Open Movie 27",
+        "titleSlug": "open-movie-27-341981",
+        "tmdbId": 341981,
+        "website": "",
+        "year": 1989,
+        "youTubeTrailerId": ""
+      },
+      "movieId": 1525,
+      "quality": {
+        "quality": {
+          "id": 31,
+          "modifier": "remux",
+          "name": "Remux-2160p",
+          "resolution": 2160,
+          "source": "bluray"
+        },
+        "revision": {
+          "isRepack": false,
+          "real": 0,
+          "version": 1
+        }
+      },
+      "qualityCutoffNotMet": false,
+      "sourceTitle": "Open.Movie.27.1989.2160p.UHD.Remux.HEVC.DTS-HD-DEMO"
+    },
+    {
+      "customFormatScore": 5900,
+      "customFormats": [
+        {
+          "id": 308,
+          "name": "5.1 Surround"
+        },
+        {
+          "id": 66,
+          "name": "DTS-HD MA"
+        },
+        {
+          "id": 287,
+          "name": "DV Boost"
+        },
+        {
+          "id": 234,
+          "name": "HDR"
+        },
+        {
+          "id": 94,
+          "name": "Remux Tier 02"
+        }
+      ],
+      "data": {
+        "indexerFlags": "0",
+        "reason": "MissingFromDisk",
+        "releaseGroup": "DEMO",
+        "size": "60966287154"
+      },
+      "date": "2025-12-26T14:42:01Z",
+      "eventType": "movieFileDeleted",
+      "id": 74326,
+      "languages": [
+        {
+          "id": 1,
+          "name": "English"
+        }
+      ],
+      "movie": {
+        "added": "2021-06-22T19:56:47Z",
+        "alternateTitles": [],
+        "certification": "R",
+        "cleanTitle": "openmovie27",
+        "digitalRelease": "2002-08-07T00:00:00Z",
+        "folderName": "/data/radarr/Open Movie 27 (1989) {tmdb-341981}",
+        "genres": [
+          "Action",
+          "Crime",
+          "Drama",
+          "Thriller"
+        ],
+        "id": 1525,
+        "images": [
+          {
+            "coverType": "poster",
+            "remoteUrl": "https://example.invalid/movie/open-movie-27/poster.jpg"
+          },
+          {
+            "coverType": "fanart",
+            "remoteUrl": "https://example.invalid/movie/open-movie-27/fanart.jpg"
+          }
+        ],
+        "imdbId": "tt9241542",
+        "inCinemas": "1989-08-04T00:00:00Z",
+        "isAvailable": true,
+        "keywords": [
+          "car mechanic",
+          "jail guard",
+          "prison",
+          "prison warden",
+          "self sacrifice"
+        ],
+        "minimumAvailability": "inCinemas",
+        "monitored": true,
+        "movieFileId": 10825,
+        "originalLanguage": {
+          "id": 1,
+          "name": "English"
+        },
+        "originalTitle": "Open Movie 27",
+        "overview": "An open-licensed short film from the demo library.",
+        "path": "/data/radarr/Open Movie 27 (1989) {tmdb-341981}",
+        "physicalRelease": "1991-06-25T00:00:00Z",
+        "popularity": 7.087,
+        "qualityProfileId": 18,
+        "ratings": {
+          "imdb": {
+            "type": "user",
+            "value": 6.4,
+            "votes": 48864
+          },
+          "metacritic": {
+            "type": "user",
+            "value": 52,
+            "votes": 0
+          },
+          "rottenTomatoes": {
+            "type": "user",
+            "value": 31,
+            "votes": 0
+          },
+          "tmdb": {
+            "type": "user",
+            "value": 6.801,
+            "votes": 1364
+          },
+          "trakt": {
+            "type": "user",
+            "value": 6.78819,
+            "votes": 1355
+          }
+        },
+        "releaseDate": "1989-08-04T00:00:00Z",
+        "runtime": 109,
+        "secondaryYearSourceId": 0,
+        "sortTitle": "open movie 27",
+        "status": "released",
+        "studio": "Open Studio 7",
+        "tags": [
+          6
+        ],
+        "title": "Open Movie 27",
+        "titleSlug": "open-movie-27-341981",
+        "tmdbId": 341981,
+        "website": "",
+        "year": 1989,
+        "youTubeTrailerId": ""
+      },
+      "movieId": 1525,
+      "quality": {
+        "quality": {
+          "id": 31,
+          "modifier": "remux",
+          "name": "Remux-2160p",
+          "resolution": 2160,
+          "source": "bluray"
+        },
+        "revision": {
+          "isRepack": false,
+          "real": 0,
+          "version": 1
+        }
+      },
+      "qualityCutoffNotMet": false,
+      "sourceTitle": "Open.Movie.49-DEMO.mkv"
+    },
+    {
+      "customFormatScore": 5900,
+      "customFormats": [
+        {
+          "id": 308,
+          "name": "5.1 Surround"
+        },
+        {
+          "id": 66,
+          "name": "DTS-HD MA"
+        },
+        {
+          "id": 287,
+          "name": "DV Boost"
+        },
+        {
+          "id": 234,
+          "name": "HDR"
+        },
+        {
+          "id": 94,
+          "name": "Remux Tier 02"
+        }
+      ],
+      "data": {
+        "indexerFlags": "0",
+        "path": "/data/radarr/Open Movie 27 (1989) {tmdb-341981}/Open.Movie.27-DEMO.mkv",
+        "relativePath": "Open.Movie.27-DEMO.mkv",
+        "releaseGroup": "DEMO",
+        "size": "60966287154",
+        "sourcePath": "/data/radarr/Open Movie 27 (1989) {tmdb-341981}/Open.Movie.27-DEMO.mkv",
+        "sourceRelativePath": "Open.Movie.27-DEMO.mkv"
+      },
+      "date": "2024-10-12T16:31:56Z",
+      "eventType": "movieFileRenamed",
+      "id": 61939,
+      "languages": [
+        {
+          "id": 1,
+          "name": "English"
+        }
+      ],
+      "movie": {
+        "added": "2021-06-22T19:56:47Z",
+        "alternateTitles": [],
+        "certification": "R",
+        "cleanTitle": "openmovie27",
+        "digitalRelease": "2002-08-07T00:00:00Z",
+        "folderName": "/data/radarr/Open Movie 27 (1989) {tmdb-341981}",
+        "genres": [
+          "Action",
+          "Crime",
+          "Drama",
+          "Thriller"
+        ],
+        "id": 1525,
+        "images": [
+          {
+            "coverType": "poster",
+            "remoteUrl": "https://example.invalid/movie/open-movie-27/poster.jpg"
+          },
+          {
+            "coverType": "fanart",
+            "remoteUrl": "https://example.invalid/movie/open-movie-27/fanart.jpg"
+          }
+        ],
+        "imdbId": "tt9241542",
+        "inCinemas": "1989-08-04T00:00:00Z",
+        "isAvailable": true,
+        "keywords": [
+          "car mechanic",
+          "jail guard",
+          "prison",
+          "prison warden",
+          "self sacrifice"
+        ],
+        "minimumAvailability": "inCinemas",
+        "monitored": true,
+        "movieFileId": 10825,
+        "originalLanguage": {
+          "id": 1,
+          "name": "English"
+        },
+        "originalTitle": "Open Movie 27",
+        "overview": "An open-licensed short film from the demo library.",
+        "path": "/data/radarr/Open Movie 27 (1989) {tmdb-341981}",
+        "physicalRelease": "1991-06-25T00:00:00Z",
+        "popularity": 7.087,
+        "qualityProfileId": 18,
+        "ratings": {
+          "imdb": {
+            "type": "user",
+            "value": 6.4,
+            "votes": 48864
+          },
+          "metacritic": {
+            "type": "user",
+            "value": 52,
+            "votes": 0
+          },
+          "rottenTomatoes": {
+            "type": "user",
+            "value": 31,
+            "votes": 0
+          },
+          "tmdb": {
+            "type": "user",
+            "value": 6.801,
+            "votes": 1364
+          },
+          "trakt": {
+            "type": "user",
+            "value": 6.78819,
+            "votes": 1355
+          }
+        },
+        "releaseDate": "1989-08-04T00:00:00Z",
+        "runtime": 109,
+        "secondaryYearSourceId": 0,
+        "sortTitle": "open movie 27",
+        "status": "released",
+        "studio": "Open Studio 7",
+        "tags": [
+          6
+        ],
+        "title": "Open Movie 27",
+        "titleSlug": "open-movie-27-341981",
+        "tmdbId": 341981,
+        "website": "",
+        "year": 1989,
+        "youTubeTrailerId": ""
+      },
+      "movieId": 1525,
+      "quality": {
+        "quality": {
+          "id": 31,
+          "modifier": "remux",
+          "name": "Remux-2160p",
+          "resolution": 2160,
+          "source": "bluray"
+        },
+        "revision": {
+          "isRepack": false,
+          "real": 0,
+          "version": 1
+        }
+      },
+      "qualityCutoffNotMet": false,
+      "sourceTitle": "Open.Movie.49-DEMO.mkv"
+    }
+  ],
+  "sortDirection": "descending",
+  "sortKey": "date",
+  "totalRecords": 12
+}

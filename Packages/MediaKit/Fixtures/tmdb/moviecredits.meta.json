@@ -1,0 +1,29 @@
+{
+  "headers": {
+    "Age": "1629",
+    "Alt-Svc": "h3=\":443\"; ma=86400",
+    "Cache-Control": "public, max-age=27139",
+    "Content-Encoding": "gzip",
+    "Content-Type": "application/json;charset=utf-8",
+    "Date": "Tue, 15 Sep 2026 00:03:03 GMT",
+    "Etag": "W/\"cab119c5bd971a857174fc2c6fa4fcd09614bbbe3e543f58a8109bedcb9c82f4\"",
+    "Server": "openresty",
+    "Vary": "Origin",
+    "Via": "1.1 ca4bc82573be586920ccabe8e2946522.cloudfront.net (CloudFront)",
+    "x-amz-cf-id": "jGaSZTPVMu64-tDIfcQ1y7v0QeVqV5faqc0ZkHQ_GQ55sf5zDjv8xQ==",
+    "x-amz-cf-pop": "WAW51-P1",
+    "x-az": "us-east-1c",
+    "x-cache": "Hit from cloudfront",
+    "x-gateway-cache-status": "HIT",
+    "x-task-id": "db5a529ce11a4c688c4279d4b86a2a3d"
+  },
+  "operation": "movieCredits",
+  "original_array_count": {
+    "cast": 76,
+    "crew": 188
+  },
+  "recorded_at": "2026-09-15",
+  "request_path": "/3/movie/{id}/credits",
+  "status": 200,
+  "truncated": true
+}

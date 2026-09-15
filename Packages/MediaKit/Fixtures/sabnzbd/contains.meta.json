@@ -1,0 +1,23 @@
+{
+  "headers": {
+    "Access-Control-Allow-Origin": "*",
+    "Alt-Svc": "h3=\":443\"; ma=2592000",
+    "Cache-Control": "no-cache",
+    "Content-Encoding": "gzip",
+    "Content-Length": "967",
+    "Content-Type": "application/json;charset=UTF-8",
+    "Date": "Tue, 15 Sep 2026 00:30:11 GMT",
+    "Pragma": "no-cache",
+    "Server": "CherryPy/18.10.0",
+    "Vary": "Accept-Encoding",
+    "x-frame-options": "SameOrigin"
+  },
+  "operation": "contains",
+  "original_array_count": {
+    "queue.slots": 5
+  },
+  "recorded_at": "2026-09-15",
+  "request_path": "/api",
+  "status": 200,
+  "truncated": false
+}

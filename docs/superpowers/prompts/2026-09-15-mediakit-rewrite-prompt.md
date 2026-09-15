@@ -40,7 +40,7 @@ Każda z uzasadnieniem, bo od niego zależą kompromisy w projekcie.
 
 Zweryfikowane przed napisaniem tego promptu. Faza 0 zwraca tabelę: hipoteza, werdykt, dowód ze ścieżką i linią.
 
-- Toolchain: właściciel deklaruje Xcode 27. W chwili pisania lokalnie i w CI (`.github/workflows/release.yml`) był Xcode 26.4.1 z SDK 26.4. Nic w tym planie nie wymaga 27; sprawdzasz `xcodebuild -version` w fazie 0 i pracujesz z tym, co jest.
+- Toolchain: lokalnie Xcode 27.0 (27A266a), SDK macOS 27.0 / iOS 27.0, Swift 6.4; przełączony w trakcie fazy 0 (start był na 26.4.1). CI (`.github/workflows/release.yml`) dalej przypina Xcode 26.4.1 na `macos-26`, więc manifesty zostają na `swift-tools-version: 6.2` i podłodze 26 (`.v27` istnieje dopiero w PackageDescription 6.4). Zweryfikowane w fazie 0 na pakiecie testowym: 6.2 + `.v26` + `defaultIsolation(nil)` + obie upcoming features + `import SQLite3` bez zależności budują się pod 6.4. Podniesienie CI do 27 to pytanie do właściciela.
 - Graf pakietów: `ArrBarr` linkuje `ArrCore` i `ArrMCPServer`; `ArrMCPServer` zależy od `ArrCore` i ma podłogę macOS 14 w manifeście; `TonightCore` jest w grafie projektu, ale target `TonightBarr` nie jest budowany przez schemat `ArrBarr`. Wszystkie cztery manifesty mają `swift-tools-version: 6.0`.
 - Widget: `ArrBarrWidgets` to target wyłącznie iOS, osadzony w `ArrBarriOS`. Sam pobiera dane z sieci przez `LibrarySummaryService` i `UpcomingService`, czyli przez klientów ArrCore, z sekretami z suite'u grupy i keychain. Nie czyta snapshotu aplikacji. Na macOS nie ma widgetu.
 - Uprawnienia: `ArrBarr.entitlements` ma sandbox i sieć, bez `application-groups`; OSS podpis `CODE_SIGN_IDENTITY = "-"`, pusty team. iOS i widget mają `group.pl.incred.ArrBarr`.
@@ -145,7 +145,7 @@ Agent może odpytywać skonfigurowane usługi właściciela wyłącznie odczytam
 
 | Usługa | Dozwolone | Zakazane |
 |---|---|---|
-| Arry | `GET`: `/system/status`, `/health`, `/diskspace`, `/queue`, `/history`, `/calendar`, `/movie`, `/series`, `/artist`, `/album`, `/episode`, `/episodefile`, `/moviefile`, `/trackfile`, `/qualityprofile`, `/rootfolder`, `/metadataprofile`, `/customformat`, `/downloadclient`, `/command`, `/*/lookup`, `/credit`, `/alttitle`; `POST /signalr/negotiate` i połączenie WebSocket | `GET /release` (uruchamia indeksery), każdy inny `POST`, `PUT`, `DELETE`: `/command`, `/release`, dodawanie, monitor, grab, kolejka, blocklist |
+| Arry | `GET`: `/system/status`, `/health`, `/diskspace`, `/queue`, `/history`, `/calendar`, `/movie`, `/series`, `/artist`, `/album`, `/episode`, `/episodefile`, `/moviefile`, `/trackfile`, `/track` (Lidarr), `/search` (Lidarr), `/qualityprofile`, `/rootfolder`, `/metadataprofile`, `/customformat`, `/downloadclient`, `/command`, `/*/lookup`, `/credit`, `/alttitle`; `POST /signalr/negotiate` i połączenie WebSocket | `GET /release` (uruchamia indeksery), każdy inny `POST`, `PUT`, `DELETE`: `/command`, `/release`, dodawanie, monitor, grab, kolejka, blocklist |
 | qBittorrent | `POST /auth/login` raz per uruchomienie z ponownym użyciem sesji; `GET`: `app/version`, `app/preferences`, `torrents/info` | `torrents/*` akcje: stop, start, delete, add, setForceStart |
 | Transmission | `POST` RPC: `session-get`, `torrent-get` | `torrent-start`, `torrent-stop`, `torrent-remove`, `torrent-add`, `session-set` |
 | Deluge | `POST` RPC: `auth.login` raz, `daemon.info`, `core.get_torrents_status`, `core.get_config` | `core.pause_torrent`, `core.resume_torrent`, `core.remove_torrent`, `core.add_torrent_*` |
@@ -157,11 +157,11 @@ Agent może odpytywać skonfigurowane usługi właściciela wyłącznie odczytam
 | TMDB | dowolny `GET` poza `/authentication/*` | `/authentication/*`, `/account/*` z zapisem |
 | Wykrywanie | zapytania Bonjour i UDP 7359 | nic więcej |
 
-Logowania: jedno na klienta na uruchomienie, sesja wielokrotnego użytku; qBittorrent banuje IP po serii nieudanych logowań. Zapisy testowane przez `FixtureTransport` i testy kształtu requestu: metoda, URL, nagłówki, body, tagi. Fixture'y nagrywane w jednym seryjnym kroku fazy 0, z sekretami usuniętymi przed zapisem do repo.
+Logowania: jedno na klienta na uruchomienie, sesja wielokrotnego użytku; qBittorrent banuje IP po serii nieudanych logowań. Zapisy testowane przez `FixtureTransport` i testy kształtu requestu: metoda, URL, nagłówki, body, tagi. Fixture'y nagrywane w jednym seryjnym kroku fazy 0, z sekretami usuniętymi przed zapisem do repo. Do repo trafiają wyłącznie fixture'y po `Tools/fixtures/anonymize_fixtures.py`: tytuły, opisy, identyfikatory zewnętrzne, grafiki i nazwy plików zastąpione katalogiem open-source z `DemoMocks` (Big Buck Bunny, Sintel, …); surowe nagrania biblioteki właściciela zostają poza repo. Decyzje właściciela po fazie 0: ArrCore dostaje `defaultIsolation(MainActor.self)` w fazie 5 po usunięciu starych klientów (tryb v6 osobno później); widget czyta SQLite z kontenera grupy i odświeża własnym połączeniem MediaKit; Whisparr = klient v3 wyprowadzony z Radarra na fixture'ach syntetycznych, v2 udokumentowana luka.
 
 ## 6. Proces, agenci, modele
 
-Mechanika Workflow: jedna faza to jedno wywołanie Workflow, poniżej 15 agentów. Etapy sekwencyjne zapisujesz jako `pipeline`, równoległe implementacje w worktree. Każdy implementer zwraca raport w schemacie JSON: `build_ok`, `tests_ok`, `grep_gates`, `files_touched`, `open_questions`; integrator odrzuca scalenie z jakimkolwiek `false`. Jeden implementer na zadanie, bez recenzenta per zadanie; adwersarialny review tylko tam, gdzie wskazano.
+Mechanika Workflow: jedna faza to jedno wywołanie Workflow, poniżej 15 agentów. Etapy sekwencyjne zapisujesz jako `pipeline`, równoległe implementacje w worktree. **Nie używaj `isolation: 'worktree'`**: w fazie 0 okazało się, że tworzy worktree z `origin/main` (ac23c34, 32 commity za branchem), bez `Packages/MediaKit` i `TonightCore`. Koordynator tworzy worktree sam przed każdą fazą (`git worktree add <scratchpad>/wt-<zadanie> -b wt/<zadanie> feat/mediakit-foundation`), podaje agentowi ścieżkę i każe pracować wyłącznie w niej; integrator scala przez `git merge --no-ff` gałęzi `wt/*` do brancha fazy i usuwa worktree. Każdy implementer zwraca raport w schemacie JSON: `build_ok`, `tests_ok`, `grep_gates`, `files_touched`, `open_questions`; integrator odrzuca scalenie z jakimkolwiek `false`. Jeden implementer na zadanie, bez recenzenta per zadanie; adwersarialny review tylko tam, gdzie wskazano.
 
 Koordynator: Ty, Fable 5.1, effort `xhigh`. Pod-koordynatorzy faz z wieloma etapami: Fable, effort `high`. Modele agentów według tabeli; `opus` tam, gdzie liczy się poprawność współbieżnego kodu, `sonnet` tam, gdzie zadanie jest mechaniczne i ma kontrakt w testach, `haiku` do bramek grep i formatowania raportów.
 
@@ -182,6 +182,19 @@ Koordynator: Ty, Fable 5.1, effort `xhigh`. Pod-koordynatorzy faz z wieloma etap
 | 7 API 26, tylko macOS | 4 | Spotlight i `SnippetIntent` `opus medium`: sześć intencji jako akcje z parametrami, snippet kolejki z pauzą i wznowieniem, `AppShortcutsProvider` na wszystkie sześć. Foundation Models `opus high`: `@Generable` dla Quizu i `suggest_titles`, strumieniowanie częściowych wyników, wariant narzędzi według decyzji właściciela. Typowane wiadomości dla dwunastu postów nawigacyjnych `sonnet medium`. Integrator `sonnet medium`: build, testy, relaunch, czas ramki listy. Bez zmian funkcjonalnych w iOS. |
 
 Definicja ukończenia fazy: testy zielone, buildy zielone, commit `phase(N):`, jednozdaniowe podsumowanie, paczka pytań tam, gdzie tabela ją przewiduje.
+
+## 6a. Narzędzia Xcode 27: serwer MCP `xcode` i skille
+
+Serwer MCP `xcode` (`xcrun mcpbridge`, w `~/.claude.json` per projekt) i skille agenta Xcode 27 (`swiftui-specialist`, `device-interaction`, `test-modernizer`) są dostępne od restartu sesji po fazie 0. Agenci Workflow ładują je przez `ToolSearch` (`select:mcp__xcode__<Nazwa>`); każdy prompt agenta, którego to dotyczy, nazywa narzędzie wprost. Zasady:
+
+1. **Fakty o API tylko z dokumentacji.** Każdy agent, który projektuje lub pisze kod na API 26/27 (`Observations`, typowane wiadomości `NotificationCenter`, `@concurrent`, `NWBrowser`, `SnippetIntent`, Foundation Models `@Generable`, `SQLite3`), przed użyciem symbolu woła `DocumentationSearch` i cytuje w raporcie nazwę modułu i sygnaturę. Sygnatura z pamięci, której nie da się potwierdzić, to `open_question`, nie kod. Dotyczy architektów fazy 1, kręgosłupa fazy 3, kompozycji fazy 4 i całej fazy 7.
+2. **Build i diagnostyka w głównym drzewie przez Xcode.** Integratorzy i weryfikator używają `BuildProject` + `GetBuildLog` (filtr po severity) zamiast `xcodebuild | tail`, a bramkę "zero ostrzeżeń w MediaKit" liczą z `GetBuildLog` po schemacie `MediaKit` plus `XcodeRefreshCodeIssuesInFile` na każdym pliku pakietu. Worktree'y równoległych implementerów nie są otwarte w Xcode, więc tam zostaje `xcodebuild` z sekcji 7; `swift test` w pakietach zostaje wszędzie.
+3. **Ustawienia projektu przez narzędzia, nie sed.** Podniesienie `MACOSX_DEPLOYMENT_TARGET` / `IPHONEOS_DEPLOYMENT_TARGET` w fazie 3 idzie przez `GetTargetBuildSettings` + `UpdateTargetBuildSetting` dla każdego targetu; po operacji diff `project.pbxproj` ma zawierać tylko te klucze. Xcode 27 może dopisać `LastUpgradeCheck` przy otwarciu projektu; taką zmianę commituje się osobno albo odrzuca, nigdy w commicie fazy.
+4. **Sondy zachowania przez `RunCodeSnippet`.** Pytania w stylu "czy `Observations` emituje po mutacji w tym samym ticku", "jaką wersję SQLite ma SDK", "czy `NotificationCenter.Message` wymaga `Sendable`" rozstrzyga snippet w kontekście pliku MediaKit, a nie test-rozpoznanie. Wynik trafia do specu lub planu jednym zdaniem.
+5. **Telemetria i zimny start z konsoli Xcode.** W fazie 6 weryfikator uruchamia aplikację przez `RunProject` i czyta OSLog przez `GetConsoleOutput` (filtr po podsystemie `pl.incred.ArrBarr`, kategorie MediaKit); raport per host i czas do pierwszego renderu z SQLite pochodzą stąd. `log stream` zostaje jako fallback. Właściciel nadal weryfikuje wizualnie sam; `RunProject` nie zastępuje relaunchu z sekcji 7, bo popover ma się zachowywać jak z Findera, nie spod debuggera.
+6. **iOS: smoke bez screenshotów dla właściciela.** Integrator fali 2 fazy 5 i weryfikator fazy 6 używają `DeviceInteractionStartWorkspaceSession` → `DeviceInteractionInstallAndRun` → `DeviceInteractionSynthesize` na symulatorze, żeby potwierdzić, że aplikacja iOS i widget startują i renderują kolejkę z fixture'ów demo; skill `device-interaction` opisuje sekwencję. Zrzuty służą agentowi do stwierdzenia faktu, nie idą do właściciela.
+7. **Skille.** `swiftui-specialist` ładują agenci dotykający Views w fazach 5 i 7. `test-modernizer` nie jest potrzebny: pakiety są już na Swift Testing. `uikit-app-modernization`, `c-bounds-safety`, `audit-xcode-security-settings` nie dotyczą tego projektu.
+8. **Poza użyciem.** `GetTopCrashIssues` i field performance wymagają App Store Connect. `LocalizationPlanner` i `StringCatalog*` wymagają skilli `xcode-integration`, których sesja nie ma; klucze katalogu dalej idą przez `Tools/loc`. `XcodeWrite`/`XcodeUpdate` nie zastępują zwykłej edycji plików w pakietach SwiftPM, bo pliki pakietu nie są w strukturze projektu.
 
 ## 7. Komendy
 
@@ -217,7 +230,7 @@ pkill -x ArrBarr 2>/dev/null; sleep 0.5 && open build/Build/Products/Debug/ArrBa
 python3 Tools/loc/lint_missing_keys.py
 ```
 
-Po każdej zmianie kodu: build, testy, relaunch. Właściciel weryfikuje wizualnie sam; nie rób screenshotów.
+Po każdej zmianie kodu: build, testy, relaunch. Właściciel weryfikuje wizualnie sam; nie rób screenshotów. W głównym drzewie build przez `BuildProject`/`GetBuildLog` (sekcja 6a); powyższe komendy `xcodebuild` obowiązują w worktree'ach i jako fallback.
 
 ## 8. Raport końcowy
 

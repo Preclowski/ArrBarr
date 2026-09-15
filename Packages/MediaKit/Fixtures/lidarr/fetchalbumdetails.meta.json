@@ -1,0 +1,31 @@
+{
+  "headers": {
+    "Alt-Svc": "h3=\":443\"; ma=2592000",
+    "Cache-Control": "no-cache, no-store",
+    "Content-Encoding": "br",
+    "Content-Type": "application/json; charset=utf-8",
+    "Date": "Tue, 15 Sep 2026 00:30:07 GMT",
+    "Expires": "-1",
+    "Pragma": "no-cache",
+    "Server": "Kestrel",
+    "Vary": "Accept-Encoding",
+    "x-application-version": "3.1.4.5029"
+  },
+  "operation": "fetchAlbumDetails",
+  "original_array_count": {
+    "artist.genres": 0,
+    "artist.images": 0,
+    "artist.links": 5,
+    "artist.tags": 0,
+    "genres": 0,
+    "images": 1,
+    "links": 0,
+    "media": 1,
+    "releases": 1,
+    "secondaryTypes": 0
+  },
+  "recorded_at": "2026-09-15",
+  "request_path": "/api/v1/album/{id}",
+  "status": 200,
+  "truncated": false
+}

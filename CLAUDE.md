@@ -73,6 +73,14 @@ pkill -x ArrBarr 2>/dev/null; sleep 0.5 && open build/Build/Products/Debug/ArrBa
 
 After every code change: rebuild, then kill and relaunch the app — don't ask first.
 
+Xcode 27 ships an MCP server (`xcrun mcpbridge`, configured for this project) —
+prefer `BuildProject` + `GetBuildLog` over parsing `xcodebuild` output when the
+project is open in Xcode, `DocumentationSearch` before using any macOS/iOS 26+
+API from memory, `RunCodeSnippet` for quick behaviour probes, and
+`RunProject` + `GetConsoleOutput` to read the app's OSLog. Worktrees are not
+open in Xcode: use the `xcodebuild` commands there. Package tests stay on
+`swift test`.
+
 Other schemes: `ArrBarriOS`, `ArrBarrWidgets`, `ArrCore`, `ArrMCPServer`,
 `Paywall Test`. Build configs: **Debug**, **Release** (OSS/GitHub) and
 **Release-AppStore** (sets the `APPSTORE` compilation flag → StoreKit paywall

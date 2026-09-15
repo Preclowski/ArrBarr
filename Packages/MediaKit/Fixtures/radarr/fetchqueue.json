@@ -1,0 +1,289 @@
+{
+  "page": 1,
+  "pageSize": 1000,
+  "records": [
+    {
+      "added": "2026-08-25T13:27:29Z",
+      "customFormatScore": 8656,
+      "customFormats": [
+        {
+          "id": 310,
+          "name": "7.1 Surround"
+        },
+        {
+          "id": 287,
+          "name": "DV Boost"
+        },
+        {
+          "id": 167,
+          "name": "FraMeSToR"
+        },
+        {
+          "id": 234,
+          "name": "HDR"
+        },
+        {
+          "id": 86,
+          "name": "Hybrid"
+        },
+        {
+          "id": 93,
+          "name": "Remux Tier 01"
+        },
+        {
+          "id": 97,
+          "name": "Repack/Proper"
+        },
+        {
+          "id": 61,
+          "name": "TrueHD ATMOS"
+        }
+      ],
+      "downloadClient": "SABnzbd",
+      "downloadClientHasPostImportCategory": false,
+      "downloadId": "f2c2882d-c58a-4c2f-8b69-91edaf70cf5e",
+      "id": 96934894,
+      "indexer": "Demo Indexer 1",
+      "languages": [
+        {
+          "id": 1,
+          "name": "English"
+        }
+      ],
+      "movieId": 2907,
+      "protocol": "usenet",
+      "quality": {
+        "quality": {
+          "id": 31,
+          "modifier": "remux",
+          "name": "Remux-2160p",
+          "resolution": 2160,
+          "source": "bluray"
+        },
+        "revision": {
+          "isRepack": true,
+          "real": 0,
+          "version": 2
+        }
+      },
+      "size": 83260793159,
+      "sizeleft": 65694597120,
+      "status": "paused",
+      "statusMessages": [],
+      "title": "Open.Movie.54.2026.REPACK.UHD.BluRay.2160p.TrueHD.Atmos.HEVC-DEMO",
+      "trackedDownloadState": "downloading",
+      "trackedDownloadStatus": "ok"
+    },
+    {
+      "added": "2026-09-13T04:51:11Z",
+      "customFormatScore": 8652,
+      "customFormats": [
+        {
+          "id": 310,
+          "name": "7.1 Surround"
+        },
+        {
+          "id": 235,
+          "name": "DV (Disk)"
+        },
+        {
+          "id": 287,
+          "name": "DV Boost"
+        },
+        {
+          "id": 167,
+          "name": "FraMeSToR"
+        },
+        {
+          "id": 234,
+          "name": "HDR"
+        },
+        {
+          "id": 93,
+          "name": "Remux Tier 01"
+        },
+        {
+          "id": 61,
+          "name": "TrueHD ATMOS"
+        }
+      ],
+      "downloadClient": "SABnzbd",
+      "downloadClientHasPostImportCategory": false,
+      "downloadId": "0aebc569-962a-4d8d-ab56-d9e266690381",
+      "id": 1048030258,
+      "indexer": "Demo Indexer 1",
+      "languages": [
+        {
+          "id": 1,
+          "name": "English"
+        }
+      ],
+      "movieId": 359,
+      "protocol": "usenet",
+      "quality": {
+        "quality": {
+          "id": 31,
+          "modifier": "remux",
+          "name": "Remux-2160p",
+          "resolution": 2160,
+          "source": "bluray"
+        },
+        "revision": {
+          "isRepack": false,
+          "real": 0,
+          "version": 1
+        }
+      },
+      "size": 52345249464,
+      "sizeleft": 52345249464,
+      "status": "paused",
+      "statusMessages": [],
+      "title": "Open.Movie.52.2005.UHD.BluRay.2160p.TrueHD.Atmos.HEVC-DEMO",
+      "trackedDownloadState": "downloading",
+      "trackedDownloadStatus": "ok"
+    },
+    {
+      "added": "2026-09-14T08:18:25Z",
+      "customFormatScore": 8657,
+      "customFormats": [
+        {
+          "id": 310,
+          "name": "7.1 Surround"
+        },
+        {
+          "id": 287,
+          "name": "DV Boost"
+        },
+        {
+          "id": 167,
+          "name": "FraMeSToR"
+        },
+        {
+          "id": 234,
+          "name": "HDR"
+        },
+        {
+          "id": 86,
+          "name": "Hybrid"
+        },
+        {
+          "id": 93,
+          "name": "Remux Tier 01"
+        },
+        {
+          "id": 98,
+          "name": "Repack2"
+        },
+        {
+          "id": 61,
+          "name": "TrueHD ATMOS"
+        }
+      ],
+      "downloadClient": "SABnzbd",
+      "downloadClientHasPostImportCategory": false,
+      "downloadId": "d935e278-1a6e-413f-a8e0-da900601f27c",
+      "id": 833029024,
+      "indexer": "Demo Indexer 1",
+      "languages": [
+        {
+          "id": 1,
+          "name": "English"
+        }
+      ],
+      "movieId": 122,
+      "protocol": "usenet",
+      "quality": {
+        "quality": {
+          "id": 31,
+          "modifier": "remux",
+          "name": "Remux-2160p",
+          "resolution": 2160,
+          "source": "bluray"
+        },
+        "revision": {
+          "isRepack": true,
+          "real": 0,
+          "version": 3
+        }
+      },
+      "size": 55300765777,
+      "sizeleft": 55300765777,
+      "status": "paused",
+      "statusMessages": [],
+      "title": "Open.Movie.51.2014.UHD.BluRay.2160p.TrueHD.Atmos.HEVC-DEMO",
+      "trackedDownloadState": "downloading",
+      "trackedDownloadStatus": "ok"
+    },
+    {
+      "added": "2026-08-15T15:34:06Z",
+      "customFormatScore": 8651,
+      "customFormats": [
+        {
+          "id": 310,
+          "name": "7.1 Surround"
+        },
+        {
+          "id": 287,
+          "name": "DV Boost"
+        },
+        {
+          "id": 167,
+          "name": "FraMeSToR"
+        },
+        {
+          "id": 234,
+          "name": "HDR"
+        },
+        {
+          "id": 86,
+          "name": "Hybrid"
+        },
+        {
+          "id": 93,
+          "name": "Remux Tier 01"
+        },
+        {
+          "id": 61,
+          "name": "TrueHD ATMOS"
+        }
+      ],
+      "downloadClient": "SABnzbd",
+      "downloadClientHasPostImportCategory": false,
+      "downloadId": "d33f6a7e-91a2-4a41-a656-69d400a038ef",
+      "id": 303083663,
+      "indexer": "Demo Indexer 1",
+      "languages": [
+        {
+          "id": 1,
+          "name": "English"
+        }
+      ],
+      "movieId": 1557,
+      "protocol": "usenet",
+      "quality": {
+        "quality": {
+          "id": 31,
+          "modifier": "remux",
+          "name": "Remux-2160p",
+          "resolution": 2160,
+          "source": "bluray"
+        },
+        "revision": {
+          "isRepack": false,
+          "real": 0,
+          "version": 1
+        }
+      },
+      "size": 45963594956,
+      "sizeleft": 45963594956,
+      "status": "paused",
+      "statusMessages": [],
+      "title": "Open.Movie.55.2016.UHD.BluRay.2160p.TrueHD.Atmos.HEVC-DEMO",
+      "trackedDownloadState": "downloading",
+      "trackedDownloadStatus": "ok"
+    }
+  ],
+  "sortDirection": "descending",
+  "sortKey": "timeleft",
+  "totalRecords": 4
+}

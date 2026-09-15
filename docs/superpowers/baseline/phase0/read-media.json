@@ -1,0 +1,655 @@
+{
+ "counts": [
+  {
+   "name": "MediaKit spike swift files",
+   "value": 18,
+   "command": "find Packages/MediaKit/Sources -type f -name '*.swift' | wc -l"
+  },
+  {
+   "name": "MediaKit spike total LOC (Sources)",
+   "value": 3459,
+   "command": "for f in $(find Packages/MediaKit/Sources -name '*.swift'); do wc -l < $f; done | paste -sd+ | bc",
+   "notes": "sum of the 18 wc -l values listed in files[]"
+  },
+  {
+   "name": "MediaKit test LOC",
+   "value": 1011,
+   "command": "wc -l Packages/MediaKit/Tests/MediaKitTests/*.swift"
+  },
+  {
+   "name": "ArrCore in-scope files total LOC",
+   "value": 3272,
+   "command": "wc -l on the 13 files listed in files[]"
+  },
+  {
+   "name": "ArrCore LOC marked replaced_by_mediakit=true",
+   "value": 2143,
+   "command": "sum of JellyfinClient(311)+MediaServerClient(135)+MediaServerIndex(229)+MediaServerPosterAccess(118)+PlexClient(264)+TMDBClient(620)+MediaServerTypes(176)+ArrMediaServerKeys(89)+SeriesIdentityResolver(201)"
+  },
+  {
+   "name": "TonightCore files importing MediaKit",
+   "value": 11,
+   "command": "grep -rl '^import MediaKit' Packages/TonightCore/Sources/ | wc -l"
+  },
+  {
+   "name": "LAN discovery (Bonjour/UDP) hits in ArrCore+MediaKit",
+   "value": 0,
+   "command": "grep -rln 'NWBrowser|Bonjour|NetService|_services\\._tcp|UDPConnection|NWListener' Packages/ArrCore/Sources/ArrCore Packages/MediaKit/Sources"
+  },
+  {
+   "name": "DemoMode.isActive gates found in MediaServer/TMDB/Poster client files",
+   "value": 0,
+   "command": "grep -n 'DemoMode.isActive|DemoMode\\.' Packages/ArrCore/Sources/ArrCore/Services/MediaServer/*.swift Packages/ArrCore/Sources/ArrCore/Services/TMDBClient.swift Packages/ArrCore/Sources/ArrCore/Services/PosterStore.swift Packages/ArrCore/Sources/ArrCore/Services/LocalToolBackend+TMDB.swift Packages/ArrCore/Sources/ArrCore/Services/NotificationArtwork.swift",
+   "notes": "the clients themselves never check DemoMode; the only gate found is two call sites in SeriesIdentityResolver.swift (lines 73, 89)"
+  }
+ ],
+ "files": [
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/MediaServer/PlexClient.swift",
+   "lines": 264,
+   "role": "Plex MediaServerClient impl: /identity, /library/sections(+/all), /status/sessions(+/history/all), /library/metadata/{id}/children, refresh, emptyTrash. Auth via X-Plex-Token header (config.kind.authHeaders), never query.",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/MediaServer/JellyfinClient.swift",
+   "lines": 311,
+   "role": "Jellyfin+Emby MediaServerClient impl (one type for both): /System/Info, /Users, /Users/{id}/Items, /Library/VirtualFolders, /Items/{id}/Refresh, /Sessions, /Shows/{id}/Seasons, /Items/{id}/Images/Primary. Auth via header (X-Emby-Token or MediaBrowser Authorization).",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/MediaServer/MediaServerClient.swift",
+   "lines": 135,
+   "role": "MediaServerClient protocol (8 methods), MediaServerClientFactory (picks Plex/Jellyfin client by kind), shared normalizedBaseURL/scanLibraries helpers, and MediaServerGuidParser (parses Plex tmdb://, legacy agent guids, TVDB guids, and Jellyfin/Emby ProviderIds dict into MediaServerExternalKey).",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/MediaServer/MediaServerIndex.swift",
+   "lines": 229,
+   "role": "Lock-guarded (NSLock, @unchecked Sendable) synchronous snapshot singleton: byKey [ExternalKey:Entry], watchHistory, seasonPostersByItem. 15-min stale window, refreshIfStale/refresh(config:), config-change invalidation, clear(). Powers posterURL(for:)/isWatched/recentlyWatched used synchronously across ~a dozen non-async call sites.",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/MediaServer/MediaServerPosterAccess.swift",
+   "lines": 118,
+   "role": "Lock-guarded singleton mapping a token-free poster URL back to auth headers (owns(url:) by scheme/host/port match) and building server-side resize URLs (Plex /photo/:/transcode, Jellyfin/Emby maxWidth query param).",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Models/MediaServerTypes.swift",
+   "lines": 176,
+   "role": "DTOs: MediaServerExternalKey (tmdb/tvdb/imdb enum), MediaServerEntry, MediaServerSession, MediaServerWatch, MediaServerLibrary, MediaServerHandshake.",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Models/ArrMediaServerKeys.swift",
+   "lines": 89,
+   "role": "Extensions converting Radarr/Sonarr library records and SearchResult into [MediaServerExternalKey] — the join key between arr records and the media-server index.",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/SeriesIdentityResolver.swift",
+   "lines": 201,
+   "role": "@MainActor identity bridge: TMDB tv id -> Sonarr tvdbId, via library snapshot, Sonarr term=tmdb:N probe, then TMDB /tv/{id}/external_ids. Two CoalescingCaches, per-server 'accepts tmdb term' memory, gated by DemoMode.isActive (lines 73, 89).",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/TMDBClient.swift",
+   "lines": 620,
+   "role": "TMDB v3 REST client: search/person, credits, discover, similar/recommended, videos, countries, external_ids, image URL builder. Auto-detects v3 hex key (api_key query) vs v4 JWT (Bearer header).",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/PosterStore.swift",
+   "lines": 645,
+   "role": "Image cache/pipeline: PosterTier (icon/card/full) with per-tier CDN size variant, disk dirs (Caches vs Application Support), memory cache, SHA256(url)-keyed file/miss-marker naming, resize logic, purge(). Presentation-facing (PlatformImage), no MediaKit equivalent found in the spike.",
+   "replaced_by_mediakit": false
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/TMDBSearchMapping.swift",
+   "lines": 76,
+   "role": "Maps raw TMDB summary payloads into the app's SearchResult domain model (poster URL, genre names, library-ownership tagging). Domain composition, not transport.",
+   "replaced_by_mediakit": false
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/LocalToolBackend+TMDB.swift",
+   "lines": 300,
+   "role": "Chat/MCP tool handlers (tmdb_search_person, tmdb_discover_movies/series, person credits) that construct TMDBClient and format ToolCallOutput/ChatRichContent. Composition layer over the client, not the client itself.",
+   "replaced_by_mediakit": false
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/NotificationArtwork.swift",
+   "lines": 266,
+   "role": "Builds the notification banner thumbnail (title poster with prefetch/wait-budget, or an arr's brand mark on brand colour as fallback). UI/presentation composition.",
+   "replaced_by_mediakit": false
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Models/MediaRef.swift",
+   "lines": 225,
+   "role": "App-wide cross-system identity enum (tmdb/tvdb/tmdbTV/musicBrainz/imdb) used for search ranking, deep links, chat-tool JSON and add-flow dispatch — broader than media-server transport.",
+   "replaced_by_mediakit": false
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Models/MediaServerConfig.swift",
+   "lines": 89,
+   "role": "MediaServerKind enum (plex/jellyfin/emby) with authHeaders(token:), and MediaServerConfig struct (enabled/kind/baseURL/token/userId, isConfigured). Settings/ConfigStore domain model.",
+   "replaced_by_mediakit": false
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Models/DiscoverItem.swift",
+   "lines": 235,
+   "role": "Quiz/Discover card domain model (DiscoverItemKind, DiscoverAction, DiscoverItem, DiscoverMediaSelection) — view-model-facing composition.",
+   "replaced_by_mediakit": false
+  },
+  {
+   "path": "Packages/MediaKit/Sources/MediaKit/Identity/MediaID.swift",
+   "lines": 122,
+   "role": "MediaKit's identity enum: tmdbMovie/tmdbSeries/tvdb/imdb/musicBrainz/server(flavor,id)/arr(flavor,id) — superset of ArrCore's MediaRef + MediaServerExternalKey combined.",
+   "replaced_by_mediakit": false
+  },
+  {
+   "path": "Packages/MediaKit/Sources/MediaKit/Identity/MediaIdentity.swift",
+   "lines": 100,
+   "role": "Wraps a MediaKind + set of MediaID cross-references for one title; convenience accessors (tmdbID etc).",
+   "replaced_by_mediakit": false
+  },
+  {
+   "path": "Packages/MediaKit/Sources/MediaKit/Identity/TMDBIdentityResolver.swift",
+   "lines": 81,
+   "role": "actor implementing IdentityResolving via TMDB /find and /external_ids — MediaKit's analogue of ArrCore's SeriesIdentityResolver.",
+   "replaced_by_mediakit": false
+  },
+  {
+   "path": "Packages/MediaKit/Sources/MediaKit/Providers/HTTPTransport.swift",
+   "lines": 100,
+   "role": "HTTPTransport protocol + URLSessionTransport default impl, HTTPResponse struct.",
+   "replaced_by_mediakit": false
+  },
+  {
+   "path": "Packages/MediaKit/Sources/MediaKit/Providers/MediaProvider.swift",
+   "lines": 171,
+   "role": "Core provider protocols: MediaProvider, BatchMediaProvider, IdentityResolving, CredentialsProviding; ProviderID/ProviderCost/ProviderHealth.",
+   "replaced_by_mediakit": false
+  },
+  {
+   "path": "Packages/MediaKit/Sources/MediaKit/Providers/MediaServerProvider.swift",
+   "lines": 532,
+   "role": "actor MediaProvider impl for Plex/Jellyfin/Emby: titles(), plexTitles()/jellyfinTitles() via /library/sections, /Users/{id}/Items etc; plexGuid parser; artworkURL/sized(). Largest MediaKit file — parallels ArrCore's PlexClient+JellyfinClient+GuidParser+PosterAccess combined. NOTE: its request() header builder collapses jellyfin+emby into one 'MediaBrowser Token' branch, unlike ArrCore's 3-way split (plain X-Emby-Token for Emby) — a behavior discrepancy vs. the shipping client.",
+   "replaced_by_mediakit": false
+  },
+  {
+   "path": "Packages/MediaKit/Sources/MediaKit/Providers/RadarrProvider.swift",
+   "lines": 157,
+   "role": "MediaProvider impl wrapping Radarr for availability/library facts.",
+   "replaced_by_mediakit": false
+  },
+  {
+   "path": "Packages/MediaKit/Sources/MediaKit/Providers/SonarrProvider.swift",
+   "lines": 152,
+   "role": "MediaProvider impl wrapping Sonarr, same shape as RadarrProvider.",
+   "replaced_by_mediakit": false
+  },
+  {
+   "path": "Packages/MediaKit/Sources/MediaKit/Providers/TMDBAuth.swift",
+   "lines": 36,
+   "role": "Isolated TMDB v3-query-key vs v4-Bearer decision, byte-for-byte re-implementation of ArrCore TMDBClient's isReadAccessToken()/get() auth branch.",
+   "replaced_by_mediakit": false
+  },
+  {
+   "path": "Packages/MediaKit/Sources/MediaKit/Providers/TMDBCatalog.swift",
+   "lines": 336,
+   "role": "TMDB catalog/discover surface (MediaCatalogProviding conformance) — pagination, filters, sort — parallels ArrCore's TMDBClient.discoverMovies/discoverTV plus TMDBSearchMapping.",
+   "replaced_by_mediakit": false
+  },
+  {
+   "path": "Packages/MediaKit/Sources/MediaKit/Providers/TMDBProvider.swift",
+   "lines": 208,
+   "role": "TMDBProvider: MediaProvider conformance fetching TitleFacts/Artwork/Ratings/Credits fragments via TMDBAuth+HTTPTransport.",
+   "replaced_by_mediakit": false
+  },
+  {
+   "path": "Packages/MediaKit/Sources/MediaKit/Model/Facts.swift",
+   "lines": 181,
+   "role": "TitleFacts, Artwork, Ratings/ServiceRating/RatingService, Availability, Credits/PersonCredit, StreamingAvailability — the merged-fact vocabulary a MediaSnapshot is built from.",
+   "replaced_by_mediakit": false
+  },
+  {
+   "path": "Packages/MediaKit/Sources/MediaKit/Model/MediaCatalog.swift",
+   "lines": 245,
+   "role": "MediaCatalogQuery/Intent/Filter/Sort/Page and MediaCatalogProviding protocol — discovery/browse query vocabulary.",
+   "replaced_by_mediakit": false
+  },
+  {
+   "path": "Packages/MediaKit/Sources/MediaKit/Model/MediaField.swift",
+   "lines": 88,
+   "role": "MediaFieldSet (OptionSet) + MediaField enum + FreshnessClass — declares which facts a query wants and how fresh.",
+   "replaced_by_mediakit": false
+  },
+  {
+   "path": "Packages/MediaKit/Sources/MediaKit/Model/MediaSnapshot.swift",
+   "lines": 176,
+   "role": "MediaFragment/MediaSnapshot (merged multi-provider answer with Provenance) + MediaError.",
+   "replaced_by_mediakit": false
+  },
+  {
+   "path": "Packages/MediaKit/Sources/MediaKit/Graph/MediaGraph.swift",
+   "lines": 371,
+   "role": "actor: the query planner — picks providers per field by precedence/cost, runs them concurrently, merges into a MediaSnapshot, applies FreshnessPolicy, per-provider fingerprint invalidation.",
+   "replaced_by_mediakit": false
+  },
+  {
+   "path": "Packages/MediaKit/Sources/MediaKit/Cache/FragmentCache.swift",
+   "lines": 138,
+   "role": "actor: per-(provider,identity) fragment cache with per-field TTL and fingerprint-based invalidation; also the coalescing point for concurrent identical requests.",
+   "replaced_by_mediakit": false
+  },
+  {
+   "path": "Packages/MediaKit/Sources/MediaKit/Telemetry/MediaTelemetry.swift",
+   "lines": 246,
+   "role": "actor recording MediaTelemetryEvent/ProviderUsage and building MediaUsageReport; withTelemetry() wrapper.",
+   "replaced_by_mediakit": false
+  },
+  {
+   "path": "Packages/TonightCore/Sources/TonightCore/MediaKitBridge.swift",
+   "lines": 62,
+   "role": "Seam file: MediaItem<->MediaIdentity/MediaSnapshot conversions, so TonightBarr's views keep binding to MediaItem while MediaKit owns identity/facts underneath. Explicitly the single migration surface per its own doc comment.",
+   "replaced_by_mediakit": false
+  }
+ ],
+ "operations": [
+  {
+   "name": "Plex identity",
+   "client": "PlexClient",
+   "method": "GET",
+   "path": "/identity",
+   "write": false,
+   "cache": "",
+   "demo_branch": false,
+   "notes": "testConnection(); auth via X-Plex-Token header"
+  },
+  {
+   "name": "Plex library sections",
+   "client": "PlexClient",
+   "method": "GET",
+   "path": "/library/sections",
+   "write": false,
+   "cache": "MediaServerIndex (byKey, 15min stale)",
+   "demo_branch": false,
+   "notes": "used by both libraryIndex() and libraries()"
+  },
+  {
+   "name": "Plex section items",
+   "client": "PlexClient",
+   "method": "GET",
+   "path": "/library/sections/{key}/all?includeGuids=1",
+   "write": false,
+   "cache": "MediaServerIndex",
+   "demo_branch": false,
+   "notes": "sequential per-section fetch (deliberately not parallel, avoids Plex server swap); feeds byKey map"
+  },
+  {
+   "name": "Plex refresh library",
+   "client": "PlexClient",
+   "method": "GET",
+   "path": "/library/sections/{id}/refresh",
+   "write": true,
+   "cache": "",
+   "demo_branch": false,
+   "notes": "scanLibrary(id:) - GET request but mutates server state (triggers rescan)"
+  },
+  {
+   "name": "Plex empty trash",
+   "client": "PlexClient",
+   "method": "PUT",
+   "path": "/library/sections/{libraryId}/emptyTrash",
+   "write": true,
+   "cache": "",
+   "demo_branch": false,
+   "notes": "Plex-only; Jellyfin/Emby throw trashUnsupported"
+  },
+  {
+   "name": "Plex sessions",
+   "client": "PlexClient",
+   "method": "GET",
+   "path": "/status/sessions",
+   "write": false,
+   "cache": "",
+   "demo_branch": false,
+   "notes": "nowPlaying(), not cached in MediaServerIndex"
+  },
+  {
+   "name": "Plex watch history",
+   "client": "PlexClient",
+   "method": "GET",
+   "path": "/status/sessions/history/all",
+   "write": false,
+   "cache": "MediaServerIndex.watchHistory",
+   "demo_branch": false,
+   "notes": "recentlyWatched(limit:), sort=viewedAt:desc + X-Plex-Container-Start/Size paging"
+  },
+  {
+   "name": "Plex season children",
+   "client": "PlexClient",
+   "method": "GET",
+   "path": "/library/metadata/{seriesItemId}/children",
+   "write": false,
+   "cache": "MediaServerIndex.seasonPostersByItem (lazy, per series, in-flight dedup)",
+   "demo_branch": false,
+   "notes": "seasonPosters(seriesItemId:)"
+  },
+  {
+   "name": "Jellyfin/Emby system info",
+   "client": "JellyfinClient",
+   "method": "GET",
+   "path": "/System/Info",
+   "write": false,
+   "cache": "",
+   "demo_branch": false,
+   "notes": "testConnection(); auth via X-Emby-Token or MediaBrowser Authorization header"
+  },
+  {
+   "name": "Jellyfin/Emby users",
+   "client": "JellyfinClient",
+   "method": "GET",
+   "path": "/Users",
+   "write": false,
+   "cache": "",
+   "demo_branch": false,
+   "notes": "resolveUserId() - picks first enabled admin, else first enabled user; result persisted into MediaServerConfig.userId"
+  },
+  {
+   "name": "Jellyfin/Emby library items",
+   "client": "JellyfinClient",
+   "method": "GET",
+   "path": "/Users/{userId}/Items?Recursive=true&IncludeItemTypes=Movie,Series&Fields=ProviderIds&EnableUserData=true&EnableImages=true&...",
+   "write": false,
+   "cache": "MediaServerIndex",
+   "demo_branch": false,
+   "notes": "libraryIndex()"
+  },
+  {
+   "name": "Jellyfin/Emby virtual folders",
+   "client": "JellyfinClient",
+   "method": "GET",
+   "path": "/Library/VirtualFolders",
+   "write": false,
+   "cache": "",
+   "demo_branch": false,
+   "notes": "libraries()"
+  },
+  {
+   "name": "Jellyfin/Emby refresh item",
+   "client": "JellyfinClient",
+   "method": "POST",
+   "path": "/Items/{id}/Refresh?Recursive=true&MetadataRefreshMode=Default&ImageRefreshMode=Default",
+   "write": true,
+   "cache": "",
+   "demo_branch": false,
+   "notes": "scanLibrary(id:)"
+  },
+  {
+   "name": "Jellyfin/Emby sessions",
+   "client": "JellyfinClient",
+   "method": "GET",
+   "path": "/Sessions",
+   "write": false,
+   "cache": "",
+   "demo_branch": false,
+   "notes": "nowPlaying()"
+  },
+  {
+   "name": "Jellyfin/Emby watched history",
+   "client": "JellyfinClient",
+   "method": "GET",
+   "path": "/Users/{userId}/Items?Filters=IsPlayed&SortBy=DatePlayed&SortOrder=Descending&Limit={limit}",
+   "write": false,
+   "cache": "MediaServerIndex.watchHistory",
+   "demo_branch": false,
+   "notes": "recentlyWatched(limit:)"
+  },
+  {
+   "name": "Jellyfin/Emby season list",
+   "client": "JellyfinClient",
+   "method": "GET",
+   "path": "/Shows/{seriesItemId}/Seasons?EnableImages=true&ImageTypeLimit=1&EnableImageTypes=Primary",
+   "write": false,
+   "cache": "MediaServerIndex.seasonPostersByItem",
+   "demo_branch": false,
+   "notes": "seasonPosters(seriesItemId:)"
+  },
+  {
+   "name": "Jellyfin/Emby image (implicit)",
+   "client": "JellyfinClient",
+   "method": "GET",
+   "path": "/Items/{id}/Images/Primary?tag={tag}",
+   "write": false,
+   "cache": "PosterStore (via MediaServerPosterAccess header injection)",
+   "demo_branch": false,
+   "notes": "poster URL built but not fetched by the client itself; fetched later by PosterStore.download() with headers from MediaServerPosterAccess"
+  },
+  {
+   "name": "Plex/Jellyfin/Emby poster resize (implicit)",
+   "client": "MediaServerPosterAccess",
+   "method": "GET",
+   "path": "Plex: /photo/:/transcode?width=&height=&url=; Jellyfin/Emby: original path + maxWidth=",
+   "write": false,
+   "cache": "PosterStore (SHA256(url) keyed)",
+   "demo_branch": false,
+   "notes": "sizedURL(for:tier:) rewrites the poster URL; actual fetch happens in PosterStore.fetchStoring/download"
+  },
+  {
+   "name": "TMDB configuration",
+   "client": "TMDBClient",
+   "method": "GET",
+   "path": "/configuration",
+   "write": false,
+   "cache": "",
+   "demo_branch": false,
+   "notes": "testConnection(); v3 key in api_key query OR v4 JWT as Bearer header, auto-detected by isReadAccessToken()"
+  },
+  {
+   "name": "TMDB search person",
+   "client": "TMDBClient",
+   "method": "GET",
+   "path": "/search/person?query=",
+   "write": false,
+   "cache": "",
+   "demo_branch": false
+  },
+  {
+   "name": "TMDB movie credits",
+   "client": "TMDBClient",
+   "method": "GET",
+   "path": "/movie/{movieId}/credits",
+   "write": false,
+   "cache": "",
+   "demo_branch": false
+  },
+  {
+   "name": "TMDB tv aggregate credits",
+   "client": "TMDBClient",
+   "method": "GET",
+   "path": "/tv/{tvId}/aggregate_credits",
+   "write": false,
+   "cache": "",
+   "demo_branch": false
+  },
+  {
+   "name": "TMDB tv creators",
+   "client": "TMDBClient",
+   "method": "GET",
+   "path": "/tv/{tvId}",
+   "write": false,
+   "cache": "",
+   "demo_branch": false,
+   "notes": "reads created_by"
+  },
+  {
+   "name": "TMDB find by tvdb id",
+   "client": "TMDBClient",
+   "method": "GET",
+   "path": "/find/{tvdbId}?external_source=tvdb_id",
+   "write": false,
+   "cache": "",
+   "demo_branch": false,
+   "notes": "tvIdFromTVDB"
+  },
+  {
+   "name": "TMDB external ids",
+   "client": "TMDBClient",
+   "method": "GET",
+   "path": "/tv/{tvId}/external_ids",
+   "write": false,
+   "cache": "SeriesIdentityResolver.tvdbIds CoalescingCache",
+   "demo_branch": true,
+   "notes": "tvdbIdFromTVId; only TMDB call SeriesIdentityResolver makes; gated by !DemoMode.isActive at the resolver's public entry points"
+  },
+  {
+   "name": "TMDB person details",
+   "client": "TMDBClient",
+   "method": "GET",
+   "path": "/person/{personId} (+ retry with language=en-US)",
+   "write": false,
+   "cache": "",
+   "demo_branch": false
+  },
+  {
+   "name": "TMDB person movie credits",
+   "client": "TMDBClient",
+   "method": "GET",
+   "path": "/person/{personId}/movie_credits",
+   "write": false,
+   "cache": "",
+   "demo_branch": false
+  },
+  {
+   "name": "TMDB person tv credits",
+   "client": "TMDBClient",
+   "method": "GET",
+   "path": "/person/{personId}/tv_credits",
+   "write": false,
+   "cache": "",
+   "demo_branch": false
+  },
+  {
+   "name": "TMDB discover movies",
+   "client": "TMDBClient",
+   "method": "GET",
+   "path": "/discover/movie?sort_by=&vote_count.gte=&include_adult=false&with_genres=&primary_release_date.gte/lte=",
+   "write": false,
+   "cache": "",
+   "demo_branch": false
+  },
+  {
+   "name": "TMDB discover tv",
+   "client": "TMDBClient",
+   "method": "GET",
+   "path": "/discover/tv?sort_by=&vote_count.gte=&include_adult=false&with_genres=&first_air_date.gte/lte=",
+   "write": false,
+   "cache": "",
+   "demo_branch": false
+  },
+  {
+   "name": "TMDB similar movies",
+   "client": "TMDBClient",
+   "method": "GET",
+   "path": "/movie/{movieId}/similar?page=",
+   "write": false,
+   "cache": "",
+   "demo_branch": false
+  },
+  {
+   "name": "TMDB similar tv",
+   "client": "TMDBClient",
+   "method": "GET",
+   "path": "/tv/{seriesId}/similar?page=",
+   "write": false,
+   "cache": "",
+   "demo_branch": false
+  },
+  {
+   "name": "TMDB recommended movies",
+   "client": "TMDBClient",
+   "method": "GET",
+   "path": "/movie/{movieId}/recommendations?page=",
+   "write": false,
+   "cache": "",
+   "demo_branch": false
+  },
+  {
+   "name": "TMDB recommended tv",
+   "client": "TMDBClient",
+   "method": "GET",
+   "path": "/tv/{seriesId}/recommendations?page=",
+   "write": false,
+   "cache": "",
+   "demo_branch": false
+  },
+  {
+   "name": "TMDB movie videos",
+   "client": "TMDBClient",
+   "method": "GET",
+   "path": "/movie/{movieId}/videos",
+   "write": false,
+   "cache": "",
+   "demo_branch": false
+  },
+  {
+   "name": "TMDB tv videos",
+   "client": "TMDBClient",
+   "method": "GET",
+   "path": "/tv/{tvId}/videos",
+   "write": false,
+   "cache": "",
+   "demo_branch": false
+  },
+  {
+   "name": "TMDB movie countries",
+   "client": "TMDBClient",
+   "method": "GET",
+   "path": "/movie/{movieId}",
+   "write": false,
+   "cache": "",
+   "demo_branch": false,
+   "notes": "reads production_countries/origin_country"
+  },
+  {
+   "name": "TMDB tv countries",
+   "client": "TMDBClient",
+   "method": "GET",
+   "path": "/tv/{tvId}",
+   "write": false,
+   "cache": "",
+   "demo_branch": false,
+   "notes": "reads production_countries/origin_country"
+  },
+  {
+   "name": "TMDB image (implicit, no auth)",
+   "client": "TMDBClient (static imageURL)",
+   "method": "GET",
+   "path": "https://image.tmdb.org/t/p/{size}{path}",
+   "write": false,
+   "cache": "PosterStore (icon=w185, card=w780, full=original via PosterTier.tmdbSize)",
+   "demo_branch": false,
+   "notes": "no api key needed for images; fetched by PosterStore, not TMDBClient"
+  }
+ ],
+ "findings": [
+  "Auth placement matches the report's expectations and is consistently header-based for the two media-server auth schemes: Plex sends bare X-Plex-Token, Emby sends bare X-Emby-Token, Jellyfin sends 'Authorization: MediaBrowser Token=\"…\"' — all set via MediaServerKind.authHeaders(token:) (MediaServerConfig.swift:38-50), never in a query string, for every one of the 8 protocol methods on both clients.",
+  "TMDB is the one place a secret CAN travel in the query string: TMDBClient.get() (TMDBClient.swift:588-618) appends api_key= to the query for a legacy v3 hex key (only when the pasted credential is not a v4 JWT, detected by isReadAccessToken()). This only applies to the JSON API calls (api.themoviedb.org/3/...), never to image URLs (image.tmdb.org, no auth needed at all) — so no TMDB image URL ever carries a key.",
+  "The TMDB v3-key-in-query URLs are never persisted or hashed into a cache key: TMDBClient's get() is private and only decoded JSON model values (not the raw URL) leave the function, so the api_key never reaches PosterStore, title-metadata.json, or QueueItem. No leak found in this codebase today.",
+  "PosterStore's design explicitly documents and defends against the leak the task asks about: media-server poster URLs are built token-free by PlexClient/JellyfinClient (comment at MediaServerPosterAccess.swift:6-13 and PlexClient.swift:248-250 / JellyfinClient.swift:299), and PosterStore.download() re-attaches the media-server token per-request as a header via MediaServerPosterAccess.shared.headers(for:) rather than baking it into the URL. The disk/memory cache key (PosterStore.key(for:), line 519-522) is SHA256(url.absoluteString) — a one-way hash, not the raw URL — so even a URL that did carry a secret would not be recoverable from the cache key or filename. No credential leak found in PosterStore.",
+  "DemoMode.isActive is NOT checked inside PlexClient, JellyfinClient, MediaServerIndex, TMDBClient, PosterStore, or LocalToolBackend+TMDB.swift — none of those files reference DemoMode at all. The only demo-mode short-circuit found in this scope is in SeriesIdentityResolver.swift (lines 73 and 89: 'guard tmdbTVId > 0, !DemoMode.isActive, ...'), which gates the TMDB/Sonarr identity-resolution bridge but not the media-server clients or the TMDB catalog/discover calls used elsewhere (e.g. LocalToolBackend+TMDB.swift's tmdbDiscoverMovies/tmdbDiscoverSeries construct a live TMDBClient unconditionally).",
+  "MediaKit's MediaServerProvider.request() (Providers/MediaServerProvider.swift:178-197) collapses the Jellyfin/Emby auth branch into a single 'MediaBrowser Token=\"…\"' header for both, unlike the shipping ArrCore MediaServerKind.authHeaders which sends a bare X-Emby-Token for Emby and only wraps the token in the MediaBrowser scheme for Jellyfin. This is a behavior discrepancy the spike would need to reconcile before replacing JellyfinClient — a real Emby server may reject the wrapped scheme on some versions per ArrCore's own comment.",
+  "No LAN discovery code (Bonjour/NWBrowser/NetService/mDNS/UDP broadcast) exists anywhere in ArrCore or the MediaKit spike — servers are configured by URL only, confirmed by an empty grep across both packages.",
+  "MediaKit's TMDBAuth.swift is a near-verbatim duplicate of TMDBClient's isReadAccessToken()/query-vs-Bearer logic — same prefix check ('eyJ' or 3-part JWT), same fallback to api_key query param — so the spike has not changed or improved the TMDB credential-handling behavior, only relocated it.",
+  "MediaKitBridge.swift in TonightCore is explicitly documented (its own header comment) as 'the whole migration surface' — TonightBarr's views still bind to the app-local MediaItem type, and MediaKit's MediaSnapshot/MediaIdentity are converted at this one seam. ArrBarr proper (ArrCore) does not import MediaKit at all today; only TonightCore (11 files) does.",
+  "MediaKit's identity vocabulary (MediaID/MediaIdentity, Identity/MediaID.swift) is a strict superset of ArrCore's two identity types combined (MediaRef for arr/search routing + MediaServerExternalKey for media-server matching), adding .season/.episode/.artist/.album kinds and a unified .server(flavor,id)/.arr(flavor,id) case — a stronger single-namespace design than ArrCore's two separate enums."
+ ],
+ "open_questions": [
+  "Is PosterStore itself expected to move into MediaKit eventually (e.g. as a caching layer keyed by MediaKit's MediaID instead of raw URLs), or does it stay a presentation-tier ArrCore service permanently? The MediaKit spike has no image-byte cache today (FragmentCache caches MediaFragment metadata, not image data), so PosterStore has no direct successor to compare against.",
+  "MediaKit's MediaServerProvider auth-header discrepancy (Emby always gets the MediaBrowser-wrapped token, never a bare X-Emby-Token) — is this a known simplification for the TonightBarr-only spike scope, or a bug that needs fixing before MediaKit could replace ArrCore's JellyfinClient?",
+  "SeriesIdentityResolver's DemoMode.isActive gate returns nil (i.e. 'no identity resolved') in demo mode rather than substituting a mock — is that the intended demo behavior (identity-dependent features simply degrade), or should MediaKit's TMDBIdentityResolver add an explicit demo path?",
+  "TMDBClient's v3 api_key-in-query behavior for the JSON API endpoints is inherited unchanged into MediaKit's TMDBAuth — is there an intention to move every TMDB caller to v4 Bearer-only in the MediaKit migration, or must v3 hex keys keep working indefinitely?"
+ ],
+ "summary": "Read-only inventory of ArrCore's media-server (Plex/Jellyfin/Emby)/TMDB/poster/identity stack versus the MediaKit spike. All 8 MediaServerClient methods on both PlexClient and JellyfinClient authenticate via header only (X-Plex-Token / X-Emby-Token / MediaBrowser Authorization), never in a query string; only 2 of those methods mutate server state (scanLibrary via GET/POST, emptyTrash via PUT). TMDBClient's JSON API calls put a legacy v3 hex key in an api_key query parameter (v4 JWT keys go to an Authorization Bearer header instead) but TMDB image URLs never carry any credential. PosterStore's cache key is a SHA256 hash of the URL (not the raw URL), and the design already documents and defends against media-server tokens leaking into the poster URL/cache — no credential leak found in this codebase today. DemoMode.isActive gates only SeriesIdentityResolver's TMDB/Sonarr bridge (2 call sites); none of the media-server or TMDB client files check DemoMode at all. No LAN/Bonjour discovery code exists anywhere in scope. The MediaKit spike (18 source files, ~3459 LOC, 1011 LOC of tests) is a from-scratch, more general reimplementation (unified MediaID/MediaIdentity vocabulary, MediaGraph query planner, FragmentCache, per-provider MediaServerProvider/TMDBProvider/RadarrProvider/SonarrProvider) that TonightCore already imports and bridges to (MediaKitBridge.swift is explicitly the single migration seam); ArrCore itself does not import MediaKit yet. 9 ArrCore files totaling 2143 LOC (Plex/Jellyfin clients, the MediaServerClient protocol+factory+GuidParser, MediaServerIndex, MediaServerPosterAccess, MediaServerTypes DTOs, ArrMediaServerKeys, SeriesIdentityResolver, and TMDBClient) map onto MediaKit responsibilities; PosterStore, TMDBSearchMapping, LocalToolBackend+TMDB, NotificationArtwork, MediaRef, MediaServerConfig, and DiscoverItem stay ArrCore-side as presentation/domain composition. One correctness discrepancy was found: MediaKit's MediaServerProvider always wraps Jellyfin/Emby tokens in the 'MediaBrowser Token=' scheme, while ArrCore's shipping client sends Emby a bare X-Emby-Token — a gap to reconcile before MediaKit could replace JellyfinClient."
+}

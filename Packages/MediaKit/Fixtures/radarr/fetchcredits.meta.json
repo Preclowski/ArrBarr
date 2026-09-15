@@ -1,0 +1,22 @@
+{
+  "headers": {
+    "Alt-Svc": "h3=\":443\"; ma=2592000",
+    "Cache-Control": "no-cache, no-store",
+    "Content-Encoding": "br",
+    "Content-Type": "application/json; charset=utf-8",
+    "Date": "Tue, 15 Sep 2026 00:30:06 GMT",
+    "Expires": "-1",
+    "Pragma": "no-cache",
+    "Server": "Kestrel",
+    "Vary": "Accept-Encoding",
+    "x-application-version": "6.3.0.10514"
+  },
+  "operation": "fetchCredits",
+  "original_array_count": {
+    "$": 58
+  },
+  "recorded_at": "2026-09-15",
+  "request_path": "/api/v3/credit",
+  "status": 200,
+  "truncated": true
+}

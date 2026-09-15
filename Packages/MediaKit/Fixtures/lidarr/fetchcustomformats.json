@@ -1,0 +1,184 @@
+[
+  {
+    "id": 1,
+    "includeCustomFormatWhenRenaming": false,
+    "name": "CD",
+    "specifications": [
+      {
+        "fields": [
+          {
+            "advanced": false,
+            "helpText": "Custom Format RegEx is Case Insensitive",
+            "isFloat": false,
+            "label": "Regular Expression",
+            "name": "value",
+            "order": 0,
+            "privacy": "normal",
+            "type": "textbox",
+            "value": "\\bCD\\b"
+          }
+        ],
+        "implementation": "ReleaseTitleSpecification",
+        "implementationName": "Release Title",
+        "infoLink": "https://wiki.servarr.com/lidarr/settings#custom-formats-2",
+        "name": "CD",
+        "negate": false,
+        "required": false
+      }
+    ]
+  },
+  {
+    "id": 2,
+    "includeCustomFormatWhenRenaming": false,
+    "name": "Preferred Groups",
+    "specifications": [
+      {
+        "fields": [
+          {
+            "advanced": false,
+            "helpText": "Custom Format RegEx is Case Insensitive",
+            "isFloat": false,
+            "label": "Regular Expression",
+            "name": "value",
+            "order": 0,
+            "privacy": "normal",
+            "type": "textbox",
+            "value": "\\bDeVOiD\\b"
+          }
+        ],
+        "implementation": "ReleaseGroupSpecification",
+        "implementationName": "Release Group",
+        "infoLink": "https://wiki.servarr.com/lidarr/settings#custom-formats-2",
+        "name": "DeVOiD",
+        "negate": false,
+        "required": false
+      },
+      {
+        "fields": [
+          {
+            "advanced": false,
+            "helpText": "Custom Format RegEx is Case Insensitive",
+            "isFloat": false,
+            "label": "Regular Expression",
+            "name": "value",
+            "order": 0,
+            "privacy": "normal",
+            "type": "textbox",
+            "value": "\\bPERFECT\\b"
+          }
+        ],
+        "implementation": "ReleaseGroupSpecification",
+        "implementationName": "Release Group",
+        "infoLink": "https://wiki.servarr.com/lidarr/settings#custom-formats-2",
+        "name": "PERFECT",
+        "negate": false,
+        "required": false
+      },
+      {
+        "fields": [
+          {
+            "advanced": false,
+            "helpText": "Custom Format RegEx is Case Insensitive",
+            "isFloat": false,
+            "label": "Regular Expression",
+            "name": "value",
+            "order": 0,
+            "privacy": "normal",
+            "type": "textbox",
+            "value": "\\bENRiCH\\b"
+          }
+        ],
+        "implementation": "ReleaseGroupSpecification",
+        "implementationName": "Release Group",
+        "infoLink": "https://wiki.servarr.com/lidarr/settings#custom-formats-2",
+        "name": "ENRiCH",
+        "negate": false,
+        "required": false
+      }
+    ]
+  },
+  {
+    "id": 3,
+    "includeCustomFormatWhenRenaming": false,
+    "name": "WEB",
+    "specifications": [
+      {
+        "fields": [
+          {
+            "advanced": false,
+            "helpText": "Custom Format RegEx is Case Insensitive",
+            "isFloat": false,
+            "label": "Regular Expression",
+            "name": "value",
+            "order": 0,
+            "privacy": "normal",
+            "type": "textbox",
+            "value": "\\bWEB\\b"
+          }
+        ],
+        "implementation": "ReleaseTitleSpecification",
+        "implementationName": "Release Title",
+        "infoLink": "https://wiki.servarr.com/lidarr/settings#custom-formats-2",
+        "name": "WEB",
+        "negate": false,
+        "required": false
+      }
+    ]
+  },
+  {
+    "id": 4,
+    "includeCustomFormatWhenRenaming": false,
+    "name": "Lossless",
+    "specifications": [
+      {
+        "fields": [
+          {
+            "advanced": false,
+            "helpText": "Custom Format RegEx is Case Insensitive",
+            "isFloat": false,
+            "label": "Regular Expression",
+            "name": "value",
+            "order": 0,
+            "privacy": "normal",
+            "type": "textbox",
+            "value": "\\blossless\\b"
+          }
+        ],
+        "implementation": "ReleaseTitleSpecification",
+        "implementationName": "Release Title",
+        "infoLink": "https://wiki.servarr.com/lidarr/settings#custom-formats-2",
+        "name": "Lossless",
+        "negate": false,
+        "required": false
+      }
+    ]
+  },
+  {
+    "id": 5,
+    "includeCustomFormatWhenRenaming": false,
+    "name": "Vinyl",
+    "specifications": [
+      {
+        "fields": [
+          {
+            "advanced": false,
+            "helpText": "Custom Format RegEx is Case Insensitive",
+            "isFloat": false,
+            "label": "Regular Expression",
+            "name": "value",
+            "order": 0,
+            "privacy": "normal",
+            "type": "textbox",
+            "value": "\\bVinyl\\b"
+          }
+        ],
+        "implementation": "ReleaseTitleSpecification",
+        "implementationName": "Release Title",
+        "infoLink": "https://wiki.servarr.com/lidarr/settings#custom-formats-2",
+        "name": "Vinyl",
+        "negate": false,
+        "required": false
+      }
+    ]
+  }
+]

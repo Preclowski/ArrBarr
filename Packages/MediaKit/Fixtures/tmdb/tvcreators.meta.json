@@ -1,0 +1,36 @@
+{
+  "headers": {
+    "Age": "1629",
+    "Alt-Svc": "h3=\":443\"; ma=86400",
+    "Cache-Control": "public, max-age=15053",
+    "Content-Encoding": "gzip",
+    "Content-Type": "application/json;charset=utf-8",
+    "Date": "Tue, 15 Sep 2026 00:03:03 GMT",
+    "Etag": "W/\"d5d4da5312759b1f2883eaf4ff4021c9f289e7b7c5a13bbef907d5389f2c2d49\"",
+    "Server": "openresty",
+    "Vary": "Origin",
+    "Via": "1.1 ca4bc82573be586920ccabe8e2946522.cloudfront.net (CloudFront)",
+    "x-amz-cf-id": "j2ILmkcitEzIfK0voDxQNfZhY9idUiFy8dyqjXDmhp9c8XhNsiy26A==",
+    "x-amz-cf-pop": "WAW51-P1",
+    "x-az": "us-east-1a",
+    "x-cache": "Hit from cloudfront",
+    "x-gateway-cache-status": "HIT",
+    "x-task-id": "e69e2fb58e624e2ebbe9b6c94a2380db"
+  },
+  "operation": "tvCreators",
+  "original_array_count": {
+    "episode_run_time": 0,
+    "genres": 3,
+    "languages": 1,
+    "networks": 1,
+    "origin_country": 1,
+    "production_companies": 6,
+    "production_countries": 2,
+    "seasons": 9,
+    "spoken_languages": 1
+  },
+  "recorded_at": "2026-09-15",
+  "request_path": "/3/tv/{id}",
+  "status": 200,
+  "truncated": true
+}

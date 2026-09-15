@@ -1,0 +1,20 @@
+{
+  "headers": {
+    "Alt-Svc": "h3=\":443\"; ma=2592000",
+    "Cache-Control": "no-cache, no-store",
+    "Content-Length": "316",
+    "Content-Type": "application/json",
+    "Date": "Tue, 15 Sep 2026 00:30:10 GMT",
+    "Expires": "-1",
+    "Pragma": "no-cache",
+    "Server": "Kestrel"
+  },
+  "operation": "realtime.negotiate",
+  "original_array_count": {
+    "availableTransports": 3
+  },
+  "recorded_at": "2026-09-15",
+  "request_path": "/signalr/messages/negotiate",
+  "status": 200,
+  "truncated": false
+}

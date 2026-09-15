@@ -1,0 +1,33 @@
+{
+  "headers": {
+    "Age": "11433",
+    "Alt-Svc": "h3=\":443\"; ma=86400",
+    "Cache-Control": "public, max-age=18165",
+    "Content-Encoding": "gzip",
+    "Content-Type": "application/json;charset=utf-8",
+    "Date": "Mon, 14 Sep 2026 21:19:39 GMT",
+    "Etag": "W/\"e9510c7214e99a5e9d37ddf3d8ba6380eb73625bf6f77f9c130ce781d94c7925\"",
+    "Server": "openresty",
+    "Vary": "Origin",
+    "Via": "1.1 ca4bc82573be586920ccabe8e2946522.cloudfront.net (CloudFront)",
+    "x-amz-cf-id": "UcY_Mn_RaM1t-EFRh0INwkshi7KO4eeqKaH6tR4066Dy97IKaxpavw==",
+    "x-amz-cf-pop": "WAW51-P1",
+    "x-az": "us-east-1a",
+    "x-cache": "Hit from cloudfront",
+    "x-gateway-cache-status": "HIT",
+    "x-task-id": "e69e2fb58e624e2ebbe9b6c94a2380db"
+  },
+  "operation": "testConnection",
+  "original_array_count": {
+    "change_keys": 54,
+    "images.backdrop_sizes": 4,
+    "images.logo_sizes": 7,
+    "images.poster_sizes": 7,
+    "images.profile_sizes": 4,
+    "images.still_sizes": 4
+  },
+  "recorded_at": "2026-09-15",
+  "request_path": "/3/configuration",
+  "status": 200,
+  "truncated": true
+}

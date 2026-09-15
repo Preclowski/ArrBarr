@@ -1,0 +1,23 @@
+{
+  "headers": {
+    "Alt-Svc": "h3=\":443\"; ma=2592000",
+    "Cache-Control": "no-cache",
+    "Content-Encoding": "gzip",
+    "Content-Length": "1204",
+    "Content-Type": "application/json",
+    "Date": "Tue, 15 Sep 2026 00:30:12 GMT",
+    "x-plex-container-start": "0",
+    "x-plex-container-total-size": "13260",
+    "x-plex-content-compressed-length": "1204",
+    "x-plex-content-original-length": "12965",
+    "x-plex-protocol": "1.0"
+  },
+  "operation": "recentlyWatched",
+  "original_array_count": {
+    "MediaContainer.Metadata": 20
+  },
+  "recorded_at": "2026-09-15",
+  "request_path": "/status/sessions/history/all",
+  "status": 200,
+  "truncated": true
+}

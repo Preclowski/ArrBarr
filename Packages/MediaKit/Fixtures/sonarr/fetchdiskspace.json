@@ -1,0 +1,32 @@
+[
+  {
+    "freeSpace": 3754835968,
+    "label": "",
+    "path": "/data/sonarr",
+    "totalSpace": 32523501568
+  },
+  {
+    "freeSpace": 3754835968,
+    "label": "",
+    "path": "/data/sonarr/Open Album 7",
+    "totalSpace": 32523501568
+  },
+  {
+    "freeSpace": 14059777490944,
+    "label": "",
+    "path": "/data/sonarr",
+    "totalSpace": 35914660499456
+  },
+  {
+    "freeSpace": 1298180333568,
+    "label": "",
+    "path": "/data/downloads/torrent/completed",
+    "totalSpace": 1999422177280
+  },
+  {
+    "freeSpace": 1298180333568,
+    "label": "",
+    "path": "/data/downloads/usenet/completed",
+    "totalSpace": 1999422177280
+  }
+]

@@ -1,0 +1,170 @@
+{
+  "adult": false,
+  "backdrop_path": "/open-series-76-backdrop.jpg",
+  "created_by": 0,
+  "episode_run_time": [],
+  "first_air_date": "2011-04-17",
+  "genres": [
+    {
+      "id": 10765,
+      "name": "Open Movie 114"
+    },
+    {
+      "id": 18,
+      "name": "Open Movie 70"
+    },
+    {
+      "id": 10759,
+      "name": "Open Movie 115"
+    }
+  ],
+  "homepage": "",
+  "id": 1399,
+  "in_production": false,
+  "languages": [
+    "en"
+  ],
+  "last_air_date": "2019-05-19",
+  "last_episode_to_air": {
+    "air_date": "2019-05-19",
+    "episode_number": 6,
+    "episode_type": "finale",
+    "id": 1551830,
+    "name": "Episode 6",
+    "overview": "An open-licensed episode from the demo library.",
+    "production_code": "806",
+    "runtime": 80,
+    "season_number": 8,
+    "show_id": 1399,
+    "still_path": "/episode-6-still.jpg",
+    "vote_average": 4.5,
+    "vote_count": 454
+  },
+  "name": "Open Series 76",
+  "networks": [
+    {
+      "id": 49,
+      "logo_path": "/open-movie-116-logo.jpg",
+      "name": "Open Movie 116",
+      "origin_country": "US"
+    }
+  ],
+  "next_episode_to_air": null,
+  "number_of_episodes": 73,
+  "number_of_seasons": 8,
+  "origin_country": [
+    "US"
+  ],
+  "original_language": "en",
+  "original_name": "Open Series 76",
+  "overview": "An open-licensed series from the demo library.",
+  "popularity": 217.263,
+  "poster_path": "/open-series-76-poster.jpg",
+  "production_companies": [
+    {
+      "id": 76043,
+      "logo_path": "/open-movie-117-logo.jpg",
+      "name": "Open Movie 117",
+      "origin_country": "US"
+    },
+    {
+      "id": 12525,
+      "logo_path": null,
+      "name": "Open Movie 118",
+      "origin_country": ""
+    },
+    {
+      "id": 5820,
+      "logo_path": null,
+      "name": "Open Movie 119",
+      "origin_country": "GB"
+    },
+    {
+      "id": 12526,
+      "logo_path": null,
+      "name": "Open Movie 120",
+      "origin_country": "US"
+    },
+    {
+      "id": 286828,
+      "logo_path": null,
+      "name": "Open Movie 121",
+      "origin_country": ""
+    }
+  ],
+  "production_countries": [
+    {
+      "iso_3166_1": "GB",
+      "name": "Open Movie 122"
+    },
+    {
+      "iso_3166_1": "US",
+      "name": "Open Movie 78"
+    }
+  ],
+  "seasons": [
+    {
+      "air_date": "2010-12-05",
+      "episode_count": 300,
+      "id": 3627,
+      "name": "Open Movie 123",
+      "overview": "An open-licensed short film from the demo library.",
+      "poster_path": "/open-movie-123-poster.jpg",
+      "season_number": 0,
+      "vote_average": 0
+    },
+    {
+      "air_date": "2011-04-17",
+      "episode_count": 10,
+      "id": 3624,
+      "name": "Open Movie 124",
+      "overview": "An open-licensed short film from the demo library.",
+      "poster_path": "/open-movie-124-poster.jpg",
+      "season_number": 1,
+      "vote_average": 8.4
+    },
+    {
+      "air_date": "2012-04-01",
+      "episode_count": 10,
+      "id": 3625,
+      "name": "Open Movie 125",
+      "overview": "An open-licensed short film from the demo library.",
+      "poster_path": "/open-movie-125-poster.jpg",
+      "season_number": 2,
+      "vote_average": 8.3
+    },
+    {
+      "air_date": "2013-03-31",
+      "episode_count": 10,
+      "id": 3626,
+      "name": "Open Movie 126",
+      "overview": "An open-licensed short film from the demo library.",
+      "poster_path": "/open-movie-126-poster.jpg",
+      "season_number": 3,
+      "vote_average": 8.3
+    },
+    {
+      "air_date": "2014-04-06",
+      "episode_count": 10,
+      "id": 3628,
+      "name": "Open Movie 127",
+      "overview": "An open-licensed short film from the demo library.",
+      "poster_path": "/open-movie-127-poster.jpg",
+      "season_number": 4,
+      "vote_average": 8.5
+    }
+  ],
+  "softcore": false,
+  "spoken_languages": [
+    {
+      "english_name": "English",
+      "iso_639_1": "en",
+      "name": "Open Movie 79"
+    }
+  ],
+  "status": "Ended",
+  "tagline": "An open-licensed demo title.",
+  "type": "Scripted",
+  "vote_average": 8.471,
+  "vote_count": 27728
+}

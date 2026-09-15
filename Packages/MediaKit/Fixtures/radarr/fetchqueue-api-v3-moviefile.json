@@ -1,0 +1,312 @@
+[
+  {
+    "customFormatScore": 8656,
+    "customFormats": [
+      {
+        "id": 310,
+        "name": "7.1 Surround"
+      },
+      {
+        "id": 287,
+        "name": "DV Boost"
+      },
+      {
+        "id": 167,
+        "name": "FraMeSToR"
+      },
+      {
+        "id": 234,
+        "name": "HDR"
+      },
+      {
+        "id": 86,
+        "name": "Hybrid"
+      },
+      {
+        "id": 93,
+        "name": "Remux Tier 01"
+      },
+      {
+        "id": 97,
+        "name": "Repack/Proper"
+      },
+      {
+        "id": 61,
+        "name": "TrueHD ATMOS"
+      }
+    ],
+    "dateAdded": "2026-01-02T00:30:31Z",
+    "edition": "",
+    "id": 11986,
+    "indexerFlags": 0,
+    "languages": [
+      {
+        "id": 1,
+        "name": "English"
+      }
+    ],
+    "mediaInfo": {
+      "audioBitrate": 4136960,
+      "audioChannels": 7.1,
+      "audioCodec": "TrueHD Atmos",
+      "audioLanguages": "eng/eng/eng",
+      "audioStreamCount": 3,
+      "resolution": "3840x2160",
+      "runTime": "2:15:54",
+      "scanType": "Progressive",
+      "subtitles": "eng/eng/eng/ara/chi/chi/chi/cze/dan/dut/fin/fre/fre/ger/gre/hun/ice/ind/ita/jpn/kor/may/nor/pol/por/por/rum/rus/spa/spa/swe/tha/tur/eng/dan/dut/fin/fre/fre/ger/ita/nor/por/rus/spa/spa/swe",
+      "videoBitDepth": 10,
+      "videoBitrate": 44935650,
+      "videoCodec": "h265",
+      "videoDynamicRange": "HDR",
+      "videoDynamicRangeType": "DV HDR10",
+      "videoFps": 23.976
+    },
+    "movieId": 122,
+    "path": "/data/radarr/Open Movie 51 (2014) {tmdb-629006}/Open.Movie.51.Atmos-DEMO.mkv",
+    "quality": {
+      "quality": {
+        "id": 31,
+        "modifier": "remux",
+        "name": "Remux-2160p",
+        "resolution": 2160,
+        "source": "bluray"
+      },
+      "revision": {
+        "isRepack": false,
+        "real": 0,
+        "version": 2
+      }
+    },
+    "qualityCutoffNotMet": false,
+    "relativePath": "Open.Movie.51.Atmos-DEMO.mkv",
+    "releaseGroup": "DEMO",
+    "size": 52716184374
+  },
+  {
+    "customFormatScore": 8450,
+    "customFormats": [
+      {
+        "id": 310,
+        "name": "7.1 Surround"
+      },
+      {
+        "id": 287,
+        "name": "DV Boost"
+      },
+      {
+        "id": 234,
+        "name": "HDR"
+      },
+      {
+        "id": 93,
+        "name": "Remux Tier 01"
+      },
+      {
+        "id": 61,
+        "name": "TrueHD ATMOS"
+      }
+    ],
+    "dateAdded": "2025-12-27T14:44:04Z",
+    "edition": "",
+    "id": 10301,
+    "indexerFlags": 0,
+    "languages": [
+      {
+        "id": 1,
+        "name": "English"
+      }
+    ],
+    "mediaInfo": {
+      "audioBitrate": 2986703,
+      "audioChannels": 7.1,
+      "audioCodec": "TrueHD Atmos",
+      "audioLanguages": "eng/eng/eng",
+      "audioStreamCount": 3,
+      "resolution": "3840x2160",
+      "runTime": "1:26:21",
+      "scanType": "Progressive",
+      "subtitles": "eng/eng/eng/eng/eng/eng/eng/eng/eng/alb/ara/ara/bos/bul/bul/chi/chi/chi/chi/chi/hrv/hrv/cze/cze/dan/dan/dut/dut/est/fil/fin/fin/fre/fre/ger/ger/gre/gre/heb/heb/hin/hin/hun/hun/ice/ind/ind/ita/ita/jpn/jpn/kor/kor/lav/lit/may/nor/nor/pol/pol/por/por/por/por/rum/rum/rus/rus/srp/slo/slv/spa/spa/spa/spa/swe/swe/tam/tel/tha/tha/tur/tur/ukr/vie/eng/eng/eng/eng/eng/cze/dan/dut/fin/fre/ger/hun/ita/jpn/kor/nor/pol/por/por/rus/spa/spa/swe",
+      "videoBitDepth": 10,
+      "videoBitrate": 71105658,
+      "videoCodec": "h265",
+      "videoDynamicRange": "HDR",
+      "videoDynamicRangeType": "DV HDR10",
+      "videoFps": 23.976
+    },
+    "movieId": 359,
+    "path": "/data/radarr/Open Movie 52 (2005) {tmdb-628008}/Open.Movie.52.Atmos-DEMO.mkv",
+    "quality": {
+      "quality": {
+        "id": 31,
+        "modifier": "remux",
+        "name": "Remux-2160p",
+        "resolution": 2160,
+        "source": "bluray"
+      },
+      "revision": {
+        "isRepack": false,
+        "real": 0,
+        "version": 1
+      }
+    },
+    "qualityCutoffNotMet": false,
+    "relativePath": "Open.Movie.52.Atmos-DEMO.mkv",
+    "releaseGroup": "DEMO",
+    "size": 50439352901
+  },
+  {
+    "customFormatScore": 9200,
+    "customFormats": [
+      {
+        "id": 310,
+        "name": "7.1 Surround"
+      },
+      {
+        "id": 287,
+        "name": "DV Boost"
+      },
+      {
+        "id": 234,
+        "name": "HDR"
+      },
+      {
+        "id": 92,
+        "name": "IMAX"
+      },
+      {
+        "id": 94,
+        "name": "Remux Tier 02"
+      },
+      {
+        "id": 61,
+        "name": "TrueHD ATMOS"
+      }
+    ],
+    "dateAdded": "2026-08-25T13:46:41Z",
+    "edition": "IMAX",
+    "id": 13462,
+    "indexerFlags": 0,
+    "languages": [
+      {
+        "id": 1,
+        "name": "English"
+      }
+    ],
+    "mediaInfo": {
+      "audioBitrate": 4896036,
+      "audioChannels": 7.1,
+      "audioCodec": "TrueHD Atmos",
+      "audioLanguages": "eng/eng/eng",
+      "audioStreamCount": 3,
+      "resolution": "3840x2160",
+      "runTime": "2:12:05",
+      "scanType": "Progressive",
+      "subtitles": "eng/eng/eng/eng/ara/aze/bul/chi/chi/chi/hrv/cze/dan/dut/est/fin/fre/fre/gre/heb/hun/ice/kor/lav/lit/nor/pol/por/rum/rus/slo/slv/spa/swe/ukr/eng/eng/fre/spa",
+      "videoBitDepth": 10,
+      "videoBitrate": 68047314,
+      "videoCodec": "HEVC",
+      "videoDynamicRange": "HDR",
+      "videoDynamicRangeType": "DV HDR10Plus",
+      "videoFps": 23.976
+    },
+    "movieId": 2907,
+    "originalFilePath": "Open Movie 53/Open.Movie.54.2026.IMAX.2160p.UHD.Remux.HEVC.TrueHD.Atmos-DEMO.mkv",
+    "path": "/data/radarr/Open Movie 54 (2026) {tmdb-549480}/Open.Movie.54.Atmos-DEMO.mkv",
+    "quality": {
+      "quality": {
+        "id": 31,
+        "modifier": "remux",
+        "name": "Remux-2160p",
+        "resolution": 2160,
+        "source": "bluray"
+      },
+      "revision": {
+        "isRepack": false,
+        "real": 0,
+        "version": 1
+      }
+    },
+    "qualityCutoffNotMet": false,
+    "relativePath": "Open.Movie.54.Atmos-DEMO.mkv",
+    "releaseGroup": "DEMO",
+    "sceneName": "Open.Movie.54.2026.IMAX.2160p.UHD.Remux.HEVC.TrueHD.Atmos-DEMO",
+    "size": 73222560037
+  },
+  {
+    "customFormatScore": -3400,
+    "customFormats": [
+      {
+        "id": 310,
+        "name": "7.1 Surround"
+      },
+      {
+        "id": 287,
+        "name": "DV Boost"
+      },
+      {
+        "id": 226,
+        "name": "Generated Dynamic HDR"
+      },
+      {
+        "id": 234,
+        "name": "HDR"
+      },
+      {
+        "id": 86,
+        "name": "Hybrid"
+      },
+      {
+        "id": 61,
+        "name": "TrueHD ATMOS"
+      }
+    ],
+    "dateAdded": "2025-12-28T12:38:09Z",
+    "edition": "",
+    "id": 11727,
+    "indexerFlags": 0,
+    "languages": [
+      {
+        "id": 1,
+        "name": "English"
+      }
+    ],
+    "mediaInfo": {
+      "audioBitrate": 7172282,
+      "audioChannels": 7.1,
+      "audioCodec": "TrueHD Atmos",
+      "audioLanguages": "eng/eng",
+      "audioStreamCount": 2,
+      "resolution": "3840x2160",
+      "runTime": "1:48:29",
+      "scanType": "Progressive",
+      "subtitles": "eng/fre/spa/jpn",
+      "videoBitDepth": 10,
+      "videoBitrate": 44904648,
+      "videoCodec": "h265",
+      "videoDynamicRange": "HDR",
+      "videoDynamicRangeType": "DV HDR10",
+      "videoFps": 23.976
+    },
+    "movieId": 1557,
+    "path": "/data/radarr/Open Movie 55 (2016) {tmdb-491664}/Open.Movie.55.Atmos-DEMO.mkv",
+    "quality": {
+      "quality": {
+        "id": 31,
+        "modifier": "remux",
+        "name": "Remux-2160p",
+        "resolution": 2160,
+        "source": "bluray"
+      },
+      "revision": {
+        "isRepack": false,
+        "real": 0,
+        "version": 1
+      }
+    },
+    "qualityCutoffNotMet": false,
+    "relativePath": "Open.Movie.55.Atmos-DEMO.mkv",
+    "releaseGroup": "DEMO",
+    "size": 43000883671
+  }
+]

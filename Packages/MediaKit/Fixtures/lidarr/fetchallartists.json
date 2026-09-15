@@ -1,0 +1,4161 @@
+[
+  {
+    "added": "2026-06-17T01:11:41Z",
+    "artistName": "Brad Sucks",
+    "artistType": "Group",
+    "cleanName": "bradsucks",
+    "disambiguation": "",
+    "discogsId": 355368,
+    "ended": false,
+    "foreignArtistId": "e0ca8d41-ed6a-9d26-2639-1777f7ed2459",
+    "genres": [
+      "Nu Metal",
+      "Rock",
+      "Rap Rock",
+      "Metal",
+      "Alternative Rock",
+      "Rap Metal"
+    ],
+    "id": 7,
+    "images": [
+      {
+        "coverType": "banner",
+        "extension": ".jpg",
+        "remoteUrl": "https://example.invalid/album/brad-sucks/banner.jpg",
+        "url": "https://example.invalid/album/brad-sucks/banner.jpg"
+      },
+      {
+        "coverType": "clearlogo",
+        "extension": ".png",
+        "remoteUrl": "https://example.invalid/album/brad-sucks/clearlogo.jpg",
+        "url": "https://example.invalid/album/brad-sucks/clearlogo.jpg"
+      },
+      {
+        "coverType": "poster",
+        "extension": ".jpg",
+        "remoteUrl": "https://example.invalid/album/brad-sucks/poster.jpg",
+        "url": "https://example.invalid/album/brad-sucks/poster.jpg"
+      },
+      {
+        "coverType": "fanart",
+        "extension": ".jpg",
+        "remoteUrl": "https://example.invalid/album/brad-sucks/fanart.jpg",
+        "url": "https://example.invalid/album/brad-sucks/fanart.jpg"
+      }
+    ],
+    "lastAlbum": {
+      "albumType": "Single",
+      "anyReleaseOk": true,
+      "artist": {
+        "added": "2026-06-17T01:11:41Z",
+        "artistName": "Brad Sucks",
+        "artistType": "Group",
+        "cleanName": "bradsucks",
+        "disambiguation": "",
+        "discogsId": 355368,
+        "ended": false,
+        "foreignArtistId": "e0ca8d41-ed6a-9d26-2639-1777f7ed2459",
+        "genres": [
+          "Nu Metal",
+          "Rock",
+          "Rap Rock",
+          "Metal",
+          "Alternative Rock",
+          "Rap Metal"
+        ],
+        "id": 7,
+        "images": [],
+        "lastAlbum": null,
+        "links": [
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "discogs",
+            "url": "https://example.invalid/links/brad-sucks/discogs"
+          },
+          {
+            "name": "myspace",
+            "url": "https://example.invalid/links/brad-sucks/myspace"
+          },
+          {
+            "name": "purevolume",
+            "url": "https://example.invalid/links/brad-sucks/purevolume"
+          },
+          {
+            "name": "imdb",
+            "url": "https://example.invalid/links/brad-sucks/imdb"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "twitter",
+            "url": "https://example.invalid/links/brad-sucks/twitter"
+          },
+          {
+            "name": "allmusic",
+            "url": "https://example.invalid/links/brad-sucks/allmusic"
+          },
+          {
+            "name": "discogs",
+            "url": "https://example.invalid/links/brad-sucks/discogs"
+          },
+          {
+            "name": "viaf",
+            "url": "https://example.invalid/links/brad-sucks/viaf"
+          },
+          {
+            "name": "wikidata",
+            "url": "https://example.invalid/links/brad-sucks/wikidata"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "spotify",
+            "url": "https://example.invalid/links/brad-sucks/spotify"
+          },
+          {
+            "name": "rateyourmusic",
+            "url": "https://example.invalid/links/brad-sucks/rateyourmusic"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "genius",
+            "url": "https://example.invalid/links/brad-sucks/genius"
+          },
+          {
+            "name": "deezer",
+            "url": "https://example.invalid/links/brad-sucks/deezer"
+          },
+          {
+            "name": "instagram",
+            "url": "https://example.invalid/links/brad-sucks/instagram"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "songkick",
+            "url": "https://example.invalid/links/brad-sucks/songkick"
+          },
+          {
+            "name": "whosampled",
+            "url": "https://example.invalid/links/brad-sucks/whosampled"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "secondhandsongs",
+            "url": "https://example.invalid/links/brad-sucks/secondhandsongs"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "deezer",
+            "url": "https://example.invalid/links/brad-sucks/deezer"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "tidal",
+            "url": "https://example.invalid/links/brad-sucks/tidal"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "Brad Sucks",
+            "url": "https://example.invalid/links/brad-sucks/brad-sucks"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "youtube",
+            "url": "https://example.invalid/links/brad-sucks/youtube"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "youtube",
+            "url": "https://example.invalid/links/brad-sucks/youtube"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "soundcloud",
+            "url": "https://example.invalid/links/brad-sucks/soundcloud"
+          },
+          {
+            "name": "facebook",
+            "url": "https://example.invalid/links/brad-sucks/facebook"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          }
+        ],
+        "metadataProfileId": 1,
+        "monitorNewItems": "all",
+        "monitored": true,
+        "nextAlbum": null,
+        "path": "/data/lidarr/Brad Sucks",
+        "qualityProfileId": 1,
+        "ratings": {
+          "value": 8.8,
+          "votes": 42
+        },
+        "sortName": "brad sucks",
+        "status": "continuing",
+        "tadbId": 98683,
+        "tags": []
+      },
+      "artistId": 7,
+      "disambiguation": "",
+      "duration": 205976,
+      "foreignAlbumId": "03708196-0f41-2348-1c03-4bff477983ef",
+      "genres": [],
+      "id": 6637,
+      "images": [
+        {
+          "coverType": "cover",
+          "extension": ".jpg",
+          "remoteUrl": "https://example.invalid/album/out-of-it/cover.jpg"
+        }
+      ],
+      "lastSearchTime": "2026-08-13T00:59:14Z",
+      "links": [],
+      "media": [
+        {
+          "mediumFormat": "Digital Media",
+          "mediumName": "",
+          "mediumNumber": 1
+        }
+      ],
+      "mediumCount": 1,
+      "monitored": true,
+      "overview": "An open-licensed album from the demo library.",
+      "profileId": 1,
+      "ratings": {
+        "value": 0,
+        "votes": 0
+      },
+      "releaseDate": "2026-08-04T00:00:00Z",
+      "releases": [
+        {
+          "albumId": 6637,
+          "country": [],
+          "disambiguation": "",
+          "duration": 205976,
+          "foreignReleaseId": "d26f454e-c066-17cf-f5f0-f04dea559b3d",
+          "format": "Digital Media",
+          "id": 25785,
+          "label": [
+            "Demo Label 2"
+          ],
+          "media": [
+            {
+              "mediumFormat": "Digital Media",
+              "mediumName": "",
+              "mediumNumber": 1
+            }
+          ],
+          "mediumCount": 1,
+          "monitored": true,
+          "status": "Official",
+          "title": "Out of It",
+          "trackCount": 1
+        }
+      ],
+      "secondaryTypes": [
+        "Live",
+        "Soundtrack"
+      ],
+      "title": "Out of It"
+    },
+    "links": [
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/brad-sucks/link"
+      },
+      {
+        "name": "discogs",
+        "url": "https://example.invalid/links/brad-sucks/discogs"
+      },
+      {
+        "name": "myspace",
+        "url": "https://example.invalid/links/brad-sucks/myspace"
+      },
+      {
+        "name": "purevolume",
+        "url": "https://example.invalid/links/brad-sucks/purevolume"
+      },
+      {
+        "name": "imdb",
+        "url": "https://example.invalid/links/brad-sucks/imdb"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/brad-sucks/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/brad-sucks/link"
+      },
+      {
+        "name": "twitter",
+        "url": "https://example.invalid/links/brad-sucks/twitter"
+      },
+      {
+        "name": "allmusic",
+        "url": "https://example.invalid/links/brad-sucks/allmusic"
+      },
+      {
+        "name": "discogs",
+        "url": "https://example.invalid/links/brad-sucks/discogs"
+      },
+      {
+        "name": "viaf",
+        "url": "https://example.invalid/links/brad-sucks/viaf"
+      },
+      {
+        "name": "wikidata",
+        "url": "https://example.invalid/links/brad-sucks/wikidata"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/brad-sucks/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/brad-sucks/link"
+      },
+      {
+        "name": "spotify",
+        "url": "https://example.invalid/links/brad-sucks/spotify"
+      },
+      {
+        "name": "rateyourmusic",
+        "url": "https://example.invalid/links/brad-sucks/rateyourmusic"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/brad-sucks/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/brad-sucks/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/brad-sucks/link"
+      },
+      {
+        "name": "genius",
+        "url": "https://example.invalid/links/brad-sucks/genius"
+      },
+      {
+        "name": "deezer",
+        "url": "https://example.invalid/links/brad-sucks/deezer"
+      },
+      {
+        "name": "instagram",
+        "url": "https://example.invalid/links/brad-sucks/instagram"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/brad-sucks/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/brad-sucks/link"
+      },
+      {
+        "name": "songkick",
+        "url": "https://example.invalid/links/brad-sucks/songkick"
+      },
+      {
+        "name": "whosampled",
+        "url": "https://example.invalid/links/brad-sucks/whosampled"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/brad-sucks/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/brad-sucks/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/brad-sucks/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/brad-sucks/link"
+      },
+      {
+        "name": "secondhandsongs",
+        "url": "https://example.invalid/links/brad-sucks/secondhandsongs"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/brad-sucks/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/brad-sucks/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/brad-sucks/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/brad-sucks/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/brad-sucks/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/brad-sucks/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/brad-sucks/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/brad-sucks/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/brad-sucks/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/brad-sucks/link"
+      },
+      {
+        "name": "deezer",
+        "url": "https://example.invalid/links/brad-sucks/deezer"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/brad-sucks/link"
+      },
+      {
+        "name": "tidal",
+        "url": "https://example.invalid/links/brad-sucks/tidal"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/brad-sucks/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/brad-sucks/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/brad-sucks/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/brad-sucks/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/brad-sucks/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/brad-sucks/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/brad-sucks/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/brad-sucks/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/brad-sucks/link"
+      },
+      {
+        "name": "Brad Sucks",
+        "url": "https://example.invalid/links/brad-sucks/brad-sucks"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/brad-sucks/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/brad-sucks/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/brad-sucks/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/brad-sucks/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/brad-sucks/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/brad-sucks/link"
+      },
+      {
+        "name": "youtube",
+        "url": "https://example.invalid/links/brad-sucks/youtube"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/brad-sucks/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/brad-sucks/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/brad-sucks/link"
+      },
+      {
+        "name": "youtube",
+        "url": "https://example.invalid/links/brad-sucks/youtube"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/brad-sucks/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/brad-sucks/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/brad-sucks/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/brad-sucks/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/brad-sucks/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/brad-sucks/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/brad-sucks/link"
+      },
+      {
+        "name": "soundcloud",
+        "url": "https://example.invalid/links/brad-sucks/soundcloud"
+      },
+      {
+        "name": "facebook",
+        "url": "https://example.invalid/links/brad-sucks/facebook"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/brad-sucks/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/brad-sucks/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/brad-sucks/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/brad-sucks/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/brad-sucks/link"
+      }
+    ],
+    "metadataProfileId": 1,
+    "monitorNewItems": "all",
+    "monitored": true,
+    "nextAlbum": {
+      "albumType": "Album",
+      "anyReleaseOk": true,
+      "artist": {
+        "added": "2026-06-17T01:11:41Z",
+        "artistName": "Brad Sucks",
+        "artistType": "Group",
+        "cleanName": "bradsucks",
+        "disambiguation": "",
+        "discogsId": 355368,
+        "ended": false,
+        "foreignArtistId": "e0ca8d41-ed6a-9d26-2639-1777f7ed2459",
+        "genres": [
+          "Nu Metal",
+          "Rock",
+          "Rap Rock",
+          "Metal",
+          "Alternative Rock",
+          "Rap Metal"
+        ],
+        "id": 7,
+        "images": [],
+        "lastAlbum": null,
+        "links": [
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "discogs",
+            "url": "https://example.invalid/links/brad-sucks/discogs"
+          },
+          {
+            "name": "myspace",
+            "url": "https://example.invalid/links/brad-sucks/myspace"
+          },
+          {
+            "name": "purevolume",
+            "url": "https://example.invalid/links/brad-sucks/purevolume"
+          },
+          {
+            "name": "imdb",
+            "url": "https://example.invalid/links/brad-sucks/imdb"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "twitter",
+            "url": "https://example.invalid/links/brad-sucks/twitter"
+          },
+          {
+            "name": "allmusic",
+            "url": "https://example.invalid/links/brad-sucks/allmusic"
+          },
+          {
+            "name": "discogs",
+            "url": "https://example.invalid/links/brad-sucks/discogs"
+          },
+          {
+            "name": "viaf",
+            "url": "https://example.invalid/links/brad-sucks/viaf"
+          },
+          {
+            "name": "wikidata",
+            "url": "https://example.invalid/links/brad-sucks/wikidata"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "spotify",
+            "url": "https://example.invalid/links/brad-sucks/spotify"
+          },
+          {
+            "name": "rateyourmusic",
+            "url": "https://example.invalid/links/brad-sucks/rateyourmusic"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "genius",
+            "url": "https://example.invalid/links/brad-sucks/genius"
+          },
+          {
+            "name": "deezer",
+            "url": "https://example.invalid/links/brad-sucks/deezer"
+          },
+          {
+            "name": "instagram",
+            "url": "https://example.invalid/links/brad-sucks/instagram"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "songkick",
+            "url": "https://example.invalid/links/brad-sucks/songkick"
+          },
+          {
+            "name": "whosampled",
+            "url": "https://example.invalid/links/brad-sucks/whosampled"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "secondhandsongs",
+            "url": "https://example.invalid/links/brad-sucks/secondhandsongs"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "deezer",
+            "url": "https://example.invalid/links/brad-sucks/deezer"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "tidal",
+            "url": "https://example.invalid/links/brad-sucks/tidal"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "Brad Sucks",
+            "url": "https://example.invalid/links/brad-sucks/brad-sucks"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "youtube",
+            "url": "https://example.invalid/links/brad-sucks/youtube"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "youtube",
+            "url": "https://example.invalid/links/brad-sucks/youtube"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "soundcloud",
+            "url": "https://example.invalid/links/brad-sucks/soundcloud"
+          },
+          {
+            "name": "facebook",
+            "url": "https://example.invalid/links/brad-sucks/facebook"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/brad-sucks/link"
+          }
+        ],
+        "metadataProfileId": 1,
+        "monitorNewItems": "all",
+        "monitored": true,
+        "nextAlbum": null,
+        "path": "/data/lidarr/Brad Sucks",
+        "qualityProfileId": 1,
+        "ratings": {
+          "value": 8.8,
+          "votes": 42
+        },
+        "sortName": "brad sucks",
+        "status": "continuing",
+        "tadbId": 98683,
+        "tags": []
+      },
+      "artistId": 7,
+      "disambiguation": "",
+      "duration": 3927000,
+      "foreignAlbumId": "7a46a77a-80fa-8873-0404-e8208f965c34",
+      "genres": [],
+      "id": 6636,
+      "images": [
+        {
+          "coverType": "cover",
+          "extension": ".jpg",
+          "remoteUrl": "https://example.invalid/album/i-dont-know-what-im-doing/cover.jpg"
+        }
+      ],
+      "links": [
+        {
+          "name": "wikidata",
+          "url": "https://example.invalid/links/i-dont-know-what-im-doing/wikidata"
+        }
+      ],
+      "media": [
+        {
+          "mediumFormat": "Digital Media",
+          "mediumName": "",
+          "mediumNumber": 1
+        }
+      ],
+      "mediumCount": 1,
+      "monitored": true,
+      "overview": "An open-licensed album from the demo library.",
+      "profileId": 1,
+      "ratings": {
+        "value": 0,
+        "votes": 0
+      },
+      "releaseDate": "2026-09-25T00:00:00Z",
+      "releases": [
+        {
+          "albumId": 6636,
+          "country": [
+            "[Worldwide]"
+          ],
+          "disambiguation": "",
+          "duration": 3927000,
+          "foreignReleaseId": "b4b7bcf6-7c12-4efb-d881-744f35691d7a",
+          "format": "Digital Media",
+          "id": 22161,
+          "label": [
+            "Demo Label 2"
+          ],
+          "media": [
+            {
+              "mediumFormat": "Digital Media",
+              "mediumName": "",
+              "mediumNumber": 1
+            }
+          ],
+          "mediumCount": 1,
+          "monitored": true,
+          "status": "Official",
+          "title": "I Dont Know What Im Doing",
+          "trackCount": 20
+        }
+      ],
+      "secondaryTypes": [
+        "Live",
+        "Soundtrack"
+      ],
+      "title": "I Dont Know What Im Doing"
+    },
+    "path": "/data/lidarr/Brad Sucks",
+    "qualityProfileId": 1,
+    "ratings": {
+      "value": 8.8,
+      "votes": 42
+    },
+    "rootFolderPath": "/data/lidarr/",
+    "sortName": "brad sucks",
+    "statistics": {
+      "albumCount": 78,
+      "percentOfTracks": 24.169184290030213,
+      "sizeOnDisk": 4020697796,
+      "totalTrackCount": 745,
+      "trackCount": 662,
+      "trackFileCount": 160
+    },
+    "status": "continuing",
+    "tadbId": 98683,
+    "tags": []
+  },
+  {
+    "added": "2026-08-07T01:22:14Z",
+    "artistName": "Jonathan Coulton",
+    "artistType": "Group",
+    "cleanName": "jonathancoulton",
+    "disambiguation": "",
+    "discogsId": 394521,
+    "ended": false,
+    "foreignArtistId": "f309a3fd-a914-7eb8-5346-ec99dad3532f",
+    "genres": [
+      "New Wave",
+      "Disco",
+      "Rock",
+      "Pop",
+      "Power Pop",
+      "Punk",
+      "Pop Rock",
+      "Punk Rock"
+    ],
+    "id": 45,
+    "images": [
+      {
+        "coverType": "poster",
+        "extension": ".jpg",
+        "remoteUrl": "https://example.invalid/album/jonathan-coulton/poster.jpg",
+        "url": "https://example.invalid/album/jonathan-coulton/poster.jpg"
+      },
+      {
+        "coverType": "banner",
+        "extension": ".jpg",
+        "remoteUrl": "https://example.invalid/album/jonathan-coulton/banner.jpg",
+        "url": "https://example.invalid/album/jonathan-coulton/banner.jpg"
+      },
+      {
+        "coverType": "clearlogo",
+        "extension": ".png",
+        "remoteUrl": "https://example.invalid/album/jonathan-coulton/clearlogo.jpg",
+        "url": "https://example.invalid/album/jonathan-coulton/clearlogo.jpg"
+      },
+      {
+        "coverType": "fanart",
+        "extension": ".jpg",
+        "remoteUrl": "https://example.invalid/album/jonathan-coulton/fanart.jpg",
+        "url": "https://example.invalid/album/jonathan-coulton/fanart.jpg"
+      }
+    ],
+    "lastAlbum": {
+      "albumType": "Album",
+      "anyReleaseOk": true,
+      "artist": {
+        "added": "2026-08-07T01:22:14Z",
+        "artistName": "Jonathan Coulton",
+        "artistType": "Group",
+        "cleanName": "jonathancoulton",
+        "disambiguation": "",
+        "discogsId": 394521,
+        "ended": false,
+        "foreignArtistId": "f309a3fd-a914-7eb8-5346-ec99dad3532f",
+        "genres": [
+          "New Wave",
+          "Disco",
+          "Rock",
+          "Pop",
+          "Power Pop",
+          "Punk",
+          "Pop Rock",
+          "Punk Rock"
+        ],
+        "id": 45,
+        "images": [
+          {
+            "coverType": "poster",
+            "extension": ".jpg",
+            "remoteUrl": "https://example.invalid/album/jonathan-coulton/poster.jpg"
+          },
+          {
+            "coverType": "banner",
+            "extension": ".jpg",
+            "remoteUrl": "https://example.invalid/album/jonathan-coulton/banner.jpg"
+          },
+          {
+            "coverType": "clearlogo",
+            "extension": ".png",
+            "remoteUrl": "https://example.invalid/album/jonathan-coulton/clearlogo.jpg"
+          },
+          {
+            "coverType": "fanart",
+            "extension": ".jpg",
+            "remoteUrl": "https://example.invalid/album/jonathan-coulton/fanart.jpg"
+          }
+        ],
+        "lastAlbum": null,
+        "links": [
+          {
+            "name": "discogs",
+            "url": "https://example.invalid/links/jonathan-coulton/discogs"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/jonathan-coulton/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/jonathan-coulton/link"
+          },
+          {
+            "name": "imdb",
+            "url": "https://example.invalid/links/jonathan-coulton/imdb"
+          },
+          {
+            "name": "allmusic",
+            "url": "https://example.invalid/links/jonathan-coulton/allmusic"
+          },
+          {
+            "name": "youtube",
+            "url": "https://example.invalid/links/jonathan-coulton/youtube"
+          },
+          {
+            "name": "facebook",
+            "url": "https://example.invalid/links/jonathan-coulton/facebook"
+          },
+          {
+            "name": "wikidata",
+            "url": "https://example.invalid/links/jonathan-coulton/wikidata"
+          },
+          {
+            "name": "rateyourmusic",
+            "url": "https://example.invalid/links/jonathan-coulton/rateyourmusic"
+          },
+          {
+            "name": "twitter",
+            "url": "https://example.invalid/links/jonathan-coulton/twitter"
+          },
+          {
+            "name": "myspace",
+            "url": "https://example.invalid/links/jonathan-coulton/myspace"
+          },
+          {
+            "name": "purevolume",
+            "url": "https://example.invalid/links/jonathan-coulton/purevolume"
+          },
+          {
+            "name": "secondhandsongs",
+            "url": "https://example.invalid/links/jonathan-coulton/secondhandsongs"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/jonathan-coulton/link"
+          },
+          {
+            "name": "viaf",
+            "url": "https://example.invalid/links/jonathan-coulton/viaf"
+          },
+          {
+            "name": "soundcloud",
+            "url": "https://example.invalid/links/jonathan-coulton/soundcloud"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/jonathan-coulton/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/jonathan-coulton/link"
+          },
+          {
+            "name": "spotify",
+            "url": "https://example.invalid/links/jonathan-coulton/spotify"
+          },
+          {
+            "name": "whosampled",
+            "url": "https://example.invalid/links/jonathan-coulton/whosampled"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/jonathan-coulton/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/jonathan-coulton/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/jonathan-coulton/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/jonathan-coulton/link"
+          },
+          {
+            "name": "genius",
+            "url": "https://example.invalid/links/jonathan-coulton/genius"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/jonathan-coulton/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/jonathan-coulton/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/jonathan-coulton/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/jonathan-coulton/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/jonathan-coulton/link"
+          },
+          {
+            "name": "songkick",
+            "url": "https://example.invalid/links/jonathan-coulton/songkick"
+          },
+          {
+            "name": "deezer",
+            "url": "https://example.invalid/links/jonathan-coulton/deezer"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/jonathan-coulton/link"
+          },
+          {
+            "name": "tidal",
+            "url": "https://example.invalid/links/jonathan-coulton/tidal"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/jonathan-coulton/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/jonathan-coulton/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/jonathan-coulton/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/jonathan-coulton/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/jonathan-coulton/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/jonathan-coulton/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/jonathan-coulton/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/jonathan-coulton/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/jonathan-coulton/link"
+          },
+          {
+            "name": "youtube",
+            "url": "https://example.invalid/links/jonathan-coulton/youtube"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/jonathan-coulton/link"
+          },
+          {
+            "name": "instagram",
+            "url": "https://example.invalid/links/jonathan-coulton/instagram"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/jonathan-coulton/link"
+          },
+          {
+            "name": "Jonathan Coulton",
+            "url": "https://example.invalid/links/jonathan-coulton/jonathan-coulton"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/jonathan-coulton/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/jonathan-coulton/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/jonathan-coulton/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/jonathan-coulton/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/jonathan-coulton/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/jonathan-coulton/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/jonathan-coulton/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/jonathan-coulton/link"
+          },
+          {
+            "name": "tidal",
+            "url": "https://example.invalid/links/jonathan-coulton/tidal"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/jonathan-coulton/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/jonathan-coulton/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/jonathan-coulton/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/jonathan-coulton/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/jonathan-coulton/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/jonathan-coulton/link"
+          },
+          {
+            "name": "deezer",
+            "url": "https://example.invalid/links/jonathan-coulton/deezer"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/jonathan-coulton/link"
+          }
+        ],
+        "metadataProfileId": 1,
+        "monitorNewItems": "all",
+        "monitored": true,
+        "nextAlbum": null,
+        "overview": "An open-licensed recording artist from the demo library.",
+        "path": "/data/lidarr/Jonathan Coulton",
+        "qualityProfileId": 2,
+        "ratings": {
+          "value": 7.8,
+          "votes": 9
+        },
+        "sortName": "jonathan coulton",
+        "status": "continuing",
+        "tadbId": 529362,
+        "tags": []
+      },
+      "artistId": 45,
+      "disambiguation": "",
+      "duration": 24982001,
+      "foreignAlbumId": "0d14b2e1-e8ce-6c46-5fd2-d6fdf09aff43",
+      "genres": [
+        "Rock",
+        "New Wave",
+        "Punk"
+      ],
+      "id": 7520,
+      "images": [
+        {
+          "coverType": "cover",
+          "extension": ".jpg",
+          "remoteUrl": "https://example.invalid/album/open-album-4/cover.jpg"
+        },
+        {
+          "coverType": "disc",
+          "extension": ".jpg",
+          "remoteUrl": "https://example.invalid/album/open-album-4/disc.jpg"
+        }
+      ],
+      "lastSearchTime": "2026-09-10T01:09:47Z",
+      "links": [
+        {
+          "name": "link",
+          "url": "https://example.invalid/links/open-album-4/link"
+        },
+        {
+          "name": "allmusic",
+          "url": "https://example.invalid/links/open-album-4/allmusic"
+        },
+        {
+          "name": "discogs",
+          "url": "https://example.invalid/links/open-album-4/discogs"
+        },
+        {
+          "name": "rateyourmusic",
+          "url": "https://example.invalid/links/open-album-4/rateyourmusic"
+        },
+        {
+          "name": "genius",
+          "url": "https://example.invalid/links/open-album-4/genius"
+        },
+        {
+          "name": "link",
+          "url": "https://example.invalid/links/open-album-4/link"
+        },
+        {
+          "name": "link",
+          "url": "https://example.invalid/links/open-album-4/link"
+        }
+      ],
+      "media": [
+        {
+          "mediumFormat": "12\" Vinyl",
+          "mediumName": "",
+          "mediumNumber": 1
+        },
+        {
+          "mediumFormat": "12\" Vinyl",
+          "mediumName": "",
+          "mediumNumber": 2
+        },
+        {
+          "mediumFormat": "12\" Vinyl",
+          "mediumName": "",
+          "mediumNumber": 3
+        },
+        {
+          "mediumFormat": "12\" Vinyl",
+          "mediumName": "",
+          "mediumNumber": 4
+        },
+        {
+          "mediumFormat": "12\" Vinyl",
+          "mediumName": "",
+          "mediumNumber": 5
+        },
+        {
+          "mediumFormat": "12\" Vinyl",
+          "mediumName": "",
+          "mediumNumber": 6
+        },
+        {
+          "mediumFormat": "7\" Vinyl",
+          "mediumName": "",
+          "mediumNumber": 7
+        },
+        {
+          "mediumFormat": "12\" Vinyl",
+          "mediumName": "",
+          "mediumNumber": 8
+        },
+        {
+          "mediumFormat": "12\" Vinyl",
+          "mediumName": "",
+          "mediumNumber": 9
+        },
+        {
+          "mediumFormat": "12\" Vinyl",
+          "mediumName": "",
+          "mediumNumber": 10
+        },
+        {
+          "mediumFormat": "12\" Vinyl",
+          "mediumName": "",
+          "mediumNumber": 11
+        },
+        {
+          "mediumFormat": "12\" Vinyl",
+          "mediumName": "",
+          "mediumNumber": 12
+        }
+      ],
+      "mediumCount": 12,
+      "monitored": true,
+      "overview": "An open-licensed album from the demo library.",
+      "profileId": 2,
+      "ratings": {
+        "value": 0,
+        "votes": 0
+      },
+      "releaseDate": "2022-06-08T00:00:00Z",
+      "releases": [
+        {
+          "albumId": 7520,
+          "country": [
+            "[Worldwide]"
+          ],
+          "disambiguation": "",
+          "duration": 24982001,
+          "foreignReleaseId": "c132971b-5a07-ba30-c11f-df3f40f91871",
+          "format": "11x12\" Vinyl, 7\" Vinyl",
+          "id": 25707,
+          "label": [
+            "Demo Label 3",
+            "Demo Label 4",
+            "Demo Label 5"
+          ],
+          "media": [
+            {
+              "mediumFormat": "12\" Vinyl",
+              "mediumName": "",
+              "mediumNumber": 1
+            },
+            {
+              "mediumFormat": "12\" Vinyl",
+              "mediumName": "",
+              "mediumNumber": 2
+            },
+            {
+              "mediumFormat": "12\" Vinyl",
+              "mediumName": "",
+              "mediumNumber": 3
+            },
+            {
+              "mediumFormat": "12\" Vinyl",
+              "mediumName": "",
+              "mediumNumber": 4
+            },
+            {
+              "mediumFormat": "12\" Vinyl",
+              "mediumName": "",
+              "mediumNumber": 5
+            },
+            {
+              "mediumFormat": "12\" Vinyl",
+              "mediumName": "",
+              "mediumNumber": 6
+            },
+            {
+              "mediumFormat": "7\" Vinyl",
+              "mediumName": "",
+              "mediumNumber": 7
+            },
+            {
+              "mediumFormat": "12\" Vinyl",
+              "mediumName": "",
+              "mediumNumber": 8
+            },
+            {
+              "mediumFormat": "12\" Vinyl",
+              "mediumName": "",
+              "mediumNumber": 9
+            },
+            {
+              "mediumFormat": "12\" Vinyl",
+              "mediumName": "",
+              "mediumNumber": 10
+            },
+            {
+              "mediumFormat": "12\" Vinyl",
+              "mediumName": "",
+              "mediumNumber": 11
+            },
+            {
+              "mediumFormat": "12\" Vinyl",
+              "mediumName": "",
+              "mediumNumber": 12
+            }
+          ],
+          "mediumCount": 12,
+          "monitored": true,
+          "status": "Official",
+          "title": "Open Album 4",
+          "trackCount": 123
+        },
+        {
+          "albumId": 7520,
+          "country": [
+            "Afghanistan",
+            "Albania",
+            "Algeria",
+            "Andorra",
+            "Angola",
+            "Anguilla",
+            "Antigua and Barbuda",
+            "Argentina",
+            "Armenia",
+            "Australia",
+            "Austria",
+            "Azerbaijan",
+            "Bahamas",
+            "Bahrain",
+            "Bangladesh",
+            "Barbados",
+            "Belgium",
+            "Belize",
+            "Benin",
+            "Bermuda",
+            "Bhutan",
+            "Bolivia",
+            "Bosnia and Herzegovina",
+            "Botswana",
+            "Brazil",
+            "Brunei",
+            "Bulgaria",
+            "Burkina Faso",
+            "Burundi",
+            "Cambodia",
+            "Cameroon",
+            "Canada",
+            "Cape Verde",
+            "Cayman Islands",
+            "Central African Republic",
+            "Chad",
+            "Chile",
+            "China",
+            "Christmas Island",
+            "Cocos (Keeling) Islands",
+            "Colombia",
+            "Comoros",
+            "Congo",
+            "Cook Islands",
+            "Costa Rica",
+            "Côte d'Ivoire",
+            "Croatia",
+            "Cyprus",
+            "Czechia",
+            "Denmark",
+            "Djibouti",
+            "Dominica",
+            "Dominican Republic",
+            "Timor-Leste",
+            "Ecuador",
+            "Egypt",
+            "El Salvador",
+            "Equatorial Guinea",
+            "Eritrea",
+            "Estonia",
+            "Ethiopia",
+            "Falkland Islands",
+            "Fiji",
+            "Finland",
+            "France",
+            "Gabon",
+            "Gambia",
+            "Georgia",
+            "Germany",
+            "Ghana",
+            "Greece",
+            "Grenada",
+            "Guatemala",
+            "Guinea",
+            "Guinea-Bissau",
+            "Guyana",
+            "Haiti",
+            "Honduras",
+            "Hong Kong",
+            "Hungary",
+            "Iceland",
+            "India",
+            "Indonesia",
+            "Iraq",
+            "Ireland",
+            "Israel",
+            "Italy",
+            "Jamaica",
+            "Japan",
+            "Jordan",
+            "Kazakhstan",
+            "Kenya",
+            "Kiribati",
+            "South Korea",
+            "Kuwait",
+            "Kyrgyzstan",
+            "Laos",
+            "Latvia",
+            "Lebanon",
+            "Lesotho",
+            "Liberia",
+            "Libya",
+            "Liechtenstein",
+            "Lithuania",
+            "Luxembourg",
+            "Macao",
+            "North Macedonia",
+            "Madagascar",
+            "Malawi",
+            "Malaysia",
+            "Maldives",
+            "Mali",
+            "Malta",
+            "Marshall Islands",
+            "Mauritania",
+            "Mauritius",
+            "Mexico",
+            "Federated States of Micronesia",
+            "Moldova",
+            "Monaco",
+            "Mongolia",
+            "Montserrat",
+            "Morocco",
+            "Mozambique",
+            "Myanmar",
+            "Namibia",
+            "Nauru",
+            "Nepal",
+            "Netherlands",
+            "New Zealand",
+            "Nicaragua",
+            "Niger",
+            "Nigeria",
+            "Niue",
+            "Norfolk Island",
+            "Norway",
+            "Oman",
+            "Pakistan",
+            "Palau",
+            "Panama",
+            "Papua New Guinea",
+            "Paraguay",
+            "Peru",
+            "Philippines",
+            "Pitcairn",
+            "Poland",
+            "Portugal",
+            "Qatar",
+            "Romania",
+            "Rwanda",
+            "Saint Kitts and Nevis",
+            "Saint Lucia",
+            "Saint Vincent and The Grenadines",
+            "Samoa",
+            "San Marino",
+            "Sao Tome and Principe",
+            "Saudi Arabia",
+            "Senegal",
+            "Seychelles",
+            "Sierra Leone",
+            "Singapore",
+            "Slovakia",
+            "Slovenia",
+            "Solomon Islands",
+            "Somalia",
+            "South Africa",
+            "Spain",
+            "Sri Lanka",
+            "Suriname",
+            "Svalbard and Jan Mayen",
+            "Eswatini",
+            "Sweden",
+            "Switzerland",
+            "Taiwan",
+            "Tajikistan",
+            "Tanzania",
+            "Thailand",
+            "Togo",
+            "Tokelau",
+            "Tonga",
+            "Trinidad and Tobago",
+            "Tunisia",
+            "Türkiye",
+            "Turkmenistan",
+            "Turks and Caicos Islands",
+            "Tuvalu",
+            "Uganda",
+            "Ukraine",
+            "United Arab Emirates",
+            "United Kingdom",
+            "United States",
+            "Uruguay",
+            "Uzbekistan",
+            "Vanuatu",
+            "Venezuela",
+            "Vietnam",
+            "British Virgin Islands",
+            "Yemen",
+            "Democratic Republic of the Congo",
+            "Zambia",
+            "Zimbabwe",
+            "Montenegro",
+            "Palestine",
+            "Serbia",
+            "Curaçao",
+            "Kosovo"
+          ],
+          "disambiguation": "",
+          "duration": 10371638,
+          "foreignReleaseId": "c132971b-5a07-ba30-c11f-df3f40f91871",
+          "format": "3xDigital Media",
+          "id": 25708,
+          "label": [
+            "Demo Label 6"
+          ],
+          "media": [
+            {
+              "mediumFormat": "Digital Media",
+              "mediumName": "",
+              "mediumNumber": 1
+            },
+            {
+              "mediumFormat": "Digital Media",
+              "mediumName": "",
+              "mediumNumber": 2
+            },
+            {
+              "mediumFormat": "Digital Media",
+              "mediumName": "",
+              "mediumNumber": 3
+            }
+          ],
+          "mediumCount": 3,
+          "monitored": false,
+          "status": "Official",
+          "title": "Open Album 4",
+          "trackCount": 52
+        },
+        {
+          "albumId": 7520,
+          "country": [],
+          "disambiguation": "",
+          "duration": 25029491,
+          "foreignReleaseId": "c132971b-5a07-ba30-c11f-df3f40f91871",
+          "format": "8xCD",
+          "id": 25709,
+          "label": [
+            "Demo Label 6",
+            "Demo Label 4"
+          ],
+          "media": [
+            {
+              "mediumFormat": "CD",
+              "mediumName": "",
+              "mediumNumber": 1
+            },
+            {
+              "mediumFormat": "CD",
+              "mediumName": "",
+              "mediumNumber": 2
+            },
+            {
+              "mediumFormat": "CD",
+              "mediumName": "",
+              "mediumNumber": 3
+            },
+            {
+              "mediumFormat": "CD",
+              "mediumName": "",
+              "mediumNumber": 4
+            },
+            {
+              "mediumFormat": "CD",
+              "mediumName": "",
+              "mediumNumber": 5
+            },
+            {
+              "mediumFormat": "CD",
+              "mediumName": "",
+              "mediumNumber": 6
+            },
+            {
+              "mediumFormat": "CD",
+              "mediumName": "",
+              "mediumNumber": 7
+            },
+            {
+              "mediumFormat": "CD",
+              "mediumName": "",
+              "mediumNumber": 8
+            }
+          ],
+          "mediumCount": 8,
+          "monitored": false,
+          "status": "Official",
+          "title": "Open Album 4",
+          "trackCount": 123
+        },
+        {
+          "albumId": 7520,
+          "country": [],
+          "disambiguation": "",
+          "duration": 25037000,
+          "foreignReleaseId": "c132971b-5a07-ba30-c11f-df3f40f91871",
+          "format": "8xDigital Media",
+          "id": 25710,
+          "label": [
+            "Demo Label 5"
+          ],
+          "media": [
+            {
+              "mediumFormat": "Digital Media",
+              "mediumName": "",
+              "mediumNumber": 1
+            },
+            {
+              "mediumFormat": "Digital Media",
+              "mediumName": "",
+              "mediumNumber": 2
+            },
+            {
+              "mediumFormat": "Digital Media",
+              "mediumName": "",
+              "mediumNumber": 3
+            },
+            {
+              "mediumFormat": "Digital Media",
+              "mediumName": "",
+              "mediumNumber": 4
+            },
+            {
+              "mediumFormat": "Digital Media",
+              "mediumName": "",
+              "mediumNumber": 5
+            },
+            {
+              "mediumFormat": "Digital Media",
+              "mediumName": "",
+              "mediumNumber": 6
+            },
+            {
+              "mediumFormat": "Digital Media",
+              "mediumName": "",
+              "mediumNumber": 7
+            },
+            {
+              "mediumFormat": "Digital Media",
+              "mediumName": "",
+              "mediumNumber": 8
+            }
+          ],
+          "mediumCount": 8,
+          "monitored": false,
+          "status": "Official",
+          "title": "Open Album 4",
+          "trackCount": 123
+        },
+        {
+          "albumId": 7520,
+          "country": [
+            "[Worldwide]"
+          ],
+          "disambiguation": "",
+          "duration": 10371623,
+          "foreignReleaseId": "c132971b-5a07-ba30-c11f-df3f40f91871",
+          "format": "3xCD",
+          "id": 25711,
+          "label": [
+            "Demo Label 4",
+            "Demo Label 5"
+          ],
+          "media": [
+            {
+              "mediumFormat": "CD",
+              "mediumName": "",
+              "mediumNumber": 1
+            },
+            {
+              "mediumFormat": "CD",
+              "mediumName": "",
+              "mediumNumber": 2
+            },
+            {
+              "mediumFormat": "CD",
+              "mediumName": "",
+              "mediumNumber": 3
+            }
+          ],
+          "mediumCount": 3,
+          "monitored": false,
+          "status": "Official",
+          "title": "Open Album 4",
+          "trackCount": 52
+        }
+      ],
+      "secondaryTypes": [
+        "Compilation"
+      ],
+      "title": "Open Album 4"
+    },
+    "links": [
+      {
+        "name": "discogs",
+        "url": "https://example.invalid/links/jonathan-coulton/discogs"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/jonathan-coulton/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/jonathan-coulton/link"
+      },
+      {
+        "name": "imdb",
+        "url": "https://example.invalid/links/jonathan-coulton/imdb"
+      },
+      {
+        "name": "allmusic",
+        "url": "https://example.invalid/links/jonathan-coulton/allmusic"
+      },
+      {
+        "name": "youtube",
+        "url": "https://example.invalid/links/jonathan-coulton/youtube"
+      },
+      {
+        "name": "facebook",
+        "url": "https://example.invalid/links/jonathan-coulton/facebook"
+      },
+      {
+        "name": "wikidata",
+        "url": "https://example.invalid/links/jonathan-coulton/wikidata"
+      },
+      {
+        "name": "rateyourmusic",
+        "url": "https://example.invalid/links/jonathan-coulton/rateyourmusic"
+      },
+      {
+        "name": "twitter",
+        "url": "https://example.invalid/links/jonathan-coulton/twitter"
+      },
+      {
+        "name": "myspace",
+        "url": "https://example.invalid/links/jonathan-coulton/myspace"
+      },
+      {
+        "name": "purevolume",
+        "url": "https://example.invalid/links/jonathan-coulton/purevolume"
+      },
+      {
+        "name": "secondhandsongs",
+        "url": "https://example.invalid/links/jonathan-coulton/secondhandsongs"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/jonathan-coulton/link"
+      },
+      {
+        "name": "viaf",
+        "url": "https://example.invalid/links/jonathan-coulton/viaf"
+      },
+      {
+        "name": "soundcloud",
+        "url": "https://example.invalid/links/jonathan-coulton/soundcloud"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/jonathan-coulton/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/jonathan-coulton/link"
+      },
+      {
+        "name": "spotify",
+        "url": "https://example.invalid/links/jonathan-coulton/spotify"
+      },
+      {
+        "name": "whosampled",
+        "url": "https://example.invalid/links/jonathan-coulton/whosampled"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/jonathan-coulton/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/jonathan-coulton/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/jonathan-coulton/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/jonathan-coulton/link"
+      },
+      {
+        "name": "genius",
+        "url": "https://example.invalid/links/jonathan-coulton/genius"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/jonathan-coulton/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/jonathan-coulton/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/jonathan-coulton/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/jonathan-coulton/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/jonathan-coulton/link"
+      },
+      {
+        "name": "songkick",
+        "url": "https://example.invalid/links/jonathan-coulton/songkick"
+      },
+      {
+        "name": "deezer",
+        "url": "https://example.invalid/links/jonathan-coulton/deezer"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/jonathan-coulton/link"
+      },
+      {
+        "name": "tidal",
+        "url": "https://example.invalid/links/jonathan-coulton/tidal"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/jonathan-coulton/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/jonathan-coulton/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/jonathan-coulton/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/jonathan-coulton/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/jonathan-coulton/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/jonathan-coulton/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/jonathan-coulton/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/jonathan-coulton/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/jonathan-coulton/link"
+      },
+      {
+        "name": "youtube",
+        "url": "https://example.invalid/links/jonathan-coulton/youtube"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/jonathan-coulton/link"
+      },
+      {
+        "name": "instagram",
+        "url": "https://example.invalid/links/jonathan-coulton/instagram"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/jonathan-coulton/link"
+      },
+      {
+        "name": "Jonathan Coulton",
+        "url": "https://example.invalid/links/jonathan-coulton/jonathan-coulton"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/jonathan-coulton/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/jonathan-coulton/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/jonathan-coulton/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/jonathan-coulton/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/jonathan-coulton/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/jonathan-coulton/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/jonathan-coulton/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/jonathan-coulton/link"
+      },
+      {
+        "name": "tidal",
+        "url": "https://example.invalid/links/jonathan-coulton/tidal"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/jonathan-coulton/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/jonathan-coulton/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/jonathan-coulton/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/jonathan-coulton/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/jonathan-coulton/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/jonathan-coulton/link"
+      },
+      {
+        "name": "deezer",
+        "url": "https://example.invalid/links/jonathan-coulton/deezer"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/jonathan-coulton/link"
+      }
+    ],
+    "metadataProfileId": 1,
+    "monitorNewItems": "all",
+    "monitored": true,
+    "nextAlbum": null,
+    "overview": "An open-licensed recording artist from the demo library.",
+    "path": "/data/lidarr/Jonathan Coulton",
+    "qualityProfileId": 2,
+    "ratings": {
+      "value": 7.8,
+      "votes": 9
+    },
+    "rootFolderPath": "/data/lidarr/",
+    "sortName": "jonathan coulton",
+    "statistics": {
+      "albumCount": 80,
+      "percentOfTracks": 10.723514211886306,
+      "sizeOnDisk": 2903329866,
+      "totalTrackCount": 1055,
+      "trackCount": 774,
+      "trackFileCount": 83
+    },
+    "status": "continuing",
+    "tadbId": 529362,
+    "tags": []
+  },
+  {
+    "added": "2026-08-09T12:12:09Z",
+    "artistName": "Nine Inch Nails",
+    "artistType": "Person",
+    "cleanName": "nineinchnails",
+    "disambiguation": "",
+    "discogsId": 202074,
+    "ended": false,
+    "foreignArtistId": "a40f3fe3-9eeb-f345-f241-90f2bfd89716",
+    "genres": [],
+    "id": 56,
+    "images": [],
+    "lastAlbum": {
+      "albumType": "Album",
+      "anyReleaseOk": true,
+      "artist": {
+        "added": "2026-08-09T12:12:09Z",
+        "artistName": "Nine Inch Nails",
+        "artistType": "Person",
+        "cleanName": "nineinchnails",
+        "disambiguation": "",
+        "discogsId": 202074,
+        "ended": false,
+        "foreignArtistId": "a40f3fe3-9eeb-f345-f241-90f2bfd89716",
+        "genres": [],
+        "id": 56,
+        "images": [],
+        "lastAlbum": null,
+        "links": [
+          {
+            "name": "discogs",
+            "url": "https://example.invalid/links/nine-inch-nails/discogs"
+          },
+          {
+            "name": "allmusic",
+            "url": "https://example.invalid/links/nine-inch-nails/allmusic"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/nine-inch-nails/link"
+          },
+          {
+            "name": "imdb",
+            "url": "https://example.invalid/links/nine-inch-nails/imdb"
+          },
+          {
+            "name": "wikidata",
+            "url": "https://example.invalid/links/nine-inch-nails/wikidata"
+          }
+        ],
+        "metadataProfileId": 2,
+        "monitorNewItems": "all",
+        "monitored": true,
+        "nextAlbum": null,
+        "path": "/data/lidarr/Nine Inch Nails",
+        "qualityProfileId": 1,
+        "ratings": {
+          "value": 0,
+          "votes": 0
+        },
+        "sortName": "nine inch nails",
+        "status": "continuing",
+        "tadbId": 572763,
+        "tags": []
+      },
+      "artistId": 56,
+      "disambiguation": "",
+      "duration": 3014000,
+      "foreignAlbumId": "8c33ed3e-aa92-3a49-6a8c-a97146bd3436",
+      "genres": [],
+      "id": 4562,
+      "images": [
+        {
+          "coverType": "cover",
+          "extension": ".jpg",
+          "remoteUrl": "https://example.invalid/album/ghosts-i-iv/cover.jpg"
+        }
+      ],
+      "lastSearchTime": "2026-08-09T17:04:43Z",
+      "links": [],
+      "media": [
+        {
+          "mediumFormat": "CD",
+          "mediumName": "",
+          "mediumNumber": 1
+        }
+      ],
+      "mediumCount": 1,
+      "monitored": true,
+      "overview": "An open-licensed album from the demo library.",
+      "profileId": 0,
+      "ratings": {
+        "value": 10,
+        "votes": 1
+      },
+      "releaseDate": "2008-02-01T00:00:00Z",
+      "releases": [
+        {
+          "albumId": 4562,
+          "country": [
+            "Poland"
+          ],
+          "disambiguation": "",
+          "duration": 3014000,
+          "foreignReleaseId": "fd545363-7109-63fb-af81-0ffa8840e01d",
+          "format": "CD",
+          "id": 14106,
+          "label": [
+            "Demo Label 1"
+          ],
+          "media": [
+            {
+              "mediumFormat": "CD",
+              "mediumName": "",
+              "mediumNumber": 1
+            }
+          ],
+          "mediumCount": 1,
+          "monitored": true,
+          "status": "Official",
+          "title": "Ghosts I-IV",
+          "trackCount": 15
+        }
+      ],
+      "secondaryTypes": [],
+      "title": "Ghosts I-IV"
+    },
+    "links": [
+      {
+        "name": "discogs",
+        "url": "https://example.invalid/links/nine-inch-nails/discogs"
+      },
+      {
+        "name": "allmusic",
+        "url": "https://example.invalid/links/nine-inch-nails/allmusic"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/nine-inch-nails/link"
+      },
+      {
+        "name": "imdb",
+        "url": "https://example.invalid/links/nine-inch-nails/imdb"
+      },
+      {
+        "name": "wikidata",
+        "url": "https://example.invalid/links/nine-inch-nails/wikidata"
+      }
+    ],
+    "metadataProfileId": 2,
+    "monitorNewItems": "all",
+    "monitored": true,
+    "nextAlbum": null,
+    "path": "/data/lidarr/Nine Inch Nails",
+    "qualityProfileId": 1,
+    "ratings": {
+      "value": 0,
+      "votes": 0
+    },
+    "rootFolderPath": "/data/lidarr/",
+    "sortName": "nine inch nails",
+    "statistics": {
+      "albumCount": 1,
+      "percentOfTracks": 0,
+      "sizeOnDisk": 0,
+      "totalTrackCount": 15,
+      "trackCount": 15,
+      "trackFileCount": 0
+    },
+    "status": "continuing",
+    "tadbId": 572763,
+    "tags": []
+  },
+  {
+    "added": "2026-08-10T01:31:46Z",
+    "artistName": "Kevin MacLeod",
+    "artistType": "Group",
+    "cleanName": "kevinmacleod",
+    "disambiguation": "",
+    "discogsId": 470506,
+    "ended": false,
+    "foreignArtistId": "12e988e3-fa34-1a12-bb0e-30376fed8a39",
+    "genres": [
+      "New Wave",
+      "Pop",
+      "Synth-Pop",
+      "Dance-Pop",
+      "Sophisti-Pop"
+    ],
+    "id": 80,
+    "images": [
+      {
+        "coverType": "clearlogo",
+        "extension": ".png",
+        "remoteUrl": "https://example.invalid/album/kevin-macleod/clearlogo.jpg",
+        "url": "https://example.invalid/album/kevin-macleod/clearlogo.jpg"
+      },
+      {
+        "coverType": "banner",
+        "extension": ".jpg",
+        "remoteUrl": "https://example.invalid/album/kevin-macleod/banner.jpg",
+        "url": "https://example.invalid/album/kevin-macleod/banner.jpg"
+      },
+      {
+        "coverType": "fanart",
+        "extension": ".jpg",
+        "remoteUrl": "https://example.invalid/album/kevin-macleod/fanart.jpg",
+        "url": "https://example.invalid/album/kevin-macleod/fanart.jpg"
+      },
+      {
+        "coverType": "poster",
+        "extension": ".jpg",
+        "remoteUrl": "https://example.invalid/album/kevin-macleod/poster.jpg",
+        "url": "https://example.invalid/album/kevin-macleod/poster.jpg"
+      }
+    ],
+    "lastAlbum": {
+      "albumType": "Album",
+      "anyReleaseOk": true,
+      "artist": {
+        "added": "2026-08-10T01:31:46Z",
+        "artistName": "Kevin MacLeod",
+        "artistType": "Group",
+        "cleanName": "kevinmacleod",
+        "disambiguation": "",
+        "discogsId": 470506,
+        "ended": false,
+        "foreignArtistId": "12e988e3-fa34-1a12-bb0e-30376fed8a39",
+        "genres": [
+          "New Wave",
+          "Pop",
+          "Synth-Pop",
+          "Dance-Pop",
+          "Sophisti-Pop"
+        ],
+        "id": 80,
+        "images": [
+          {
+            "coverType": "clearlogo",
+            "extension": ".png",
+            "remoteUrl": "https://example.invalid/album/kevin-macleod/clearlogo.jpg"
+          },
+          {
+            "coverType": "banner",
+            "extension": ".jpg",
+            "remoteUrl": "https://example.invalid/album/kevin-macleod/banner.jpg"
+          },
+          {
+            "coverType": "fanart",
+            "extension": ".jpg",
+            "remoteUrl": "https://example.invalid/album/kevin-macleod/fanart.jpg"
+          },
+          {
+            "coverType": "poster",
+            "extension": ".jpg",
+            "remoteUrl": "https://example.invalid/album/kevin-macleod/poster.jpg"
+          }
+        ],
+        "lastAlbum": null,
+        "links": [
+          {
+            "name": "Kevin MacLeod",
+            "url": "https://example.invalid/links/kevin-macleod/kevin-macleod"
+          },
+          {
+            "name": "discogs",
+            "url": "https://example.invalid/links/kevin-macleod/discogs"
+          },
+          {
+            "name": "imdb",
+            "url": "https://example.invalid/links/kevin-macleod/imdb"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/kevin-macleod/link"
+          },
+          {
+            "name": "myspace",
+            "url": "https://example.invalid/links/kevin-macleod/myspace"
+          },
+          {
+            "name": "allmusic",
+            "url": "https://example.invalid/links/kevin-macleod/allmusic"
+          },
+          {
+            "name": "twitter",
+            "url": "https://example.invalid/links/kevin-macleod/twitter"
+          },
+          {
+            "name": "youtube",
+            "url": "https://example.invalid/links/kevin-macleod/youtube"
+          },
+          {
+            "name": "facebook",
+            "url": "https://example.invalid/links/kevin-macleod/facebook"
+          },
+          {
+            "name": "wikidata",
+            "url": "https://example.invalid/links/kevin-macleod/wikidata"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/kevin-macleod/link"
+          },
+          {
+            "name": "rateyourmusic",
+            "url": "https://example.invalid/links/kevin-macleod/rateyourmusic"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/kevin-macleod/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/kevin-macleod/link"
+          },
+          {
+            "name": "viaf",
+            "url": "https://example.invalid/links/kevin-macleod/viaf"
+          },
+          {
+            "name": "spotify",
+            "url": "https://example.invalid/links/kevin-macleod/spotify"
+          },
+          {
+            "name": "deezer",
+            "url": "https://example.invalid/links/kevin-macleod/deezer"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/kevin-macleod/link"
+          },
+          {
+            "name": "whosampled",
+            "url": "https://example.invalid/links/kevin-macleod/whosampled"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/kevin-macleod/link"
+          },
+          {
+            "name": "genius",
+            "url": "https://example.invalid/links/kevin-macleod/genius"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/kevin-macleod/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/kevin-macleod/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/kevin-macleod/link"
+          },
+          {
+            "name": "soundcloud",
+            "url": "https://example.invalid/links/kevin-macleod/soundcloud"
+          },
+          {
+            "name": "secondhandsongs",
+            "url": "https://example.invalid/links/kevin-macleod/secondhandsongs"
+          },
+          {
+            "name": "songkick",
+            "url": "https://example.invalid/links/kevin-macleod/songkick"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/kevin-macleod/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/kevin-macleod/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/kevin-macleod/link"
+          },
+          {
+            "name": "instagram",
+            "url": "https://example.invalid/links/kevin-macleod/instagram"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/kevin-macleod/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/kevin-macleod/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/kevin-macleod/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/kevin-macleod/link"
+          },
+          {
+            "name": "tidal",
+            "url": "https://example.invalid/links/kevin-macleod/tidal"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/kevin-macleod/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/kevin-macleod/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/kevin-macleod/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/kevin-macleod/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/kevin-macleod/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/kevin-macleod/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/kevin-macleod/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/kevin-macleod/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/kevin-macleod/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/kevin-macleod/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/kevin-macleod/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/kevin-macleod/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/kevin-macleod/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/kevin-macleod/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/kevin-macleod/link"
+          }
+        ],
+        "metadataProfileId": 3,
+        "monitorNewItems": "all",
+        "monitored": true,
+        "nextAlbum": null,
+        "path": "/data/lidarr/Kevin MacLeod",
+        "qualityProfileId": 1,
+        "ratings": {
+          "value": 8.3,
+          "votes": 13
+        },
+        "sortName": "kevin macleod",
+        "status": "continuing",
+        "tadbId": 839130,
+        "tags": []
+      },
+      "artistId": 80,
+      "disambiguation": "",
+      "duration": 3146000,
+      "foreignAlbumId": "e9490b30-1b82-55ba-745b-c3c86ca3f365",
+      "genres": [
+        "Pop",
+        "Europop",
+        "Dance-Rock"
+      ],
+      "id": 5289,
+      "images": [
+        {
+          "coverType": "cover",
+          "extension": ".jpg",
+          "remoteUrl": "https://example.invalid/album/open-album-5/cover.jpg"
+        },
+        {
+          "coverType": "disc",
+          "extension": ".jpg",
+          "remoteUrl": "https://example.invalid/album/open-album-5/disc.jpg"
+        }
+      ],
+      "links": [
+        {
+          "name": "wikidata",
+          "url": "https://example.invalid/links/open-album-5/wikidata"
+        },
+        {
+          "name": "link",
+          "url": "https://example.invalid/links/open-album-5/link"
+        },
+        {
+          "name": "link",
+          "url": "https://example.invalid/links/open-album-5/link"
+        },
+        {
+          "name": "allmusic",
+          "url": "https://example.invalid/links/open-album-5/allmusic"
+        },
+        {
+          "name": "discogs",
+          "url": "https://example.invalid/links/open-album-5/discogs"
+        },
+        {
+          "name": "link",
+          "url": "https://example.invalid/links/open-album-5/link"
+        }
+      ],
+      "media": [
+        {
+          "mediumFormat": "CD",
+          "mediumName": "",
+          "mediumNumber": 1
+        }
+      ],
+      "mediumCount": 1,
+      "monitored": true,
+      "overview": "An open-licensed album from the demo library.",
+      "profileId": 1,
+      "ratings": {
+        "value": 6.4,
+        "votes": 4
+      },
+      "releaseDate": "2022-10-21T00:00:00Z",
+      "releases": [
+        {
+          "albumId": 5289,
+          "country": [
+            "[Worldwide]"
+          ],
+          "disambiguation": "",
+          "duration": 3145000,
+          "foreignReleaseId": "30c434a3-9ff0-a7ba-a9c5-1d259d1ad229",
+          "format": "Digital Media",
+          "id": 19093,
+          "label": [
+            "Demo Label 7",
+            "Demo Label 8"
+          ],
+          "media": [
+            {
+              "mediumFormat": "Digital Media",
+              "mediumName": "",
+              "mediumNumber": 1
+            }
+          ],
+          "mediumCount": 1,
+          "monitored": false,
+          "status": "Official",
+          "title": "Open Album 5",
+          "trackCount": 12
+        },
+        {
+          "albumId": 5289,
+          "country": [
+            "Europe"
+          ],
+          "disambiguation": "",
+          "duration": 0,
+          "foreignReleaseId": "30c434a3-9ff0-a7ba-a9c5-1d259d1ad229",
+          "format": "2x12\" Vinyl",
+          "id": 19092,
+          "label": [
+            "Demo Label 9",
+            "Demo Label 10"
+          ],
+          "media": [
+            {
+              "mediumFormat": "12\" Vinyl",
+              "mediumName": "",
+              "mediumNumber": 1
+            },
+            {
+              "mediumFormat": "12\" Vinyl",
+              "mediumName": "",
+              "mediumNumber": 2
+            }
+          ],
+          "mediumCount": 2,
+          "monitored": false,
+          "status": "Official",
+          "title": "Open Album 5",
+          "trackCount": 12
+        },
+        {
+          "albumId": 5289,
+          "country": [
+            "Europe"
+          ],
+          "disambiguation": "",
+          "duration": 3146000,
+          "foreignReleaseId": "30c434a3-9ff0-a7ba-a9c5-1d259d1ad229",
+          "format": "CD",
+          "id": 19091,
+          "label": [
+            "Demo Label 9",
+            "Demo Label 10"
+          ],
+          "media": [
+            {
+              "mediumFormat": "CD",
+              "mediumName": "",
+              "mediumNumber": 1
+            }
+          ],
+          "mediumCount": 1,
+          "monitored": true,
+          "status": "Official",
+          "title": "Open Album 5",
+          "trackCount": 12
+        }
+      ],
+      "secondaryTypes": [],
+      "title": "Open Album 5"
+    },
+    "links": [
+      {
+        "name": "Kevin MacLeod",
+        "url": "https://example.invalid/links/kevin-macleod/kevin-macleod"
+      },
+      {
+        "name": "discogs",
+        "url": "https://example.invalid/links/kevin-macleod/discogs"
+      },
+      {
+        "name": "imdb",
+        "url": "https://example.invalid/links/kevin-macleod/imdb"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+      },
+      {
+        "name": "myspace",
+        "url": "https://example.invalid/links/kevin-macleod/myspace"
+      },
+      {
+        "name": "allmusic",
+        "url": "https://example.invalid/links/kevin-macleod/allmusic"
+      },
+      {
+        "name": "twitter",
+        "url": "https://example.invalid/links/kevin-macleod/twitter"
+      },
+      {
+        "name": "youtube",
+        "url": "https://example.invalid/links/kevin-macleod/youtube"
+      },
+      {
+        "name": "facebook",
+        "url": "https://example.invalid/links/kevin-macleod/facebook"
+      },
+      {
+        "name": "wikidata",
+        "url": "https://example.invalid/links/kevin-macleod/wikidata"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+      },
+      {
+        "name": "rateyourmusic",
+        "url": "https://example.invalid/links/kevin-macleod/rateyourmusic"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+      },
+      {
+        "name": "viaf",
+        "url": "https://example.invalid/links/kevin-macleod/viaf"
+      },
+      {
+        "name": "spotify",
+        "url": "https://example.invalid/links/kevin-macleod/spotify"
+      },
+      {
+        "name": "deezer",
+        "url": "https://example.invalid/links/kevin-macleod/deezer"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+      },
+      {
+        "name": "whosampled",
+        "url": "https://example.invalid/links/kevin-macleod/whosampled"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+      },
+      {
+        "name": "genius",
+        "url": "https://example.invalid/links/kevin-macleod/genius"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+      },
+      {
+        "name": "soundcloud",
+        "url": "https://example.invalid/links/kevin-macleod/soundcloud"
+      },
+      {
+        "name": "secondhandsongs",
+        "url": "https://example.invalid/links/kevin-macleod/secondhandsongs"
+      },
+      {
+        "name": "songkick",
+        "url": "https://example.invalid/links/kevin-macleod/songkick"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+      },
+      {
+        "name": "instagram",
+        "url": "https://example.invalid/links/kevin-macleod/instagram"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+      },
+      {
+        "name": "tidal",
+        "url": "https://example.invalid/links/kevin-macleod/tidal"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+      }
+    ],
+    "metadataProfileId": 3,
+    "monitorNewItems": "all",
+    "monitored": true,
+    "nextAlbum": null,
+    "path": "/data/lidarr/Kevin MacLeod",
+    "qualityProfileId": 1,
+    "ratings": {
+      "value": 8.3,
+      "votes": 13
+    },
+    "rootFolderPath": "/data/lidarr/",
+    "sortName": "kevin macleod",
+    "statistics": {
+      "albumCount": 90,
+      "percentOfTracks": 4.394426580921758,
+      "sizeOnDisk": 510499948,
+      "totalTrackCount": 933,
+      "trackCount": 933,
+      "trackFileCount": 41
+    },
+    "status": "continuing",
+    "tadbId": 839130,
+    "tags": []
+  },
+  {
+    "added": "2026-06-17T01:11:48Z",
+    "artistName": "Tobu",
+    "artistType": "Person",
+    "cleanName": "tobu",
+    "disambiguation": "",
+    "discogsId": 312558,
+    "ended": false,
+    "foreignArtistId": "7556169f-6d58-62da-712d-fd50ccdb98c5",
+    "genres": [
+      "Art Rock",
+      "Pop Rock",
+      "Progressive Rock",
+      "Art Pop",
+      "New Wave",
+      "Rock",
+      "Chamber Pop",
+      "Worldbeat",
+      "Soft Rock",
+      "Progressive Pop",
+      "Experimental",
+      "Crossover Prog",
+      "Folk",
+      "Pop"
+    ],
+    "id": 11,
+    "images": [
+      {
+        "coverType": "banner",
+        "extension": ".jpg",
+        "remoteUrl": "https://example.invalid/album/tobu/banner.jpg",
+        "url": "https://example.invalid/album/tobu/banner.jpg"
+      },
+      {
+        "coverType": "clearlogo",
+        "extension": ".png",
+        "remoteUrl": "https://example.invalid/album/tobu/clearlogo.jpg",
+        "url": "https://example.invalid/album/tobu/clearlogo.jpg"
+      },
+      {
+        "coverType": "poster",
+        "extension": ".jpg",
+        "remoteUrl": "https://example.invalid/album/tobu/poster.jpg",
+        "url": "https://example.invalid/album/tobu/poster.jpg"
+      },
+      {
+        "coverType": "fanart",
+        "extension": ".jpg",
+        "remoteUrl": "https://example.invalid/album/tobu/fanart.jpg",
+        "url": "https://example.invalid/album/tobu/fanart.jpg"
+      }
+    ],
+    "lastAlbum": {
+      "albumType": "Single",
+      "anyReleaseOk": true,
+      "artist": {
+        "added": "2026-06-17T01:11:48Z",
+        "artistName": "Tobu",
+        "artistType": "Person",
+        "cleanName": "tobu",
+        "disambiguation": "",
+        "discogsId": 312558,
+        "ended": false,
+        "foreignArtistId": "7556169f-6d58-62da-712d-fd50ccdb98c5",
+        "genres": [
+          "Art Rock",
+          "Pop Rock",
+          "Progressive Rock",
+          "Art Pop",
+          "New Wave",
+          "Rock",
+          "Chamber Pop",
+          "Worldbeat",
+          "Soft Rock",
+          "Progressive Pop",
+          "Experimental",
+          "Crossover Prog",
+          "Folk",
+          "Pop"
+        ],
+        "id": 11,
+        "images": [],
+        "lastAlbum": null,
+        "links": [
+          {
+            "name": "Tobu",
+            "url": "https://example.invalid/links/tobu/tobu"
+          },
+          {
+            "name": "discogs",
+            "url": "https://example.invalid/links/tobu/discogs"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/tobu/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/tobu/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/tobu/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/tobu/link"
+          },
+          {
+            "name": "myspace",
+            "url": "https://example.invalid/links/tobu/myspace"
+          },
+          {
+            "name": "Tobu",
+            "url": "https://example.invalid/links/tobu/tobu"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/tobu/link"
+          },
+          {
+            "name": "allmusic",
+            "url": "https://example.invalid/links/tobu/allmusic"
+          },
+          {
+            "name": "youtube",
+            "url": "https://example.invalid/links/tobu/youtube"
+          },
+          {
+            "name": "facebook",
+            "url": "https://example.invalid/links/tobu/facebook"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/tobu/link"
+          },
+          {
+            "name": "viaf",
+            "url": "https://example.invalid/links/tobu/viaf"
+          },
+          {
+            "name": "wikidata",
+            "url": "https://example.invalid/links/tobu/wikidata"
+          },
+          {
+            "name": "rateyourmusic",
+            "url": "https://example.invalid/links/tobu/rateyourmusic"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/tobu/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/tobu/link"
+          },
+          {
+            "name": "spotify",
+            "url": "https://example.invalid/links/tobu/spotify"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/tobu/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/tobu/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/tobu/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/tobu/link"
+          },
+          {
+            "name": "genius",
+            "url": "https://example.invalid/links/tobu/genius"
+          },
+          {
+            "name": "imdb",
+            "url": "https://example.invalid/links/tobu/imdb"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/tobu/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/tobu/link"
+          },
+          {
+            "name": "whosampled",
+            "url": "https://example.invalid/links/tobu/whosampled"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/tobu/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/tobu/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/tobu/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/tobu/link"
+          },
+          {
+            "name": "twitter",
+            "url": "https://example.invalid/links/tobu/twitter"
+          },
+          {
+            "name": "songkick",
+            "url": "https://example.invalid/links/tobu/songkick"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/tobu/link"
+          },
+          {
+            "name": "tidal",
+            "url": "https://example.invalid/links/tobu/tidal"
+          },
+          {
+            "name": "deezer",
+            "url": "https://example.invalid/links/tobu/deezer"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/tobu/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/tobu/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/tobu/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/tobu/link"
+          },
+          {
+            "name": "instagram",
+            "url": "https://example.invalid/links/tobu/instagram"
+          },
+          {
+            "name": "secondhandsongs",
+            "url": "https://example.invalid/links/tobu/secondhandsongs"
+          },
+          {
+            "name": "soundcloud",
+            "url": "https://example.invalid/links/tobu/soundcloud"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/tobu/link"
+          },
+          {
+            "name": "youtube",
+            "url": "https://example.invalid/links/tobu/youtube"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/tobu/link"
+          },
+          {
+            "name": "bandcamp",
+            "url": "https://example.invalid/links/tobu/bandcamp"
+          },
+          {
+            "name": "youtube",
+            "url": "https://example.invalid/links/tobu/youtube"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/tobu/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/tobu/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/tobu/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/tobu/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/tobu/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/tobu/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/tobu/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/tobu/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/tobu/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/tobu/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/tobu/link"
+          },
+          {
+            "name": "deezer",
+            "url": "https://example.invalid/links/tobu/deezer"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/tobu/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/tobu/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/tobu/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/tobu/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/tobu/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/tobu/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/tobu/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/tobu/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/tobu/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/tobu/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/tobu/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/tobu/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/tobu/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/tobu/link"
+          },
+          {
+            "name": "link",
+            "url": "https://example.invalid/links/tobu/link"
+          }
+        ],
+        "metadataProfileId": 1,
+        "monitorNewItems": "all",
+        "monitored": true,
+        "nextAlbum": null,
+        "path": "/data/lidarr/Tobu",
+        "qualityProfileId": 1,
+        "ratings": {
+          "value": 9.4,
+          "votes": 19
+        },
+        "sortName": "tobu",
+        "status": "continuing",
+        "tadbId": 809484,
+        "tags": []
+      },
+      "artistId": 11,
+      "disambiguation": "",
+      "duration": 514000,
+      "foreignAlbumId": "e9f7b50c-05e8-de1f-abec-c94b2d2edc1f",
+      "genres": [],
+      "id": 7375,
+      "images": [
+        {
+          "coverType": "cover",
+          "extension": ".jpg",
+          "remoteUrl": "https://example.invalid/album/open-album-6/cover.jpg"
+        }
+      ],
+      "lastSearchTime": "2026-08-30T01:05:40Z",
+      "links": [],
+      "media": [
+        {
+          "mediumFormat": "Digital Media",
+          "mediumName": "",
+          "mediumNumber": 1
+        }
+      ],
+      "mediumCount": 1,
+      "monitored": true,
+      "overview": "An open-licensed album from the demo library.",
+      "profileId": 1,
+      "ratings": {
+        "value": 0,
+        "votes": 0
+      },
+      "releaseDate": "2026-08-28T00:00:00Z",
+      "releases": [
+        {
+          "albumId": 7375,
+          "country": [
+            "[Worldwide]"
+          ],
+          "disambiguation": "",
+          "duration": 514000,
+          "foreignReleaseId": "1b2b8744-d713-4dbb-26b0-a98abee4d183",
+          "format": "Digital Media",
+          "id": 25330,
+          "label": [
+            "Demo Label 11",
+            "Demo Label 12"
+          ],
+          "media": [
+            {
+              "mediumFormat": "Digital Media",
+              "mediumName": "",
+              "mediumNumber": 1
+            }
+          ],
+          "mediumCount": 1,
+          "monitored": true,
+          "status": "Official",
+          "title": "Open Album 6",
+          "trackCount": 1
+        }
+      ],
+      "secondaryTypes": [],
+      "title": "Open Album 6"
+    },
+    "links": [
+      {
+        "name": "Tobu",
+        "url": "https://example.invalid/links/tobu/tobu"
+      },
+      {
+        "name": "discogs",
+        "url": "https://example.invalid/links/tobu/discogs"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/tobu/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/tobu/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/tobu/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/tobu/link"
+      },
+      {
+        "name": "myspace",
+        "url": "https://example.invalid/links/tobu/myspace"
+      },
+      {
+        "name": "Tobu",
+        "url": "https://example.invalid/links/tobu/tobu"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/tobu/link"
+      },
+      {
+        "name": "allmusic",
+        "url": "https://example.invalid/links/tobu/allmusic"
+      },
+      {
+        "name": "youtube",
+        "url": "https://example.invalid/links/tobu/youtube"
+      },
+      {
+        "name": "facebook",
+        "url": "https://example.invalid/links/tobu/facebook"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/tobu/link"
+      },
+      {
+        "name": "viaf",
+        "url": "https://example.invalid/links/tobu/viaf"
+      },
+      {
+        "name": "wikidata",
+        "url": "https://example.invalid/links/tobu/wikidata"
+      },
+      {
+        "name": "rateyourmusic",
+        "url": "https://example.invalid/links/tobu/rateyourmusic"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/tobu/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/tobu/link"
+      },
+      {
+        "name": "spotify",
+        "url": "https://example.invalid/links/tobu/spotify"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/tobu/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/tobu/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/tobu/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/tobu/link"
+      },
+      {
+        "name": "genius",
+        "url": "https://example.invalid/links/tobu/genius"
+      },
+      {
+        "name": "imdb",
+        "url": "https://example.invalid/links/tobu/imdb"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/tobu/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/tobu/link"
+      },
+      {
+        "name": "whosampled",
+        "url": "https://example.invalid/links/tobu/whosampled"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/tobu/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/tobu/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/tobu/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/tobu/link"
+      },
+      {
+        "name": "twitter",
+        "url": "https://example.invalid/links/tobu/twitter"
+      },
+      {
+        "name": "songkick",
+        "url": "https://example.invalid/links/tobu/songkick"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/tobu/link"
+      },
+      {
+        "name": "tidal",
+        "url": "https://example.invalid/links/tobu/tidal"
+      },
+      {
+        "name": "deezer",
+        "url": "https://example.invalid/links/tobu/deezer"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/tobu/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/tobu/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/tobu/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/tobu/link"
+      },
+      {
+        "name": "instagram",
+        "url": "https://example.invalid/links/tobu/instagram"
+      },
+      {
+        "name": "secondhandsongs",
+        "url": "https://example.invalid/links/tobu/secondhandsongs"
+      },
+      {
+        "name": "soundcloud",
+        "url": "https://example.invalid/links/tobu/soundcloud"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/tobu/link"
+      },
+      {
+        "name": "youtube",
+        "url": "https://example.invalid/links/tobu/youtube"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/tobu/link"
+      },
+      {
+        "name": "bandcamp",
+        "url": "https://example.invalid/links/tobu/bandcamp"
+      },
+      {
+        "name": "youtube",
+        "url": "https://example.invalid/links/tobu/youtube"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/tobu/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/tobu/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/tobu/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/tobu/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/tobu/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/tobu/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/tobu/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/tobu/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/tobu/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/tobu/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/tobu/link"
+      },
+      {
+        "name": "deezer",
+        "url": "https://example.invalid/links/tobu/deezer"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/tobu/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/tobu/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/tobu/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/tobu/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/tobu/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/tobu/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/tobu/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/tobu/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/tobu/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/tobu/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/tobu/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/tobu/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/tobu/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/tobu/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/tobu/link"
+      }
+    ],
+    "metadataProfileId": 1,
+    "monitorNewItems": "all",
+    "monitored": true,
+    "nextAlbum": null,
+    "path": "/data/lidarr/Tobu",
+    "qualityProfileId": 1,
+    "ratings": {
+      "value": 9.4,
+      "votes": 19
+    },
+    "rootFolderPath": "/data/lidarr/",
+    "sortName": "tobu",
+    "statistics": {
+      "albumCount": 142,
+      "percentOfTracks": 11.732851985559567,
+      "sizeOnDisk": 2870497576,
+      "totalTrackCount": 709,
+      "trackCount": 554,
+      "trackFileCount": 65
+    },
+    "status": "continuing",
+    "tadbId": 809484,
+    "tags": []
+  }
+]

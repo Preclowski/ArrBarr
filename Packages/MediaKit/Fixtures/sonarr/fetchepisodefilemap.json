@@ -1,0 +1,327 @@
+[
+  {
+    "customFormatScore": 3525,
+    "customFormats": [
+      {
+        "id": 78,
+        "name": "AMZN"
+      },
+      {
+        "id": 34,
+        "name": "DD+"
+      },
+      {
+        "id": 60,
+        "name": "WEB Tier 01"
+      }
+    ],
+    "dateAdded": "2023-01-02T14:37:59Z",
+    "id": 9708,
+    "indexerFlags": 0,
+    "languages": [
+      {
+        "id": 1,
+        "name": "English"
+      }
+    ],
+    "mediaInfo": {
+      "audioBitrate": 640000,
+      "audioChannels": 5.1,
+      "audioCodec": "EAC3",
+      "audioLanguages": "eng",
+      "audioStreamCount": 1,
+      "resolution": "1920x1080",
+      "runTime": "53:22",
+      "scanType": "Progressive",
+      "subtitles": "eng/eng",
+      "videoBitDepth": 8,
+      "videoBitrate": 0,
+      "videoCodec": "h264",
+      "videoDynamicRange": "",
+      "videoDynamicRangeType": "",
+      "videoFps": 23.976
+    },
+    "path": "/data/sonarr/Open Series 6/Open Series 18/Open.Series.5.S02E01-DEMO.mkv",
+    "quality": {
+      "quality": {
+        "id": 3,
+        "name": "WEBDL-1080p",
+        "resolution": 1080,
+        "source": "web"
+      },
+      "revision": {
+        "isRepack": false,
+        "real": 0,
+        "version": 1
+      }
+    },
+    "qualityCutoffNotMet": false,
+    "relativePath": "Open Series 18/Open.Series.5.S02E01-DEMO.mkv",
+    "releaseGroup": "DEMO",
+    "releaseType": "singleEpisode",
+    "sceneName": "Open.Series.5.S02E01.1080p.WEB-DL.DDP5-DEMO",
+    "seasonNumber": 2,
+    "seriesId": 101,
+    "size": 5355593753
+  },
+  {
+    "customFormatScore": 3525,
+    "customFormats": [
+      {
+        "id": 78,
+        "name": "AMZN"
+      },
+      {
+        "id": 34,
+        "name": "DD+"
+      },
+      {
+        "id": 60,
+        "name": "WEB Tier 01"
+      }
+    ],
+    "dateAdded": "2023-01-02T14:41:19Z",
+    "id": 9709,
+    "indexerFlags": 0,
+    "languages": [
+      {
+        "id": 1,
+        "name": "English"
+      }
+    ],
+    "mediaInfo": {
+      "audioBitrate": 640000,
+      "audioChannels": 5.1,
+      "audioCodec": "EAC3",
+      "audioLanguages": "eng",
+      "audioStreamCount": 1,
+      "resolution": "1920x1080",
+      "runTime": "49:46",
+      "scanType": "Progressive",
+      "subtitles": "eng/eng",
+      "videoBitDepth": 8,
+      "videoBitrate": 0,
+      "videoCodec": "h264",
+      "videoDynamicRange": "",
+      "videoDynamicRangeType": "",
+      "videoFps": 23.976
+    },
+    "path": "/data/sonarr/Open Series 6/Open Series 18/Open.Series.5.S02E03-DEMO.mkv",
+    "quality": {
+      "quality": {
+        "id": 3,
+        "name": "WEBDL-1080p",
+        "resolution": 1080,
+        "source": "web"
+      },
+      "revision": {
+        "isRepack": false,
+        "real": 0,
+        "version": 1
+      }
+    },
+    "qualityCutoffNotMet": false,
+    "relativePath": "Open Series 18/Open.Series.5.S02E03-DEMO.mkv",
+    "releaseGroup": "DEMO",
+    "releaseType": "singleEpisode",
+    "sceneName": "Open.Series.5.S02E03.1080p.WEB-DL.DD5-DEMO",
+    "seasonNumber": 2,
+    "seriesId": 101,
+    "size": 3471747566
+  },
+  {
+    "customFormatScore": 3525,
+    "customFormats": [
+      {
+        "id": 78,
+        "name": "AMZN"
+      },
+      {
+        "id": 34,
+        "name": "DD+"
+      },
+      {
+        "id": 60,
+        "name": "WEB Tier 01"
+      }
+    ],
+    "dateAdded": "2023-01-02T14:43:23Z",
+    "id": 9711,
+    "indexerFlags": 0,
+    "languages": [
+      {
+        "id": 1,
+        "name": "English"
+      }
+    ],
+    "mediaInfo": {
+      "audioBitrate": 640000,
+      "audioChannels": 5.1,
+      "audioCodec": "EAC3",
+      "audioLanguages": "eng",
+      "audioStreamCount": 1,
+      "resolution": "1920x1080",
+      "runTime": "58:41",
+      "scanType": "Progressive",
+      "subtitles": "eng/eng",
+      "videoBitDepth": 8,
+      "videoBitrate": 0,
+      "videoCodec": "h264",
+      "videoDynamicRange": "",
+      "videoDynamicRangeType": "",
+      "videoFps": 23.976
+    },
+    "path": "/data/sonarr/Open Series 6/Open Series 18/Open.Series.5.S02E04-DEMO.mkv",
+    "quality": {
+      "quality": {
+        "id": 3,
+        "name": "WEBDL-1080p",
+        "resolution": 1080,
+        "source": "web"
+      },
+      "revision": {
+        "isRepack": false,
+        "real": 0,
+        "version": 1
+      }
+    },
+    "qualityCutoffNotMet": false,
+    "relativePath": "Open Series 18/Open.Series.5.S02E04-DEMO.mkv",
+    "releaseGroup": "DEMO",
+    "releaseType": "singleEpisode",
+    "sceneName": "Open.Series.5.S02E04.1080p.WEB-DL.DD5-DEMO",
+    "seasonNumber": 2,
+    "seriesId": 101,
+    "size": 4734021791
+  },
+  {
+    "customFormatScore": 3525,
+    "customFormats": [
+      {
+        "id": 78,
+        "name": "AMZN"
+      },
+      {
+        "id": 34,
+        "name": "DD+"
+      },
+      {
+        "id": 60,
+        "name": "WEB Tier 01"
+      }
+    ],
+    "dateAdded": "2023-01-02T14:46:16Z",
+    "id": 9712,
+    "indexerFlags": 0,
+    "languages": [
+      {
+        "id": 1,
+        "name": "English"
+      }
+    ],
+    "mediaInfo": {
+      "audioBitrate": 640000,
+      "audioChannels": 5.1,
+      "audioCodec": "EAC3",
+      "audioLanguages": "eng",
+      "audioStreamCount": 1,
+      "resolution": "1920x1080",
+      "runTime": "49:38",
+      "scanType": "Progressive",
+      "subtitles": "eng/eng",
+      "videoBitDepth": 8,
+      "videoBitrate": 0,
+      "videoCodec": "h264",
+      "videoDynamicRange": "",
+      "videoDynamicRangeType": "",
+      "videoFps": 23.976
+    },
+    "path": "/data/sonarr/Open Series 6/Open Series 18/Open.Series.5.S02E06-DEMO.mkv",
+    "quality": {
+      "quality": {
+        "id": 3,
+        "name": "WEBDL-1080p",
+        "resolution": 1080,
+        "source": "web"
+      },
+      "revision": {
+        "isRepack": false,
+        "real": 0,
+        "version": 1
+      }
+    },
+    "qualityCutoffNotMet": false,
+    "relativePath": "Open Series 18/Open.Series.5.S02E06-DEMO.mkv",
+    "releaseGroup": "DEMO",
+    "releaseType": "singleEpisode",
+    "sceneName": "Open.Series.5.S02E06.1080p.WEB-DL.DD5-DEMO",
+    "seasonNumber": 2,
+    "seriesId": 101,
+    "size": 3764316265
+  },
+  {
+    "customFormatScore": 3525,
+    "customFormats": [
+      {
+        "id": 78,
+        "name": "AMZN"
+      },
+      {
+        "id": 34,
+        "name": "DD+"
+      },
+      {
+        "id": 60,
+        "name": "WEB Tier 01"
+      }
+    ],
+    "dateAdded": "2023-01-02T14:48:41Z",
+    "id": 9714,
+    "indexerFlags": 0,
+    "languages": [
+      {
+        "id": 1,
+        "name": "English"
+      }
+    ],
+    "mediaInfo": {
+      "audioBitrate": 640000,
+      "audioChannels": 5.1,
+      "audioCodec": "EAC3",
+      "audioLanguages": "eng",
+      "audioStreamCount": 1,
+      "resolution": "1920x1080",
+      "runTime": "1:01:52",
+      "scanType": "Progressive",
+      "subtitles": "eng/eng",
+      "videoBitDepth": 8,
+      "videoBitrate": 0,
+      "videoCodec": "h264",
+      "videoDynamicRange": "",
+      "videoDynamicRangeType": "",
+      "videoFps": 23.976
+    },
+    "path": "/data/sonarr/Open Series 6/Open Series 18/Open.Series.5.S02E08-DEMO.mkv",
+    "quality": {
+      "quality": {
+        "id": 3,
+        "name": "WEBDL-1080p",
+        "resolution": 1080,
+        "source": "web"
+      },
+      "revision": {
+        "isRepack": false,
+        "real": 0,
+        "version": 1
+      }
+    },
+    "qualityCutoffNotMet": false,
+    "relativePath": "Open Series 18/Open.Series.5.S02E08-DEMO.mkv",
+    "releaseGroup": "DEMO",
+    "releaseType": "singleEpisode",
+    "sceneName": "Open.Series.5.S02E08.1080p.WEB-DL.DD5-DEMO",
+    "seasonNumber": 2,
+    "seriesId": 101,
+    "size": 5406521015
+  }
+]

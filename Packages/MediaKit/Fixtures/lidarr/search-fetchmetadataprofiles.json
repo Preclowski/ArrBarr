@@ -1,0 +1,452 @@
+[
+  {
+    "id": 2,
+    "name": "None",
+    "primaryAlbumTypes": [
+      {
+        "albumType": {
+          "id": 2,
+          "name": "Single"
+        },
+        "allowed": false
+      },
+      {
+        "albumType": {
+          "id": 4,
+          "name": "Other"
+        },
+        "allowed": false
+      },
+      {
+        "albumType": {
+          "id": 1,
+          "name": "EP"
+        },
+        "allowed": false
+      },
+      {
+        "albumType": {
+          "id": 3,
+          "name": "Broadcast"
+        },
+        "allowed": false
+      },
+      {
+        "albumType": {
+          "id": 0,
+          "name": "Album"
+        },
+        "allowed": false
+      }
+    ],
+    "releaseStatuses": [
+      {
+        "allowed": false,
+        "releaseStatus": {
+          "id": 3,
+          "name": "Pseudo-Release"
+        }
+      },
+      {
+        "allowed": false,
+        "releaseStatus": {
+          "id": 1,
+          "name": "Promotion"
+        }
+      },
+      {
+        "allowed": false,
+        "releaseStatus": {
+          "id": 0,
+          "name": "Official"
+        }
+      },
+      {
+        "allowed": false,
+        "releaseStatus": {
+          "id": 2,
+          "name": "Bootleg"
+        }
+      }
+    ],
+    "secondaryAlbumTypes": [
+      {
+        "albumType": {
+          "id": 0,
+          "name": "Studio"
+        },
+        "allowed": false
+      },
+      {
+        "albumType": {
+          "id": 3,
+          "name": "Spokenword"
+        },
+        "allowed": false
+      },
+      {
+        "albumType": {
+          "id": 2,
+          "name": "Soundtrack"
+        },
+        "allowed": false
+      },
+      {
+        "albumType": {
+          "id": 7,
+          "name": "Remix"
+        },
+        "allowed": false
+      },
+      {
+        "albumType": {
+          "id": 9,
+          "name": "Mixtape/Street"
+        },
+        "allowed": false
+      },
+      {
+        "albumType": {
+          "id": 6,
+          "name": "Live"
+        },
+        "allowed": false
+      },
+      {
+        "albumType": {
+          "id": 4,
+          "name": "Interview"
+        },
+        "allowed": false
+      },
+      {
+        "albumType": {
+          "id": 8,
+          "name": "DJ-mix"
+        },
+        "allowed": false
+      },
+      {
+        "albumType": {
+          "id": 10,
+          "name": "Demo"
+        },
+        "allowed": false
+      },
+      {
+        "albumType": {
+          "id": 1,
+          "name": "Compilation"
+        },
+        "allowed": false
+      },
+      {
+        "albumType": {
+          "id": 11,
+          "name": "Audio drama"
+        },
+        "allowed": false
+      }
+    ]
+  },
+  {
+    "id": 3,
+    "name": "Everything",
+    "primaryAlbumTypes": [
+      {
+        "albumType": {
+          "id": 4,
+          "name": "Other"
+        },
+        "allowed": true
+      },
+      {
+        "albumType": {
+          "id": 3,
+          "name": "Broadcast"
+        },
+        "allowed": true
+      },
+      {
+        "albumType": {
+          "id": 2,
+          "name": "Single"
+        },
+        "allowed": true
+      },
+      {
+        "albumType": {
+          "id": 1,
+          "name": "EP"
+        },
+        "allowed": true
+      },
+      {
+        "albumType": {
+          "id": 0,
+          "name": "Album"
+        },
+        "allowed": true
+      }
+    ],
+    "releaseStatuses": [
+      {
+        "allowed": false,
+        "releaseStatus": {
+          "id": 3,
+          "name": "Pseudo-Release"
+        }
+      },
+      {
+        "allowed": false,
+        "releaseStatus": {
+          "id": 2,
+          "name": "Bootleg"
+        }
+      },
+      {
+        "allowed": false,
+        "releaseStatus": {
+          "id": 1,
+          "name": "Promotion"
+        }
+      },
+      {
+        "allowed": true,
+        "releaseStatus": {
+          "id": 0,
+          "name": "Official"
+        }
+      }
+    ],
+    "secondaryAlbumTypes": [
+      {
+        "albumType": {
+          "id": 11,
+          "name": "Audio drama"
+        },
+        "allowed": false
+      },
+      {
+        "albumType": {
+          "id": 10,
+          "name": "Demo"
+        },
+        "allowed": true
+      },
+      {
+        "albumType": {
+          "id": 9,
+          "name": "Mixtape/Street"
+        },
+        "allowed": true
+      },
+      {
+        "albumType": {
+          "id": 8,
+          "name": "DJ-mix"
+        },
+        "allowed": true
+      },
+      {
+        "albumType": {
+          "id": 7,
+          "name": "Remix"
+        },
+        "allowed": true
+      },
+      {
+        "albumType": {
+          "id": 6,
+          "name": "Live"
+        },
+        "allowed": true
+      },
+      {
+        "albumType": {
+          "id": 4,
+          "name": "Interview"
+        },
+        "allowed": false
+      },
+      {
+        "albumType": {
+          "id": 3,
+          "name": "Spokenword"
+        },
+        "allowed": false
+      },
+      {
+        "albumType": {
+          "id": 2,
+          "name": "Soundtrack"
+        },
+        "allowed": true
+      },
+      {
+        "albumType": {
+          "id": 1,
+          "name": "Compilation"
+        },
+        "allowed": true
+      },
+      {
+        "albumType": {
+          "id": 0,
+          "name": "Studio"
+        },
+        "allowed": true
+      }
+    ]
+  },
+  {
+    "id": 1,
+    "name": "Standard",
+    "primaryAlbumTypes": [
+      {
+        "albumType": {
+          "id": 2,
+          "name": "Single"
+        },
+        "allowed": true
+      },
+      {
+        "albumType": {
+          "id": 4,
+          "name": "Other"
+        },
+        "allowed": true
+      },
+      {
+        "albumType": {
+          "id": 1,
+          "name": "EP"
+        },
+        "allowed": true
+      },
+      {
+        "albumType": {
+          "id": 3,
+          "name": "Broadcast"
+        },
+        "allowed": false
+      },
+      {
+        "albumType": {
+          "id": 0,
+          "name": "Album"
+        },
+        "allowed": true
+      }
+    ],
+    "releaseStatuses": [
+      {
+        "allowed": false,
+        "releaseStatus": {
+          "id": 3,
+          "name": "Pseudo-Release"
+        }
+      },
+      {
+        "allowed": false,
+        "releaseStatus": {
+          "id": 1,
+          "name": "Promotion"
+        }
+      },
+      {
+        "allowed": true,
+        "releaseStatus": {
+          "id": 0,
+          "name": "Official"
+        }
+      },
+      {
+        "allowed": false,
+        "releaseStatus": {
+          "id": 2,
+          "name": "Bootleg"
+        }
+      }
+    ],
+    "secondaryAlbumTypes": [
+      {
+        "albumType": {
+          "id": 0,
+          "name": "Studio"
+        },
+        "allowed": true
+      },
+      {
+        "albumType": {
+          "id": 3,
+          "name": "Spokenword"
+        },
+        "allowed": false
+      },
+      {
+        "albumType": {
+          "id": 2,
+          "name": "Soundtrack"
+        },
+        "allowed": true
+      },
+      {
+        "albumType": {
+          "id": 7,
+          "name": "Remix"
+        },
+        "allowed": false
+      },
+      {
+        "albumType": {
+          "id": 9,
+          "name": "Mixtape/Street"
+        },
+        "allowed": false
+      },
+      {
+        "albumType": {
+          "id": 6,
+          "name": "Live"
+        },
+        "allowed": false
+      },
+      {
+        "albumType": {
+          "id": 4,
+          "name": "Interview"
+        },
+        "allowed": false
+      },
+      {
+        "albumType": {
+          "id": 8,
+          "name": "DJ-mix"
+        },
+        "allowed": false
+      },
+      {
+        "albumType": {
+          "id": 10,
+          "name": "Demo"
+        },
+        "allowed": false
+      },
+      {
+        "albumType": {
+          "id": 1,
+          "name": "Compilation"
+        },
+        "allowed": true
+      },
+      {
+        "albumType": {
+          "id": 11,
+          "name": "Audio drama"
+        },
+        "allowed": false
+      }
+    ]
+  }
+]

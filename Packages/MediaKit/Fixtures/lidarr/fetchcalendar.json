@@ -1,0 +1,435 @@
+[
+  {
+    "albumType": "Album",
+    "anyReleaseOk": true,
+    "artist": {
+      "added": "2026-06-17T01:11:41Z",
+      "artistName": "Brad Sucks",
+      "artistType": "Group",
+      "cleanName": "bradsucks",
+      "disambiguation": "",
+      "discogsId": 355368,
+      "ended": false,
+      "foreignArtistId": "e0ca8d41-ed6a-9d26-2639-1777f7ed2459",
+      "genres": [
+        "Nu Metal",
+        "Rock",
+        "Rap Rock",
+        "Metal",
+        "Alternative Rock",
+        "Rap Metal"
+      ],
+      "id": 7,
+      "images": [],
+      "lastAlbum": null,
+      "links": [
+        {
+          "name": "link",
+          "url": "https://example.invalid/links/brad-sucks/link"
+        },
+        {
+          "name": "discogs",
+          "url": "https://example.invalid/links/brad-sucks/discogs"
+        },
+        {
+          "name": "myspace",
+          "url": "https://example.invalid/links/brad-sucks/myspace"
+        },
+        {
+          "name": "purevolume",
+          "url": "https://example.invalid/links/brad-sucks/purevolume"
+        },
+        {
+          "name": "imdb",
+          "url": "https://example.invalid/links/brad-sucks/imdb"
+        },
+        {
+          "name": "link",
+          "url": "https://example.invalid/links/brad-sucks/link"
+        },
+        {
+          "name": "link",
+          "url": "https://example.invalid/links/brad-sucks/link"
+        },
+        {
+          "name": "twitter",
+          "url": "https://example.invalid/links/brad-sucks/twitter"
+        },
+        {
+          "name": "allmusic",
+          "url": "https://example.invalid/links/brad-sucks/allmusic"
+        },
+        {
+          "name": "discogs",
+          "url": "https://example.invalid/links/brad-sucks/discogs"
+        },
+        {
+          "name": "viaf",
+          "url": "https://example.invalid/links/brad-sucks/viaf"
+        },
+        {
+          "name": "wikidata",
+          "url": "https://example.invalid/links/brad-sucks/wikidata"
+        },
+        {
+          "name": "link",
+          "url": "https://example.invalid/links/brad-sucks/link"
+        },
+        {
+          "name": "link",
+          "url": "https://example.invalid/links/brad-sucks/link"
+        },
+        {
+          "name": "spotify",
+          "url": "https://example.invalid/links/brad-sucks/spotify"
+        },
+        {
+          "name": "rateyourmusic",
+          "url": "https://example.invalid/links/brad-sucks/rateyourmusic"
+        },
+        {
+          "name": "link",
+          "url": "https://example.invalid/links/brad-sucks/link"
+        },
+        {
+          "name": "link",
+          "url": "https://example.invalid/links/brad-sucks/link"
+        },
+        {
+          "name": "link",
+          "url": "https://example.invalid/links/brad-sucks/link"
+        },
+        {
+          "name": "genius",
+          "url": "https://example.invalid/links/brad-sucks/genius"
+        },
+        {
+          "name": "deezer",
+          "url": "https://example.invalid/links/brad-sucks/deezer"
+        },
+        {
+          "name": "instagram",
+          "url": "https://example.invalid/links/brad-sucks/instagram"
+        },
+        {
+          "name": "link",
+          "url": "https://example.invalid/links/brad-sucks/link"
+        },
+        {
+          "name": "link",
+          "url": "https://example.invalid/links/brad-sucks/link"
+        },
+        {
+          "name": "songkick",
+          "url": "https://example.invalid/links/brad-sucks/songkick"
+        },
+        {
+          "name": "whosampled",
+          "url": "https://example.invalid/links/brad-sucks/whosampled"
+        },
+        {
+          "name": "link",
+          "url": "https://example.invalid/links/brad-sucks/link"
+        },
+        {
+          "name": "link",
+          "url": "https://example.invalid/links/brad-sucks/link"
+        },
+        {
+          "name": "link",
+          "url": "https://example.invalid/links/brad-sucks/link"
+        },
+        {
+          "name": "link",
+          "url": "https://example.invalid/links/brad-sucks/link"
+        },
+        {
+          "name": "secondhandsongs",
+          "url": "https://example.invalid/links/brad-sucks/secondhandsongs"
+        },
+        {
+          "name": "link",
+          "url": "https://example.invalid/links/brad-sucks/link"
+        },
+        {
+          "name": "link",
+          "url": "https://example.invalid/links/brad-sucks/link"
+        },
+        {
+          "name": "link",
+          "url": "https://example.invalid/links/brad-sucks/link"
+        },
+        {
+          "name": "link",
+          "url": "https://example.invalid/links/brad-sucks/link"
+        },
+        {
+          "name": "link",
+          "url": "https://example.invalid/links/brad-sucks/link"
+        },
+        {
+          "name": "link",
+          "url": "https://example.invalid/links/brad-sucks/link"
+        },
+        {
+          "name": "link",
+          "url": "https://example.invalid/links/brad-sucks/link"
+        },
+        {
+          "name": "link",
+          "url": "https://example.invalid/links/brad-sucks/link"
+        },
+        {
+          "name": "link",
+          "url": "https://example.invalid/links/brad-sucks/link"
+        },
+        {
+          "name": "link",
+          "url": "https://example.invalid/links/brad-sucks/link"
+        },
+        {
+          "name": "deezer",
+          "url": "https://example.invalid/links/brad-sucks/deezer"
+        },
+        {
+          "name": "link",
+          "url": "https://example.invalid/links/brad-sucks/link"
+        },
+        {
+          "name": "tidal",
+          "url": "https://example.invalid/links/brad-sucks/tidal"
+        },
+        {
+          "name": "link",
+          "url": "https://example.invalid/links/brad-sucks/link"
+        },
+        {
+          "name": "link",
+          "url": "https://example.invalid/links/brad-sucks/link"
+        },
+        {
+          "name": "link",
+          "url": "https://example.invalid/links/brad-sucks/link"
+        },
+        {
+          "name": "link",
+          "url": "https://example.invalid/links/brad-sucks/link"
+        },
+        {
+          "name": "link",
+          "url": "https://example.invalid/links/brad-sucks/link"
+        },
+        {
+          "name": "link",
+          "url": "https://example.invalid/links/brad-sucks/link"
+        },
+        {
+          "name": "link",
+          "url": "https://example.invalid/links/brad-sucks/link"
+        },
+        {
+          "name": "link",
+          "url": "https://example.invalid/links/brad-sucks/link"
+        },
+        {
+          "name": "link",
+          "url": "https://example.invalid/links/brad-sucks/link"
+        },
+        {
+          "name": "Brad Sucks",
+          "url": "https://example.invalid/links/brad-sucks/brad-sucks"
+        },
+        {
+          "name": "link",
+          "url": "https://example.invalid/links/brad-sucks/link"
+        },
+        {
+          "name": "link",
+          "url": "https://example.invalid/links/brad-sucks/link"
+        },
+        {
+          "name": "link",
+          "url": "https://example.invalid/links/brad-sucks/link"
+        },
+        {
+          "name": "link",
+          "url": "https://example.invalid/links/brad-sucks/link"
+        },
+        {
+          "name": "link",
+          "url": "https://example.invalid/links/brad-sucks/link"
+        },
+        {
+          "name": "link",
+          "url": "https://example.invalid/links/brad-sucks/link"
+        },
+        {
+          "name": "youtube",
+          "url": "https://example.invalid/links/brad-sucks/youtube"
+        },
+        {
+          "name": "link",
+          "url": "https://example.invalid/links/brad-sucks/link"
+        },
+        {
+          "name": "link",
+          "url": "https://example.invalid/links/brad-sucks/link"
+        },
+        {
+          "name": "link",
+          "url": "https://example.invalid/links/brad-sucks/link"
+        },
+        {
+          "name": "youtube",
+          "url": "https://example.invalid/links/brad-sucks/youtube"
+        },
+        {
+          "name": "link",
+          "url": "https://example.invalid/links/brad-sucks/link"
+        },
+        {
+          "name": "link",
+          "url": "https://example.invalid/links/brad-sucks/link"
+        },
+        {
+          "name": "link",
+          "url": "https://example.invalid/links/brad-sucks/link"
+        },
+        {
+          "name": "link",
+          "url": "https://example.invalid/links/brad-sucks/link"
+        },
+        {
+          "name": "link",
+          "url": "https://example.invalid/links/brad-sucks/link"
+        },
+        {
+          "name": "link",
+          "url": "https://example.invalid/links/brad-sucks/link"
+        },
+        {
+          "name": "link",
+          "url": "https://example.invalid/links/brad-sucks/link"
+        },
+        {
+          "name": "soundcloud",
+          "url": "https://example.invalid/links/brad-sucks/soundcloud"
+        },
+        {
+          "name": "facebook",
+          "url": "https://example.invalid/links/brad-sucks/facebook"
+        },
+        {
+          "name": "link",
+          "url": "https://example.invalid/links/brad-sucks/link"
+        },
+        {
+          "name": "link",
+          "url": "https://example.invalid/links/brad-sucks/link"
+        },
+        {
+          "name": "link",
+          "url": "https://example.invalid/links/brad-sucks/link"
+        },
+        {
+          "name": "link",
+          "url": "https://example.invalid/links/brad-sucks/link"
+        },
+        {
+          "name": "link",
+          "url": "https://example.invalid/links/brad-sucks/link"
+        }
+      ],
+      "metadataProfileId": 1,
+      "monitorNewItems": "all",
+      "monitored": true,
+      "nextAlbum": null,
+      "path": "/data/lidarr/Brad Sucks",
+      "qualityProfileId": 1,
+      "ratings": {
+        "value": 8.8,
+        "votes": 42
+      },
+      "sortName": "brad sucks",
+      "status": "continuing",
+      "tadbId": 98683,
+      "tags": []
+    },
+    "artistId": 7,
+    "disambiguation": "",
+    "duration": 3927000,
+    "foreignAlbumId": "7a46a77a-80fa-8873-0404-e8208f965c34",
+    "genres": [],
+    "id": 6636,
+    "images": [
+      {
+        "coverType": "cover",
+        "extension": ".jpg",
+        "remoteUrl": "https://example.invalid/album/i-dont-know-what-im-doing/cover.jpg",
+        "url": "https://example.invalid/album/i-dont-know-what-im-doing/cover.jpg"
+      }
+    ],
+    "links": [
+      {
+        "name": "wikidata",
+        "url": "https://example.invalid/links/i-dont-know-what-im-doing/wikidata"
+      }
+    ],
+    "media": [
+      {
+        "mediumFormat": "Digital Media",
+        "mediumName": "",
+        "mediumNumber": 1
+      }
+    ],
+    "mediumCount": 1,
+    "monitored": true,
+    "overview": "An open-licensed album from the demo library.",
+    "profileId": 1,
+    "ratings": {
+      "value": 0,
+      "votes": 0
+    },
+    "releaseDate": "2026-09-25T00:00:00Z",
+    "releases": [
+      {
+        "albumId": 6636,
+        "country": [
+          "[Worldwide]"
+        ],
+        "disambiguation": "",
+        "duration": 3927000,
+        "foreignReleaseId": "b4b7bcf6-7c12-4efb-d881-744f35691d7a",
+        "format": "Digital Media",
+        "id": 22161,
+        "label": [
+          "Demo Label 2"
+        ],
+        "media": [
+          {
+            "mediumFormat": "Digital Media",
+            "mediumName": "",
+            "mediumNumber": 1
+          }
+        ],
+        "mediumCount": 1,
+        "monitored": true,
+        "status": "Official",
+        "title": "I Dont Know What Im Doing",
+        "trackCount": 20
+      }
+    ],
+    "secondaryTypes": [
+      "Live",
+      "Soundtrack"
+    ],
+    "statistics": {
+      "percentOfTracks": 0,
+      "sizeOnDisk": 0,
+      "totalTrackCount": 20,
+      "trackCount": 0,
+      "trackFileCount": 0
+    },
+    "title": "I Dont Know What Im Doing"
+  }
+]

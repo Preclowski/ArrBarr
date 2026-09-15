@@ -1,0 +1,123 @@
+{
+  "page": 1,
+  "pageSize": 1000,
+  "records": [
+    {
+      "added": "2026-09-14T03:06:14Z",
+      "albumId": 3336,
+      "artistId": 26,
+      "customFormatScore": 0,
+      "customFormats": [
+        {
+          "id": 3,
+          "name": "WEB"
+        }
+      ],
+      "downloadClient": "SABnzbd",
+      "downloadClientHasPostImportCategory": false,
+      "downloadForced": false,
+      "downloadId": "cc50cd5f-8bc2-47b4-a006-3eb2d4e65a40",
+      "errorMessage": "",
+      "estimatedCompletionTime": "2026-09-15T00:29:59Z",
+      "id": 230241794,
+      "indexer": "Demo Indexer 1",
+      "outputPath": "/data/downloads/usenet/completed/music/Open Album 19",
+      "protocol": "UsenetDownloadProtocol",
+      "quality": {
+        "quality": {
+          "id": 6,
+          "name": "FLAC"
+        },
+        "revision": {
+          "isRepack": false,
+          "real": 0,
+          "version": 1
+        }
+      },
+      "size": 73775926,
+      "sizeleft": 0,
+      "status": "completed",
+      "statusMessages": [
+        {
+          "messages": [],
+          "title": "One or more tracks expected in this release were not imported or missing from the release"
+        },
+        {
+          "messages": [
+            "Album match is not close enough: 74.3 % vs 80 % [album, country, tracks]"
+          ],
+          "title": "Open.Album.20-DEMO.flac"
+        },
+        {
+          "messages": [
+            "Album match is not close enough: 74.3 % vs 80 % [album, country, tracks]"
+          ],
+          "title": "Open.Album.21-DEMO.flac"
+        }
+      ],
+      "timeleft": "00:00:00",
+      "title": "Open.Album.11-DEMO",
+      "trackFileCount": 2,
+      "trackHasFileCount": 0,
+      "trackedDownloadState": "importFailed",
+      "trackedDownloadStatus": "warning"
+    },
+    {
+      "added": "2026-09-11T18:46:45Z",
+      "albumId": 6636,
+      "artistId": 7,
+      "customFormatScore": 0,
+      "customFormats": [
+        {
+          "id": 3,
+          "name": "WEB"
+        }
+      ],
+      "downloadClient": "SABnzbd",
+      "downloadClientHasPostImportCategory": false,
+      "downloadForced": false,
+      "downloadId": "6095cd85-2d10-463c-89ca-a56afc71b6bb",
+      "errorMessage": "",
+      "estimatedCompletionTime": "2026-09-15T00:29:59Z",
+      "id": 432938268,
+      "indexer": "Demo Indexer 1",
+      "outputPath": "/data/downloads/usenet/completed/music/Open Album 23",
+      "protocol": "UsenetDownloadProtocol",
+      "quality": {
+        "quality": {
+          "id": 4,
+          "name": "MP3-320"
+        },
+        "revision": {
+          "isRepack": false,
+          "real": 0,
+          "version": 1
+        }
+      },
+      "size": 32603374,
+      "sizeleft": 0,
+      "status": "completed",
+      "statusMessages": [
+        {
+          "messages": [],
+          "title": "One or more tracks expected in this release were not imported or missing from the release"
+        },
+        {
+          "messages": [
+            "Has missing tracks"
+          ],
+          "title": "Open.Album.24-DEMO.mp3"
+        }
+      ],
+      "timeleft": "00:00:00",
+      "title": "Open.Album.22-DEMO",
+      "trackFileCount": 20,
+      "trackHasFileCount": 0,
+      "trackedDownloadState": "importFailed",
+      "trackedDownloadStatus": "warning"
+    }
+  ],
+  "sortDirection": "descending",
+  "sortKey": "timeleft",
+  "totalRecords": 2
+}

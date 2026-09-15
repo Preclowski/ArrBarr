@@ -1,0 +1,1043 @@
+[
+  {
+    "added": "2020-10-18T22:39:19Z",
+    "alternateTitles": [
+      {
+        "id": 6408,
+        "movieMetadataId": 666,
+        "sourceType": "tmdb",
+        "title": "Open Movie 56 (Alt 1)"
+      },
+      {
+        "id": 6405,
+        "movieMetadataId": 666,
+        "sourceType": "tmdb",
+        "title": "Open Movie 56 (Alt 2)"
+      },
+      {
+        "id": 17885,
+        "movieMetadataId": 666,
+        "sourceType": "tmdb",
+        "title": "Open Movie 56 (Alt 3)"
+      },
+      {
+        "id": 6415,
+        "movieMetadataId": 666,
+        "sourceType": "tmdb",
+        "title": "Open Movie 56 (Alt 4)"
+      },
+      {
+        "id": 33843,
+        "movieMetadataId": 666,
+        "sourceType": "tmdb",
+        "title": "Open Movie 56 (Alt 5)"
+      },
+      {
+        "id": 6412,
+        "movieMetadataId": 666,
+        "sourceType": "tmdb",
+        "title": "Open Movie 56 (Alt 6)"
+      },
+      {
+        "id": 6413,
+        "movieMetadataId": 666,
+        "sourceType": "tmdb",
+        "title": "Open Movie 56 (Alt 7)"
+      },
+      {
+        "id": 30525,
+        "movieMetadataId": 666,
+        "sourceType": "tmdb",
+        "title": "Open Movie 56 (Alt 8)"
+      },
+      {
+        "id": 30524,
+        "movieMetadataId": 666,
+        "sourceType": "tmdb",
+        "title": "Open Movie 56 (Alt 9)"
+      },
+      {
+        "id": 6411,
+        "movieMetadataId": 666,
+        "sourceType": "tmdb",
+        "title": "Open Movie 56 (Alt 10)"
+      },
+      {
+        "id": 43064,
+        "movieMetadataId": 666,
+        "sourceType": "tmdb",
+        "title": "Open Movie 56 (Alt 11)"
+      }
+    ],
+    "certification": "R",
+    "cleanTitle": "openmovie56",
+    "collection": {
+      "title": "Open Movie 57",
+      "tmdbId": 74273
+    },
+    "digitalRelease": "2003-11-05T00:00:00Z",
+    "folder": "Open Movie 56 (2003) {tmdb-182746}",
+    "folderName": "/data/radarr/Open Movie 56 (2003) {tmdb-182746}",
+    "genres": [
+      "Adventure",
+      "Action",
+      "Thriller",
+      "Science Fiction"
+    ],
+    "id": 669,
+    "images": [
+      {
+        "coverType": "poster",
+        "remoteUrl": "https://example.invalid/movie/open-movie-56/poster.jpg",
+        "url": "https://example.invalid/movie/open-movie-56/poster.jpg"
+      },
+      {
+        "coverType": "fanart",
+        "remoteUrl": "https://example.invalid/movie/open-movie-56/fanart.jpg",
+        "url": "https://example.invalid/movie/open-movie-56/fanart.jpg"
+      }
+    ],
+    "imdbId": "tt3450091",
+    "inCinemas": "2003-11-05T00:00:00Z",
+    "isAvailable": true,
+    "keywords": [
+      "action hero",
+      "allegory",
+      "artificial intelligence (a.i.)",
+      "christ allegory",
+      "computer",
+      "computer virus",
+      "cyberpunk",
+      "dreams",
+      "dying and death",
+      "dystopia",
+      "excited",
+      "fight",
+      "flying",
+      "fortune teller",
+      "future",
+      "gnosticism",
+      "hero",
+      "key",
+      "killer robot",
+      "kung fu",
+      "machine town",
+      "man vs machine",
+      "martial arts",
+      "mission",
+      "philosophical",
+      "philosophy",
+      "precognition",
+      "pretentious",
+      "rescue",
+      "saving the world",
+      "sequel",
+      "subway",
+      "sun",
+      "sunlight",
+      "super computer",
+      "temple",
+      "truth",
+      "underground world",
+      "virtual reality",
+      "woman director",
+      "ying yang"
+    ],
+    "lastSearchTime": "2026-04-19T11:57:27Z",
+    "minimumAvailability": "released",
+    "monitored": true,
+    "movieFile": {
+      "dateAdded": "2026-04-19T12:18:17Z",
+      "edition": "",
+      "id": 13061,
+      "indexerFlags": 0,
+      "languages": [
+        {
+          "id": 1,
+          "name": "English"
+        }
+      ],
+      "mediaInfo": {
+        "audioBitrate": 0,
+        "audioChannels": 7.1,
+        "audioCodec": "TrueHD Atmos",
+        "audioLanguages": "eng/eng/eng/eng",
+        "audioStreamCount": 4,
+        "resolution": "3840x2160",
+        "runTime": "2:09:15",
+        "scanType": "Progressive",
+        "subtitles": "eng/ara/chi/hrv/cze/dan/fin/ger/gre/hun/ita/jpn/kor/nor/pol/por/por/rum/rus/spa/swe/tha/tur/jpn/jpn",
+        "videoBitDepth": 10,
+        "videoBitrate": 0,
+        "videoCodec": "HEVC",
+        "videoDynamicRange": "HDR",
+        "videoDynamicRangeType": "HDR10",
+        "videoFps": 23.976
+      },
+      "movieId": 669,
+      "originalFilePath": "Open Movie 58/Open.Movie.56.2003.UHD.BluRay.2160p.TrueHD.Atmos.HEVC-DEMO.mkv",
+      "path": "/data/radarr/Open Movie 56 (2003) {tmdb-182746}/Open.Movie.56.Atmos-DEMO.mkv",
+      "quality": {
+        "quality": {
+          "id": 31,
+          "modifier": "remux",
+          "name": "Remux-2160p",
+          "resolution": 2160,
+          "source": "bluray"
+        },
+        "revision": {
+          "isRepack": false,
+          "real": 0,
+          "version": 1
+        }
+      },
+      "qualityCutoffNotMet": false,
+      "relativePath": "Open.Movie.56.Atmos-DEMO.mkv",
+      "releaseGroup": "DEMO",
+      "sceneName": "Open.Movie.56.2003.UHD.BluRay.2160p.TrueHD.Atmos.HEVC-DEMO",
+      "size": 54445474182
+    },
+    "movieFileId": 13061,
+    "originalLanguage": {
+      "id": 1,
+      "name": "English"
+    },
+    "originalTitle": "Open Movie 56",
+    "overview": "An open-licensed short film from the demo library.",
+    "path": "/data/radarr/Open Movie 56 (2003) {tmdb-182746}",
+    "physicalRelease": "2004-04-02T00:00:00Z",
+    "popularity": 13.3819,
+    "qualityProfileId": 18,
+    "ratings": {
+      "imdb": {
+        "type": "user",
+        "value": 6.7,
+        "votes": 579839
+      },
+      "metacritic": {
+        "type": "user",
+        "value": 47,
+        "votes": 0
+      },
+      "rottenTomatoes": {
+        "type": "user",
+        "value": 33,
+        "votes": 0
+      },
+      "tmdb": {
+        "type": "user",
+        "value": 6.758,
+        "votes": 11108
+      },
+      "trakt": {
+        "type": "user",
+        "value": 7.16703,
+        "votes": 20870
+      }
+    },
+    "releaseDate": "2003-11-05T00:00:00Z",
+    "remotePoster": "https://example.invalid/movie/open-movie-56/remoteposter.jpg",
+    "runtime": 129,
+    "secondaryYearSourceId": 0,
+    "sortTitle": "open movie 56",
+    "status": "released",
+    "studio": "Open Studio 17",
+    "tags": [
+      6
+    ],
+    "title": "Open Movie 56",
+    "titleSlug": "open-movie-56-182746",
+    "tmdbId": 182746,
+    "website": "",
+    "year": 2003,
+    "youTubeTrailerId": ""
+  },
+  {
+    "added": "2020-10-18T22:39:19Z",
+    "alternateTitles": [
+      {
+        "id": 34247,
+        "movieMetadataId": 664,
+        "sourceType": "tmdb",
+        "title": "Open Movie 59 (Alt 1)"
+      },
+      {
+        "id": 17882,
+        "movieMetadataId": 664,
+        "sourceType": "tmdb",
+        "title": "Open Movie 59 (Alt 2)"
+      },
+      {
+        "id": 34395,
+        "movieMetadataId": 664,
+        "sourceType": "tmdb",
+        "title": "Open Movie 59 (Alt 3)"
+      },
+      {
+        "id": 36570,
+        "movieMetadataId": 664,
+        "sourceType": "tmdb",
+        "title": "Open Movie 59 (Alt 4)"
+      },
+      {
+        "id": 6403,
+        "movieMetadataId": 664,
+        "sourceType": "tmdb",
+        "title": "Open Movie 59 (Alt 5)"
+      },
+      {
+        "id": 6399,
+        "movieMetadataId": 664,
+        "sourceType": "tmdb",
+        "title": "Open Movie 59 (Alt 6)"
+      },
+      {
+        "id": 26177,
+        "movieMetadataId": 664,
+        "sourceType": "tmdb",
+        "title": "Open Movie 59 (Alt 7)"
+      }
+    ],
+    "certification": "R",
+    "cleanTitle": "openmovie59",
+    "collection": {
+      "title": "Open Movie 57",
+      "tmdbId": 74273
+    },
+    "digitalRelease": "2001-03-19T00:00:00Z",
+    "folder": "Open Movie 59 (1999) {tmdb-460295}",
+    "folderName": "/data/radarr/Open Movie 59 (1999) {tmdb-460295}",
+    "genres": [
+      "Action",
+      "Science Fiction"
+    ],
+    "id": 667,
+    "images": [
+      {
+        "coverType": "poster",
+        "remoteUrl": "https://example.invalid/movie/open-movie-59/poster.jpg",
+        "url": "https://example.invalid/movie/open-movie-59/poster.jpg"
+      },
+      {
+        "coverType": "fanart",
+        "remoteUrl": "https://example.invalid/movie/open-movie-59/fanart.jpg",
+        "url": "https://example.invalid/movie/open-movie-59/fanart.jpg"
+      }
+    ],
+    "imdbId": "tt1355964",
+    "inCinemas": "1999-03-31T00:00:00Z",
+    "isAvailable": true,
+    "keywords": [
+      "allegory",
+      "artificial intelligence (a.i.)",
+      "chosen one",
+      "cyberpunk",
+      "dystopia",
+      "fortune teller",
+      "gnosticism",
+      "insurgence",
+      "man vs machine",
+      "martial arts",
+      "philosophy",
+      "prophecy",
+      "saving the world",
+      "simulated reality ",
+      "woman director"
+    ],
+    "minimumAvailability": "released",
+    "monitored": true,
+    "movieFile": {
+      "dateAdded": "2025-12-28T12:19:35Z",
+      "edition": "",
+      "id": 11209,
+      "indexerFlags": 0,
+      "languages": [
+        {
+          "id": 1,
+          "name": "English"
+        }
+      ],
+      "mediaInfo": {
+        "audioBitrate": 0,
+        "audioChannels": 7.1,
+        "audioCodec": "TrueHD Atmos",
+        "audioLanguages": "eng/eng/eng/eng/eng/eng",
+        "audioStreamCount": 6,
+        "resolution": "3840x2160",
+        "runTime": "2:16:18",
+        "scanType": "Progressive",
+        "subtitles": "eng/ara/bul/chi/hrv/cze/dan/dut/est/fin/fre/ger/gre/heb/hun/ice/ind/ita/jpn/kor/lav/nor/pol/por/por/rum/rus/srp/slv/spa/spa/swe/tha/tur/chi/kor/jpn/chi/kor/jpn/chi/kor/jpn/chi/kor/jpn",
+        "videoBitDepth": 10,
+        "videoBitrate": 0,
+        "videoCodec": "h265",
+        "videoDynamicRange": "HDR",
+        "videoDynamicRangeType": "DV HDR10",
+        "videoFps": 23.976
+      },
+      "movieId": 667,
+      "path": "/data/radarr/Open Movie 59 (1999) {tmdb-460295}/Open.Movie.59.Atmos-DEMO.mkv",
+      "quality": {
+        "quality": {
+          "id": 31,
+          "modifier": "remux",
+          "name": "Remux-2160p",
+          "resolution": 2160,
+          "source": "bluray"
+        },
+        "revision": {
+          "isRepack": false,
+          "real": 0,
+          "version": 1
+        }
+      },
+      "qualityCutoffNotMet": false,
+      "relativePath": "Open.Movie.59.Atmos-DEMO.mkv",
+      "releaseGroup": "DEMO",
+      "size": 56808632124
+    },
+    "movieFileId": 11209,
+    "originalLanguage": {
+      "id": 1,
+      "name": "English"
+    },
+    "originalTitle": "Open Movie 59",
+    "overview": "An open-licensed short film from the demo library.",
+    "path": "/data/radarr/Open Movie 59 (1999) {tmdb-460295}",
+    "physicalRelease": "1999-11-25T00:00:00Z",
+    "popularity": 47.5327,
+    "qualityProfileId": 18,
+    "ratings": {
+      "imdb": {
+        "type": "user",
+        "value": 8.7,
+        "votes": 2275363
+      },
+      "metacritic": {
+        "type": "user",
+        "value": 73,
+        "votes": 0
+      },
+      "rottenTomatoes": {
+        "type": "user",
+        "value": 83,
+        "votes": 0
+      },
+      "tmdb": {
+        "type": "user",
+        "value": 8.3,
+        "votes": 28695
+      },
+      "trakt": {
+        "type": "user",
+        "value": 8.78249,
+        "votes": 54916
+      }
+    },
+    "releaseDate": "1999-11-25T00:00:00Z",
+    "remotePoster": "https://example.invalid/movie/open-movie-59/remoteposter.jpg",
+    "runtime": 136,
+    "secondaryYearSourceId": 0,
+    "sortTitle": "open movie 59",
+    "status": "released",
+    "studio": "Open Studio 17",
+    "tags": [
+      6
+    ],
+    "title": "Open Movie 59",
+    "titleSlug": "open-movie-59-460295",
+    "tmdbId": 460295,
+    "website": "",
+    "year": 1999,
+    "youTubeTrailerId": ""
+  },
+  {
+    "added": "2020-10-18T22:39:19Z",
+    "alternateTitles": [
+      {
+        "id": 6422,
+        "movieMetadataId": 665,
+        "sourceType": "tmdb",
+        "title": "Open Movie 60 (Alt 1)"
+      },
+      {
+        "id": 30522,
+        "movieMetadataId": 665,
+        "sourceType": "tmdb",
+        "title": "Open Movie 60 (Alt 2)"
+      },
+      {
+        "id": 17883,
+        "movieMetadataId": 665,
+        "sourceType": "tmdb",
+        "title": "Open Movie 60 (Alt 3)"
+      },
+      {
+        "id": 6416,
+        "movieMetadataId": 665,
+        "sourceType": "tmdb",
+        "title": "Open Movie 60 (Alt 4)"
+      },
+      {
+        "id": 6425,
+        "movieMetadataId": 665,
+        "sourceType": "tmdb",
+        "title": "Open Movie 60 (Alt 5)"
+      },
+      {
+        "id": 6419,
+        "movieMetadataId": 665,
+        "sourceType": "tmdb",
+        "title": "Open Movie 60 (Alt 6)"
+      },
+      {
+        "id": 6424,
+        "movieMetadataId": 665,
+        "sourceType": "tmdb",
+        "title": "Open Movie 60 (Alt 7)"
+      },
+      {
+        "id": 6427,
+        "movieMetadataId": 665,
+        "sourceType": "tmdb",
+        "title": "Open Movie 60 (Alt 8)"
+      },
+      {
+        "id": 33831,
+        "movieMetadataId": 665,
+        "sourceType": "tmdb",
+        "title": "Open Movie 60 (Alt 9)"
+      },
+      {
+        "id": 6423,
+        "movieMetadataId": 665,
+        "sourceType": "tmdb",
+        "title": "Open Movie 60 (Alt 10)"
+      }
+    ],
+    "certification": "R",
+    "cleanTitle": "openmovie60",
+    "collection": {
+      "title": "Open Movie 57",
+      "tmdbId": 74273
+    },
+    "digitalRelease": "2003-05-16T00:00:00Z",
+    "folder": "Open Movie 60 (2003) {tmdb-23124}",
+    "folderName": "/data/radarr/Open Movie 60 (2003) {tmdb-23124}",
+    "genres": [
+      "Adventure",
+      "Action",
+      "Thriller",
+      "Science Fiction"
+    ],
+    "id": 668,
+    "images": [
+      {
+        "coverType": "poster",
+        "remoteUrl": "https://example.invalid/movie/open-movie-60/poster.jpg",
+        "url": "https://example.invalid/movie/open-movie-60/poster.jpg"
+      },
+      {
+        "coverType": "fanart",
+        "remoteUrl": "https://example.invalid/movie/open-movie-60/fanart.jpg",
+        "url": "https://example.invalid/movie/open-movie-60/fanart.jpg"
+      }
+    ],
+    "imdbId": "tt3202586",
+    "inCinemas": "2003-05-15T00:00:00Z",
+    "isAvailable": true,
+    "keywords": [
+      "action hero",
+      "allegory",
+      "artificial intelligence (a.i.)",
+      "car crash",
+      "computer",
+      "computer virus",
+      "cyberpunk",
+      "defiant",
+      "dreams",
+      "dying and death",
+      "dystopia",
+      "fight",
+      "fortune teller",
+      "future",
+      "gnosticism",
+      "grand",
+      "hero",
+      "key",
+      "kung fu",
+      "man vs machine",
+      "martial arts",
+      "mission",
+      "oracle",
+      "plato",
+      "precognition",
+      "prophecy",
+      "rave",
+      "sardonic",
+      "saving the world",
+      "sequel",
+      "simulation",
+      "truth",
+      "underground world",
+      "virtual reality",
+      "woman director"
+    ],
+    "lastSearchTime": "2026-04-19T11:55:22Z",
+    "minimumAvailability": "released",
+    "monitored": true,
+    "movieFile": {
+      "dateAdded": "2025-12-28T12:19:35Z",
+      "edition": "",
+      "id": 11210,
+      "indexerFlags": 0,
+      "languages": [
+        {
+          "id": 1,
+          "name": "English"
+        }
+      ],
+      "mediaInfo": {
+        "audioBitrate": 0,
+        "audioChannels": 7.1,
+        "audioCodec": "TrueHD Atmos",
+        "audioLanguages": "eng/eng/eng/eng",
+        "audioStreamCount": 4,
+        "resolution": "3840x2160",
+        "runTime": "2:18:17",
+        "scanType": "Progressive",
+        "subtitles": "eng/ara/bul/chi/hrv/cze/dan/dut/fin/fre/ger/gre/heb/hun/ice/ind/ita/jpn/kor/nor/pol/por/por/rum/rus/slv/spa/spa/swe/tha/tur/chi/kor/jpn/chi/kor/jpn",
+        "videoBitDepth": 10,
+        "videoBitrate": 0,
+        "videoCodec": "h265",
+        "videoDynamicRange": "HDR",
+        "videoDynamicRangeType": "DV HDR10",
+        "videoFps": 23.976
+      },
+      "movieId": 668,
+      "path": "/data/radarr/Open Movie 60 (2003) {tmdb-23124}/Open.Movie.60.Atmos-DEMO.mkv",
+      "quality": {
+        "quality": {
+          "id": 31,
+          "modifier": "remux",
+          "name": "Remux-2160p",
+          "resolution": 2160,
+          "source": "bluray"
+        },
+        "revision": {
+          "isRepack": false,
+          "real": 0,
+          "version": 1
+        }
+      },
+      "qualityCutoffNotMet": false,
+      "relativePath": "Open.Movie.60.Atmos-DEMO.mkv",
+      "releaseGroup": "DEMO",
+      "size": 75203194023
+    },
+    "movieFileId": 11210,
+    "originalLanguage": {
+      "id": 1,
+      "name": "English"
+    },
+    "originalTitle": "Open Movie 60",
+    "overview": "An open-licensed short film from the demo library.",
+    "path": "/data/radarr/Open Movie 60 (2003) {tmdb-23124}",
+    "physicalRelease": "2003-10-10T00:00:00Z",
+    "popularity": 16.9742,
+    "qualityProfileId": 18,
+    "ratings": {
+      "imdb": {
+        "type": "user",
+        "value": 7.2,
+        "votes": 676287
+      },
+      "metacritic": {
+        "type": "user",
+        "value": 62,
+        "votes": 0
+      },
+      "rottenTomatoes": {
+        "type": "user",
+        "value": 74,
+        "votes": 0
+      },
+      "tmdb": {
+        "type": "user",
+        "value": 7.085,
+        "votes": 12292
+      },
+      "trakt": {
+        "type": "user",
+        "value": 7.55767,
+        "votes": 24439
+      }
+    },
+    "releaseDate": "2003-05-16T00:00:00Z",
+    "remotePoster": "https://example.invalid/movie/open-movie-60/remoteposter.jpg",
+    "runtime": 138,
+    "secondaryYearSourceId": 0,
+    "sortTitle": "open movie 60",
+    "status": "released",
+    "studio": "Open Studio 17",
+    "tags": [
+      6
+    ],
+    "title": "Open Movie 60",
+    "titleSlug": "open-movie-60-23124",
+    "tmdbId": 23124,
+    "website": "",
+    "year": 2003,
+    "youTubeTrailerId": ""
+  },
+  {
+    "added": "2021-01-12T22:20:11Z",
+    "alternateTitles": [
+      {
+        "id": 16516,
+        "movieMetadataId": 874,
+        "sourceType": "tmdb",
+        "title": "Open Movie 61 (Alt 1)"
+      },
+      {
+        "id": 15055,
+        "movieMetadataId": 874,
+        "sourceType": "tmdb",
+        "title": "Open Movie 61 (Alt 2)"
+      },
+      {
+        "id": 21754,
+        "movieMetadataId": 874,
+        "sourceType": "tmdb",
+        "title": "Open Movie 61 (Alt 3)"
+      },
+      {
+        "id": 16556,
+        "movieMetadataId": 874,
+        "sourceType": "tmdb",
+        "title": "Open Movie 61 (Alt 4)"
+      },
+      {
+        "id": 17267,
+        "movieMetadataId": 874,
+        "sourceType": "tmdb",
+        "title": "Open Movie 61 (Alt 5)"
+      },
+      {
+        "id": 17884,
+        "movieMetadataId": 874,
+        "sourceType": "tmdb",
+        "title": "Open Movie 61 (Alt 6)"
+      },
+      {
+        "id": 13107,
+        "movieMetadataId": 874,
+        "sourceType": "tmdb",
+        "title": "Open Movie 61 (Alt 7)"
+      },
+      {
+        "id": 16515,
+        "movieMetadataId": 874,
+        "sourceType": "tmdb",
+        "title": "Open Movie 61 (Alt 8)"
+      },
+      {
+        "id": 21604,
+        "movieMetadataId": 874,
+        "sourceType": "tmdb",
+        "title": "Open Movie 61 (Alt 9)"
+      },
+      {
+        "id": 15309,
+        "movieMetadataId": 874,
+        "sourceType": "tmdb",
+        "title": "Open Movie 61 (Alt 10)"
+      },
+      {
+        "id": 16562,
+        "movieMetadataId": 874,
+        "sourceType": "tmdb",
+        "title": "Open Movie 61 (Alt 11)"
+      },
+      {
+        "id": 40892,
+        "movieMetadataId": 874,
+        "sourceType": "tmdb",
+        "title": "Open Movie 61 (Alt 12)"
+      },
+      {
+        "id": 16546,
+        "movieMetadataId": 874,
+        "sourceType": "tmdb",
+        "title": "Open Movie 61 (Alt 13)"
+      },
+      {
+        "id": 30523,
+        "movieMetadataId": 874,
+        "sourceType": "tmdb",
+        "title": "Open Movie 61 (Alt 14)"
+      },
+      {
+        "id": 16417,
+        "movieMetadataId": 874,
+        "sourceType": "tmdb",
+        "title": "Open Movie 61 (Alt 15)"
+      },
+      {
+        "id": 33842,
+        "movieMetadataId": 874,
+        "sourceType": "tmdb",
+        "title": "Open Movie 61 (Alt 16)"
+      },
+      {
+        "id": 24247,
+        "movieMetadataId": 874,
+        "sourceType": "tmdb",
+        "title": "Open Movie 61 (Alt 17)"
+      },
+      {
+        "id": 33264,
+        "movieMetadataId": 874,
+        "sourceType": "tmdb",
+        "title": "Open Movie 61 (Alt 18)"
+      }
+    ],
+    "certification": "R",
+    "cleanTitle": "openmovie61",
+    "collection": {
+      "title": "Open Movie 57",
+      "tmdbId": 74273
+    },
+    "digitalRelease": "2021-12-22T00:00:00Z",
+    "folder": "Open Movie 61 (2021) {tmdb-141555}",
+    "folderName": "/data/radarr/Open Movie 61 (2021) {tmdb-141555}",
+    "genres": [
+      "Science Fiction",
+      "Action",
+      "Adventure"
+    ],
+    "id": 882,
+    "images": [
+      {
+        "coverType": "poster",
+        "remoteUrl": "https://example.invalid/movie/open-movie-61/poster.jpg",
+        "url": "https://example.invalid/movie/open-movie-61/poster.jpg"
+      },
+      {
+        "coverType": "fanart",
+        "remoteUrl": "https://example.invalid/movie/open-movie-61/fanart.jpg",
+        "url": "https://example.invalid/movie/open-movie-61/fanart.jpg"
+      }
+    ],
+    "imdbId": "tt6995887",
+    "inCinemas": "2021-12-16T00:00:00Z",
+    "isAvailable": true,
+    "keywords": [
+      "aftercreditsstinger",
+      "artificial intelligence (a.i.)",
+      "computer",
+      "cyberpunk",
+      "dream world",
+      "dystopia",
+      "future",
+      "gnosticism",
+      "grand",
+      "man vs machine",
+      "prophecy",
+      "sequel",
+      "underground world",
+      "virtual reality",
+      "woman director"
+    ],
+    "lastSearchTime": "2024-12-02T01:04:04Z",
+    "minimumAvailability": "released",
+    "monitored": true,
+    "movieFile": {
+      "dateAdded": "2025-12-28T12:19:36Z",
+      "edition": "",
+      "id": 11211,
+      "indexerFlags": 0,
+      "languages": [
+        {
+          "id": 1,
+          "name": "English"
+        }
+      ],
+      "mediaInfo": {
+        "audioBitrate": 3139914,
+        "audioChannels": 7.1,
+        "audioCodec": "TrueHD Atmos",
+        "audioLanguages": "eng/eng",
+        "audioStreamCount": 2,
+        "resolution": "3840x2160",
+        "runTime": "2:27:57",
+        "scanType": "Progressive",
+        "subtitles": "eng/dan/fin/fre/ger/gre/hun/ita/kor/nor/pol/por/spa/swe",
+        "videoBitDepth": 10,
+        "videoBitrate": 60878172,
+        "videoCodec": "h265",
+        "videoDynamicRange": "HDR",
+        "videoDynamicRangeType": "DV HDR10",
+        "videoFps": 23.976
+      },
+      "movieId": 882,
+      "path": "/data/radarr/Open Movie 61 (2021) {tmdb-141555}/Open.Movie.61.Atmos-DEMO.mkv",
+      "quality": {
+        "quality": {
+          "id": 31,
+          "modifier": "remux",
+          "name": "Remux-2160p",
+          "resolution": 2160,
+          "source": "bluray"
+        },
+        "revision": {
+          "isRepack": false,
+          "real": 0,
+          "version": 1
+        }
+      },
+      "qualityCutoffNotMet": false,
+      "relativePath": "Open.Movie.61.Atmos-DEMO.mkv",
+      "releaseGroup": "DEMO",
+      "size": 72021853149
+    },
+    "movieFileId": 11211,
+    "originalLanguage": {
+      "id": 1,
+      "name": "English"
+    },
+    "originalTitle": "Open Movie 61",
+    "overview": "An open-licensed short film from the demo library.",
+    "path": "/data/radarr/Open Movie 61 (2021) {tmdb-141555}",
+    "physicalRelease": "2022-03-08T00:00:00Z",
+    "popularity": 14.728,
+    "qualityProfileId": 18,
+    "ratings": {
+      "imdb": {
+        "type": "user",
+        "value": 5.6,
+        "votes": 306534
+      },
+      "metacritic": {
+        "type": "user",
+        "value": 63,
+        "votes": 0
+      },
+      "rottenTomatoes": {
+        "type": "user",
+        "value": 63,
+        "votes": 0
+      },
+      "tmdb": {
+        "type": "user",
+        "value": 6.3,
+        "votes": 6709
+      },
+      "trakt": {
+        "type": "user",
+        "value": 6.12271,
+        "votes": 20332
+      }
+    },
+    "releaseDate": "2021-12-22T00:00:00Z",
+    "remotePoster": "https://example.invalid/movie/open-movie-61/remoteposter.jpg",
+    "runtime": 148,
+    "secondaryYearSourceId": 0,
+    "sortTitle": "open movie 61",
+    "status": "released",
+    "studio": "Open Studio 14",
+    "tags": [
+      7
+    ],
+    "title": "Open Movie 61",
+    "titleSlug": "open-movie-61-141555",
+    "tmdbId": 141555,
+    "website": "",
+    "year": 2021,
+    "youTubeTrailerId": ""
+  },
+  {
+    "added": "0001-01-01T00:00:00Z",
+    "alternateTitles": [
+      {
+        "movieMetadataId": 0,
+        "sourceType": "tmdb",
+        "title": "Open Movie 62 (Alt 1)"
+      }
+    ],
+    "cleanTitle": "openmovie62",
+    "collection": {
+      "title": "Open Movie 63",
+      "tmdbId": 932020
+    },
+    "folder": "Open Movie 62 (1996) {tmdb-590949}",
+    "folderName": "",
+    "genres": [
+      "Animation",
+      "Science Fiction",
+      "Thriller"
+    ],
+    "images": [
+      {
+        "coverType": "poster",
+        "remoteUrl": "https://example.invalid/movie/open-movie-62/poster.jpg",
+        "url": "https://example.invalid/movie/open-movie-62/poster.jpg"
+      },
+      {
+        "coverType": "fanart",
+        "remoteUrl": "https://example.invalid/movie/open-movie-62/fanart.jpg",
+        "url": "https://example.invalid/movie/open-movie-62/fanart.jpg"
+      }
+    ],
+    "imdbId": "tt7869167",
+    "inCinemas": "1996-06-25T00:00:00Z",
+    "isAvailable": true,
+    "keywords": [
+      "android",
+      "cyberpunk",
+      "mars"
+    ],
+    "minimumAvailability": "tba",
+    "monitored": false,
+    "movieFileId": 0,
+    "originalLanguage": {
+      "id": 1,
+      "name": "English"
+    },
+    "originalTitle": "Open Movie 62",
+    "overview": "An open-licensed short film from the demo library.",
+    "physicalRelease": "1996-06-25T00:00:00Z",
+    "popularity": 2.8971,
+    "qualityProfileId": 0,
+    "ratings": {
+      "imdb": {
+        "type": "user",
+        "value": 6.7,
+        "votes": 2022
+      },
+      "tmdb": {
+        "type": "user",
+        "value": 6.465,
+        "votes": 72
+      },
+      "trakt": {
+        "type": "user",
+        "value": 6.94059,
+        "votes": 101
+      }
+    },
+    "releaseDate": "1996-06-25T00:00:00Z",
+    "remotePoster": "https://example.invalid/movie/open-movie-62/remoteposter.jpg",
+    "runtime": 92,
+    "secondaryYearSourceId": 0,
+    "sortTitle": "open movie 62",
+    "status": "released",
+    "studio": "Open Studio 18",
+    "tags": [],
+    "title": "Open Movie 62",
+    "titleSlug": "open-movie-62-590949",
+    "tmdbId": 590949,
+    "website": "",
+    "year": 1996,
+    "youTubeTrailerId": ""
+  }
+]

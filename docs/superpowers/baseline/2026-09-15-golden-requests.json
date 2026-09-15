@@ -1,0 +1,2588 @@
+[
+  {
+    "allowed": false,
+    "body": "{\"id\":7,\"method\":\"core.add_torrent_magnet\",\"params\":[\"magnet:?xt=urn:btih:0000000000000000000000000000000000000000&dn=Recording+Placeholder\",{\"add_paused\":false}]}",
+    "client": "deluge",
+    "count": 1,
+    "header_names": [
+      "Accept",
+      "Content-Length",
+      "Content-Type"
+    ],
+    "intercept_reason": "host not a configured live service",
+    "method": "POST",
+    "operation": "addMagnet",
+    "path": "/json",
+    "query_keys": []
+  },
+  {
+    "allowed": false,
+    "body": "{\"id\":6,\"method\":\"core.remove_torrent\",\"params\":[\"0000000000000000000000000000000000000000\",false]}",
+    "client": "deluge",
+    "count": 1,
+    "header_names": [
+      "Accept",
+      "Content-Length",
+      "Content-Type"
+    ],
+    "intercept_reason": "host not a configured live service",
+    "method": "POST",
+    "operation": "delete",
+    "path": "/json",
+    "query_keys": []
+  },
+  {
+    "allowed": false,
+    "body": "{\"id\":3,\"method\":\"core.get_torrents_status\",\"params\":[{\"id\":[\"0000000000000000000000000000000000000000\"]},[\"progress\",\"download_payload_rate\"]]}",
+    "client": "deluge",
+    "count": 1,
+    "header_names": [
+      "Accept",
+      "Content-Length",
+      "Content-Type"
+    ],
+    "intercept_reason": "host not a configured live service",
+    "method": "POST",
+    "operation": "fetchProgress",
+    "path": "/json",
+    "query_keys": []
+  },
+  {
+    "allowed": false,
+    "body": "{\"id\":4,\"method\":\"core.pause_torrent\",\"params\":[[\"0000000000000000000000000000000000000000\"]]}",
+    "client": "deluge",
+    "count": 1,
+    "header_names": [
+      "Accept",
+      "Content-Length",
+      "Content-Type"
+    ],
+    "intercept_reason": "host not a configured live service",
+    "method": "POST",
+    "operation": "pause",
+    "path": "/json",
+    "query_keys": []
+  },
+  {
+    "allowed": false,
+    "body": "{\"id\":5,\"method\":\"core.resume_torrent\",\"params\":[[\"0000000000000000000000000000000000000000\"]]}",
+    "client": "deluge",
+    "count": 1,
+    "header_names": [
+      "Accept",
+      "Content-Length",
+      "Content-Type"
+    ],
+    "intercept_reason": "host not a configured live service",
+    "method": "POST",
+    "operation": "resume",
+    "path": "/json",
+    "query_keys": []
+  },
+  {
+    "allowed": false,
+    "body": "{\"id\":1,\"method\":\"auth.login\",\"params\":[\"recording-placeholder\"]}",
+    "client": "deluge",
+    "count": 2,
+    "header_names": [
+      "Accept",
+      "Content-Length",
+      "Content-Type"
+    ],
+    "intercept_reason": "host not a configured live service",
+    "method": "POST",
+    "operation": "testConnection",
+    "path": "/json",
+    "query_keys": []
+  },
+  {
+    "allowed": false,
+    "client": "lidarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "intercept_reason": "arr: only GET and signalr/negotiate are allow-listed",
+    "method": "DELETE",
+    "operation": "deleteLibraryRecord",
+    "path": "/api/v1/artist/{id}",
+    "query_keys": [
+      "addImportExclusion",
+      "addImportListExclusion",
+      "deleteFiles"
+    ]
+  },
+  {
+    "allowed": false,
+    "client": "lidarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "intercept_reason": "arr: only GET and signalr/negotiate are allow-listed",
+    "method": "DELETE",
+    "operation": "deleteQueueItem",
+    "path": "/api/v1/queue/{id}",
+    "query_keys": [
+      "blocklist",
+      "removeFromClient"
+    ]
+  },
+  {
+    "allowed": true,
+    "client": "lidarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "fetchAlbumDetails",
+    "path": "/api/v1/album/{id}",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "lidarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "fetchAllArtists",
+    "path": "/api/v1/artist",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "lidarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "fetchArtistAlbums",
+    "path": "/api/v1/album",
+    "query_keys": [
+      "artistId"
+    ]
+  },
+  {
+    "allowed": true,
+    "client": "lidarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "fetchArtistDetails",
+    "path": "/api/v1/artist/{id}",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "lidarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "fetchCalendar",
+    "path": "/api/v1/calendar",
+    "query_keys": [
+      "end",
+      "start",
+      "unmonitored"
+    ]
+  },
+  {
+    "allowed": true,
+    "client": "lidarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "fetchCustomFormats",
+    "path": "/api/v1/customformat",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "lidarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "fetchDiskSpace",
+    "path": "/api/v1/diskspace",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "lidarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "fetchDownloadClients",
+    "path": "/api/v1/downloadclient",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "lidarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "fetchHealth",
+    "path": "/api/v1/health",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "lidarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "fetchHistory",
+    "path": "/api/v1/history",
+    "query_keys": [
+      "includeAlbum",
+      "includeArtist",
+      "page",
+      "pageSize",
+      "sortDirection",
+      "sortKey"
+    ]
+  },
+  {
+    "allowed": true,
+    "client": "lidarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "fetchHistoryForAlbum",
+    "path": "/api/v1/history",
+    "query_keys": [
+      "albumIds",
+      "includeAlbum",
+      "includeArtist",
+      "page",
+      "pageSize",
+      "sortDirection",
+      "sortKey"
+    ]
+  },
+  {
+    "allowed": true,
+    "client": "lidarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "fetchQualityProfiles",
+    "path": "/api/v1/qualityprofile",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "lidarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "fetchQueue",
+    "path": "/api/v1/queue",
+    "query_keys": [
+      "includeUnknownArtistItems",
+      "pageSize"
+    ]
+  },
+  {
+    "allowed": true,
+    "client": "lidarr",
+    "count": 2,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "fetchQueue",
+    "path": "/api/v1/trackfile",
+    "query_keys": [
+      "albumId"
+    ]
+  },
+  {
+    "allowed": false,
+    "client": "lidarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "intercept_reason": "arr: /release not allow-listed",
+    "method": "GET",
+    "operation": "fetchReleases",
+    "path": "/api/v1/release",
+    "query_keys": [
+      "albumId"
+    ]
+  },
+  {
+    "allowed": true,
+    "client": "lidarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "fetchTrackFiles",
+    "path": "/api/v1/trackfile",
+    "query_keys": [
+      "albumId"
+    ]
+  },
+  {
+    "allowed": true,
+    "client": "lidarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "fetchTracks",
+    "path": "/api/v1/track",
+    "query_keys": [
+      "albumId"
+    ]
+  },
+  {
+    "allowed": true,
+    "client": "lidarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "isSearchRunning",
+    "path": "/api/v1/command",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "lidarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "search.addAlbum",
+    "path": "/api/v1/search",
+    "query_keys": [
+      "term"
+    ]
+  },
+  {
+    "allowed": false,
+    "body": "{\"addOptions\":{\"searchForNewAlbum\":false},\"albumType\":\"Single\",\"anyReleaseOk\":true,\"artist\":{\"addOptions\":{\"monitor\":\"none\",\"searchForMissingAlbums\":false},\"added\":\"0001-01-01T00:00:00Z\",\"artistName\":\"Open Artist 9\",\"artistType\":\"Group\",\"disambiguation\":\"\",\"discogsId\":386298,\"ended\":false,\"folder\":\"Open Artist 9\",\"foreignArtistId\":\"f036f736-2a68-df79-f181-34a7baf7022c\",\"genres\":[\"Goa Trance\",\"Psytrance\"],\"images\":[],\"lastAlbum\":null,\"links\":[{\"name\":\"link\",\"url\":\"https://example.invalid/links/open-artist-9/link\"},{\"name\":\"discogs\",\"url\":\"https://example.invalid/links/open-artist-9/discogs\"},{\"name\":\"wikidata\",\"url\":\"https://example.invalid/links/open-artist-9/wikidata\"},{\"name\":\"link\",\"url\":\"https://example.invalid/links/open-artist-9/link\"},{\"name\":\"deezer\",\"url\":\"https://example.invalid/links/open-artist-9/deezer\"},{\"name\":\"facebook\",\"url\":\"https://example.invalid/links/open-artist-9/facebook\"},{\"name\":\"bandcamp\",\"url\":\"https://example.invalid/links/open-artist-9/bandcamp\"},{\"name\":\"myspace\",\"url\":\"https://example.invalid/links/open-artist-9/myspace\"},{\"name\":\"allmusic\",\"url\":\"https://example.invalid/links/open-artist-9/allmusic\"},{\"name\":\"rateyourmusic\",\"url\":\"https://example.invalid/links/open-artist-9/rateyourmusic\"},{\"name\":\"soundcloud\",\"url\":\"https://example.invalid/links/open-artist-9/soundcloud\"},{\"name\":\"spotify\",\"url\":\"https://example.invalid/links/open-artist-9/spotify\"},{\"name\":\"link\",\"url\":\"https://example.invalid/links/open-artist-9/link\"},{\"name\":\"tidal\",\"url\":\"https://example.invalid/links/open-artist-9/tidal\"}],\"metadataProfileId\":1,\"monitorNewItems\":\"all\",\"monitored\":true,\"nextAlbum\":null,\"qualityProfileId\":1,\"ratings\":{\"value\":9,\"votes\":2},\"rootFolderPath\":\"/data/lidarr\",\"status\":\"continuing\",\"tadbId\":739653,\"tags\":[]},\"artistId\":0,\"disambiguation\":\"\",\"duration\":1520000,\"foreignAlbumId\":\"6d2f4c89-371a-9e18-be48-3c77cb8f06d2\",\"genres\":[\"Electronic\",\"Goa Trance\",\"Psytrance\"],\"images\":[],\"links\":[{\"name\":\"discogs\",\"url\":\"https://example.invalid/links/open-artist-8/discogs\"}],\"media\":[{\"mediumFormat\":\"CD\",\"mediumName\":\"\",\"mediumNumber\":1}],\"mediumCount\":1,\"monitored\":true,\"profileId\":0,\"ratings\":{\"value\":0,\"votes\":0},\"releaseDate\":\"1998-01-01T00:00:00Z\",\"releases\":[{\"albumId\":0,\"country\":[\"United Kingdom\"],\"disambiguation\":\"\",\"duration\":1520000,\"foreignReleaseId\":\"241b284f-0868-5fdf-85e0-242773872f08\",\"format\":\"CD\",\"id\":0,\"label\":[\"Demo Label 15\"],\"media\":[{\"mediumFormat\":\"CD\",\"mediumName\":\"\",\"mediumNumber\":1}],\"mediumCount\":1,\"monitored\":true,\"status\":\"Official\",\"title\":\"Open Artist 8\",\"trackCount\":3}],\"secondaryTypes\":[],\"title\":\"Open Artist 8\"}",
+    "client": "lidarr",
+    "count": 1,
+    "header_names": [
+      "Content-Length",
+      "Content-Type",
+      "X-Api-Key"
+    ],
+    "intercept_reason": "arr: only GET and signalr/negotiate are allow-listed",
+    "method": "POST",
+    "operation": "search.addAlbum",
+    "path": "/api/v1/album",
+    "query_keys": []
+  },
+  {
+    "allowed": false,
+    "body": "{\"addOptions\":{\"monitor\":\"all\",\"searchForMissingAlbums\":false},\"artistName\":\"Open Artist 8\",\"foreignArtistId\":\"66d59c76-b47a-a20a-615e-da27596f785c\",\"metadataProfileId\":1,\"monitored\":true,\"qualityProfileId\":1,\"rootFolderPath\":\"/data/lidarr\"}",
+    "client": "lidarr",
+    "count": 1,
+    "header_names": [
+      "Content-Length",
+      "Content-Type",
+      "X-Api-Key"
+    ],
+    "intercept_reason": "arr: only GET and signalr/negotiate are allow-listed",
+    "method": "POST",
+    "operation": "search.addArtist",
+    "path": "/api/v1/artist",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "lidarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "search.fetchLibraryOwnership",
+    "path": "/api/v1/artist",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "lidarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "search.fetchMetadataProfiles",
+    "path": "/api/v1/metadataprofile",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "lidarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "search.fetchQualityProfiles",
+    "path": "/api/v1/qualityprofile",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "lidarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "search.fetchRootFolders",
+    "path": "/api/v1/rootfolder",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "lidarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "search.lookup",
+    "path": "/api/v1/artist/lookup",
+    "query_keys": [
+      "term"
+    ]
+  },
+  {
+    "allowed": true,
+    "client": "lidarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "search.lookup",
+    "path": "/api/v1/search",
+    "query_keys": [
+      "term"
+    ]
+  },
+  {
+    "allowed": false,
+    "body": "{\"albumIds\":[4562],\"name\":\"AlbumSearch\"}",
+    "client": "lidarr",
+    "count": 1,
+    "header_names": [
+      "Content-Length",
+      "Content-Type",
+      "X-Api-Key"
+    ],
+    "intercept_reason": "arr: only GET and signalr/negotiate are allow-listed",
+    "method": "POST",
+    "operation": "searchAlbum",
+    "path": "/api/v1/command",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "lidarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "setAlbumMonitored",
+    "path": "/api/v1/album/{id}",
+    "query_keys": []
+  },
+  {
+    "allowed": false,
+    "body": "{\"albumType\":\"Album\",\"anyReleaseOk\":true,\"artist\":{\"added\":\"2026-08-09T12:12:09Z\",\"artistName\":\"Nine Inch Nails\",\"artistType\":\"Person\",\"cleanName\":\"nineinchnails\",\"disambiguation\":\"\",\"discogsId\":202074,\"ended\":false,\"foreignArtistId\":\"a40f3fe3-9eeb-f345-f241-90f2bfd89716\",\"genres\":[],\"id\":56,\"images\":[],\"lastAlbum\":null,\"links\":[{\"name\":\"discogs\",\"url\":\"https://example.invalid/links/nine-inch-nails/discogs\"},{\"name\":\"allmusic\",\"url\":\"https://example.invalid/links/nine-inch-nails/allmusic\"},{\"name\":\"link\",\"url\":\"https://example.invalid/links/nine-inch-nails/link\"},{\"name\":\"imdb\",\"url\":\"https://example.invalid/links/nine-inch-nails/imdb\"},{\"name\":\"wikidata\",\"url\":\"https://example.invalid/links/nine-inch-nails/wikidata\"}],\"metadataProfileId\":2,\"monitorNewItems\":\"all\",\"monitored\":true,\"nextAlbum\":null,\"path\":\"/data/media/music/Nine Inch Nails\",\"qualityProfileId\":1,\"ratings\":{\"value\":0,\"votes\":0},\"sortName\":\"nine inch nails\",\"status\":\"continuing\",\"tadbId\":572763,\"tags\":[]},\"artistId\":56,\"disambiguation\":\"\",\"duration\":3014000,\"foreignAlbumId\":\"8c33ed3e-aa92-3a49-6a8c-a97146bd3436\",\"genres\":[],\"id\":4562,\"images\":[{\"coverType\":\"cover\",\"extension\":\".jpg\",\"remoteUrl\":\"https://example.invalid/album/ghosts-i-iv/cover.jpg\",\"url\":\"https://example.invalid/album/ghosts-i-iv/cover.jpg\"}],\"lastSearchTime\":\"2026-08-09T17:04:43Z\",\"links\":[],\"media\":[{\"mediumFormat\":\"CD\",\"mediumName\":\"\",\"mediumNumber\":1}],\"mediumCount\":1,\"monitored\":true,\"overview\":\"An open-licensed album from the demo library.\",\"profileId\":0,\"ratings\":{\"value\":10,\"votes\":1},\"releaseDate\":\"2008-02-01T00:00:00Z\",\"releases\":[{\"albumId\":4562,\"country\":[\"Poland\"],\"disambiguation\":\"\",\"duration\":3014000,\"foreignReleaseId\":\"fd545363-7109-63fb-af81-0ffa8840e01d\",\"format\":\"CD\",\"id\":14106,\"label\":[\"Demo Label 1\"],\"media\":[{\"mediumFormat\":\"CD\",\"mediumName\":\"\",\"mediumNumber\":1}],\"mediumCount\":1,\"monitored\":true,\"status\":\"Official\",\"title\":\"Ghosts I-IV\",\"trackCount\":15}],\"secondaryTypes\":[],\"statistics\":{\"percentOfTracks\":0,\"sizeOnDisk\":0,\"totalTrackCount\":15,\"trackCount\":15,\"trackFileCount\":0},\"title\":\"Ghosts I-IV\"}",
+    "client": "lidarr",
+    "count": 1,
+    "header_names": [
+      "Content-Length",
+      "Content-Type",
+      "X-Api-Key"
+    ],
+    "intercept_reason": "arr: only GET and signalr/negotiate are allow-listed",
+    "method": "PUT",
+    "operation": "setAlbumMonitored",
+    "path": "/api/v1/album/{id}",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "lidarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "setArtistMonitored",
+    "path": "/api/v1/artist/{id}",
+    "query_keys": []
+  },
+  {
+    "allowed": false,
+    "body": "{\"added\":\"2026-08-09T12:12:09Z\",\"artistName\":\"Nine Inch Nails\",\"artistType\":\"Person\",\"cleanName\":\"nineinchnails\",\"disambiguation\":\"\",\"discogsId\":202074,\"ended\":false,\"foreignArtistId\":\"a40f3fe3-9eeb-f345-f241-90f2bfd89716\",\"genres\":[],\"id\":56,\"images\":[],\"lastAlbum\":{\"albumType\":\"Album\",\"anyReleaseOk\":true,\"artist\":{\"added\":\"2026-08-09T12:12:09Z\",\"artistName\":\"Nine Inch Nails\",\"artistType\":\"Person\",\"cleanName\":\"nineinchnails\",\"disambiguation\":\"\",\"discogsId\":202074,\"ended\":false,\"foreignArtistId\":\"a40f3fe3-9eeb-f345-f241-90f2bfd89716\",\"genres\":[],\"id\":56,\"images\":[],\"lastAlbum\":null,\"links\":[{\"name\":\"discogs\",\"url\":\"https://example.invalid/links/nine-inch-nails/discogs\"},{\"name\":\"allmusic\",\"url\":\"https://example.invalid/links/nine-inch-nails/allmusic\"},{\"name\":\"link\",\"url\":\"https://example.invalid/links/nine-inch-nails/link\"},{\"name\":\"imdb\",\"url\":\"https://example.invalid/links/nine-inch-nails/imdb\"},{\"name\":\"wikidata\",\"url\":\"https://example.invalid/links/nine-inch-nails/wikidata\"}],\"metadataProfileId\":2,\"monitorNewItems\":\"all\",\"monitored\":true,\"nextAlbum\":null,\"path\":\"/data/media/music/Nine Inch Nails\",\"qualityProfileId\":1,\"ratings\":{\"value\":0,\"votes\":0},\"sortName\":\"nine inch nails\",\"status\":\"continuing\",\"tadbId\":572763,\"tags\":[]},\"artistId\":56,\"disambiguation\":\"\",\"duration\":3014000,\"foreignAlbumId\":\"8c33ed3e-aa92-3a49-6a8c-a97146bd3436\",\"genres\":[],\"id\":4562,\"images\":[{\"coverType\":\"cover\",\"extension\":\".jpg\",\"remoteUrl\":\"https://example.invalid/album/ghosts-i-iv/cover.jpg\"}],\"lastSearchTime\":\"2026-08-09T17:04:43Z\",\"links\":[],\"media\":[{\"mediumFormat\":\"CD\",\"mediumName\":\"\",\"mediumNumber\":1}],\"mediumCount\":1,\"monitored\":true,\"overview\":\"An open-licensed album from the demo library.\",\"profileId\":0,\"ratings\":{\"value\":10,\"votes\":1},\"releaseDate\":\"2008-02-01T00:00:00Z\",\"releases\":[{\"albumId\":4562,\"country\":[\"Poland\"],\"disambiguation\":\"\",\"duration\":3014000,\"foreignReleaseId\":\"fd545363-7109-63fb-af81-0ffa8840e01d\",\"format\":\"CD\",\"id\":14106,\"label\":[\"Demo Label 1\"],\"media\":[{\"mediumFormat\":\"CD\",\"mediumName\":\"\",\"mediumNumber\":1}],\"mediumCount\":1,\"monitored\":true,\"status\":\"Official\",\"title\":\"Ghosts I-IV\",\"trackCount\":15}],\"secondaryTypes\":[],\"title\":\"Ghosts I-IV\"},\"links\":[{\"name\":\"discogs\",\"url\":\"https://example.invalid/links/nine-inch-nails/discogs\"},{\"name\":\"allmusic\",\"url\":\"https://example.invalid/links/nine-inch-nails/allmusic\"},{\"name\":\"link\",\"url\":\"https://example.invalid/links/nine-inch-nails/link\"},{\"name\":\"imdb\",\"url\":\"https://example.invalid/links/nine-inch-nails/imdb\"},{\"name\":\"wikidata\",\"url\":\"https://example.invalid/links/nine-inch-nails/wikidata\"}],\"metadataProfileId\":2,\"monitorNewItems\":\"all\",\"monitored\":true,\"nextAlbum\":null,\"path\":\"/data/media/music/Nine Inch Nails\",\"qualityProfileId\":1,\"ratings\":{\"value\":0,\"votes\":0},\"rootFolderPath\":\"/data/media/music/\",\"sortName\":\"nine inch nails\",\"statistics\":{\"albumCount\":1,\"percentOfTracks\":0,\"sizeOnDisk\":0,\"totalTrackCount\":15,\"trackCount\":15,\"trackFileCount\":0},\"status\":\"continuing\",\"tadbId\":572763,\"tags\":[]}",
+    "client": "lidarr",
+    "count": 1,
+    "header_names": [
+      "Content-Length",
+      "Content-Type",
+      "X-Api-Key"
+    ],
+    "intercept_reason": "arr: only GET and signalr/negotiate are allow-listed",
+    "method": "PUT",
+    "operation": "setArtistMonitored",
+    "path": "/api/v1/artist/{id}",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "lidarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "testConnection",
+    "path": "/api/v1/system/status",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "lidarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "updateLibraryRecord",
+    "path": "/api/v1/artist/{id}",
+    "query_keys": []
+  },
+  {
+    "allowed": false,
+    "body": "{\"added\":\"2026-08-09T12:12:09Z\",\"artistName\":\"Nine Inch Nails\",\"artistType\":\"Person\",\"cleanName\":\"nineinchnails\",\"disambiguation\":\"\",\"discogsId\":202074,\"ended\":false,\"foreignArtistId\":\"a40f3fe3-9eeb-f345-f241-90f2bfd89716\",\"genres\":[],\"id\":56,\"images\":[],\"lastAlbum\":{\"albumType\":\"Album\",\"anyReleaseOk\":true,\"artist\":{\"added\":\"2026-08-09T12:12:09Z\",\"artistName\":\"Nine Inch Nails\",\"artistType\":\"Person\",\"cleanName\":\"nineinchnails\",\"disambiguation\":\"\",\"discogsId\":202074,\"ended\":false,\"foreignArtistId\":\"a40f3fe3-9eeb-f345-f241-90f2bfd89716\",\"genres\":[],\"id\":56,\"images\":[],\"lastAlbum\":null,\"links\":[{\"name\":\"discogs\",\"url\":\"https://example.invalid/links/nine-inch-nails/discogs\"},{\"name\":\"allmusic\",\"url\":\"https://example.invalid/links/nine-inch-nails/allmusic\"},{\"name\":\"link\",\"url\":\"https://example.invalid/links/nine-inch-nails/link\"},{\"name\":\"imdb\",\"url\":\"https://example.invalid/links/nine-inch-nails/imdb\"},{\"name\":\"wikidata\",\"url\":\"https://example.invalid/links/nine-inch-nails/wikidata\"}],\"metadataProfileId\":2,\"monitorNewItems\":\"all\",\"monitored\":true,\"nextAlbum\":null,\"path\":\"/data/media/music/Nine Inch Nails\",\"qualityProfileId\":1,\"ratings\":{\"value\":0,\"votes\":0},\"sortName\":\"nine inch nails\",\"status\":\"continuing\",\"tadbId\":572763,\"tags\":[]},\"artistId\":56,\"disambiguation\":\"\",\"duration\":3014000,\"foreignAlbumId\":\"8c33ed3e-aa92-3a49-6a8c-a97146bd3436\",\"genres\":[],\"id\":4562,\"images\":[{\"coverType\":\"cover\",\"extension\":\".jpg\",\"remoteUrl\":\"https://example.invalid/album/ghosts-i-iv/cover.jpg\"}],\"lastSearchTime\":\"2026-08-09T17:04:43Z\",\"links\":[],\"media\":[{\"mediumFormat\":\"CD\",\"mediumName\":\"\",\"mediumNumber\":1}],\"mediumCount\":1,\"monitored\":true,\"overview\":\"An open-licensed album from the demo library.\",\"profileId\":0,\"ratings\":{\"value\":10,\"votes\":1},\"releaseDate\":\"2008-02-01T00:00:00Z\",\"releases\":[{\"albumId\":4562,\"country\":[\"Poland\"],\"disambiguation\":\"\",\"duration\":3014000,\"foreignReleaseId\":\"fd545363-7109-63fb-af81-0ffa8840e01d\",\"format\":\"CD\",\"id\":14106,\"label\":[\"Demo Label 1\"],\"media\":[{\"mediumFormat\":\"CD\",\"mediumName\":\"\",\"mediumNumber\":1}],\"mediumCount\":1,\"monitored\":true,\"status\":\"Official\",\"title\":\"Ghosts I-IV\",\"trackCount\":15}],\"secondaryTypes\":[],\"title\":\"Ghosts I-IV\"},\"links\":[{\"name\":\"discogs\",\"url\":\"https://example.invalid/links/nine-inch-nails/discogs\"},{\"name\":\"allmusic\",\"url\":\"https://example.invalid/links/nine-inch-nails/allmusic\"},{\"name\":\"link\",\"url\":\"https://example.invalid/links/nine-inch-nails/link\"},{\"name\":\"imdb\",\"url\":\"https://example.invalid/links/nine-inch-nails/imdb\"},{\"name\":\"wikidata\",\"url\":\"https://example.invalid/links/nine-inch-nails/wikidata\"}],\"metadataProfileId\":2,\"monitorNewItems\":\"all\",\"monitored\":true,\"nextAlbum\":null,\"path\":\"/data/media/music/Nine Inch Nails\",\"qualityProfileId\":1,\"ratings\":{\"value\":0,\"votes\":0},\"rootFolderPath\":\"/data/media/music/\",\"sortName\":\"nine inch nails\",\"statistics\":{\"albumCount\":1,\"percentOfTracks\":0,\"sizeOnDisk\":0,\"totalTrackCount\":15,\"trackCount\":15,\"trackFileCount\":0},\"status\":\"continuing\",\"tadbId\":572763,\"tags\":[]}",
+    "client": "lidarr",
+    "count": 1,
+    "header_names": [
+      "Content-Length",
+      "Content-Type",
+      "X-Api-Key"
+    ],
+    "intercept_reason": "arr: only GET and signalr/negotiate are allow-listed",
+    "method": "PUT",
+    "operation": "updateLibraryRecord",
+    "path": "/api/v1/artist/{id}",
+    "query_keys": [
+      "moveFiles"
+    ]
+  },
+  {
+    "allowed": false,
+    "body": "{\"method\":\"append\",\"params\":[\"placeholder.nzb\",\"PG56Yi8+\",\"sonarr\",0,false,false,\"\",0,\"SCORE\",[]]}",
+    "client": "nzbget",
+    "count": 1,
+    "header_names": [
+      "Authorization",
+      "Content-Length",
+      "Content-Type"
+    ],
+    "intercept_reason": "host not a configured live service",
+    "method": "POST",
+    "operation": "addFile",
+    "path": "/jsonrpc",
+    "query_keys": []
+  },
+  {
+    "allowed": false,
+    "body": "{\"method\":\"editqueue\",\"params\":[\"GroupDelete\",\"\",[1]]}",
+    "client": "nzbget",
+    "count": 1,
+    "header_names": [
+      "Authorization",
+      "Content-Length",
+      "Content-Type"
+    ],
+    "intercept_reason": "host not a configured live service",
+    "method": "POST",
+    "operation": "delete",
+    "path": "/jsonrpc",
+    "query_keys": []
+  },
+  {
+    "allowed": false,
+    "body": "{\"method\":\"listgroups\",\"params\":[0]}",
+    "client": "nzbget",
+    "count": 1,
+    "header_names": [
+      "Authorization",
+      "Content-Length",
+      "Content-Type"
+    ],
+    "intercept_reason": "host not a configured live service",
+    "method": "POST",
+    "operation": "fetchProgress",
+    "path": "/jsonrpc",
+    "query_keys": []
+  },
+  {
+    "allowed": false,
+    "body": "{\"method\":\"editqueue\",\"params\":[\"GroupPause\",\"\",[1]]}",
+    "client": "nzbget",
+    "count": 1,
+    "header_names": [
+      "Authorization",
+      "Content-Length",
+      "Content-Type"
+    ],
+    "intercept_reason": "host not a configured live service",
+    "method": "POST",
+    "operation": "pause",
+    "path": "/jsonrpc",
+    "query_keys": []
+  },
+  {
+    "allowed": false,
+    "body": "{\"method\":\"editqueue\",\"params\":[\"GroupResume\",\"\",[1]]}",
+    "client": "nzbget",
+    "count": 1,
+    "header_names": [
+      "Authorization",
+      "Content-Length",
+      "Content-Type"
+    ],
+    "intercept_reason": "host not a configured live service",
+    "method": "POST",
+    "operation": "resume",
+    "path": "/jsonrpc",
+    "query_keys": []
+  },
+  {
+    "allowed": false,
+    "body": "{\"method\":\"version\",\"params\":[]}",
+    "client": "nzbget",
+    "count": 1,
+    "header_names": [
+      "Authorization",
+      "Content-Length",
+      "Content-Type"
+    ],
+    "intercept_reason": "host not a configured live service",
+    "method": "POST",
+    "operation": "testConnection",
+    "path": "/jsonrpc",
+    "query_keys": []
+  },
+  {
+    "allowed": false,
+    "client": "plex",
+    "count": 1,
+    "header_names": [
+      "Accept",
+      "X-Plex-Token"
+    ],
+    "intercept_reason": "plex: only GET is allow-listed",
+    "method": "PUT",
+    "operation": "emptyTrash",
+    "path": "/library/sections/{id}/emptyTrash",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "plex",
+    "count": 1,
+    "header_names": [
+      "Accept",
+      "X-Plex-Token"
+    ],
+    "method": "GET",
+    "operation": "libraries",
+    "path": "/library/sections",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "plex",
+    "count": 1,
+    "header_names": [
+      "Accept",
+      "X-Plex-Token"
+    ],
+    "method": "GET",
+    "operation": "libraryIndex",
+    "path": "/library/sections",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "plex",
+    "count": 2,
+    "header_names": [
+      "Accept",
+      "X-Plex-Token"
+    ],
+    "method": "GET",
+    "operation": "libraryIndex",
+    "path": "/library/sections/{id}/all",
+    "query_keys": [
+      "includeGuids"
+    ]
+  },
+  {
+    "allowed": true,
+    "client": "plex",
+    "count": 1,
+    "header_names": [
+      "Accept",
+      "X-Plex-Token"
+    ],
+    "method": "GET",
+    "operation": "nowPlaying",
+    "path": "/status/sessions",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "plex",
+    "count": 1,
+    "header_names": [
+      "Accept",
+      "X-Plex-Token"
+    ],
+    "method": "GET",
+    "operation": "recentlyWatched",
+    "path": "/status/sessions/history/all",
+    "query_keys": [
+      "X-Plex-Container-Size",
+      "X-Plex-Container-Start",
+      "sort"
+    ]
+  },
+  {
+    "allowed": false,
+    "client": "plex",
+    "count": 1,
+    "header_names": [
+      "Accept",
+      "X-Plex-Token"
+    ],
+    "intercept_reason": "plex: maintenance write",
+    "method": "GET",
+    "operation": "scanLibrary",
+    "path": "/library/sections/{id}/refresh",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "plex",
+    "count": 6,
+    "header_names": [
+      "Accept",
+      "X-Plex-Token"
+    ],
+    "method": "GET",
+    "operation": "seasonPosters",
+    "path": "/library/metadata/{id}/children",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "plex",
+    "count": 1,
+    "header_names": [
+      "Accept",
+      "X-Plex-Token"
+    ],
+    "method": "GET",
+    "operation": "testConnection",
+    "path": "/identity",
+    "query_keys": []
+  },
+  {
+    "allowed": false,
+    "body": "<multipart fields: category, paused, stopped, torrents, placeholder.torrent>",
+    "client": "qbittorrent",
+    "count": 1,
+    "header_names": [
+      "Content-Length",
+      "Content-Type",
+      "Referer"
+    ],
+    "intercept_reason": "qbittorrent: only GET reads are allow-listed",
+    "method": "POST",
+    "operation": "addFile",
+    "path": "/api/v2/torrents/add",
+    "query_keys": []
+  },
+  {
+    "allowed": false,
+    "body": "<multipart fields: category, paused, stopped, urls>",
+    "client": "qbittorrent",
+    "count": 1,
+    "header_names": [
+      "Content-Length",
+      "Content-Type",
+      "Referer"
+    ],
+    "intercept_reason": "qbittorrent: only GET reads are allow-listed",
+    "method": "POST",
+    "operation": "addMagnet",
+    "path": "/api/v2/torrents/add",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "qbittorrent",
+    "count": 1,
+    "header_names": [
+      "Referer"
+    ],
+    "method": "GET",
+    "operation": "contains",
+    "path": "/api/v2/torrents/info",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "qbittorrent",
+    "count": 1,
+    "header_names": [
+      "Referer"
+    ],
+    "method": "GET",
+    "operation": "defaultAddPaused",
+    "path": "/api/v2/app/preferences",
+    "query_keys": []
+  },
+  {
+    "allowed": false,
+    "body": "deleteFiles=false&hashes=0000000000000000000000000000000000000000",
+    "client": "qbittorrent",
+    "count": 1,
+    "header_names": [
+      "Content-Length",
+      "Content-Type",
+      "Referer"
+    ],
+    "intercept_reason": "qbittorrent: only GET reads are allow-listed",
+    "method": "POST",
+    "operation": "delete",
+    "path": "/api/v2/torrents/delete",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "qbittorrent",
+    "count": 1,
+    "header_names": [
+      "Referer"
+    ],
+    "method": "GET",
+    "operation": "fetchProgress",
+    "path": "/api/v2/torrents/info",
+    "query_keys": []
+  },
+  {
+    "allowed": false,
+    "body": "hashes=0000000000000000000000000000000000000000&value=true",
+    "client": "qbittorrent",
+    "count": 1,
+    "header_names": [
+      "Content-Length",
+      "Content-Type",
+      "Referer"
+    ],
+    "intercept_reason": "qbittorrent: only GET reads are allow-listed",
+    "method": "POST",
+    "operation": "forceStart",
+    "path": "/api/v2/torrents/setForceStart",
+    "query_keys": []
+  },
+  {
+    "allowed": false,
+    "body": "hashes=0000000000000000000000000000000000000000",
+    "client": "qbittorrent",
+    "count": 1,
+    "header_names": [
+      "Content-Length",
+      "Content-Type",
+      "Referer"
+    ],
+    "intercept_reason": "qbittorrent: only GET reads are allow-listed",
+    "method": "POST",
+    "operation": "pause",
+    "path": "/api/v2/torrents/stop",
+    "query_keys": []
+  },
+  {
+    "allowed": false,
+    "body": "hashes=0000000000000000000000000000000000000000",
+    "client": "qbittorrent",
+    "count": 1,
+    "header_names": [
+      "Content-Length",
+      "Content-Type",
+      "Referer"
+    ],
+    "intercept_reason": "qbittorrent: only GET reads are allow-listed",
+    "method": "POST",
+    "operation": "resume",
+    "path": "/api/v2/torrents/start",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "qbittorrent",
+    "count": 1,
+    "header_names": [
+      "Referer"
+    ],
+    "method": "GET",
+    "operation": "testConnection",
+    "path": "/api/v2/app/version",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "radarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "alternateTitleMap",
+    "path": "/api/v3/alttitle",
+    "query_keys": []
+  },
+  {
+    "allowed": false,
+    "client": "radarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "intercept_reason": "arr: only GET and signalr/negotiate are allow-listed",
+    "method": "DELETE",
+    "operation": "deleteLibraryRecord",
+    "path": "/api/v3/movie/{id}",
+    "query_keys": [
+      "addImportExclusion",
+      "addImportListExclusion",
+      "deleteFiles"
+    ]
+  },
+  {
+    "allowed": false,
+    "client": "radarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "intercept_reason": "arr: only GET and signalr/negotiate are allow-listed",
+    "method": "DELETE",
+    "operation": "deleteQueueItem",
+    "path": "/api/v3/queue/{id}",
+    "query_keys": [
+      "blocklist",
+      "removeFromClient"
+    ]
+  },
+  {
+    "allowed": true,
+    "client": "radarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "fetchAllMovies",
+    "path": "/api/v3/movie",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "radarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "fetchCalendar",
+    "path": "/api/v3/calendar",
+    "query_keys": [
+      "end",
+      "start",
+      "unmonitored"
+    ]
+  },
+  {
+    "allowed": true,
+    "client": "radarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "fetchCredits",
+    "path": "/api/v3/credit",
+    "query_keys": [
+      "movieId"
+    ]
+  },
+  {
+    "allowed": true,
+    "client": "radarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "fetchCustomFormats",
+    "path": "/api/v3/customformat",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "radarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "fetchDiskSpace",
+    "path": "/api/v3/diskspace",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "radarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "fetchDownloadClients",
+    "path": "/api/v3/downloadclient",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "radarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "fetchHealth",
+    "path": "/api/v3/health",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "radarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "fetchHistory",
+    "path": "/api/v3/history",
+    "query_keys": [
+      "includeMovie",
+      "page",
+      "pageSize",
+      "sortDirection",
+      "sortKey"
+    ]
+  },
+  {
+    "allowed": true,
+    "client": "radarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "fetchHistoryForMovie",
+    "path": "/api/v3/history",
+    "query_keys": [
+      "includeMovie",
+      "movieIds",
+      "page",
+      "pageSize",
+      "sortDirection",
+      "sortKey"
+    ]
+  },
+  {
+    "allowed": true,
+    "client": "radarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "fetchMovieDetails",
+    "path": "/api/v3/movie/{id}",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "radarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "fetchMovieFile",
+    "path": "/api/v3/moviefile",
+    "query_keys": [
+      "movieId"
+    ]
+  },
+  {
+    "allowed": true,
+    "client": "radarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "fetchQualityProfiles",
+    "path": "/api/v3/qualityprofile",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "radarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "fetchQueue",
+    "path": "/api/v3/moviefile",
+    "query_keys": [
+      "movieId",
+      "movieId",
+      "movieId",
+      "movieId"
+    ]
+  },
+  {
+    "allowed": true,
+    "client": "radarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "fetchQueue",
+    "path": "/api/v3/queue",
+    "query_keys": [
+      "includeUnknownMovieItems",
+      "pageSize"
+    ]
+  },
+  {
+    "allowed": false,
+    "client": "radarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "intercept_reason": "arr: /release not allow-listed",
+    "method": "GET",
+    "operation": "fetchReleases",
+    "path": "/api/v3/release",
+    "query_keys": [
+      "movieId"
+    ]
+  },
+  {
+    "allowed": false,
+    "body": "{}",
+    "client": "radarr",
+    "count": 1,
+    "header_names": [
+      "Content-Length",
+      "Content-Type",
+      "X-Api-Key"
+    ],
+    "intercept_reason": "arr: only GET and signalr/negotiate are allow-listed",
+    "method": "POST",
+    "operation": "grabQueueItem",
+    "path": "/api/v3/queue/grab/{id}",
+    "query_keys": []
+  },
+  {
+    "allowed": false,
+    "body": "{\"guid\":\"recording-placeholder\",\"indexerId\":999999999}",
+    "client": "radarr",
+    "count": 1,
+    "header_names": [
+      "Content-Length",
+      "Content-Type",
+      "X-Api-Key"
+    ],
+    "intercept_reason": "arr: only GET and signalr/negotiate are allow-listed",
+    "method": "POST",
+    "operation": "grabRelease",
+    "path": "/api/v3/release",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "radarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "isSearchRunning",
+    "path": "/api/v3/command",
+    "query_keys": []
+  },
+  {
+    "allowed": false,
+    "body": "{\"movieId\":1525,\"name\":\"RefreshMovie\"}",
+    "client": "radarr",
+    "count": 1,
+    "header_names": [
+      "Content-Length",
+      "Content-Type",
+      "X-Api-Key"
+    ],
+    "intercept_reason": "arr: only GET and signalr/negotiate are allow-listed",
+    "method": "POST",
+    "operation": "postCommand",
+    "path": "/api/v3/command",
+    "query_keys": []
+  },
+  {
+    "allowed": false,
+    "body": "{\"addOptions\":{\"searchForMovie\":false},\"monitor\":\"movieOnly\",\"monitored\":true,\"qualityProfileId\":1,\"rootFolderPath\":\"/data/radarr\",\"title\":\"Open Movie 59\",\"tmdbId\":460295}",
+    "client": "radarr",
+    "count": 1,
+    "header_names": [
+      "Content-Length",
+      "Content-Type",
+      "X-Api-Key"
+    ],
+    "intercept_reason": "arr: only GET and signalr/negotiate are allow-listed",
+    "method": "POST",
+    "operation": "search.addMovie",
+    "path": "/api/v3/movie",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "radarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "search.fetchLibraryOwnership",
+    "path": "/api/v3/movie",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "radarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "search.fetchMetadataProfiles",
+    "path": "/api/v3/metadataprofile",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "radarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "search.fetchQualityProfiles",
+    "path": "/api/v3/qualityprofile",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "radarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "search.fetchRootFolders",
+    "path": "/api/v3/rootfolder",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "radarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "search.lookup",
+    "path": "/api/v3/movie/lookup",
+    "query_keys": [
+      "term"
+    ]
+  },
+  {
+    "allowed": false,
+    "body": "{\"movieIds\":[1525],\"name\":\"MoviesSearch\"}",
+    "client": "radarr",
+    "count": 1,
+    "header_names": [
+      "Content-Length",
+      "Content-Type",
+      "X-Api-Key"
+    ],
+    "intercept_reason": "arr: only GET and signalr/negotiate are allow-listed",
+    "method": "POST",
+    "operation": "searchMovie",
+    "path": "/api/v3/command",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "radarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "setMovieMonitored",
+    "path": "/api/v3/movie/{id}",
+    "query_keys": []
+  },
+  {
+    "allowed": false,
+    "body": "{\"added\":\"2021-06-22T19:56:47Z\",\"alternateTitles\":[{\"id\":39909,\"movieMetadataId\":1507,\"sourceType\":\"tmdb\",\"title\":\"Open Movie 27 (Alt 1)\"},{\"id\":29428,\"movieMetadataId\":1507,\"sourceType\":\"tmdb\",\"title\":\"Open Movie 27 (Alt 2)\"},{\"id\":32619,\"movieMetadataId\":1507,\"sourceType\":\"tmdb\",\"title\":\"Open Movie 27 (Alt 3)\"},{\"id\":14263,\"movieMetadataId\":1507,\"sourceType\":\"tmdb\",\"title\":\"Open Movie 27 (Alt 4)\"},{\"id\":14262,\"movieMetadataId\":1507,\"sourceType\":\"tmdb\",\"title\":\"Open Movie 27 (Alt 5)\"}],\"certification\":\"R\",\"cleanTitle\":\"openmovie27\",\"digitalRelease\":\"2002-08-07T00:00:00Z\",\"folderName\":\"/data/media/movies/Open Movie 27 (1989) {tmdb-341981}\",\"genres\":[\"Action\",\"Crime\",\"Drama\",\"Thriller\"],\"hasFile\":true,\"id\":1525,\"images\":[{\"coverType\":\"poster\",\"remoteUrl\":\"https://example.invalid/movie/open-movie-27/poster.jpg\",\"url\":\"https://example.invalid/movie/open-movie-27/poster.jpg\"},{\"coverType\":\"fanart\",\"remoteUrl\":\"https://example.invalid/movie/open-movie-27/fanart.jpg\",\"url\":\"https://example.invalid/movie/open-movie-27/fanart.jpg\"}],\"imdbId\":\"tt9241542\",\"inCinemas\":\"1989-08-04T00:00:00Z\",\"isAvailable\":true,\"keywords\":[\"car mechanic\",\"jail guard\",\"prison\",\"prison warden\",\"self sacrifice\"],\"minimumAvailability\":\"inCinemas\",\"monitored\":true,\"movieFile\":{\"dateAdded\":\"2025-12-27T17:05:00Z\",\"edition\":\"\",\"id\":10825,\"indexerFlags\":0,\"languages\":[{\"id\":1,\"name\":\"English\"}],\"mediaInfo\":{\"audioBitrate\":3981662,\"audioChannels\":5.1,\"audioCodec\":\"DTS-HD MA\",\"audioLanguages\":\"eng\",\"audioStreamCount\":1,\"resolution\":\"3840x2160\",\"runTime\":\"1:48:41\",\"scanType\":\"Progressive\",\"subtitles\":\"eng/spa/rum\",\"videoBitDepth\":10,\"videoBitrate\":70762776,\"videoCodec\":\"h265\",\"videoDynamicRange\":\"HDR\",\"videoDynamicRangeType\":\"DV HDR10\",\"videoFps\":24},\"movieId\":1525,\"path\":\"/data/media/movies/Open Movie 27 (1989) {tmdb-341981}/Open.Movie.27-DEMO.mkv\",\"quality\":{\"quality\":{\"id\":31,\"modifier\":\"remux\",\"name\":\"Remux-2160p\",\"resolution\":2160,\"source\":\"bluray\"},\"revision\":{\"isRepack\":false,\"real\":0,\"version\":1}},\"qualityCutoffNotMet\":false,\"relativePath\":\"Open.Movie.27-DEMO.mkv\",\"releaseGroup\":\"DEMO\",\"size\":60966287154},\"movieFileId\":10825,\"originalLanguage\":{\"id\":1,\"name\":\"English\"},\"originalTitle\":\"Open Movie 27\",\"overview\":\"An open-licensed short film from the demo library.\",\"path\":\"/data/media/movies/Open Movie 27 (1989) {tmdb-341981}\",\"physicalRelease\":\"1991-06-25T00:00:00Z\",\"popularity\":7.087,\"qualityProfileId\":18,\"ratings\":{\"imdb\":{\"type\":\"user\",\"value\":6.4,\"votes\":48864},\"metacritic\":{\"type\":\"user\",\"value\":52,\"votes\":0},\"rottenTomatoes\":{\"type\":\"user\",\"value\":31,\"votes\":0},\"tmdb\":{\"type\":\"user\",\"value\":6.801,\"votes\":1364},\"trakt\":{\"type\":\"user\",\"value\":6.78819,\"votes\":1355}},\"releaseDate\":\"1989-08-04T00:00:00Z\",\"rootFolderPath\":\"/data/media/movies\",\"runtime\":109,\"secondaryYearSourceId\":0,\"sizeOnDisk\":60966287154,\"sortTitle\":\"open movie 27\",\"statistics\":{\"movieFileCount\":1,\"releaseGroups\":[\"DEMO\"],\"sizeOnDisk\":60966287154},\"status\":\"released\",\"studio\":\"Open Studio 7\",\"tags\":[6],\"title\":\"Open Movie 27\",\"titleSlug\":\"open-movie-27-341981\",\"tmdbId\":341981,\"website\":\"\",\"year\":1989,\"youTubeTrailerId\":\"\"}",
+    "client": "radarr",
+    "count": 1,
+    "header_names": [
+      "Content-Length",
+      "Content-Type",
+      "X-Api-Key"
+    ],
+    "intercept_reason": "arr: only GET and signalr/negotiate are allow-listed",
+    "method": "PUT",
+    "operation": "setMovieMonitored",
+    "path": "/api/v3/movie/{id}",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "radarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "testConnection",
+    "path": "/api/v3/system/status",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "radarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "updateLibraryRecord",
+    "path": "/api/v3/movie/{id}",
+    "query_keys": []
+  },
+  {
+    "allowed": false,
+    "body": "{\"added\":\"2021-06-22T19:56:47Z\",\"alternateTitles\":[{\"id\":39909,\"movieMetadataId\":1507,\"sourceType\":\"tmdb\",\"title\":\"Open Movie 27 (Alt 1)\"},{\"id\":29428,\"movieMetadataId\":1507,\"sourceType\":\"tmdb\",\"title\":\"Open Movie 27 (Alt 2)\"},{\"id\":32619,\"movieMetadataId\":1507,\"sourceType\":\"tmdb\",\"title\":\"Open Movie 27 (Alt 3)\"},{\"id\":14263,\"movieMetadataId\":1507,\"sourceType\":\"tmdb\",\"title\":\"Open Movie 27 (Alt 4)\"},{\"id\":14262,\"movieMetadataId\":1507,\"sourceType\":\"tmdb\",\"title\":\"Open Movie 27 (Alt 5)\"}],\"certification\":\"R\",\"cleanTitle\":\"openmovie27\",\"digitalRelease\":\"2002-08-07T00:00:00Z\",\"folderName\":\"/data/media/movies/Open Movie 27 (1989) {tmdb-341981}\",\"genres\":[\"Action\",\"Crime\",\"Drama\",\"Thriller\"],\"hasFile\":true,\"id\":1525,\"images\":[{\"coverType\":\"poster\",\"remoteUrl\":\"https://example.invalid/movie/open-movie-27/poster.jpg\",\"url\":\"https://example.invalid/movie/open-movie-27/poster.jpg\"},{\"coverType\":\"fanart\",\"remoteUrl\":\"https://example.invalid/movie/open-movie-27/fanart.jpg\",\"url\":\"https://example.invalid/movie/open-movie-27/fanart.jpg\"}],\"imdbId\":\"tt9241542\",\"inCinemas\":\"1989-08-04T00:00:00Z\",\"isAvailable\":true,\"keywords\":[\"car mechanic\",\"jail guard\",\"prison\",\"prison warden\",\"self sacrifice\"],\"minimumAvailability\":\"inCinemas\",\"monitored\":true,\"movieFile\":{\"dateAdded\":\"2025-12-27T17:05:00Z\",\"edition\":\"\",\"id\":10825,\"indexerFlags\":0,\"languages\":[{\"id\":1,\"name\":\"English\"}],\"mediaInfo\":{\"audioBitrate\":3981662,\"audioChannels\":5.1,\"audioCodec\":\"DTS-HD MA\",\"audioLanguages\":\"eng\",\"audioStreamCount\":1,\"resolution\":\"3840x2160\",\"runTime\":\"1:48:41\",\"scanType\":\"Progressive\",\"subtitles\":\"eng/spa/rum\",\"videoBitDepth\":10,\"videoBitrate\":70762776,\"videoCodec\":\"h265\",\"videoDynamicRange\":\"HDR\",\"videoDynamicRangeType\":\"DV HDR10\",\"videoFps\":24},\"movieId\":1525,\"path\":\"/data/media/movies/Open Movie 27 (1989) {tmdb-341981}/Open.Movie.27-DEMO.mkv\",\"quality\":{\"quality\":{\"id\":31,\"modifier\":\"remux\",\"name\":\"Remux-2160p\",\"resolution\":2160,\"source\":\"bluray\"},\"revision\":{\"isRepack\":false,\"real\":0,\"version\":1}},\"qualityCutoffNotMet\":false,\"relativePath\":\"Open.Movie.27-DEMO.mkv\",\"releaseGroup\":\"DEMO\",\"size\":60966287154},\"movieFileId\":10825,\"originalLanguage\":{\"id\":1,\"name\":\"English\"},\"originalTitle\":\"Open Movie 27\",\"overview\":\"An open-licensed short film from the demo library.\",\"path\":\"/data/media/movies/Open Movie 27 (1989) {tmdb-341981}\",\"physicalRelease\":\"1991-06-25T00:00:00Z\",\"popularity\":7.087,\"qualityProfileId\":1,\"ratings\":{\"imdb\":{\"type\":\"user\",\"value\":6.4,\"votes\":48864},\"metacritic\":{\"type\":\"user\",\"value\":52,\"votes\":0},\"rottenTomatoes\":{\"type\":\"user\",\"value\":31,\"votes\":0},\"tmdb\":{\"type\":\"user\",\"value\":6.801,\"votes\":1364},\"trakt\":{\"type\":\"user\",\"value\":6.78819,\"votes\":1355}},\"releaseDate\":\"1989-08-04T00:00:00Z\",\"rootFolderPath\":\"/data/media/movies\",\"runtime\":109,\"secondaryYearSourceId\":0,\"sizeOnDisk\":60966287154,\"sortTitle\":\"open movie 27\",\"statistics\":{\"movieFileCount\":1,\"releaseGroups\":[\"DEMO\"],\"sizeOnDisk\":60966287154},\"status\":\"released\",\"studio\":\"Open Studio 7\",\"tags\":[6],\"title\":\"Open Movie 27\",\"titleSlug\":\"open-movie-27-341981\",\"tmdbId\":341981,\"website\":\"\",\"year\":1989,\"youTubeTrailerId\":\"\"}",
+    "client": "radarr",
+    "count": 1,
+    "header_names": [
+      "Content-Length",
+      "Content-Type",
+      "X-Api-Key"
+    ],
+    "intercept_reason": "arr: only GET and signalr/negotiate are allow-listed",
+    "method": "PUT",
+    "operation": "updateLibraryRecord",
+    "path": "/api/v3/movie/{id}",
+    "query_keys": [
+      "moveFiles"
+    ]
+  },
+  {
+    "allowed": false,
+    "body": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><methodCall><methodName>load.start</methodName><params><param><value><string></string></value></param><param><value><string>magnet:?xt=urn:btih:0000000000000000000000000000000000000000&amp;dn=Recording+Placeholder</string></value></param></params></methodCall>",
+    "client": "rtorrent",
+    "count": 1,
+    "header_names": [
+      "Content-Length",
+      "Content-Type"
+    ],
+    "intercept_reason": "host not a configured live service",
+    "method": "POST",
+    "operation": "addMagnet",
+    "path": "/RPC2",
+    "query_keys": []
+  },
+  {
+    "allowed": false,
+    "body": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><methodCall><methodName>d.erase</methodName><params><param><value><string>0000000000000000000000000000000000000000</string></value></param></params></methodCall>",
+    "client": "rtorrent",
+    "count": 1,
+    "header_names": [
+      "Content-Length",
+      "Content-Type"
+    ],
+    "intercept_reason": "host not a configured live service",
+    "method": "POST",
+    "operation": "delete",
+    "path": "/RPC2",
+    "query_keys": []
+  },
+  {
+    "allowed": false,
+    "body": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><methodCall><methodName>d.multicall2</methodName><params><param><value><string></string></value></param><param><value><string>main</string></value></param><param><value><string>d.hash=</string></value></param><param><value><string>d.completed_bytes=</string></value></param><param><value><string>d.size_bytes=</string></value></param><param><value><string>d.down.rate=</string></value></param></params></methodCall>",
+    "client": "rtorrent",
+    "count": 1,
+    "header_names": [
+      "Content-Length",
+      "Content-Type"
+    ],
+    "intercept_reason": "host not a configured live service",
+    "method": "POST",
+    "operation": "fetchProgress",
+    "path": "/RPC2",
+    "query_keys": []
+  },
+  {
+    "allowed": false,
+    "body": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><methodCall><methodName>d.stop</methodName><params><param><value><string>0000000000000000000000000000000000000000</string></value></param></params></methodCall>",
+    "client": "rtorrent",
+    "count": 1,
+    "header_names": [
+      "Content-Length",
+      "Content-Type"
+    ],
+    "intercept_reason": "host not a configured live service",
+    "method": "POST",
+    "operation": "pause",
+    "path": "/RPC2",
+    "query_keys": []
+  },
+  {
+    "allowed": false,
+    "body": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><methodCall><methodName>d.start</methodName><params><param><value><string>0000000000000000000000000000000000000000</string></value></param></params></methodCall>",
+    "client": "rtorrent",
+    "count": 1,
+    "header_names": [
+      "Content-Length",
+      "Content-Type"
+    ],
+    "intercept_reason": "host not a configured live service",
+    "method": "POST",
+    "operation": "resume",
+    "path": "/RPC2",
+    "query_keys": []
+  },
+  {
+    "allowed": false,
+    "body": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><methodCall><methodName>system.client_version</methodName><params></params></methodCall>",
+    "client": "rtorrent",
+    "count": 1,
+    "header_names": [
+      "Content-Length",
+      "Content-Type"
+    ],
+    "intercept_reason": "host not a configured live service",
+    "method": "POST",
+    "operation": "testConnection",
+    "path": "/RPC2",
+    "query_keys": []
+  },
+  {
+    "allowed": false,
+    "body": "<multipart fields: cat, nzbfile, placeholder.nzb>",
+    "client": "sabnzbd",
+    "count": 1,
+    "header_names": [
+      "Content-Length",
+      "Content-Type"
+    ],
+    "intercept_reason": "sabnzbd: only GET is allow-listed",
+    "method": "POST",
+    "operation": "addFile",
+    "path": "/api",
+    "query_keys": [
+      "apikey",
+      "mode",
+      "output"
+    ]
+  },
+  {
+    "allowed": true,
+    "client": "sabnzbd",
+    "count": 1,
+    "header_names": [],
+    "method": "GET",
+    "operation": "contains",
+    "path": "/api",
+    "query_keys": [
+      "apikey",
+      "mode",
+      "output"
+    ]
+  },
+  {
+    "allowed": false,
+    "client": "sabnzbd",
+    "count": 1,
+    "header_names": [],
+    "intercept_reason": "sabnzbd: mode=queue&name=delete is an action",
+    "method": "GET",
+    "operation": "delete",
+    "path": "/api",
+    "query_keys": [
+      "apikey",
+      "mode",
+      "name",
+      "output",
+      "value"
+    ]
+  },
+  {
+    "allowed": true,
+    "client": "sabnzbd",
+    "count": 1,
+    "header_names": [],
+    "method": "GET",
+    "operation": "fetchProgress",
+    "path": "/api",
+    "query_keys": [
+      "apikey",
+      "mode",
+      "output"
+    ]
+  },
+  {
+    "allowed": true,
+    "client": "sabnzbd",
+    "count": 1,
+    "header_names": [],
+    "method": "GET",
+    "operation": "history",
+    "path": "/api",
+    "query_keys": [
+      "apikey",
+      "limit",
+      "mode",
+      "output"
+    ]
+  },
+  {
+    "allowed": false,
+    "client": "sabnzbd",
+    "count": 1,
+    "header_names": [],
+    "intercept_reason": "sabnzbd: mode=queue&name=pause is an action",
+    "method": "GET",
+    "operation": "pause",
+    "path": "/api",
+    "query_keys": [
+      "apikey",
+      "mode",
+      "name",
+      "output",
+      "value"
+    ]
+  },
+  {
+    "allowed": false,
+    "client": "sabnzbd",
+    "count": 1,
+    "header_names": [],
+    "intercept_reason": "sabnzbd: mode=queue&name=resume is an action",
+    "method": "GET",
+    "operation": "resume",
+    "path": "/api",
+    "query_keys": [
+      "apikey",
+      "mode",
+      "name",
+      "output",
+      "value"
+    ]
+  },
+  {
+    "allowed": true,
+    "client": "sabnzbd",
+    "count": 1,
+    "header_names": [],
+    "method": "GET",
+    "operation": "testConnection",
+    "path": "/api",
+    "query_keys": [
+      "apikey",
+      "mode",
+      "output"
+    ]
+  },
+  {
+    "allowed": false,
+    "client": "sonarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "intercept_reason": "arr: only GET and signalr/negotiate are allow-listed",
+    "method": "DELETE",
+    "operation": "deleteLibraryRecord",
+    "path": "/api/v3/series/{id}",
+    "query_keys": [
+      "addImportExclusion",
+      "addImportListExclusion",
+      "deleteFiles"
+    ]
+  },
+  {
+    "allowed": false,
+    "client": "sonarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "intercept_reason": "arr: only GET and signalr/negotiate are allow-listed",
+    "method": "DELETE",
+    "operation": "deleteQueueItem",
+    "path": "/api/v3/queue/{id}",
+    "query_keys": [
+      "blocklist",
+      "removeFromClient"
+    ]
+  },
+  {
+    "allowed": true,
+    "client": "sonarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "fetchAllSeries",
+    "path": "/api/v3/series",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "sonarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "fetchCalendar",
+    "path": "/api/v3/calendar",
+    "query_keys": [
+      "end",
+      "includeSeries",
+      "start",
+      "unmonitored"
+    ]
+  },
+  {
+    "allowed": true,
+    "client": "sonarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "fetchCustomFormats",
+    "path": "/api/v3/customformat",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "sonarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "fetchDiskSpace",
+    "path": "/api/v3/diskspace",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "sonarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "fetchDownloadClients",
+    "path": "/api/v3/downloadclient",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "sonarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "fetchEpisodeFileMap",
+    "path": "/api/v3/episodefile",
+    "query_keys": [
+      "seriesId"
+    ]
+  },
+  {
+    "allowed": true,
+    "client": "sonarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "fetchEpisodes",
+    "path": "/api/v3/episode",
+    "query_keys": [
+      "seriesId"
+    ]
+  },
+  {
+    "allowed": true,
+    "client": "sonarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "fetchHealth",
+    "path": "/api/v3/health",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "sonarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "fetchHistory",
+    "path": "/api/v3/history",
+    "query_keys": [
+      "includeEpisode",
+      "includeSeries",
+      "page",
+      "pageSize",
+      "sortDirection",
+      "sortKey"
+    ]
+  },
+  {
+    "allowed": true,
+    "client": "sonarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "fetchHistoryForSeries",
+    "path": "/api/v3/history",
+    "query_keys": [
+      "includeEpisode",
+      "includeSeries",
+      "page",
+      "pageSize",
+      "seriesIds",
+      "sortDirection",
+      "sortKey"
+    ]
+  },
+  {
+    "allowed": true,
+    "client": "sonarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "fetchQualityProfiles",
+    "path": "/api/v3/qualityprofile",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "sonarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "fetchQueue",
+    "path": "/api/v3/episodefile",
+    "query_keys": [
+      "seriesId"
+    ]
+  },
+  {
+    "allowed": true,
+    "client": "sonarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "fetchQueue",
+    "path": "/api/v3/queue",
+    "query_keys": [
+      "includeEpisode",
+      "pageSize"
+    ]
+  },
+  {
+    "allowed": false,
+    "client": "sonarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "intercept_reason": "arr: /release not allow-listed",
+    "method": "GET",
+    "operation": "fetchReleases",
+    "path": "/api/v3/release",
+    "query_keys": [
+      "episodeId"
+    ]
+  },
+  {
+    "allowed": true,
+    "client": "sonarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "fetchSeriesDetails",
+    "path": "/api/v3/series/{id}",
+    "query_keys": []
+  },
+  {
+    "allowed": false,
+    "body": "{}",
+    "client": "sonarr",
+    "count": 1,
+    "header_names": [
+      "Content-Length",
+      "Content-Type",
+      "X-Api-Key"
+    ],
+    "intercept_reason": "arr: only GET and signalr/negotiate are allow-listed",
+    "method": "POST",
+    "operation": "grabQueueItem",
+    "path": "/api/v3/queue/grab/{id}",
+    "query_keys": []
+  },
+  {
+    "allowed": false,
+    "body": "{\"guid\":\"recording-placeholder\",\"indexerId\":999999999}",
+    "client": "sonarr",
+    "count": 1,
+    "header_names": [
+      "Content-Length",
+      "Content-Type",
+      "X-Api-Key"
+    ],
+    "intercept_reason": "arr: only GET and signalr/negotiate are allow-listed",
+    "method": "POST",
+    "operation": "grabRelease",
+    "path": "/api/v3/release",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "sonarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "isSearchRunning",
+    "path": "/api/v3/command",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "sonarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "POST",
+    "operation": "realtime.negotiate",
+    "path": "/signalr/messages/negotiate",
+    "query_keys": [
+      "negotiateVersion"
+    ]
+  },
+  {
+    "allowed": false,
+    "body": "{\"addOptions\":{\"monitor\":\"all\",\"searchForMissingEpisodes\":false},\"monitored\":true,\"qualityProfileId\":1,\"rootFolderPath\":\"/data/sonarr\",\"seasonFolder\":true,\"seriesType\":\"standard\",\"title\":\"Open Series 33\",\"tvdbId\":811183}",
+    "client": "sonarr",
+    "count": 1,
+    "header_names": [
+      "Content-Length",
+      "Content-Type",
+      "X-Api-Key"
+    ],
+    "intercept_reason": "arr: only GET and signalr/negotiate are allow-listed",
+    "method": "POST",
+    "operation": "search.addSeries",
+    "path": "/api/v3/series",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "sonarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "search.fetchLibraryOwnership",
+    "path": "/api/v3/series",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "sonarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "search.fetchMetadataProfiles",
+    "path": "/api/v3/metadataprofile",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "sonarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "search.fetchQualityProfiles",
+    "path": "/api/v3/qualityprofile",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "sonarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "search.fetchRootFolders",
+    "path": "/api/v3/rootfolder",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "sonarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "search.lookup",
+    "path": "/api/v3/series/lookup",
+    "query_keys": [
+      "term"
+    ]
+  },
+  {
+    "allowed": false,
+    "body": "{\"episodeIds\":[8637],\"name\":\"EpisodeSearch\"}",
+    "client": "sonarr",
+    "count": 1,
+    "header_names": [
+      "Content-Length",
+      "Content-Type",
+      "X-Api-Key"
+    ],
+    "intercept_reason": "arr: only GET and signalr/negotiate are allow-listed",
+    "method": "POST",
+    "operation": "searchEpisodes",
+    "path": "/api/v3/command",
+    "query_keys": []
+  },
+  {
+    "allowed": false,
+    "body": "{\"name\":\"SeasonSearch\",\"seasonNumber\":1,\"seriesId\":101}",
+    "client": "sonarr",
+    "count": 1,
+    "header_names": [
+      "Content-Length",
+      "Content-Type",
+      "X-Api-Key"
+    ],
+    "intercept_reason": "arr: only GET and signalr/negotiate are allow-listed",
+    "method": "POST",
+    "operation": "searchSeason",
+    "path": "/api/v3/command",
+    "query_keys": []
+  },
+  {
+    "allowed": false,
+    "body": "{\"name\":\"SeriesSearch\",\"seriesId\":101}",
+    "client": "sonarr",
+    "count": 1,
+    "header_names": [
+      "Content-Length",
+      "Content-Type",
+      "X-Api-Key"
+    ],
+    "intercept_reason": "arr: only GET and signalr/negotiate are allow-listed",
+    "method": "POST",
+    "operation": "searchSeries",
+    "path": "/api/v3/command",
+    "query_keys": []
+  },
+  {
+    "allowed": false,
+    "body": "{\"episodeIds\":[8637],\"monitored\":true}",
+    "client": "sonarr",
+    "count": 1,
+    "header_names": [
+      "Content-Length",
+      "Content-Type",
+      "X-Api-Key"
+    ],
+    "intercept_reason": "arr: only GET and signalr/negotiate are allow-listed",
+    "method": "PUT",
+    "operation": "setEpisodesMonitored",
+    "path": "/api/v3/episode/monitor",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "sonarr",
+    "count": 2,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "setSeasonMonitored",
+    "path": "/api/v3/series/{id}",
+    "query_keys": []
+  },
+  {
+    "allowed": false,
+    "body": "{\"added\":\"2023-01-02T14:32:14Z\",\"airTime\":\"22:00\",\"alternateTitles\":[],\"certification\":\"TV-MA\",\"cleanTitle\":\"openseries5\",\"ended\":true,\"firstAired\":\"2016-02-02T00:00:00Z\",\"genres\":[\"Crime\",\"Drama\"],\"id\":101,\"images\":[{\"coverType\":\"banner\",\"remoteUrl\":\"https://example.invalid/series/open-series-5/banner.jpg\",\"url\":\"https://example.invalid/series/open-series-5/banner.jpg\"},{\"coverType\":\"poster\",\"remoteUrl\":\"https://example.invalid/series/open-series-5/poster.jpg\",\"url\":\"https://example.invalid/series/open-series-5/poster.jpg\"},{\"coverType\":\"fanart\",\"remoteUrl\":\"https://example.invalid/series/open-series-5/fanart.jpg\",\"url\":\"https://example.invalid/series/open-series-5/fanart.jpg\"},{\"coverType\":\"clearlogo\",\"remoteUrl\":\"https://example.invalid/series/open-series-5/clearlogo.jpg\",\"url\":\"https://example.invalid/series/open-series-5/clearlogo.jpg\"}],\"imdbId\":\"tt7836192\",\"languageProfileId\":1,\"lastAired\":\"2021-11-09T00:00:00Z\",\"monitorNewItems\":\"all\",\"monitored\":true,\"network\":\"Open Studio 21\",\"originalLanguage\":{\"id\":1,\"name\":\"English\"},\"overview\":\"An open-licensed series from the demo library.\",\"path\":\"/data/media/tv/Open Series 6\",\"previousAiring\":\"2021-11-10T03:00:00Z\",\"qualityProfileId\":13,\"ratings\":{\"value\":8.4,\"votes\":102984},\"rootFolderPath\":\"/data/media/tv\",\"runtime\":56,\"seasonFolder\":true,\"seasons\":[{\"monitored\":false,\"seasonNumber\":1,\"statistics\":{\"episodeCount\":10,\"episodeFileCount\":10,\"percentOfEpisodes\":100,\"previousAiring\":\"2016-04-06T02:00:00Z\",\"releaseGroups\":[\"DEMO\"],\"sizeOnDisk\":40105941301,\"totalEpisodeCount\":10}},{\"monitored\":true,\"seasonNumber\":2,\"statistics\":{\"episodeCount\":9,\"episodeFileCount\":9,\"percentOfEpisodes\":100,\"previousAiring\":\"2018-03-22T02:00:00Z\",\"releaseGroups\":[\"DEMO\",\"DEMO\"],\"sizeOnDisk\":41198260739,\"totalEpisodeCount\":9}},{\"monitored\":true,\"seasonNumber\":3,\"statistics\":{\"episodeCount\":10,\"episodeFileCount\":10,\"percentOfEpisodes\":100,\"previousAiring\":\"2021-11-10T03:00:00Z\",\"releaseGroups\":[\"DEMO\"],\"sizeOnDisk\":33675037631,\"totalEpisodeCount\":10}}],\"seriesType\":\"standard\",\"sortTitle\":\"open series 5\",\"statistics\":{\"episodeCount\":29,\"episodeFileCount\":29,\"percentOfEpisodes\":100,\"releaseGroups\":[\"DEMO\",\"DEMO\",\"DEMO\"],\"seasonCount\":3,\"sizeOnDisk\":114979239671,\"totalEpisodeCount\":29},\"status\":\"ended\",\"tags\":[],\"title\":\"Open Series 5\",\"titleSlug\":\"open-series-5-203349\",\"tmdbId\":203349,\"tvMazeId\":224229,\"tvRageId\":670847,\"tvdbId\":911809,\"useSceneNumbering\":false,\"year\":2016}",
+    "client": "sonarr",
+    "count": 2,
+    "header_names": [
+      "Content-Length",
+      "Content-Type",
+      "X-Api-Key"
+    ],
+    "intercept_reason": "arr: only GET and signalr/negotiate are allow-listed",
+    "method": "PUT",
+    "operation": "setSeasonMonitored",
+    "path": "/api/v3/series/{id}",
+    "query_keys": []
+  },
+  {
+    "allowed": false,
+    "body": "{\"monitored\":true,\"seasonNumber\":1}",
+    "client": "sonarr",
+    "count": 1,
+    "header_names": [
+      "Content-Length",
+      "Content-Type",
+      "X-Api-Key"
+    ],
+    "intercept_reason": "arr: only GET and signalr/negotiate are allow-listed",
+    "method": "PUT",
+    "operation": "setSeasonMonitored",
+    "path": "/api/v5/series/{id}/season",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "sonarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "setSeriesMonitored",
+    "path": "/api/v3/series/{id}",
+    "query_keys": []
+  },
+  {
+    "allowed": false,
+    "body": "{\"added\":\"2023-01-02T14:32:14Z\",\"airTime\":\"22:00\",\"alternateTitles\":[],\"certification\":\"TV-MA\",\"cleanTitle\":\"openseries5\",\"ended\":true,\"firstAired\":\"2016-02-02T00:00:00Z\",\"genres\":[\"Crime\",\"Drama\"],\"id\":101,\"images\":[{\"coverType\":\"banner\",\"remoteUrl\":\"https://example.invalid/series/open-series-5/banner.jpg\",\"url\":\"https://example.invalid/series/open-series-5/banner.jpg\"},{\"coverType\":\"poster\",\"remoteUrl\":\"https://example.invalid/series/open-series-5/poster.jpg\",\"url\":\"https://example.invalid/series/open-series-5/poster.jpg\"},{\"coverType\":\"fanart\",\"remoteUrl\":\"https://example.invalid/series/open-series-5/fanart.jpg\",\"url\":\"https://example.invalid/series/open-series-5/fanart.jpg\"},{\"coverType\":\"clearlogo\",\"remoteUrl\":\"https://example.invalid/series/open-series-5/clearlogo.jpg\",\"url\":\"https://example.invalid/series/open-series-5/clearlogo.jpg\"}],\"imdbId\":\"tt7836192\",\"languageProfileId\":1,\"lastAired\":\"2021-11-09T00:00:00Z\",\"monitorNewItems\":\"all\",\"monitored\":true,\"network\":\"Open Studio 21\",\"originalLanguage\":{\"id\":1,\"name\":\"English\"},\"overview\":\"An open-licensed series from the demo library.\",\"path\":\"/data/media/tv/Open Series 6\",\"previousAiring\":\"2021-11-10T03:00:00Z\",\"qualityProfileId\":13,\"ratings\":{\"value\":8.4,\"votes\":102984},\"rootFolderPath\":\"/data/media/tv\",\"runtime\":56,\"seasonFolder\":true,\"seasons\":[{\"monitored\":true,\"seasonNumber\":1,\"statistics\":{\"episodeCount\":10,\"episodeFileCount\":10,\"percentOfEpisodes\":100,\"previousAiring\":\"2016-04-06T02:00:00Z\",\"releaseGroups\":[\"DEMO\"],\"sizeOnDisk\":40105941301,\"totalEpisodeCount\":10}},{\"monitored\":true,\"seasonNumber\":2,\"statistics\":{\"episodeCount\":9,\"episodeFileCount\":9,\"percentOfEpisodes\":100,\"previousAiring\":\"2018-03-22T02:00:00Z\",\"releaseGroups\":[\"DEMO\",\"DEMO\"],\"sizeOnDisk\":41198260739,\"totalEpisodeCount\":9}},{\"monitored\":true,\"seasonNumber\":3,\"statistics\":{\"episodeCount\":10,\"episodeFileCount\":10,\"percentOfEpisodes\":100,\"previousAiring\":\"2021-11-10T03:00:00Z\",\"releaseGroups\":[\"DEMO\"],\"sizeOnDisk\":33675037631,\"totalEpisodeCount\":10}}],\"seriesType\":\"standard\",\"sortTitle\":\"open series 5\",\"statistics\":{\"episodeCount\":29,\"episodeFileCount\":29,\"percentOfEpisodes\":100,\"releaseGroups\":[\"DEMO\",\"DEMO\",\"DEMO\"],\"seasonCount\":3,\"sizeOnDisk\":114979239671,\"totalEpisodeCount\":29},\"status\":\"ended\",\"tags\":[],\"title\":\"Open Series 5\",\"titleSlug\":\"open-series-5-203349\",\"tmdbId\":203349,\"tvMazeId\":224229,\"tvRageId\":670847,\"tvdbId\":911809,\"useSceneNumbering\":false,\"year\":2016}",
+    "client": "sonarr",
+    "count": 1,
+    "header_names": [
+      "Content-Length",
+      "Content-Type",
+      "X-Api-Key"
+    ],
+    "intercept_reason": "arr: only GET and signalr/negotiate are allow-listed",
+    "method": "PUT",
+    "operation": "setSeriesMonitored",
+    "path": "/api/v3/series/{id}",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "sonarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "testConnection",
+    "path": "/api/v3/system/status",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "sonarr",
+    "count": 1,
+    "header_names": [
+      "X-Api-Key"
+    ],
+    "method": "GET",
+    "operation": "updateLibraryRecord",
+    "path": "/api/v3/series/{id}",
+    "query_keys": []
+  },
+  {
+    "allowed": false,
+    "body": "{\"added\":\"2023-01-02T14:32:14Z\",\"airTime\":\"22:00\",\"alternateTitles\":[],\"certification\":\"TV-MA\",\"cleanTitle\":\"openseries5\",\"ended\":true,\"firstAired\":\"2016-02-02T00:00:00Z\",\"genres\":[\"Crime\",\"Drama\"],\"id\":101,\"images\":[{\"coverType\":\"banner\",\"remoteUrl\":\"https://example.invalid/series/open-series-5/banner.jpg\",\"url\":\"https://example.invalid/series/open-series-5/banner.jpg\"},{\"coverType\":\"poster\",\"remoteUrl\":\"https://example.invalid/series/open-series-5/poster.jpg\",\"url\":\"https://example.invalid/series/open-series-5/poster.jpg\"},{\"coverType\":\"fanart\",\"remoteUrl\":\"https://example.invalid/series/open-series-5/fanart.jpg\",\"url\":\"https://example.invalid/series/open-series-5/fanart.jpg\"},{\"coverType\":\"clearlogo\",\"remoteUrl\":\"https://example.invalid/series/open-series-5/clearlogo.jpg\",\"url\":\"https://example.invalid/series/open-series-5/clearlogo.jpg\"}],\"imdbId\":\"tt7836192\",\"languageProfileId\":1,\"lastAired\":\"2021-11-09T00:00:00Z\",\"monitorNewItems\":\"all\",\"monitored\":true,\"network\":\"Open Studio 21\",\"originalLanguage\":{\"id\":1,\"name\":\"English\"},\"overview\":\"An open-licensed series from the demo library.\",\"path\":\"/data/media/tv/Open Series 6\",\"previousAiring\":\"2021-11-10T03:00:00Z\",\"qualityProfileId\":13,\"ratings\":{\"value\":8.4,\"votes\":102984},\"rootFolderPath\":\"/data/media/tv\",\"runtime\":56,\"seasonFolder\":true,\"seasons\":[{\"monitored\":true,\"seasonNumber\":1,\"statistics\":{\"episodeCount\":10,\"episodeFileCount\":10,\"percentOfEpisodes\":100,\"previousAiring\":\"2016-04-06T02:00:00Z\",\"releaseGroups\":[\"DEMO\"],\"sizeOnDisk\":40105941301,\"totalEpisodeCount\":10}},{\"monitored\":true,\"seasonNumber\":2,\"statistics\":{\"episodeCount\":9,\"episodeFileCount\":9,\"percentOfEpisodes\":100,\"previousAiring\":\"2018-03-22T02:00:00Z\",\"releaseGroups\":[\"DEMO\",\"DEMO\"],\"sizeOnDisk\":41198260739,\"totalEpisodeCount\":9}},{\"monitored\":true,\"seasonNumber\":3,\"statistics\":{\"episodeCount\":10,\"episodeFileCount\":10,\"percentOfEpisodes\":100,\"previousAiring\":\"2021-11-10T03:00:00Z\",\"releaseGroups\":[\"DEMO\"],\"sizeOnDisk\":33675037631,\"totalEpisodeCount\":10}}],\"seriesType\":\"standard\",\"sortTitle\":\"open series 5\",\"statistics\":{\"episodeCount\":29,\"episodeFileCount\":29,\"percentOfEpisodes\":100,\"releaseGroups\":[\"DEMO\",\"DEMO\",\"DEMO\"],\"seasonCount\":3,\"sizeOnDisk\":114979239671,\"totalEpisodeCount\":29},\"status\":\"ended\",\"tags\":[],\"title\":\"Open Series 5\",\"titleSlug\":\"open-series-5-203349\",\"tmdbId\":203349,\"tvMazeId\":224229,\"tvRageId\":670847,\"tvdbId\":911809,\"useSceneNumbering\":false,\"year\":2016}",
+    "client": "sonarr",
+    "count": 1,
+    "header_names": [
+      "Content-Length",
+      "Content-Type",
+      "X-Api-Key"
+    ],
+    "intercept_reason": "arr: only GET and signalr/negotiate are allow-listed",
+    "method": "PUT",
+    "operation": "updateLibraryRecord",
+    "path": "/api/v3/series/{id}",
+    "query_keys": [
+      "moveFiles"
+    ]
+  },
+  {
+    "allowed": true,
+    "client": "tmdb",
+    "count": 1,
+    "header_names": [
+      "Authorization"
+    ],
+    "method": "GET",
+    "operation": "discoverMovies",
+    "path": "/3/discover/movie",
+    "query_keys": [
+      "include_adult",
+      "sort_by",
+      "vote_count.gte"
+    ]
+  },
+  {
+    "allowed": true,
+    "client": "tmdb",
+    "count": 1,
+    "header_names": [
+      "Authorization"
+    ],
+    "method": "GET",
+    "operation": "discoverTV",
+    "path": "/3/discover/tv",
+    "query_keys": [
+      "include_adult",
+      "sort_by",
+      "vote_count.gte"
+    ]
+  },
+  {
+    "allowed": true,
+    "client": "tmdb",
+    "count": 1,
+    "header_names": [
+      "Authorization"
+    ],
+    "method": "GET",
+    "operation": "movieCountries",
+    "path": "/3/movie/{id}",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "tmdb",
+    "count": 1,
+    "header_names": [
+      "Authorization"
+    ],
+    "method": "GET",
+    "operation": "movieCredits",
+    "path": "/3/movie/{id}/credits",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "tmdb",
+    "count": 1,
+    "header_names": [
+      "Authorization"
+    ],
+    "method": "GET",
+    "operation": "movieVideos",
+    "path": "/3/movie/{id}/videos",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "tmdb",
+    "count": 1,
+    "header_names": [
+      "Authorization"
+    ],
+    "method": "GET",
+    "operation": "personDetails",
+    "path": "/3/person/{id}",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "tmdb",
+    "count": 1,
+    "header_names": [
+      "Authorization"
+    ],
+    "method": "GET",
+    "operation": "personMovieCredits",
+    "path": "/3/person/{id}/movie_credits",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "tmdb",
+    "count": 1,
+    "header_names": [
+      "Authorization"
+    ],
+    "method": "GET",
+    "operation": "personTVCredits",
+    "path": "/3/person/{id}/tv_credits",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "tmdb",
+    "count": 1,
+    "header_names": [
+      "Authorization"
+    ],
+    "method": "GET",
+    "operation": "recommendedMovies",
+    "path": "/3/movie/{id}/recommendations",
+    "query_keys": [
+      "page"
+    ]
+  },
+  {
+    "allowed": true,
+    "client": "tmdb",
+    "count": 1,
+    "header_names": [
+      "Authorization"
+    ],
+    "method": "GET",
+    "operation": "recommendedTV",
+    "path": "/3/tv/{id}/recommendations",
+    "query_keys": [
+      "page"
+    ]
+  },
+  {
+    "allowed": true,
+    "client": "tmdb",
+    "count": 1,
+    "header_names": [
+      "Authorization"
+    ],
+    "method": "GET",
+    "operation": "searchPerson",
+    "path": "/3/search/person",
+    "query_keys": [
+      "query"
+    ]
+  },
+  {
+    "allowed": true,
+    "client": "tmdb",
+    "count": 1,
+    "header_names": [
+      "Authorization"
+    ],
+    "method": "GET",
+    "operation": "similarMovies",
+    "path": "/3/movie/{id}/similar",
+    "query_keys": [
+      "page"
+    ]
+  },
+  {
+    "allowed": true,
+    "client": "tmdb",
+    "count": 1,
+    "header_names": [
+      "Authorization"
+    ],
+    "method": "GET",
+    "operation": "similarTV",
+    "path": "/3/tv/{id}/similar",
+    "query_keys": [
+      "page"
+    ]
+  },
+  {
+    "allowed": true,
+    "client": "tmdb",
+    "count": 1,
+    "header_names": [
+      "Authorization"
+    ],
+    "method": "GET",
+    "operation": "testConnection",
+    "path": "/3/configuration",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "tmdb",
+    "count": 1,
+    "header_names": [
+      "Authorization"
+    ],
+    "method": "GET",
+    "operation": "tvCountries",
+    "path": "/3/tv/{id}",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "tmdb",
+    "count": 1,
+    "header_names": [
+      "Authorization"
+    ],
+    "method": "GET",
+    "operation": "tvCreators",
+    "path": "/3/tv/{id}",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "tmdb",
+    "count": 1,
+    "header_names": [
+      "Authorization"
+    ],
+    "method": "GET",
+    "operation": "tvCredits",
+    "path": "/3/tv/{id}/aggregate_credits",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "tmdb",
+    "count": 1,
+    "header_names": [
+      "Authorization"
+    ],
+    "method": "GET",
+    "operation": "tvIdFromTVDB",
+    "path": "/3/find/{id}",
+    "query_keys": [
+      "external_source"
+    ]
+  },
+  {
+    "allowed": true,
+    "client": "tmdb",
+    "count": 1,
+    "header_names": [
+      "Authorization"
+    ],
+    "method": "GET",
+    "operation": "tvVideos",
+    "path": "/3/tv/{id}/videos",
+    "query_keys": []
+  },
+  {
+    "allowed": true,
+    "client": "tmdb",
+    "count": 1,
+    "header_names": [
+      "Authorization"
+    ],
+    "method": "GET",
+    "operation": "tvdbIdFromTVId",
+    "path": "/3/tv/{id}/external_ids",
+    "query_keys": []
+  },
+  {
+    "allowed": false,
+    "body": "{\"arguments\":{\"filename\":\"Open.Movie.133-DEMO\",\"paused\":false},\"method\":\"torrent-add\"}",
+    "client": "transmission",
+    "count": 1,
+    "header_names": [
+      "Content-Length",
+      "Content-Type"
+    ],
+    "intercept_reason": "host not a configured live service",
+    "method": "POST",
+    "operation": "addMagnet",
+    "path": "/transmission/rpc",
+    "query_keys": []
+  },
+  {
+    "allowed": false,
+    "body": "{\"arguments\":{\"delete-local-data\":false,\"ids\":[\"0000000000000000000000000000000000000000\"]},\"method\":\"torrent-remove\"}",
+    "client": "transmission",
+    "count": 1,
+    "header_names": [
+      "Content-Length",
+      "Content-Type"
+    ],
+    "intercept_reason": "host not a configured live service",
+    "method": "POST",
+    "operation": "delete",
+    "path": "/transmission/rpc",
+    "query_keys": []
+  },
+  {
+    "allowed": false,
+    "body": "{\"arguments\":{\"fields\":[\"hashString\",\"percentDone\",\"rateDownload\"],\"ids\":[\"0000000000000000000000000000000000000000\"]},\"method\":\"torrent-get\"}",
+    "client": "transmission",
+    "count": 1,
+    "header_names": [
+      "Content-Length",
+      "Content-Type"
+    ],
+    "intercept_reason": "host not a configured live service",
+    "method": "POST",
+    "operation": "fetchProgress",
+    "path": "/transmission/rpc",
+    "query_keys": []
+  },
+  {
+    "allowed": false,
+    "body": "{\"arguments\":{\"ids\":[\"0000000000000000000000000000000000000000\"]},\"method\":\"torrent-stop\"}",
+    "client": "transmission",
+    "count": 1,
+    "header_names": [
+      "Content-Length",
+      "Content-Type"
+    ],
+    "intercept_reason": "host not a configured live service",
+    "method": "POST",
+    "operation": "pause",
+    "path": "/transmission/rpc",
+    "query_keys": []
+  },
+  {
+    "allowed": false,
+    "body": "{\"arguments\":{\"ids\":[\"0000000000000000000000000000000000000000\"]},\"method\":\"torrent-start\"}",
+    "client": "transmission",
+    "count": 1,
+    "header_names": [
+      "Content-Length",
+      "Content-Type"
+    ],
+    "intercept_reason": "host not a configured live service",
+    "method": "POST",
+    "operation": "resume",
+    "path": "/transmission/rpc",
+    "query_keys": []
+  },
+  {
+    "allowed": false,
+    "body": "{\"arguments\":{\"fields\":[\"version\"]},\"method\":\"session-get\"}",
+    "client": "transmission",
+    "count": 1,
+    "header_names": [
+      "Content-Length",
+      "Content-Type"
+    ],
+    "intercept_reason": "host not a configured live service",
+    "method": "POST",
+    "operation": "testConnection",
+    "path": "/transmission/rpc",
+    "query_keys": []
+  }
+]

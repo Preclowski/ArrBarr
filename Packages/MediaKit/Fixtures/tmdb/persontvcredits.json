@@ -1,0 +1,270 @@
+{
+  "cast": [
+    {
+      "adult": false,
+      "backdrop_path": "/open-series-51-backdrop.jpg",
+      "character": "Character 22",
+      "credit_id": "525333fb19c295794002c720",
+      "episode_count": 1,
+      "first_air_date": "1985-09-24",
+      "first_credit_air_date": "1987-11-10",
+      "genre_ids": [
+        35
+      ],
+      "id": 54,
+      "name": "Open Series 51",
+      "origin_country": [
+        "US"
+      ],
+      "original_language": "en",
+      "original_name": "Open Series 51",
+      "overview": "An open-licensed series from the demo library.",
+      "popularity": 13.9142,
+      "poster_path": "/open-series-51-poster.jpg",
+      "softcore": false,
+      "vote_average": 6.489,
+      "vote_count": 177
+    },
+    {
+      "adult": false,
+      "backdrop_path": "/open-series-52-backdrop.jpg",
+      "character": "Character 23",
+      "credit_id": "525704eb760ee3776a008abe",
+      "episode_count": 1,
+      "first_air_date": "1987-09-29",
+      "first_credit_air_date": "1989-10-03",
+      "genre_ids": [
+        18
+      ],
+      "id": 1448,
+      "name": "Open Series 52",
+      "origin_country": [
+        "US"
+      ],
+      "original_language": "en",
+      "original_name": "Open Series 52",
+      "overview": "An open-licensed series from the demo library.",
+      "popularity": 16.7651,
+      "poster_path": "/open-series-52-poster.jpg",
+      "softcore": false,
+      "vote_average": 6.273,
+      "vote_count": 33
+    },
+    {
+      "adult": false,
+      "backdrop_path": "/open-series-53-backdrop.jpg",
+      "character": "Character 24",
+      "credit_id": "52570765760ee3776a03124d",
+      "episode_count": 1,
+      "first_air_date": "1987-04-12",
+      "first_credit_air_date": "1988-05-01",
+      "genre_ids": [
+        80,
+        9648,
+        18
+      ],
+      "id": 1486,
+      "name": "Open Series 53",
+      "origin_country": [
+        "US"
+      ],
+      "original_language": "en",
+      "original_name": "Open Series 53",
+      "overview": "An open-licensed series from the demo library.",
+      "popularity": 42.9997,
+      "poster_path": "/open-series-53-poster.jpg",
+      "softcore": false,
+      "vote_average": 7.268,
+      "vote_count": 205
+    },
+    {
+      "adult": false,
+      "backdrop_path": "/open-series-54-backdrop.jpg",
+      "character": "Character 25",
+      "credit_id": "5257157c760ee3776a132ba8",
+      "episode_count": 2,
+      "first_air_date": "2000-04-12",
+      "first_credit_air_date": "2002-02-10",
+      "genre_ids": [
+        35
+      ],
+      "id": 1795,
+      "name": "Open Series 54",
+      "origin_country": [
+        "US"
+      ],
+      "original_language": "en",
+      "original_name": "Open Series 54",
+      "overview": "An open-licensed series from the demo library.",
+      "popularity": 29.4502,
+      "poster_path": "/open-series-54-poster.jpg",
+      "softcore": false,
+      "vote_average": 6.752,
+      "vote_count": 312
+    },
+    {
+      "adult": false,
+      "backdrop_path": "/open-series-55-backdrop.jpg",
+      "character": "Character 25",
+      "credit_id": "52572b4e760ee3776a2d9c26",
+      "episode_count": 1,
+      "first_air_date": "1996-07-22",
+      "first_credit_air_date": "2012-02-01",
+      "genre_ids": [
+        10763,
+        35
+      ],
+      "id": 2224,
+      "name": "Open Series 55",
+      "origin_country": [
+        "US"
+      ],
+      "original_language": "en",
+      "original_name": "Open Series 55",
+      "overview": "An open-licensed series from the demo library.",
+      "popularity": 231.1704,
+      "poster_path": "/open-series-55-poster.jpg",
+      "softcore": false,
+      "vote_average": 6.4,
+      "vote_count": 658
+    }
+  ],
+  "crew": [
+    {
+      "adult": false,
+      "backdrop_path": "/open-series-56-backdrop.jpg",
+      "credit_id": "58cf92ae9251415a7d0339c3",
+      "department": "Production",
+      "episode_count": 16,
+      "first_air_date": "2016-12-16",
+      "first_credit_air_date": "2016-12-16",
+      "genre_ids": [
+        10765,
+        9648,
+        18
+      ],
+      "id": 69061,
+      "job": "Executive Producer",
+      "name": "Open Series 56",
+      "origin_country": [
+        "US"
+      ],
+      "original_language": "en",
+      "original_name": "Open Series 56",
+      "overview": "An open-licensed series from the demo library.",
+      "popularity": 19.0289,
+      "poster_path": "/open-series-56-poster.jpg",
+      "softcore": false,
+      "vote_average": 7.539,
+      "vote_count": 1452
+    },
+    {
+      "adult": false,
+      "backdrop_path": "/open-series-57-backdrop.jpg",
+      "credit_id": "58d06d6e9251415a240011dc",
+      "department": "Production",
+      "episode_count": 8,
+      "first_air_date": "2017-03-05",
+      "first_credit_air_date": "2017-03-05",
+      "genre_ids": [
+        18
+      ],
+      "id": 69851,
+      "job": "Executive Producer",
+      "name": "Open Series 57",
+      "origin_country": [
+        "US"
+      ],
+      "original_language": "en",
+      "original_name": "Open Series 57",
+      "overview": "An open-licensed series from the demo library.",
+      "popularity": 9.7644,
+      "poster_path": "/open-series-57-poster.jpg",
+      "softcore": false,
+      "vote_average": 7.6,
+      "vote_count": 260
+    },
+    {
+      "adult": false,
+      "backdrop_path": "/open-series-58-backdrop.jpg",
+      "credit_id": "5a45e03a9251411fab090cc0",
+      "department": "Production",
+      "episode_count": 1,
+      "first_air_date": "",
+      "first_credit_air_date": null,
+      "genre_ids": [
+        18
+      ],
+      "id": 6860,
+      "job": "Executive Producer",
+      "name": "Open Series 58",
+      "origin_country": [
+        "US"
+      ],
+      "original_language": "en",
+      "original_name": "Open Series 58",
+      "overview": "An open-licensed series from the demo library.",
+      "popularity": 2.5645,
+      "poster_path": "/open-series-58-poster.jpg",
+      "softcore": false,
+      "vote_average": 3.4,
+      "vote_count": 5
+    },
+    {
+      "adult": false,
+      "backdrop_path": "/open-series-59-backdrop.jpg",
+      "credit_id": "5b177cc9c3a3687412008e66",
+      "department": "Production",
+      "episode_count": 10,
+      "first_air_date": "2021-05-13",
+      "first_credit_air_date": "2021-05-13",
+      "genre_ids": [
+        18,
+        10765
+      ],
+      "id": 80039,
+      "job": "Executive Producer",
+      "name": "Open Series 59",
+      "origin_country": [
+        "US"
+      ],
+      "original_language": "en",
+      "original_name": "Open Series 59",
+      "overview": "An open-licensed series from the demo library.",
+      "popularity": 6.907,
+      "poster_path": "/open-series-59-poster.jpg",
+      "softcore": false,
+      "vote_average": 7.212,
+      "vote_count": 153
+    },
+    {
+      "adult": false,
+      "backdrop_path": "/open-series-60-backdrop.jpg",
+      "credit_id": "5f604e5e156cc70038e2836c",
+      "department": "Production",
+      "episode_count": 6,
+      "first_air_date": "2020-09-14",
+      "first_credit_air_date": "2020-09-14",
+      "genre_ids": [
+        9648,
+        18,
+        10765
+      ],
+      "id": 90259,
+      "job": "Executive Producer",
+      "name": "Open Series 60",
+      "origin_country": [
+        "US"
+      ],
+      "original_language": "en",
+      "original_name": "Open Series 60",
+      "overview": "An open-licensed series from the demo library.",
+      "popularity": 7.9505,
+      "poster_path": "/open-series-60-poster.jpg",
+      "softcore": false,
+      "vote_average": 6.479,
+      "vote_count": 236
+    }
+  ],
+  "id": 287
+}

@@ -1,0 +1,32 @@
+{
+  "headers": {
+    "Age": "1630",
+    "Alt-Svc": "h3=\":443\"; ma=86400",
+    "Cache-Control": "public, max-age=9179",
+    "Content-Encoding": "gzip",
+    "Content-Type": "application/json;charset=utf-8",
+    "Date": "Tue, 15 Sep 2026 00:03:02 GMT",
+    "Etag": "W/\"5cb3d51ef34adf208a363ec4fc193f0598341d0e01166e7d12f4e71947cafa6e\"",
+    "Server": "openresty",
+    "Vary": "accept-encoding, Origin",
+    "Via": "1.1 ca4bc82573be586920ccabe8e2946522.cloudfront.net (CloudFront)",
+    "x-amz-cf-id": "TqEA201bCjfLE4b4zCneEnu7GQqeWdHde8xE4iQPX8e-TivNr3iD1Q==",
+    "x-amz-cf-pop": "WAW51-P1",
+    "x-az": "us-east-1c",
+    "x-cache": "Hit from cloudfront",
+    "x-gateway-cache-status": "MISS",
+    "x-memc": "HIT",
+    "x-memc-age": "12549",
+    "x-memc-expires": "9179",
+    "x-memc-key": "c5f6c26dea9a5717d07709f006a69a7e",
+    "x-task-id": "db5a529ce11a4c688c4279d4b86a2a3d"
+  },
+  "operation": "searchPerson",
+  "original_array_count": {
+    "results": 20
+  },
+  "recorded_at": "2026-09-15",
+  "request_path": "/3/search/person",
+  "status": 200,
+  "truncated": true
+}

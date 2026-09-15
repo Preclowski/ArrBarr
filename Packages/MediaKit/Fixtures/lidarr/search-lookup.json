@@ -1,0 +1,443 @@
+[
+  {
+    "added": "0001-01-01T00:00:00Z",
+    "artistName": "Open Artist 8",
+    "artistType": "Group",
+    "disambiguation": "",
+    "discogsId": 387493,
+    "ended": false,
+    "folder": "Open Artist 8",
+    "foreignArtistId": "66d59c76-b47a-a20a-615e-da27596f785c",
+    "genres": [
+      "Alternative Rock",
+      "Art Rock",
+      "Rock",
+      "Experimental Rock",
+      "Electronic",
+      "Indie Rock",
+      "Art Pop",
+      "Post-Britpop",
+      "Electronica",
+      "Experimental",
+      "Idm",
+      "Chamber Pop",
+      "Indietronica",
+      "Post-Grunge",
+      "Britpop",
+      "Electronic Rock",
+      "Ambient Pop",
+      "Crossover Prog"
+    ],
+    "images": [
+      {
+        "coverType": "clearlogo",
+        "extension": ".png",
+        "remoteUrl": "https://example.invalid/album/open-artist-8/clearlogo.jpg",
+        "url": "https://example.invalid/album/open-artist-8/clearlogo.jpg"
+      },
+      {
+        "coverType": "fanart",
+        "extension": ".jpg",
+        "remoteUrl": "https://example.invalid/album/open-artist-8/fanart.jpg",
+        "url": "https://example.invalid/album/open-artist-8/fanart.jpg"
+      },
+      {
+        "coverType": "banner",
+        "extension": ".jpg",
+        "remoteUrl": "https://example.invalid/album/open-artist-8/banner.jpg",
+        "url": "https://example.invalid/album/open-artist-8/banner.jpg"
+      },
+      {
+        "coverType": "poster",
+        "extension": ".jpg",
+        "remoteUrl": "https://example.invalid/album/open-artist-8/poster.jpg",
+        "url": "https://example.invalid/album/open-artist-8/poster.jpg"
+      }
+    ],
+    "lastAlbum": null,
+    "links": [
+      {
+        "name": "Open Artist 8",
+        "url": "https://example.invalid/links/open-artist-8/open-artist-8"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/open-artist-8/link"
+      },
+      {
+        "name": "discogs",
+        "url": "https://example.invalid/links/open-artist-8/discogs"
+      },
+      {
+        "name": "myspace",
+        "url": "https://example.invalid/links/open-artist-8/myspace"
+      },
+      {
+        "name": "purevolume",
+        "url": "https://example.invalid/links/open-artist-8/purevolume"
+      },
+      {
+        "name": "imdb",
+        "url": "https://example.invalid/links/open-artist-8/imdb"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/open-artist-8/link"
+      },
+      {
+        "name": "allmusic",
+        "url": "https://example.invalid/links/open-artist-8/allmusic"
+      },
+      {
+        "name": "facebook",
+        "url": "https://example.invalid/links/open-artist-8/facebook"
+      },
+      {
+        "name": "soundcloud",
+        "url": "https://example.invalid/links/open-artist-8/soundcloud"
+      },
+      {
+        "name": "secondhandsongs",
+        "url": "https://example.invalid/links/open-artist-8/secondhandsongs"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/open-artist-8/link"
+      },
+      {
+        "name": "rateyourmusic",
+        "url": "https://example.invalid/links/open-artist-8/rateyourmusic"
+      },
+      {
+        "name": "twitter",
+        "url": "https://example.invalid/links/open-artist-8/twitter"
+      },
+      {
+        "name": "viaf",
+        "url": "https://example.invalid/links/open-artist-8/viaf"
+      },
+      {
+        "name": "wikidata",
+        "url": "https://example.invalid/links/open-artist-8/wikidata"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/open-artist-8/link"
+      },
+      {
+        "name": "spotify",
+        "url": "https://example.invalid/links/open-artist-8/spotify"
+      },
+      {
+        "name": "genius",
+        "url": "https://example.invalid/links/open-artist-8/genius"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/open-artist-8/link"
+      },
+      {
+        "name": "songkick",
+        "url": "https://example.invalid/links/open-artist-8/songkick"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/open-artist-8/link"
+      },
+      {
+        "name": "deezer",
+        "url": "https://example.invalid/links/open-artist-8/deezer"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/open-artist-8/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/open-artist-8/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/open-artist-8/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/open-artist-8/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/open-artist-8/link"
+      },
+      {
+        "name": "whosampled",
+        "url": "https://example.invalid/links/open-artist-8/whosampled"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/open-artist-8/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/open-artist-8/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/open-artist-8/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/open-artist-8/link"
+      },
+      {
+        "name": "instagram",
+        "url": "https://example.invalid/links/open-artist-8/instagram"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/open-artist-8/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/open-artist-8/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/open-artist-8/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/open-artist-8/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/open-artist-8/link"
+      },
+      {
+        "name": "vgmdb",
+        "url": "https://example.invalid/links/open-artist-8/vgmdb"
+      },
+      {
+        "name": "bandcamp",
+        "url": "https://example.invalid/links/open-artist-8/bandcamp"
+      },
+      {
+        "name": "tidal",
+        "url": "https://example.invalid/links/open-artist-8/tidal"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/open-artist-8/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/open-artist-8/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/open-artist-8/link"
+      },
+      {
+        "name": "youtube",
+        "url": "https://example.invalid/links/open-artist-8/youtube"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/open-artist-8/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/open-artist-8/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/open-artist-8/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/open-artist-8/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/open-artist-8/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/open-artist-8/link"
+      },
+      {
+        "name": "youtube",
+        "url": "https://example.invalid/links/open-artist-8/youtube"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/open-artist-8/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/open-artist-8/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/open-artist-8/link"
+      },
+      {
+        "name": "deezer",
+        "url": "https://example.invalid/links/open-artist-8/deezer"
+      }
+    ],
+    "metadataProfileId": 0,
+    "monitorNewItems": "all",
+    "monitored": false,
+    "nextAlbum": null,
+    "overview": "An open-licensed recording artist from the demo library.",
+    "qualityProfileId": 0,
+    "ratings": {
+      "value": 9,
+      "votes": 80
+    },
+    "remotePoster": "https://example.invalid/artist/open-artist-8/remoteposter.jpg",
+    "status": "continuing",
+    "tadbId": 154474,
+    "tags": []
+  },
+  {
+    "added": "0001-01-01T00:00:00Z",
+    "artistName": "Open Artist 11",
+    "disambiguation": "",
+    "discogsId": 54822,
+    "ended": false,
+    "folder": "Open Artist 11",
+    "foreignArtistId": "c7be7586-c98c-ba22-6e04-b515e5ae2daf",
+    "genres": [],
+    "images": [],
+    "lastAlbum": null,
+    "links": [
+      {
+        "name": "facebook",
+        "url": "https://example.invalid/links/open-artist-11/facebook"
+      }
+    ],
+    "metadataProfileId": 0,
+    "monitorNewItems": "all",
+    "monitored": false,
+    "nextAlbum": null,
+    "qualityProfileId": 0,
+    "ratings": {
+      "value": 0,
+      "votes": 0
+    },
+    "status": "continuing",
+    "tadbId": 820899,
+    "tags": []
+  },
+  {
+    "added": "0001-01-01T00:00:00Z",
+    "artistName": "Open Artist 12",
+    "disambiguation": "",
+    "discogsId": 358457,
+    "ended": false,
+    "folder": "Open Artist 12",
+    "foreignArtistId": "548cfa91-4824-5d7c-8a1e-70c1f4962d9a",
+    "genres": [],
+    "images": [],
+    "lastAlbum": null,
+    "links": [],
+    "metadataProfileId": 0,
+    "monitorNewItems": "all",
+    "monitored": false,
+    "nextAlbum": null,
+    "qualityProfileId": 0,
+    "ratings": {
+      "value": 0,
+      "votes": 0
+    },
+    "status": "continuing",
+    "tadbId": 950268,
+    "tags": []
+  },
+  {
+    "added": "0001-01-01T00:00:00Z",
+    "artistName": "Open Artist 13",
+    "disambiguation": "",
+    "discogsId": 350038,
+    "ended": false,
+    "folder": "Open Artist 13",
+    "foreignArtistId": "43417427-f78f-b307-7991-0ac295172596",
+    "genres": [],
+    "images": [],
+    "lastAlbum": null,
+    "links": [
+      {
+        "name": "spotify",
+        "url": "https://example.invalid/links/open-artist-13/spotify"
+      },
+      {
+        "name": "deezer",
+        "url": "https://example.invalid/links/open-artist-13/deezer"
+      },
+      {
+        "name": "tidal",
+        "url": "https://example.invalid/links/open-artist-13/tidal"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/open-artist-13/link"
+      },
+      {
+        "name": "link",
+        "url": "https://example.invalid/links/open-artist-13/link"
+      }
+    ],
+    "metadataProfileId": 0,
+    "monitorNewItems": "all",
+    "monitored": false,
+    "nextAlbum": null,
+    "qualityProfileId": 0,
+    "ratings": {
+      "value": 0,
+      "votes": 0
+    },
+    "status": "continuing",
+    "tadbId": 773764,
+    "tags": []
+  },
+  {
+    "added": "0001-01-01T00:00:00Z",
+    "artistName": "Open Artist 14",
+    "artistType": "Group",
+    "disambiguation": "",
+    "discogsId": 968377,
+    "ended": false,
+    "folder": "Open Artist 14",
+    "foreignArtistId": "2767ec1b-97b9-9da1-b462-b9f086d12722",
+    "genres": [],
+    "images": [],
+    "lastAlbum": null,
+    "links": [
+      {
+        "name": "facebook",
+        "url": "https://example.invalid/links/open-artist-14/facebook"
+      },
+      {
+        "name": "twitter",
+        "url": "https://example.invalid/links/open-artist-14/twitter"
+      },
+      {
+        "name": "instagram",
+        "url": "https://example.invalid/links/open-artist-14/instagram"
+      }
+    ],
+    "metadataProfileId": 0,
+    "monitorNewItems": "all",
+    "monitored": false,
+    "nextAlbum": null,
+    "qualityProfileId": 0,
+    "ratings": {
+      "value": 10,
+      "votes": 1
+    },
+    "status": "continuing",
+    "tadbId": 968358,
+    "tags": []
+  }
+]

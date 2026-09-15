@@ -1,0 +1,31 @@
+{
+  "headers": {
+    "Alt-Svc": "h3=\":443\"; ma=2592000",
+    "Cache-Control": "no-cache, no-store",
+    "Content-Encoding": "br",
+    "Content-Type": "application/json; charset=utf-8",
+    "Date": "Tue, 15 Sep 2026 00:30:07 GMT",
+    "Expires": "-1",
+    "Pragma": "no-cache",
+    "Server": "Kestrel",
+    "Vary": "Accept-Encoding",
+    "x-application-version": "3.1.4.5029"
+  },
+  "operation": "setArtistMonitored",
+  "original_array_count": {
+    "genres": 0,
+    "images": 0,
+    "lastAlbum.genres": 0,
+    "lastAlbum.images": 1,
+    "lastAlbum.links": 0,
+    "lastAlbum.media": 1,
+    "lastAlbum.releases": 1,
+    "lastAlbum.secondaryTypes": 0,
+    "links": 5,
+    "tags": 0
+  },
+  "recorded_at": "2026-09-15",
+  "request_path": "/api/v1/artist/{id}",
+  "status": 200,
+  "truncated": false
+}

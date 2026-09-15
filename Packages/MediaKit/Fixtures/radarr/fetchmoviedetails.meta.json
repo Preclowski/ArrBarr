@@ -1,0 +1,28 @@
+{
+  "headers": {
+    "Alt-Svc": "h3=\":443\"; ma=2592000",
+    "Cache-Control": "no-cache, no-store",
+    "Content-Encoding": "br",
+    "Content-Type": "application/json; charset=utf-8",
+    "Date": "Tue, 15 Sep 2026 00:30:06 GMT",
+    "Expires": "-1",
+    "Pragma": "no-cache",
+    "Server": "Kestrel",
+    "Vary": "Accept-Encoding",
+    "x-application-version": "6.3.0.10514"
+  },
+  "operation": "fetchMovieDetails",
+  "original_array_count": {
+    "alternateTitles": 5,
+    "genres": 4,
+    "images": 2,
+    "keywords": 5,
+    "movieFile.languages": 1,
+    "statistics.releaseGroups": 1,
+    "tags": 1
+  },
+  "recorded_at": "2026-09-15",
+  "request_path": "/api/v3/movie/{id}",
+  "status": 200,
+  "truncated": false
+}

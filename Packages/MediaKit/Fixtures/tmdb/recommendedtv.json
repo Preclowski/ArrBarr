@@ -1,0 +1,127 @@
+{
+  "page": 1,
+  "results": [
+    {
+      "adult": false,
+      "backdrop_path": "/open-series-61-backdrop.jpg",
+      "first_air_date": "2022-08-21",
+      "genre_ids": [
+        10765,
+        18,
+        10759
+      ],
+      "id": 94997,
+      "media_type": "tv",
+      "name": "Open Series 61",
+      "origin_country": [
+        "US"
+      ],
+      "original_language": "en",
+      "original_name": "Open Series 61",
+      "overview": "An open-licensed series from the demo library.",
+      "popularity": 128.619,
+      "poster_path": "/open-series-61-poster.jpg",
+      "softcore": false,
+      "vote_average": 8.382,
+      "vote_count": 7116
+    },
+    {
+      "adult": false,
+      "backdrop_path": "/open-series-62-backdrop.jpg",
+      "first_air_date": "2019-12-20",
+      "genre_ids": [
+        10765,
+        18,
+        10759
+      ],
+      "id": 71912,
+      "media_type": "tv",
+      "name": "Open Series 62",
+      "origin_country": [
+        "US"
+      ],
+      "original_language": "en",
+      "original_name": "Open Series 62",
+      "overview": "An open-licensed series from the demo library.",
+      "popularity": 55.6005,
+      "poster_path": "/open-series-62-poster.jpg",
+      "softcore": false,
+      "vote_average": 7.89,
+      "vote_count": 6890
+    },
+    {
+      "adult": false,
+      "backdrop_path": "/open-series-63-backdrop.jpg",
+      "first_air_date": "2008-11-01",
+      "genre_ids": [
+        10765,
+        10759,
+        18
+      ],
+      "id": 7704,
+      "media_type": "tv",
+      "name": "Open Series 63",
+      "origin_country": [
+        "US"
+      ],
+      "original_language": "en",
+      "original_name": "Open Series 63",
+      "overview": "An open-licensed series from the demo library.",
+      "popularity": 19.6045,
+      "poster_path": "/open-series-63-poster.jpg",
+      "softcore": false,
+      "vote_average": 7.457,
+      "vote_count": 371
+    },
+    {
+      "adult": false,
+      "backdrop_path": "/open-series-64-backdrop.jpg",
+      "first_air_date": "2017-01-06",
+      "genre_ids": [
+        10765,
+        18,
+        10759
+      ],
+      "id": 62417,
+      "media_type": "tv",
+      "name": "Open Series 64",
+      "origin_country": [
+        "US"
+      ],
+      "original_language": "en",
+      "original_name": "Open Series 64",
+      "overview": "An open-licensed series from the demo library.",
+      "popularity": 5.4487,
+      "poster_path": "/open-series-64-poster.jpg",
+      "softcore": false,
+      "vote_average": 6.6,
+      "vote_count": 215
+    },
+    {
+      "adult": false,
+      "backdrop_path": "/open-series-65-backdrop.jpg",
+      "first_air_date": "2022-12-25",
+      "genre_ids": [
+        10765,
+        10759,
+        18
+      ],
+      "id": 106541,
+      "media_type": "tv",
+      "name": "Open Series 65",
+      "origin_country": [
+        "US"
+      ],
+      "original_language": "en",
+      "original_name": "Open Series 65",
+      "overview": "An open-licensed series from the demo library.",
+      "popularity": 10.6765,
+      "poster_path": "/open-series-65-poster.jpg",
+      "softcore": false,
+      "vote_average": 6.489,
+      "vote_count": 819
+    }
+  ],
+  "total_pages": 25,
+  "total_results": 498
+}

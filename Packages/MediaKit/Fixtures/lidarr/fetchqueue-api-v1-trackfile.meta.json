@@ -1,0 +1,22 @@
+{
+  "headers": {
+    "Alt-Svc": "h3=\":443\"; ma=2592000",
+    "Cache-Control": "no-cache, no-store",
+    "Content-Encoding": "br",
+    "Content-Type": "application/json; charset=utf-8",
+    "Date": "Tue, 15 Sep 2026 00:30:07 GMT",
+    "Expires": "-1",
+    "Pragma": "no-cache",
+    "Server": "Kestrel",
+    "Vary": "Accept-Encoding",
+    "x-application-version": "3.1.4.5029"
+  },
+  "operation": "fetchQueue",
+  "original_array_count": {
+    "$": 0
+  },
+  "recorded_at": "2026-09-15",
+  "request_path": "/api/v1/trackfile",
+  "status": 200,
+  "truncated": false
+}

@@ -1,0 +1,841 @@
+{
+ "summary": "Inventoried Packages/ArrCore/Sources/ArrCore/Services' *arr client stack (HTTPClient, ArrAPIClient, Radarr/Sonarr/Lidarr/WhisparrClient, SearchClient, ArrDownloadClients) plus caches (TitleMetadataStore, LibraryIndex, SearchOptionsCache, CoalescingCache, SeriesIdentityResolver) and the Codable models they decode into. 13 in-scope files, 4512 total LOC, all replaced_by_mediakit=true (transport/clients/caches/identity — no views or view-models in scope). Whisparr has no v2/v3 code path (hard-coded /api/v3; only a v2/v3 naming distinction survives in a category-matching comment in ArrDownloadClients.swift). Sonarr has genuine dual-version logic: setSeasonMonitored tries /api/v5/series/{id}/season first, falls back to the two-PUT V3 season-mutation dance on HTTP 404/405. A major, easy-to-miss finding: fetchQueue/fetchCalendar/fetchHistory on all four arr clients carry NO DemoMode.isActive branch at all — demo substitution for those three happens one layer up (QueueAggregator, per grep). Two ArrAPIClient shared operations (fetchHealth, fetchDiskSpace) also have no demo branch and always hit the real network even in demo mode. ServiceConfig.identityFingerprint hashes only apiKey.count, not the key value, while SearchOptionsCache's own key includes the full apiKey string — two different fingerprint schemes coexist for what is nominally the same 'has the config changed' question.",
+ "counts": [
+  {
+   "name": "in-scope files",
+   "value": 13,
+   "command": "ls Packages/ArrCore/Sources/ArrCore/Services (filtered to scope list)"
+  },
+  {
+   "name": "total LOC of replaced_by_mediakit=true files",
+   "value": 4512,
+   "command": "wc -l on each of the 13 scope files, summed",
+   "notes": "352+407+609+733+513+324+594+93+288+215+107+76+201"
+  },
+  {
+   "name": "DemoMode.isActive branches — ArrAPIClient.swift",
+   "value": 11,
+   "command": "grep -c 'DemoMode.isActive' ArrAPIClient.swift"
+  },
+  {
+   "name": "DemoMode.isActive branches — RadarrClient.swift",
+   "value": 6,
+   "command": "grep -c 'DemoMode.isActive' RadarrClient.swift"
+  },
+  {
+   "name": "DemoMode.isActive branches — SonarrClient.swift",
+   "value": 8,
+   "command": "grep -c 'DemoMode.isActive' SonarrClient.swift"
+  },
+  {
+   "name": "DemoMode.isActive branches — LidarrClient.swift",
+   "value": 8,
+   "command": "grep -c 'DemoMode.isActive' LidarrClient.swift"
+  },
+  {
+   "name": "DemoMode.isActive branches — WhisparrClient.swift",
+   "value": 3,
+   "command": "grep -c 'DemoMode.isActive' WhisparrClient.swift"
+  },
+  {
+   "name": "DemoMode.isActive branches — SearchClient.swift",
+   "value": 10,
+   "command": "grep -c 'DemoMode.isActive' SearchClient.swift"
+  },
+  {
+   "name": "DemoMode.isActive branches — ArrDownloadClients.swift",
+   "value": 0,
+   "command": "grep -c 'DemoMode.isActive' ArrDownloadClients.swift"
+  },
+  {
+   "name": "DemoMode.isActive branches — HTTPClient/TitleMetadataStore/LibraryIndex/SearchOptionsCache/CoalescingCache",
+   "value": 0,
+   "command": "grep -c 'DemoMode.isActive' <each file>",
+   "notes": "all 0 — these are pure transport/cache, demo gating lives in the calling client"
+  },
+  {
+   "name": "DemoMode.isActive branches — SeriesIdentityResolver.swift",
+   "value": 2,
+   "command": "grep -c 'DemoMode.isActive' SeriesIdentityResolver.swift"
+  },
+  {
+   "name": "Codable/Decodable type declarations across Models/",
+   "value": 97,
+   "command": "grep -rE '(struct|class|enum) [A-Za-z0-9_]+.*:.*(Codable|Decodable)' Models/*.swift | wc -l"
+  },
+  {
+   "name": "Model files containing any Codable/Decodable type",
+   "value": 12,
+   "command": "grep -rlE '(struct|class|enum) [A-Za-z0-9_]+.*:.*(Codable|Decodable)' Models/*.swift | wc -l"
+  },
+  {
+   "name": "Decodable types in ArrTypes.swift (the main arr-response model file)",
+   "value": 64,
+   "command": "grep -cE '(struct|class|enum) [A-Za-z0-9_]+.*:.*(Codable|Decodable)' Models/ArrTypes.swift"
+  },
+  {
+   "name": "Decodable types in ArrDetailTypes.swift",
+   "value": 14,
+   "command": "grep -cE '(struct|class|enum) [A-Za-z0-9_]+.*:.*(Codable|Decodable)' Models/ArrDetailTypes.swift"
+  },
+  {
+   "name": "Decodable types in ReleaseTypes.swift",
+   "value": 3,
+   "command": "grep -cE '(struct|class|enum) [A-Za-z0-9_]+.*:.*(Codable|Decodable)' Models/ReleaseTypes.swift"
+  },
+  {
+   "name": "Decodable types in SearchTypes.swift",
+   "value": 2,
+   "command": "grep -cE '(struct|class|enum) [A-Za-z0-9_]+.*:.*(Codable|Decodable)' Models/SearchTypes.swift"
+  },
+  {
+   "name": "Decodable types in DownloadClientTypes.swift",
+   "value": 4,
+   "command": "grep -cE '(struct|class|enum) [A-Za-z0-9_]+.*:.*(Codable|Decodable)' Models/DownloadClientTypes.swift"
+  },
+  {
+   "name": "Decodable types in QueueItem.swift / UpcomingItem.swift / DiskSpace.swift / ServiceConfig.swift",
+   "value": 4,
+   "command": "grep -cE ... on each (1 each)",
+   "notes": "1 each"
+  },
+  {
+   "name": "Decodable types actually decoded by in-scope arr clients (sum of the arr-response-relevant files)",
+   "value": 91,
+   "command": "sum of ArrTypes(64)+ArrDetailTypes(14)+ReleaseTypes(3)+SearchTypes(2)+DownloadClientTypes(4)+QueueItem(1)+UpcomingItem(1)+DiskSpace(1)+ServiceConfig(1)",
+   "notes": "excludes ChatProvider.swift/MCPTypes.swift/MediaServerConfig.swift Codable types (6 of the 97), which are out of *arr-client scope"
+  }
+ ],
+ "files": [
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/HTTPClient.swift",
+   "lines": 352,
+   "role": "Transport primitive: URLRequest builder, GET/POST/PUT/DELETE/postMultipart, per-request timeout, disables the process-wide URLCache, HTTPError with arr-body error-message parsing",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/ArrAPIClient.swift",
+   "lines": 407,
+   "role": "Protocol + default-implementation mixin shared by all 4 arr clients: GET/POST/PUT/DELETE helpers, X-Api-Key injection, testConnection, queue delete/grab, health/diskspace, command posting, resolveMetadata fan-out helper, custom formats/quality profiles/releases fetch, monitored-flag full-record PUT helpers",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/RadarrClient.swift",
+   "lines": 609,
+   "role": "Radarr REST client: queue/calendar/history/movie details/movie files/credits/search/lookup/library/alternate-titles + QueueItem unify + shared date/status/protocol parsing helpers",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/SonarrClient.swift",
+   "lines": 733,
+   "role": "Sonarr REST client: queue/calendar/history/series+episode details/monitored toggles (incl. v5/v3 season fallback)/lookup/library + unify",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/LidarrClient.swift",
+   "lines": 513,
+   "role": "Lidarr REST client: queue/calendar/history/album+artist details/track files/monitored toggles/search/library + unify",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/WhisparrClient.swift",
+   "lines": 324,
+   "role": "Whisparr (Radarr-fork) REST client: queue/calendar/history/movie details/movie files/library + unify",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/SearchClient.swift",
+   "lines": 594,
+   "role": "Cross-arr lookup/add client: movie/series/artist/album lookup+search, quality/metadata profiles, root folders, addMovie/addSeries/addScene/addArtist/addAlbum, library ownership map, result unification per arr",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/ArrDownloadClients.swift",
+   "lines": 93,
+   "role": "Decodes /downloadclient into ArrDownloadClient list (enabled clients + category) for the download-drop flow",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/TitleMetadataStore.swift",
+   "lines": 288,
+   "role": "Actor-backed on-disk (Application Support, one JSON file) cache of stable title metadata (title/year/slug/poster) keyed by source+instance-hash+kind+id, 30-day touch-based retention, 2s write coalescing",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/LibraryIndex.swift",
+   "lines": 215,
+   "role": "Actor-backed in-memory snapshot of Radarr/Sonarr/Lidarr/Whisparr libraries; 10-min TTL, per-source in-flight-fetch coalescing, config-fingerprint invalidation, version counters, stale-on-failure retention",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/SearchOptionsCache.swift",
+   "lines": 107,
+   "role": "MainActor cache of add-form options (quality/metadata profiles, root folders) per arr, 15-min TTL, keyed by source+baseURL+apiKey, in-flight coalescing for quality profiles",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/CoalescingCache.swift",
+   "lines": 76,
+   "role": "Generic session-lifetime LRU + single-flight coalescing cache used by CastProvider/TrailerProvider/SeriesIdentityResolver",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/SeriesIdentityResolver.swift",
+   "lines": 201,
+   "role": "MainActor TMDB-tv-id → Sonarr tvdbId identity resolution (library snapshot → Sonarr tmdb: term probe → TMDB external_ids → exact tvdb lookup), backed by two CoalescingCaches",
+   "replaced_by_mediakit": true
+  }
+ ],
+ "operations": [
+  {
+   "name": "testConnection",
+   "client": "ArrAPIClient (shared, all 4 arrs)",
+   "method": "GET",
+   "path": "{apiBase}/system/status",
+   "write": false,
+   "cache": "none",
+   "demo_branch": true,
+   "notes": "sleep(600ms) + DemoMocks.systemStatus"
+  },
+  {
+   "name": "fetchCustomFormats",
+   "client": "ArrAPIClient (shared, Sonarr+Radarr)",
+   "method": "GET",
+   "path": "{apiBase}/customformat",
+   "write": false,
+   "cache": "none",
+   "demo_branch": true,
+   "notes": "DemoMocks.customFormats()"
+  },
+  {
+   "name": "fetchQualityProfiles (shared helper)",
+   "client": "ArrAPIClient (shared)",
+   "method": "GET",
+   "path": "{apiBase}/qualityprofile",
+   "write": false,
+   "cache": "none (separate from SearchOptionsCache path)",
+   "demo_branch": true
+  },
+  {
+   "name": "fetchReleases (interactive search)",
+   "client": "ArrAPIClient (shared, all 4 arrs)",
+   "method": "GET",
+   "path": "{apiBase}/release",
+   "write": false,
+   "cache": "none",
+   "demo_branch": true,
+   "notes": "120s interactiveSearchTimeout; demo sleeps 900ms then returns DemoMocks.releases"
+  },
+  {
+   "name": "deleteLibraryRecord",
+   "client": "ArrAPIClient (shared)",
+   "method": "DELETE",
+   "path": "{apiBase}/movie|series|artist/{id}",
+   "write": true,
+   "cache": "invalidates LibraryIndex via callers",
+   "demo_branch": true,
+   "notes": "sends BOTH addImportExclusion and addImportListExclusion query params since Radarr/Sonarr/Lidarr disagree on the flag name"
+  },
+  {
+   "name": "grabRelease",
+   "client": "ArrAPIClient (shared)",
+   "method": "POST",
+   "path": "{apiBase}/release",
+   "write": true,
+   "cache": "none",
+   "demo_branch": true,
+   "notes": "120s timeout, sends {guid, indexerId}"
+  },
+  {
+   "name": "deleteQueueItem",
+   "client": "ArrAPIClient (shared)",
+   "method": "DELETE",
+   "path": "{apiBase}/queue/{id}?removeFromClient&blocklist",
+   "write": true,
+   "cache": "none",
+   "demo_branch": false,
+   "notes": "FINDING: no DemoMode.isActive guard — always hits the real arr even in demo mode"
+  },
+  {
+   "name": "grabQueueItem",
+   "client": "ArrAPIClient (shared)",
+   "method": "POST",
+   "path": "{apiBase}/queue/grab/{id}",
+   "write": true,
+   "cache": "none",
+   "demo_branch": true
+  },
+  {
+   "name": "fetchHealth",
+   "client": "ArrAPIClient (shared)",
+   "method": "GET",
+   "path": "{apiBase}/health",
+   "write": false,
+   "cache": "none",
+   "demo_branch": false,
+   "notes": "FINDING: no demo branch; decode failures silently degrade to []"
+  },
+  {
+   "name": "fetchDiskSpace",
+   "client": "ArrAPIClient (shared)",
+   "method": "GET",
+   "path": "{apiBase}/diskspace",
+   "write": false,
+   "cache": "none",
+   "demo_branch": false,
+   "notes": "FINDING: no demo branch; decode failures silently degrade to []"
+  },
+  {
+   "name": "postCommand",
+   "client": "ArrAPIClient (shared)",
+   "method": "POST",
+   "path": "{apiBase}/command",
+   "write": true,
+   "cache": "none",
+   "demo_branch": true,
+   "notes": "underlies searchMovie/searchSeries/searchSeason/searchEpisodes/searchAlbum — sleep(600ms) no-op in demo"
+  },
+  {
+   "name": "isSearchRunning",
+   "client": "ArrAPIClient (shared)",
+   "method": "GET",
+   "path": "{apiBase}/command",
+   "write": false,
+   "cache": "none",
+   "demo_branch": true,
+   "notes": "demo returns false; never throws"
+  },
+  {
+   "name": "setMovieMonitored",
+   "client": "ArrAPIClient (shared, Radarr+Whisparr)",
+   "method": "GET+PUT",
+   "path": "{apiBase}/movie/{id}",
+   "write": true,
+   "cache": "invalidates via callers",
+   "demo_branch": true,
+   "notes": "read-modify-write raw JSON round trip"
+  },
+  {
+   "name": "updateLibraryRecord",
+   "client": "ArrAPIClient (shared)",
+   "method": "GET+PUT",
+   "path": "arbitrary recordPath (movie/series/artist)",
+   "write": true,
+   "cache": "invalidates via callers",
+   "demo_branch": true,
+   "notes": "handles rootFolderPath change + moveFiles=true"
+  },
+  {
+   "name": "fetchQueue",
+   "client": "RadarrClient",
+   "method": "GET",
+   "path": "/api/v3/queue?pageSize=1000&includeUnknownMovieItems=true",
+   "write": false,
+   "cache": "TitleMetadataStore (via resolveMetadata) + private 15-min movieFileCache",
+   "demo_branch": false,
+   "notes": "FINDING: no demo branch — demo substitution happens in QueueAggregator, one layer up"
+  },
+  {
+   "name": "fetchMovieFiles (side-load)",
+   "client": "RadarrClient",
+   "method": "GET",
+   "path": "/api/v3/moviefile?movieId=...",
+   "write": false,
+   "cache": "private 15-min in-memory movieFileCache",
+   "demo_branch": false
+  },
+  {
+   "name": "fetchCalendar",
+   "client": "RadarrClient",
+   "method": "GET",
+   "path": "/api/v3/calendar",
+   "write": false,
+   "cache": "none",
+   "demo_branch": false
+  },
+  {
+   "name": "fetchHistory",
+   "client": "RadarrClient",
+   "method": "GET",
+   "path": "/api/v3/history",
+   "write": false,
+   "cache": "none",
+   "demo_branch": false
+  },
+  {
+   "name": "fetchMovieDetails",
+   "client": "RadarrClient",
+   "method": "GET",
+   "path": "/api/v3/movie/{id}",
+   "write": false,
+   "cache": "feeds TitleMetadataStore",
+   "demo_branch": true
+  },
+  {
+   "name": "fetchMovieFile",
+   "client": "RadarrClient",
+   "method": "GET",
+   "path": "/api/v3/moviefile?movieId={id}",
+   "write": false,
+   "cache": "none",
+   "demo_branch": true
+  },
+  {
+   "name": "fetchCredits",
+   "client": "RadarrClient",
+   "method": "GET",
+   "path": "/api/v3/credit?movieId={id}",
+   "write": false,
+   "cache": "none",
+   "demo_branch": true
+  },
+  {
+   "name": "searchMovie",
+   "client": "RadarrClient",
+   "method": "POST",
+   "path": "/api/v3/command {name: MoviesSearch}",
+   "write": true,
+   "cache": "none",
+   "demo_branch": true,
+   "notes": "via shared postCommand"
+  },
+  {
+   "name": "lookupMovies",
+   "client": "RadarrClient",
+   "method": "GET",
+   "path": "/api/v3/movie/lookup?term=...",
+   "write": false,
+   "cache": "none",
+   "demo_branch": true
+  },
+  {
+   "name": "fetchAllMovies",
+   "client": "RadarrClient",
+   "method": "GET",
+   "path": "/api/v3/movie",
+   "write": false,
+   "cache": "LibraryIndex (10-min TTL)",
+   "demo_branch": true
+  },
+  {
+   "name": "alternateTitleMap",
+   "client": "RadarrClient",
+   "method": "GET",
+   "path": "/api/v3/alttitle",
+   "write": false,
+   "cache": "none",
+   "demo_branch": true,
+   "notes": "guard skips the fetch entirely in demo (returns before building the URL)"
+  },
+  {
+   "name": "fetchQueue",
+   "client": "SonarrClient",
+   "method": "GET",
+   "path": "/api/v3/queue?pageSize=1000",
+   "write": false,
+   "cache": "TitleMetadataStore + episode-file map",
+   "demo_branch": false
+  },
+  {
+   "name": "fetchEpisodeFileMap",
+   "client": "SonarrClient",
+   "method": "GET",
+   "path": "/api/v3/episodefile?seriesId=...",
+   "write": false,
+   "cache": "none noted (15-min pattern mirrors Radarr/Lidarr per comment)",
+   "demo_branch": true
+  },
+  {
+   "name": "fetchCalendar",
+   "client": "SonarrClient",
+   "method": "GET",
+   "path": "/api/v3/calendar",
+   "write": false,
+   "cache": "none",
+   "demo_branch": false
+  },
+  {
+   "name": "fetchHistory",
+   "client": "SonarrClient",
+   "method": "GET",
+   "path": "/api/v3/history",
+   "write": false,
+   "cache": "none",
+   "demo_branch": false
+  },
+  {
+   "name": "fetchSeriesDetails",
+   "client": "SonarrClient",
+   "method": "GET",
+   "path": "/api/v3/series/{id}",
+   "write": false,
+   "cache": "feeds TitleMetadataStore",
+   "demo_branch": true
+  },
+  {
+   "name": "fetchEpisodes",
+   "client": "SonarrClient",
+   "method": "GET",
+   "path": "/api/v3/episode?seriesId=...",
+   "write": false,
+   "cache": "none",
+   "demo_branch": true
+  },
+  {
+   "name": "searchEpisodes/searchSeason/searchSeries",
+   "client": "SonarrClient",
+   "method": "POST",
+   "path": "/api/v3/command {EpisodeSearch|SeasonSearch|SeriesSearch}",
+   "write": true,
+   "cache": "none",
+   "demo_branch": true,
+   "notes": "via shared postCommand"
+  },
+  {
+   "name": "setSeriesMonitored",
+   "client": "SonarrClient",
+   "method": "GET+PUT",
+   "path": "/api/v3/series/{id}",
+   "write": true,
+   "cache": "none",
+   "demo_branch": true
+  },
+  {
+   "name": "setEpisodesMonitored",
+   "client": "SonarrClient",
+   "method": "PUT",
+   "path": "/api/v3/episode/monitor",
+   "write": true,
+   "cache": "none",
+   "demo_branch": true
+  },
+  {
+   "name": "setSeasonMonitored (v5 path)",
+   "client": "SonarrClient",
+   "method": "PUT",
+   "path": "/api/v5/series/{id}/season {seasonNumber, monitored}",
+   "write": true,
+   "cache": "none",
+   "demo_branch": true,
+   "notes": "tried first; on HTTP 404/405 falls back to V3 path"
+  },
+  {
+   "name": "setSeasonMonitored (v3 fallback)",
+   "client": "SonarrClient",
+   "method": "GET+PUT x2",
+   "path": "/api/v3/series/{id}",
+   "write": true,
+   "cache": "none",
+   "demo_branch": true,
+   "notes": "deliberately writes !monitored then monitored to force Sonarr's season->episode monitored cascade to fire even on a no-op toggle"
+  },
+  {
+   "name": "lookupSeries",
+   "client": "SonarrClient",
+   "method": "GET",
+   "path": "/api/v3/series/lookup?term=...",
+   "write": false,
+   "cache": "none",
+   "demo_branch": true
+  },
+  {
+   "name": "fetchAllSeries",
+   "client": "SonarrClient",
+   "method": "GET",
+   "path": "/api/v3/series",
+   "write": false,
+   "cache": "LibraryIndex (10-min TTL)",
+   "demo_branch": true
+  },
+  {
+   "name": "fetchQueue",
+   "client": "LidarrClient",
+   "method": "GET",
+   "path": "/api/v1/queue?pageSize=1000&includeUnknownArtistItems=true",
+   "write": false,
+   "cache": "TitleMetadataStore + private trackFileCache",
+   "demo_branch": false
+  },
+  {
+   "name": "fetchAlbums (side-load)",
+   "client": "LidarrClient",
+   "method": "GET",
+   "path": "/api/v1/album?albumIds=...",
+   "write": false,
+   "cache": "feeds TitleMetadataStore",
+   "demo_branch": false
+  },
+  {
+   "name": "fetchTrackFiles",
+   "client": "LidarrClient",
+   "method": "GET",
+   "path": "/api/v1/trackfile?albumId={id}",
+   "write": false,
+   "cache": "private 15-min trackFileCache",
+   "demo_branch": true
+  },
+  {
+   "name": "fetchCalendar",
+   "client": "LidarrClient",
+   "method": "GET",
+   "path": "/api/v1/calendar?start&end&unmonitored=false",
+   "write": false,
+   "cache": "none",
+   "demo_branch": false
+  },
+  {
+   "name": "fetchHistory",
+   "client": "LidarrClient",
+   "method": "GET",
+   "path": "/api/v1/history",
+   "write": false,
+   "cache": "none",
+   "demo_branch": false
+  },
+  {
+   "name": "fetchAlbumDetails",
+   "client": "LidarrClient",
+   "method": "GET",
+   "path": "/api/v1/album/{id}",
+   "write": false,
+   "cache": "none",
+   "demo_branch": true
+  },
+  {
+   "name": "fetchTracks",
+   "client": "LidarrClient",
+   "method": "GET",
+   "path": "/api/v1/track?albumId={id}",
+   "write": false,
+   "cache": "none",
+   "demo_branch": true
+  },
+  {
+   "name": "fetchArtistDetails",
+   "client": "LidarrClient",
+   "method": "GET",
+   "path": "/api/v1/artist/{id}",
+   "write": false,
+   "cache": "none",
+   "demo_branch": true
+  },
+  {
+   "name": "fetchAllArtists",
+   "client": "LidarrClient",
+   "method": "GET",
+   "path": "/api/v1/artist",
+   "write": false,
+   "cache": "LibraryIndex (10-min TTL)",
+   "demo_branch": true
+  },
+  {
+   "name": "fetchArtistAlbums",
+   "client": "LidarrClient",
+   "method": "GET",
+   "path": "/api/v1/album?artistId={id}",
+   "write": false,
+   "cache": "none",
+   "demo_branch": true
+  },
+  {
+   "name": "setAlbumMonitored",
+   "client": "LidarrClient",
+   "method": "GET+PUT",
+   "path": "/api/v1/album/{id}",
+   "write": true,
+   "cache": "none",
+   "demo_branch": true
+  },
+  {
+   "name": "setArtistMonitored",
+   "client": "LidarrClient",
+   "method": "GET+PUT",
+   "path": "/api/v1/artist/{id}",
+   "write": true,
+   "cache": "none",
+   "demo_branch": true
+  },
+  {
+   "name": "searchAlbum",
+   "client": "LidarrClient",
+   "method": "POST",
+   "path": "/api/v1/command {AlbumSearch}",
+   "write": true,
+   "cache": "none",
+   "demo_branch": true,
+   "notes": "via shared postCommand"
+  },
+  {
+   "name": "fetchQueue",
+   "client": "WhisparrClient",
+   "method": "GET",
+   "path": "/api/v3/queue",
+   "write": false,
+   "cache": "TitleMetadataStore + moviefile map",
+   "demo_branch": false
+  },
+  {
+   "name": "fetchMovieFile",
+   "client": "WhisparrClient",
+   "method": "GET",
+   "path": "/api/v3/moviefile?movieId={id}",
+   "write": false,
+   "cache": "none",
+   "demo_branch": true,
+   "notes": "demo returns nil unconditionally"
+  },
+  {
+   "name": "fetchCalendar",
+   "client": "WhisparrClient",
+   "method": "GET",
+   "path": "/api/v3/calendar",
+   "write": false,
+   "cache": "none",
+   "demo_branch": false
+  },
+  {
+   "name": "fetchHistory",
+   "client": "WhisparrClient",
+   "method": "GET",
+   "path": "/api/v3/history",
+   "write": false,
+   "cache": "none",
+   "demo_branch": false
+  },
+  {
+   "name": "fetchAllMovies",
+   "client": "WhisparrClient",
+   "method": "GET",
+   "path": "/api/v3/movie",
+   "write": false,
+   "cache": "LibraryIndex (10-min TTL)",
+   "demo_branch": true
+  },
+  {
+   "name": "fetchMovieDetails",
+   "client": "WhisparrClient",
+   "method": "GET",
+   "path": "/api/v3/movie/{id}",
+   "write": false,
+   "cache": "feeds TitleMetadataStore",
+   "demo_branch": true
+  },
+  {
+   "name": "lookup (movie/series/artist)",
+   "client": "SearchClient",
+   "method": "GET",
+   "path": "{apiBase}/movie|series|artist/lookup?term=... (or /search for Lidarr)",
+   "write": false,
+   "cache": "none",
+   "demo_branch": true
+  },
+  {
+   "name": "fetchLibraryOwnership",
+   "client": "SearchClient",
+   "method": "(delegates to LibraryIndex fetches)",
+   "path": "n/a",
+   "write": false,
+   "cache": "LibraryIndex",
+   "demo_branch": true,
+   "notes": "demo returns [:] immediately"
+  },
+  {
+   "name": "fetchQualityProfiles",
+   "client": "SearchClient",
+   "method": "GET",
+   "path": "{apiBase}/qualityprofile",
+   "write": false,
+   "cache": "SearchOptionsCache (15-min TTL)",
+   "demo_branch": true
+  },
+  {
+   "name": "fetchMetadataProfiles",
+   "client": "SearchClient",
+   "method": "GET",
+   "path": "{apiBase}/metadataprofile",
+   "write": false,
+   "cache": "SearchOptionsCache (15-min TTL)",
+   "demo_branch": true
+  },
+  {
+   "name": "fetchRootFolders",
+   "client": "SearchClient",
+   "method": "GET",
+   "path": "{apiBase}/rootfolder",
+   "write": false,
+   "cache": "SearchOptionsCache (15-min TTL)",
+   "demo_branch": true
+  },
+  {
+   "name": "addMovie",
+   "client": "SearchClient",
+   "method": "POST",
+   "path": "{apiBase}/movie",
+   "write": true,
+   "cache": "invalidates LibraryIndex via callers",
+   "demo_branch": true
+  },
+  {
+   "name": "addSeries",
+   "client": "SearchClient",
+   "method": "POST",
+   "path": "{apiBase}/series",
+   "write": true,
+   "cache": "invalidates LibraryIndex via callers",
+   "demo_branch": true
+  },
+  {
+   "name": "addScene",
+   "client": "SearchClient",
+   "method": "POST",
+   "path": "{apiBase}/movie (Whisparr)",
+   "write": true,
+   "cache": "invalidates LibraryIndex via callers",
+   "demo_branch": true
+  },
+  {
+   "name": "addArtist",
+   "client": "SearchClient",
+   "method": "POST",
+   "path": "{apiBase}/artist",
+   "write": true,
+   "cache": "invalidates LibraryIndex via callers",
+   "demo_branch": true
+  },
+  {
+   "name": "addAlbum",
+   "client": "SearchClient",
+   "method": "GET+POST",
+   "path": "{apiBase}/search then {apiBase}/album",
+   "write": true,
+   "cache": "invalidates LibraryIndex via callers",
+   "demo_branch": true
+  },
+  {
+   "name": "fetchDownloadClients",
+   "client": "ArrDownloadClients (extension on ArrAPIClient)",
+   "method": "GET",
+   "path": "{apiBase}/downloadclient",
+   "write": false,
+   "cache": "none",
+   "demo_branch": false,
+   "notes": "no demo branch found in this file"
+  }
+ ],
+ "findings": [
+  "fetchQueue, fetchCalendar and fetchHistory on ALL FOUR arr clients (Radarr/Sonarr/Lidarr/Whisparr) carry no DemoMode.isActive check whatsoever; demo substitution for these three paths lives one layer up in QueueAggregator (confirmed via grep) rather than in the client, unlike every other operation which is demo-gated inline. This is an architectural inconsistency worth flagging to whoever ports the layer to MediaKit — the new client cannot just be a drop-in replacement guided by grepping the client files alone.",
+  "deleteQueueItem, fetchHealth and fetchDiskSpace on ArrAPIClient have NO demo-mode guard at all and always perform the real network call even when DemoMode.isActive is true — likely an oversight (every sibling write operation in the same file has a matching sleep+no-op branch) rather than intentional, since deleteQueueItem is destructive.",
+  "Sonarr's setSeasonMonitored is the only genuine cross-version fallback in the whole *arr client layer: it optimistically PUTs /api/v5/series/{id}/season and, only on HTTP 404/405, falls back to a two-step V3 season-mutation dance that deliberately writes the opposite value first to force Sonarr's monitored-cascade to fire even on a no-op toggle (documented at length in-line — this is fragile, undertested surface for a rewrite to preserve exactly).",
+  "There is no Whisparr v2-vs-v3 code path anywhere: WhisparrClient hard-codes apiBase = \"/api/v3\". The only trace of a v2/v3 distinction is a comment in ArrDownloadClients.category() noting that Whisparr v2 uses the field name tvCategory and v3 uses movieCategory — matched generically by suffix, not by an explicit version branch.",
+  "Two different 'has this config changed' fingerprint schemes coexist: ServiceConfig.identityFingerprint is `\"\\(baseURL)|\\(apiKey.count)\"` (length only, not the key value) and is used by LibraryIndex/SeriesIdentityResolver, while SearchOptionsCache.key builds its own `\"\\(source)|\\(baseURL)|\\(apiKey)\"` with the full API key. A user who edits their API key but keeps the same length would not invalidate LibraryIndex's cached library snapshot, but would invalidate SearchOptionsCache.",
+  "The Radarr/Sonarr/Lidarr DELETE library-record path deliberately sends BOTH addImportExclusion and addImportListExclusion query params on every call because Radarr/Whisparr and Sonarr/Lidarr disagree on the parameter name — ASP.NET silently ignores the one it doesn't recognize. This is documented, deliberate duplication, not dead code.",
+  "arr error bodies are the real error source: HTTPError.serverMessage(from:) parses three different arr/ASP.NET error shapes (Servarr array of {errorMessage}, {message} object, ASP.NET ProblemDetails {errors:{field:[...]}}) out of the response body, and 401/403 get a special-cased hint because Servarr returns an EMPTY body for those codes specifically — confirming the memory note that arr errors live in the body, not the status.",
+  "ArrAPIClient.resolveMetadata documents that three clients (Radarr/Sonarr/Lidarr) used to have a line-for-line duplicate of the cache-then-bounded-fan-out-then-batch-write logic before being consolidated here — a completed dedup, not a remaining one.",
+  "TitleMetadataStore deliberately persists to Application Support (never Caches) as ONE JSON file (not one file per entity) with 30-day touch-based retention and 2-second debounced flush; LibraryIndex is purely in-memory (actor, no persistence) with a 10-minute TTL and per-source in-flight-fetch coalescing keyed by config fingerprint; SearchOptionsCache is MainActor (not actor) with a 15-minute TTL split per-facet (profiles/folders/metadataProfiles) so a partial write from one caller can't blank another caller's slot.",
+  "No dead/duplicated decoders were found among the in-scope client files themselves — SearchClient's addAlbum performs an extra GET to /search before the POST to /album specifically to look up the release-group id Lidarr's add endpoint needs, which is a genuine two-request add flow unique to Lidarr (every other addX is a single POST)."
+ ],
+ "open_questions": [
+  "Whether QueueAggregator's DemoMode.isActive branches (lines ~382 and ~450, confirmed present but not read in full) fully substitute for fetchQueue/fetchCalendar/fetchHistory across all four sources, or only for some — worth a closer read of QueueAggregator.swift (out of this task's file scope) before assuming MediaKit's rewrite can move demo-gating into the client layer unchanged.",
+  "Whether the download-client implementations (QbittorrentClient/TransmissionClient/RtorrentClient/DelugeClient/SabnzbdClient/NzbgetClient) — explicitly NOT enumerated by the given file list beyond ArrDownloadClients.swift — are meant to be in the MediaKit communication-layer scope too; they were left out of this inventory per the literal scope list given."
+ ]
+}

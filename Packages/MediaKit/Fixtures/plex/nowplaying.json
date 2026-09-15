@@ -1,0 +1,290 @@
+{
+  "MediaContainer": {
+    "Metadata": [
+      {
+        "Director": [
+          {
+            "filter": "director=362945",
+            "id": "362945",
+            "tag": "Person 24",
+            "tagKey": "5d77682b6f4521001ea99ea2",
+            "thumb": "https://metadata-static.plex.tv/c/people/c0719276a91a25717e9d259b5e1dc20b.jpg"
+          }
+        ],
+        "Media": [
+          {
+            "Part": [
+              {
+                "Stream": [
+                  {
+                    "bitDepth": 8,
+                    "bitrate": 14366,
+                    "chromaLocation": "left",
+                    "chromaSubsampling": "4:2:0",
+                    "codec": "h264",
+                    "codedHeight": 1088,
+                    "codedWidth": 1920,
+                    "colorPrimaries": "bt709",
+                    "colorRange": "tv",
+                    "colorSpace": "bt709",
+                    "colorTrc": "bt709",
+                    "default": true,
+                    "displayTitle": "1080p (H.264)",
+                    "extendedDisplayTitle": "1080p (H.264)",
+                    "frameRate": 23.976,
+                    "hasScalingMatrix": false,
+                    "height": 1080,
+                    "id": "1128647",
+                    "index": 0,
+                    "language": "English",
+                    "languageCode": "eng",
+                    "languageTag": "en",
+                    "level": 40,
+                    "location": "direct",
+                    "profile": "high",
+                    "refFrames": 4,
+                    "scanType": "progressive",
+                    "streamType": 1,
+                    "width": 1920
+                  },
+                  {
+                    "audioChannelLayout": "stereo",
+                    "bitrate": 224,
+                    "channels": 2,
+                    "codec": "eac3",
+                    "default": true,
+                    "displayTitle": "Open Movie 79 (EAC3 Stereo)",
+                    "extendedDisplayTitle": "Open Movie 79 (EAC3 Stereo)",
+                    "id": "1128648",
+                    "index": 1,
+                    "language": "English",
+                    "languageCode": "eng",
+                    "languageTag": "en",
+                    "location": "direct",
+                    "samplingRate": 48000,
+                    "selected": true,
+                    "streamType": 2
+                  }
+                ],
+                "container": "mkv",
+                "decision": "directplay",
+                "duration": 1480896,
+                "file": "/data/plex/Hero/Episode.22.S07E22-DEMO.mkv",
+                "id": "221010",
+                "key": "/library/parts/221010/1789162754/file.mkv",
+                "selected": true,
+                "size": 2700724332,
+                "videoProfile": "high"
+              }
+            ],
+            "aspectRatio": "1.78",
+            "audioChannels": 2,
+            "audioCodec": "eac3",
+            "bitrate": 14590,
+            "container": "mkv",
+            "duration": 1480896,
+            "height": 1080,
+            "id": "193401",
+            "selected": true,
+            "videoCodec": "h264",
+            "videoFrameRate": "24p",
+            "videoProfile": "high",
+            "videoResolution": "1080",
+            "width": 1920
+          }
+        ],
+        "Player": {
+          "address": "10.0.0.2",
+          "device": "Demo Player",
+          "local": false,
+          "machineIdentifier": "user",
+          "model": "demo",
+          "platform": "Android",
+          "platformVersion": "11",
+          "playbackId": "3c4f95f0-bda9-425f-8552-29fba0c75419",
+          "playbackSessionId": "97640169-5f99-43b3-b551-31fbf9169d5a",
+          "product": "Plex for Android (TV)",
+          "profile": "Android",
+          "relayed": false,
+          "remotePublicAddress": "198.51.100.2",
+          "secure": true,
+          "state": "playing",
+          "title": "Demo Player",
+          "userID": 0,
+          "vendor": "Demo",
+          "version": "10.30.8.4222"
+        },
+        "Producer": [
+          {
+            "filter": "producer=361984",
+            "id": "361984",
+            "tag": "Person 25",
+            "tagKey": "5d77687b7e5fa10020bf0672",
+            "thumb": "https://metadata-static.plex.tv/5/people/5f06b54e4c857bf9b612711a70b855bf.jpg"
+          }
+        ],
+        "Rating": [
+          {
+            "image": "imdb://image.rating",
+            "type": "audience",
+            "value": "7.6"
+          },
+          {
+            "image": "themoviedb://image.rating",
+            "type": "audience",
+            "value": "8.0"
+          }
+        ],
+        "Role": [
+          {
+            "filter": "actor=100290",
+            "id": "100290",
+            "role": "Character 1",
+            "tag": "Person 26",
+            "tagKey": "5d77682aeb5d26001f1de546",
+            "thumb": "https://metadata-static.plex.tv/d/people/dc74ba5a676970f286e7cbd37c6333c5.jpg"
+          },
+          {
+            "filter": "actor=173263",
+            "id": "173263",
+            "role": "Character 2",
+            "tag": "Person 27",
+            "tagKey": "5d776835961905001eb94200",
+            "thumb": "https://metadata-static.plex.tv/5/people/55724e99df57904790b5dc989f012583.jpg"
+          },
+          {
+            "filter": "actor=360763",
+            "id": "360763",
+            "role": "Character 3",
+            "tag": "Person 28",
+            "tagKey": "5d776826151a60001f24a744",
+            "thumb": "https://metadata-static.plex.tv/5/people/5b8531374ec665607418fadd0ed380f9.jpg"
+          },
+          {
+            "filter": "actor=303759",
+            "id": "303759",
+            "role": "Character 4",
+            "tag": "Person 29",
+            "tagKey": "5d7768468718ba001e317d80",
+            "thumb": "https://metadata-static.plex.tv/4/people/4426b2e6acddc8f97a40f4f18f21ca2e.jpg"
+          },
+          {
+            "filter": "actor=124760",
+            "id": "124760",
+            "role": "Character 5",
+            "tag": "Person 30",
+            "tagKey": "5d77682d8718ba001e312ff7",
+            "thumb": "https://metadata-static.plex.tv/7/people/794d8ba0f4cbf859644086683dfe1063.jpg"
+          },
+          {
+            "filter": "actor=270986",
+            "id": "270986",
+            "role": "Character 6",
+            "tag": "Person 31",
+            "tagKey": "5d776827999c64001ec2c90e",
+            "thumb": "https://metadata-static.plex.tv/6/people/6b0a083b477d80d0dbdd3ab854c80792.jpg"
+          },
+          {
+            "filter": "actor=169281",
+            "id": "169281",
+            "role": "Character 7",
+            "tag": "Person 32",
+            "tagKey": "5d77682c8a7581001f12c653",
+            "thumb": "https://metadata-static.plex.tv/f/people/fa83247246075f16bb309ec432eca093.jpg"
+          },
+          {
+            "filter": "actor=360762",
+            "id": "360762",
+            "role": "Character 8",
+            "tag": "Person 33",
+            "tagKey": "5d7768456f4521001ea9f3d3",
+            "thumb": "https://metadata-static.plex.tv/7/people/7a844888d52746e28ede2e54a2fc2eb4.jpg"
+          },
+          {
+            "filter": "actor=235684",
+            "id": "235684",
+            "role": "Character 9",
+            "tag": "Person 34",
+            "tagKey": "5d776cdf594b2b001e6fd2ac",
+            "thumb": "https://metadata-static.plex.tv/e/people/e4d06ed3b454c9f5f6c45f1041d2ff9d.jpg"
+          },
+          {
+            "filter": "actor=363032",
+            "id": "363032",
+            "role": "Character 10",
+            "tag": "Person 35",
+            "tagKey": "5d77684585719b001f3a6b8f",
+            "thumb": "https://metadata-static.plex.tv/d/people/de43eedd39123dda02b0d3fd77d13a45.jpg"
+          },
+          {
+            "filter": "actor=194915",
+            "id": "194915",
+            "role": "Character 11",
+            "tag": "Person 36",
+            "tagKey": "5d77682b4de0ee001fcc99a2",
+            "thumb": "https://metadata-static.plex.tv/9/people/9b303efb92d62888c88a99eec8ecb089.jpg"
+          }
+        ],
+        "Session": {
+          "bandwidth": 30639,
+          "id": "995ec0d66095af4c-com-plexapp-android",
+          "location": "wan"
+        },
+        "UltraBlurColors": [
+          {
+            "bottomLeft": "161210",
+            "bottomRight": "32352f",
+            "topLeft": "2a2f2f",
+            "topRight": "161718"
+          }
+        ],
+        "User": 0,
+        "Writer": [
+          {
+            "filter": "writer=362965",
+            "id": "362965",
+            "tag": "Person 37",
+            "tagKey": "5e163545188587003d04af71"
+          }
+        ],
+        "addedAt": 1789163910,
+        "art": "/library/metadata/75512/art/1",
+        "audienceRating": 8,
+        "audienceRatingImage": "themoviedb://image.rating",
+        "contentRating": "TV-PG",
+        "duration": 1480896,
+        "grandparentArt": "/library/metadata/75512/art/1",
+        "grandparentGuid": "plex://show/49f4083a982958ff91675fce",
+        "grandparentKey": "/library/metadata/75512",
+        "grandparentRatingKey": "75512",
+        "grandparentSlug": "episode-22",
+        "grandparentTheme": "/library/metadata/75512/theme/1",
+        "grandparentThumb": "/library/metadata/75512/thumb/1",
+        "grandparentTitle": "Pioneer One",
+        "guid": "plex://episode/49f4083a982958ff91675fce",
+        "index": 22,
+        "key": "/library/metadata/75837",
+        "librarySectionID": "2",
+        "librarySectionKey": "/library/sections/2",
+        "librarySectionTitle": "TV Shows",
+        "originallyAvailableAt": "1979-02-19",
+        "parentGuid": "plex://season/49f4083a982958ff91675fce",
+        "parentIndex": 7,
+        "parentKey": "/library/metadata/75813",
+        "parentRatingKey": "75813",
+        "parentThumb": "/library/metadata/75813/thumb/1",
+        "parentTitle": "Season 7",
+        "ratingKey": "75837",
+        "sessionKey": "125",
+        "summary": "An open-licensed episode from the demo library.",
+        "thumb": "/library/metadata/75837/thumb/1",
+        "title": "Episode 22",
+        "type": "episode",
+        "updatedAt": 1789163915,
+        "viewOffset": 1431087,
+        "year": 1979
+      }
+    ],
+    "size": 1
+  }
+}
