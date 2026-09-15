@@ -183,9 +183,11 @@ struct QueueListView: View {
         .navigationTitle(selecting ? selectionCountLabel : "")
         .toolbar { if selecting { selectionToolbar } }
         #else
-        .safeAreaInset(edge: .top, spacing: 0) {
+        // A bar, not an inset: the list's top edge blurs softly under it instead of cutting hard.
+        .safeAreaBar(edge: .top, spacing: 0) {
             if selecting { selectionActionBar }
         }
+        .scrollEdgeEffectStyle(.soft, for: .top)
         #endif
         // Drop the selection set whenever selecting mode ends (menu toggle,
         // Cancel, or the queue emptying out from under us).

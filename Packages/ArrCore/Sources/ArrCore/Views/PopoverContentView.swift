@@ -626,6 +626,8 @@ public struct PopoverContentView: View {
         // through `pillHeight`. The cluster pill stretches to fill all space
         // between, so long labels (Polish "Nadchodzące") aren't squeezed and the
         // chrome spans the whole row.
+        // One Liquid Glass container: the two islands render as one glass set and morph together.
+        GlassEffectContainer(spacing: 8) {
         HStack(spacing: 8) {
             // Detached mode uses the real macOS traffic lights (floating top-left,
             // only the red × active) instead of a custom in-bar close dot, so the
@@ -654,6 +656,7 @@ public struct PopoverContentView: View {
             // flush against the capsule rim (read as cramped otherwise).
             .padding(.horizontal, 4)
             .glassyFloatingBar()
+        }
         }
         .padding(.horizontal, 12)
         .padding(.top, 10)
