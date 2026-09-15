@@ -11,28 +11,36 @@ nonisolated public enum AppMessages {
     public struct OpenDetail: NotificationCenter.AsyncMessage {
         public typealias Subject = AppMessageBus
         public let item: QueueItem
+        public init(item: QueueItem) { self.item = item }
     }
     /// A deep-tree view needs a confirmation modal; the host renders it at panel width.
     public struct ConfirmRequest: NotificationCenter.AsyncMessage {
         public typealias Subject = AppMessageBus
         public let payload: PendingConfirm
+        public init(payload: PendingConfirm) { self.payload = payload }
     }
     /// A successful "Test Connection": the queue refreshes so a just-saved key clears its banner.
-    public struct ConfigValidated: NotificationCenter.AsyncMessage { public typealias Subject = AppMessageBus }
+    public struct ConfigValidated: NotificationCenter.AsyncMessage {
+        public typealias Subject = AppMessageBus
+        public init() {}
+    }
     /// Torrent/nzb files or a magnet link dropped on the panel or the detached window; the app opens the add window.
     public struct DropDownloads: NotificationCenter.AsyncMessage {
         public typealias Subject = AppMessageBus
         public let urls: [URL]
+        public init(urls: [URL]) { self.urls = urls }
     }
     /// The search-to-add intent or a chat link that resolved to nothing: run this query on the search surface.
     public struct SearchQuery: NotificationCenter.AsyncMessage {
         public typealias Subject = AppMessageBus
         public let query: String
+        public init(query: String) { self.query = query }
     }
     /// A not-in-library result was tapped or swiped right: open the add panel with it.
     public struct OpenSearchAdd: NotificationCenter.AsyncMessage {
         public typealias Subject = AppMessageBus
         public let result: SearchResult
+        public init(result: SearchResult) { self.result = result }
     }
     /// The `discover_in_quiz` tool or the resume card: open the quiz with these picks (`append` extends a live deck).
     public struct OpenDiscoverQuiz: NotificationCenter.AsyncMessage {
@@ -40,16 +48,19 @@ nonisolated public enum AppMessages {
         public let mood: String
         public let items: [DiscoverItem]
         public let append: Bool
+        public init(mood: String, items: [DiscoverItem], append: Bool) { self.mood = mood; self.items = items; self.append = append }
     }
     /// A person card in chat or an `arrbarr://person/…` link: push `PersonView`.
     public struct OpenPerson: NotificationCenter.AsyncMessage {
         public typealias Subject = AppMessageBus
         public let ref: PersonRef
+        public init(ref: PersonRef) { self.ref = ref }
     }
     /// A title was added to an arr; the quiz drops a card it was still offering.
     public struct DidAddToLibrary: NotificationCenter.AsyncMessage {
         public typealias Subject = AppMessageBus
         public let foreignId: String
+        public init(foreignId: String) { self.foreignId = foreignId }
     }
 
     public static func post<M: NotificationCenter.AsyncMessage>(_ message: M) where M.Subject == AppMessageBus {
