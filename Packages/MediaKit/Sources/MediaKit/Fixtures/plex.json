@@ -1,0 +1,1266 @@
+{
+ "libraries": {
+  "body": {
+   "MediaContainer": {
+    "Directory": [
+     {
+      "Location": [
+       {
+        "id": 12,
+        "path": "/data/plex/media/movies"
+       }
+      ],
+      "agent": "tv.plex.agents.movie",
+      "allowSync": true,
+      "content": true,
+      "contentChangedAt": 9074221,
+      "createdAt": 1610707258,
+      "directory": true,
+      "filters": true,
+      "hidden": 0,
+      "key": "1",
+      "language": "en-US",
+      "metadataAgentProviderGroupId": 1,
+      "refreshing": false,
+      "scannedAt": 1785805331,
+      "scanner": "Plex Movie",
+      "title": "Movies",
+      "type": "movie",
+      "updatedAt": 1766747442,
+      "uuid": "e657685d-9c19-4c56-b5e5-29b16357431b"
+     },
+     {
+      "Location": [
+       {
+        "id": 11,
+        "path": "/data/plex/media/shows"
+       }
+      ],
+      "agent": "tv.plex.agents.series",
+      "allowSync": true,
+      "content": true,
+      "contentChangedAt": 9068940,
+      "createdAt": 1610707309,
+      "directory": true,
+      "filters": true,
+      "hidden": 0,
+      "key": "2",
+      "language": "en-US",
+      "metadataAgentProviderGroupId": 2,
+      "refreshing": false,
+      "scannedAt": 1788818772,
+      "scanner": "Plex TV Series",
+      "title": "TV Shows",
+      "type": "show",
+      "updatedAt": 1766747142,
+      "uuid": "8752eb97-f65f-4b12-9919-b856dfb43226"
+     }
+    ],
+    "allowSync": false,
+    "size": 2,
+    "title1": "Library 1"
+   }
+  },
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ },
+ "libraryindex": {
+  "body": {
+   "MediaContainer": {
+    "Directory": [
+     {
+      "Location": [
+       {
+        "id": 12,
+        "path": "/data/plex/media/movies"
+       }
+      ],
+      "agent": "tv.plex.agents.movie",
+      "allowSync": true,
+      "content": true,
+      "contentChangedAt": 9074221,
+      "createdAt": 1610707258,
+      "directory": true,
+      "filters": true,
+      "hidden": 0,
+      "key": "1",
+      "language": "en-US",
+      "metadataAgentProviderGroupId": 1,
+      "refreshing": false,
+      "scannedAt": 1785805331,
+      "scanner": "Plex Movie",
+      "title": "Movies",
+      "type": "movie",
+      "updatedAt": 1766747442,
+      "uuid": "e657685d-9c19-4c56-b5e5-29b16357431b"
+     },
+     {
+      "Location": [
+       {
+        "id": 11,
+        "path": "/data/plex/media/shows"
+       }
+      ],
+      "agent": "tv.plex.agents.series",
+      "allowSync": true,
+      "content": true,
+      "contentChangedAt": 9068940,
+      "createdAt": 1610707309,
+      "directory": true,
+      "filters": true,
+      "hidden": 0,
+      "key": "2",
+      "language": "en-US",
+      "metadataAgentProviderGroupId": 2,
+      "refreshing": false,
+      "scannedAt": 1788818772,
+      "scanner": "Plex TV Series",
+      "title": "TV Shows",
+      "type": "show",
+      "updatedAt": 1766747142,
+      "uuid": "8752eb97-f65f-4b12-9919-b856dfb43226"
+     }
+    ],
+    "allowSync": false,
+    "size": 2,
+    "title1": "Library 1"
+   }
+  },
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ },
+ "libraryindex-library-sections-id-all": {
+  "body": {
+   "MediaContainer": {
+    "Metadata": [
+     {
+      "Collection": [
+       {
+        "tag": "Collection 1"
+       }
+      ],
+      "Country": [
+       {
+        "tag": "United States of America"
+       }
+      ],
+      "Director": [
+       {
+        "tag": "Person 1"
+       }
+      ],
+      "Genre": [
+       {
+        "tag": "Drama"
+       },
+       {
+        "tag": "Musical"
+       }
+      ],
+      "Guid": [
+       {
+        "id": "imdb://tt7354996"
+       },
+       {
+        "id": "tmdb://11691"
+       },
+       {
+        "id": "tvdb://377947"
+       }
+      ],
+      "Image": [
+       {
+        "alt": "Big Buck Bunny",
+        "type": "coverPoster",
+        "url": "/library/metadata/28739/thumb/1788923209"
+       },
+       {
+        "alt": "Big Buck Bunny",
+        "type": "background",
+        "url": "/library/metadata/28739/art/1788923209"
+       },
+       {
+        "alt": "Big Buck Bunny",
+        "type": "clearLogo",
+        "url": "/library/metadata/28739/clearLogo/1788923209"
+       },
+       {
+        "alt": "Big Buck Bunny",
+        "type": "backgroundSquare",
+        "url": "/library/metadata/28739/squareArt/1788923209"
+       }
+      ],
+      "Media": [
+       {
+        "Part": [
+         {
+          "audioProfile": "dolby truehd + dolby atmos",
+          "container": "mkv",
+          "duration": 7665950,
+          "file": "/data/plex/Big Buck Bunny (2016) {tmdb-11691}/Big.Buck.Bunny.Atmos-DEMO.mkv",
+          "id": 204738,
+          "key": "/library/parts/204738/1723056659/file.mkv",
+          "size": 80882788175,
+          "videoProfile": "main 10"
+         }
+        ],
+        "aspectRatio": 1.78,
+        "audioChannels": 8,
+        "audioCodec": "truehd",
+        "audioProfile": "dolby truehd + dolby atmos",
+        "bitrate": 84407,
+        "container": "mkv",
+        "duration": 7665950,
+        "height": 2160,
+        "id": 177129,
+        "videoCodec": "hevc",
+        "videoFrameRate": "24p",
+        "videoProfile": "main 10",
+        "videoResolution": "4k",
+        "width": 3840
+       }
+      ],
+      "Role": [
+       {
+        "tag": "Person 2"
+       },
+       {
+        "tag": "Person 3"
+       },
+       {
+        "tag": "Person 4"
+       }
+      ],
+      "UltraBlurColors": {
+       "bottomLeft": "591dd7",
+       "bottomRight": "151c55",
+       "topLeft": "240c80",
+       "topRight": "4b3799"
+      },
+      "Writer": [
+       {
+        "tag": "Person 1"
+       }
+      ],
+      "addedAt": 1636130502,
+      "art": "/library/metadata/28739/art/1",
+      "audienceRating": 7.9,
+      "audienceRatingImage": "themoviedb://image.rating",
+      "chapterSource": "media",
+      "contentRating": "PG-13",
+      "contentRatingAge": 13,
+      "duration": 7665950,
+      "guid": "plex://movie/5751c160c60d1b4480c4310b",
+      "hasPremiumExtras": "1",
+      "hasPremiumPrimaryExtra": "1",
+      "key": "/library/metadata/28739",
+      "lastViewedAt": 1785616458,
+      "originallyAvailableAt": "2016-12-07",
+      "rating": 7.9,
+      "ratingKey": "28739",
+      "skipCount": 1,
+      "slug": "big-buck-bunny",
+      "studio": "Blender Foundation",
+      "summary": "An open-licensed short film from the demo library.",
+      "tagline": "An open-licensed demo title.",
+      "thumb": "/library/metadata/28739/thumb/1",
+      "title": "Big Buck Bunny",
+      "titleSort": "big buck bunny",
+      "type": "movie",
+      "updatedAt": 1788923209,
+      "viewCount": 2,
+      "viewOffset": 657824,
+      "year": 2016
+     },
+     {
+      "Country": [
+       {
+        "tag": "Denmark"
+       },
+       {
+        "tag": "France"
+       }
+      ],
+      "Director": [
+       {
+        "tag": "Person 5"
+       }
+      ],
+      "Genre": [
+       {
+        "tag": "Comedy"
+       }
+      ],
+      "Guid": [
+       {
+        "id": "imdb://tt2669208"
+       },
+       {
+        "id": "tmdb://655873"
+       },
+       {
+        "id": "tvdb://513902"
+       }
+      ],
+      "Image": [
+       {
+        "alt": "Sintel",
+        "type": "coverPoster",
+        "url": "/library/metadata/59167/thumb/1787977378"
+       },
+       {
+        "alt": "Sintel",
+        "type": "background",
+        "url": "/library/metadata/59167/art/1787977378"
+       },
+       {
+        "alt": "Sintel",
+        "type": "clearLogo",
+        "url": "/library/metadata/59167/clearLogo/1787977378"
+       },
+       {
+        "alt": "Sintel",
+        "type": "backgroundSquare",
+        "url": "/library/metadata/59167/squareArt/1787977378"
+       }
+      ],
+      "Media": [
+       {
+        "Part": [
+         {
+          "audioProfile": "lc",
+          "container": "mp4",
+          "duration": 5979688,
+          "file": "/data/plex/Sintel (2006) {tmdb-655873}/Sintel-DEMO.mp4",
+          "has64bitOffsets": false,
+          "id": 206277,
+          "key": "/library/parts/206277/1701444010/file.mp4",
+          "optimizedForStreaming": true,
+          "size": 1781679472,
+          "videoProfile": "high"
+         }
+        ],
+        "aspectRatio": 1.85,
+        "audioChannels": 2,
+        "audioCodec": "aac",
+        "audioProfile": "lc",
+        "bitrate": 2377,
+        "container": "mp4",
+        "duration": 5979688,
+        "has64bitOffsets": false,
+        "height": 1038,
+        "id": 178668,
+        "optimizedForStreaming": 1,
+        "videoCodec": "h264",
+        "videoFrameRate": "24p",
+        "videoProfile": "high",
+        "videoResolution": "1080",
+        "width": 1920
+       }
+      ],
+      "Role": [
+       {
+        "tag": "Person 6"
+       },
+       {
+        "tag": "Person 7"
+       },
+       {
+        "tag": "Person 8"
+       }
+      ],
+      "UltraBlurColors": {
+       "bottomLeft": "323333",
+       "bottomRight": "55220b",
+       "topLeft": "4c1e0d",
+       "topRight": "0d020e"
+      },
+      "Writer": [
+       {
+        "tag": "Person 5"
+       }
+      ],
+      "addedAt": 1706925690,
+      "art": "/library/metadata/59167/art/1",
+      "audienceRating": 6.6,
+      "audienceRatingImage": "themoviedb://image.rating",
+      "chapterSource": "media",
+      "contentRating": "Not Rated",
+      "duration": 5979688,
+      "guid": "plex://movie/86c653484534fd078e4e66d0",
+      "key": "/library/metadata/59167",
+      "originalTitle": "Sintel",
+      "originallyAvailableAt": "2006-12-08",
+      "rating": 6.6,
+      "ratingKey": "59167",
+      "slug": "sintel",
+      "studio": "Blender Animation Studio",
+      "summary": "An open-licensed short film from the demo library.",
+      "thumb": "/library/metadata/59167/thumb/1",
+      "title": "Sintel",
+      "titleSort": "sintel",
+      "type": "movie",
+      "updatedAt": 1787977378,
+      "year": 2006
+     },
+     {
+      "Country": [
+       {
+        "tag": "Poland"
+       }
+      ],
+      "Director": [
+       {
+        "tag": "Person 9"
+       }
+      ],
+      "Genre": [
+       {
+        "tag": "Komedia"
+       }
+      ],
+      "Guid": [
+       {
+        "id": "imdb://tt2415194"
+       },
+       {
+        "id": "tmdb://673894"
+       },
+       {
+        "id": "tvdb://162199"
+       }
+      ],
+      "Image": [
+       {
+        "alt": "Tears of Steel",
+        "type": "coverPoster",
+        "url": "/library/metadata/13812/thumb/1786792994"
+       },
+       {
+        "alt": "Tears of Steel",
+        "type": "background",
+        "url": "/library/metadata/13812/art/1786792994"
+       },
+       {
+        "alt": "Tears of Steel",
+        "type": "clearLogo",
+        "url": "/library/metadata/13812/clearLogo/1786792994"
+       },
+       {
+        "alt": "Tears of Steel",
+        "type": "backgroundSquare",
+        "url": "/library/metadata/13812/squareArt/1786792994"
+       }
+      ],
+      "Media": [
+       {
+        "Part": [
+         {
+          "container": "mpegts",
+          "duration": 6734048,
+          "file": "/data/plex/Elephants Dream (1981) {tmdb-811721}/Elephants.Dream-DEMO.ts",
+          "id": 205834,
+          "key": "/library/parts/205834/1673983820/file.ts",
+          "packetLength": 188,
+          "size": 5060120204,
+          "videoProfile": "high"
+         }
+        ],
+        "aspectRatio": 1.78,
+        "audioChannels": 5,
+        "audioCodec": "ac3",
+        "bitrate": 6011,
+        "container": "mpegts",
+        "duration": 6734048,
+        "height": 1080,
+        "id": 178225,
+        "videoCodec": "h264",
+        "videoFrameRate": "PAL",
+        "videoProfile": "high",
+        "videoResolution": "1080",
+        "width": 1920
+       }
+      ],
+      "Role": [
+       {
+        "tag": "Person 10"
+       },
+       {
+        "tag": "Person 11"
+       },
+       {
+        "tag": "Person 12"
+       }
+      ],
+      "UltraBlurColors": {
+       "bottomLeft": "81491b",
+       "bottomRight": "844f1e",
+       "topLeft": "49200d",
+       "topRight": "80521d"
+      },
+      "Writer": [
+       {
+        "tag": "Person 10"
+       },
+       {
+        "tag": "Person 9"
+       }
+      ],
+      "addedAt": 1611820958,
+      "art": "/library/metadata/13812/art/1",
+      "audienceRating": 7.8,
+      "audienceRatingImage": "themoviedb://image.rating",
+      "duration": 6734048,
+      "guid": "plex://movie/31519555c0efbd15905ab16a",
+      "key": "/library/metadata/13812",
+      "languageOverride": "pl-PL",
+      "lastViewedAt": 1674161656,
+      "originallyAvailableAt": "1981-05-04",
+      "rating": 7.9,
+      "ratingKey": "13812",
+      "skipCount": 1,
+      "slug": "tears-of-steel",
+      "studio": "VODO",
+      "summary": "An open-licensed short film from the demo library.",
+      "thumb": "/library/metadata/13812/thumb/1",
+      "title": "Tears of Steel",
+      "type": "movie",
+      "updatedAt": 1786792994,
+      "useOriginalTitle": "1",
+      "viewOffset": 113049,
+      "year": 1981
+     },
+     {
+      "Collection": [
+       {
+        "tag": "Collection 2"
+       }
+      ],
+      "Country": [
+       {
+        "tag": "United States of America"
+       }
+      ],
+      "Director": [
+       {
+        "tag": "Person 13"
+       }
+      ],
+      "Genre": [
+       {
+        "tag": "Drama"
+       },
+       {
+        "tag": "Crime"
+       }
+      ],
+      "Guid": [
+       {
+        "id": "imdb://tt0927110"
+       },
+       {
+        "id": "tmdb://122140"
+       },
+       {
+        "id": "tvdb://848447"
+       }
+      ],
+      "Image": [
+       {
+        "alt": "Spring",
+        "type": "coverPoster",
+        "url": "/library/metadata/9167/thumb/1786850988"
+       },
+       {
+        "alt": "Spring",
+        "type": "background",
+        "url": "/library/metadata/9167/art/1786850988"
+       },
+       {
+        "alt": "Spring",
+        "type": "clearLogo",
+        "url": "/library/metadata/9167/clearLogo/1786850988"
+       },
+       {
+        "alt": "Spring",
+        "type": "backgroundSquare",
+        "url": "/library/metadata/9167/squareArt/1786850988"
+       }
+      ],
+      "Media": [
+       {
+        "Part": [
+         {
+          "container": "mkv",
+          "duration": 5760167,
+          "file": "/data/plex/Spring (1957) {tmdb-122140}/Spring-DEMO.mkv",
+          "id": 205537,
+          "key": "/library/parts/205537/1704018321/file.mkv",
+          "size": 59798061232,
+          "videoProfile": "main 10"
+         }
+        ],
+        "aspectRatio": 1.78,
+        "audioChannels": 2,
+        "audioCodec": "flac",
+        "bitrate": 83050,
+        "container": "mkv",
+        "duration": 5760167,
+        "height": 2160,
+        "id": 177928,
+        "videoCodec": "hevc",
+        "videoFrameRate": "24p",
+        "videoProfile": "main 10",
+        "videoResolution": "4k",
+        "width": 3840
+       }
+      ],
+      "Role": [
+       {
+        "tag": "Person 14"
+       },
+       {
+        "tag": "Person 15"
+       },
+       {
+        "tag": "Person 16"
+       }
+      ],
+      "UltraBlurColors": {
+       "bottomLeft": "733d25",
+       "bottomRight": "285948",
+       "topLeft": "492013",
+       "topRight": "8f4435"
+      },
+      "Writer": [
+       {
+        "tag": "Person 17"
+       }
+      ],
+      "addedAt": 1610794475,
+      "art": "/library/metadata/9167/art/1",
+      "audienceRating": 8.6,
+      "audienceRatingImage": "themoviedb://image.rating",
+      "chapterSource": "media",
+      "contentRating": "Not Rated",
+      "contentRatingAge": 12,
+      "duration": 5760167,
+      "guid": "plex://movie/8d36e08eeccba21c8fe626e2",
+      "hasPremiumExtras": "1",
+      "hasPremiumPrimaryExtra": "1",
+      "key": "/library/metadata/9167",
+      "lastRatedAt": 1697995822,
+      "lastViewedAt": 1733084481,
+      "originallyAvailableAt": "1957-04-10",
+      "rating": 8.5,
+      "ratingKey": "9167",
+      "slug": "spring",
+      "studio": "Open Studio 4",
+      "summary": "An open-licensed short film from the demo library.",
+      "tagline": "An open-licensed demo title.",
+      "thumb": "/library/metadata/9167/thumb/1",
+      "title": "Spring",
+      "type": "movie",
+      "updatedAt": 1786850988,
+      "userRating": 10,
+      "viewCount": 2,
+      "year": 1957
+     },
+     {
+      "Country": [
+       {
+        "tag": "United States of America"
+       },
+       {
+        "tag": "United Kingdom"
+       }
+      ],
+      "Director": [
+       {
+        "tag": "Person 18"
+       }
+      ],
+      "Genre": [
+       {
+        "tag": "Comedy"
+       },
+       {
+        "tag": "Science Fiction"
+       }
+      ],
+      "Guid": [
+       {
+        "id": "imdb://tt7201740"
+       },
+       {
+        "id": "tmdb://626250"
+       },
+       {
+        "id": "tvdb://158702"
+       }
+      ],
+      "Image": [
+       {
+        "alt": "Cosmos Laundromat",
+        "type": "coverPoster",
+        "url": "/library/metadata/73301/thumb/1788238784"
+       },
+       {
+        "alt": "Cosmos Laundromat",
+        "type": "background",
+        "url": "/library/metadata/73301/art/1788238784"
+       },
+       {
+        "alt": "Cosmos Laundromat",
+        "type": "clearLogo",
+        "url": "/library/metadata/73301/clearLogo/1788238784"
+       },
+       {
+        "alt": "Cosmos Laundromat",
+        "type": "backgroundSquare",
+        "url": "/library/metadata/73301/squareArt/1788238784"
+       }
+      ],
+      "Media": [
+       {
+        "Part": [
+         {
+          "audioProfile": "ma",
+          "container": "mkv",
+          "duration": 6339424,
+          "file": "/data/plex/Cosmos Laundromat (2025) {tmdb-626250}/Cosmos.Laundromat-DEMO.mkv",
+          "hasThumbnail": "1",
+          "id": 216203,
+          "key": "/library/parts/216203/1761894141/file.mkv",
+          "size": 32964656449,
+          "videoProfile": "high"
+         }
+        ],
+        "aspectRatio": 1.78,
+        "audioChannels": 6,
+        "audioCodec": "dca-ma",
+        "audioProfile": "ma",
+        "bitrate": 41600,
+        "container": "mkv",
+        "duration": 6339424,
+        "height": 1080,
+        "id": 188594,
+        "videoCodec": "h264",
+        "videoFrameRate": "24p",
+        "videoProfile": "high",
+        "videoResolution": "1080",
+        "width": 1920
+       }
+      ],
+      "Role": [
+       {
+        "tag": "Person 19"
+       },
+       {
+        "tag": "Person 20"
+       },
+       {
+        "tag": "Person 21"
+       }
+      ],
+      "UltraBlurColors": {
+       "bottomLeft": "8d4903",
+       "bottomRight": "892607",
+       "topLeft": "492108",
+       "topRight": "8c4a03"
+      },
+      "Writer": [
+       {
+        "tag": "Person 22"
+       },
+       {
+        "tag": "Person 23"
+       }
+      ],
+      "addedAt": 1777413118,
+      "art": "/library/metadata/73301/art/1",
+      "audienceRating": 6.3,
+      "audienceRatingImage": "themoviedb://image.rating",
+      "chapterSource": "media",
+      "contentRating": "R",
+      "duration": 6339424,
+      "guid": "plex://movie/f3655ecbb13c1292730efc54",
+      "hasPremiumPrimaryExtra": "1",
+      "key": "/library/metadata/73301",
+      "lastViewedAt": 1777587391,
+      "originallyAvailableAt": "2025-08-21",
+      "ratingKey": "73301",
+      "slug": "cosmos-laundromat",
+      "studio": "Open Studio 5",
+      "summary": "An open-licensed short film from the demo library.",
+      "tagline": "An open-licensed demo title.",
+      "thumb": "/library/metadata/73301/thumb/1",
+      "title": "Cosmos Laundromat",
+      "type": "movie",
+      "updatedAt": 1788238784,
+      "viewOffset": 540264,
+      "year": 2025
+     }
+    ],
+    "allowSync": true,
+    "art": "/library/metadata/0/art/1",
+    "identifier": "com.plexapp.plugins.library",
+    "librarySectionID": 1,
+    "librarySectionTitle": "Movies",
+    "librarySectionUUID": "e657685d-9c19-4c56-b5e5-29b16357431b",
+    "mediaTagPrefix": "/system/bundle/media/flags/",
+    "mediaTagVersion": 1786914632,
+    "size": 2920,
+    "thumb": "/library/metadata/0/thumb/1",
+    "title1": "Movies",
+    "title2": "Charge",
+    "viewGroup": "movie",
+    "viewMode": 65592
+   }
+  },
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ },
+ "nowplaying": {
+  "body": {
+   "MediaContainer": {
+    "Metadata": [
+     {
+      "Director": [
+       {
+        "filter": "director=362945",
+        "id": "362945",
+        "tag": "Person 24",
+        "tagKey": "5d77682b6f4521001ea99ea2",
+        "thumb": "https://metadata-static.plex.tv/c/people/c0719276a91a25717e9d259b5e1dc20b.jpg"
+       }
+      ],
+      "Media": [
+       {
+        "Part": [
+         {
+          "Stream": [
+           {
+            "bitDepth": 8,
+            "bitrate": 14366,
+            "chromaLocation": "left",
+            "chromaSubsampling": "4:2:0",
+            "codec": "h264",
+            "codedHeight": 1088,
+            "codedWidth": 1920,
+            "colorPrimaries": "bt709",
+            "colorRange": "tv",
+            "colorSpace": "bt709",
+            "colorTrc": "bt709",
+            "default": true,
+            "displayTitle": "1080p (H.264)",
+            "extendedDisplayTitle": "1080p (H.264)",
+            "frameRate": 23.976,
+            "hasScalingMatrix": false,
+            "height": 1080,
+            "id": "1128647",
+            "index": 0,
+            "language": "English",
+            "languageCode": "eng",
+            "languageTag": "en",
+            "level": 40,
+            "location": "direct",
+            "profile": "high",
+            "refFrames": 4,
+            "scanType": "progressive",
+            "streamType": 1,
+            "width": 1920
+           },
+           {
+            "audioChannelLayout": "stereo",
+            "bitrate": 224,
+            "channels": 2,
+            "codec": "eac3",
+            "default": true,
+            "displayTitle": "Open Movie 79 (EAC3 Stereo)",
+            "extendedDisplayTitle": "Open Movie 79 (EAC3 Stereo)",
+            "id": "1128648",
+            "index": 1,
+            "language": "English",
+            "languageCode": "eng",
+            "languageTag": "en",
+            "location": "direct",
+            "samplingRate": 48000,
+            "selected": true,
+            "streamType": 2
+           }
+          ],
+          "container": "mkv",
+          "decision": "directplay",
+          "duration": 1480896,
+          "file": "/data/plex/Hero/Episode.22.S07E22-DEMO.mkv",
+          "id": "221010",
+          "key": "/library/parts/221010/1789162754/file.mkv",
+          "selected": true,
+          "size": 2700724332,
+          "videoProfile": "high"
+         }
+        ],
+        "aspectRatio": "1.78",
+        "audioChannels": 2,
+        "audioCodec": "eac3",
+        "bitrate": 14590,
+        "container": "mkv",
+        "duration": 1480896,
+        "height": 1080,
+        "id": "193401",
+        "selected": true,
+        "videoCodec": "h264",
+        "videoFrameRate": "24p",
+        "videoProfile": "high",
+        "videoResolution": "1080",
+        "width": 1920
+       }
+      ],
+      "Player": {
+       "address": "10.0.0.2",
+       "device": "Demo Player",
+       "local": false,
+       "machineIdentifier": "user",
+       "model": "demo",
+       "platform": "Android",
+       "platformVersion": "11",
+       "playbackId": "3c4f95f0-bda9-425f-8552-29fba0c75419",
+       "playbackSessionId": "97640169-5f99-43b3-b551-31fbf9169d5a",
+       "product": "Plex for Android (TV)",
+       "profile": "Android",
+       "relayed": false,
+       "remotePublicAddress": "198.51.100.2",
+       "secure": true,
+       "state": "playing",
+       "title": "Demo Player",
+       "userID": 0,
+       "vendor": "Demo",
+       "version": "10.30.8.4222"
+      },
+      "Producer": [
+       {
+        "filter": "producer=361984",
+        "id": "361984",
+        "tag": "Person 25",
+        "tagKey": "5d77687b7e5fa10020bf0672",
+        "thumb": "https://metadata-static.plex.tv/5/people/5f06b54e4c857bf9b612711a70b855bf.jpg"
+       }
+      ],
+      "Rating": [
+       {
+        "image": "imdb://image.rating",
+        "type": "audience",
+        "value": "7.6"
+       },
+       {
+        "image": "themoviedb://image.rating",
+        "type": "audience",
+        "value": "8.0"
+       }
+      ],
+      "Role": [
+       {
+        "filter": "actor=100290",
+        "id": "100290",
+        "role": "Character 1",
+        "tag": "Person 26",
+        "tagKey": "5d77682aeb5d26001f1de546",
+        "thumb": "https://metadata-static.plex.tv/d/people/dc74ba5a676970f286e7cbd37c6333c5.jpg"
+       },
+       {
+        "filter": "actor=173263",
+        "id": "173263",
+        "role": "Character 2",
+        "tag": "Person 27",
+        "tagKey": "5d776835961905001eb94200",
+        "thumb": "https://metadata-static.plex.tv/5/people/55724e99df57904790b5dc989f012583.jpg"
+       },
+       {
+        "filter": "actor=360763",
+        "id": "360763",
+        "role": "Character 3",
+        "tag": "Person 28",
+        "tagKey": "5d776826151a60001f24a744",
+        "thumb": "https://metadata-static.plex.tv/5/people/5b8531374ec665607418fadd0ed380f9.jpg"
+       },
+       {
+        "filter": "actor=303759",
+        "id": "303759",
+        "role": "Character 4",
+        "tag": "Person 29",
+        "tagKey": "5d7768468718ba001e317d80",
+        "thumb": "https://metadata-static.plex.tv/4/people/4426b2e6acddc8f97a40f4f18f21ca2e.jpg"
+       },
+       {
+        "filter": "actor=124760",
+        "id": "124760",
+        "role": "Character 5",
+        "tag": "Person 30",
+        "tagKey": "5d77682d8718ba001e312ff7",
+        "thumb": "https://metadata-static.plex.tv/7/people/794d8ba0f4cbf859644086683dfe1063.jpg"
+       },
+       {
+        "filter": "actor=270986",
+        "id": "270986",
+        "role": "Character 6",
+        "tag": "Person 31",
+        "tagKey": "5d776827999c64001ec2c90e",
+        "thumb": "https://metadata-static.plex.tv/6/people/6b0a083b477d80d0dbdd3ab854c80792.jpg"
+       },
+       {
+        "filter": "actor=169281",
+        "id": "169281",
+        "role": "Character 7",
+        "tag": "Person 32",
+        "tagKey": "5d77682c8a7581001f12c653",
+        "thumb": "https://metadata-static.plex.tv/f/people/fa83247246075f16bb309ec432eca093.jpg"
+       },
+       {
+        "filter": "actor=360762",
+        "id": "360762",
+        "role": "Character 8",
+        "tag": "Person 33",
+        "tagKey": "5d7768456f4521001ea9f3d3",
+        "thumb": "https://metadata-static.plex.tv/7/people/7a844888d52746e28ede2e54a2fc2eb4.jpg"
+       },
+       {
+        "filter": "actor=235684",
+        "id": "235684",
+        "role": "Character 9",
+        "tag": "Person 34",
+        "tagKey": "5d776cdf594b2b001e6fd2ac",
+        "thumb": "https://metadata-static.plex.tv/e/people/e4d06ed3b454c9f5f6c45f1041d2ff9d.jpg"
+       },
+       {
+        "filter": "actor=363032",
+        "id": "363032",
+        "role": "Character 10",
+        "tag": "Person 35",
+        "tagKey": "5d77684585719b001f3a6b8f",
+        "thumb": "https://metadata-static.plex.tv/d/people/de43eedd39123dda02b0d3fd77d13a45.jpg"
+       },
+       {
+        "filter": "actor=194915",
+        "id": "194915",
+        "role": "Character 11",
+        "tag": "Person 36",
+        "tagKey": "5d77682b4de0ee001fcc99a2",
+        "thumb": "https://metadata-static.plex.tv/9/people/9b303efb92d62888c88a99eec8ecb089.jpg"
+       }
+      ],
+      "Session": {
+       "bandwidth": 30639,
+       "id": "995ec0d66095af4c-com-plexapp-android",
+       "location": "wan"
+      },
+      "UltraBlurColors": [
+       {
+        "bottomLeft": "161210",
+        "bottomRight": "32352f",
+        "topLeft": "2a2f2f",
+        "topRight": "161718"
+       }
+      ],
+      "User": 0,
+      "Writer": [
+       {
+        "filter": "writer=362965",
+        "id": "362965",
+        "tag": "Person 37",
+        "tagKey": "5e163545188587003d04af71"
+       }
+      ],
+      "addedAt": 1789163910,
+      "art": "/library/metadata/75512/art/1",
+      "audienceRating": 8,
+      "audienceRatingImage": "themoviedb://image.rating",
+      "contentRating": "TV-PG",
+      "duration": 1480896,
+      "grandparentArt": "/library/metadata/75512/art/1",
+      "grandparentGuid": "plex://show/49f4083a982958ff91675fce",
+      "grandparentKey": "/library/metadata/75512",
+      "grandparentRatingKey": "75512",
+      "grandparentSlug": "episode-22",
+      "grandparentTheme": "/library/metadata/75512/theme/1",
+      "grandparentThumb": "/library/metadata/75512/thumb/1",
+      "grandparentTitle": "Pioneer One",
+      "guid": "plex://episode/49f4083a982958ff91675fce",
+      "index": 22,
+      "key": "/library/metadata/75837",
+      "librarySectionID": "2",
+      "librarySectionKey": "/library/sections/2",
+      "librarySectionTitle": "TV Shows",
+      "originallyAvailableAt": "1979-02-19",
+      "parentGuid": "plex://season/49f4083a982958ff91675fce",
+      "parentIndex": 7,
+      "parentKey": "/library/metadata/75813",
+      "parentRatingKey": "75813",
+      "parentThumb": "/library/metadata/75813/thumb/1",
+      "parentTitle": "Season 7",
+      "ratingKey": "75837",
+      "sessionKey": "125",
+      "summary": "An open-licensed episode from the demo library.",
+      "thumb": "/library/metadata/75837/thumb/1",
+      "title": "Episode 22",
+      "type": "episode",
+      "updatedAt": 1789163915,
+      "viewOffset": 1431087,
+      "year": 1979
+     }
+    ],
+    "size": 1
+   }
+  },
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ },
+ "recentlywatched": {
+  "body": {
+   "MediaContainer": {
+    "Metadata": [
+     {
+      "accountID": 0,
+      "deviceID": 0,
+      "grandparentArt": "/library/metadata/75512/art/1",
+      "grandparentKey": "/library/metadata/75512",
+      "grandparentThumb": "/library/metadata/75512/thumb/1",
+      "grandparentTitle": "Pioneer One",
+      "historyKey": "/status/sessions/history/16497",
+      "index": 22,
+      "key": "/library/metadata/75837",
+      "librarySectionID": "2",
+      "originallyAvailableAt": "1979-02-19",
+      "parentIndex": 7,
+      "parentKey": "/library/metadata/75813",
+      "parentThumb": "/library/metadata/75813/thumb/1",
+      "parentTitle": "Season 7",
+      "ratingKey": "75837",
+      "thumb": "/library/metadata/75837/thumb/1",
+      "title": "Episode 22",
+      "type": "episode",
+      "viewedAt": 1789432120
+     },
+     {
+      "accountID": 0,
+      "deviceID": 0,
+      "grandparentArt": "/library/metadata/75512/art/1",
+      "grandparentKey": "/library/metadata/75512",
+      "grandparentThumb": "/library/metadata/75512/thumb/1",
+      "grandparentTitle": "Pioneer One",
+      "historyKey": "/status/sessions/history/16496",
+      "index": 21,
+      "key": "/library/metadata/75836",
+      "librarySectionID": "2",
+      "originallyAvailableAt": "1979-02-14",
+      "parentIndex": 7,
+      "parentKey": "/library/metadata/75813",
+      "parentThumb": "/library/metadata/75813/thumb/1",
+      "parentTitle": "Season 7",
+      "ratingKey": "75836",
+      "thumb": "/library/metadata/75836/thumb/1",
+      "title": "Episode 21",
+      "type": "episode",
+      "viewedAt": 1789430705
+     },
+     {
+      "accountID": 0,
+      "deviceID": 0,
+      "grandparentArt": "/library/metadata/75512/art/1",
+      "grandparentKey": "/library/metadata/75512",
+      "grandparentThumb": "/library/metadata/75512/thumb/1",
+      "grandparentTitle": "Pioneer One",
+      "historyKey": "/status/sessions/history/16495",
+      "index": 20,
+      "key": "/library/metadata/75835",
+      "librarySectionID": "2",
+      "originallyAvailableAt": "1979-02-05",
+      "parentIndex": 7,
+      "parentKey": "/library/metadata/75813",
+      "parentThumb": "/library/metadata/75813/thumb/1",
+      "parentTitle": "Season 7",
+      "ratingKey": "75835",
+      "thumb": "/library/metadata/75835/thumb/1",
+      "title": "Episode 20",
+      "type": "episode",
+      "viewedAt": 1789429352
+     },
+     {
+      "accountID": 0,
+      "deviceID": 0,
+      "grandparentArt": "/library/metadata/75512/art/1",
+      "grandparentKey": "/library/metadata/75512",
+      "grandparentThumb": "/library/metadata/75512/thumb/1",
+      "grandparentTitle": "Pioneer One",
+      "historyKey": "/status/sessions/history/16494",
+      "index": 19,
+      "key": "/library/metadata/75834",
+      "librarySectionID": "2",
+      "originallyAvailableAt": "1979-01-29",
+      "parentIndex": 7,
+      "parentKey": "/library/metadata/75813",
+      "parentThumb": "/library/metadata/75813/thumb/1",
+      "parentTitle": "Season 7",
+      "ratingKey": "75834",
+      "thumb": "/library/metadata/75834/thumb/1",
+      "title": "Episode 19",
+      "type": "episode",
+      "viewedAt": 1789427961
+     },
+     {
+      "accountID": 0,
+      "deviceID": 0,
+      "grandparentArt": "/library/metadata/75512/art/1",
+      "grandparentKey": "/library/metadata/75512",
+      "grandparentThumb": "/library/metadata/75512/thumb/1",
+      "grandparentTitle": "Pioneer One",
+      "historyKey": "/status/sessions/history/16493",
+      "index": 18,
+      "key": "/library/metadata/75833",
+      "librarySectionID": "2",
+      "originallyAvailableAt": "1979-01-22",
+      "parentIndex": 7,
+      "parentKey": "/library/metadata/75813",
+      "parentThumb": "/library/metadata/75813/thumb/1",
+      "parentTitle": "Season 7",
+      "ratingKey": "75833",
+      "thumb": "/library/metadata/75833/thumb/1",
+      "title": "Episode 18",
+      "type": "episode",
+      "viewedAt": 1789426489
+     }
+    ],
+    "offset": 0,
+    "size": 20,
+    "totalSize": 13260
+   }
+  },
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ },
+ "testconnection": {
+  "body": {
+   "MediaContainer": {
+    "apiVersion": "1.2.3",
+    "claimed": true,
+    "machineIdentifier": "user",
+    "size": 0,
+    "version": "1.43.4.10903-e5521bd8c"
+   }
+  },
+  "headers": {
+   "Content-Type": "application/json"
+  },
+  "status": 200
+ }
+}

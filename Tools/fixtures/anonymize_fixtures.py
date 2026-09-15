@@ -35,7 +35,7 @@ import sys
 from collections import Counter, defaultdict
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-FIXTURE_ROOT = os.path.join(REPO, "Packages", "MediaKit", "Fixtures")
+FIXTURE_ROOT = os.path.join(REPO, "Packages", "MediaKit", "Fixtures")  # unpacked tree; pack_fixtures.py ships it
 CORPUS = os.path.join(REPO, "docs", "superpowers", "baseline", "2026-09-15-golden-requests.json")
 
 # --------------------------------------------------------------------------
