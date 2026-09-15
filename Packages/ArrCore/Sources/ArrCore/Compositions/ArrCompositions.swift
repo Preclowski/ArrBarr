@@ -302,17 +302,24 @@ nonisolated enum MediaKitErrorPresenter {
         if let server = error.serverMessage, !server.isEmpty { return server }
         switch error {
         case .notConfigured: return String(localized: "common.arrbarrIsNotConfigured.label", bundle: .module)
-        case let .unreachable(host, _): return "Network error: \(host.description) unreachable"
-        case let .breakerOpen(host, _): return "Network error: \(host.description) unreachable"
-        case let .rateLimited(host, _): return "Rate limited by \(host.description)"
-        case let .unauthorized(_, status, _): return "HTTP \(status): check the API key"
-        case let .rejected(_, status, _), let .serverFault(_, status, _): return "HTTP \(status)"
-        case let .serviceError(_, code, _): return "Service error \(code ?? "")"
-        case let .decoding(op, detail): return "Decoding \(op.name): \(detail)"
-        case let .unsupported(_, capability): return "Unsupported: \(capability.rawValue)"
-        case let .persistence(detail): return "Storage: \(detail)"
-        case .notPermitted, .fixtureMissing: return "Internal error"
+        case let .unreachable(host, _): return text("mediakit.error.unreachable", host.description)
+        case let .breakerOpen(host, _): return text("mediakit.error.breakerOpen", host.description)
+        case let .rateLimited(host, _): return text("mediakit.error.rateLimited", host.description)
+        case let .unauthorized(_, status, _): return text("mediakit.error.unauthorized", String(status))
+        case let .rejected(_, status, _): return text("mediakit.error.rejected", String(status))
+        case let .serverFault(_, status, _): return text("mediakit.error.serverFault", String(status))
+        case let .serviceError(_, code, _): return text("mediakit.error.serviceError", code ?? "")
+        case let .decoding(op, detail): return text("mediakit.error.decoding", op.name, detail)
+        case let .unsupported(_, capability): return text("mediakit.error.unsupported", capability.rawValue)
+        case let .persistence(detail): return text("mediakit.error.persistence", detail)
+        case .notPermitted: return text("mediakit.error.notPermitted")
+        case .fixtureMissing: return text("mediakit.error.fixtureMissing")
         }
+    }
+
+    /// Catalogue key + `%@` arguments; every `MediaKitError` case has a key (`MediaKitErrorCatalogTests`).
+    private static func text(_ key: String, _ arguments: String...) -> String {
+        String(format: String(localized: String.LocalizationValue(key), bundle: .module), arguments: arguments)
     }
 
     static func message(for error: any Error) -> String {

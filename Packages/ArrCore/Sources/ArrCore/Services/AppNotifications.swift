@@ -64,7 +64,8 @@ nonisolated public enum AppMessages {
     }
 
     public static func post<M: NotificationCenter.AsyncMessage>(_ message: M) where M.Subject == AppMessageBus {
-        NotificationCenter.default.post(message)
+        let center = NotificationCenter.default
+        center.post(message)
     }
 }
 
