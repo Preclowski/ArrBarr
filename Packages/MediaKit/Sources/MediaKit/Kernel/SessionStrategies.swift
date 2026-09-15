@@ -157,6 +157,19 @@ public struct DelugeStrategy: SessionStrategy {
     }
 }
 
+/// v4 read access tokens go in the Authorization header; a v3 key is the second sanctioned query secret.
+public struct TMDBStrategy: SessionStrategy {
+    private let base = HeaderAuthStrategy()
+    public init() {}
+    public func authorize(_ request: HTTPRequest, plan: RequestPlan, credentials: Credentials, session: SessionToken?) throws -> HTTPRequest {
+        var p = plan
+        if case let .apiKey(key) = credentials.material, !TMDBService.isReadAccessToken(key) { p.auth = .querySecret("api_key") } else { p.auth = .bearer }
+        return try base.authorize(request, plan: p, credentials: credentials, session: session)
+    }
+    public func rejection(for response: HTTPResponse) -> SessionRejection? { response.status == 401 ? .unauthenticated : nil }
+    public func establish(after rejection: SessionRejection?, credentials: Credentials, send: SessionSend) async throws -> SessionToken? { nil }
+}
+
 public enum SessionStrategies {
     public static let standard: [InstanceKind: any SessionStrategy] = {
         var table: [InstanceKind: any SessionStrategy] = [:]
@@ -165,6 +178,7 @@ public enum SessionStrategies {
         table[.qbittorrent] = QBittorrentStrategy()
         table[.transmission] = TransmissionStrategy()
         table[.deluge] = DelugeStrategy()
+        table[.tmdb] = TMDBStrategy()
         return table
     }()
 }

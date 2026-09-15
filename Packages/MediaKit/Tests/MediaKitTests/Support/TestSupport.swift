@@ -97,10 +97,13 @@ struct TestKit {
     static let sonarr = InstanceID(.sonarr)
     static let qbittorrent = InstanceID(.qbittorrent)
 
+    let fixtures: FixtureTransport?
+
     init(instances: [InstanceID] = [TestKit.radarr, TestKit.sonarr], database location: DatabaseLocation? = .memory,
-         limits: HostGovernor.Limits = HostGovernor.Limits(), credentials: [InstanceID: Credentials]? = nil) async throws {
+         limits: HostGovernor.Limits = HostGovernor.Limits(), credentials: [InstanceID: Credentials]? = nil, fixtures: Bool = false) async throws {
         let log = NoLog()
         clock.autoAdvance = true
+        self.fixtures = fixtures ? FixtureTransport(clock: clock) : nil
         registry = InstanceRegistry(telemetry: telemetry, log: log)
         governor = HostGovernor(defaults: limits, clock: clock, telemetry: telemetry, log: log)
         sessions = SessionBroker(strategies: SessionStrategies.standard, telemetry: telemetry, log: log)
@@ -111,7 +114,8 @@ struct TestKit {
             if table[id] == nil { table[id] = Credentials(baseURL: url, material: .apiKey("secret-\(id.kind.rawValue)"), generation: "g1") }
             descriptors.append(InstanceDescriptor(id: id, baseURL: table[id]!.baseURL, generation: table[id]!.generation))
         }
-        pipeline = RequestPipeline(transport: transport, sockets: transport, governor: governor, sessions: sessions,
+        let wire: any Transport = self.fixtures ?? transport
+        pipeline = RequestPipeline(transport: wire, sockets: transport, governor: governor, sessions: sessions,
                                    credentials: StaticCredentials(table), registry: registry, telemetry: telemetry, log: log, clock: clock)
         database = try location.map { try SQLiteDatabase(location: $0, log: log) }
         identity = IdentityStore(database: database, clock: clock)

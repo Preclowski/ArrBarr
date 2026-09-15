@@ -36,9 +36,9 @@ public struct Resource<Value: Codable & Sendable>: Sendable {
 extension Resource {
     /// JSON body decoded as `Value` with the shared wire decoder.
     public static func json(_ plan: RequestPlan, tags: Set<InvalidationTag>, freshness: FreshnessClass, ttl: Duration? = nil,
-                            harvest: (@Sendable (Value) -> [Crosswalk])? = nil) -> Resource<Value> where Value: Decodable {
+                            decoder: JSONDecoder = WireCodec.decoder, harvest: (@Sendable (Value) -> [Crosswalk])? = nil) -> Resource<Value> where Value: Decodable {
         Resource(plan: plan, tags: tags, freshness: freshness, ttl: ttl,
-                 decode: { data in try WireCodec.decoder.decode(Value.self, from: data) }, harvest: harvest)
+                 decode: { data in try decoder.decode(Value.self, from: data) }, harvest: harvest)
     }
 }
 

@@ -2053,7 +2053,7 @@
   "body": {
    "adult": false,
    "backdrop_path": "/open-series-76-backdrop.jpg",
-   "created_by": 0,
+   "created_by": [],
    "episode_run_time": [],
    "first_air_date": "2011-04-17",
    "genres": [
@@ -2229,7 +2229,7 @@
   "body": {
    "adult": false,
    "backdrop_path": "/open-series-76-backdrop.jpg",
-   "created_by": 0,
+   "created_by": [],
    "episode_run_time": [],
    "first_air_date": "2011-04-17",
    "genres": [

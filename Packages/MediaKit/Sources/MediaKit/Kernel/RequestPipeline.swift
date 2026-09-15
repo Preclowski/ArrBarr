@@ -200,6 +200,13 @@ public enum WireCodec {
         return d
     }()
 
+    /// TMDB and the media servers spell keys in snake_case / PascalCase; services pick the decoder.
+    public static let snakeCaseDecoder: JSONDecoder = {
+        let d = JSONDecoder()
+        d.keyDecodingStrategy = .convertFromSnakeCase
+        return d
+    }()
+
     public static let encoder: JSONEncoder = {
         let e = JSONEncoder()
         e.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]

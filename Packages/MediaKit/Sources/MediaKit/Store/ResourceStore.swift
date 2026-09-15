@@ -77,7 +77,7 @@ public actor ResourceStore {
         telemetry.record(.cacheMiss(resource.key))
         do {
             let row = try await fetch(resource, priority: priority)
-            return Fetched(value: try resource.decode(row.payload), origin: inFlight[resource.key] == nil ? .network : .coalesced,
+            return Fetched(value: try Self.stored(V.self, row.payload, operation: resource.key.operation), origin: inFlight[resource.key] == nil ? .network : .coalesced,
                            fetchedAt: row.fetchedAt, isStale: false, tags: row.tags, degraded: nil)
         } catch let error as MediaKitError {
             if policy != .mustRevalidate, let cached {
@@ -267,11 +267,17 @@ public actor ResourceStore {
 
     private func decode<V>(_ resource: Resource<V>, _ entry: StoredEntry, origin: CacheOrigin, isStale: Bool, degraded: MediaKitError?) throws -> Fetched<V> {
         do {
-            return Fetched(value: try resource.decode(entry.payload), origin: origin, fetchedAt: entry.fetchedAt, isStale: isStale, tags: entry.tags, degraded: degraded)
+            return Fetched(value: try Self.stored(V.self, entry.payload, operation: resource.key.operation), origin: origin, fetchedAt: entry.fetchedAt, isStale: isStale, tags: entry.tags, degraded: degraded)
         } catch {
             memory.remove { $0.key == entry.key }
-            throw MediaKitError.decoding(resource.key.operation, detail: WireCodec.describe(error))
+            throw error
         }
+    }
+
+    /// Payloads are re-encoded values, not response bytes: `Resource.decode` is for the wire only.
+    private static func stored<V: Decodable>(_ type: V.Type, _ payload: Data, operation: OperationID) throws -> V {
+        do { return try WireCodec.decoder.decode(V.self, from: payload) }
+        catch { throw MediaKitError.decoding(operation, detail: "stored payload: " + WireCodec.describe(error)) }
     }
 
     private func fetch<V>(_ resource: Resource<V>, priority: RequestPriority) async throws -> CommittedRow {

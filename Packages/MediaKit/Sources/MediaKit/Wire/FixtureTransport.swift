@@ -44,14 +44,14 @@ public actor FixtureTransport: Transport, SocketTransport {
     public func send(_ request: HTTPRequest) async throws -> HTTPResponse {
         log.append((request.operation, clock.now))
         let kind = request.operation.kind
-        let name = request.operation.name.lowercased()
+        let name = request.operation.name.lowercased().replacingOccurrences(of: ".", with: "-")
         let table = try load(kind)
         let slug: String = {
             if let rpc = request.rpcMethod { return rpc.replacingOccurrences(of: ".", with: "-") }
-            var s = request.pathTemplate.replacingOccurrences(of: "{id}", with: "").replacingOccurrences(of: "/", with: "-")
+            var s = request.pathTemplate.replacingOccurrences(of: "\\{[a-zA-Z]+\\}", with: "id", options: .regularExpression).replacingOccurrences(of: "/", with: "-")
             while s.hasPrefix("-") { s.removeFirst() }
             while s.hasSuffix("-") { s.removeLast() }
-            return s
+            return s.replacingOccurrences(of: "--", with: "-")
         }()
         if let entry = table["\(name)-\(slug)"] ?? table[name] {
             var body = entry.body
