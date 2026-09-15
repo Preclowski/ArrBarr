@@ -2,7 +2,7 @@ import Foundation
 import MediaKit
 
 /// Plex, Jellyfin and Emby through MediaKit, in the vocabulary `MediaServerIndex` and the settings pane consume.
-struct MediaServerFacade: MediaServerClient {
+nonisolated struct MediaServerFacade: MediaServerClient {
     let config: MediaServerConfig
 
     private func context() async throws -> (gateway: ServiceGateway, service: MediaServerService) {

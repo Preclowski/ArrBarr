@@ -15,7 +15,7 @@ import Foundation
 /// forgotten, so if the same problem recurs later it is announced again. That
 /// is the difference between "we told you once, ever" and "we tell you when it
 /// happens".
-struct HealthNotificationTracker: Codable, Equatable {
+nonisolated struct HealthNotificationTracker: Codable, Equatable {
     /// Keys of the records announced so far, per source.
     private var announced: [String: Set<String>] = [:]
 

@@ -2,7 +2,7 @@ import Foundation
 import MediaKit
 
 /// Whisparr v3 is Radarr's vocabulary; the capability probe marks a v2 instance, whose movie resources are unsupported.
-public struct WhisparrClient: ArrAPIClient {
+nonisolated public struct WhisparrClient: ArrAPIClient {
     public let config: ServiceConfig
     public let source: QueueItem.Source = .whisparr
     public let serviceName = "Whisparr"

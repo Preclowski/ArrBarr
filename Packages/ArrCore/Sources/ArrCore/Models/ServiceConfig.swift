@@ -1,6 +1,6 @@
 import Foundation
 
-public struct ServiceConfig: Codable, Equatable, Sendable {
+nonisolated public struct ServiceConfig: Codable, Equatable, Sendable {
     public var enabled: Bool
     public var baseURL: String
     public var apiKey: String
@@ -47,7 +47,7 @@ public struct ServiceConfig: Codable, Equatable, Sendable {
     public static let empty = ServiceConfig(enabled: false, baseURL: "", apiKey: "", username: "", password: "")
 }
 
-public enum ServiceKind: String, CaseIterable, Identifiable, Sendable {
+nonisolated public enum ServiceKind: String, CaseIterable, Identifiable, Sendable {
     case radarr, sonarr, lidarr, whisparr, sabnzbd, qbittorrent, nzbget, transmission, rtorrent, deluge
     public var id: String { rawValue }
 

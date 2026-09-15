@@ -17,11 +17,11 @@ import Foundation
 /// (a monitored toggle in the arr's own UI) can wait for the next `ttl`.
 public actor LibraryIndex {
 
-    public static let shared = LibraryIndex()
+    nonisolated public static let shared = LibraryIndex()
 
     /// Backstop for changes no event tells us about. Long on purpose: this is
     /// the heaviest call the app makes, and events cover the urgent cases.
-    public static let ttl: TimeInterval = 10 * 60
+    nonisolated public static let ttl: TimeInterval = 10 * 60
 
     private struct Slot<Record: Sendable>: Sendable {
         var records: [Record]
@@ -208,7 +208,7 @@ public actor LibraryIndex {
         Task { await self.invalidate(source) }
     }
 
-    private static func isFresh(_ stamp: Date) -> Bool {
+    nonisolated private static func isFresh(_ stamp: Date) -> Bool {
         Date().timeIntervalSince(stamp) < ttl
     }
 

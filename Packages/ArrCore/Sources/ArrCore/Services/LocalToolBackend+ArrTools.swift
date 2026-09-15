@@ -269,7 +269,7 @@ extension LocalToolBackend {
         return results.map { "  • \($0.0): \($0.1)" }
     }
 
-    private static func probeDownloadClient(_ kind: DownloadClientKind, _ cfg: ServiceConfig) async throws -> String {
+    nonisolated private static func probeDownloadClient(_ kind: DownloadClientKind, _ cfg: ServiceConfig) async throws -> String {
         // qBittorrent and Deluge authenticate with a session cookie, so when
         // they aren't handed a URLSession they build their own — and a
         // URLSession keeps *itself* alive until it is invalidated. `health` is
@@ -515,7 +515,7 @@ extension LocalToolBackend {
     }
 
     /// Helper: extract YYYY from an ISO-ish release date.
-    static func yearFromReleaseDate(_ raw: String?) -> Int? {
+    nonisolated static func yearFromReleaseDate(_ raw: String?) -> Int? {
         guard let raw, raw.count >= 4 else { return nil }
         return Int(raw.prefix(4))
     }
@@ -573,7 +573,7 @@ extension LocalToolBackend {
     /// model-authored reasons came back as plot blurbs on every card and
     /// visibly slowed generation, so card reasons are computed-only now
     /// (anchors, library decks).
-    static func suggestItems(_ value: JSONValue) -> [(title: String, year: Int?, tmdbId: Int?)] {
+    nonisolated static func suggestItems(_ value: JSONValue) -> [(title: String, year: Int?, tmdbId: Int?)] {
         guard case .object(let dict) = value, case .array(let arr) = dict["items"] else { return [] }
         func intValue(_ raw: JSONValue?) -> Int? {
             switch raw {
@@ -593,7 +593,7 @@ extension LocalToolBackend {
     /// The lookup term for one pick: an exact `tmdb:` ref when the model
     /// supplied the id (one exact hit, no wrong-remake risk — both arrs
     /// resolve it), else title-plus-year prose.
-    static func lookupTerm(title: String, year: Int?, tmdbId: Int?) -> String {
+    nonisolated static func lookupTerm(title: String, year: Int?, tmdbId: Int?) -> String {
         if let tmdbId { return "tmdb:\(tmdbId)" }
         return year.map { "\(title) \($0)" } ?? title
     }
@@ -601,7 +601,7 @@ extension LocalToolBackend {
     /// Condensed text for the model: surfaced picks + library state +
     /// missing labels. Kept under ~300 tokens for 15 items so it doesn't
     /// eat the local LLM's context window.
-    static func formatSuggestionsCondensed(
+    nonisolated static func formatSuggestionsCondensed(
         resolved: [SearchResult],
         missing: [String],
         kind: String
@@ -632,7 +632,7 @@ extension LocalToolBackend {
     /// Detect a 4-digit year in the query and surface year-matching hits to
     /// the top of the result list. Helps when TMDB's popularity ranking
     /// buries upcoming / niche entries under same-titled hits from years ago.
-    static func searchWithYearAwareness(client: SearchClient, query: String) async throws -> [SearchResult] {
+    nonisolated static func searchWithYearAwareness(client: SearchClient, query: String) async throws -> [SearchResult] {
         let primary = try await client.lookup(query: query)
         guard let year = extractYear(from: query) else { return primary }
         // If we already have year-matching hits in the primary list, surface them.
@@ -661,7 +661,7 @@ extension LocalToolBackend {
         return merged
     }
 
-    static func extractYear(from query: String) -> Int? {
+    nonisolated static func extractYear(from query: String) -> Int? {
         // Look for any 4-digit run that's a plausible year (1900..currentYear+5).
         let now = Calendar.current.component(.year, from: Date())
         guard let regex = try? NSRegularExpression(pattern: #"\b(19|20)\d{2}\b"#) else { return nil }
@@ -680,7 +680,7 @@ extension LocalToolBackend {
     /// ✗ 0/0 upcoming") capped to keep tokens sane. With a filter it
     /// drops to a single targeted line. Empty when the record has no
     /// season data (shouldn't happen for live Sonarr, possible in demo).
-    static func seasonsSummary(for rec: SonarrLibraryRecord, filter: Int?) -> String {
+    nonisolated static func seasonsSummary(for rec: SonarrLibraryRecord, filter: Int?) -> String {
         let seasons = rec.seasons?.filter { $0.seasonNumber > 0 } ?? []
         guard !seasons.isEmpty else { return "" }
         if let target = filter {
@@ -695,7 +695,7 @@ extension LocalToolBackend {
         return " · seasons: \(shown)\(trailing)"
     }
 
-    static func formatSeasonLine(_ s: SonarrLibrarySeason) -> String {
+    nonisolated static func formatSeasonLine(_ s: SonarrLibrarySeason) -> String {
         let mon = (s.monitored ?? false) ? "✓" : "✗"
         let have = s.statistics?.episodeFileCount ?? 0
         let total = s.statistics?.totalEpisodeCount ?? s.statistics?.episodeCount ?? 0
@@ -764,7 +764,7 @@ extension LocalToolBackend {
         return ToolCallOutput(text: text, rich: .calendar(merged))
     }
 
-    private static func fetchCalendar(_ source: QueueItem.Source, _ cfg: ServiceConfig) async throws -> [UpcomingItem] {
+    nonisolated private static func fetchCalendar(_ source: QueueItem.Source, _ cfg: ServiceConfig) async throws -> [UpcomingItem] {
         switch source {
         case .sonarr:   return try await SonarrClient(config: cfg).fetchCalendar()
         case .radarr:   return try await RadarrClient(config: cfg).fetchCalendar()
@@ -825,7 +825,7 @@ extension LocalToolBackend {
         )
     }
 
-    static func formatCalendarCondensed(_ items: [UpcomingItem]) -> String {
+    nonisolated static func formatCalendarCondensed(_ items: [UpcomingItem]) -> String {
         guard !items.isEmpty else { return "Nothing upcoming." }
         let fmt = DateFormatter()
         fmt.dateFormat = "yyyy-MM-dd"
@@ -915,7 +915,7 @@ extension LocalToolBackend {
 
     /// Pure, unit-tested formatter: one line per queue item, with an
     /// `UPGRADE: old → new` diff fragment for upgrade rows.
-    static func formatQueueCondensed(_ items: [QueueItem], failures: [String] = []) -> String {
+    nonisolated static func formatQueueCondensed(_ items: [QueueItem], failures: [String] = []) -> String {
         var sections: [String] = []
 
         if items.isEmpty {
@@ -950,7 +950,7 @@ extension LocalToolBackend {
 
     /// Builds the `UPGRADE: 1080p → 2160p · score 50→120 · +DV -X · 8.1GB→24.3GB`
     /// fragment for an upgrade row. Returns nil if there's no meaningful diff.
-    static func upgradeDiffFragment(_ item: QueueItem) -> String? {
+    nonisolated static func upgradeDiffFragment(_ item: QueueItem) -> String? {
         var parts: [String] = []
 
         let oldQ = item.existingQuality ?? "?"

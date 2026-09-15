@@ -61,7 +61,7 @@ public actor SearchClient {
         }
     }
 
-    static func profileNameMap(config: ServiceConfig, source: QueueItem.Source) async -> [Int: String] {
+    nonisolated static func profileNameMap(config: ServiceConfig, source: QueueItem.Source) async -> [Int: String] {
         let profiles = await SearchOptionsCache.shared.qualityProfiles(config: config, source: source) {
             (try? await SearchClient(config: config, source: source).fetchQualityProfiles()) ?? []
         }
@@ -86,7 +86,7 @@ public actor SearchClient {
     @discardableResult
     func addMovie(_ result: SearchResult, qualityProfileId: Int, rootFolderPath: String, monitor: RadarrMonitorMode, searchOnAdd: Bool) async throws -> Int? {
         try ensureRefCompatible(result)
-        return try await client.post("search.addMovie", path: "/movie", body: [
+        return try await client.post("addMovie", path: "/movie", body: [
             "tmdbId": .number(Double(result.externalId)), "title": .string(result.title), "qualityProfileId": .number(Double(qualityProfileId)),
             "rootFolderPath": .string(rootFolderPath), "monitored": .bool(true), "monitor": .string(monitor.rawValue),
             "addOptions": .object(["searchForMovie": .bool(searchOnAdd)]),
@@ -102,7 +102,7 @@ public actor SearchClient {
             throw HTTPError.decoding(NSError(domain: "ArrBarr.SonarrAdd", code: 0, userInfo: [
                 NSLocalizedDescriptionKey: String(format: String(localized: "search.unresolvedSeries.error", bundle: .module), result.title)]))
         }
-        return try await client.post("search.addSeries", path: "/series", body: [
+        return try await client.post("addSeries", path: "/series", body: [
             "tvdbId": .number(Double(tvdbId)), "title": .string(result.title), "qualityProfileId": .number(Double(qualityProfileId)),
             "rootFolderPath": .string(rootFolderPath), "monitored": .bool(true), "seriesType": .string(seriesType.rawValue), "seasonFolder": .bool(seasonFolder),
             "addOptions": .object(["monitor": .string(monitor.apiValue), "searchForMissingEpisodes": .bool(searchOnAdd)]),
@@ -117,14 +117,14 @@ public actor SearchClient {
             "monitored": .bool(true), "monitor": .string(monitor.rawValue), "addOptions": .object(["searchForMovie": .bool(searchOnAdd)]),
         ]
         if let tmdbId = Int(result.foreignId), tmdbId != 0 { body["tmdbId"] = .number(Double(tmdbId)) } else { body["foreignId"] = .string(result.foreignId) }
-        return try await client.post("search.addMovie", path: "/movie", body: body, invalidates: { self.addTags($0) })
+        return try await client.post("addMovie", path: "/movie", body: body, invalidates: { self.addTags($0) })
     }
 
     @discardableResult
     func addArtist(_ result: SearchResult, qualityProfileId: Int, metadataProfileId: Int, rootFolderPath: String, monitor: String = "all",
                    searchOnAdd: Bool) async throws -> Int? {
         try ensureRefCompatible(result)
-        return try await client.post("search.addArtist", path: "/artist", body: [
+        return try await client.post("addArtist", path: "/artist", body: [
             "foreignArtistId": .string(result.foreignId), "artistName": .string(result.title), "qualityProfileId": .number(Double(qualityProfileId)),
             "metadataProfileId": .number(Double(metadataProfileId)), "rootFolderPath": .string(rootFolderPath), "monitored": .bool(true),
             "addOptions": .object(["monitor": .string(monitor), "searchForMissingAlbums": .bool(searchOnAdd)]),
@@ -142,11 +142,11 @@ public actor SearchClient {
 
     // MARK: - Result mapping
 
-    private static func poster(_ images: [ArrCore.ArrImage]?, baseURL: String, coverTypes: [String] = ["poster"]) -> URL? {
+    nonisolated private static func poster(_ images: [ArrCore.ArrImage]?, baseURL: String, coverTypes: [String] = ["poster"]) -> URL? {
         images?.posterURL(baseURL: baseURL, coverTypes: coverTypes).0
     }
 
-    private static func unifyRadarr(_ r: RadarrLookupRecord, baseURL: String, sourceRank: Int = 0) -> SearchResult? {
+    nonisolated private static func unifyRadarr(_ r: RadarrLookupRecord, baseURL: String, sourceRank: Int = 0) -> SearchResult? {
         guard let tmdbId = r.tmdbId else { return nil }
         return SearchResult(
             externalId: tmdbId, foreignId: String(tmdbId), title: r.title, subtitle: nil, year: r.year, rating: r.ratings?.tmdb?.value,
@@ -156,7 +156,7 @@ public actor SearchClient {
             inLibraryArrId: (r.id ?? 0) != 0 ? r.id : nil, imdbId: r.imdbId, sourceRank: sourceRank)
     }
 
-    private static func unifySonarr(_ r: SonarrLookupRecord, baseURL: String, sourceRank: Int = 0) -> SearchResult? {
+    nonisolated private static func unifySonarr(_ r: SonarrLookupRecord, baseURL: String, sourceRank: Int = 0) -> SearchResult? {
         guard let tvdbId = r.tvdbId else { return nil }
         let seasons = r.statistics?.seasonCount
         return SearchResult(
@@ -167,7 +167,7 @@ public actor SearchClient {
             imdbId: r.imdbId, sourceRank: sourceRank, tmdbTVId: (r.tmdbId ?? 0) != 0 ? r.tmdbId : nil)
     }
 
-    static func unifyWhisparr(_ r: WhisparrLookupRecord, baseURL: String, sourceRank: Int = 0) -> SearchResult? {
+    nonisolated static func unifyWhisparr(_ r: WhisparrLookupRecord, baseURL: String, sourceRank: Int = 0) -> SearchResult? {
         let stableId: Int, foreign: String
         if let tmdb = r.tmdbId, tmdb != 0 { stableId = tmdb; foreign = String(tmdb) }
         else if let fid = r.foreignId, !fid.isEmpty { stableId = ArrLibraryMaps.foreignHashKey(fid); foreign = fid }
@@ -179,7 +179,7 @@ public actor SearchClient {
             source: .whisparr, sourceRank: sourceRank)
     }
 
-    static func unifyLidarrAlbum(_ r: LidarrAlbumLookupRecord, baseURL: String, sourceRank: Int = 0) -> SearchResult? {
+    nonisolated static func unifyLidarrAlbum(_ r: LidarrAlbumLookupRecord, baseURL: String, sourceRank: Int = 0) -> SearchResult? {
         guard let foreign = r.foreignAlbumId, !foreign.isEmpty else { return nil }
         let year = r.releaseDate.flatMap { parseArrDate($0) }.map { Calendar.current.component(.year, from: $0) }
         let subtitle = [r.artist?.artistName, r.albumType].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · ")
@@ -190,7 +190,7 @@ public actor SearchClient {
             source: .lidarr, inLibraryArrId: (r.id ?? 0) != 0 ? r.id : nil, sourceRank: sourceRank, isLidarrAlbum: true)
     }
 
-    static func unifyLidarr(_ r: LidarrLookupRecord, baseURL: String, sourceRank: Int = 0) -> SearchResult? {
+    nonisolated static func unifyLidarr(_ r: LidarrLookupRecord, baseURL: String, sourceRank: Int = 0) -> SearchResult? {
         guard let foreign = r.foreignArtistId, !foreign.isEmpty else { return nil }
         return SearchResult(
             externalId: ArrLibraryMaps.foreignHashKey(foreign), foreignId: foreign, title: r.artistName, subtitle: r.disambiguation, year: nil,

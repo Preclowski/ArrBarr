@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Source-neutral cast member for the detail cast strip. Movies map from
 /// Radarr's `/credit` (no TMDB key needed); series map from TMDB credits.
-public struct CastMember: Identifiable, Equatable, Sendable {
+nonisolated public struct CastMember: Identifiable, Equatable, Sendable {
     public let id: String
     public let name: String
     public let role: String?
@@ -195,7 +195,7 @@ private struct CastTooltip: View {
 
 // MARK: - Mapping helpers
 
-extension CastMember {
+nonisolated extension CastMember {
     /// Radarr `/credit` → cast members (cast only, ordered, headshots).
     static func from(radarrCredits credits: [ArrCredit]) -> [CastMember] {
         credits

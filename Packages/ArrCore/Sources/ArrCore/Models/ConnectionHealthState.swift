@@ -9,7 +9,7 @@ import Foundation
 ///    the client returns one.
 ///  - `.down` — healthcheck failed (after the debounce). `message` is the
 ///    underlying error for the tooltip / Needs-You detail line.
-public enum ConnectionHealthState: Equatable, Sendable {
+nonisolated public enum ConnectionHealthState: Equatable, Sendable {
     case unknown
     case ok(detail: String?)
     case down(message: String)
@@ -20,7 +20,7 @@ public enum ConnectionHealthState: Equatable, Sendable {
     }
 }
 
-public struct ServiceHealthSnapshot: Equatable, Sendable {
+nonisolated public struct ServiceHealthSnapshot: Equatable, Sendable {
     public let state: ConnectionHealthState
     public let lastChecked: Date?
 

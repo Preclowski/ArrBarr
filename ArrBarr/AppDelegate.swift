@@ -47,7 +47,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// launched at login, lives for days and is never watched while it starts,
     /// so "did it come up, in which mode, and what did the OS hand it later" is
     /// only answerable from the log.
-    private static let log = Logger(category: "Lifecycle")
+    nonisolated private static let log = Logger(category: "Lifecycle")
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         registerNotificationCategories()

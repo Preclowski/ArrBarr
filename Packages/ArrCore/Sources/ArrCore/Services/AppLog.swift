@@ -4,11 +4,11 @@ import os
 /// Single source of truth for ArrBarr's unified-logging identity, so Console /
 /// `log show` / `log stream` filtering is uniform across the whole app:
 /// `log stream --predicate 'subsystem == "pl.incred.ArrBarr"'`.
-public enum AppLog {
+nonisolated public enum AppLog {
     public static let subsystem = "pl.incred.ArrBarr"
 }
 
-public extension Logger {
+nonisolated public extension Logger {
     /// An os.Logger on the shared ArrBarr subsystem. Pass a per-module
     /// `category` (e.g. "PosterStore", "Realtime"). This is the ONLY supported
     /// way to make a logger — never spell out the subsystem at a call site, and
@@ -46,12 +46,12 @@ public extension Logger {
     /// That is deliberately a machine-level opt-in rather than an `#if DEBUG`
     /// dance in our own code — one mechanism, and the shipped statement is the
     /// same one that was tested.
-    init(category: String) {
+    nonisolated init(category: String) {
         self.init(subsystem: AppLog.subsystem, category: category)
     }
 }
 
-public extension URL {
+nonisolated public extension URL {
     /// `scheme://host[:port]/path` — enough to tell which server was talked to,
     /// without the query string.
     ///
@@ -75,7 +75,7 @@ public extension URL {
 ///
 /// Signposts are compiled out of the measurement path when nothing is
 /// recording, so these stay in shipped builds.
-public enum AppSignpost {
+nonisolated public enum AppSignpost {
     public static let queue = OSSignposter(subsystem: AppLog.subsystem, category: "QueueFetch")
     public static let posters = OSSignposter(subsystem: AppLog.subsystem, category: "PosterStore")
 }

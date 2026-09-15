@@ -2,16 +2,16 @@ import Foundation
 
 // MARK: - SABnzbd
 
-public struct SabQueueResponse: Decodable {
+nonisolated public struct SabQueueResponse: Decodable {
     let queue: SabQueue
 }
 
-public struct SabQueue: Decodable {
+nonisolated public struct SabQueue: Decodable {
     let paused: Bool
     let slots: [SabSlot]
 }
 
-public struct SabSlot: Decodable {
+nonisolated public struct SabSlot: Decodable {
     let nzo_id: String
     let filename: String
     let status: String
@@ -23,7 +23,7 @@ public struct SabSlot: Decodable {
 
 // MARK: - qBittorrent
 
-public struct QbitTorrent: Decodable {
+nonisolated public struct QbitTorrent: Decodable {
     let hash: String
     let name: String
     let state: String

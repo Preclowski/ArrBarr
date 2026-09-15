@@ -177,7 +177,7 @@ public struct SearchAddPanel: View {
             // Enrich first so the hero card upgrades from TMDB-lean to
             // full-fat IMDB/RT/runtime as soon as possible. Runs in
             // parallel with loadOptions — they hit different endpoints.
-            async let enrich: Void = {
+            async let enrich: Void = { @MainActor in
                 if needsEnrichment, let enriched = await viewModel.enrich(result) {
                     result = enriched
                 }

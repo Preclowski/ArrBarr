@@ -4,7 +4,7 @@ import Foundation
 /// for tool names, descriptions and input schemas. Both LocalToolBackend (the
 /// in-process implementation) and ChatViewModelFactory (which advertises the
 /// tools to the LLM provider) read from here.
-public enum ChatToolCatalog {
+nonisolated public enum ChatToolCatalog {
 
     /// Returns the catalog gated on what's actually configured. Each `include*`
     /// flag should mirror `ConfigStore.<arr>.isConfigured` (and

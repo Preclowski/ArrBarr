@@ -11,7 +11,7 @@ import Foundation
 /// Files on disk vs episodes expected, summed from Sonarr's per-season
 /// statistics — the arr's own numbers. Counting the episode list instead would
 /// call every ongoing series half-missing, since unaired episodes are in it too.
-public struct EpisodeFileCounts: Equatable, Sendable {
+nonisolated public struct EpisodeFileCounts: Equatable, Sendable {
     public let have: Int
     public let total: Int
 
@@ -29,7 +29,7 @@ public struct EpisodeFileCounts: Equatable, Sendable {
     }
 }
 
-extension LibraryEntry.FileState {
+nonisolated extension LibraryEntry.FileState {
     /// Precedence: complete first — what's on disk is the answer even when the
     /// arr stopped monitoring it — then unmonitored, partial, and finally
     /// missing vs nothing-grabbable-yet. `monitored == nil` means "not known
@@ -53,7 +53,7 @@ extension LibraryEntry.FileState {
     }
 }
 
-extension SonarrLibraryRecord {
+nonisolated extension SonarrLibraryRecord {
     var episodeFileCounts: EpisodeFileCounts {
         EpisodeFileCounts(seasons: (seasons ?? []).map {
             (have: $0.statistics?.episodeFileCount, total: $0.statistics?.episodeCount)
@@ -61,7 +61,7 @@ extension SonarrLibraryRecord {
     }
 }
 
-extension SonarrSeriesDetail {
+nonisolated extension SonarrSeriesDetail {
     var episodeFileCounts: EpisodeFileCounts {
         EpisodeFileCounts(seasons: (seasons ?? []).map {
             (have: $0.statistics?.episodeFileCount, total: $0.statistics?.episodeCount)
@@ -77,30 +77,30 @@ extension SonarrSeriesDetail {
 ///
 /// `isDownloaded` is about the disk, not the monitored flag: an unmonitored
 /// film with a file is still downloaded.
-public struct LibraryOwnership: Equatable, Sendable {
+nonisolated public struct LibraryOwnership: Equatable, Sendable {
     public let arrId: Int
     public let isDownloaded: Bool
 }
 
-extension RadarrLibraryRecord {
+nonisolated extension RadarrLibraryRecord {
     var ownership: LibraryOwnership? {
         id.map { LibraryOwnership(arrId: $0, isDownloaded: hasFile == true) }
     }
 }
 
-extension SonarrLibraryRecord {
+nonisolated extension SonarrLibraryRecord {
     var ownership: LibraryOwnership? {
         id.map { LibraryOwnership(arrId: $0, isDownloaded: episodeFileCounts.isComplete) }
     }
 }
 
-extension WhisparrLibraryRecord {
+nonisolated extension WhisparrLibraryRecord {
     var ownership: LibraryOwnership? {
         id.map { LibraryOwnership(arrId: $0, isDownloaded: hasFile == true) }
     }
 }
 
-extension LidarrLibraryRecord {
+nonisolated extension LidarrLibraryRecord {
     var ownership: LibraryOwnership? {
         id.map { id in
             let total = statistics?.trackCount ?? 0

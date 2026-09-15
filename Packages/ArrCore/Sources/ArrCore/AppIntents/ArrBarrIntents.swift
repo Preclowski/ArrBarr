@@ -165,10 +165,9 @@ public struct PauseAllDownloadsIntent: AppIntent {
     public init() {}
 
     public func perform() async throws -> some IntentResult & ProvidesDialog {
-        let cs = ConfigStore.shared
         let items = await ArrIntentSupport.queueItems()
         let targets = await MainActor.run {
-            items.filter { $0.status == .downloading && ArrIntentSupport.canControl($0, cs) }
+            items.filter { $0.status == .downloading && ArrIntentSupport.canControl($0, ConfigStore.shared) }
         }
         for item in targets { await QueueViewModel.shared.pause(item) }
         let msg = targets.isEmpty
@@ -186,10 +185,9 @@ public struct ResumeAllDownloadsIntent: AppIntent {
     public init() {}
 
     public func perform() async throws -> some IntentResult & ProvidesDialog {
-        let cs = ConfigStore.shared
         let items = await ArrIntentSupport.queueItems()
         let targets = await MainActor.run {
-            items.filter { $0.status == .paused && ArrIntentSupport.canControl($0, cs) }
+            items.filter { $0.status == .paused && ArrIntentSupport.canControl($0, ConfigStore.shared) }
         }
         for item in targets { await QueueViewModel.shared.resume(item) }
         let msg = targets.isEmpty

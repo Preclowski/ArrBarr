@@ -105,7 +105,7 @@ public enum SpotlightIndexer {
     /// library. Each run also fetches a slice of the still-missing posters (see
     /// `prefetchBudget`), so artwork converges across launches.
     @MainActor
-    public static func reindex(configStore: ConfigStore = .shared) {
+    public static func reindex(configStore: ConfigStore) {
         if isReindexing { return }
         if let last = lastReindex, Date().timeIntervalSince(last) < reindexThrottle { return }
         lastReindex = Date()
@@ -195,7 +195,7 @@ public enum SpotlightIndexer {
     /// hit on macOS (`spotlightOpensInApp = false`). Fetches the title slug,
     /// which the identifier alone doesn't carry.
     @MainActor
-    public static func browserURL(forIdentifier id: String, configStore: ConfigStore = .shared) async -> URL? {
+    public static func browserURL(forIdentifier id: String, configStore: ConfigStore) async -> URL? {
         guard let ref = parse(id) else { return nil }
         let cfg = configStore.serviceConfig(for: ref.source)
         guard cfg.isConfigured else { return nil }

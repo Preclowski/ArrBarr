@@ -4,19 +4,14 @@ import MediaKit
 @testable import ArrCore
 
 /// Demo mode is the bundled fixtures behind placeholder origins: every enabled arr answers queue, calendar and
-/// history without a host. The gateway is built as a demo one directly, so the global flag stays untouched.
+/// history without a host. `ServiceGateway.demo` builds it, so the global flag stays untouched.
 @Suite("Demo data flow")
 struct DemoDataFlowTests {
     @MainActor
     private func makeGateway() -> ServiceGateway {
-        let store = ConfigStore(defaults: UserDefaults(suiteName: "ArrCoreTests.demo.\(UUID().uuidString)")!, secrets: InMemorySecretStore())
-        for kind in [ServiceKind.radarr, .sonarr, .lidarr, .whisparr] {
-            var config = ServiceConfig.empty
-            config.enabled = true
-            store.update(kind, with: config)
-        }
-        store.mediaServer = MediaServerConfig(enabled: true, kind: .plex)
-        return ServiceGateway(configStore: store, demo: true)
+        let gateway = ServiceGateway.demo(kinds: [.radarr, .sonarr, .lidarr, .whisparr])
+        gateway.configStore.mediaServer = MediaServerConfig(enabled: true, kind: .plex)
+        return gateway
     }
 
     @Test("Every arr flavour serves queue, upcoming and history from fixtures", arguments: [QueueItem.Source.radarr, .sonarr, .lidarr, .whisparr])

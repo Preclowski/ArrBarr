@@ -1,12 +1,12 @@
 import Foundation
 
 /// Whether a Discover card represents a movie or a TV show.
-public enum DiscoverItemKind: String, Equatable, Sendable {
+nonisolated public enum DiscoverItemKind: String, Equatable, Sendable {
     case movie, show
 }
 
 /// The user's media-type selection in the Discover picker.
-public enum DiscoverMediaSelection: String, CaseIterable, Identifiable, Sendable {
+nonisolated public enum DiscoverMediaSelection: String, CaseIterable, Identifiable, Sendable {
     case movie, show
 
     public var id: String { rawValue }
@@ -18,7 +18,7 @@ public enum DiscoverMediaSelection: String, CaseIterable, Identifiable, Sendable
     }
 }
 
-public enum DiscoverAction: Equatable, Sendable {
+nonisolated public enum DiscoverAction: Equatable, Sendable {
     /// Card represents a movie not in Radarr. Swipe-right opens the
     /// existing SearchAddPanel overlay.
     case addToRadarr
@@ -30,7 +30,7 @@ public enum DiscoverAction: Equatable, Sendable {
     case openDetail(source: QueueItem.Source, arrId: Int)
 }
 
-public struct DiscoverItem: Identifiable, Equatable, Sendable {
+nonisolated public struct DiscoverItem: Identifiable, Equatable, Sendable {
     public let result: SearchResult
     public let action: DiscoverAction
     /// Source label for the bottom-of-card chip ("From TMDB" / "From your
@@ -72,7 +72,7 @@ public struct DiscoverItem: Identifiable, Equatable, Sendable {
     }
 }
 
-public enum DiscoverStatus: String, CaseIterable, Identifiable, Sendable {
+nonisolated public enum DiscoverStatus: String, CaseIterable, Identifiable, Sendable {
     case any         = "Any status"
     case owned       = "Owned"
     case toDownload  = "To download"
@@ -82,7 +82,7 @@ public enum DiscoverStatus: String, CaseIterable, Identifiable, Sendable {
 /// Standard TMDB movie genre catalog. Hardcoded because TMDB's
 /// /genre/movie/list rarely changes and adding a separate network
 /// fetch just for the picker is overkill.
-public enum DiscoverGenre: Int, CaseIterable, Identifiable, Sendable {
+nonisolated public enum DiscoverGenre: Int, CaseIterable, Identifiable, Sendable {
     case action = 28, adventure = 12, animation = 16, comedy = 35
     case crime = 80, documentary = 99, drama = 18, family = 10751
     case fantasy = 14, history = 36, horror = 27, music = 10402
@@ -122,7 +122,7 @@ public enum DiscoverGenre: Int, CaseIterable, Identifiable, Sendable {
     }
 }
 
-public enum DiscoverDecade: String, CaseIterable, Identifiable, Sendable {
+nonisolated public enum DiscoverDecade: String, CaseIterable, Identifiable, Sendable {
     case any        = "Any"
     case eighties   = "1980s"
     case nineties   = "1990s"
@@ -143,7 +143,7 @@ public enum DiscoverDecade: String, CaseIterable, Identifiable, Sendable {
     }
 }
 
-public enum DiscoverRatingTier: String, CaseIterable, Identifiable, Sendable {
+nonisolated public enum DiscoverRatingTier: String, CaseIterable, Identifiable, Sendable {
     case any
     case highlyRated      // vote_average >= 7.5
     case cultFavorite     // vote_count  >= 500
@@ -157,7 +157,7 @@ public enum DiscoverRatingTier: String, CaseIterable, Identifiable, Sendable {
     }
 }
 
-public enum DiscoverRuntime: String, CaseIterable, Identifiable, Sendable {
+nonisolated public enum DiscoverRuntime: String, CaseIterable, Identifiable, Sendable {
     case any
     case short          // runtime < 90 minutes
     case epic           // runtime > 150 minutes
@@ -167,7 +167,7 @@ public enum DiscoverRuntime: String, CaseIterable, Identifiable, Sendable {
     public var greaterThan: Int? { self == .epic ? 150 : nil }
 }
 
-public struct DiscoverFilter: Equatable, Sendable {
+nonisolated public struct DiscoverFilter: Equatable, Sendable {
     public var decade: DiscoverDecade
     public var monitoredOnly: Bool          // legacy — keep for back-compat in tests
     public var genres: Set<DiscoverGenre>

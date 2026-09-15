@@ -26,11 +26,11 @@ import os
 /// the auth headers. That keeps this type free of `ServiceConfig`, free of a
 /// store↔client cycle, and testable against a temp directory.
 public actor TitleMetadataStore {
-    public static let shared = TitleMetadataStore()
+    nonisolated public static let shared = TitleMetadataStore()
 
     /// Which kind of entity an id refers to. Part of the key because ids are
     /// only unique per kind — Lidarr album 15 and artist 15 are different rows.
-    public enum Kind: String, Codable, Sendable, CaseIterable {
+    nonisolated public enum Kind: String, Codable, Sendable, CaseIterable {
         case movie, series, album
     }
 
@@ -38,7 +38,7 @@ public actor TitleMetadataStore {
     /// Deliberately narrow: fields are here because `unify` reads them, not
     /// because the wire offers them. `runtime` and `ratings` are on the wire and
     /// stay off this record — only the calendar path reads those.
-    public struct Metadata: Codable, Sendable, Equatable {
+    nonisolated public struct Metadata: Codable, Sendable, Equatable {
         public var title: String
         /// Artist name for a Lidarr album. Unused by the movie/series kinds.
         public var secondary: String?
@@ -127,7 +127,7 @@ public actor TitleMetadataStore {
             self.id = id
         }
 
-        static func instanceHash(_ baseURL: String) -> String {
+        nonisolated static func instanceHash(_ baseURL: String) -> String {
             let digest = SHA256.hash(data: Data(baseURL.utf8))
             return digest.prefix(8).map { String(format: "%02x", $0) }.joined()
         }
@@ -137,7 +137,7 @@ public actor TitleMetadataStore {
         var storageKey: String { "\(source.rawValue)/\(instance)/\(kind.rawValue)/\(id)" }
     }
 
-    private struct Entry: Codable {
+    nonisolated private struct Entry: Codable {
         var metadata: Metadata
         /// Touch-on-use, the way `PosterStore` tracks live artwork. Retention
         /// reclaims by this, never by write time, so a download that sits in the
@@ -148,11 +148,11 @@ public actor TitleMetadataStore {
     /// How long an *untouched* entry survives. Anything still being resolved
     /// keeps having its `lastSeen` refreshed, so this only reaps entities that
     /// have left the queue and the library both.
-    private static let retention: TimeInterval = 30 * 24 * 3600
+    nonisolated private static let retention: TimeInterval = 30 * 24 * 3600
 
     /// Writes are coalesced: a queue refresh resolves dozens of rows at once and
     /// each would otherwise rewrite the whole map.
-    private static let flushDelay: TimeInterval = 2
+    nonisolated private static let flushDelay: TimeInterval = 2
 
     private var entries: [String: Entry] = [:]
     private var loaded = false

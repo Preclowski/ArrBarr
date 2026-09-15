@@ -157,7 +157,7 @@ extension LocalToolBackend {
     /// Credits payload: with the person when TMDB details came back, the plain
     /// carousel when they didn't. Thin alias over the model's own factory, which
     /// the card de-duplicator reuses.
-    static func creditsRich(person: ChatPerson?, results: [SearchResult]) -> ChatRichContent {
+    nonisolated static func creditsRich(person: ChatPerson?, results: [SearchResult]) -> ChatRichContent {
         .credits(person: person, results: results)
     }
 
@@ -253,7 +253,7 @@ extension LocalToolBackend {
         await ArrLibraryMaps.sonarrByTMDBId(config: sonarr)
     }
 
-    static func formatTMDBSummary(_ results: [SearchResult], kind: String, origin: String) -> String {
+    nonisolated static func formatTMDBSummary(_ results: [SearchResult], kind: String, origin: String) -> String {
         let ownedCount = results.filter { $0.inLibraryArrId != nil }.count
         var out = "TMDB returned \(results.count) \(kind) result\(results.count == 1 ? "" : "s") (\(origin))."
         if ownedCount > 0 {
@@ -285,13 +285,13 @@ extension LocalToolBackend {
         return out
     }
 
-    static func knownMovieGenres() -> String {
+    nonisolated static func knownMovieGenres() -> String {
         ["action", "comedy", "crime", "documentary", "drama", "fantasy",
          "horror", "mystery", "romance", "science fiction", "thriller", "western"]
             .joined(separator: ", ")
     }
 
-    static func knownTVGenres() -> String {
+    nonisolated static func knownTVGenres() -> String {
         ["animation", "comedy", "crime", "documentary", "drama",
          "mystery", "reality", "sci-fi & fantasy", "war & politics", "western"]
             .joined(separator: ", ")

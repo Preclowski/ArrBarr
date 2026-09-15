@@ -9,7 +9,7 @@ import Foundation
 /// folded — reusing `TitleMatch.fold`) weighted by the person's TMDB
 /// popularity, with a nudge for the people a media library is actually browsed
 /// by — actors AND directors, weighted the same.
-enum PersonRelevance {
+nonisolated enum PersonRelevance {
     static func score(person: TMDBPerson, normalizedQuery q: String) -> Double {
         let name = TitleMatch.fold(person.name)
         let qTokens = q.split(separator: " ").map(String.init)
@@ -78,7 +78,7 @@ enum PersonRelevance {
     }
 }
 
-public extension TMDBPerson {
+nonisolated public extension TMDBPerson {
     /// Catalog key for the "these titles are theirs" caption under a search
     /// result set — "Starring X" reads wrong for someone who directed them.
     var filmographyCaptionKey: String {

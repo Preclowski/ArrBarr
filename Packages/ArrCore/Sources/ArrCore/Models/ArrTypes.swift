@@ -1,14 +1,14 @@
 import Foundation
 
 // MARK: - Shared Radarr/Sonarr v3 types
-public struct ArrQueuePage<Record: Codable & Sendable>: Codable, Sendable {
+nonisolated public struct ArrQueuePage<Record: Codable & Sendable>: Codable, Sendable {
     let page: Int
     let pageSize: Int
     let totalRecords: Int
     let records: [Record]
 }
 
-public struct ArrCustomFormat: Codable, Equatable, Sendable {
+nonisolated public struct ArrCustomFormat: Codable, Equatable, Sendable {
     // `id` is optional because some arr endpoints (notably Radarr's
     // movie detail when CFs are referenced rather than embedded) ship
     // the format with a name but no id. A required `id` made the
@@ -23,12 +23,12 @@ public struct ArrCustomFormat: Codable, Equatable, Sendable {
 /// matching `specifications` (the conditions that make a release match
 /// this format) on top of the bare id/name in `ArrCustomFormat`. Used by
 /// the chat `describe_format` tool to explain what a format actually does.
-public struct ArrCustomFormatDetail: Codable, Equatable, Sendable {
+nonisolated public struct ArrCustomFormatDetail: Codable, Equatable, Sendable {
     public let id: Int
     public let name: String
     public let specifications: [Specification]?
 
-    public struct Specification: Codable, Equatable, Sendable {
+    nonisolated public struct Specification: Codable, Equatable, Sendable {
         let name: String?
         /// Raw implementation key, e.g. "ReleaseTitleSpecification".
         let implementation: String?
@@ -39,7 +39,7 @@ public struct ArrCustomFormatDetail: Codable, Equatable, Sendable {
         let fields: [Field]?
     }
 
-    public struct Field: Codable, Equatable, Sendable {
+    nonisolated public struct Field: Codable, Equatable, Sendable {
         let name: String?
         /// Polymorphic — a regex string, an enum int, an array of ints, …
         /// Kept as `JSONValue` so the describe tool can stringify whatever
@@ -51,12 +51,12 @@ public struct ArrCustomFormatDetail: Codable, Equatable, Sendable {
 /// Quality profile from `/api/v3/qualityprofile`. We only decode the bits
 /// the `describe_format` tool needs: the per-format score table so we can
 /// report "this format scores +50 in profile HD-1080p".
-public struct ArrQualityProfile: Codable, Equatable, Sendable {
+nonisolated public struct ArrQualityProfile: Codable, Equatable, Sendable {
     public let id: Int
     public let name: String
     public let formatItems: [FormatItem]?
 
-    public struct FormatItem: Codable, Equatable, Sendable {
+    nonisolated public struct FormatItem: Codable, Equatable, Sendable {
         let format: Int
         let name: String?
         let score: Int
@@ -67,7 +67,7 @@ public struct ArrQualityProfile: Codable, Equatable, Sendable {
 /// store cast/crew (sourced from TMDB on its side), so movie cast needs no
 /// app-side TMDB key. Sonarr has no equivalent endpoint, so series cast still
 /// comes from TMDB.
-public struct ArrCredit: Codable, Equatable, Sendable {
+nonisolated public struct ArrCredit: Codable, Equatable, Sendable {
     let personName: String?
     let personTmdbId: Int?
     let character: String?
@@ -80,7 +80,7 @@ public struct ArrCredit: Codable, Equatable, Sendable {
     let job: String?
     let images: [Image]?
 
-    public struct Image: Codable, Equatable, Sendable {
+    nonisolated public struct Image: Codable, Equatable, Sendable {
         let coverType: String?
         /// Local Radarr proxy path (needs api key). Prefer `remoteUrl`.
         let url: String?
@@ -96,13 +96,13 @@ public struct ArrCredit: Codable, Equatable, Sendable {
     }
 }
 
-public struct ArrQuality: Codable, Sendable {
+nonisolated public struct ArrQuality: Codable, Sendable {
     let quality: ArrQualityName?
-    struct ArrQualityName: Codable, Sendable { let name: String? }
+    nonisolated struct ArrQualityName: Codable, Sendable { let name: String? }
     var name: String? { quality?.name }
 }
 
-public struct ArrImage: Codable, Equatable, Sendable {
+nonisolated public struct ArrImage: Codable, Equatable, Sendable {
     let coverType: String?
     let url: String?
     let remoteUrl: String?
@@ -114,12 +114,12 @@ public struct ArrImage: Codable, Equatable, Sendable {
 /// flatten both into a single user-facing string per entry when the
 /// status is `warning` / `failed`. No tracker-prefix or i18n parsing —
 /// the arr ships these in the user's configured server locale.
-public struct ArrStatusMessage: Codable, Sendable, Equatable {
+nonisolated public struct ArrStatusMessage: Codable, Sendable, Equatable {
     public let title: String?
     public let messages: [String]?
 }
 
-public extension Optional where Wrapped == [ArrStatusMessage] {
+nonisolated public extension Optional where Wrapped == [ArrStatusMessage] {
     /// Flatten the arr's nested status payload into one user-facing
     /// line per actual message. We unfold each (title, [messages])
     /// entry: when there are messages we join them with " — title:",
@@ -150,7 +150,7 @@ public extension Optional where Wrapped == [ArrStatusMessage] {
 
 
 
-public struct ArrFile: Codable, Sendable {
+nonisolated public struct ArrFile: Codable, Sendable {
     let customFormats: [ArrCustomFormat]?
     let customFormatScore: Int?
     let quality: ArrQuality?
@@ -168,7 +168,7 @@ public struct ArrFile: Codable, Sendable {
 
 
 
-public struct SonarrEpisodeFile: Codable, Sendable {
+nonisolated public struct SonarrEpisodeFile: Codable, Sendable {
     let id: Int
     let seriesId: Int?
     let customFormats: [ArrCustomFormat]?
@@ -181,7 +181,7 @@ public struct SonarrEpisodeFile: Codable, Sendable {
 // MARK: - Lidarr
 
 
-public struct LidarrArtist: Codable, Sendable {
+nonisolated public struct LidarrArtist: Codable, Sendable {
     let id: Int
     let artistName: String
     let foreignArtistId: String?
@@ -194,7 +194,7 @@ public struct LidarrArtist: Codable, Sendable {
 /// them into the album-level existing-file diff fields (quality / size / score
 /// / formats). Only the fields the diff needs are decoded; extra JSON is
 /// ignored.
-public struct LidarrTrackFile: Codable, Sendable {
+nonisolated public struct LidarrTrackFile: Codable, Sendable {
     let id: Int
     let albumId: Int?
     let customFormats: [ArrCustomFormat]?
@@ -219,7 +219,7 @@ public struct LidarrTrackFile: Codable, Sendable {
 
 // MARK: - Health
 
-public struct ArrHealthRecord: Codable, Equatable, Sendable {
+nonisolated public struct ArrHealthRecord: Codable, Equatable, Sendable {
     let source: String?
     let type: String?
     let message: String?
@@ -233,7 +233,7 @@ public struct ArrHealthRecord: Codable, Equatable, Sendable {
 /// given record is otherwise unknowable client-side, because `POST /command`
 /// is fire-and-forget here and `addOptions.searchForMovie` fires entirely
 /// server-side, where the app never sees a command id at all.
-public struct ArrCommand: Codable, Equatable, Sendable {
+nonisolated public struct ArrCommand: Codable, Equatable, Sendable {
     let name: String?
     let status: String?
     let body: Body?
@@ -242,7 +242,7 @@ public struct ArrCommand: Codable, Equatable, Sendable {
     /// (Radarr `movieIds`, Lidarr `albumIds`, singular variants on some
     /// versions), so all the plausible spellings are decoded and any hit
     /// counts — cheaper and more version-proof than branching per product.
-    struct Body: Codable, Equatable, Sendable {
+    nonisolated struct Body: Codable, Equatable, Sendable {
         let movieIds: [Int]?
         let movieId: Int?
         let albumIds: [Int]?
@@ -276,7 +276,7 @@ public struct ArrCommand: Codable, Equatable, Sendable {
 
 // MARK: - Search Lookup
 
-public struct RadarrLookupRecord: Codable, Sendable {
+nonisolated public struct RadarrLookupRecord: Codable, Sendable {
     /// Radarr's `/movie/lookup` echoes the library record id here for movies the
     /// user already owns (0 / absent otherwise) — the signal that drives the
     /// "in library" state on search cards.
@@ -298,13 +298,13 @@ public struct RadarrLookupRecord: Codable, Sendable {
     let status: String?
 }
 
-public struct RadarrLookupRatings: Codable, Sendable, Equatable {
+nonisolated public struct RadarrLookupRatings: Codable, Sendable, Equatable {
     let tmdb: RadarrLookupRatingValue?
     let imdb: RadarrLookupRatingValue?
     let metacritic: RadarrLookupRatingValue?
     let rottenTomatoes: RadarrLookupRatingValue?
 }
-public struct RadarrLookupRatingValue: Codable, Sendable, Equatable {
+nonisolated public struct RadarrLookupRatingValue: Codable, Sendable, Equatable {
     let value: Double?
     /// Radarr's lookup endpoint returns the same Ratings sub-object as
     /// the detail endpoint, including TMDB's vote_count. Used as the
@@ -313,7 +313,7 @@ public struct RadarrLookupRatingValue: Codable, Sendable, Equatable {
     let votes: Int?
 }
 
-public struct SonarrLookupRecord: Codable, Sendable {
+nonisolated public struct SonarrLookupRecord: Codable, Sendable {
     /// Library record id for series the user already owns (0 / absent otherwise)
     /// — drives the "in library" state on search cards.
     let id: Int?
@@ -339,7 +339,7 @@ public struct SonarrLookupRecord: Codable, Sendable {
     let status: String?
 }
 
-public struct SonarrLookupRatings: Codable, Sendable, Equatable {
+nonisolated public struct SonarrLookupRatings: Codable, Sendable, Equatable {
     let value: Double?
     /// TVDB vote count. Sonarr has always returned it; we used to drop it,
     /// which meant `bayesianQuality` never shrank a series rating and a
@@ -347,13 +347,13 @@ public struct SonarrLookupRatings: Codable, Sendable, Equatable {
     var votes: Int? = nil
 }
 
-public struct SonarrLookupStats: Codable, Sendable {
+nonisolated public struct SonarrLookupStats: Codable, Sendable {
     let seasonCount: Int?
 }
 
 // MARK: - Lidarr library / lookup types
 
-public struct LidarrLibraryRecord: Codable, Sendable, Equatable {
+nonisolated public struct LidarrLibraryRecord: Codable, Sendable, Equatable {
     public let id: Int?
     public let foreignArtistId: String?
     public let artistName: String?
@@ -370,14 +370,14 @@ public struct LidarrLibraryRecord: Codable, Sendable, Equatable {
     /// Library tab's rating sort is the first thing to read it.
     public var ratings: LidarrLookupRatings? = nil
 }
-public struct LidarrLibraryStatistics: Codable, Sendable, Equatable {
+nonisolated public struct LidarrLibraryStatistics: Codable, Sendable, Equatable {
     public let albumCount: Int?
     public let trackCount: Int?
     public let trackFileCount: Int?
     public let sizeOnDisk: Int64?
 }
 
-public struct LidarrLookupRecord: Codable, Sendable {
+nonisolated public struct LidarrLookupRecord: Codable, Sendable {
     public let foreignArtistId: String?
     public let artistName: String
     public let disambiguation: String?
@@ -386,7 +386,7 @@ public struct LidarrLookupRecord: Codable, Sendable {
     public let ratings: LidarrLookupRatings?
     public let genres: [String]?
 }
-public struct LidarrLookupRatings: Codable, Sendable, Equatable {
+nonisolated public struct LidarrLookupRatings: Codable, Sendable, Equatable {
     public let value: Double?
     /// See `SonarrLookupRatings.votes` — same dropped-signal fix.
     public var votes: Int? = nil
@@ -396,7 +396,7 @@ public struct LidarrLookupRatings: Codable, Sendable, Equatable {
 /// UI queries). Each entry wraps EITHER an artist OR an album resource;
 /// `/artist/lookup` and `/album/lookup` only do text search for prefixed /
 /// foreign-id terms, which is why the app searches through this endpoint.
-public struct LidarrSearchRecord: Codable, Sendable {
+nonisolated public struct LidarrSearchRecord: Codable, Sendable {
     public let foreignId: String?
     public let artist: LidarrLookupRecord?
     public let album: LidarrAlbumLookupRecord?
@@ -407,7 +407,7 @@ public struct LidarrSearchRecord: Codable, Sendable {
 /// is already in the library (same convention as the other arr lookups);
 /// the embedded `artist` carries what the add flow needs to create the
 /// artist alongside the album.
-public struct LidarrAlbumLookupRecord: Codable, Sendable {
+nonisolated public struct LidarrAlbumLookupRecord: Codable, Sendable {
     public let id: Int?
     public let foreignAlbumId: String?
     public let title: String
@@ -425,13 +425,13 @@ public struct LidarrAlbumLookupRecord: Codable, Sendable {
 /// type requires `id`, and the search payload omits it for artists that
 /// aren't in the library (which is most of them), so reusing it made the
 /// whole `/search` array fail to decode and music search came back empty.
-public struct LidarrAlbumLookupArtist: Codable, Sendable {
+nonisolated public struct LidarrAlbumLookupArtist: Codable, Sendable {
     public let id: Int?
     public let artistName: String?
     public let foreignArtistId: String?
 }
 
-public struct MetadataProfile: Codable, Sendable, Equatable, Identifiable {
+nonisolated public struct MetadataProfile: Codable, Sendable, Equatable, Identifiable {
     public let id: Int
     public let name: String
 }
@@ -445,7 +445,7 @@ public struct MetadataProfile: Codable, Sendable, Equatable, Identifiable {
 /// Shared by the inline `alternateTitles[]` on a library record and by
 /// Radarr's dedicated `/alttitle` table, which is why `movieId` is here at
 /// all: inline it's redundant, standalone it's the only join key.
-public struct ArrAlternateTitle: Codable, Sendable, Equatable {
+nonisolated public struct ArrAlternateTitle: Codable, Sendable, Equatable {
     public let title: String?
     public var movieId: Int? = nil
 
@@ -456,7 +456,7 @@ public struct ArrAlternateTitle: Codable, Sendable, Equatable {
 }
 
 // Used to fetch existing library ids and list library contents
-public struct RadarrLibraryRecord: Codable, Sendable, Equatable {
+nonisolated public struct RadarrLibraryRecord: Codable, Sendable, Equatable {
     let id: Int?
     let tmdbId: Int?
     let title: String?
@@ -506,7 +506,7 @@ public struct RadarrLibraryRecord: Codable, Sendable, Equatable {
     /// to the `/alttitle` table when it doesn't.
     var alternateTitles: [ArrAlternateTitle]? = nil
 }
-public struct SonarrLibraryRecord: Codable, Sendable, Equatable {
+nonisolated public struct SonarrLibraryRecord: Codable, Sendable, Equatable {
     let id: Int?
     let tvdbId: Int?
     let title: String?
@@ -547,18 +547,18 @@ public struct SonarrLibraryRecord: Codable, Sendable, Equatable {
     /// First episode's air date — a series' equivalent of a release date.
     var firstAired: String? = nil
 }
-public struct SonarrLibraryStatistics: Codable, Sendable, Equatable {
+nonisolated public struct SonarrLibraryStatistics: Codable, Sendable, Equatable {
     let episodeCount: Int?
     let episodeFileCount: Int?
     let seasonCount: Int?
     let sizeOnDisk: Int64?
 }
-public struct SonarrLibrarySeason: Codable, Sendable, Equatable {
+nonisolated public struct SonarrLibrarySeason: Codable, Sendable, Equatable {
     let seasonNumber: Int
     let monitored: Bool?
     let statistics: SonarrLibrarySeasonStatistics?
 }
-public struct SonarrLibrarySeasonStatistics: Codable, Sendable, Equatable {
+nonisolated public struct SonarrLibrarySeasonStatistics: Codable, Sendable, Equatable {
     let episodeCount: Int?
     let episodeFileCount: Int?
     let totalEpisodeCount: Int?
@@ -570,7 +570,7 @@ public struct SonarrLibrarySeasonStatistics: Codable, Sendable, Equatable {
 
 
 
-public struct WhisparrLibraryRecord: Codable, Sendable, Equatable {
+nonisolated public struct WhisparrLibraryRecord: Codable, Sendable, Equatable {
     public let id: Int?
     public let foreignId: String?
     public let tmdbId: Int?
@@ -590,7 +590,7 @@ public struct WhisparrLibraryRecord: Codable, Sendable, Equatable {
     public var added: String? = nil
 }
 
-public struct WhisparrLookupRecord: Codable, Sendable {
+nonisolated public struct WhisparrLookupRecord: Codable, Sendable {
     public let foreignId: String?
     public let tmdbId: Int?
     public let title: String
@@ -605,7 +605,7 @@ public struct WhisparrLookupRecord: Codable, Sendable {
 
 // MARK: - ArrImage helpers
 
-public extension Array where Element == ArrImage {
+nonisolated public extension Array where Element == ArrImage {
     /// Resolves a poster URL from an Arr images array.
     /// Prefers `remoteUrl` (TMDB / MusicBrainz / etc., no auth) over the local server URL.
     /// - Parameter baseURL: The arr server base URL (used when only a local path is available).
@@ -662,9 +662,9 @@ public extension Array where Element == ArrImage {
     }
 }
 
-public struct ArrLibraryFile: Codable, Sendable, Equatable {
-    public struct Quality: Codable, Sendable, Equatable {
-        public struct Name: Codable, Sendable, Equatable { let name: String? }
+nonisolated public struct ArrLibraryFile: Codable, Sendable, Equatable {
+    nonisolated public struct Quality: Codable, Sendable, Equatable {
+        nonisolated public struct Name: Codable, Sendable, Equatable { let name: String? }
         let quality: Name?
     }
     let quality: Quality?
@@ -674,6 +674,6 @@ public struct ArrLibraryFile: Codable, Sendable, Equatable {
     var qualityName: String? { quality?.quality?.name }
 }
 
-public struct ArrFileLanguage: Codable, Sendable {
+nonisolated public struct ArrFileLanguage: Codable, Sendable {
     let name: String?
 }

@@ -1,6 +1,6 @@
 import Foundation
 
-public struct LLMTool: Sendable {
+nonisolated public struct LLMTool: Sendable {
     public let name: String
     public let description: String
     public let inputSchema: JSONValue
@@ -11,7 +11,7 @@ public struct LLMTool: Sendable {
     }
 }
 
-public struct LLMResponse: Sendable {
+nonisolated public struct LLMResponse: Sendable {
     /// Free-text the assistant produced.
     public let text: String
     /// Zero or more tool calls the assistant made.
@@ -30,7 +30,7 @@ public struct LLMResponse: Sendable {
 
 /// Shared bits for composing the chat system prompt across providers, so the
 /// OpenAI and Foundation Models prompts stay in sync.
-public enum SystemPromptComposer {
+nonisolated public enum SystemPromptComposer {
     /// Human-readable clause naming the arrs currently exposed to the model.
     /// Derived from the gated tool list (`sonarr_*`, `radarr_*`, …) so it always
     /// reflects exactly what's enabled — no separate config to keep in step.

@@ -92,8 +92,13 @@ Approach: the old client types (`RadarrClient`, `SonarrClient`, `LidarrClient`, 
       MediaKit-backed calls; candidates for a later pass).
 - [ ] Migrate the remaining `URLProtocol` stub suites to `ScriptedTransport`/`FixtureTransport`
       (today they run through the shared session with global registration).
-- [ ] `.defaultIsolation(MainActor.self)` in `Packages/ArrCore/Package.swift`; fix what the
-      compiler reports; `python3 Tools/loc/lint_missing_keys.py`.
+- [x] `.defaultIsolation(MainActor.self)` in `Packages/ArrCore/Package.swift`. Wire models, the
+      helper enums, the facades, the lock-guarded stores and the statics inside actors are
+      `nonisolated`; MainActor default arguments (`ConfigStore.shared`) dropped; `MediaServerIndex`
+      locks scoped with `withLock`. ArrCore compiles with zero warnings; `lint_missing_keys.py`
+      clean (arr add operations renamed so the lint stops reading them as catalogue keys).
+- [x] Widget demo: `UpcomingService.demo(sources:limit:)` over `ServiceGateway.demo(kinds:)` (bundled
+      fixtures, no global flag); the dead `DemoMocks` queue/upcoming/history builders deleted.
 
 ## Phase 6 — verification
 

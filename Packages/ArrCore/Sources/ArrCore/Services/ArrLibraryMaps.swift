@@ -11,7 +11,7 @@ import Foundation
 /// library each — search, `suggest_titles`, `discover_in_quiz` and the TMDB
 /// credit tools — share one snapshot instead of pulling a 3000-movie payload
 /// apiece.
-public enum ArrLibraryMaps {
+nonisolated public enum ArrLibraryMaps {
     /// Radarr: `tmdbId → ownership`. Empty when Radarr isn't configured or the
     /// fetch fails — callers proceed untagged.
     public static func radarrByTMDBId(config: ServiceConfig) async -> [Int: LibraryOwnership] {

@@ -13,7 +13,7 @@ import Foundation
 /// Deliberately not a search engine: normalize hard, then rank exact → prefix →
 /// contains → edit-distance. That covers the human ways of typing a title the
 /// user already knows they own, and nothing else.
-public enum TitleMatch {
+nonisolated public enum TitleMatch {
 
     /// Case, accent, width and punctuation-insensitive form — articles intact.
     /// This is the space a live filter field compares in: dropping a leading

@@ -22,10 +22,10 @@ struct ChatViewModelHolderTests {
         let store = ConfigStore()
 
         var offSignature = ""
-        try withDemoFlag(false) { offSignature = ChatViewModelHolder.signature(store: store) }
+        withDemoFlag(false) { offSignature = ChatViewModelHolder.signature(store: store) }
 
         var onSignature = ""
-        try withDemoFlag(true) { onSignature = ChatViewModelHolder.signature(store: store) }
+        withDemoFlag(true) { onSignature = ChatViewModelHolder.signature(store: store) }
 
         #expect(offSignature != onSignature)
     }

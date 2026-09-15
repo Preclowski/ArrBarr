@@ -3,7 +3,7 @@ import Foundation
 /// Structured side-channel payload carried by a `.tool` `ChatMessage`. The
 /// LLM never sees this — it's UI-only. The corresponding `toolResult` text
 /// remains the canonical info the model gets in the conversation.
-public enum ChatRichContent: Sendable, Equatable {
+nonisolated public enum ChatRichContent: Sendable, Equatable {
     case searchSeriesResults([SearchResult])
     case searchMovieResults([SearchResult])
     case searchArtistResults([SearchResult])
@@ -59,7 +59,7 @@ public enum ChatRichContent: Sendable, Equatable {
 ///
 /// Scoped to the turn, not the conversation — asking about the same actor again
 /// ten messages later should of course show them again.
-public enum ChatPersonCardDedupe {
+nonisolated public enum ChatPersonCardDedupe {
     /// Rich payloads that need to change, keyed by message id. `nil` means the
     /// message has nothing left to draw and should be dropped entirely.
     public static func adjustments(for messages: [ChatMessage]) -> [UUID: ChatRichContent?] {

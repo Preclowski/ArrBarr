@@ -11,7 +11,7 @@ import Foundation
 /// Records with no ids yield an empty array, which the index treats as "no
 /// match" — the arr's own artwork stands.
 
-public extension RadarrMovieDetail {
+nonisolated public extension RadarrMovieDetail {
     var mediaServerKeys: [MediaServerExternalKey] {
         var keys: [MediaServerExternalKey] = []
         if let tmdbId { keys.append(.tmdb(tmdbId)) }
@@ -19,7 +19,7 @@ public extension RadarrMovieDetail {
     }
 }
 
-public extension SonarrSeriesDetail {
+nonisolated public extension SonarrSeriesDetail {
     var mediaServerKeys: [MediaServerExternalKey] {
         var keys: [MediaServerExternalKey] = []
         // TVDB first: Sonarr keys on it and every media server that scanned a
@@ -31,13 +31,13 @@ public extension SonarrSeriesDetail {
     }
 }
 
-public extension RadarrLibraryRecord {
+nonisolated public extension RadarrLibraryRecord {
     var mediaServerKeys: [MediaServerExternalKey] {
         tmdbId.map { [.tmdb($0)] } ?? []
     }
 }
 
-public extension SonarrLibraryRecord {
+nonisolated public extension SonarrLibraryRecord {
     var mediaServerKeys: [MediaServerExternalKey] {
         var keys: [MediaServerExternalKey] = []
         // TVDB first, tmdb as the second chance — same order and reasoning as
@@ -48,7 +48,7 @@ public extension SonarrLibraryRecord {
     }
 }
 
-public extension SearchResult {
+nonisolated public extension SearchResult {
     /// A lookup result's ids, in the form the media-server index is keyed by.
     /// Radarr results carry a TMDB id in `externalId`, Sonarr results a TVDB
     /// id — and TMDB-sourced series rows, which have no `externalId` yet, carry

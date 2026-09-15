@@ -11,7 +11,7 @@ public struct LibraryEntry: Identifiable, Equatable, Sendable {
     /// occurs for multi-file media (Sonarr episodes, Lidarr tracks).
     /// `notAvailable` = monitored, nothing on disk, and nothing grabbable
     /// yet (Radarr: minimumAvailability not met; Sonarr: no aired episodes).
-    public enum FileState: Sendable {
+    nonisolated public enum FileState: Sendable {
         case complete, partial, missing, notAvailable, unmonitored
     }
 

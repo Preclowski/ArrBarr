@@ -4,13 +4,13 @@ import os
 /// The App Group suite shared between the host app and the widget extension,
 /// plus extension-safe config reads. `nonisolated` throughout — a widget
 /// `TimelineProvider` calls this from a background context.
-public enum WidgetDataStore {
+nonisolated public enum WidgetDataStore {
     /// iOS App Group identifier. (macOS, shipped later, needs the
     /// team-id-prefixed form under app-sandbox — handled when the macOS
     /// widget target is added.)
-    public static let appGroupSuiteName = "group.pl.incred.ArrBarr"
+    nonisolated public static let appGroupSuiteName = "group.pl.incred.ArrBarr"
 
-    public static func groupDefaults() -> UserDefaults? {
+    nonisolated public static func groupDefaults() -> UserDefaults? {
         UserDefaults(suiteName: appGroupSuiteName)
     }
 

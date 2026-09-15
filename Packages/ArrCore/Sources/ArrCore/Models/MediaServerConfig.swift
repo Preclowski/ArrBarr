@@ -8,7 +8,7 @@ import Foundation
 /// health reporting, the queue's section order, the brand-icon set and the
 /// secrets roster; a media server takes part in none of those, and widening it
 /// would touch every exhaustive switch in the app to buy nothing.
-public enum MediaServerKind: String, Codable, CaseIterable, Identifiable, Sendable {
+nonisolated public enum MediaServerKind: String, Codable, CaseIterable, Identifiable, Sendable {
     case plex, jellyfin, emby
 
     public var id: String { rawValue }
@@ -53,7 +53,7 @@ public enum MediaServerKind: String, Codable, CaseIterable, Identifiable, Sendab
 /// The single media-server connection. Mirrors `ServiceConfig`'s shape closely
 /// enough to be familiar in Settings, but carries `kind` (which server) and
 /// `userId` (resolved automatically, never typed) instead of a login pair.
-public struct MediaServerConfig: Codable, Equatable, Sendable {
+nonisolated public struct MediaServerConfig: Codable, Equatable, Sendable {
     public var enabled: Bool
     public var kind: MediaServerKind
     public var baseURL: String

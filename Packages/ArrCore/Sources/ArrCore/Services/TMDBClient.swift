@@ -10,7 +10,7 @@ import MediaKit
 /// TMDB's fixed English department/job tokens. They arrive verbatim on every
 /// payload regardless of the request language, so matching them is string
 /// matching against constants — never against a localized label.
-public enum TMDBDepartment {
+nonisolated public enum TMDBDepartment {
     public static let acting = "Acting"
     public static let directing = "Directing"
     /// The crew `job` (not department) that means "this person directed it".
@@ -21,7 +21,7 @@ public enum TMDBDepartment {
     public static let coDirectorJob = "Co-Director"
 }
 
-public struct TMDBPerson: Codable, Sendable, Equatable, Identifiable {
+nonisolated public struct TMDBPerson: Codable, Sendable, Equatable, Identifiable {
     public let id: Int
     public let name: String
     public let knownForDepartment: String?
@@ -46,7 +46,7 @@ public struct TMDBPerson: Codable, Sendable, Equatable, Identifiable {
 
 /// `/person/{id}` — the biography-bearing detail record. Only the fields the
 /// person view / tooltip render are decoded.
-public struct TMDBPersonDetails: Codable, Sendable, Equatable {
+nonisolated public struct TMDBPersonDetails: Codable, Sendable, Equatable {
     public let id: Int
     public let name: String
     public let biography: String?
@@ -87,11 +87,11 @@ public struct TMDBPersonDetails: Codable, Sendable, Equatable {
     }
 }
 
-public struct TMDBPagedPeople: Codable, Sendable {
+nonisolated public struct TMDBPagedPeople: Codable, Sendable {
     public let results: [TMDBPerson]
 }
 
-public struct TMDBMovieSummary: Codable, Sendable, Equatable {
+nonisolated public struct TMDBMovieSummary: Codable, Sendable, Equatable {
     public let id: Int
     public let title: String
     public let releaseDate: String?
@@ -119,7 +119,7 @@ public struct TMDBMovieSummary: Codable, Sendable, Equatable {
     }
 }
 
-public struct TMDBTVSummary: Codable, Sendable, Equatable {
+nonisolated public struct TMDBTVSummary: Codable, Sendable, Equatable {
     public let id: Int
     public let name: String
     public let firstAirDate: String?
@@ -147,24 +147,24 @@ public struct TMDBTVSummary: Codable, Sendable, Equatable {
     }
 }
 
-public struct TMDBMovieCreditsResponse: Codable, Sendable {
+nonisolated public struct TMDBMovieCreditsResponse: Codable, Sendable {
     public let cast: [TMDBMovieSummary]
     public let crew: [TMDBMovieSummary]?
 }
 
-public struct TMDBTVCreditsResponse: Codable, Sendable {
+nonisolated public struct TMDBTVCreditsResponse: Codable, Sendable {
     public let cast: [TMDBTVSummary]
     public let crew: [TMDBTVSummary]?
 }
 
 // MARK: - Movie credits (cast + crew)
 
-public struct TMDBCredits: Codable, Sendable, Equatable {
+nonisolated public struct TMDBCredits: Codable, Sendable, Equatable {
     public let cast: [TMDBCreditPerson]
     public let crew: [TMDBCreditPerson]
 }
 
-public struct TMDBCreditPerson: Codable, Sendable, Equatable, Identifiable {
+nonisolated public struct TMDBCreditPerson: Codable, Sendable, Equatable, Identifiable {
     public let id: Int
     public let name: String
     public let profilePath: String?
@@ -189,15 +189,15 @@ public struct TMDBCreditPerson: Codable, Sendable, Equatable, Identifiable {
 /// have their own), so the creator is the credit that plays the director's
 /// role for a show. The entries carry the same id/name/profile fields as a
 /// credit person, so they decode into the same type.
-public struct TMDBTVCreatedByResponse: Codable, Sendable {
+nonisolated public struct TMDBTVCreatedByResponse: Codable, Sendable {
     public let created_by: [TMDBCreditPerson]?
 }
 
-public struct TMDBDiscoverMovieResponse: Codable, Sendable {
+nonisolated public struct TMDBDiscoverMovieResponse: Codable, Sendable {
     public let results: [TMDBMovieSummary]
 }
 
-public struct TMDBDiscoverTVResponse: Codable, Sendable {
+nonisolated public struct TMDBDiscoverTVResponse: Codable, Sendable {
     public let results: [TMDBTVSummary]
 }
 
@@ -207,7 +207,7 @@ public struct TMDBDiscoverTVResponse: Codable, Sendable {
 // stable across decades — embedding them avoids an extra round-trip per
 // session and lets the LLM pick a genre by name without a setup tool call.
 
-public enum TMDBGenres {
+nonisolated public enum TMDBGenres {
     public static let movie: [String: Int] = [
         "action": 28, "adventure": 12, "animation": 16, "comedy": 35,
         "crime": 80, "documentary": 99, "drama": 18, "family": 10751,
@@ -259,7 +259,7 @@ public enum TMDBGenres {
 //
 /// One entry of TMDB's `/videos` — in practice always a YouTube clip; TMDB
 /// hosts no video of its own, it only points at one.
-public struct TMDBVideo: Codable, Sendable, Equatable {
+nonisolated public struct TMDBVideo: Codable, Sendable, Equatable {
     public let key: String
     public let site: String?
     public let type: String?
@@ -300,7 +300,7 @@ public struct TMDBVideo: Codable, Sendable, Equatable {
 // need per-instance caching. Sendable so it can be passed across actors.
 
 /// TMDB through MediaKit: the same methods and result types as before, the key resolved per instance.
-public struct TMDBClient: Sendable {
+nonisolated public struct TMDBClient: Sendable {
     public let apiKey: String
 
     public init(apiKey: String) { self.apiKey = apiKey }
@@ -382,7 +382,7 @@ public struct TMDBClient: Sendable {
 
     public func movieVideos(movieId: Int) async throws -> [TMDBVideo] { try await read(VideoEnvelope.self) { $0.movieVideos(id: movieId) }.results }
     public func tvVideos(tvId: Int) async throws -> [TMDBVideo] { try await read(VideoEnvelope.self) { $0.tvVideos(id: tvId) }.results }
-    private struct VideoEnvelope: Codable, Sendable { let results: [TMDBVideo] }
+    nonisolated private struct VideoEnvelope: Codable, Sendable { let results: [TMDBVideo] }
 
     public func movieCountries(movieId: Int) async throws -> [String] {
         Self.codes(from: try await read(TMDBCountries.self) { $0.movie(id: movieId) }, preferOrigin: false)
@@ -392,8 +392,8 @@ public struct TMDBClient: Sendable {
         Self.codes(from: try await read(TMDBCountries.self) { $0.tv(id: tvId) }, preferOrigin: true)
     }
 
-    private struct TMDBCountries: Codable, Sendable {
-        struct Country: Codable, Sendable { let iso_3166_1: String? }
+    nonisolated private struct TMDBCountries: Codable, Sendable {
+        nonisolated struct Country: Codable, Sendable { let iso_3166_1: String? }
         let production_countries: [Country]?
         let origin_country: [String]?
     }

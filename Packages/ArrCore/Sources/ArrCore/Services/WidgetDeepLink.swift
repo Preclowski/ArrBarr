@@ -2,7 +2,7 @@ import Foundation
 
 /// Routes carried by `arrbarr://` deep links from widgets. Phase 1 only emits
 /// `.library`; later phases add `.upcoming`, `.needs`, `.quiz`, `.quizAdd`.
-public enum WidgetDeepLink: Equatable, Sendable {
+nonisolated public enum WidgetDeepLink: Equatable, Sendable {
     case library
 
     public static let scheme = "arrbarr"

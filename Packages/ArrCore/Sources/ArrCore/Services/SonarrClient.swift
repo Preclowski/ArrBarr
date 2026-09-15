@@ -1,7 +1,7 @@
 import Foundation
 import MediaKit
 
-public struct SonarrClient: ArrAPIClient {
+nonisolated public struct SonarrClient: ArrAPIClient {
     public let config: ServiceConfig
     public let source: QueueItem.Source = .sonarr
     public let serviceName = "Sonarr"

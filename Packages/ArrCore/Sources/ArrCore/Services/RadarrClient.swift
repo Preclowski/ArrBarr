@@ -1,7 +1,7 @@
 import Foundation
 import MediaKit
 
-public struct RadarrClient: ArrAPIClient {
+nonisolated public struct RadarrClient: ArrAPIClient {
     public let config: ServiceConfig
     public let source: QueueItem.Source = .radarr
     public let serviceName = "Radarr"
@@ -47,12 +47,12 @@ public struct RadarrClient: ArrAPIClient {
     }
 }
 
-func parseArrDate(_ string: String) -> Date? {
+nonisolated func parseArrDate(_ string: String) -> Date? {
     ArrDateParser.shared.parse(string)
 }
 
 /// Servarr dates come zoned, zoneless, or date-only; the memo keeps the row mappers cheap.
-private final class ArrDateParser: @unchecked Sendable {
+nonisolated private final class ArrDateParser: @unchecked Sendable {
     static let shared = ArrDateParser()
     private let lock = NSLock()
     private let zonedFractional = ISO8601DateFormatter()
@@ -90,13 +90,13 @@ private final class ArrDateParser: @unchecked Sendable {
     }
 }
 
-func clampedBytes(_ value: Double?) -> Int64 {
+nonisolated func clampedBytes(_ value: Double?) -> Int64 {
     guard let value, value > 0 else { return 0 }
     guard value < Double(Int64.max) else { return Int64.max }
     return Int64(value)
 }
 
-func parseProtocol(_ raw: String?) -> QueueItem.DownloadProtocol {
+nonisolated func parseProtocol(_ raw: String?) -> QueueItem.DownloadProtocol {
     switch raw?.lowercased() {
     case "usenet", "usenetdownloadprotocol": return .usenet
     case "torrent", "torrentdownloadprotocol": return .torrent
@@ -104,7 +104,7 @@ func parseProtocol(_ raw: String?) -> QueueItem.DownloadProtocol {
     }
 }
 
-func parseStatus(arrStatus: String?, trackedState: String?, trackedStatus: String? = nil) -> QueueItem.Status {
+nonisolated func parseStatus(arrStatus: String?, trackedState: String?, trackedStatus: String? = nil) -> QueueItem.Status {
     let status = arrStatus?.lowercased()
     if status == "paused" { return .paused }
     func resolve() -> QueueItem.Status {

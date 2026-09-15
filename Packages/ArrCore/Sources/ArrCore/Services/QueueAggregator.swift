@@ -2,7 +2,7 @@ import Foundation
 import MediaKit
 import os
 
-public struct SourceQueueResult: Equatable {
+nonisolated public struct SourceQueueResult: Equatable {
     public let source: QueueItem.Source
     public let items: [QueueItem]
     public let error: String?
@@ -99,7 +99,7 @@ public final class QueueAggregator: QueueDataProviding, @unchecked Sendable {
     }
 
     private func queueItems(_ source: QueueItem.Source) async throws -> [QueueItem] {
-        let baseURL = await configStore.config(for: source.serviceKind).baseURL
+        let baseURL = configStore.config(for: source.serviceKind).baseURL
         return try await ArrQueueLoader.items(source: source, gateway: gateway, baseURL: baseURL)
     }
 
@@ -159,7 +159,7 @@ public final class QueueAggregator: QueueDataProviding, @unchecked Sendable {
 
     func fetchHistory(for source: QueueItem.Source, page: Int, pageSize: Int, entityId: Int?) async -> HistoryResult {
         do {
-            let baseURL = await configStore.config(for: source.serviceKind).baseURL
+            let baseURL = configStore.config(for: source.serviceKind).baseURL
             let result = try await ArrQueueLoader.history(source: source, gateway: gateway, baseURL: baseURL, page: page, pageSize: pageSize, entityId: entityId)
             return HistoryResult(items: result.items, hasMore: result.hasMore, error: nil)
         } catch {
@@ -284,7 +284,7 @@ public final class QueueAggregator: QueueDataProviding, @unchecked Sendable {
     }
 }
 
-public struct HistoryResult: Equatable {
+nonisolated public struct HistoryResult: Equatable {
     public let items: [HistoryItem]
     public let hasMore: Bool
     public let error: String?
@@ -293,7 +293,7 @@ public struct HistoryResult: Equatable {
     }
 }
 
-public struct HealthResult: Equatable {
+nonisolated public struct HealthResult: Equatable {
     public let radarr: [ArrHealthRecord]
     public let sonarr: [ArrHealthRecord]
     public let lidarr: [ArrHealthRecord]
@@ -312,7 +312,7 @@ public struct HealthResult: Equatable {
     }
 }
 
-public struct AggregateResult: Equatable {
+nonisolated public struct AggregateResult: Equatable {
     public let radarr: [QueueItem]
     public let sonarr: [QueueItem]
     public let lidarr: [QueueItem]

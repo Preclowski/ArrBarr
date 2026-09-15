@@ -4,7 +4,7 @@ import os
 /// Why an arr didn't show up in the add window is invisible from the UI — the
 /// arr is simply absent, whether it wasn't configured, wasn't reachable, or had
 /// no matching client. This log is the only way to tell those apart.
-private let dropLog = Logger(category: "DownloadDrop")
+nonisolated private let dropLog = Logger(category: "DownloadDrop")
 
 /// Turns a dropped file or magnet link into an actual download.
 ///
@@ -15,7 +15,7 @@ private let dropLog = Logger(category: "DownloadDrop")
 /// of our own choosing would work exactly once — the download would land and
 /// then sit there, never imported, because no arr is watching that category.
 public actor DownloadDropService {
-    public static let shared = DownloadDropService()
+    nonisolated public static let shared = DownloadDropService()
 
     /// Resolved destinations keyed by the config signature they were built
     /// from, so re-opening the sheet doesn't re-interrogate every arr — but a
@@ -108,7 +108,7 @@ public actor DownloadDropService {
     /// new download. Mirrors `DownloadProgressService.makeSource`; the two stay
     /// separate because progress and adding are genuinely different
     /// capabilities (an arr kind has the first, never the second).
-    private static func addSource(_ kind: ServiceKind, _ config: ServiceConfig) -> (any DownloadAddSource)? {
+    nonisolated private static func addSource(_ kind: ServiceKind, _ config: ServiceConfig) -> (any DownloadAddSource)? {
         switch kind {
         case .qbittorrent:  return QbittorrentClient(config: config)
         case .transmission: return TransmissionClient(config: config)
@@ -120,7 +120,7 @@ public actor DownloadDropService {
         }
     }
 
-    private static func downloadClients(arr: ServiceKind, config: ServiceConfig) async throws -> [ArrDownloadClient] {
+    nonisolated private static func downloadClients(arr: ServiceKind, config: ServiceConfig) async throws -> [ArrDownloadClient] {
         switch arr {
         case .sonarr:   return try await SonarrClient(config: config).fetchDownloadClients()
         case .radarr:   return try await RadarrClient(config: config).fetchDownloadClients()
@@ -132,7 +132,7 @@ public actor DownloadDropService {
 
     /// Cheap identity for a config set — enough to notice a URL/key edit
     /// without holding the configs themselves.
-    private static func signature(_ configs: [ServiceKind: ServiceConfig]) -> String {
+    nonisolated private static func signature(_ configs: [ServiceKind: ServiceConfig]) -> String {
         configs.keys.sorted { $0.rawValue < $1.rawValue }.map { kind in
             let c = configs[kind]
             return "\(kind.rawValue):\(c?.enabled == true):\(c?.baseURL ?? "")"
@@ -140,9 +140,9 @@ public actor DownloadDropService {
     }
 }
 
-public extension ServiceKind {
+nonisolated public extension ServiceKind {
     /// The arr kinds, in the order the add sheet lists them.
-    static var arrKinds: [ServiceKind] { [.sonarr, .radarr, .lidarr, .whisparr] }
+    nonisolated static var arrKinds: [ServiceKind] { [.sonarr, .radarr, .lidarr, .whisparr] }
 
     /// SF Symbol shown on this arr's tile in the add sheet.
     var symbolName: String {

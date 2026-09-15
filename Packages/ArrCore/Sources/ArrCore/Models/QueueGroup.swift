@@ -14,7 +14,7 @@ import Foundation
 /// became a weighted-by-size average and pause/resume secretly fanned
 /// out to N actions. Each independent download now renders as its own
 /// row, exactly like Radarr's movies do.
-public enum QueueRowEntry: Identifiable, Equatable {
+nonisolated public enum QueueRowEntry: Identifiable, Equatable {
     case single(QueueItem)
     case group(QueueGroup)
 
@@ -43,7 +43,7 @@ public enum QueueRowEntry: Identifiable, Equatable {
     }
 }
 
-public struct QueueGroup: Identifiable, Equatable {
+nonisolated public struct QueueGroup: Identifiable, Equatable {
     /// Stable identity for the row — the shared `downloadId` of every
     /// member.
     public let id: String
@@ -57,7 +57,7 @@ public struct QueueGroup: Identifiable, Equatable {
 /// User preference for the by-title layer on top of the queue list.
 /// `off` renders the flat list; the other two group same-title entries and
 /// differ only in the default disclosure state.
-public enum QueueTitleGroupingMode: String, CaseIterable, Sendable {
+nonisolated public enum QueueTitleGroupingMode: String, CaseIterable, Sendable {
     case off, collapsed, expanded
 }
 
@@ -65,7 +65,7 @@ public enum QueueTitleGroupingMode: String, CaseIterable, Sendable {
 /// movie / album). Unlike the old removed "virtual bundles", this never
 /// merges downloads into one row — its children are the real entries, each
 /// with its own controls; the container only adds a collapsible header.
-public struct QueueTitleGroup: Identifiable, Equatable {
+nonisolated public struct QueueTitleGroup: Identifiable, Equatable {
     /// Stable identity — the shared title key of every member (survives
     /// members joining/leaving, so disclosure state can be keyed on it).
     public let id: String
@@ -116,7 +116,7 @@ public struct QueueTitleGroup: Identifiable, Equatable {
 
 /// A row in the queue list after the optional by-title pass: either a
 /// pass-through entry or a title group wrapping ≥2 of them.
-public enum QueueDisplayRow: Identifiable {
+nonisolated public enum QueueDisplayRow: Identifiable {
     case entry(QueueRowEntry)
     case titleGroup(QueueTitleGroup)
 
@@ -128,7 +128,7 @@ public enum QueueDisplayRow: Identifiable {
     }
 }
 
-public enum QueueGrouping {
+nonisolated public enum QueueGrouping {
     /// Bucket Sonarr queue items by `downloadId`. Items in a bucket of ≥2
     /// form a `.pack` group (one physical download with multiple expected
     /// episodes). Singletons — including the previously "virtual"

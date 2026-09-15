@@ -7,7 +7,7 @@ import FoundationModels
 /// recent-enough OS, but Apple Intelligence supported AND enabled. The Settings
 /// AI provider picker hides the Foundation Models option when this is false.
 public enum FoundationModelsAvailability {
-    public static var isSupported: Bool {
+    nonisolated public static var isSupported: Bool {
         #if canImport(FoundationModels)
         if case .available = SystemLanguageModel.default.availability { return true }
         #endif
@@ -82,7 +82,7 @@ public struct FoundationModelsProvider: LLMProvider {
 
     // MARK: - Private
 
-    private static func buildInstructions(tools: [LLMTool]) -> Instructions {
+    nonisolated private static func buildInstructions(tools: [LLMTool]) -> Instructions {
         // Foundation Models sees only a single stringified `json` argument on
         // each DynamicMCPTool, so the framework can't expose the real schema
         // to the model. We compensate by spelling each tool's JSON schema out
@@ -180,7 +180,7 @@ public struct FoundationModelsProvider: LLMProvider {
 /// during a single LLM session. ChatViewModel drains it after `respond` returns
 /// and renders them as `.tool` messages without re-executing.
 actor DynamicMCPToolBox {
-    static let shared = DynamicMCPToolBox()
+    nonisolated static let shared = DynamicMCPToolBox()
     private var pendingCalls: [ToolCall] = []
     private var pendingResults: [String] = []
     private var pendingRich: [ChatRichContent?] = []

@@ -6,7 +6,7 @@ import Foundation
 /// whole discovery strategy (a big collection owns the canon, so guessing
 /// obvious titles wastes a full round of lookups plus an LLM turn), and an
 /// actor hop has no place inside prompt assembly.
-public final class LibraryStats: @unchecked Sendable {
+nonisolated public final class LibraryStats: @unchecked Sendable {
 
     public static let shared = LibraryStats()
 

@@ -12,7 +12,7 @@ import Foundation
 /// prompt built with `String(localized:)` stayed in the pre-switch language
 /// until relaunch. The model, instructed to reply in the user's language, then
 /// mirrored that stale prompt and answered the whole turn in the old language.
-enum AppLocalized {
+nonisolated enum AppLocalized {
     /// Look `key` up in `locale`'s `.lproj` inside `Bundle.module`, falling back
     /// to the module default (Base / English) when that language isn't shipped.
     ///

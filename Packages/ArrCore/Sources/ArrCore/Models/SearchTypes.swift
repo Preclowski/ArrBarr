@@ -2,19 +2,19 @@ import Foundation
 
 // MARK: - Shared
 
-public struct QualityProfile: Codable, Identifiable, Sendable {
+nonisolated public struct QualityProfile: Codable, Identifiable, Sendable {
     public let id: Int
     let name: String
 }
 
-public struct RootFolder: Codable, Identifiable, Sendable {
+nonisolated public struct RootFolder: Codable, Identifiable, Sendable {
     public let id: Int
     let path: String
 }
 
 // MARK: - Search result (unified)
 
-public struct SearchResult: Identifiable, Equatable, Hashable, Sendable {
+nonisolated public struct SearchResult: Identifiable, Equatable, Hashable, Sendable {
     /// The external key this row is addressed by: tmdbId for Radarr/Whisparr,
     /// tvdbId for Sonarr, a hashed MusicBrainz id for Lidarr.
     ///
@@ -183,7 +183,7 @@ public struct SearchResult: Identifiable, Equatable, Hashable, Sendable {
 
 // MARK: - Monitor modes
 
-public enum RadarrMonitorMode: String, CaseIterable, Identifiable {
+nonisolated public enum RadarrMonitorMode: String, CaseIterable, Identifiable {
     case movieOnly, movieAndCollection, none
     public var id: String { rawValue }
     /// Localized through the catalog, not returned raw. A bare English string
@@ -199,7 +199,7 @@ public enum RadarrMonitorMode: String, CaseIterable, Identifiable {
     }
 }
 
-public enum SonarrMonitorMode: String, CaseIterable, Identifiable {
+nonisolated public enum SonarrMonitorMode: String, CaseIterable, Identifiable {
     case all, future, missing, existing, first, latest, none
     public var id: String { rawValue }
     /// Value Sonarr expects for `addOptions.monitor`. Sonarr's
@@ -231,7 +231,7 @@ public enum SonarrMonitorMode: String, CaseIterable, Identifiable {
 /// Lidarr `addOptions.monitor` for a new artist. Mirrors Lidarr's
 /// `MonitorTypes` (serialised lowercase/camelCase 1:1 — unlike Sonarr,
 /// `first`/`latest` need no remapping).
-public enum LidarrMonitorMode: String, CaseIterable, Identifiable {
+nonisolated public enum LidarrMonitorMode: String, CaseIterable, Identifiable {
     case all, future, missing, existing, first, latest, none
     public var id: String { rawValue }
     /// See `RadarrMonitorMode.displayName` — localized, not raw.
@@ -250,7 +250,7 @@ public enum LidarrMonitorMode: String, CaseIterable, Identifiable {
 
 /// Radarr's `minimumAvailability` — when a monitored movie becomes eligible
 /// for searching/downloading. Serialises 1:1 to Radarr v3's enum values.
-public enum RadarrMinimumAvailability: String, CaseIterable, Identifiable {
+nonisolated public enum RadarrMinimumAvailability: String, CaseIterable, Identifiable {
     case announced, inCinemas, released
     public var id: String { rawValue }
     /// See `RadarrMonitorMode.displayName` — localized, not raw.
@@ -263,7 +263,7 @@ public enum RadarrMinimumAvailability: String, CaseIterable, Identifiable {
     }
 }
 
-public enum SonarrSeriesType: String, CaseIterable, Identifiable {
+nonisolated public enum SonarrSeriesType: String, CaseIterable, Identifiable {
     case standard, daily, anime
     public var id: String { rawValue }
     /// Was `rawValue.capitalized` — cheap, and English-only forever: a
@@ -280,7 +280,7 @@ public enum SonarrSeriesType: String, CaseIterable, Identifiable {
 
 // MARK: - Library entry → search row
 
-extension SearchResult {
+nonisolated extension SearchResult {
     /// A Library-tab entry as a search row — what library-only search returns.
     /// Owned by definition, so it arrives stamped: it opens the detail view,
     /// and its chip reads "Downloaded" or "library" from the same file state

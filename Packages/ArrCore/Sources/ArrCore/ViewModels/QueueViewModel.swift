@@ -195,10 +195,10 @@ public final class QueueViewModel {
     /// Process-wide shared view-model. Used by both the AppDelegate (status
     /// bar badge updates) and the SwiftUI `MenuBarExtra` scene so they see
     /// the same queue snapshot and don't double-poll.
-    public static let shared = QueueViewModel()
+    public static let shared = QueueViewModel(configStore: .shared)
 
     public init(
-        configStore: ConfigStore = .shared,
+        configStore: ConfigStore,
         notificationDefaults: UserDefaults = .standard
     ) {
         self.configStore = configStore

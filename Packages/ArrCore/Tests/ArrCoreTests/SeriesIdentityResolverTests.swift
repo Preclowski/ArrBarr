@@ -147,7 +147,7 @@ struct SeriesIdentityResolverTests {
 
     @Test("The show is resolved through TMDB's external ids, never by title")
     func resolvesByIdNotByTitle() async throws {
-        try await withStub {
+        await withStub {
             let record = await SeriesIdentityResolver.sonarrRecord(
                 tmdbTVId: Fixtures.tmdbTVId, sonarrConfig: config(port: 8001), tmdbKey: "k")
 
@@ -163,7 +163,7 @@ struct SeriesIdentityResolverTests {
 
     @Test("A tmdb: answer that doesn't carry our id is rejected, not trusted")
     func verificationGateRejectsFuzzyAnswer() async throws {
-        try await withStub {
+        await withStub {
             // Sonarr replies to `term=tmdb:1234` with a same-titled other show
             // — the shape an older server produces when it treats the prefix as
             // literal text.
@@ -182,7 +182,7 @@ struct SeriesIdentityResolverTests {
 
     @Test("A Sonarr that understands tmdb: costs one request and no TMDB quota")
     func verifiedTMDBTermShortCircuits() async throws {
-        try await withStub {
+        await withStub {
             ResolverStub.state.understandsTMDBTerm = true
 
             let record = await SeriesIdentityResolver.sonarrRecord(
@@ -195,7 +195,7 @@ struct SeriesIdentityResolverTests {
 
     @Test("An owned series resolves from the library snapshot without asking TMDB")
     func ownedSeriesNeedsNoTMDBRequest() async throws {
-        try await withStub {
+        await withStub {
             ResolverStub.state.libraryJSON = Fixtures.ownedLibrary
 
             let tvdbId = await SeriesIdentityResolver.tvdbId(
@@ -208,7 +208,7 @@ struct SeriesIdentityResolverTests {
 
     @Test("No tvdb id anywhere means no substitution at all")
     func unresolvableYieldsNil() async throws {
-        try await withStub {
+        await withStub {
             ResolverStub.state.externalTVDBId = nil
 
             let record = await SeriesIdentityResolver.sonarrRecord(
@@ -221,7 +221,7 @@ struct SeriesIdentityResolverTests {
 
     @Test("A repeat resolution is served from cache")
     func repeatResolutionIsCached() async throws {
-        try await withStub {
+        await withStub {
             let cfg = config(port: 8006)
             _ = await SeriesIdentityResolver.sonarrRecord(
                 tmdbTVId: Fixtures.tmdbTVId, sonarrConfig: cfg, tmdbKey: "k")
@@ -237,7 +237,7 @@ struct SeriesIdentityResolverTests {
 
     @Test("Concurrent resolutions of the same show coalesce into one")
     func concurrentResolutionsCoalesce() async throws {
-        try await withStub {
+        await withStub {
             let cfg = config(port: 8007)
             async let a = SeriesIdentityResolver.sonarrRecord(
                 tmdbTVId: Fixtures.tmdbTVId, sonarrConfig: cfg, tmdbKey: "k")
@@ -255,7 +255,7 @@ struct SeriesIdentityResolverTests {
 
     @Test("Enriching a TMDB series row swaps in the right show, not a namesake")
     func enrichKeepsIdentity() async throws {
-        try await withStub {
+        await withStub {
             let vm = SearchViewModel()
             vm.setup(radarrConfig: .empty, sonarrConfig: config(port: 8008),
                      tmdbApiKey: "k")
@@ -279,7 +279,7 @@ struct SeriesIdentityResolverTests {
     /// outside identical to the bug where it really was a different show.
     @Test("Enrichment upgrades the metadata but keeps the poster you tapped")
     func enrichKeepsTheRowsArtwork() async throws {
-        try await withStub {
+        await withStub {
             let vm = SearchViewModel()
             vm.setup(radarrConfig: .empty, sonarrConfig: config(port: 8011),
                      tmdbApiKey: "k")
@@ -302,7 +302,7 @@ struct SeriesIdentityResolverTests {
 
     @Test("An unresolved row is never enriched into some other show")
     func enrichReturnsNilRatherThanGuessing() async throws {
-        try await withStub {
+        await withStub {
             ResolverStub.state.externalTVDBId = nil
             let vm = SearchViewModel()
             vm.setup(radarrConfig: .empty, sonarrConfig: config(port: 8009),
@@ -317,7 +317,7 @@ struct SeriesIdentityResolverTests {
     /// The write path is the one that can't be undone by tapping back.
     @Test("Adding an unresolved series refuses rather than posting a guess")
     func addSeriesRefusesUnresolvedRow() async throws {
-        try await withStub {
+        await withStub {
             let client = SearchClient(config: config(port: 8010), source: .sonarr)
             let lean = TMDBSearchMapping.series([tvSummary()]).first!
 

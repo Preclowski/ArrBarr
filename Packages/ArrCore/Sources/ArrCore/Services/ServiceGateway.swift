@@ -3,16 +3,16 @@ import Foundation
 import MediaKit
 import os
 
-extension ServiceKind {
+nonisolated extension ServiceKind {
     public var instanceKind: InstanceKind { InstanceKind(rawValue: rawValue)! }
     public var instanceID: InstanceID { InstanceID(instanceKind) }
 }
 
-extension QueueItem.Source {
+nonisolated extension QueueItem.Source {
     public var instanceID: InstanceID { InstanceID(serviceKind.instanceKind) }
 }
 
-extension MediaServerKind {
+nonisolated extension MediaServerKind {
     var instanceID: InstanceID {
         switch self {
         case .plex: InstanceID(.plex)
@@ -30,7 +30,7 @@ public final class ServiceGateway {
     private let kitLock: OSAllocatedUnfairLock<MediaStack>
     public nonisolated var kit: MediaStack { kitLock.withLock { $0 } }
     public let telemetry = TelemetryRecorder()
-    private let configStore: ConfigStore
+    let configStore: ConfigStore
     private var observers: Set<AnyCancellable> = []
     private var started = false
     private var startTask: Task<Void, Never>?
@@ -73,6 +73,21 @@ public final class ServiceGateway {
     }
 
     static let isRunningTests = NSClassFromString("XCTestCase") != nil
+
+    /// A gateway on the bundled fixtures for `kinds`, independent of the global demo flag: the widget's demo and tests.
+    /// It never becomes the process-wide gateway.
+    public static func demo(kinds: Set<ServiceKind>) -> ServiceGateway {
+        let store = ConfigStore(defaults: UserDefaults(suiteName: "pl.incred.ArrBarr.demo.fixtures")!, secrets: InMemorySecretStore())
+        for kind in ServiceKind.allCases {
+            var config = ServiceConfig.empty
+            config.enabled = kinds.contains(kind)
+            store.update(kind, with: config)
+        }
+        let hadCurrent = current != nil
+        let gateway = ServiceGateway(configStore: store, demo: true)
+        if !hadCurrent { current = nil }
+        return gateway
+    }
 
     /// A client built with a config that is not the saved one (a Settings draft, a test) gets its own instance.
     public func adopt(_ config: ServiceConfig, for kind: ServiceKind) async -> InstanceID {

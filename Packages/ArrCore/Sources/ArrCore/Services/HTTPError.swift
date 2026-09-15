@@ -1,7 +1,7 @@
 import Foundation
 import MediaKit
 
-public enum HTTPError: LocalizedError {
+nonisolated public enum HTTPError: LocalizedError {
     case badURL
     case transport(Error)
     case status(Int, body: String?)
@@ -101,7 +101,7 @@ public enum HTTPError: LocalizedError {
     }
 }
 
-public extension Error {
+nonisolated public extension Error {
     /// The message to put in front of a user.
     ///
     /// `localizedDescription` alone is not it: for a `LocalizedError` it falls

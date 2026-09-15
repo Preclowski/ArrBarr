@@ -15,7 +15,7 @@ import Foundation
 /// Lock-guarded rather than an actor for the same reason as
 /// `MediaServerIndex`: `PosterStore`'s hot path is synchronous, and an actor
 /// would push `await` into it for a dictionary read.
-public final class MediaServerPosterAccess: @unchecked Sendable {
+nonisolated public final class MediaServerPosterAccess: @unchecked Sendable {
     public static let shared = MediaServerPosterAccess()
 
     private let lock = NSLock()

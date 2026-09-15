@@ -2,8 +2,8 @@ import Foundation
 
 /// One remembered quiz verdict. `key` is `DiscoverItem.dedupKey`, so the same
 /// title collides across sources (curated, anchors, library) and sessions.
-public struct SwipeSignal: Codable, Sendable, Equatable {
-    public enum Kind: String, Codable, Sendable {
+nonisolated public struct SwipeSignal: Codable, Sendable, Equatable {
+    nonisolated public enum Kind: String, Codable, Sendable {
         /// Right swipe — positive taste signal (future anchor / profile food).
         case kept
         /// Left swipe — "not now". A cooldown, never a verdict: it expires,
@@ -16,7 +16,7 @@ public struct SwipeSignal: Codable, Sendable, Equatable {
     /// What the title IS — drives the per-type grouping in the settings
     /// pane. Optional because entries persisted before the field existed
     /// decode without it.
-    public enum Media: String, Codable, Sendable {
+    nonisolated public enum Media: String, Codable, Sendable {
         case movie, show, music
     }
     public var key: String

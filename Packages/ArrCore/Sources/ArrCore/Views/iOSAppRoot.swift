@@ -66,7 +66,7 @@ public struct iOSAppRoot: View {
     }
 
     public init(viewModel: QueueViewModel? = nil, configStore: ConfigStore? = nil) {
-        let vm = viewModel ?? QueueViewModel()
+        let vm = viewModel ?? QueueViewModel(configStore: .shared)
         let cs = configStore ?? .shared
         self._viewModel = State(initialValue: vm)
         self._configStore = ObservedObject(wrappedValue: cs)

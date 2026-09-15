@@ -1,6 +1,6 @@
 import Foundation
 
-public struct ChatMessage: Identifiable, Equatable, Sendable {
+nonisolated public struct ChatMessage: Identifiable, Equatable, Sendable {
     public enum Role: Equatable, Sendable { case user, assistant, tool }
 
     public let id: UUID
@@ -31,7 +31,7 @@ public struct ChatMessage: Identifiable, Equatable, Sendable {
     }
 }
 
-public struct ToolCall: Equatable, Sendable {
+nonisolated public struct ToolCall: Equatable, Sendable {
     /// Provider-side correlation id (e.g. OpenAI's tool_call_id). Optional;
     /// Foundation Models doesn't need this, OpenAI does.
     public let id: String?

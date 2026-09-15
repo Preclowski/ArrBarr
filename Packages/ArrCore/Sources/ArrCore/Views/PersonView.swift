@@ -4,7 +4,7 @@ import os
 /// Identity of a person to open — pushed as a `navigationDestination(item:)`
 /// from cast heads. Carries just enough to render the header instantly (name +
 /// headshot) while `PersonStore` fetches the bio and filmography.
-public struct PersonRef: Hashable, Identifiable, Sendable {
+nonisolated public struct PersonRef: Hashable, Identifiable, Sendable {
     public let tmdbId: Int
     public let name: String
     public let profilePath: String?

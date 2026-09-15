@@ -2,7 +2,7 @@ import Foundation
 import MediaKit
 
 /// Wire records → ArrCore compositions. One function per shape for all four arr flavours.
-enum ArrCompositions {
+nonisolated enum ArrCompositions {
     struct EntityMeta: Sendable {
         var title: String
         var secondary: String?
@@ -292,12 +292,12 @@ enum ArrCompositions {
     }
 }
 
-extension Int64 {
+nonisolated extension Int64 {
     fileprivate var nonZero: Int64? { self > 0 ? self : nil }
 }
 
 /// The user-facing text for a MediaKit failure; the arr's own reason wins when it sent one.
-enum MediaKitErrorPresenter {
+nonisolated enum MediaKitErrorPresenter {
     static func message(for error: MediaKitError) -> String {
         if let server = error.serverMessage, !server.isEmpty { return server }
         switch error {

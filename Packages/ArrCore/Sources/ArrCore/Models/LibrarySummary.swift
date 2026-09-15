@@ -2,7 +2,7 @@ import Foundation
 
 /// One arr's library headline: how many items and how many bytes on disk.
 /// Pure value type so the summation logic is unit-testable without a network.
-public struct LibrarySummary: Sendable, Equatable, Identifiable {
+nonisolated public struct LibrarySummary: Sendable, Equatable, Identifiable {
     public enum Source: String, Sendable, CaseIterable, Identifiable {
         case radarr, sonarr, lidarr, whisparr
         public var id: String { rawValue }

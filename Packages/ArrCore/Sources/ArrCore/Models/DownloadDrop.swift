@@ -6,7 +6,7 @@ import Foundation
 /// usenet client. This is what filters the arrs offered in the add sheet — an
 /// arr whose download client can't speak the payload's protocol isn't a choice,
 /// it's a dead end.
-public enum DownloadKind: String, Sendable, CaseIterable {
+nonisolated public enum DownloadKind: String, Sendable, CaseIterable {
     case torrent
     case usenet
 
@@ -27,7 +27,7 @@ public enum DownloadKind: String, Sendable, CaseIterable {
 /// One thing the user dropped, opened or clicked: a torrent/nzb file's bytes, or
 /// a magnet link. Carries its own display name so the UI never has to re-derive
 /// one from a URL it no longer holds.
-public struct DownloadDrop: Identifiable, Sendable, Equatable {
+nonisolated public struct DownloadDrop: Identifiable, Sendable, Equatable {
     public enum Content: Sendable, Equatable {
         case file(Data, filename: String)
         case magnet(String)
@@ -213,7 +213,7 @@ public struct DownloadDrop: Identifiable, Sendable, Equatable {
 /// import work. The category is the whole point: drop a file into the client
 /// under `tv-sonarr` and Sonarr picks it up on its next scan; drop it in with no
 /// category and it sits there orphaned.
-public struct ArrDownloadClient: Identifiable, Sendable, Hashable {
+nonisolated public struct ArrDownloadClient: Identifiable, Sendable, Hashable {
     public let id: Int
     public let name: String
     /// The arr's implementation name — "QBittorrent", "Sabnzbd", … Mapped to our
@@ -241,7 +241,7 @@ public struct ArrDownloadClient: Identifiable, Sendable, Hashable {
 
 /// A resolved "where this file is going": the arr that will import it, and the
 /// client + category it has to land in for that import to happen.
-public struct DownloadDestination: Identifiable, Sendable, Hashable {
+nonisolated public struct DownloadDestination: Identifiable, Sendable, Hashable {
     public var id: String { "\(arr.rawValue)-\(client.id)" }
     public let arr: ServiceKind
     public let client: ArrDownloadClient
@@ -252,7 +252,7 @@ public struct DownloadDestination: Identifiable, Sendable, Hashable {
 
 /// A download client that can be handed a new torrent/nzb, as opposed to only
 /// reporting on the ones it already has (`DownloadProgressSource`).
-public protocol DownloadAddSource: Sendable {
+nonisolated public protocol DownloadAddSource: Sendable {
     func add(_ drop: DownloadDrop, category: String?, paused: Bool) async throws
     /// The client's own "add downloads paused" preference, so the sheet's
     /// checkbox starts on what the client would have done anyway. nil when the
@@ -260,6 +260,6 @@ public protocol DownloadAddSource: Sendable {
     func defaultAddPaused() async -> Bool?
 }
 
-public extension DownloadAddSource {
+nonisolated public extension DownloadAddSource {
     func defaultAddPaused() async -> Bool? { nil }
 }

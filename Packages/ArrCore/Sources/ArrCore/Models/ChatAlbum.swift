@@ -4,7 +4,7 @@ import Foundation
 /// `LidarrAlbumListRecord`: the rich payload needs `Equatable` (the whole
 /// message stream diffs on it) and only wants the handful of fields a card
 /// shows — everything else is one tap away in the album detail.
-public struct ChatAlbum: Sendable, Equatable, Identifiable {
+nonisolated public struct ChatAlbum: Sendable, Equatable, Identifiable {
     /// Lidarr's album id — what a tap hands to the detail surface, and what
     /// `lidarr_monitor_album` takes.
     public let id: Int

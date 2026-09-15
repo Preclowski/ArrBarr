@@ -44,6 +44,8 @@ let package = Package(
                 // to the 6.0 mode is a separate cleanup — Phase 1 keeps
                 // semantics identical so the macOS app builds unchanged.
                 .swiftLanguageMode(.v5),
+                // Views, view-models and stores are main-actor code; the few off-main pieces say so explicitly.
+                .defaultIsolation(MainActor.self),
             ]
         ),
         .testTarget(

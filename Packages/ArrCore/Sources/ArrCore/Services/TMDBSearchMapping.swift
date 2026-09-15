@@ -7,7 +7,7 @@ import Foundation
 /// so the mapping — poster URL derivation, genre-id → name, library-owned
 /// tagging, the tvdb-id-is-not-a-tmdb-id caveat — lives here rather than being
 /// re-derived per surface.
-public enum TMDBSearchMapping {
+nonisolated public enum TMDBSearchMapping {
 
     /// TMDB movies → `SearchResult`. `libraryMap` (tmdbId → ownership) tags
     /// already-owned results, so the UI routes their tap to the detail view

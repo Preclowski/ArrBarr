@@ -1,7 +1,7 @@
 import Foundation
 import MediaKit
 
-public struct LidarrClient: ArrAPIClient {
+nonisolated public struct LidarrClient: ArrAPIClient {
     public let config: ServiceConfig
     public let source: QueueItem.Source = .lidarr
     public let serviceName = "Lidarr"
