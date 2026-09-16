@@ -50,7 +50,9 @@ public struct ExpandableOverview: View {
         VStack(alignment: .leading, spacing: 2) {
             Text(text)
                 .scaledFont(size: 12)
-                .foregroundStyle(.secondary)
+                // Body copy, so `.primary`: at `.secondary` the synopsis blended
+                // into the glass behind it and read as half-transparent.
+                .foregroundStyle(.primary)
                 .lineLimit(showsFullText ? nil : 4)
                 .fixedSize(horizontal: false, vertical: true)
                 // The 4-line height is measured on a HIDDEN probe (below),

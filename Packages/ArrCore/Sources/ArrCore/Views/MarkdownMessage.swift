@@ -279,7 +279,7 @@ struct MarkdownMessage: View {
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 5)
-                    .background(.ultraThinMaterial, in: Capsule())
+                    .glassEffect(.regular, in: .capsule)
                 }
             }
             .animation(.easeInOut(duration: 0.25), value: spoilersRevealed)

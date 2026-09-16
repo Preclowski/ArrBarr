@@ -8546,37 +8546,37 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "ArrBarr is not configured"
+            "value": "Not configured"
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "ArrBarr nie jest skonfigurowany"
+            "value": "Nie skonfigurowano"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "ArrBarr ist nicht konfiguriert"
+            "value": "Nicht konfiguriert"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "ArrBarr no está configurado"
+            "value": "Sin configurar"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "ArrBarr n'est pas configuré"
+            "value": "Non configuré"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "ArrBarr is niet geconfigureerd"
+            "value": "Niet geconfigureerd"
           }
         }
       },
@@ -24073,6 +24073,48 @@
         }
       }
     },
+    "library.watched.badge": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Watched"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Obejrzane"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gesehen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Visto"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vu"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bekeken"
+          }
+        }
+      },
+      "comment": "Marker on a poster whose title the media server reports as played"
+    },
     "library.view.grid": {
       "extractionState": "manual",
       "localizations": {
@@ -24574,6 +24616,48 @@
         }
       },
       "comment": "Error shown when the local cache failed; %@ is the detail"
+    },
+    "mediakit.error.notConfigured": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ is not configured"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ nie jest skonfigurowany"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ ist nicht konfiguriert"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ no está configurado"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ n'est pas configuré"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ is niet geconfigureerd"
+          }
+        }
+      },
+      "comment": "Error shown when a service has no usable configuration"
     },
     "mediakit.error.notPermitted": {
       "extractionState": "manual",

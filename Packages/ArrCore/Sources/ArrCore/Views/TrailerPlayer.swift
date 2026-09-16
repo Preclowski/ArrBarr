@@ -464,7 +464,9 @@ extension View {
     func trailerOverlay(key: Binding<String?>) -> some View {
         overlay {
             if let presented = key.wrappedValue {
-                ZStack(alignment: .topTrailing) {
+                // Top-LEADING: the ✕ sits in the same corner as the poster
+                // lightbox's, and as every pushed view's back chevron.
+                ZStack(alignment: .topLeading) {
                     // ONE near-black layer, not a material with a black plate on
                     // top. Tinting the glass was the tidier idea but it can't
                     // get there: measured over bright content, `.regularMaterial`

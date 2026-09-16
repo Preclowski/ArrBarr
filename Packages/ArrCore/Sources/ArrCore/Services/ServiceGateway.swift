@@ -294,11 +294,11 @@ public final class ServiceGateway {
             if !Self.isRunningTests, let url = URL(string: config.baseURL), config.isConfigured {
                 let generation = SecretGenerations.generation(for: .apiKey(for: kind), in: configStore.defaultsForGateway)
                     + "." + SecretGenerations.generation(for: .password(for: kind), in: configStore.defaultsForGateway)
-                out.append(InstanceDescriptor(id: kind.instanceID, baseURL: url, enabled: config.isVisible, generation: generation))
+                out.append(InstanceDescriptor(id: kind.instanceID, baseURL: url, enabled: config.isUsable(as: kind), generation: generation))
             }
             for (index, draft) in (adHoc.withLock { $0[kind] } ?? []).enumerated() {
                 guard let url = URL(string: draft.baseURL), draft.isConfigured else { continue }
-                out.append(InstanceDescriptor(id: InstanceID(kind.instanceKind, ordinal: index + 1), baseURL: url, enabled: draft.isVisible, generation: "draft"))
+                out.append(InstanceDescriptor(id: InstanceID(kind.instanceKind, ordinal: index + 1), baseURL: url, enabled: draft.isUsable(as: kind), generation: "draft"))
             }
         }
         let server = configStore.mediaServer

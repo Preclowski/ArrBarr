@@ -96,6 +96,31 @@ struct Row: Codable, Sendable, Equatable { let id: Int; let title: String }
         #expect(fresh.value[0].title == "new" && fresh.origin == .memory)
     }
 
+    /// TTL expiry means "possibly old" — serve it. An invalidation means "known changed" — serving it would
+    /// show the user the state they just changed away from (an imported title still listed as missing).
+    @Test func staleWhileRevalidateRefetchesAnInvalidatedRow() async throws {
+        let kit = try await TestKit()
+        kit.transport.answer("fetchQueue", json: #"[{"id":1,"title":"old"}]"#)
+        let r: Resource<[Row]> = kit.resource("fetchQueue")
+        _ = try await kit.store.read(r)
+        kit.transport.answer("fetchQueue", json: #"[{"id":1,"title":"new"}]"#)
+        await kit.store.invalidate([.collection(.queue, TestKit.radarr)], reason: .event)
+        let served = try await kit.store.read(r, policy: .staleWhileRevalidate)
+        #expect(served.origin == .network && !served.isStale && served.value[0].title == "new")
+    }
+
+    /// The refetch is not a promise the network will answer: a dead host still gets the last known rows.
+    @Test func anInvalidatedRowIsStillServedWhenTheRefetchFails() async throws {
+        let kit = try await TestKit()
+        kit.transport.answer("fetchQueue", json: #"[{"id":1,"title":"old"}]"#)
+        let r: Resource<[Row]> = kit.resource("fetchQueue")
+        _ = try await kit.store.read(r)
+        await kit.store.invalidate([.collection(.queue, TestKit.radarr)], reason: .event)
+        kit.transport.fallback = { _ in throw URLError(.cannotConnectToHost) }
+        let served = try await kit.store.read(r, policy: .staleWhileRevalidate)
+        #expect(served.isStale && served.degraded != nil && served.value[0].title == "old")
+    }
+
     @Test func cacheOnlyNeverTouchesTheNetwork() async throws {
         let kit = try await TestKit()
         let r: Resource<[Row]> = kit.resource("fetchQueue")

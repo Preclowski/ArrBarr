@@ -359,6 +359,10 @@ public struct DetailView: View {
     private var detailBody: some View {
         ZStack {
             VStack(spacing: 0) {
+                // Stacked header, not a `safeAreaBar`: tried both orders of
+                // bar + `.scrollEdgeEffectStyle(.soft)` here and the system
+                // never drew its blur on this surface, so the content just
+                // disappeared under a header with nothing marking the seam.
                 header
                 ScrollView {
                     content
@@ -916,12 +920,14 @@ public struct DetailView: View {
         } label: {
             Image(systemName: "xmark")
                 .scaledFont(size: CancelCTAMetrics.glyph, weight: .bold)
+                .foregroundStyle(.red)
                 .frame(width: 26)
                 // Must match `PauseResumeButton`'s own padding, or the two
                 // buttons sitting side by side come out different heights.
                 .padding(.vertical, CancelCTAMetrics.vPadding)
         }
-        .modifier(GlassProminentButtonStyle())
+        // Matches the pause/resume capsule beside it — see `GlassTintedButtonStyle`.
+        .modifier(GlassTintedButtonStyle())
         .tint(.red)
         .help(Text("queue.cancelDownload.button", bundle: .module))
         .accessibilityLabel(Text("queue.cancelDownload.button", bundle: .module))

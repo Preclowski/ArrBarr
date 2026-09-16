@@ -22,24 +22,25 @@ public extension View {
     ///   height, so a growing capsule keeps inflating its own corners until the
     ///   bar reads as a lozenge/circle. A fixed continuous radius sized to the
     ///   one-line height looks identical at rest and simply gets taller.
-    func glassyFloatingBar(focused: Bool = false, cornerRadius: CGFloat? = nil) -> some View {
+    /// - Parameter inverted: tints the glass towards the OPPOSITE appearance
+    ///   (light in dark mode, dark in light) so an input reads as something you
+    ///   type into rather than as more chrome. A hint, not a flip — the content
+    ///   keeps the app's own colours.
+    /// - Parameter circular: a real `Circle` instead of a capsule. A capsule
+    ///   only looks round when its bounds are square, and the glass pads its
+    ///   own bounds — so a square one-glyph island still came out an oval.
+    func glassyFloatingBar(focused: Bool = false, cornerRadius: CGFloat? = nil,
+                           inverted: Bool = false, circular: Bool = false) -> some View {
         modifier(GlassyFloatingBarModifier(lift: focused ? GlassyFloatingBarModifier.litTint : 0,
-                                           cornerRadius: cornerRadius))
+                                           cornerRadius: cornerRadius,
+                                           inverted: inverted,
+                                           circular: circular))
             // Sits *above* the modifier on purpose — this is what drives its
             // `animatableData`; put it inside and there's nothing left to
             // interpolate. Asymmetric on purpose too: lighting up is a response
             // to you (quick, 0.18), going dark is you leaving (unhurried, 0.3,
             // so blur-then-click-elsewhere doesn't strobe).
             .animation(focused ? .easeOut(duration: 0.18) : .easeInOut(duration: 0.3), value: focused)
-    }
-
-    /// Compact glass pill for inline clusters (row action buttons etc).
-    /// Same Liquid Glass / material chrome as `glassyFloatingBar` but
-    /// without the drop shadow — meant to live inside another rectangle
-    /// (the row's hover-action overlay) where a shadow would muddy the
-    /// edge against the fade gradient.
-    func glassPill() -> some View {
-        modifier(GlassPillModifier())
     }
 
     /// Translucent *frosted-glass* bar for an active mode indicator (queue
@@ -58,35 +59,10 @@ public extension View {
 private struct SelectionModeBarModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
-            .background {
-                Capsule()
-                    // `.ultraThinMaterial` = the lightest frost — translucent
-                    // glass (rows show through) with a softer, smaller blur than
-                    // `.thinMaterial`. The sheen + rim + shadow keep it readable.
-                    .fill(.ultraThinMaterial)
-                    // Gentle top-down sheen lifts the pill a touch above the
-                    // near-black backdrop without turning it opaque-white.
-                    .overlay(
-                        Capsule().fill(
-                            LinearGradient(
-                                colors: [Color.white.opacity(0.16), Color.white.opacity(0.03)],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                        )
-                    )
-            }
-            // Bright glass edge — this is what actually delineates the shape
-            // against a dark list (the earlier 0.10 rim was invisible).
-            .overlay(Capsule().strokeBorder(Color.white.opacity(0.42), lineWidth: 0.75))
-            // Strong-ish shadow so the translucent pill visibly floats.
+            // System glass lights its own edge, so the only hand-drawn cue
+            // left is the shadow — that is what says "floating above the list".
+            .glassEffect(.regular.interactive(), in: .capsule)
             .shadow(color: .black.opacity(0.35), radius: 12, y: 3)
-    }
-}
-
-private struct GlassPillModifier: ViewModifier {
-    func body(content: Content) -> some View {
-        content.glassEffect(.regular, in: .capsule)
     }
 }
 
@@ -96,10 +72,14 @@ private struct GlassPillModifier: ViewModifier {
 /// ships no type-erased *insettable* shape, hence the hand-rolled wrapper).
 private struct BarShape: InsettableShape {
     var cornerRadius: CGFloat?
+    /// Wins over `cornerRadius`: a true circle, inscribed in (and centred on)
+    /// whatever bounds it gets.
+    var isCircle: Bool = false
     var inset: CGFloat = 0
 
     func path(in rect: CGRect) -> Path {
         let r = rect.insetBy(dx: inset, dy: inset)
+        if isCircle { return Circle().path(in: r) }
         guard let cornerRadius else { return Capsule().path(in: r) }
         return RoundedRectangle(cornerRadius: max(0, cornerRadius - inset), style: .continuous).path(in: r)
     }
@@ -118,6 +98,8 @@ private struct BarShape: InsettableShape {
 /// means SwiftUI interpolates *that*, re-running `body` per frame with an
 /// in-between value, and the glass, rim and shadows all ease together for free.
 private struct GlassyFloatingBarModifier: ViewModifier, Animatable {
+    @Environment(\.colorScheme) private var scheme
+
     /// How much white goes *into* the glass on focus, 0 at rest. A gentle
     /// brightening, not a spotlight: the pill sits over a dark, low-contrast
     /// list, so it takes very little white to read as "active" — the earlier
@@ -128,9 +110,15 @@ private struct GlassyFloatingBarModifier: ViewModifier, Animatable {
     /// that grows vertically keeps the corners it had on one line.
     var cornerRadius: CGFloat?
 
+    /// Flip the glass against the app's appearance — see `glassyFloatingBar`.
+    var inverted: Bool = false
+
+    /// Circle instead of capsule — see `glassyFloatingBar`.
+    var circular: Bool = false
+
     /// One shape for the glass, the rims and the shadows — they must agree or
     /// the rim floats off the material's edge.
-    private var shape: BarShape { BarShape(cornerRadius: cornerRadius) }
+    private var shape: BarShape { BarShape(cornerRadius: cornerRadius, isCircle: circular) }
 
     var animatableData: Double {
         get { lift }
@@ -142,6 +130,11 @@ private struct GlassyFloatingBarModifier: ViewModifier, Animatable {
     private var t: Double { min(1, max(0, lift / GlassyFloatingBarModifier.litTint)) }
 
     static let litTint: Double = 0.12
+
+    /// How much of the opposite appearance goes into an inverted bar — as
+    /// little as can still be seen, so the field stays glass rather than
+    /// becoming a slab laid on the popover.
+    static let invertTint: Double = 0.08
 
     func body(content: Content) -> some View {
         decorated(base(content))
@@ -162,7 +155,16 @@ private struct GlassyFloatingBarModifier: ViewModifier, Animatable {
     /// invisible.
     @ViewBuilder
     private func base(_ content: Content) -> some View {
-        content.glassEffect(.regular.tint(Color.white.opacity(lift)), in: shape)
+        content.glassEffect(.regular.tint(tint), in: shape)
+    }
+
+    /// One tint slot, two directions: inverted bars go towards the opposite
+    /// appearance (focus lifts them further), everything else takes only the
+    /// focus white.
+    private var tint: Color {
+        guard inverted else { return Color.white.opacity(lift) }
+        let base = scheme == .dark ? Color.white : Color.black
+        return base.opacity(GlassyFloatingBarModifier.invertTint + lift)
     }
 
     private func decorated<V: View>(_ v: V) -> some View {

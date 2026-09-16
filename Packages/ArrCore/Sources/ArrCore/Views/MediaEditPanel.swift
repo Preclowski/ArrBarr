@@ -552,7 +552,8 @@ struct MediaEditModalOverlay: View {
             MediaEditPanel(request: request, onBack: onDismiss, onReady: { ready = true })
                 .background(
                     Rectangle()
-                        .fill(.thinMaterial)
+                        .fill(.clear)
+                        .glassEffect(.regular, in: .rect)
                         .overlay(alignment: .top) { Divider().opacity(0.4) }
                         .ignoresSafeArea(edges: .bottom)
                 )

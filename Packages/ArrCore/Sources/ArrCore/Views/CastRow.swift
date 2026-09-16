@@ -157,7 +157,7 @@ private struct CastTooltip: View {
                     Text(sub).scaledFont(size: 11).foregroundStyle(.secondary).lineLimit(2)
                 }
                 if let bio = details?.biography, !bio.isEmpty {
-                    Text(bio).scaledFont(size: 11).foregroundStyle(.primary.opacity(0.9))
+                    Text(bio).scaledFont(size: 11).foregroundStyle(.primary)
                         .lineLimit(4).fixedSize(horizontal: false, vertical: true).padding(.top, 1)
                 } else if !loaded {
                     SkeletonLines(count: 2).padding(.top, 1)

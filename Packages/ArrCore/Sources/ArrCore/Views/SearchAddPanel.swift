@@ -165,7 +165,8 @@ public struct SearchAddPanel: View {
             .padding(.top, 8)
             .background(
                 Rectangle()
-                    .fill(.thinMaterial)
+                    .fill(.clear)
+                    .glassEffect(.regular, in: .rect)
                     .overlay(alignment: .top) {
                         Divider().opacity(0.4)
                     }

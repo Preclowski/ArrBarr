@@ -8,7 +8,8 @@ import SwiftUI
 ///
 /// Callers that need extra chrome (the artist view's collapse chevron,
 /// a trailing Spacer + accessory) wrap this in their own HStack — the
-/// component owns only the title + count pair.
+/// component owns only the title + count pair. Title is `.primary` (see body),
+/// the count `.tertiary`.
 struct DetailSectionHeader: View {
     private enum Counter {
         case none
@@ -43,7 +44,11 @@ struct DetailSectionHeader: View {
         HStack(spacing: 6) {
             title
                 .scaledFont(size: 11, weight: .semibold)
-                .foregroundStyle(.secondary)
+                // `.primary`, not `.secondary`: the popover's text is vibrant,
+                // so a secondary label blends into the glass behind it and
+                // reads as half-transparent rather than quiet. The count beside
+                // it keeps the lower level — that is what carries the hierarchy.
+                .foregroundStyle(.primary)
             switch counter {
             case .none:
                 EmptyView()

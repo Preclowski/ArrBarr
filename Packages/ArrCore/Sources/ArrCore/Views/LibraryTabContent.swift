@@ -330,22 +330,21 @@ struct LibraryTabContent: View {
                     Text(verbatim: "\(count)")
                         .scaledFont(size: LibraryChrome.label, weight: .regular)
                         .monospacedDigit()
-                        .opacity(0.65)
+                        // `.secondary`, not `opacity`: over glass a faded copy
+                        // of the label blends with the backdrop, where a real
+                        // hierarchy level stays a solid, legible colour.
+                        .foregroundStyle(.secondary)
                 }
             }
             .fixedSize()
-            // Selected = the same soft primary tint the tab bar's selection
-            // pill uses (see TabPillBackground) — an inverted fill washed out
-            // under the popover's vibrancy and left the label unreadable.
             .foregroundStyle(selected ? AnyShapeStyle(.primary) : AnyShapeStyle(.secondary))
             .padding(.horizontal, LibraryChrome.chipHPad)
             .padding(.vertical, LibraryChrome.chipVPad)
+            // Flat: a filled capsule for the selected filter, nothing for the
+            // rest. Glass here fought the covers behind it — the filter row is
+            // a control strip, not floating chrome.
             .background {
-                if selected {
-                    Capsule().fill(Color.primary.opacity(0.14))
-                } else {
-                    Capsule().strokeBorder(Color.primary.opacity(0.18), lineWidth: 0.75)
-                }
+                if selected { Capsule().fill(Color.primary.opacity(0.14)) }
             }
             .contentShape(Capsule())
         }
@@ -408,9 +407,12 @@ struct LibraryTabContent: View {
                 .frame(width: LibraryChrome.tapTarget, height: LibraryChrome.tapTarget)
                 .contentShape(Rectangle())
         }
-        .menuStyle(.borderlessButton)
-        .menuIndicator(.hidden)
+        // `.button` + `.plain`, NOT `.borderlessButton`: the borderless style
+        // re-renders the label with its own metrics, which is why this glyph
+        // came out a different size and colour from the toggle beside it.
+        .menuStyle(.button)
         .buttonStyle(.plain)
+        .menuIndicator(.hidden)
         .fixedSize()
         .help(Text("library.sort.help", bundle: .module))
     }
@@ -468,6 +470,9 @@ struct LibraryTabContent: View {
                 .padding(.bottom, 58)
             }
             .scrollBounceBehavior(.basedOnSize)
+            // Content blurs softly under the floating glass chrome instead of
+            // being cut off by it — same treatment as the queue.
+            .scrollEdgeEffectStyle(.soft, for: .top)
             .frame(maxHeight: .infinity)
         }
     }
@@ -524,13 +529,15 @@ struct LibraryTabContent: View {
     private var surface: some View {
         let entries = visibleEntries
         let phase = phase(entries)
-        return VStack(spacing: 0) {
-            LibraryFilterStrip { topStrip }
-            gridOrState(entries, phase: phase)
-                .id(phase)
-                .transition(.opacity)
-        }
-        .animation(.easeOut(duration: 0.25), value: phase)
+        return gridOrState(entries, phase: phase)
+            .id(phase)
+            .transition(.opacity)
+            // Strip in the safe area: the covers scroll under it (and under
+            // the tab bar above it) instead of starting below a hard line.
+            .safeAreaBar(edge: .top, spacing: 0) {
+                LibraryFilterStrip { topStrip }
+            }
+            .animation(.easeOut(duration: 0.25), value: phase)
     }
 }
 
@@ -631,6 +638,13 @@ private struct LibraryTile: View {
                     )
                     .aspectRatio(entry.posterAspect, contentMode: .fit)
                 }
+                // Watched wedge in the corner the monitored bookmark doesn't
+                // use. Clipped to the tile's own radius so the fold follows the
+                // rounded corner instead of poking out of it.
+                .overlay(alignment: .topLeading) {
+                    if entry.watched { WatchedCornerBadge() }
+                }
+                .clipShape(RoundedRectangle(cornerRadius: Tokens.Radius.card, style: .continuous))
                 .overlay(alignment: .topTrailing) {
                     // Monitored marker — the arr web UIs' bookmark language.
                     // White glyph + soft shadow so it reads over any poster

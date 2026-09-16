@@ -61,7 +61,10 @@ public actor ResourceStore {
         let fingerprint = pipeline.registry.fingerprint(resource.key.instance)
         let cached = await lookup(resource.key, fingerprint: fingerprint, now: now)
         let ttl = min(resource.effectiveTTL.seconds, maxAge?.seconds ?? .infinity)
-        let fresh = cached.map { now < min($0.entry.fetchedAt.addingTimeInterval(ttl), $0.entry.staleAt) } ?? false
+        // Two different kinds of "not fresh": the TTL ran out (possibly old), or a command or event marked the row
+        // (known changed). Only the first is safe to hand back while revalidating behind the caller's back.
+        let invalidated = cached.map { now >= $0.entry.staleAt } ?? false
+        let fresh = (cached.map { now < $0.entry.fetchedAt.addingTimeInterval(ttl) } ?? false) && !invalidated
 
         switch policy {
         case .cacheOnly:
@@ -71,7 +74,7 @@ public actor ResourceStore {
         case .cacheFirst where fresh, .staleWhileRevalidate where fresh:
             telemetry.record(.cacheHit(resource.key, cached!.origin))
             return try decode(resource, cached!.entry, origin: cached!.origin, isStale: false, degraded: nil)
-        case .staleWhileRevalidate:
+        case .staleWhileRevalidate where !invalidated:
             if let cached {
                 telemetry.record(.cacheHit(resource.key, cached.origin))
                 scheduleRevalidation(resource)

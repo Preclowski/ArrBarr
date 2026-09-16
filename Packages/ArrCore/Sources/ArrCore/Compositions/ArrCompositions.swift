@@ -301,7 +301,13 @@ nonisolated enum MediaKitErrorPresenter {
     static func message(for error: MediaKitError) -> String {
         if let server = error.serverMessage, !server.isEmpty { return server }
         switch error {
-        case .notConfigured: return String(localized: "common.arrbarrIsNotConfigured.label", bundle: .module)
+        // Name the service, not the app: "qBittorrent is not configured" is
+        // the sentence the user can act on.
+        case let .notConfigured(instance):
+            guard let kind = ServiceKind(rawValue: instance.kind.rawValue) else {
+                return String(localized: "common.arrbarrIsNotConfigured.label", bundle: .module)
+            }
+            return text("mediakit.error.notConfigured", kind.displayName)
         case let .unreachable(host, _): return text("mediakit.error.unreachable", host.description)
         case let .breakerOpen(host, _): return text("mediakit.error.breakerOpen", host.description)
         case let .rateLimited(host, _): return text("mediakit.error.rateLimited", host.description)

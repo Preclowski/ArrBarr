@@ -44,7 +44,10 @@ struct SearchCapsule: View {
         .padding(.vertical, 10)
         .contentShape(Capsule())
         .onTapGesture { focused.wrappedValue = true }
-        .glassyFloatingBar(focused: focused.wrappedValue)
+        // Inverted: the field you type into is the one surface that reads as
+        // the opposite of the app's appearance, so it stops looking like more
+        // chrome and starts looking like an input.
+        .glassyFloatingBar(focused: focused.wrappedValue, inverted: true)
     }
 
     /// Compact menu chip on the trailing edge — narrows which backends the

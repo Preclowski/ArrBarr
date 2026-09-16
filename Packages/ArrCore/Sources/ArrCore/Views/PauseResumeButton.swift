@@ -63,17 +63,18 @@ struct PauseResumeButton: View {
                         : String(localized: "queue.pause.button", bundle: .module))
                     .scaledFont(size: Self.labelSize, weight: .semibold)
             }
-            // Force white — `.glassProminent` flips to black text on light
-            // tints (green/orange), which clashed with the white-labelled
-            // Search/Cancel capsules beside it.
-            .foregroundStyle(.white)
+            // The tint colours the label itself: on translucent glass a solid
+            // white label had nothing to sit on, and the status colour is the
+            // whole signal here.
+            .foregroundStyle(tint)
             .frame(maxWidth: .infinity)
             .padding(.vertical, Self.vPadding)
         }
-        // Same prominent glass capsule as the "Manual search" / Delete CTAs;
-        // status tint distinguishes a paused vs active download. Progress reads
-        // off the circular ring around the glyph, not a capsule fill.
-        .modifier(GlassProminentButtonStyle())
+        // Translucent tinted glass, not the filled prominent one: the strip
+        // sits over artwork and a solid capsule read as a slab. Status tint
+        // distinguishes paused vs active; progress reads off the ring around
+        // the glyph, not a capsule fill.
+        .modifier(GlassTintedButtonStyle())
         .tint(tint)
         .disabled(inFlight)
     }

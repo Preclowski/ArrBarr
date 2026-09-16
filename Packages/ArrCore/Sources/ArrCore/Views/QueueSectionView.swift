@@ -51,7 +51,8 @@ public struct QueueSectionView: View {
                 .accessibilityHidden(true)
             Text(title)
                 .scaledFont(size: 12, weight: .semibold)
-                .foregroundStyle(.secondary)
+                // Same level as every other section title — see `DetailSectionHeader`.
+                .foregroundStyle(.primary)
             if error == nil {
                 Text(verbatim: "\(itemCount)")
                     .scaledFont(size: 11)

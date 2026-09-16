@@ -191,6 +191,7 @@ public final class QueueViewModel {
 
     /// Feeds the hub's events into the debounced per-arr refresh; polling stays as fallback.
     @ObservationIgnored private var realtimeTask: Task<Void, Never>?
+    @ObservationIgnored private var invalidationObserver: NotificationCenter.ObservationToken?
 
     /// Process-wide shared view-model. Used by both the AppDelegate (status
     /// bar badge updates) and the SwiftUI `MenuBarExtra` scene so they see
@@ -255,6 +256,8 @@ public final class QueueViewModel {
             startBackgroundPolling()
             startAuxiliaryPolling()
 
+            // Registered here, not in the task below: the subscription must exist before the first import can land.
+            bootstrapCalendarInvalidation()
             Task { [weak self] in
                 await self?.bootstrapRealtime()
             }
@@ -325,6 +328,7 @@ public final class QueueViewModel {
     /// the timer (`RunLoop.main`, see `commonModeTimer`).
     isolated deinit {
         realtimeTask?.cancel()
+        upcomingRefreshTask?.cancel()
         configValidatedTask?.cancel()
         // A scheduled `Timer` is owned by the run loop, not by us — dropping
         // the view-model doesn't stop it. Without these, every discarded
@@ -367,6 +371,42 @@ public final class QueueViewModel {
             }
         }
     }
+
+    /// The calendar row carries "do I have this yet", so an import flips it. Watching the store's invalidation
+    /// rather than the raw event is deliberate: `EventHub` hands the event to subscribers immediately but
+    /// invalidates a burst window later, so a refresh driven by the event would re-read the row it is about to
+    /// mark stale and commit the pre-import state for another half hour.
+    func bootstrapCalendarInvalidation() {
+        let calendarTags = Set(QueueItem.Source.allCases.map { InvalidationTag.collection(.calendar, $0.instanceID) })
+        // `addObserver` registers before it returns, unlike an `AsyncSequence` that only subscribes once its task
+        // runs — an invalidation arriving in that gap would be dropped, which is the whole bug this watches for.
+        invalidationObserver = NotificationCenter.default.addObserver(
+            of: configStore.gateway.kit.subject, for: Invalidated.self
+        ) { [weak self] message in
+            guard !message.tags.isDisjoint(with: calendarTags) else { return }
+            await self?.scheduleUpcomingRefresh()
+        }
+    }
+
+    /// One re-read at a time: a season pack invalidates the calendar once per arr per burst window. An
+    /// invalidation arriving mid-read sets the flag instead of being dropped, so the last one still lands.
+    @MainActor
+    func scheduleUpcomingRefresh() {
+        guard upcomingRefreshTask == nil else {
+            upcomingRefreshAgain = true
+            return
+        }
+        upcomingRefreshTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            repeat {
+                upcomingRefreshAgain = false
+                await refreshUpcoming()
+            } while upcomingRefreshAgain
+            upcomingRefreshTask = nil
+        }
+    }
+    @ObservationIgnored @MainActor private var upcomingRefreshTask: Task<Void, Never>?
+    @ObservationIgnored @MainActor private var upcomingRefreshAgain = false
 
     /// How long a burst of arr events is allowed to keep collapsing into one
     /// refresh — Sonarr's "queue add, progress, file import" sequence becomes a

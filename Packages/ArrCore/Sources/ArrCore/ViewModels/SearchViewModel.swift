@@ -7,7 +7,28 @@ public final class SearchViewModel {
     /// there is nothing to mirror and nothing to keep in sync — the `didSet`
     /// IS the trigger that three separate `onChange` sites used to be.
     var query = "" {
-        didSet { if query != oldValue { onQueryChange() } }
+        didSet {
+            // A pasted multi-line clipboard (a title copied out of a list, a
+            // log line) would otherwise put a line break INSIDE the field: the
+            // capsule grows a second row and the query carries a character no
+            // *arr lookup can match. Collapse line endings to spaces at the one
+            // place every surface writes through.
+            let flattened = Self.singleLine(query)
+            if flattened != query {
+                query = flattened   // re-enters once, then settles
+                return
+            }
+            if query != oldValue { onQueryChange() }
+        }
+    }
+
+    /// Line endings → single spaces. Nothing is trimmed: a trailing space
+    /// while typing two words has to survive.
+    private static func singleLine(_ raw: String) -> String {
+        guard raw.contains(where: \.isNewline) else { return raw }
+        return raw
+            .split(whereSeparator: \.isNewline)
+            .joined(separator: " ")
     }
 
     /// True while a live query owns the surface. One definition, used by the

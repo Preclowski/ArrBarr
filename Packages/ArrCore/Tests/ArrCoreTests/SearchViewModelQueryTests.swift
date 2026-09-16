@@ -35,6 +35,19 @@ struct SearchViewModelQueryTests {
         #expect(vm.isActive)
     }
 
+    @Test("A pasted multi-line clipboard lands as one line")
+    func pastedNewlinesCollapse() {
+        let vm = SearchViewModel()
+        defer { vm.reset() }
+
+        vm.query = "blade\nrunner"
+        #expect(vm.query == "blade runner")
+
+        // Trailing / repeated line endings leave no stray spaces behind.
+        vm.query = "dune\n\n"
+        #expect(vm.query == "dune")
+    }
+
     @Test("A newline is as empty as a space — no search runs behind it")
     func newlineOnlyQueryStartsNothing() {
         let vm = SearchViewModel()
